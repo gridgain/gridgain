@@ -26,8 +26,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservabl
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
-
 /**
  * Reservation mechanism for multiple partitions allowing to do a reservation in one operation.
  */
@@ -176,20 +174,12 @@ public class GridDhtPartitionsReservation implements GridReservable {
     /**
      * @param parts Partitions.
      */
-    private static void tryEvict(GridDhtLocalPartition[] parts) {
+    private static void tryContinueClearing(GridDhtLocalPartition[] parts) {
         if (parts == null)  // Can be not initialized yet.
             return;
 
         for (GridDhtLocalPartition part : parts)
-            tryEvict(part);
-    }
-
-    /**
-     * @param part Partition.
-     */
-    private static void tryEvict(GridDhtLocalPartition part) {
-        if (part.state() == RENTING && part.reservations() == 0)
-            part.clearAsync();
+            part.tryContinueClearing();
     }
 
     /**
@@ -206,7 +196,7 @@ public class GridDhtPartitionsReservation implements GridReservable {
                 // If it was the last reservation and topology version changed -> attempt to evict partitions.
                 if (r == 1 && !cctx.kernalContext().isStopping() &&
                     !topVer.equals(cctx.topology().lastTopologyChangeVersion()))
-                    tryEvict(parts.get());
+                    tryContinueClearing(parts.get());
 
                 return;
             }
@@ -238,7 +228,6 @@ public class GridDhtPartitionsReservation implements GridReservable {
     }
 
     /**
-     * Must be checked in {@link GridDhtLocalPartition#tryClear(EvictionContext)}.
      * If returns {@code true} this reservation object becomes invalid and partitions
      * can be evicted or at least cleared.
      * Also this means that after returning {@code true} here method {@link #reserve()} can not

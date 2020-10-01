@@ -20,13 +20,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -68,8 +63,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageP
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV2;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.PendingRowIO;
@@ -90,9 +83,6 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
-import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
@@ -103,15 +93,12 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.development.utils.arguments.CLIArgument.mandatoryArg;
 import static org.apache.ignite.development.utils.arguments.CLIArgument.optionalArg;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.CHECK_PARTS;
-import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DEST;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DEST_FILE;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DIR;
-import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.FILE_MASK;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.INDEXES;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_SIZE;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_STORE_VER;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PART_CNT;
-import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.TRANSFORM;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -121,12 +108,8 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.partId;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
-import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getCrc;
-import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getPageId;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getVersion;
-import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.setCrc;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc.calcCrc;
 import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
 import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
 import static org.apache.ignite.internal.util.GridUnsafe.freeBuffer;
@@ -245,23 +228,6 @@ public class IgniteIndexReader implements AutoCloseable {
 
         for (int i = 0; i < partCnt; i++)
             partStores[i] = filePageStoreFactory.createFilePageStoreWithEnsure(i, FLAG_DATA);
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param pageSize Page size.
-     * @param outputStream Stream for print report.
-     */
-    public IgniteIndexReader(int pageSize, OutputStream outputStream) {
-        this.pageSize = pageSize;
-        partCnt = 0;
-        checkParts = false;
-        indexes = null;
-        outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
-        outErrStream = outStream;
-        idxStore = null;
-        partStores = null;
     }
 
     /** */
@@ -1241,171 +1207,6 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     * Transforms snapshot files to regular PDS files.
-     *
-     * @param src Source directory.
-     * @param dest Destination directory.
-     * @param fileMask File mask.
-     * @param filePageStoreFactory Factory of {@link FilePageStore}.
-     */
-    public void transform(
-        String src,
-        String dest,
-        String fileMask,
-        IgniteIndexReaderFilePageStoreFactory filePageStoreFactory
-    ) {
-        File srcDir = new File(src);
-
-        assert srcDir.exists();
-
-        File destDir = new File(dest);
-
-        if (!destDir.exists())
-            destDir.mkdirs();
-
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(srcDir.toPath(), "*" + fileMask)) {
-            List<Path> filesList = new ArrayList<>();
-
-            for (Path f : files) {
-                if (f.toString().toLowerCase().endsWith(fileMask))
-                    filesList.add(f);
-            }
-
-            ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Transforming files", filesList.size());
-
-            for (Path f : filesList) {
-                progressPrinter.printProgress();
-
-                String fileName = f.getFileName().toString();
-
-                boolean idxFileName = fileName.equals(INDEX_FILE_NAME);
-
-                ByteBuffer hdrBuff = filePageStoreFactory.headerBuffer(idxFileName ? FLAG_IDX : FLAG_DATA);
-
-                try {
-                    copyFromStreamToFile(f.toFile(), new File(destDir.getPath(), fileName), hdrBuff);
-                }
-                catch (Exception e) {
-                    File destF = new File(destDir.getPath(), f.getFileName().toString());
-
-                    if (destF.exists())
-                        destF.delete();
-
-                    printErr("Could not transform file: " + destF.getPath() + ", error: " + e.getMessage());
-
-                    printStackTrace(e);
-                }
-                finally {
-                    freeBuffer(hdrBuff);
-                }
-            }
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /**
-     * Convert snapshot file to the correct format.
-     * Header + pages in the correct order (in ascending order of pageIdx).
-     *
-     * @param fileInPath File for reading pages.
-     * @param fileOutPath File for writing pages.
-     * @param hdrBuf Buffer with a header for writing to {@code fileOutPath}.
-     * @return Count of read pages.
-     * @throws Exception If failed.
-     */
-    private int copyFromStreamToFile(File fileInPath, File fileOutPath, ByteBuffer hdrBuf) throws Exception {
-        ByteBuffer readBuf = allocateBuffer(pageSize);
-
-        readBuf.order(ByteOrder.nativeOrder());
-
-        long readAddr = bufferAddress(readBuf);
-
-        try (FileChannel inCh = FileChannel.open(fileInPath.toPath(), READ);
-             FileChannel outCh = FileChannel.open(fileOutPath.toPath(), WRITE, CREATE)) {
-            int hdrSize = hdrBuf.limit();
-
-            outCh.write(hdrBuf, 0);
-
-            int pageCnt = 0;
-
-            while (readNextPage(readBuf, inCh, pageSize)) {
-                pageCnt++;
-
-                readBuf.rewind();
-
-                long pageId = getPageId(readAddr);
-
-                assert pageId != 0;
-
-                int pageIdx = pageIndex(pageId);
-
-                int crcSaved = getCrc(readAddr);
-
-                setCrc(readAddr, 0);
-
-                int calced = calcCrc(readBuf, pageSize);
-
-                if (calced != crcSaved)
-                    throw new IgniteCheckedException("Snapshot corrupted");
-
-                setCrc(readAddr, crcSaved);
-
-                readBuf.rewind();
-
-                boolean changed = false;
-
-                int pageType = PageIO.getType(readAddr);
-
-                switch (pageType) {
-                    case PageIO.T_PAGE_UPDATE_TRACKING:
-                        PageHandler.zeroMemory(readAddr, TrackingPageIO.COMMON_HEADER_END,
-                            readBuf.capacity() - TrackingPageIO.COMMON_HEADER_END);
-
-                        changed = true;
-
-                        break;
-                    case PageIO.T_META:
-                    case PageIO.T_PART_META:
-                        PageMetaIO io = PageIO.getPageIO(pageType, PageIO.getVersion(readAddr));
-
-                        io.setLastAllocatedPageCount(readAddr, 0);
-                        io.setLastSuccessfulFullSnapshotId(readAddr, 0);
-                        io.setLastSuccessfulSnapshotId(readAddr, 0);
-                        io.setLastSuccessfulSnapshotTag(readAddr, 0);
-                        io.setNextSnapshotTag(readAddr, 1);
-                        io.setCandidatePageCount(readAddr, 0);
-
-                        changed = true;
-
-                        break;
-                }
-                if (changed) {
-                    setCrc(readAddr, 0);
-
-                    int crc32 = calcCrc(readBuf, pageSize);
-
-                    setCrc(readAddr, crc32);
-
-                    readBuf.rewind();
-                }
-
-                outCh.write(readBuf, hdrSize + ((long)pageIdx) * pageSize);
-
-                readBuf.rewind();
-            }
-
-            outCh.force(true);
-
-            return pageCnt;
-        }
-        finally {
-            freeBuffer(readBuf);
-        }
-    }
-
-    /**
      * Reading a page from channel into buffer.
      *
      * @param buf Buffer.
@@ -1455,21 +1256,6 @@ public class IgniteIndexReader implements AutoCloseable {
                 "without spaces, other index trees will be skipped.", String[].class, () -> null),
             optionalArg(DEST_FILE.arg(),
                     "file to print the report to (by default report is printed to console).", String.class, () -> null),
-            optionalArg(TRANSFORM.arg(), "if specified, this utility assumes that all *.bin files " +
-                "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest" +
-                " directory.", Boolean.class, () -> false),
-            optionalArg(DEST.arg(),
-                "directory where to put files transformed from snapshot (needed if you use --transform).",
-                String.class,
-                () -> {
-                    if (parserRef.get().get(TRANSFORM.arg()))
-                        throw new IgniteException("Destination path for transformed files is not specified (use --dest)");
-                    else
-                        return null;
-                }
-            ),
-            optionalArg(FILE_MASK.arg(),
-                    "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
             optionalArg(CHECK_PARTS.arg(),
                     "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false)
         );
@@ -1500,22 +1286,15 @@ public class IgniteIndexReader implements AutoCloseable {
             p.get(PAGE_STORE_VER.arg())
         );
 
-        if (p.get(TRANSFORM.arg())) {
-            try (IgniteIndexReader reader = new IgniteIndexReader(pageSize, destStream)) {
-                reader.transform(dir, p.get(DEST.arg()), p.get(FILE_MASK.arg()), filePageStoreFactory);
-            }
-        }
-        else {
-            try (IgniteIndexReader reader = new IgniteIndexReader(
-                pageSize,
-                p.get(PART_CNT.arg()),
-                p.get(INDEXES.arg()),
-                p.get(CHECK_PARTS.arg()),
-                destStream,
-                filePageStoreFactory
-            )) {
-                reader.readIdx();
-            }
+        try (IgniteIndexReader reader = new IgniteIndexReader(
+            pageSize,
+            p.get(PART_CNT.arg()),
+            p.get(INDEXES.arg()),
+            p.get(CHECK_PARTS.arg()),
+            destStream,
+            filePageStoreFactory
+        )) {
+            reader.readIdx();
         }
     }
 
@@ -1526,25 +1305,17 @@ public class IgniteIndexReader implements AutoCloseable {
         /** */
         DIR("--dir"),
         /** */
-        PART_CNT("--partCnt"),
+        PART_CNT("--part-cnt"),
         /** */
-        PAGE_SIZE("--pageSize"),
+        PAGE_SIZE("--page-size"),
         /** */
-        PAGE_STORE_VER("--pageStoreVer"),
+        PAGE_STORE_VER("--page-store-ver"),
         /** */
         INDEXES("--indexes"),
         /** */
-        DEST_FILE("--destFile"),
+        DEST_FILE("--dest-file"),
         /** */
-        TRANSFORM("--transform"),
-        /** */
-        DEST("--dest"),
-        /** */
-        FILE_MASK("--fileMask"),
-        /** */
-        CHECK_PARTS("--checkParts"),
-        /** Snapshot flag. */
-        SNAPSHOT("--snapshot");
+        CHECK_PARTS("--check-parts");
 
         /** */
         private String arg;

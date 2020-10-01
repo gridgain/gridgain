@@ -101,8 +101,8 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                 SORTED_INDEX,
                 cctx.name(),
                 idxName,
-                cctx.kernalContext().metric(),
-                cctx.group().statisticsHolderData()
+                cctx.group().statisticsHolderData(),
+                cctx.kernalContext().metric()
             );
 
             for (int i = 0; i < rootPages.size(); i++) {

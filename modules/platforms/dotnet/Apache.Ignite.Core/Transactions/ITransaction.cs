@@ -91,9 +91,7 @@ namespace Apache.Ignite.Core.Transactions
     /// <example>
     ///     You can use cache transactions as follows:
     ///     <code>
-    ///     ICacheTx tx = cache.TxStart();    
-    /// 
-    ///     try 
+    ///     using (var tx = cache.Ignite.GetTransactions().TxStart())
     ///     {
     ///         int v1 = cache&lt;string, int&gt;.Get("k1");
     ///         
@@ -101,16 +99,12 @@ namespace Apache.Ignite.Core.Transactions
     ///         if (v1 > 0)
     ///             cache.Put&lt;string, int&gt;("k1", 2);
     ///             
-    ///         cache.Removex("k2);
+    ///         cache.Remove("k2");
     ///         
     ///         // Commit the transaction.
     ///         tx.Commit();
     ///     }
-    ///     finally 
-    ///     {
-    ///         tx.Dispose();
-    ///     }
-    ///     
+    /// 
     ///     </code>
     /// </example>
     /// </summary>

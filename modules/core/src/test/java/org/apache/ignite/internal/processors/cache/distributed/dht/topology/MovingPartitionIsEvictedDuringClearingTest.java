@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -38,10 +39,10 @@ import org.junit.Test;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
 /**
- * Tests a scenario when a clearing partition is attempted to evict after call to
- * {@link GridDhtPartitionTopology#tryEvict(GridDhtLocalPartition)}.
+ * Tests a scenario when a clearing partition is attempted to evict after a call to
+ * {@link GridDhtPartitionTopology#tryFinishEviction(GridDhtLocalPartition)}.
  *
- * Such a scenario can leave a partition in RENTING state until the next exchange, but it's look acceptable.
+ * Such a scenario can leave a partition in RENTING state until the next exchange. It's actually acceptable behavior.
  */
 @WithSystemProperty(key = "IGNITE_PRELOAD_RESEND_TIMEOUT", value = "0")
 public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstractTest {
@@ -49,6 +50,8 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        // Need at least 2 threads in pool to avoid deadlock on clearing.
+        cfg.setRebalanceThreadPoolSize(ThreadLocalRandom.current().nextInt(3) + 2);
         cfg.setConsistentId(igniteInstanceName);
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration().setWalSegmentSize(4 * 1024 * 1024);

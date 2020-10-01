@@ -23,6 +23,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Date;
 import java.util.ArrayList;
@@ -314,6 +315,21 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
         }
         catch (Exception ignored) {
             fail();
+        }
+    }
+
+    /**
+     * Check JDBC support flags.
+     */
+    @Test
+    public void testCheckSupports() throws SQLException {
+        try (Connection conn = DriverManager.getConnection(URL)) {
+            DatabaseMetaData meta = conn.getMetaData();
+
+            assertTrue(meta.supportsANSI92EntryLevelSQL());
+            assertTrue(meta.supportsAlterTableWithAddColumn());
+            assertTrue(meta.supportsAlterTableWithDropColumn());
+            assertTrue(meta.nullPlusNonNullIsNull());
         }
     }
 

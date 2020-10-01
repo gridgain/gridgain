@@ -48,6 +48,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
+import org.apache.ignite.internal.managers.systemview.walker.TransactionViewWalker;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
@@ -88,6 +89,8 @@ import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccRecoveryFinished
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlockDetection.TxDeadlockFuture;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
+import org.apache.ignite.internal.util.lang.gridfunc.ReadOnlyCollectionView2X;
+import org.apache.ignite.spi.systemview.view.TransactionView;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
@@ -162,6 +165,12 @@ import static org.jsr166.ConcurrentLinkedHashMap.QueuePolicy.PER_SEGMENT_Q;
  * Cache transaction manager.
  */
 public class IgniteTxManager extends GridCacheSharedManagerAdapter {
+    /** */
+    public static final String TXS_MON_LIST = "transactions";
+
+    /** */
+    public static final String TXS_MON_LIST_DESC = "Running transactions";
+
     /** Default maximum number of transactions that have completed. */
     private static final int DFLT_MAX_COMPLETED_TX_CNT = 262144; // 2^18
 
@@ -383,6 +392,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         longOperationsDumpTimeout(longOperationsDumpTimeout());
 
         txCollisionsDumpInterval(collisionsDumpInterval());
+
+        cctx.kernalContext().systemView().registerView(TXS_MON_LIST, TXS_MON_LIST_DESC,
+            new TransactionViewWalker(),
+            new ReadOnlyCollectionView2X<>(idMap.values(), nearIdMap.values()),
+            TransactionView::new);
     }
 
     /**
@@ -720,8 +734,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         boolean storeEnabled,
         Boolean mvccOp,
         int txSize,
-        @Nullable String lb,
-        boolean tracingEnabled
+        @Nullable String lb
     ) {
         assert sysCacheCtx == null || sysCacheCtx.systemTx();
 
@@ -744,7 +757,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             subjId,
             taskNameHash,
             lb,
-            tracingEnabled,
             txDumpsThrottling
         );
 
@@ -3205,12 +3217,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                         ", failedNodeId=" + evtNodeId + ']');
 
                 // Null means that recovery voting is not needed.
-                GridCompoundFuture<IgniteInternalTx, Void> allTxFinFut =
-                    node.isClient() && mvccCrd != null && mvccCrd.nodeId() != null
+                GridCompoundFuture<IgniteInternalTx, Void> allTxFinFut = isMvccRecoveryMessageRequired()
                     ? new GridCompoundFuture<>() : null;
 
                 for (final IgniteInternalTx tx : activeTransactions()) {
-                    if ((tx.near() && !tx.local()) || (tx.storeWriteThrough() && tx.masterNodeIds().contains(evtNodeId))) {
+                    if ((tx.near() && !tx.local() && tx.originatingNodeId().equals(evtNodeId))
+                        || (tx.storeWriteThrough() && tx.masterNodeIds().contains(evtNodeId))) {
                         // Invalidate transactions.
                         salvageTx(tx, RECOVERY_FINISH);
                     }
@@ -3292,6 +3304,17 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             finally {
                 cctx.kernalContext().gateway().readUnlock();
             }
+        }
+
+        /**
+         * Determines need to send a recovery message or not.
+         *
+         * @return True if message required, false otherwise.
+         */
+        private boolean isMvccRecoveryMessageRequired() {
+            return node.isClient() && mvccCrd != null && mvccCrd.nodeId() != null &&
+                (cctx.kernalContext().coordinators().mvccEnabled() ||
+                !IgniteFeatures.nodeSupports(cctx.kernalContext(), cctx.node(mvccCrd.nodeId()), IgniteFeatures.MVCC_TX_RECOVERY_PROTOCOL_V2));
         }
     }
 

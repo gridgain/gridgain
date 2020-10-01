@@ -78,6 +78,7 @@ import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryEnumCache;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.managers.systemview.JmxSystemViewExporterSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -113,6 +114,7 @@ import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi;
+import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.config.GridTestProperties;
@@ -644,7 +646,12 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         cfg.setClientMode(false);
         cfg.setDiscoverySpi(new TcpDiscoverySpi() {
             @Override public void sendCustomEvent(DiscoverySpiCustomMessage msg) throws IgniteException {
-                //No-op
+                // No-op.
+            }
+        });
+        cfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi() {
+            @Override protected void register(SystemView<?> sysView) {
+                // No-op.
             }
         });
 
@@ -977,7 +984,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return Started grid.
      * @throws Exception If anything failed.
      */
-    protected IgniteEx startGrid(int idx, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
+    protected IgniteEx startGridWithCfg(int idx, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
         return startGrid(getTestIgniteInstanceName(idx), cfgOp);
     }
 
@@ -2872,7 +2879,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
-     * Returns metric set.
+     * Returns metric registry.
      *
      * @param igniteInstanceName Ignite instance name.
      * @param grp Name of the group.

@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.CacheMvccTransactionsTes
 import org.apache.ignite.internal.processors.cache.mvcc.CacheMvccTxFailoverTest;
 import org.apache.ignite.internal.processors.cache.mvcc.CacheMvccVacuumTest;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccCachePeekTest;
+import org.apache.ignite.internal.processors.cache.mvcc.MvccStructuresOverheadTest;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUnsupportedTxModesTest;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessorMvccPersistenceSelfTest;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessorMvccSelfTest;
@@ -69,7 +70,8 @@ import org.junit.runners.Suite;
     CacheMvccPartitionedCoordinatorFailoverTest.class,
     CacheMvccReplicatedCoordinatorFailoverTest.class,
     CacheMvccProcessorLazyStartTest.class,
-    CacheMvccClientReconnectTest.class
+    CacheMvccClientReconnectTest.class,
+    MvccStructuresOverheadTest.class
 })
 public class IgniteCacheMvccTestSuite {
 }

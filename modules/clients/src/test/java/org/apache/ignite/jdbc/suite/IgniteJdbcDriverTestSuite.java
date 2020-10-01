@@ -18,6 +18,7 @@ package org.apache.ignite.jdbc.suite;
 
 import java.security.Security;
 import org.apache.ignite.common.RunningQueryInfoCheckInitiatorTest;
+import org.apache.ignite.internal.jdbc.thin.JdbcThinStatementTimeoutInternalsTest;
 import org.apache.ignite.internal.jdbc2.JdbcBlobTest;
 import org.apache.ignite.internal.jdbc2.JdbcBulkLoadSelfTest;
 import org.apache.ignite.internal.jdbc2.JdbcConnectionReopenTest;
@@ -51,11 +52,13 @@ import org.apache.ignite.jdbc.thin.JdbcThinComplexQuerySelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionAdditionalSecurityTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionMultipleAddressesTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionMvccEnabledSelfTest;
+import org.apache.ignite.jdbc.thin.JdbcThinConnectionPropertiesTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionSSLTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionTimeoutSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDataPageScanPropertySelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDataSourceSelfTest;
+import org.apache.ignite.jdbc.thin.JdbcThinDefaultTimeoutTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDeleteStatementSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDiskSpillingClientsTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDistributedJoinsSelfTest;
@@ -115,6 +118,8 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     QaJdbcTestSuite.class,
+
+    JdbcThinStatementTimeoutInternalsTest.class,
 
     RunningQueryInfoCheckInitiatorTest.class,
 
@@ -185,6 +190,7 @@ import org.junit.runners.Suite;
     JdbcThinDataSourceSelfTest.class,
     JdbcThinPreparedStatementSelfTest.class,
     JdbcThinResultSetSelfTest.class,
+    JdbcThinConnectionPropertiesTest.class,
 
     JdbcThinStatementSelfTest.class,
     JdbcThinComplexQuerySelfTest.class,
@@ -199,6 +205,7 @@ import org.junit.runners.Suite;
     JdbcThinStatementCancelSelfTest.class,
     JdbcThinStatementTimeoutSelfTest.class,
     JdbcThinConnectionTimeoutSelfTest.class,
+    JdbcThinDefaultTimeoutTest.class,
 
     JdbcThinSystemSchemaDurabilityTest.class,
     JdbcThinSystemSchemaImplicitSchemaNamePropTest.class,

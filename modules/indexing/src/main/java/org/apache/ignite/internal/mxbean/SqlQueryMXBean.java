@@ -121,6 +121,17 @@ public interface SqlQueryMXBean {
     /**
      * Gets global query quota.
      *
+     * @return Global query quota as a long.
+     */
+    @MXBeanDescription("Gets global SQL query memory quota. Global SQL query memory pool size or SQL query memory " +
+        "quota is an upper bound for the heap memory part which might be occupied by the SQL query execution engine. " +
+        "This quota is shared among all simultaneously running queries, hence it be easily consumed by the single " +
+        "heavy analytics query.  Same as SqlGlobalMemoryQuota, but with a Long return type.")
+    Long getSqlGlobalMemoryQuotaBytes();
+
+    /**
+     * Gets global query quota.
+     *
      * @return Global query quota.
      */
     @MXBeanDescription("Gets global SQL query memory quota. Global SQL query memory pool size or SQL query memory " +
@@ -143,6 +154,18 @@ public interface SqlQueryMXBean {
         "letters 'k' for kilobytes, 'm' for megabytes, 'g' for gigabytes and '%' for the percentage of the current heap." +
         "For example:  '1000', '10M', '100k', '1G', '70%'")
     void setSqlGlobalMemoryQuota(String size);
+
+
+    /**
+     * Gets global query quota.
+     *
+     * @return Global query quota as a long.
+     */
+    @MXBeanDescription("Global SQL query memory pool size or SQL query memory quota is" +
+        " an upper bound for the heap memory part which might be occupied by the SQL query execution engine. " +
+        "This quota is shared among all simultaneously running queries, hence it be easily consumed by the single " +
+        "heavy analytics query. Same as SqlQueryMemoryQuota, but with a Long return type.")
+    Long getSqlQueryMemoryQuotaBytes();
 
     /**
      * Gets global query quota.
