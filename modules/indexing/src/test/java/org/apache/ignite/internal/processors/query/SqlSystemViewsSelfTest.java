@@ -21,6 +21,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -332,7 +333,9 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
             Object[] expRow = expectedResults[i];
 
-            assertEquals(expRow.length, resRow.size());
+            assertEquals("Row num: " + i + "\n" +
+                "Expected: " + Arrays.toString(expRow) + "\n" +
+                "Actual:   " + resRow, expRow.length, resRow.size());
 
             for (int j = 0; j < expRow.length; j++)
                 assertEquals(expRow[j], resRow.get(j));
