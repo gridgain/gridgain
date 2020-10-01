@@ -137,9 +137,8 @@ public class WalCorruptionTest extends GridCommonAbstractTest {
 
                     return;
                 }
-                else {
+                else
                     fail("Test failed with wrong exception: " + e);
-                }
             }
 
             fail("Test passed without expected exception.");
