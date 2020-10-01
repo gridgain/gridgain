@@ -424,5 +424,4 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
             }
         };
     }
-
 }

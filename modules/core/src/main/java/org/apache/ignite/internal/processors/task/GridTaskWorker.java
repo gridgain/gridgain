@@ -110,7 +110,7 @@ import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKe
  * @param <T> Task argument type.
  * @param <R> Task return value type.
  */
-class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
+public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
     /** Split size threshold. */
     private static final int SPLIT_WARN_THRESHOLD = 1000;
 
@@ -370,7 +370,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
     /**
      * @return Task session.
      */
-    GridTaskSessionImpl getSession() {
+    public GridTaskSessionImpl getSession() {
         return ses;
     }
 
@@ -1363,8 +1363,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
                 ctx.resource().invokeAnnotated(dep, res.getJob(), ComputeJobAfterSend.class);
 
                 GridJobExecuteResponse fakeRes = new GridJobExecuteResponse(node.id(), ses.getId(),
-                    res.getJobContext().getJobId(), null, null, null, null, null, null, false, null,
-                    ses.getTaskName());
+                    res.getJobContext().getJobId(), null, null, null, null, null, null, false, null);
 
                 fakeRes.setFakeException(new ClusterTopologyException("Failed to send job due to node failure: " + node));
 
@@ -1482,8 +1481,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
             }
 
             GridJobExecuteResponse fakeRes = new GridJobExecuteResponse(node.id(), ses.getId(),
-                res.getJobContext().getJobId(), null, null, null, null, null, null, false, null,
-                ses.getTaskName());
+                res.getJobContext().getJobId(), null, null, null, null, null, null, false, null);
 
             if (fakeErr == null)
                 fakeErr = U.convertException(e);
@@ -1515,8 +1513,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
                         // Artificial response in case if a job is waiting for a response from
                         // non-existent node.
                         GridJobExecuteResponse fakeRes = new GridJobExecuteResponse(nodeId, ses.getId(),
-                            jr.getJobContext().getJobId(), null, null, null, null, null, null, false, null,
-                            ses.getTaskName());
+                            jr.getJobContext().getJobId(), null, null, null, null, null, null, false, null);
 
                         fakeRes.setFakeException(new ClusterTopologyException("Node has left grid: " + nodeId));
 
@@ -1655,6 +1652,16 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
      */
     private boolean isDeadNode(UUID uid) throws IgniteClientDisconnectedCheckedException {
         return ctx.discovery().node(uid) == null || !ctx.discovery().pingNode(uid);
+    }
+
+    /** @return Affinity cache name for task. */
+    public String affCacheName() {
+        return affCacheName;
+    }
+
+    /** @return Affinity partition id. */
+    public int affPartId() {
+        return affPartId;
     }
 
     /** {@inheritDoc} */

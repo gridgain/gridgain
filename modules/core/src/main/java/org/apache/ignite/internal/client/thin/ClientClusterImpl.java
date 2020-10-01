@@ -21,7 +21,6 @@ import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 
 /**
  * Implementation of {@link ClientCluster}.
@@ -93,7 +92,7 @@ class ClientClusterImpl extends ClientClusterGroupImpl implements ClientCluster 
                 req -> {
                     checkClusterApiSupported(req.clientChannel().protocolCtx());
 
-                    try (BinaryRawWriterEx writer = new BinaryWriterExImpl(marsh.context(), req.out(), null, null)) {
+                    try (BinaryRawWriterEx writer = utils.createBinaryWriter(req.out())) {
                         writer.writeString(cacheName);
                     }
                 },
@@ -115,7 +114,7 @@ class ClientClusterImpl extends ClientClusterGroupImpl implements ClientCluster 
                 req -> {
                     checkClusterApiSupported(req.clientChannel().protocolCtx());
 
-                    try (BinaryRawWriterEx writer = new BinaryWriterExImpl(marsh.context(), req.out(), null, null)) {
+                    try (BinaryRawWriterEx writer = utils.createBinaryWriter(req.out())) {
                         writer.writeString(cacheName);
                         writer.writeBoolean(enable);
                     }

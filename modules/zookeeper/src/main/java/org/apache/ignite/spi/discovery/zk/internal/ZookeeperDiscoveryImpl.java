@@ -108,6 +108,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2;
+import static org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoveryImpl.ConnectionState.STARTED;
 import static org.apache.zookeeper.CreateMode.EPHEMERAL_SEQUENTIAL;
 import static org.apache.zookeeper.CreateMode.PERSISTENT;
 
@@ -176,7 +177,7 @@ public class ZookeeperDiscoveryImpl {
     private ZkRuntimeState rtState;
 
     /** */
-    private volatile ConnectionState connState = ConnectionState.STARTED;
+    private volatile ConnectionState connState = STARTED;
 
     /** */
     private final AtomicBoolean stop = new AtomicBoolean();
@@ -448,7 +449,7 @@ public class ZookeeperDiscoveryImpl {
         assert clientReconnectEnabled;
 
         synchronized (stateMux) {
-            if (connState == ConnectionState.STARTED) {
+            if (connState == STARTED) {
                 connState = ConnectionState.DISCONNECTED;
 
                 rtState.onCloseStart(disconnectError());
@@ -581,9 +582,8 @@ public class ZookeeperDiscoveryImpl {
      * @return {@code true} if all nodes support the given feature, {@code false} otherwise.
      */
     public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
-        checkState();
-
-        GridKernalContext ctx = (spi.ignite() instanceof IgniteEx) ? ((IgniteEx)spi.ignite()).context() : null;
+        GridKernalContext ctx =
+                (connState == STARTED && spi.ignite() instanceof IgniteEx) ? ((IgniteEx)spi.ignite()).context() : null;
 
         return rtState != null
             && rtState.top.isAllNodes(n -> !nodesPred.apply(n) || IgniteFeatures.nodeSupports(ctx, n, feature));
@@ -793,7 +793,7 @@ public class ZookeeperDiscoveryImpl {
                 if (connState == ConnectionState.STOPPED)
                     return;
 
-                connState = ConnectionState.STARTED;
+                connState = STARTED;
             }
 
             ZkRuntimeState rtState = this.rtState = new ZkRuntimeState(reconnect);
@@ -1276,7 +1276,7 @@ public class ZookeeperDiscoveryImpl {
                         return;
 
                     synchronized (stateMux) {
-                        if (connState != ConnectionState.STARTED)
+                        if (connState != STARTED)
                             return;
                     }
 
@@ -3661,7 +3661,7 @@ public class ZookeeperDiscoveryImpl {
             boolean reconnect = false;
 
             synchronized (stateMux) {
-                if (connState == ConnectionState.STARTED) {
+                if (connState == STARTED) {
                     reconnect = true;
 
                     connState = ConnectionState.DISCONNECTED;
@@ -4167,7 +4167,7 @@ public class ZookeeperDiscoveryImpl {
         @Override public void run() {
             if (clientReconnectEnabled) {
                 synchronized (stateMux) {
-                    if (connState == ConnectionState.STARTED) {
+                    if (connState == STARTED) {
                         connState = ConnectionState.DISCONNECTED;
 
                         rtState.onCloseStart(disconnectError());
@@ -4457,7 +4457,7 @@ public class ZookeeperDiscoveryImpl {
                 return;
 
             synchronized (stateMux) {
-                if (connState != ConnectionState.STARTED)
+                if (connState != STARTED)
                     return;
             }
 

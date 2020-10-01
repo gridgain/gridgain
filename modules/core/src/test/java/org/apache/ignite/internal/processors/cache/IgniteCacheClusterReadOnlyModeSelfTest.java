@@ -27,6 +27,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.lang.String.valueOf;
@@ -512,7 +513,8 @@ public class IgniteCacheClusterReadOnlyModeSelfTest extends IgniteCacheClusterRe
     }
 
     /** */
-    //@Test
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-30793")
     public void testCloseAllowed() {
         performAction((node, cache) -> {
             if (!node.configuration().isClientMode()) {

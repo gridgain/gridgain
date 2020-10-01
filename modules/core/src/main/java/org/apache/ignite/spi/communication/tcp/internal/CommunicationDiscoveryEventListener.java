@@ -17,6 +17,8 @@
 package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.util.UUID;
+import java.util.function.Supplier;
+
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -35,18 +37,18 @@ public class CommunicationDiscoveryEventListener implements GridLocalEventListen
     private final ConnectionClientPool clientPool;
 
     /** Statistics. */
-    private final TcpCommunicationMetricsListener metricsLsnr;
+    private final Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier;
 
     /**
      * @param clientPool Client pool.
-     * @param metricsLsnr Metrics listener.
+     * @param metricLsnrSupplier Metrics listener supplier.
      */
     public CommunicationDiscoveryEventListener(
         ConnectionClientPool clientPool,
-        TcpCommunicationMetricsListener metricsLsnr
+        Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier
     ) {
         this.clientPool = clientPool;
-        this.metricsLsnr = metricsLsnr;
+        this.metricLsnrSupplier = metricLsnrSupplier;
     }
 
     /** {@inheritDoc} */
@@ -71,7 +73,7 @@ public class CommunicationDiscoveryEventListener implements GridLocalEventListen
     private void onNodeLeft(Object consistentId, UUID nodeId) {
         assert nodeId != null;
 
-        metricsLsnr.onNodeLeft(consistentId);
+        metricLsnrSupplier.get().onNodeLeft(consistentId);
 
         clientPool.onNodeLeft(nodeId);
     }
