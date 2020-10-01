@@ -19,63 +19,89 @@ package org.apache.ignite.internal;
 import java.lang.reflect.Constructor;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 /**
  * Using cache API in P2P closure.
  */
-public class P2PCacheOperationIntoCouputeTest extends GridCommonAbstractTest {
+public class P2PCacheOperationIntoComputeTest extends GridCommonAbstractTest {
 
     /** Person class name. */
-    public static final String PERSON_CLASS_NAME = "org.apache.ignite.tests.p2p.cache.Person";
+    private static final String PERSON_CLASS_NAME = "org.apache.ignite.tests.p2p.cache.Person";
 
     /** Closure class name. */
-    public static final String AVARAGE_PERSON_SALERY_CLOSURE_NAME = "org.apache.ignite.tests.p2p.compute.AvaragePersonSaleryCallable";
+    private static final String AVERAGE_PERSON_SALARY_CLOSURE_NAME = "org.apache.ignite.tests.p2p.compute.AveragePersonSalaryCallable";
+
+    /** Transactional cache name. */
+    private static final String DEFAULT_TX_CACHE_NAME = DEFAULT_CACHE_NAME + "_tx";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME));
+            .setConsistentId(igniteInstanceName)
+            .setFailureDetectionTimeout(60_000)
+            .setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME),
+                new CacheConfiguration(DEFAULT_TX_CACHE_NAME)
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void test() throws Exception {
-        Constructor personCtor = getExternalClassLoader().loadClass(PERSON_CLASS_NAME).getConstructor(String.class);
-
-        IgniteCallable<Double> avgSaleryClosure = (IgniteCallable<Double>)getExternalClassLoader().loadClass(AVARAGE_PERSON_SALERY_CLOSURE_NAME)
-            .getConstructor(String.class, int.class, int.class).newInstance(DEFAULT_CACHE_NAME, 0, 10);
-
         Ignite ignite0 = startGrids(2);
 
         awaitPartitionMapExchange();
 
         Ignite client = startClientGrid(2);
 
-        IgniteCache cache = client.cache(DEFAULT_CACHE_NAME);
+        calculateAverageSalary(client, DEFAULT_CACHE_NAME);
+        calculateAverageSalary(client, DEFAULT_TX_CACHE_NAME);
+    }
+
+    /**
+     * Launches a closure which is initiated in a client node, but is executed in server. The closure are manipulating
+     * with a data through user's classes.
+     *
+     * @param client Client node.
+     * @param cacheName Cache name.
+     * @throws Exception If failed.
+     */
+    private void calculateAverageSalary(
+        Ignite client,
+        String cacheName
+    ) throws Exception {
+        Constructor personCtor = getExternalClassLoader().loadClass(PERSON_CLASS_NAME).getConstructor(String.class);
+
+        IgniteCallable<Double> avgSalaryClosure = (IgniteCallable<Double>)getExternalClassLoader().loadClass(AVERAGE_PERSON_SALARY_CLOSURE_NAME)
+            .getConstructor(String.class, int.class, int.class).newInstance(cacheName, 0, 10);
+
+        IgniteCache cache = client.cache(cacheName);
 
         for (int i = 0; i < 10; i++)
             cache.put(i, createPerson(personCtor, i));
 
-        Double avg = client.compute().call(avgSaleryClosure);
+        Double avg = client.compute().call(avgSalaryClosure);
 
-        info("Avarege salery is " + avg);
+        info("Average salary is " + avg);
     }
 
     /**
-     * Creates a new persone instance.
+     * Creates a new person instance.
      *
      * @param personConst Constructor.
      * @param id Person id.
      * @return A person instance.
      * @throws Exception If failed.
      */
-    @NotNull private Object createPerson(Constructor personConst, int id) throws Exception {
+    private Object createPerson(Constructor personConst, int id) throws Exception {
         Object person = personConst.newInstance("Person" + id);
         GridTestUtils.setFieldValue(person, "id", id);
         GridTestUtils.setFieldValue(person, "lastName", "Last name " + id);

@@ -1791,10 +1791,11 @@ public class GridCacheContext<K, V> implements Externalizable {
      *
      * @param o Object to unwrap.
      * @param keepBinary Keep binary flag.
+     * @param ldr Class loader, used for deserialization from binary representation.
      * @return Unwrapped object.
      */
-    public Object unwrapBinaryIfNeeded(Object o, boolean keepBinary) {
-        return unwrapBinaryIfNeeded(o, keepBinary, true, null);
+    public Object unwrapBinaryIfNeeded(Object o, boolean keepBinary, @Nullable ClassLoader ldr) {
+        return unwrapBinaryIfNeeded(o, keepBinary, true, ldr);
     }
 
     /**

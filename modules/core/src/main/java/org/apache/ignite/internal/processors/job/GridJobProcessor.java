@@ -286,7 +286,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
     };
 
     /** Current session. */
-    public final ThreadLocal<GridJobSessionImpl> currSess = new ThreadLocal<>();
+    private final ThreadLocal<GridJobSessionImpl> currSess = new ThreadLocal<>();
 
     /**
      * @param ctx Kernal context.
@@ -1402,6 +1402,20 @@ public class GridJobProcessor extends GridProcessorAdapter {
             return null;
 
         return ses.getTaskName();
+    }
+
+    /**
+     * Returns current deployment.
+     *
+     * @return Deployment.
+     */
+    public GridDeployment currentDeployment() {
+        GridJobSessionImpl session = currSess.get();
+
+        if (session == null || session.deployment() == null)
+            return null;
+
+        return session.deployment();
     }
 
     /**

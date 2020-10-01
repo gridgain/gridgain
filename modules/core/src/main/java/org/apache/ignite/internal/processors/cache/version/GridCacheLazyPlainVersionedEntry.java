@@ -83,7 +83,7 @@ public class GridCacheLazyPlainVersionedEntry<K, V> extends GridCachePlainVersio
     /** {@inheritDoc} */
     @Override public K key() {
         if (key == null)
-            key = (K)cctx.unwrapBinaryIfNeeded(keyObj, keepBinary);
+            key = (K)cctx.unwrapBinaryIfNeeded(keyObj, keepBinary, null);
 
         return key;
     }

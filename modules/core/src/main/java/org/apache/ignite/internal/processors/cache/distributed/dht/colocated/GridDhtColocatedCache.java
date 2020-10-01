@@ -520,7 +520,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
                                     0,
                                     0,
                                     needVer,
-                                    null);
+                                    U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())));
 
                                 if (evt) {
                                     ctx.events().readEvent(key,
@@ -610,7 +610,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
                                             0,
                                             0,
                                             needVer,
-                                            null);
+                                            U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())));
                                     }
                                 }
                                 else

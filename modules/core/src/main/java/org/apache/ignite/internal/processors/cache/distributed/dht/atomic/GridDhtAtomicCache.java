@@ -1491,7 +1491,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     0,
                                     0,
                                     needVer,
-                                    deserializeBinary ? U.jobDeploymentClassLoader(ctx.kernalContext()) : null);
+                                    U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())));
 
                                 if (evt) {
                                     ctx.events().readEvent(key,
@@ -1576,7 +1576,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                             0,
                                             0,
                                             needVer,
-                                            deserializeBinary ? U.jobDeploymentClassLoader(ctx.kernalContext()) : null);
+                                            U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())));
                                     }
                                 }
                                 else
@@ -2071,7 +2071,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
 
         if (retVal == null)
-            retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, true);
+            retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, null, true);
 
         res.returnValue(retVal);
 
@@ -2728,6 +2728,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         retVal = new GridCacheReturn(ctx,
                             nearNode.isLocal(),
                             req.keepBinary(),
+                            U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())),
                             req.returnValue() ? ret : null,
                             updRes.success());
                     }

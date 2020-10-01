@@ -41,6 +41,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
+import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheObject;
@@ -55,6 +56,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
+import org.apache.ignite.internal.processors.cache.IgnitePeerToPeerClassLoadingException;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
@@ -1499,7 +1501,13 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                         entryProcessor != null ? TRANSFORM : old != null ? UPDATE : CREATE;
 
                     if (old != null && hasFilters && !filter(entry.context(), cacheKey, old, filter)) {
-                        ret.set(cacheCtx, old, false, keepBinary);
+                        ret.set(
+                            cacheCtx,
+                            old,
+                            false,
+                            keepBinary,
+                            U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId)
+                        );
 
                         if (!readCommitted()) {
                             if (optimistic() && serializable()) {
@@ -1587,7 +1595,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                 assert txEntry.op() != TRANSFORM : txEntry;
 
                                 if (retval)
-                                    ret.set(cacheCtx, null, true, keepBinary);
+                                    ret.set(cacheCtx, null, true, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                                 else
                                     ret.success(true);
                             }
@@ -1600,7 +1608,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                             }
 
                             if (retval && !transform)
-                                ret.set(cacheCtx, old, true, keepBinary);
+                                ret.set(cacheCtx, old, true, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                             else {
                                 if (txEntry.op() == TRANSFORM) {
                                     GridCacheVersion ver;
@@ -1628,7 +1636,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                     // Pessimistic.
                     else {
                         if (retval && !transform)
-                            ret.set(cacheCtx, old, true, keepBinary);
+                            ret.set(cacheCtx, old, true, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                         else
                             ret.success(true);
                     }
@@ -1654,7 +1662,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             if (!del) {
                 if (hasFilters && !filter(entry.context(), cacheKey, v, filter)) {
-                    ret.set(cacheCtx, v, false, keepBinary);
+                    ret.set(cacheCtx, v, false, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
 
                     return loadMissed;
                 }
@@ -1708,7 +1716,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                 txEntry.markValid();
 
                 if (retval && !transform)
-                    ret.set(cacheCtx, v, true, keepBinary);
+                    ret.set(cacheCtx, v, true, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                 else
                     ret.success(true);
             }
@@ -1930,7 +1938,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                         try {
                             txFut.get();
 
-                            return new GridCacheReturn(cacheCtx, true, keepBinary,
+                            return new GridCacheReturn(cacheCtx, true, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId),
                                 implicitRes.value(), implicitRes.success());
                         }
                         catch (IgniteCheckedException | RuntimeException e) {
@@ -2153,7 +2161,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                         val = cacheCtx.unwrapInvokeResult((Map)val, keepBinary);
                     }
 
-                    return new GridCacheReturn(cacheCtx, true, keepBinary, val, futRes.success());
+                    return new GridCacheReturn(cacheCtx, true, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId), val, futRes.success());
                 }
             }));
         }
@@ -2395,7 +2403,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                             0,
                                             0,
                                             needVer,
-                                            null);
+                                            U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
 
                                         if (readVer != null)
                                             txEntry.entryReadVersion(readVer);
@@ -2627,7 +2635,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                             }
 
                             cacheCtx.addResult(map, key, val, skipVals, keepCacheObjects, deserializeBinary, false,
-                                ver, 0, 0, null);
+                                ver, 0, 0, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                         }
                     }
                     else {
@@ -2694,7 +2702,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                         0,
                                         0,
                                         needVer,
-                                        null);
+                                        U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                                 }
                                 else
                                     missed.put(key, txEntry.cached().version());
@@ -2775,7 +2783,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                         0,
                                         0,
                                         needVer,
-                                        null);
+                                        U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                                 }
                                 else
                                     missed.put(key, ver);
@@ -2888,7 +2896,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                         assert !hasFilters && !retval;
                         assert val == null || Boolean.TRUE.equals(val) : val;
 
-                        ret.set(cacheCtx, null, val != null, keepBinary);
+                        ret.set(cacheCtx, null, val != null, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                     }
                     else {
                         CacheObject cacheVal = cacheCtx.toCacheObject(val);
@@ -2927,7 +2935,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                             else
                                 success = true;
 
-                            ret.set(cacheCtx, cacheVal, success, keepBinary);
+                            ret.set(cacheCtx, cacheVal, success, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                         }
                     }
                 }
@@ -2987,7 +2995,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                 res = cacheCtx.unwrapInvokeResult((Map)res, keepBinary);
                             }
 
-                            return new GridCacheReturn(cacheCtx, true, keepBinary, res, implicitRes.success());
+                            return new GridCacheReturn(cacheCtx, true, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId), res, implicitRes.success());
                         }
                         catch (IgniteCheckedException | RuntimeException e) {
                             if (!(e instanceof NodeStoppingException))
@@ -3979,6 +3987,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         mapExplicitLocks();
 
+        if (cctx.kernalContext().deploy().enabled() && deploymentLdrId != null)
+            U.restoreDeploymentContext(cctx.kernalContext(), deploymentLdrId);
+
         fut.prepare();
 
         return fut;
@@ -4853,7 +4864,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                     needVer ? loadVer : null,
                                     0,
                                     0,
-                                    null);
+                                    U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                             }
                         }
                         else {
@@ -4878,7 +4889,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                     needVer ? loadVer : null,
                                     0,
                                     0,
-                                    null);
+                                    U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                             }
                         }
                     }

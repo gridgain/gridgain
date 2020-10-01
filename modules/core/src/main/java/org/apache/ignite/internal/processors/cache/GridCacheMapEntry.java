@@ -6889,6 +6889,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             IgniteThread.onEntryProcessorEntered(true);
 
+            if (invokeEntry.cctx.kernalContext().deploy().enabled() &&
+                invokeEntry.cctx.kernalContext().deploy().isGlobalLoader(entryProcessor.getClass().getClassLoader())) {
+                U.restoreDeploymentContext(invokeEntry.cctx.kernalContext(), invokeEntry.cctx.kernalContext()
+                    .deploy().getClassLoaderId(entryProcessor.getClass().getClassLoader()));
+            }
+
             try {
                 Object computed = entryProcessor.process(invokeEntry, invokeArgs);
 

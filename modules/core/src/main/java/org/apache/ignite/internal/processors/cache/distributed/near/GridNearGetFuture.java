@@ -690,7 +690,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
                         needVer ? info.version() : null,
                         0,
                         0,
-                        deploymentLdr);
+                        U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                 }
                 catch (GridCacheEntryRemovedException ignore) {
                     if (log.isDebugEnabled())

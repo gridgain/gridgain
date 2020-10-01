@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
@@ -225,6 +226,10 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
     /** */
     private CountDownLatch timeoutAddedLatch;
 
+    /** Deployment class loader id which will be used for deserialization of entries on a distributed task. */
+    @GridToStringExclude
+    protected final IgniteUuid deploymentLdrId;
+
     /**
      * @param cctx Context.
      * @param tx Transaction.
@@ -249,6 +254,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         this.tx = tx;
         this.dhtVerMap = dhtVerMap;
         this.last = last;
+        this.deploymentLdrId = U.contextDeploymentClassLoaderId(cctx.kernalContext());
 
         futId = IgniteUuid.randomUuid();
 
@@ -358,7 +364,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
      *
      */
     private void onEntriesLocked() {
-        ret = new GridCacheReturn(null, tx.localResult(), true, null, true);
+        ret = new GridCacheReturn(null, tx.localResult(), true, null, null, true);
 
         for (IgniteTxEntry writeEntry : req.writes()) {
             IgniteTxEntry txEntry = tx.entry(writeEntry.txKey());
@@ -445,11 +451,17 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                                 CacheInvokeEntry<Object, Object> invokeEntry = new CacheInvokeEntry<>(key, val,
                                     txEntry.cached().version(), keepBinary, txEntry.cached());
 
+                                EntryProcessor<Object, Object, Object> processor = t.get1();
+
                                 IgniteThread.onEntryProcessorEntered(false);
 
-                                try {
-                                    EntryProcessor<Object, Object, Object> processor = t.get1();
+                                if (cctx.kernalContext().deploy().enabled() &&
+                                    cctx.kernalContext().deploy().isGlobalLoader(processor.getClass().getClassLoader())) {
+                                    U.restoreDeploymentContext(cctx.kernalContext(), cctx.kernalContext()
+                                        .deploy().getClassLoaderId(processor.getClass().getClassLoader()));
+                                }
 
+                                try {
                                     procRes = processor.process(invokeEntry, t.get2());
 
                                     val = cacheCtx.toCacheObject(invokeEntry.getValue(true));
@@ -499,8 +511,14 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                                     ret.invokeResult(true);
                             }
                         }
-                        else if (retVal)
-                            ret.value(cacheCtx, val, keepBinary);
+                        else if (retVal) {
+                            assert keepBinary || tx instanceof GridNearTxLocal || !tx.localResult() :
+                                "An attempt to deserialize entry in not near node [key=" + txEntry.key() +
+                                    ", tx=" + tx.getClass().getSimpleName() +
+                                    ", cache="  + cctx.cacheContext(txEntry.cacheId()).name() + ']';
+
+                            ret.value(cacheCtx, val, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
+                        }
                     }
 
                     if (hasFilters && !cacheCtx.isAll(cached, txEntry.filters())) {
@@ -1984,8 +2002,18 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                                         null, null, EVT_CACHE_REBALANCE_OBJECT_LOADED, info.value(), true, null,
                                         false, null, null, null, false);
 
-                                if (retVal && !invoke)
-                                    ret.value(cacheCtx, info.value(), false);
+                                if (retVal && !invoke) {
+                                    assert tx instanceof GridNearTxLocal || !tx.localResult() :
+                                        "An attempt to deserialize entry in not near node [key=" + info.key() +
+                                            ", tx=" + this.getClass().getSimpleName() + ']';
+
+                                    ret.value(
+                                        cacheCtx,
+                                        info.value(),
+                                        false,
+                                        U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId)
+                                    );
+                                }
                             }
 
                             break;

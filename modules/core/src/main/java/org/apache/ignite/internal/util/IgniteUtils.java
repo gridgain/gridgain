@@ -219,6 +219,7 @@ import org.apache.ignite.internal.processors.cache.CacheClassLoaderMarker;
 import org.apache.ignite.internal.processors.cache.GridCacheAttributes;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.IgnitePeerToPeerClassLoadingException;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.transactions.IgniteTxAlreadyCompletedCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
@@ -6091,6 +6092,21 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Gets a name of class by it resource name.
+     *
+     * @param rsrcName Resource name.
+     * @return Class name.
+     */
+    public static String resourceNameToClassName(String rsrcName) {
+        if (!rsrcName.endsWith(".class"))
+            return rsrcName;
+
+        String classWithSuffix = rsrcName.replaceAll("/", ".");
+
+        return classWithSuffix.substring(0, classWithSuffix.length() - ".class".length());
+    }
+
+    /**
      * Gets runtime MBean.
      *
      * @return Runtime MBean.
@@ -7787,17 +7803,66 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Returns a job's deployment class loder or {@code null}.
+     * Returns Deployment class loader id if method was invoked in the job context or {@code null}
+     * if nothing context found or Deployment is switched off.
      *
      * @param ctx Kernal context.
-     * @return Deployment class loader or {@code null}.
+     * @return Deployment class loader id or {@code null}.
      */
-    public static ClassLoader jobDeploymentClassLoader(GridKernalContext ctx) {
-        if (ctx == null || ctx.job() == null || ctx.job().currSess.get() == null ||
-            ctx.job().currSess.get().deployment() == null)
+    public static IgniteUuid contextDeploymentClassLoaderId(GridKernalContext ctx) {
+        if (ctx == null || !ctx.deploy().enabled())
             return null;
 
-        return ctx.job().currSess.get().deployment().classLoader();
+        if (ctx.job() != null && ctx.job().currentDeployment() != null)
+            return ctx.job().currentDeployment().classLoaderId();
+
+        if (ctx.cache() != null && ctx.cache().context() != null)
+            return ctx.cache().context().deploy().locLoaderId();
+
+        return null;
+    }
+
+    /**
+     * Gets that deployment class loader matching by the specific id, or {@code null}
+     * if the class loader was not found.
+     *
+     * @param ctx Kernal context.
+     * @param ldrId Class loader id.
+     * @return Deployment class loader or {@code null}.
+     */
+    public static ClassLoader deploymentClassLoader(GridKernalContext ctx, IgniteUuid ldrId) {
+        if (ldrId == null || !ctx.deploy().enabled())
+            return null;
+
+        GridDeployment dep = ctx.deploy().getDeployment(ldrId);
+
+        return dep == null ? null : dep.classLoader();
+    }
+
+    /**
+     * Restores a deployment context for cache deployment.
+     *
+     * @param ctx Kernal context.
+     * @param ldrId Class loader id.
+     */
+    public static void restoreDeploymentContext(GridKernalContext ctx, IgniteUuid ldrId) {
+        if (ctx.deploy().enabled() && ldrId != null) {
+            GridDeployment dep = ctx.deploy().getDeployment(ldrId);
+
+            try {
+                ctx.cache().context().deploy().p2pContext(
+                    dep.classLoaderId().globalId(),
+                    dep.classLoaderId(),
+                    dep.userVersion(),
+                    dep.deployMode(),
+                    dep.participants()
+                );
+            }
+            catch (IgnitePeerToPeerClassLoadingException e) {
+                ctx.log(ctx.cache().context().deploy().getClass())
+                    .error("Could not restore P2P context [ldrId=" + ldrId + ']', e);
+            }
+        }
     }
 
     /**

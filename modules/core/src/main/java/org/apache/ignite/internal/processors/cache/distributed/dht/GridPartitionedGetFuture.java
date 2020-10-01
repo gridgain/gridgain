@@ -570,7 +570,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                         0,
                         0,
                         needVer,
-                        deploymentLdr);
+                        U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
 
                     return true;
                 }
@@ -654,7 +654,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                     needVer ? info.version() : null,
                     0,
                     0,
-                    deploymentLdr);
+                    U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
             }
 
             return map;

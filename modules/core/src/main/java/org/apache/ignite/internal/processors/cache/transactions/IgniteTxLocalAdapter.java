@@ -34,6 +34,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
@@ -53,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUpdateTxResult;
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
+import org.apache.ignite.internal.processors.cache.IgnitePeerToPeerClassLoadingException;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.PartitionUpdateCountersMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -69,6 +71,7 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.GridTuple;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.CX1;
@@ -1266,8 +1269,18 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                 addInvokeResult(txEntry, v, ret, ver);
                             }
                         }
-                        else
-                            ret.value(cacheCtx, v, txEntry.keepBinary());
+                        else {
+                            assert txEntry.keepBinary() || this instanceof GridNearTxLocal || !localResult() :
+                                "An attempt to deserialize entry in not near node [key=" + txEntry.key() +
+                                    ", tx=" + this.getClass().getSimpleName() + ']';
+
+                            ret.value(
+                                cacheCtx,
+                                v,
+                                txEntry.keepBinary(),
+                                U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId)
+                            );
+                        }
                     }
 
                     boolean pass = F.isEmpty(filter) || cacheCtx.isAll(cached, filter);
@@ -1337,6 +1350,9 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
         Object val0 = null;
 
         IgniteThread.onEntryProcessorEntered(true);
+
+        if (cctx.kernalContext().deploy().enabled() && deploymentLdrId != null)
+            U.restoreDeploymentContext(cctx.kernalContext(), deploymentLdrId);
 
         try {
             Object res = null;
