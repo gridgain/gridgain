@@ -3023,7 +3023,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             while (true) {
                 GridDhtCacheEntry entry = entryExx(key, topVer);
 
-                entry.lockEntry();
+                entry.lockEntry(true);
 
                 if (entry.obsolete())
                     entry.unlockEntry();
@@ -3049,7 +3049,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     if (entry == null)
                         continue;
 
-                    entry.lockEntry();
+                    entry.lockEntry(true);
 
                     if (entry.obsolete()) {
                         // Unlock all locked.
