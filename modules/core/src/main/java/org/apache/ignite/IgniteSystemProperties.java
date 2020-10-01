@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.lang.IgniteExperimental;
+import org.apache.ignite.mxbean.MetricsMxBean;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
@@ -348,6 +349,11 @@ public final class IgniteSystemProperties {
      * should be rechecked and potentially trimmed. Default value is {@code 10,000ms}.
      */
     public static final String IGNITE_MARSHAL_BUFFERS_RECHECK = "IGNITE_MARSHAL_BUFFERS_RECHECK";
+
+    /**
+     * System property to specify per thread binary allocator chunk pool size. Default value is {@code 32}.
+     */
+    public static final String IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE = "IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE";
 
     /**
      * System property to disable {@link HostnameVerifier} for SSL connections.
@@ -741,7 +747,9 @@ public final class IgniteSystemProperties {
 
     /**
      * Time interval for calculating rebalance rate statistics, in milliseconds. Defaults to 60000.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public static final String IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL = "IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL";
 
     /**
@@ -779,16 +787,6 @@ public final class IgniteSystemProperties {
      * WAL rebalance threshold.
      */
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
-
-    /**
-     * Margin for WAL iterator, that used for historical rebalance on atomic cache.
-     * It is intended for prevent  partition divergence due to reordering in WAL.
-     * <p>
-     * Default is {@code 5}. Iterator starts from 5 updates earlier than expected.
-     *
-     */
-    public static final String WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE =
-        "WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE";
 
     /**
      * Prefer historical rebalance if there's enough history regardless off all heuristics.

@@ -54,4 +54,9 @@ public interface GridRestProtocol {
      * Stops protocol.
      */
     public abstract void stop();
+
+    /**
+     * Processor start callback.
+     */
+    void onProcessorStart();
 }

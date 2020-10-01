@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.cache.CacheException;
@@ -152,6 +153,12 @@ public class H2TreeIndex extends H2TreeIndexBase {
     /** Query context registry. */
     private final QueryContextRegistry qryCtxRegistry;
 
+    /** If {code true} then this index is already marked as destroyed. */
+    private final AtomicBoolean destroyed = new AtomicBoolean();
+
+    /** IO statistics holder. */
+    private final IoStatisticsHolderIndex stats;
+
     /**
      * @param cctx Cache context.
      * @param tbl Table.
@@ -170,11 +177,14 @@ public class H2TreeIndex extends H2TreeIndexBase {
         String treeName,
         H2Tree[] segments,
         IndexColumn[] cols,
+        IoStatisticsHolderIndex stats,
         IgniteLogger log
     ) {
         super(tbl, idxName, cols,
             pk ? IndexType.createPrimaryKey(false, false) :
                 IndexType.createNonUnique(false, false, false));
+
+        this.stats = stats;
 
         this.cctx = cctx;
         ctx = cctx.kernalContext();
@@ -259,8 +269,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             SORTED_INDEX,
             cctx.name(),
             idxName,
-            cctx.kernalContext().metric(),
-            cctx.group().statisticsHolderData()
+            cctx.group().statisticsHolderData(),
+            cctx.kernalContext().metric()
         );
 
         cctx.kernalContext().ioStats().onIndexRegistered(
@@ -316,7 +326,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         IndexColumn.mapColumns(cols, tbl);
 
-        return new H2TreeIndex(cctx, tbl, idxName, pk, treeName, segments, cols, log);
+        return new H2TreeIndex(cctx, tbl, idxName, pk, treeName, segments, cols, stats, log);
     }
 
     /** {@inheritDoc} */
@@ -528,57 +538,50 @@ public class H2TreeIndex extends H2TreeIndexBase {
         return row.expireTime() > 0 && row.expireTime() <= U.currentTimeMillis();
     }
 
-    /** {@inheritDoc} */
-    @Override public void destroy(boolean rmvIdx) {
-        destroy0(rmvIdx, false);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void asyncDestroy(boolean rmvIdx) {
-        destroy0(rmvIdx, true);
-    }
-
     /**
-     * Internal method for destroying index with async option.
+     * Internal method for destroying index. For {@link H2TreeIndex} destroy operation is asynchronous.
      *
      * @param rmvIdx Flag remove.
-     * @param async Destroy asynchronously.
      */
-    private void destroy0(boolean rmvIdx, boolean async) {
+    @Override public void destroy(boolean rmvIdx) {
+        if (!markDestroyed())
+            return;
+
         try {
             if (cctx.affinityNode() && rmvIdx) {
-                assert cctx.shared().database().checkpointLockIsHeldByThread();
-
                 List<Long> rootPages = new ArrayList<>(segments.length);
                 List<H2Tree> trees = new ArrayList<>(segments.length);
 
-                for (int i = 0; i < segments.length; i++) {
-                    H2Tree tree = segments[i];
+                cctx.shared().database().checkpointReadLock();
 
-                    if (async) {
+                try {
+                    for (int i = 0; i < segments.length; i++) {
+                        H2Tree tree = segments[i];
+
                         tree.markDestroyed();
 
                         rootPages.add(tree.getMetaPageId());
                         trees.add(tree);
-                    }
-                    else
-                        tree.destroy();
 
-                    dropMetaPage(i);
+                        dropMetaPage(i);
+                    }
+                }
+                finally {
+                    cctx.shared().database().checkpointReadUnlock();
                 }
 
-                if (async) {
-                    DurableBackgroundTask task = new DurableBackgroundCleanupIndexTreeTask(
+                ctx.metric().remove(stats.metricRegistryName());
+
+                DurableBackgroundTask task = new DurableBackgroundCleanupIndexTreeTask(
                         rootPages,
                         trees,
                         cctx.group().name(),
                         cctx.cache().name(),
                         table.getSchema().getName(),
                         idxName
-                    );
+                );
 
-                    cctx.kernalContext().durableBackgroundTasksProcessor().startDurableBackgroundTask(task, cctx.config());
-                }
+                cctx.kernalContext().durableBackgroundTasksProcessor().startDurableBackgroundTask(task, cctx.config());
             }
         }
         catch (IgniteCheckedException e) {
@@ -953,6 +956,15 @@ public class H2TreeIndex extends H2TreeIndexBase {
         }
 
         return ret;
+    }
+
+    /**
+     * Marks this index as destroyed.
+     *
+     * @return {@code true} if mark was successfull, and {@code false} if index was already marked as destroyed.
+     */
+    private boolean markDestroyed() {
+        return destroyed.compareAndSet(false, true);
     }
 
     /**

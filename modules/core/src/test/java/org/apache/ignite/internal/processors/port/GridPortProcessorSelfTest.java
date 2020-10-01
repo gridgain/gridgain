@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.port;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -38,6 +40,7 @@ public class GridPortProcessorSelfTest extends GridCommonAbstractTest {
         ctx = newContext();
 
         ctx.add(new GridPortProcessor(ctx));
+        ctx.add(new GridInternalSubscriptionProcessor(ctx));
 
         ctx.start();
     }

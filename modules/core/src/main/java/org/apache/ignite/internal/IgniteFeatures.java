@@ -172,7 +172,13 @@ public enum IgniteFeatures {
     MVCC_TX_RECOVERY_PROTOCOL_V2(44),
 
     /** Pk index keys are applied in correct order. */
-    SPECIFIED_SEQ_PK_KEYS(45);
+    SPECIFIED_SEQ_PK_KEYS(45),
+
+    /** Compatibility support for new fields which are configured split. */
+    SPLITTED_CACHE_CONFIGURATIONS_V2(46),
+
+    /** Snapshots upload via sftp. */
+    SNAPSHOT_SFTP_UPLOAD(47);
 
     /**
      * Unique feature identifier.

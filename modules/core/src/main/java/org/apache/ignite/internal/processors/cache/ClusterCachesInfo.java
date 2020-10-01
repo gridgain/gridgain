@@ -51,12 +51,16 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.managers.systemview.walker.CacheGroupViewWalker;
+import org.apache.ignite.internal.managers.systemview.walker.CacheViewWalker;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
+import org.apache.ignite.spi.systemview.view.CacheGroupView;
+import org.apache.ignite.spi.systemview.view.CacheView;
 import org.apache.ignite.internal.processors.query.QuerySchema;
 import org.apache.ignite.internal.processors.query.QuerySchemaPatch;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -88,7 +92,19 @@ import static org.apache.ignite.internal.processors.datastructures.DataStructure
 /**
  * Logic related to cache discovery data processing.
  */
-class ClusterCachesInfo {
+public class ClusterCachesInfo {
+    /** */
+    public static final String CACHES_VIEW = "caches";
+
+    /** */
+    public static final String CACHES_VIEW_DESC = "Caches";
+
+    /** */
+    public static final String CACHE_GRPS_VIEW = "cacheGroups";
+
+    /** */
+    public static final String CACHE_GRPS_VIEW_DESC = "Cache groups";
+
     /** Representation of null for restarting caches map */
     private static final IgniteUuid NULL_OBJECT = new IgniteUuid();
 
@@ -154,6 +170,16 @@ class ClusterCachesInfo {
      */
     public ClusterCachesInfo(GridKernalContext ctx) {
         this.ctx = ctx;
+
+        ctx.systemView().registerView(CACHES_VIEW, CACHES_VIEW_DESC,
+            new CacheViewWalker(),
+            registeredCaches.values(),
+            CacheView::new);
+
+        ctx.systemView().registerView(CACHE_GRPS_VIEW, CACHE_GRPS_VIEW_DESC,
+            new CacheGroupViewWalker(),
+            registeredCacheGrps.values(),
+            CacheGroupView::new);
 
         log = ctx.log(getClass());
     }
@@ -2579,7 +2605,7 @@ class ClusterCachesInfo {
                 if (o1.cacheType().userCache() ^ o2.cacheType().userCache())
                     return o2.cacheType().userCache() ? -1 : 1;
 
-                return o1.cacheId().compareTo(o2.cacheId());
+                return Integer.compare(o1.cacheId(), o2.cacheId());
             }
         };
 

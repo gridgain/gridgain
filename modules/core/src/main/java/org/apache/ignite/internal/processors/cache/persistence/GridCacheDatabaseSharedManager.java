@@ -1949,6 +1949,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
     }
 
+    /** {@inheritDoc} */
+    @Override public WALPointer latestWalPointerReservedForPreloading() {
+        return reservedForPreloading;
+    }
+
     /**
      *
      */
@@ -2491,7 +2496,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      */
     private int semaphorePertmits(StripedExecutor exec) {
         // 4 task per-stripe by default.
-        int permits = exec.stripes() * 4;
+        int permits = exec.stripesCount() * 4;
 
         long maxMemory = Runtime.getRuntime().maxMemory();
 
@@ -2572,7 +2577,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         assert exec != null;
         assert semaphore != null;
 
-        int stripes = exec.stripes();
+        int stripes = exec.stripesCount();
 
         int stripe = U.stripeIdx(stripes, grpId, partId);
 
@@ -2741,7 +2746,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         AtomicReference<IgniteCheckedException> applyError = new AtomicReference<>();
 
-        int[] stripesThrottleAccumulator = new int[exec.stripes()];
+        int[] stripesThrottleAccumulator = new int[exec.stripesCount()];
 
         while (it.hasNext()) {
             IgniteBiTuple<WALPointer, WALRecord> next = it.next();
@@ -2848,11 +2853,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (applyError.get() != null)
             throw new IgniteException(applyError.get()); // Fail-fast check.
         else {
-            CountDownLatch stripesClearLatch = new CountDownLatch(exec.stripes());
+            CountDownLatch stripesClearLatch = new CountDownLatch(exec.stripesCount());
 
             // We have to ensure that all asynchronous updates are done.
             // StripedExecutor guarantees ordering inside stripe - it would enough to await "finishing" tasks.
-            for (int i = 0; i < exec.stripes(); i++)
+            for (int i = 0; i < exec.stripesCount(); i++)
                 exec.execute(i, stripesClearLatch::countDown);
 
             try {
@@ -2888,7 +2893,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (applyError.get() != null)
             throw applyError.get();
 
-        int stripeIdx = dataEntry.partitionId() % exec.stripes();
+        int stripeIdx = dataEntry.partitionId() % exec.stripesCount();
 
         assert stripeIdx >= 0 : "Stripe index should be non-negative: " + stripeIdx;
 
