@@ -364,10 +364,20 @@ class TcpClientChannel implements ClientChannel {
         if (e.getCause() instanceof ClientError)
             return new ClientException(e.getMessage(), e.getCause());
 
+        // For every known class derived from ClientException, wrap cause in a new instance.
+        // We could rethrow e.getCause() when instanceof ClientException,
+        // but this results in a cryptic and incomplete stack trace.
+        if (e.getCause() instanceof ClientConnectionException)
+            return new ClientConnectionException(e.getMessage(), e.getCause());
+
+        if (e.getCause() instanceof ClientAuthenticationException)
+            return new ClientAuthenticationException(e.getMessage(), e.getCause());
+
+        if (e.getCause() instanceof ClientAuthorizationException)
+            return new ClientAuthorizationException(e.getMessage(), e.getCause());
+
         if (e.getCause() instanceof ClientException)
-            // TODO: This produces a very cryptic stack trace - is there a way to create an exception of the
-            // same type as the cause?
-            return (ClientException) e.getCause();
+            return new ClientException(e.getMessage(), e.getCause());
 
         return new ClientException(e.getMessage(), e);
     }
