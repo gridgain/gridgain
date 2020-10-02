@@ -365,6 +365,8 @@ class TcpClientChannel implements ClientChannel {
             return new ClientException(e.getMessage(), e.getCause());
 
         if (e.getCause() instanceof ClientException)
+            // TODO: This produces a very cryptic stack trace - is there a way to create an exception of the
+            // same type as the cause?
             return (ClientException) e.getCause();
 
         return new ClientException(e.getMessage(), e);
