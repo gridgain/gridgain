@@ -420,21 +420,37 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} */
     @Override public int getSentMessagesCount() {
+        // Listener could be not initialized yet, but discovery thread could try to aggregate metrics.
+        if (metricsLsnr == null)
+            return 0;
+
         return metricsLsnr.sentMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getSentBytesCount() {
+        // Listener could be not initialized yet, but discovery thread clould try to aggregate metrics.
+        if (metricsLsnr == null)
+            return 0;
+
         return metricsLsnr.sentBytesCount();
     }
 
     /** {@inheritDoc} */
     @Override public int getReceivedMessagesCount() {
+        // Listener could be not initialized yet, but discovery thread could try to aggregate metrics.
+        if (metricsLsnr == null)
+            return 0;
+
         return metricsLsnr.receivedMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getReceivedBytesCount() {
+        // Listener could be not initialized yet, but discovery thread could try to aggregate metrics.
+        if (metricsLsnr == null)
+            return 0;
+
         return metricsLsnr.receivedBytesCount();
     }
 
@@ -637,6 +653,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         final Supplier<Ignite> igniteExSupplier = this::ignite;
         final Function<UUID, Boolean> pingNode = (nodeId) -> getSpiContext().pingNode(nodeId);
         final Supplier<FailureProcessor> failureProcessorSupplier = () -> ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().failure() : null;
+        final Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier = () -> metricsLsnr;
         final Supplier<Boolean> isStopped = () -> getSpiContext().isStopping();
 
         cfg.failureDetectionTimeout(ignite.configuration().getFailureDetectionTimeout());
@@ -685,7 +702,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             connectGate,
             failureProcessorSupplier,
             attributeNames,
-            metricsLsnr,
+            metricLsnrSupplier,
             nioSrvWrapper,
             ctxInitLatch,
             client,
@@ -730,7 +747,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             cfg,
             attributeNames,
             log,
-            metricsLsnr,
+            metricLsnrSupplier,
             locNodeSupplier,
             nodeGetter,
             null,
@@ -746,7 +763,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
         nioSrvWrapper.clientPool(clientPool);
 
-        discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricsLsnr);
+        discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricLsnrSupplier);
 
         try {
             shmemSrv = resetShmemServer();
@@ -819,7 +836,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 "potential OOMEs when running cache operations in FULL_ASYNC or PRIMARY_SYNC modes " +
                 "due to message queues growth on sender and receiver sides.");
 
-        registerMBean(igniteInstanceName, new TcpCommunicationSpiMBeanImpl(this, metricsLsnr, cfg, stateProvider), TcpCommunicationSpiMBean.class);
+        registerMBean(
+                igniteInstanceName,
+                new TcpCommunicationSpiMBeanImpl(
+                        this, metricLsnrSupplier, cfg, stateProvider
+                ),
+                TcpCommunicationSpiMBean.class
+        );
 
         if (shmemSrv != null) {
 
@@ -925,6 +948,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         spiCtx.addLocalEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
         ctxInitLatch.countDown();
+
+        metricsLsnr = new TcpCommunicationMetricsListener(ignite, spiCtx);
     }
 
     /** {@inheritDoc} */

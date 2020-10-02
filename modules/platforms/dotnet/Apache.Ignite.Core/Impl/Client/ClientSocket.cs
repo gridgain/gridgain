@@ -875,7 +875,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         private static Stream GetSocketStream(Socket socket, IgniteClientConfiguration cfg, string host)
         {
-            var stream = new NetworkStream(socket)
+            var stream = new NetworkStream(socket, ownsSocket: true)
             {
                 WriteTimeout = (int) cfg.SocketTimeout.TotalMilliseconds
             };
@@ -998,8 +998,10 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 _exception = _exception ?? new ObjectDisposedException(typeof(ClientSocket).FullName);
                 EndRequestsWithError();
-                _stream.Dispose();
-                _socket.Dispose();
+                
+                // This will call Socket.Shutdown and Socket.Close.
+                _stream.Close();
+                
                 _listenerEvent.Set();
                 _listenerEvent.Dispose();
 
