@@ -131,7 +131,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         CacheGroupContext grp,
         GridDhtLocalPartition part,
         GridFutureAdapter<?> finishFut,
-        EvictReason evictReason
+        EvictReason reason
     ) {
         assert nonNull(grp);
         assert nonNull(part);
@@ -147,8 +147,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
             GroupEvictionContext grpEvictionCtx = evictionGroupsMap.computeIfAbsent(
                 grpId, k -> new GroupEvictionContext(grp));
-
-            EvictReason reason = part.state() == RENTING ? EvictReason.EVICTION : EvictReason.CLEARING;
 
             if (log.isDebugEnabled())
                 log.debug("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()

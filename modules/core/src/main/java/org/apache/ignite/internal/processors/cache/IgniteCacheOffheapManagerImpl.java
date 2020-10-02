@@ -724,8 +724,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         GridCacheVersion obsoleteVer = null;
 
         try (GridCloseableIterator<CacheDataRow> it = grp.isLocal() ?
-            iterator(cctx.cacheId(), cacheDataStores().iterator(), null, null, true) :
-            evictionSafeIterator(cctx.cacheId(), cacheDataStores().iterator(), true)) {
+            iterator(cctx.cacheId(), cacheDataStores().iterator(), null, null, DATA_AND_TOMBSONES) :
+            evictionSafeIterator(cctx.cacheId(), cacheDataStores().iterator(), DATA_AND_TOMBSONES)) {
             while (it.hasNext()) {
                 cctx.shared().database().checkpointReadLock();
 
@@ -868,7 +868,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Nullable MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled
     ) {
-        return iterator(cacheId, cacheData(primary, backups, topVer), mvccSnapshot, dataPageScanEnabled, false);
+        return iterator(cacheId, cacheData(primary, backups, topVer), mvccSnapshot, dataPageScanEnabled, DATA);
     }
 
     /** {@inheritDoc} */
@@ -879,27 +879,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (data == null)
             return new GridEmptyCloseableIterator<>();
 
-        return iterator(cacheId, singletonIterator(data), mvccSnapshot, dataPageScanEnabled, false);
+        return iterator(cacheId, singletonIterator(data), mvccSnapshot, dataPageScanEnabled, DATA);
     }
 
     /** {@inheritDoc} */
-    @Override public GridIterator<CacheDataRow> partitionIterator(int part, boolean withTombstones) {
+    @Override public GridIterator<CacheDataRow> partitionIterator(int part, int flags) {
         CacheDataStore data = partitionData(part);
 
         if (data == null)
             return new GridEmptyCloseableIterator<>();
 
-        return iterator(CU.UNDEFINED_CACHE_ID, singletonIterator(data), null, null, withTombstones);
-    }
-
-    @Override public GridIterator<CacheDataRow> tombstoneIterator(int part) throws IgniteCheckedException {
-        CacheDataStore data = partitionData(part);
-
-        if (data == null)
-            return new GridEmptyCloseableIterator<>();
-
-        // TODO use flags
-        return iterator(CU.UNDEFINED_CACHE_ID, singletonIterator(data), null, null, false);
+        return iterator(CU.UNDEFINED_CACHE_ID, singletonIterator(data), null, null, flags);
     }
 
     /**
@@ -908,14 +898,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param dataIt Data store iterator.
      * @param mvccSnapshot Mvcc snapshot.
      * @param dataPageScanEnabled Flag to enable data page scan.
-     * @param withTombstones {@code True} if should return tombstone entries.
+     * @param flags Flags.
      * @return Rows iterator
      */
     private GridCloseableIterator<CacheDataRow> iterator(final int cacheId,
         final Iterator<CacheDataStore> dataIt,
         final MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled,
-        boolean withTombstones
+        int flags
     ) {
         return new GridCloseableIteratorAdapter<CacheDataRow>() {
             /** */
@@ -953,7 +943,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                                 try {
                                     if (mvccSnapshot == null)
-                                        cur = cacheId == CU.UNDEFINED_CACHE_ID ? ds.cursor(withTombstones) : ds.cursor(cacheId, withTombstones);
+                                        cur = cacheId == CU.UNDEFINED_CACHE_ID ? ds.cursor(flags) : ds.cursor(cacheId, flags);
                                     else {
                                         cur = cacheId == CU.UNDEFINED_CACHE_ID ?
                                             ds.cursor(mvccSnapshot) : ds.cursor(cacheId, mvccSnapshot);
@@ -990,13 +980,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /**
      * @param cacheId Cache ID.
      * @param dataIt Data store iterator.
-     * @param withTombstones {@code True} if should return tombstone entries.
+     * @param flags Flags.
      * @return Rows iterator
      */
     private GridCloseableIterator<CacheDataRow> evictionSafeIterator(
         final int cacheId,
         final Iterator<CacheDataStore> dataIt,
-        boolean withTombstones
+        int flags
     ) {
         return new GridCloseableIteratorAdapter<CacheDataRow>() {
             /** */
@@ -1028,7 +1018,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                             if (!reservePartition(ds.partId()))
                                 continue;
 
-                            cur = cacheId == CU.UNDEFINED_CACHE_ID ? ds.cursor(withTombstones) : ds.cursor(cacheId, withTombstones);
+                            cur = cacheId == CU.UNDEFINED_CACHE_ID ? ds.cursor(flags) : ds.cursor(cacheId, flags);
                         }
                         else
                             break;
@@ -1706,7 +1696,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     CacheDataRow oldRow = c.oldRow();
 
-                    finishUpdate(cctx, c.newRow(), oldRow);
+                    if (isTombstone(c.newRow())) {
+                        assert oldRow != null && !isTombstone(oldRow): oldRow;
+
+                        tombstoneCreated();
+
+                        finishRemove(cctx, row.key(), oldRow, c.newRow());
+                    }
+                    else
+                        finishUpdate(cctx, c.newRow(), oldRow);
 
                     break;
                 }
@@ -2954,10 +2952,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        @Override public GridCursor<? extends CacheDataRow> cursor(boolean withTombstones) throws IgniteCheckedException {
+        @Override public GridCursor<? extends CacheDataRow> cursor(int flags) throws IgniteCheckedException {
             GridCursor<? extends CacheDataRow> cur = dataTree.find(null, null);
 
-            return withTombstones ? cur : cursorSkipTombstone(cur);
+            return flags == DATA ? cursorSkipTombstone(cur) : flags == TOMBSTONES ? cursorSkipEmpty(cur) : cur;
         }
 
         /**
@@ -2977,8 +2975,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     while (cur.next()) {
                         CacheDataRow next = cur.get();
 
+                        // TODO implement fast removal mode.
                         // If request cursor with RowData.TOMBSTONES, then for non-tombtones all fields are null.
-                        if (next.version() != null) {
+                        if (isTombstone(next)) {
                             this.next = next;
 
                             return true;
@@ -3064,14 +3063,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, boolean withTombstones) throws IgniteCheckedException {
-            return cursor(cacheId, null, null, null, null, withTombstones);
+        @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, int flags) throws IgniteCheckedException {
+            return cursor(cacheId, null, null, null, null, flags);
         }
 
         /** {@inheritDoc} */
         @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId,
             MvccSnapshot mvccSnapshot) throws IgniteCheckedException {
-            return cursor(cacheId, null, null, null, mvccSnapshot, false);
+            return cursor(cacheId, null, null, null, mvccSnapshot, DATA);
         }
 
         /** {@inheritDoc} */
@@ -3083,7 +3082,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower,
             KeyCacheObject upper, CacheDataRowAdapter.RowData x) throws IgniteCheckedException {
-            return cursor(cacheId, lower, upper, null, null, false);
+            return cursor(cacheId, lower, upper, null, null, DATA);
         }
 
         /** {@inheritDoc} */
@@ -3092,7 +3091,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             KeyCacheObject upper,
             CacheDataRowAdapter.RowData x,
             MvccSnapshot snapshot,
-            boolean withTombstones
+            int flags
         ) throws IgniteCheckedException {
             SearchRow lowerRow;
             SearchRow upperRow;
@@ -3120,8 +3119,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             else {
                 cursor = dataTree.find(lowerRow, upperRow, x);
 
-                if (!withTombstones)
+                if (flags == DATA)
                     cursor = cursorSkipTombstone(cursor);
+                else if (flags == TOMBSTONES)
+                    cursor = cursorSkipEmpty(cursor);
             }
 
             return cursor;
@@ -3168,7 +3169,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             Exception ex = null;
 
             GridCursor<? extends CacheDataRow> cur =
-                cursor(cacheId, null, null, CacheDataRowAdapter.RowData.KEY_ONLY, null, true);
+                cursor(cacheId, null, null, CacheDataRowAdapter.RowData.KEY_ONLY, null, DATA_AND_TOMBSONES);
 
             int rmv = 0;
 
@@ -3282,14 +3283,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /**
          * Called when tombstone has removed from partition.
          */
-        private void tombstoneRemoved() {
+        @Override public void tombstoneRemoved() {
             tombstonesCnt.decrementAndGet();
         }
 
         /**
          * Called when tombstone has created in partition.
          */
-        private void tombstoneCreated() {
+        @Override public void tombstoneCreated() {
             tombstonesCnt.incrementAndGet();
         }
 

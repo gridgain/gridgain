@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheMapEntryFactory;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
@@ -778,8 +779,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * Adds async task that will clear tombstone entries from partition.
      */
-    void clearTombstonesAsync() {
-        grp.shared().evict().clearTombstonesAsync(grp, this);
+    public IgniteInternalFuture<?> clearTombstonesAsync() {
+        return grp.shared().evict().clearTombstonesAsync(grp, this);
     }
 
     /**
@@ -1115,8 +1116,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         try {
             GridIterator<CacheDataRow> it0 = reason == PartitionsEvictManager.EvictReason.TOMBSTONE ?
-                grp.offheap().tombstoneIterator(id) :
-                grp.offheap().partitionIterator(id, true);
+                grp.offheap().partitionIterator(id, IgniteCacheOffheapManager.TOMBSTONES) :
+                grp.offheap().partitionIterator(id, IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
 
             while (it0.hasNext()) {
                 if ((stopCntr = (stopCntr + 1) & 1023) == 0 && evictionCtx.shouldStop())
@@ -1155,8 +1156,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     if (cached.deleted())
                         continue;
 
+                    // TODO assert instanceof GridDhtCacheEntry
                     if (cached instanceof GridDhtCacheEntry && ((GridDhtCacheEntry) cached).clearInternal(clearVer, extras)) {
                         // TODO unify removal with TS.
+                        // TODO do we really need it ?
                         removeEntry(cached);
 
                         if (rec && !hld.cctx.config().isEventsDisabled()) {

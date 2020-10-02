@@ -128,6 +128,7 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_MA
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.compareIgnoreOpCounter;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
+import static org.apache.ignite.internal.util.IgniteTree.OperationType.PUT;
 
 /**
  * Adapter for cache entry.
@@ -2713,7 +2714,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (cctx.mvccEnabled())
                 cctx.offheap().mvccRemoveAll(this);
             else
-                removeValue();
+                removeValue(); // TODO write ts on cache clear.
         }
         finally {
             unlockEntry();
@@ -5922,6 +5923,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         /** {@inheritDoc} */
         @Override public void call(@Nullable CacheDataRow row) throws IgniteCheckedException {
+            // TODO entry is locked can it happen ?
             if (row == null || !ver.equals(row.version())) {
                 op = IgniteTree.OperationType.NOOP;
 
@@ -6787,30 +6789,37 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             entry.logUpdate(op, null, newVer, 0, updateCntr0);
 
-            if (oldVal != null) {
-                assert !entry.deletedUnlocked();
-
-                if (!entry.isInternal())
-                    entry.deletedUnlocked(true);
-            }
-            else {
-                boolean new0 = entry.isStartVersion();
-
-                assert entry.deletedUnlocked() || new0 || entry.isInternal() : "Invalid entry [entry=" + this +
-                    ", locNodeId=" + cctx.localNodeId() + ']';
-
-                if (new0) {
-                    if (!entry.isInternal())
-                        entry.deletedUnlocked(true);
-                }
-            }
+//            if (oldVal != null) {
+//                assert !entry.deletedUnlocked();
+//
+//                if (!entry.isInternal())
+//                    entry.deletedUnlocked(true);
+//            }
+//            else {
+//                boolean new0 = entry.isStartVersion();
+//
+//                assert entry.deletedUnlocked() || new0 || entry.isInternal() : "Invalid entry [entry=" + this +
+//                    ", locNodeId=" + cctx.localNodeId() + ']';
+//
+//                if (new0) {
+//                    if (!entry.isInternal())
+//                        entry.deletedUnlocked(true);
+//                }
+//            }
 
             GridCacheVersion enqueueVer = newVer;
 
             entry.update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, newVer, true);
 
             treeOp = (oldRow == null || readFromStore) ? IgniteTree.OperationType.NOOP :
-                IgniteTree.OperationType.REMOVE;
+                IgniteTree.OperationType.PUT; // Always delete with tombston.
+
+            GridDhtLocalPartition part = entry.localPartition();
+
+            newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer, 0, oldRow);
+
+            if (oldRow != null && oldRow.link() == newRow.link())
+                treeOp = IgniteTree.OperationType.IN_PLACE;
 
             UpdateOutcome outcome = oldVal != null ? UpdateOutcome.SUCCESS : UpdateOutcome.REMOVE_NO_VAL;
 

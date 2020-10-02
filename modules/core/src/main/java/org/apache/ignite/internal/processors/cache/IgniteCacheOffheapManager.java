@@ -55,6 +55,11 @@ import org.jetbrains.annotations.Nullable;
  */
 @SuppressWarnings("WeakerAccess")
 public interface IgniteCacheOffheapManager {
+    public static final int DATA = 1;
+    public static final int TOMBSTONES = 2;
+    public static final int DATA_AND_TOMBSONES = DATA | TOMBSTONES;
+    public static final int PAGESCAN = 4;
+
     /**
      * @param ctx Context.
      * @param grp Cache group.
@@ -453,13 +458,11 @@ public interface IgniteCacheOffheapManager {
 
     /**
      * @param part Partition number.
-     * @param withTombstones {@code True} if should return tombstone entries.
+     * @param flags Flags.
      * @return Iterator for given partition.
      * @throws IgniteCheckedException If failed.
      */
-    public GridIterator<CacheDataRow> partitionIterator(final int part, boolean withTombstones) throws IgniteCheckedException;
-
-    public GridIterator<CacheDataRow> tombstoneIterator(final int part) throws IgniteCheckedException;
+    public GridIterator<CacheDataRow> partitionIterator(final int part, int flags) throws IgniteCheckedException;
 
     /**
      * @param part Partition number.
@@ -467,7 +470,7 @@ public interface IgniteCacheOffheapManager {
      * @throws IgniteCheckedException If failed.
      */
     public default GridIterator<CacheDataRow> partitionIterator(final int part) throws IgniteCheckedException {
-        return partitionIterator(part, false);
+        return partitionIterator(part, DATA);
     }
 
     /**
@@ -985,15 +988,15 @@ public interface IgniteCacheOffheapManager {
          * @throws IgniteCheckedException If failed.
          */
         public default GridCursor<? extends CacheDataRow> cursor() throws IgniteCheckedException {
-            return cursor(false);
+            return cursor(DATA);
         }
 
         /**
-         * @param withTombstones {@code True} if should return tombstone entries.
+         * @param flags Flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
-        public GridCursor<? extends CacheDataRow> cursor(boolean withTombstones) throws IgniteCheckedException;
+        public GridCursor<? extends CacheDataRow> cursor(int flags) throws IgniteCheckedException;
 
         /**
          * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
@@ -1011,11 +1014,11 @@ public interface IgniteCacheOffheapManager {
 
         /**
          * @param cacheId Cache ID.
-         * @param withTombstones {@code True} if should return tombstone entries.
+         * @param flags Flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
-        public GridCursor<? extends CacheDataRow> cursor(int cacheId, boolean withTombstones) throws IgniteCheckedException;
+        public GridCursor<? extends CacheDataRow> cursor(int cacheId, int flags) throws IgniteCheckedException;
 
         /**
          * @param cacheId Cache ID.
@@ -1053,7 +1056,7 @@ public interface IgniteCacheOffheapManager {
          * @param upper Upper bound.
          * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
          * @param snapshot Mvcc snapshot.
-         * @param withTombstones {@code True} if should return tombstone entries.
+         * @param flags Flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
@@ -1062,7 +1065,7 @@ public interface IgniteCacheOffheapManager {
             KeyCacheObject upper,
             CacheDataRowAdapter.RowData x,
             MvccSnapshot snapshot,
-            boolean withTombstones) throws IgniteCheckedException;
+            int flags) throws IgniteCheckedException;
 
         /**
          * Destroys the tree associated with the store.
@@ -1141,5 +1144,11 @@ public interface IgniteCacheOffheapManager {
          * @return Number of tombstone entries.
          */
         public long tombstonesCount();
+
+        /** */
+        public void tombstoneRemoved();
+
+        /** */
+        public void tombstoneCreated();
     }
 }

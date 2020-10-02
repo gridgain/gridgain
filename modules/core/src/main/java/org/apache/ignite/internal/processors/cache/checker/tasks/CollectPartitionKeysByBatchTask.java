@@ -34,6 +34,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
@@ -222,7 +223,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             // TODO should consider tombsones for part sync ?
             try (GridCursor<? extends CacheDataRow> cursor = lowerKey == null ?
-                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), false) :
+                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), IgniteCacheOffheapManager.DATA_AND_TOMBSONES) :
                 grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), lowerKey, null)) {
 
                 List<VersionedKey> partEntryHashRecords = new ArrayList<>();

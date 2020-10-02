@@ -1928,13 +1928,14 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     unlockEntries(locked, req.topologyVersion());
 
                 // Enqueue if necessary after locks release.
-                if (deleted != null) {
-                    assert !deleted.isEmpty();
-                    assert ctx.deferredDelete() : this;
-
-                    for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
-                        ctx.onDeferredDelete(e.get1(), e.get2());
-                }
+                // TODO remove deleted
+//                if (deleted != null) {
+//                    assert !deleted.isEmpty();
+//                    assert ctx.deferredDelete() : this;
+//
+//                    for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
+//                        ctx.onDeferredDelete(e.get1(), e.get2());
+//                }
 
                 // TODO handle failure: probably drop the node from topology
                 // TODO fire events only after successful fsync
@@ -3084,7 +3085,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         MTC.span().addLog(() -> "unlock.entries");
 
         // Process deleted entries before locks release.
-        assert ctx.deferredDelete() : this;
+        //assert ctx.deferredDelete() : this;
 
         // Entries to skip eviction manager notification for.
         // Enqueue entries while holding locks.
@@ -3416,8 +3417,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     null,
                                     req.transformOperation());
 
-                                if (updRes.removeVersion() != null)
-                                    ctx.onDeferredDelete(entry, updRes.removeVersion());
+//                                if (updRes.removeVersion() != null)
+//                                    ctx.onDeferredDelete(entry, updRes.removeVersion());
 
                                 entry.onUnlock();
 

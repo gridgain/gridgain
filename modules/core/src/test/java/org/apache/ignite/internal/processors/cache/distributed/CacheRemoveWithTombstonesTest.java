@@ -34,10 +34,16 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -87,6 +93,9 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        cfg.setFailureDetectionTimeout(100000);
+        cfg.setClientFailureDetectionTimeout(100000);
 
         TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
 
@@ -140,7 +149,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     public void testSimple() throws Exception {
         IgniteEx crd = startGrids(3);
 
-        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(TRANSACTIONAL));
 
         final int part = 0;
         List<Integer> keys = loadDataToPartition(part, crd.name(), DEFAULT_CACHE_NAME, 100, 0);
@@ -156,6 +165,78 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         long value = tombstoneMetric0.value();
 
         assertEquals(100, value);
+    }
+
+    @Test
+    public void testIterator() throws Exception {
+        IgniteEx crd = startGrids(3);
+
+        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(ATOMIC));
+
+        final int part = 0;
+        final int cnt = 100;
+
+        List<Integer> keys = loadDataToPartition(part, crd.name(), DEFAULT_CACHE_NAME, cnt, 0);
+
+        assertEquals(cnt, cache0.size());
+
+        List<Integer> tsKeys = new ArrayList<>();
+
+        int i = 0;
+        for (Integer key : keys) {
+            if (i++ % 2 == 0) {
+                tsKeys.add(key);
+
+                cache0.remove(key);
+            }
+        }
+
+        final LongMetric tombstoneMetric0 = crd.context().metric().registry(
+            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
+
+        assertEquals(cnt/2, tombstoneMetric0.value());
+
+        CacheGroupContext grp = crd.cachex(DEFAULT_CACHE_NAME).context().group();
+
+        List<CacheDataRow> dataRows = new ArrayList<>();
+        grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA).forEach(dataRows::add);
+
+        List<CacheDataRow> tsRows = new ArrayList<>();
+        grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.TOMBSTONES).forEach(tsRows::add);
+
+        assertNull(crd.cache(DEFAULT_CACHE_NAME).get(tsKeys.get(0)));
+
+        crd.cache(DEFAULT_CACHE_NAME).put(tsKeys.get(0), 0);
+
+        assertEquals(cnt/2 - 1, tombstoneMetric0.value());
+
+        List<CacheDataRow> dataRows0 = new ArrayList<>();
+        grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA).forEach(dataRows0::add);
+
+        List<CacheDataRow> tsRows0 = new ArrayList<>();
+        grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.TOMBSTONES).forEach(tsRows0::add);
+
+        GridDhtLocalPartition part0 = grp.topology().localPartition(part);
+
+        part0.clearTombstonesAsync().get();
+
+        List<CacheDataRow> dataRows1 = new ArrayList<>();
+        grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA).forEach(dataRows1::add);
+
+        List<CacheDataRow> tsRows1 = new ArrayList<>();
+        grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.TOMBSTONES).forEach(tsRows1::add);
+
+        assertEquals(0, tombstoneMetric0.value());
+    }
+
+    @Test
+    public void testRemoveValueUsingInvoke() {
+        // TODO
+    }
+
+    @Test
+    public void testPartitionHavingTombstonesIsRented() {
+        // TODO Data and tombstones must be cleared.
     }
 
     /**

@@ -2669,11 +2669,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
 
         /** {@inheritDoc} */
-        @Override public GridCursor<? extends CacheDataRow> cursor(boolean withTombstones) throws IgniteCheckedException {
+        @Override public GridCursor<? extends CacheDataRow> cursor(int flags) throws IgniteCheckedException {
             CacheDataStore delegate = init0(true);
 
             if (delegate != null)
-                return delegate.cursor(withTombstones);
+                return delegate.cursor(flags);
 
             return EMPTY_CURSOR;
         }
@@ -2732,13 +2732,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             KeyCacheObject upper,
             CacheDataRowAdapter.RowData x,
             MvccSnapshot mvccSnapshot,
-            boolean withTombstones
+            int flags
         )
             throws IgniteCheckedException {
             CacheDataStore delegate = init0(true);
 
             if (delegate != null)
-                return delegate.cursor(cacheId, lower, upper, x, mvccSnapshot, withTombstones);
+                return delegate.cursor(cacheId, lower, upper, x, mvccSnapshot, flags);
 
             return EMPTY_CURSOR;
         }
@@ -2757,11 +2757,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /** {@inheritDoc} */
-        @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, boolean withTombstones) throws IgniteCheckedException {
+        @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, int flags) throws IgniteCheckedException {
             CacheDataStore delegate = init0(true);
 
             if (delegate != null)
-                return delegate.cursor(cacheId, withTombstones);
+                return delegate.cursor(cacheId, flags);
 
             return EMPTY_CURSOR;
         }
@@ -3002,6 +3002,34 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     return 0;
 
                 return delegate0.tombstonesCount();
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
+
+        @Override public void tombstoneRemoved() {
+            try {
+                CacheDataStore delegate0 = init0(true);
+
+                if (delegate0 == null)
+                    return;
+
+                delegate0.tombstoneRemoved();
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
+
+        @Override public void tombstoneCreated() {
+            try {
+                CacheDataStore delegate0 = init0(true);
+
+                if (delegate0 == null)
+                    return;
+
+                delegate0.tombstoneCreated();
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);
