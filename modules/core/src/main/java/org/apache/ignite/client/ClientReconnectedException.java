@@ -37,7 +37,6 @@ public class ClientReconnectedException extends ClientException {
         super(msg);
     }
 
-
     /**
      * Constructs a new exception with the specified cause and detail message.
      *
