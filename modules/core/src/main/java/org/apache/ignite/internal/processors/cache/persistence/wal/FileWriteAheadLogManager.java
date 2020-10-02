@@ -3076,6 +3076,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return segmentSize.getOrDefault(idx, -1L);
     }
 
+    /** {@inheritDoc} */
+    @Override public WALPointer lastWritePointer() {
+        return currHnd.position();
+    }
+
     /**
      * Update сurrent log segment handle.
      *

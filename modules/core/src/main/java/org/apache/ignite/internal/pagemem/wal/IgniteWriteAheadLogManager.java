@@ -215,4 +215,11 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @return Segment size, {@code -1} if size is unknown.
      */
     long segmentSize(long idx);
+
+    /**
+     * Get last written pointer.
+     *
+     * @return Last written pointer.
+     */
+    WALPointer lastWritePointer();
 }
