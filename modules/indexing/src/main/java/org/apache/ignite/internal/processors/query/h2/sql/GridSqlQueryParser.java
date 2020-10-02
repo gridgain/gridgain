@@ -28,8 +28,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryIndex;
@@ -38,74 +40,74 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.h2.dml.DmlAstUtils;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.command.Command;
-import org.h2.command.CommandContainer;
-import org.h2.command.CommandInterface;
-import org.h2.command.Prepared;
-import org.h2.command.ddl.AlterTableAddConstraint;
-import org.h2.command.ddl.AlterTableAlterColumn;
-import org.h2.command.ddl.CommandWithColumns;
-import org.h2.command.ddl.CreateIndex;
-import org.h2.command.ddl.CreateTable;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.command.ddl.DefineCommand;
-import org.h2.command.ddl.DropIndex;
-import org.h2.command.ddl.DropTable;
-import org.h2.command.ddl.SchemaCommand;
-import org.h2.command.dml.CommandWithValues;
-import org.h2.command.dml.Delete;
-import org.h2.command.dml.Explain;
-import org.h2.command.dml.Insert;
-import org.h2.command.dml.Merge;
-import org.h2.command.dml.Query;
-import org.h2.command.dml.Select;
-import org.h2.command.dml.SelectOrderBy;
-import org.h2.command.dml.SelectUnion;
-import org.h2.command.dml.Update;
-import org.h2.engine.Constants;
-import org.h2.engine.FunctionAlias;
-import org.h2.expression.Alias;
-import org.h2.expression.BinaryOperation;
-import org.h2.expression.Expression;
-import org.h2.expression.ExpressionColumn;
-import org.h2.expression.ExpressionList;
-import org.h2.expression.Parameter;
-import org.h2.expression.Subquery;
-import org.h2.expression.UnaryOperation;
-import org.h2.expression.ValueExpression;
-import org.h2.expression.aggregate.AbstractAggregate;
-import org.h2.expression.aggregate.Aggregate;
-import org.h2.expression.aggregate.AggregateType;
-import org.h2.expression.condition.CompareLike;
-import org.h2.expression.condition.Comparison;
-import org.h2.expression.condition.ConditionAndOr;
-import org.h2.expression.condition.ConditionExists;
-import org.h2.expression.condition.ConditionIn;
-import org.h2.expression.condition.ConditionInConstantSet;
-import org.h2.expression.condition.ConditionInSelect;
-import org.h2.expression.condition.ConditionNot;
-import org.h2.expression.function.Function;
-import org.h2.expression.function.JavaFunction;
-import org.h2.expression.function.TableFunction;
-import org.h2.index.ViewIndex;
-import org.h2.jdbc.JdbcPreparedStatement;
-import org.h2.result.SortOrder;
-import org.h2.schema.Schema;
-import org.h2.table.Column;
-import org.h2.table.FunctionTable;
-import org.h2.table.IndexColumn;
-import org.h2.table.MetaTable;
-import org.h2.table.RangeTable;
-import org.h2.table.Table;
-import org.h2.table.TableBase;
-import org.h2.table.TableFilter;
-import org.h2.table.TableView;
-import org.h2.value.DataType;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.command.Command;
+import org.gridgain.internal.h2.command.CommandContainer;
+import org.gridgain.internal.h2.command.CommandInterface;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.command.ddl.AlterTableAddConstraint;
+import org.gridgain.internal.h2.command.ddl.AlterTableAlterColumn;
+import org.gridgain.internal.h2.command.ddl.CommandWithColumns;
+import org.gridgain.internal.h2.command.ddl.CreateIndex;
+import org.gridgain.internal.h2.command.ddl.CreateTable;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.command.ddl.DefineCommand;
+import org.gridgain.internal.h2.command.ddl.DropIndex;
+import org.gridgain.internal.h2.command.ddl.DropTable;
+import org.gridgain.internal.h2.command.ddl.SchemaCommand;
+import org.gridgain.internal.h2.command.dml.CommandWithValues;
+import org.gridgain.internal.h2.command.dml.Delete;
+import org.gridgain.internal.h2.command.dml.Explain;
+import org.gridgain.internal.h2.command.dml.Insert;
+import org.gridgain.internal.h2.command.dml.Merge;
+import org.gridgain.internal.h2.command.dml.Query;
+import org.gridgain.internal.h2.command.dml.Select;
+import org.gridgain.internal.h2.command.dml.SelectOrderBy;
+import org.gridgain.internal.h2.command.dml.SelectUnion;
+import org.gridgain.internal.h2.command.dml.Update;
+import org.gridgain.internal.h2.engine.Constants;
+import org.gridgain.internal.h2.engine.FunctionAlias;
+import org.gridgain.internal.h2.engine.UserAggregate;
+import org.gridgain.internal.h2.expression.Alias;
+import org.gridgain.internal.h2.expression.BinaryOperation;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.expression.ExpressionColumn;
+import org.gridgain.internal.h2.expression.ExpressionList;
+import org.gridgain.internal.h2.expression.Parameter;
+import org.gridgain.internal.h2.expression.Subquery;
+import org.gridgain.internal.h2.expression.UnaryOperation;
+import org.gridgain.internal.h2.expression.ValueExpression;
+import org.gridgain.internal.h2.expression.aggregate.AbstractAggregate;
+import org.gridgain.internal.h2.expression.aggregate.Aggregate;
+import org.gridgain.internal.h2.expression.aggregate.AggregateType;
+import org.gridgain.internal.h2.expression.aggregate.JavaAggregate;
+import org.gridgain.internal.h2.expression.condition.CompareLike;
+import org.gridgain.internal.h2.expression.condition.Comparison;
+import org.gridgain.internal.h2.expression.condition.ConditionAndOr;
+import org.gridgain.internal.h2.expression.condition.ConditionExists;
+import org.gridgain.internal.h2.expression.condition.ConditionIn;
+import org.gridgain.internal.h2.expression.condition.ConditionInConstantSet;
+import org.gridgain.internal.h2.expression.condition.ConditionInSelect;
+import org.gridgain.internal.h2.expression.condition.ConditionNot;
+import org.gridgain.internal.h2.expression.function.Function;
+import org.gridgain.internal.h2.expression.function.JavaFunction;
+import org.gridgain.internal.h2.expression.function.TableFunction;
+import org.gridgain.internal.h2.index.ViewIndex;
+import org.gridgain.internal.h2.jdbc.JdbcPreparedStatement;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.schema.Schema;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.FunctionTable;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.MetaTable;
+import org.gridgain.internal.h2.table.RangeTable;
+import org.gridgain.internal.h2.table.Table;
+import org.gridgain.internal.h2.table.TableBase;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.table.TableView;
+import org.gridgain.internal.h2.value.DataType;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -413,7 +415,7 @@ public class GridSqlQueryParser {
     /** */
     private static final Getter<Column, Expression> COLUMN_CHECK_CONSTRAINT = getter(Column.class, "checkConstraint");
 
-    /** Class for private class: 'org.h2.command.CommandList'. */
+    /** Class for private class: 'org.gridgain.internal.h2.command.CommandList'. */
     private static final Class<? extends Command> CLS_COMMAND_LIST;
 
     /** */
@@ -423,7 +425,7 @@ public class GridSqlQueryParser {
     private static final Getter<Command, String> REMAINING;
 
     /** */
-    public static final String ORG_H2_COMMAND_COMMAND_LIST = "org.h2.command.CommandList";
+    public static final String ORG_H2_COMMAND_COMMAND_LIST = "org.gridgain.internal.h2.command.CommandList";
 
     static {
         try {
@@ -528,6 +530,9 @@ public class GridSqlQueryParser {
     /** */
     private final Map<String, Integer> optimizedTableFilterOrder;
 
+    /** */
+    private final IgniteLogger log;
+
     /**
      * We have a counter instead of a simple flag, because
      * a flag can be reset earlier than needed in case of
@@ -541,9 +546,14 @@ public class GridSqlQueryParser {
     /**
      * @param useOptimizedSubqry If we have to find correct order for table filters in FROM clause.
      *                           Relies on uniqueness of table filter aliases.
+     * @param log Logger.
      */
-    public GridSqlQueryParser(boolean useOptimizedSubqry) {
-        optimizedTableFilterOrder = useOptimizedSubqry ? new HashMap<String, Integer>() : null;
+    public GridSqlQueryParser(boolean useOptimizedSubqry, IgniteLogger log) {
+        assert Objects.nonNull(log);
+
+        optimizedTableFilterOrder = useOptimizedSubqry ? new HashMap<>() : null;
+
+        this.log = log;
     }
 
     /**
@@ -649,14 +659,13 @@ public class GridSqlQueryParser {
             String alias = ALIAS.get(filter);
 
             if (alias != null)
-                res = new GridSqlAlias(alias, res, false);
+                res = new GridSqlAlias(alias, res);
 
             h2ObjToGridObj.put(filter, res);
         }
 
         return res;
     }
-
 
     /**
      * @param tbl Table.
@@ -862,28 +871,10 @@ public class GridSqlQueryParser {
 
         res.columns(cols);
 
-        Column[] srcKeys = MERGE_KEYS.get(merge);
-
-        GridH2Table intoTbl = DmlAstUtils.gridTableForElement(tbl).dataTable();
-
-        GridH2RowDescriptor rowDesc = intoTbl.rowDescriptor();
-
-        GridSqlColumn[] keys = new GridSqlColumn[srcKeys.length];
-
-        for (int i = 0; i < srcKeys.length; i++) {
-            String colName = srcKeys[i].getName();
-
-            int colId = intoTbl.getColumn(colName).getColumnId();
-
-            if (!rowDesc.isKeyColumn(colId) && !F.eq(colName, rowDesc.type().affinityKey())) {
-                throw new IgniteSQLException("Invalid column name in KEYS clause of MERGE - it may include only " +
-                    "key and/or affinity columns: " + colName, IgniteQueryErrorCode.PARSING);
-            }
-
-            keys[i] = new GridSqlColumn(srcKeys[i], tbl, null, null, colName);
+        if (!F.isEmpty(MERGE_KEYS.get(merge))) {
+            log.warning("The search row by explicit KEY isn't supported. The primary key is always used to search row " +
+                "[sql=" + merge.getSQL() + ']');
         }
-
-        res.keys(keys);
 
         List<Expression[]> srcRows = COMMAND_WITH_VALUES_VALS_EXPRESSIONS.get(merge);
         if (!srcRows.isEmpty()) {
@@ -895,7 +886,7 @@ public class GridSqlQueryParser {
                     row[i] = parseExpression(srcRow[i], false);
 
                     if (row[i] == null) {
-                        throw new IgniteSQLException("DEFAULT values are unsupported for MERGE.",
+                        throw new IgniteSQLException("Explicit DEFAULT values are unsupported for MERGE.",
                             IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
                     }
                 }
@@ -905,7 +896,7 @@ public class GridSqlQueryParser {
             res.rows(rows);
         }
         else {
-            res.rows(Collections.<GridSqlElement[]>emptyList());
+            res.rows(Collections.emptyList());
             res.query(parseQuery(MERGE_QUERY.get(merge)));
         }
 
@@ -953,7 +944,7 @@ public class GridSqlQueryParser {
                     row[i] = parseExpression(srcRow[i], false);
 
                     if (row[i] == null) {
-                        throw new IgniteSQLException("DEFAULT values are unsupported for MERGE.",
+                        throw new IgniteSQLException("Explicit DEFAULT values are unsupported for INSERT.",
                             IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
                     }
                 }
@@ -1187,8 +1178,10 @@ public class GridSqlQueryParser {
 
         LinkedHashMap<String, GridSqlColumn> cols = new LinkedHashMap<>(data.columns.size());
 
-        for (Column col : data.columns)
-            cols.put(col.getName(), parseColumn(col));
+        for (Column col : data.columns) {
+            if (cols.put(col.getName(), parseColumn(col)) != null)
+                throw new IgniteSQLException("Duplicate column name: " + col.getName(), IgniteQueryErrorCode.PARSING);
+        }
 
         if (cols.containsKey(QueryUtils.KEY_FIELD_NAME.toUpperCase()) ||
             cols.containsKey(QueryUtils.VAL_FIELD_NAME.toUpperCase())) {
@@ -1819,11 +1812,11 @@ public class GridSqlQueryParser {
                 GridH2Table tbl = ((GridSqlTable)o).dataTable();
 
                 if (tbl != null) {
-                    //It's not affinity cache. Can't be local.
-                    if (tbl.cacheContext() == null)
-                        return false;
+                    GridCacheContext<?, ?> cctx = tbl.cacheContext();
 
-                    GridCacheContext cctx = tbl.cacheContext();
+                    //It's not affinity cache. Can't be local.
+                    if (cctx == null)
+                        return false;
 
                     if (cctx.mvccEnabled())
                         return false;
@@ -1831,13 +1824,20 @@ public class GridSqlQueryParser {
                     if (cctx.isPartitioned())
                         return false;
 
-                    if (cctx.isReplicated() && !cctx.isReplicatedAffinityNode())
+                    if (isReplicatedLocalExecutionImpossible(cctx))
                         return false;
                 }
             }
         }
 
         return true;
+    }
+
+    /** */
+    private static boolean isReplicatedLocalExecutionImpossible(GridCacheContext<?, ?> cctx) {
+        // Improvement is possible:
+        // MOVING partitions check inspects full partition map, but possibly only local node check is sufficient.
+        return cctx.isReplicated() && (!cctx.affinityNode() || cctx.topology().hasMovingPartitions());
     }
 
     /**
@@ -1930,8 +1930,8 @@ public class GridSqlQueryParser {
      * @param useOptimizedSubqry Whether to user optimized subquery.
      * @return Parsed query.
      */
-    public static GridSqlQuery parseQuery(Prepared prepared, boolean useOptimizedSubqry) {
-        return (GridSqlQuery)new GridSqlQueryParser(useOptimizedSubqry).parse(prepared);
+    public static GridSqlQuery parseQuery(Prepared prepared, boolean useOptimizedSubqry, IgniteLogger log) {
+        return (GridSqlQuery)new GridSqlQueryParser(useOptimizedSubqry, log).parse(prepared);
     }
 
     /**
@@ -2142,20 +2142,21 @@ public class GridSqlQueryParser {
                 expCol.getColumnName());
         }
 
-        if (expression instanceof Alias)
+        if (expression instanceof Alias) {
             return new GridSqlAlias(expression.getAlias(),
-                parseExpression(expression.getNonAliasExpression(), calcTypes), true);
+                parseExpression(expression.getNonAliasExpression(), calcTypes));
+        }
 
-        if (expression instanceof ValueExpression)
+        if (expression instanceof ValueExpression) {
             // == comparison is legit, see ValueExpression#getSQL()
             return expression == ValueExpression.getDefault() ? GridSqlKeyword.DEFAULT :
                 new GridSqlConst(expression.getValue(null));
+        }
 
         if (expression instanceof BinaryOperation) {
             BinaryOperation operation = (BinaryOperation)expression;
 
             BinaryOperation.OpType type = OPERATION_TYPE.get(operation);
-
 
             return new GridSqlOperation(mapOperationType(type),
                 parseExpression(OPERATION_LEFT.get(operation), calcTypes),
@@ -2277,7 +2278,7 @@ public class GridSqlQueryParser {
                     for (int i = 0; i < cols.length; i++) {
                         GridSqlElement arg = parseExpression(args[i], calcTypes);
 
-                        GridSqlAlias alias = new GridSqlAlias(cols[i].getName(), arg, false);
+                        GridSqlAlias alias = new GridSqlAlias(cols[i].getName(), arg);
 
                         alias.resultType(fromColumn(cols[i]));
 
@@ -2324,6 +2325,20 @@ public class GridSqlQueryParser {
 
         if (expression instanceof Parameter)
             return new GridSqlParameter(((Parameter)expression).getIndex());
+
+        if (expression instanceof JavaAggregate) {
+            JavaAggregate agg = (JavaAggregate)expression;
+
+            UserAggregate userAgg = agg.getUserAggregate();
+            Expression[] args = ABSTRACT_AGGREGATE_ARGS.get(agg);
+
+            GridSqlAggregateFunction fun = new GridSqlAggregateFunction(GridSqlFunctionType.UNKNOWN_FUNCTION, userAgg.getName(), DISTINCT.get(agg));
+
+            for (Expression arg : args)
+                fun.addChild(parseExpression(arg, calcTypes));
+
+            return fun;
+        }
 
         if (expression instanceof Aggregate) {
             AggregateType type = TYPE.get((Aggregate)expression);
@@ -2476,7 +2491,6 @@ public class GridSqlQueryParser {
     /**
      * Field getter.
      */
-    @SuppressWarnings("unchecked")
     public static class Getter<T, R> {
         /** */
         private final Field fld;

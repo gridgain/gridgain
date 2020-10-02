@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.metric;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -57,37 +59,47 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
     private final LongAdderMetric physicalReadInnerCtr;
 
     /** */
-    private final String cacheName;
+    private final String grpName;
 
     /** */
     private final String idxName;
 
+    /** */
+    private IoStatisticsHolder statCache;
+
+    /** */
+    private IoStatisticsType type;
+
     /**
      * @param type Type of statistics.
-     * @param cacheName Cache name.
+     * @param grpName Group name.
      * @param idxName Index name.
      * @param mmgr Metric manager.
      */
     public IoStatisticsHolderIndex(
         IoStatisticsType type,
-        String cacheName,
+        String grpName,
         String idxName,
+        IoStatisticsHolder statCache,
         GridMetricManager mmgr) {
-        assert cacheName != null && idxName != null;
+        assert grpName != null && idxName != null;
 
-        this.cacheName = cacheName;
+        this.type = type;
+        this.grpName = grpName;
         this.idxName = idxName;
 
-        MetricRegistry mreg = mmgr.registry(metricName(type.metricGroupName(), cacheName, idxName));
+        MetricRegistry mreg = mmgr.registry(metricRegistryName());
 
         mreg.longMetric("startTime", null).value(U.currentTimeMillis());
-        mreg.objectMetric("name", String.class, null).value(cacheName);
+        mreg.objectMetric("name", String.class, null).value(grpName);
         mreg.objectMetric("indexName", String.class, null).value(idxName);
 
         logicalReadLeafCtr = mreg.longAdderMetric(LOGICAL_READS_LEAF, null);
         logicalReadInnerCtr = mreg.longAdderMetric(LOGICAL_READS_INNER, null);
         physicalReadLeafCtr = mreg.longAdderMetric(PHYSICAL_READS_LEAF, null);
         physicalReadInnerCtr = mreg.longAdderMetric(PHYSICAL_READS_INNER, null);
+
+        this.statCache = statCache;
     }
 
     /** {@inheritDoc} */
@@ -108,8 +120,12 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
                 IoStatisticsQueryHelper.trackLogicalReadQuery(pageAddr);
 
                 break;
-        }
 
+            default:
+                statCache.trackLogicalRead(pageAddr);
+
+                break;
+        }
     }
 
     /** {@inheritDoc} */
@@ -132,6 +148,11 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
                 IoStatisticsQueryHelper.trackPhysicalAndLogicalReadQuery(pageAddr);
 
                 break;
+
+            default:
+                statCache.trackPhysicalAndLogicalRead(pageAddr);
+
+                break;
         }
     }
 
@@ -146,13 +167,46 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
     }
 
     /** {@inheritDoc} */
+    @Override public Map<String, Long> logicalReadsMap() {
+        Map<String, Long> res = new HashMap<>(3);
+
+        res.put(LOGICAL_READS_LEAF, logicalReadLeafCtr.value());
+        res.put(LOGICAL_READS_INNER, logicalReadInnerCtr.value());
+
+        return res;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Map<String, Long> physicalReadsMap() {
+        Map<String, Long> res = new HashMap<>(3);
+
+        res.put(PHYSICAL_READS_LEAF, physicalReadLeafCtr.value());
+        res.put(PHYSICAL_READS_INNER, physicalReadInnerCtr.value());
+
+        return res;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void resetStatistics() {
+        logicalReadLeafCtr.reset();
+        logicalReadInnerCtr.reset();
+        physicalReadLeafCtr.reset();
+        physicalReadInnerCtr.reset();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String metricRegistryName() {
+        return metricName(type.metricGroupName(), grpName, idxName);
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(IoStatisticsHolderIndex.class, this,
             "logicalReadLeafCtr", logicalReadLeafCtr,
             "logicalReadInnerCtr", logicalReadInnerCtr,
             "physicalReadLeafCtr", physicalReadLeafCtr,
             "physicalReadInnerCtr", physicalReadInnerCtr,
-            "cacheName", cacheName,
+            "grpName", grpName,
             "idxName", idxName);
     }
 }

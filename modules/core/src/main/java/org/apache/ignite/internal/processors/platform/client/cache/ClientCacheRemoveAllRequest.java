@@ -23,7 +23,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 /**
  * Cache removeAll request.
  */
-public class ClientCacheRemoveAllRequest extends ClientCacheRequest {
+public class ClientCacheRemoveAllRequest extends ClientCacheDataRequest {
     /**
      * Constructor.
      *

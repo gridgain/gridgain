@@ -59,6 +59,9 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTE
 public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements IgniteClusterNode,
     Comparable<TcpDiscoveryNode>, Externalizable {
     /** */
+    public static final ThreadLocal<Boolean> RESOLVE_ADDRESSES = ThreadLocal.withInitial(() -> true);
+
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** Node ID. */
@@ -181,7 +184,6 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
         Serializable consistentId)
     {
         assert id != null;
-        assert !F.isEmpty(addrs);
         assert metricsProvider != null;
         assert ver != null;
 
@@ -524,6 +526,13 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
     }
 
     /**
+     * @return Time in nanoseconds before which client is considered alive.
+     */
+    public long aliveCheckTimeNanos() {
+        return aliveCheckTimeNanos;
+    }
+
+    /**
      * @return Client router node ID.
      */
     public UUID clientRouterNodeId() {
@@ -611,7 +620,7 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
         hostNames = U.readCollection(in);
         discPort = in.readInt();
 
-        sockAddrs = U.toSocketAddresses(this, discPort);
+        sockAddrs = U.toSocketAddresses(addrs, hostNames, discPort, Boolean.TRUE.equals(RESOLVE_ADDRESSES.get()));
 
         Object consistentIdAttr = attrs.get(ATTR_NODE_CONSISTENT_ID);
 

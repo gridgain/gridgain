@@ -46,7 +46,7 @@ namespace ignite
                  * @param sql SQL query.
                  * @param cmd Parsed command.
                  */
-                InternalQuery(diagnostic::Diagnosable& diag, const std::string& sql, std::auto_ptr<SqlCommand> cmd) :
+                InternalQuery(diagnostic::DiagnosableAdapter& diag, const std::string& sql, std::auto_ptr<SqlCommand> cmd) :
                     Query(diag, QueryType::INTERNAL),
                     sql(sql),
                     cmd(cmd)
@@ -69,7 +69,7 @@ namespace ignite
                  */
                 virtual SqlResult::Type Execute()
                 {
-                    diag.AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, "Internal error.");
+                    diag.AddStatusRecord("Internal error.");
 
                     return SqlResult::AI_ERROR;
                 }
@@ -117,11 +117,9 @@ namespace ignite
                  *
                  * @return Column metadata.
                  */
-                virtual const meta::ColumnMetaVector& GetMeta() const
+                virtual const meta::ColumnMetaVector* GetMeta()
                 {
-                    static const meta::ColumnMetaVector empty;
-
-                    return empty;
+                    return 0;
                 }
 
                 /**

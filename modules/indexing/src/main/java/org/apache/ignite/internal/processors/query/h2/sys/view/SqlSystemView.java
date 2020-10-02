@@ -17,10 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2.sys.view;
 
 import java.util.Iterator;
-import org.h2.engine.Session;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.table.Column;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.Column;
 
 /**
  * SQL system view.
@@ -59,6 +59,11 @@ public interface SqlSystemView {
      * Gets row count for this view (or approximated row count, if real value can't be calculated quickly).
      */
     public long getRowCount();
+
+    /**
+     * Gets approximated row count (required to build execution plan).
+     */
+    public long getRowCountApproximation();
 
     /**
      * Check if the row count can be retrieved quickly.

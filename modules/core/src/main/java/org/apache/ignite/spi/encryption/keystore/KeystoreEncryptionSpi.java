@@ -16,12 +16,9 @@
 
 package org.apache.ignite.spi.encryption.keystore;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
@@ -156,9 +153,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
         assertParameter(keyStorePwd != null && keyStorePwd.length > 0,
             "KeyStorePassword shouldn't be empty");
 
-        try (InputStream keyStoreFile = keyStoreFile()) {
-            assertParameter(keyStoreFile != null, keyStorePath + " doesn't exists!");
-
+        try (InputStream keyStoreFile = U.openFileInputStream(keyStorePath)) {
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
 
             ks.load(keyStoreFile, keyStorePwd);
@@ -352,7 +347,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
                 throw new IllegalStateException("Unknown algorithm: " + algo);
         }
 
-        return (dataSize/BLOCK_SZ + cntBlocks)*BLOCK_SZ;
+        return (dataSize / BLOCK_SZ + cntBlocks) * BLOCK_SZ;
     }
 
     /**
@@ -383,25 +378,6 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
         ThreadLocalRandom.current().nextBytes(iv);
 
         return iv;
-    }
-
-    /**
-     * {@code keyStorePath} could be absolute path or path to classpath resource.
-     *
-     * @return File for {@code keyStorePath}.
-     */
-    private InputStream keyStoreFile() throws IOException {
-        File abs = new File(keyStorePath);
-
-        if (abs.exists())
-            return new FileInputStream(abs);
-
-        URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
-
-        if (clsPthRes != null)
-            return clsPthRes.openStream();
-
-        return null;
     }
 
     /**

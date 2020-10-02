@@ -326,7 +326,7 @@ public class IgniteCacheReplicatedQuerySelfTest extends IgniteCacheAbstractQuery
 
         for (int i = 0; i < cache.getConfiguration(CacheConfiguration.class).getMaxQueryIteratorsCount() + 1; i++) {
             QueryCursor<Cache.Entry<Integer, Integer>> q =
-                cache.query(new SqlQuery<Integer, Integer>(Integer.class, "_key >= 0 order by _key"));
+                cache.query(new SqlQuery<Integer, Integer>(Integer.class, "_key >= 0 order by _key").setPageSize(1));
 
             assertEquals(0, (int)q.iterator().next().getKey());
 

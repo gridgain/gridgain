@@ -25,10 +25,13 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcStatementType;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCache;
+import org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
+import org.apache.ignite.internal.processors.platform.client.tx.ClientTxAwareRequest;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.plugin.security.SecurityException;
@@ -37,7 +40,7 @@ import org.apache.ignite.plugin.security.SecurityException;
  * Sql query request.
  */
 @SuppressWarnings("unchecked")
-public class ClientCacheSqlFieldsQueryRequest extends ClientCacheRequest {
+public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest implements ClientTxAwareRequest {
     /** Query. */
     private final SqlFieldsQuery qry;
 
@@ -48,8 +51,10 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheRequest {
      * Ctor.
      *
      * @param reader Reader.
+     * @param protocolCtx Protocol context.
      */
-    public ClientCacheSqlFieldsQueryRequest(BinaryRawReaderEx reader) {
+    public ClientCacheSqlFieldsQueryRequest(BinaryRawReaderEx reader,
+        ClientProtocolContext protocolCtx) {
         super(reader);
 
         // Same request format as in JdbcQueryExecuteRequest.
@@ -80,8 +85,13 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheRequest {
                 .setReplicatedOnly(replicatedOnly)
                 .setEnforceJoinOrder(enforceJoinOrder)
                 .setCollocated(collocated)
-                .setLazy(lazy)
-                .setTimeout(timeout, TimeUnit.MILLISECONDS);
+                .setLazy(lazy);
+
+        // Zero value of the timeout from the old client is interpreted as a 'default'.
+        // So, old clients cannot disable default timeout by explicit set timeout to 0.
+        // they must use Integer.MAX_VALUE constant.
+        if (protocolCtx.isFeatureSupported(ClientBitmaskFeature.DEFAULT_QRY_TIMEOUT) || timeout > 0)
+            QueryUtils.withQueryTimeout(qry, timeout, TimeUnit.MILLISECONDS);
 
         this.qry = qry;
     }
@@ -91,6 +101,8 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheRequest {
         ctx.incrementCursors();
 
         try {
+            qry.setQueryInitiatorId(ctx.clientDescriptor());
+
             // If cacheId is provided, we must check the cache for existence.
             if (cacheId() != 0) {
                 DynamicCacheDescriptor desc = cacheDescriptor(ctx);
@@ -126,7 +138,7 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheRequest {
             if (securityEx != null) {
                 throw new IgniteClientException(
                     ClientStatus.SECURITY_VIOLATION,
-                    "Client is not authorized to perform this operation",
+                    securityEx.getMessage(),
                     securityEx
                 );
             }

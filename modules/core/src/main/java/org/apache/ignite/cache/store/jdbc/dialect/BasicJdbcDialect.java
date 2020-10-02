@@ -34,6 +34,9 @@ public class BasicJdbcDialect implements JdbcDialect {
     /** Max query parameters count. */
     protected int maxParamsCnt = DFLT_MAX_PARAMS_CNT;
 
+    /** Fetch size. */
+    protected int fetchSize;
+
     /**
      * Concatenates elements using provided separator.
      *
@@ -287,6 +290,15 @@ public class BasicJdbcDialect implements JdbcDialect {
 
     /** {@inheritDoc} */
     @Override public int getFetchSize() {
-        return 0;
+        return fetchSize;
+    }
+
+    /**
+     * Sets fetch size.
+     *
+     * @param fetchSize Fetch size.
+     */
+    public void setFetchSize(int fetchSize) {
+        this.fetchSize = fetchSize;
     }
 }

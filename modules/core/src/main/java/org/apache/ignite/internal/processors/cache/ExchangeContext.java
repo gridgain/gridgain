@@ -19,12 +19,19 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.internal.IgniteFeatures.PME_FREE_SWITCH;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager.exchangeProtocolVersion;
 
@@ -41,6 +48,9 @@ public class ExchangeContext {
     /** Per-group affinity fetch on join (old protocol). */
     private boolean fetchAffOnJoin;
 
+    /** Wait-free affinity switch was performed for current exchange. */
+    private boolean exchangeFreeSwitch;
+
     /** Merges allowed flag. */
     private final boolean merge;
 
@@ -50,6 +60,12 @@ public class ExchangeContext {
     /** */
     private final boolean compatibilityNode = getBoolean(IGNITE_EXCHANGE_COMPATIBILITY_VER_1, false);
 
+    /** */
+    private final boolean bltForVolatileCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
+
+    /** Free switch is supported for current exchange topology. */
+    private final boolean supFreeSwitch;
+
     /**
      * @param crd Coordinator flag.
      * @param fut Exchange future.
@@ -57,9 +73,24 @@ public class ExchangeContext {
     public ExchangeContext(boolean crd, GridDhtPartitionsExchangeFuture fut) {
         int protocolVer = exchangeProtocolVersion(fut.firstEventCache().minimumNodeVersion());
 
-        if (compatibilityNode || (crd && fut.localJoinExchange())) {
-            fetchAffOnJoin = true;
+        supFreeSwitch =
+            allNodesSupports(fut.sharedContext().kernalContext(), fut.firstEventCache().allNodes(), PME_FREE_SWITCH);
 
+        // Tests if free switch is supported for current exchange.
+        if (!compatibilityNode &&
+            fut.wasRebalanced() &&
+            fut.isBaselineNodeFailed() &&
+            supFreeSwitch &&
+            (bltForVolatileCachesSup ||
+                CU.dataRegions(fut.firstEventCache().allNodes(),
+                    fut.sharedContext().kernalContext().marshallerContext().jdkMarshaller(),
+                    U.resolveClassLoader(fut.sharedContext().kernalContext().config())).
+                    allMatch(DataRegionConfiguration::isPersistenceEnabled))) {
+            exchangeFreeSwitch = true;
+            merge = false;
+        }
+        else if (compatibilityNode || (crd && fut.localJoinExchange())) {
+            fetchAffOnJoin = true;
             merge = false;
         }
         else {
@@ -85,6 +116,13 @@ public class ExchangeContext {
     }
 
     /**
+     * @return {@code True} if exchange topology is compatible with free switch optimization.
+     */
+    public boolean supportsFreeSwitch() {
+        return supFreeSwitch;
+    }
+
+    /**
      * @return Discovery events.
      */
     public ExchangeDiscoveryEvents events() {
@@ -97,6 +135,13 @@ public class ExchangeContext {
      */
     public boolean fetchAffinityOnJoin() {
         return fetchAffOnJoin;
+    }
+
+    /**
+     * @return {@code True} if it's safe to perform PME-free affinity switch.
+     */
+    public boolean exchangeFreeSwitch() {
+        return exchangeFreeSwitch;
     }
 
     /**

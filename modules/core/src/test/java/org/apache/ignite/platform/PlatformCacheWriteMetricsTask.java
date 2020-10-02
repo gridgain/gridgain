@@ -414,6 +414,11 @@ public class PlatformCacheWriteMetricsTask extends ComputeTaskAdapter<Long, Obje
         }
 
         /** {@inheritDoc} */
+        @Override public String getTxKeyCollisions() {
+            return "";
+        }
+
+        /** {@inheritDoc} */
         @Override public int getTotalPartitionsCount() {
             return 54;
         }
@@ -536,6 +541,16 @@ public class PlatformCacheWriteMetricsTask extends ComputeTaskAdapter<Long, Obje
         /** {@inheritDoc} */
         @Override public long getEntryProcessorRemovals() {
             return 78;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean isIndexRebuildInProgress() {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long getIndexRebuildKeysProcessed() {
+            return 0;
         }
     }
 }

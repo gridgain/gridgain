@@ -61,6 +61,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -78,7 +79,7 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
     private static final String CLIENT_GRID_NAME = "client";
 
     /** */
-    protected static final String EXISTING_CACHE_NAME = "existing-cache";;
+    protected static final String EXISTING_CACHE_NAME = "existing-cache";
 
     /** */
     private static final int PARTITION_COUNT = 16;
@@ -549,7 +550,7 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
 
             clientCfg.setClientMode(true);
 
-            Ignite clientNode = startGrid(clientName1, clientCfg);
+            IgniteEx clientNode = (IgniteEx)startGrid(clientName1, clientCfg);
 
             clientNode.cluster().baselineAutoAdjustEnabled(false);
 

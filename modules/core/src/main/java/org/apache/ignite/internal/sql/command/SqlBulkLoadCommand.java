@@ -26,9 +26,11 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.apache.ignite.internal.sql.SqlParserUtils.error;
 import static org.apache.ignite.internal.sql.SqlParserUtils.errorUnexpectedToken;
+import static org.apache.ignite.internal.sql.SqlParserUtils.parseBoolean;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseIdentifier;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseInt;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseQualifiedIdentifier;
@@ -149,8 +151,12 @@ public class SqlBulkLoadCommand implements SqlCommand {
                 fmt.quoteChars(BulkLoadCsvFormat.DEFAULT_QUOTE_CHARS);
                 fmt.commentChars(BulkLoadCsvFormat.DEFAULT_COMMENT_CHARS);
                 fmt.escapeChars(BulkLoadCsvFormat.DEFAULT_ESCAPE_CHARS);
+                fmt.nullString(BulkLoadCsvFormat.DEFAULT_NULL_STRING);
+                fmt.trim(BulkLoadCsvFormat.DEFAULT_TRIM_SPACES);
 
                 parseCsvOptions(lex, fmt);
+
+                validateCsvParserFormat(lex, fmt);
 
                 inputFormat = fmt;
 
@@ -177,6 +183,36 @@ public class SqlBulkLoadCommand implements SqlCommand {
                     String charsetName = parseString(lex);
 
                     format.inputCharsetName(charsetName);
+
+                    break;
+                }
+
+                case SqlKeyword.DELIMITER: {
+                    lex.shift();
+
+                    String delimiter = parseString(lex);
+
+                    format.fieldSeparator(Pattern.compile(delimiter));
+
+                    break;
+                }
+
+                case SqlKeyword.TRIM: {
+                    lex.shift();
+
+                    Boolean trim = parseBoolean(lex);
+
+                    format.trim(trim);
+
+                    break;
+                }
+
+                case SqlKeyword.NULLSTRING: {
+                    lex.shift();
+
+                    String nullString = parseString(lex);
+
+                    format.nullString(nullString);
 
                     break;
                 }
@@ -211,6 +247,25 @@ public class SqlBulkLoadCommand implements SqlCommand {
                     return;
             }
         }
+    }
+
+    /**
+     * Parses the optional parameters.
+     *
+     * @param lex The lexer.
+     * @param format CSV format object to validate.
+     */
+    private void validateCsvParserFormat(SqlLexer lex, BulkLoadCsvFormat format) {
+        String delimiter = format.fieldSeparator().toString();
+        String quoteChars = format.quoteChars();
+
+        if (delimiter.length() > 1 || quoteChars.length() > 1)
+            throw error(lex, "Delimiter or quote chars must consist of single character: delim is '" + delimiter
+                + "', quote char is '" + quoteChars + "'");
+
+        if (delimiter.equals(quoteChars))
+            throw error(lex, "Invalid delimiter or quote chars: delim is '" + delimiter
+                + "', quote char is '" + quoteChars + "'");
     }
 
     /**

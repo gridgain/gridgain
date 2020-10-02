@@ -368,7 +368,7 @@ public class BinaryUtils {
      * @return Field type name or {@code null} if unknown.
      */
     public static String fieldTypeName(int typeId) {
-        if(typeId < 0 || typeId >= FIELD_TYPE_NAMES.length)
+        if (typeId < 0 || typeId >= FIELD_TYPE_NAMES.length)
             return null;
 
         return FIELD_TYPE_NAMES[typeId];
@@ -712,7 +712,7 @@ public class BinaryUtils {
         if (obj == null)
             return false;
 
-        Class<?> cls= obj.getClass();
+        Class<?> cls = obj.getClass();
 
         return cls == KeyCacheObjectImpl.class ||
             cls == BinaryObjectImpl.class ||
@@ -732,7 +732,7 @@ public class BinaryUtils {
         if (arr == null)
             return false;
 
-        Class<?> cls =  arr.getClass();
+        Class<?> cls = arr.getClass();
 
         return cls == byte[].class || cls == short[].class || cls == int[].class || cls == long[].class ||
             cls == float[].class || cls == double[].class || cls == char[].class || cls == boolean[].class ||
@@ -1043,8 +1043,11 @@ public class BinaryUtils {
                             "Type '" + oldMeta.typeName() + "' with typeId " + oldMeta.typeId()
                                 + " has a different/incorrect type for field '" + newField.getKey()
                                 + "'. Expected '" + oldFieldTypeName + "' but '" + newFieldTypeName
-                                + "' was provided. Field type's modification is unsupported, clean {root_path}/marshaller " +
-                                "and {root_path}/binary_meta directories if the type change is required."
+                                + "' was provided. The type of an existing field can not be changed. " +
+                                "Use a different field name or follow this procedure to reuse the current name:\n" +
+                                "- Delete data records that use the old field type;\n" +
+                                "- Remove metadata by the command: " +
+                                "'control.sh --meta remove --typeId " + oldMeta.typeId() + "'."
                         );
                     }
                 }
@@ -1637,15 +1640,18 @@ public class BinaryUtils {
             cls = ctx.descriptorForTypeId(true, typeId, ldr, false).describedClass();
         else {
             String clsName = doReadClassName(in);
+            boolean useCache = GridBinaryMarshaller.USE_CACHE.get();
 
             try {
-                cls = U.forName(clsName, ldr);
+                cls = U.forName(clsName, ldr, null);
             }
             catch (ClassNotFoundException e) {
                 throw new BinaryInvalidTypeException("Failed to load the class: " + clsName, e);
             }
 
-            ctx.registerClass(cls, false, false);
+            // forces registering of class by type id, at least locally
+            if (useCache)
+                ctx.registerClass(cls, false, false);
         }
 
         return cls;
@@ -1668,7 +1674,7 @@ public class BinaryUtils {
             cls = ctx.descriptorForTypeId(true, typeId, ldr, registerMeta).describedClass();
         else {
             try {
-                cls = U.forName(clsName, ldr);
+                cls = U.forName(clsName, ldr, null);
             }
             catch (ClassNotFoundException e) {
                 throw new BinaryInvalidTypeException("Failed to load the class: " + clsName, e);
@@ -1714,7 +1720,7 @@ public class BinaryUtils {
     private static Object[] doReadBinaryEnumArray(BinaryInputStream in, BinaryContext ctx) {
         int len = in.readInt();
 
-        Object[] arr = (Object[])Array.newInstance(BinaryObject.class, len);
+        Object[] arr = (Object[])Array.newInstance(BinaryEnumObjectImpl.class, len);
 
         for (int i = 0; i < len; i++) {
             byte flag = in.readByte();
@@ -1732,9 +1738,10 @@ public class BinaryUtils {
      * Having target class in place we simply read ordinal and create final representation.
      *
      * @param cls Enum class.
+     * @param useCache True if class loader cache will be used, false otherwise.
      * @return Value.
      */
-    public static Enum<?> doReadEnum(BinaryInputStream in, Class<?> cls) throws BinaryObjectException {
+    public static Enum<?> doReadEnum(BinaryInputStream in, Class<?> cls, boolean useCache) throws BinaryObjectException {
         assert cls != null;
 
         if (!cls.isEnum())
@@ -1742,7 +1749,31 @@ public class BinaryUtils {
 
         int ord = in.readInt();
 
-        return BinaryEnumCache.get(cls, ord);
+        if (useCache)
+            return BinaryEnumCache.get(cls, ord);
+        else
+            return uncachedEnumValue(cls, ord);
+    }
+
+    /**
+     * Get value for the given class without any caching.
+     *
+     * @param cls Class.
+     */
+    private static <T> T uncachedEnumValue(Class<?> cls, int ord) throws BinaryObjectException {
+        assert cls != null;
+
+        if (ord >= 0) {
+            Object[] vals = cls.getEnumConstants();
+
+            if (ord < vals.length)
+                return (T)vals[ord];
+            else
+                throw new BinaryObjectException("Failed to get enum value for ordinal (do you have correct class " +
+                    "version?) [cls=" + cls.getName() + ", ordinal=" + ord + ", totalValues=" + vals.length + ']');
+        }
+        else
+            return null;
     }
 
     /**
@@ -1761,7 +1792,7 @@ public class BinaryUtils {
             if (flag == GridBinaryMarshaller.NULL)
                 arr[i] = null;
             else
-                arr[i] = doReadEnum(in, doReadClass(in, ctx, ldr));
+                arr[i] = doReadEnum(in, doReadClass(in, ctx, ldr), GridBinaryMarshaller.USE_CACHE.get());
         }
 
         return arr;
@@ -1794,7 +1825,7 @@ public class BinaryUtils {
      */
     @Nullable public static Object doReadObject(BinaryInputStream in, BinaryContext ctx, ClassLoader ldr,
         BinaryReaderHandlesHolder handles) throws BinaryObjectException {
-        return new BinaryReaderExImpl(ctx, in, ldr, handles.handles(), true).deserialize();
+        return new BinaryReaderExImpl(ctx, in, ldr, handles.handles(), false, true).deserialize();
     }
 
     /**
@@ -1830,6 +1861,9 @@ public class BinaryUtils {
                 return null;
 
             case GridBinaryMarshaller.HANDLE: {
+                if (handles.ignoreHandle())
+                    return null;
+
                 int handlePos = start - in.readInt();
 
                 Object obj = handles.getHandle(handlePos);
@@ -2383,7 +2417,7 @@ public class BinaryUtils {
             }
             else {
                 arr[position++] = (byte)(0xC0 | ((c >> 6) & 0x1F));
-                arr[position++] = (byte)(0x80 | (c  & 0x3F));
+                arr[position++] = (byte)(0x80 | (c & 0x3F));
             }
         }
 

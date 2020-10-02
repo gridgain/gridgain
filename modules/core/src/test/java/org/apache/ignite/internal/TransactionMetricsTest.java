@@ -239,12 +239,16 @@ public class TransactionMetricsTest extends GridCommonAbstractTest {
     private static class TxThread implements Runnable {
         /** */
         private CountDownLatch commitAllowLatch;
+
         /** */
         private CountDownLatch transactionStartLatch;
+
         /** */
         private Ignite ignite;
+
         /** */
         private int key1;
+
         /** */
         private int key2;
 

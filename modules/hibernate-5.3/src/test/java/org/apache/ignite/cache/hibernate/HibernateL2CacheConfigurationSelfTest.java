@@ -73,7 +73,7 @@ public class HibernateL2CacheConfigurationSelfTest extends GridCommonAbstractTes
     public static final String ENTITY4_NAME = Entity4.class.getName();
 
     /** */
-    public static final String CONNECTION_URL = "jdbc:h2:mem:example;DB_CLOSE_DELAY=-1";
+    public static final String CONNECTION_URL = "jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1";
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -129,6 +129,7 @@ public class HibernateL2CacheConfigurationSelfTest extends GridCommonAbstractTes
 
         return cfg;
     }
+
     /**
      * @param igniteInstanceName Ignite instance name.
      * @return Hibernate configuration.
@@ -266,7 +267,7 @@ public class HibernateL2CacheConfigurationSelfTest extends GridCommonAbstractTes
     /**
      *
      */
-    private <K, V> Set<Cache.Entry<K, V>> toSet(Iterator<Cache.Entry<K, V>> iter){
+    private <K, V> Set<Cache.Entry<K, V>> toSet(Iterator<Cache.Entry<K, V>> iter) {
         Set<Cache.Entry<K, V>> set = new HashSet<>();
 
         while (iter.hasNext())

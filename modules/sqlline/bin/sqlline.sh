@@ -54,6 +54,16 @@ checkJava
 setIgniteHome
 
 #
+# Set supported terminal type for z/OS.
+#
+osname=`uname`
+
+if [ $osname = "OS/390" ] ; then
+    export TERM=dumb
+    JVM_OPTS="-Dfile.encoding=IBM-1047 $JVM_OPTS"
+fi
+
+#
 # Set IGNITE_LIBS.
 #
 . "${SCRIPTS_HOME}"/include/setenv.sh
@@ -87,6 +97,7 @@ elif [ $version -ge 11 ] ; then
         --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
         --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
         --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
+        --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
         --illegal-access=permit \
         ${JVM_OPTS}"
 fi

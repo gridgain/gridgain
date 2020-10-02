@@ -32,7 +32,6 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CacheInterceptor;
@@ -56,12 +55,11 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.CachePluginConfiguration;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_DISK_PAGE_COMPRESSION;
 
 /**
  * This class defines grid cache configuration. This configuration is passed to
@@ -261,6 +259,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** Near cache configuration. */
     private NearCacheConfiguration<K, V> nearCfg;
 
+    /** Platform cache configuration. Enables native cache in platforms (.NET, ...). */
+    private PlatformCacheConfiguration platformCfg;
+
     /** Default value for 'copyOnRead' flag. */
     public static final boolean DFLT_COPY_ON_READ = true;
 
@@ -347,6 +348,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private long rebalanceThrottle = DFLT_REBALANCE_THROTTLE;
 
     /** */
+    @SerializeSeparately
     private CacheInterceptor<K, V> interceptor;
 
     /** */
@@ -374,7 +376,10 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** */
     private boolean sqlEscapeAll;
 
-    /** */
+    /**
+     * @deprecated {@link #qryEntities} is used instead. This field is preserved for serialization compatibility.
+     * */
+    @Deprecated
     private transient Class<?>[] indexedTypes;
 
     /** Copy on read flag. */
@@ -413,13 +418,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * @see KeystoreEncryptionSpi
      */
     private boolean encryptionEnabled;
-
-    /** */
-    private DiskPageCompression diskPageCompression = IgniteSystemProperties.getEnum(
-        DiskPageCompression.class, IGNITE_DEFAULT_DISK_PAGE_COMPRESSION);
-
-    /** */
-    private Integer diskPageCompressionLevel;
 
     /** Empty constructor (all values are initialized to their defaults). */
     public CacheConfiguration() {
@@ -479,10 +477,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         memPlcName = cc.getDataRegionName();
         name = cc.getName();
         nearCfg = cc.getNearConfiguration();
+        platformCfg = cc.getPlatformCacheConfiguration();
         nodeFilter = cc.getNodeFilter();
         onheapCache = cc.isOnheapCacheEnabled();
-        diskPageCompression = cc.getDiskPageCompression();
-        diskPageCompressionLevel = cc.getDiskPageCompressionLevel();
         partLossPlc = cc.getPartitionLossPolicy();
         pluginCfgs = cc.getPluginConfigurations();
         qryDetailMetricsSz = cc.getQueryDetailMetricsSize();
@@ -766,6 +763,38 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      */
     public CacheConfiguration<K, V> setNearConfiguration(NearCacheConfiguration<K, V> nearCfg) {
         this.nearCfg = nearCfg;
+
+        return this;
+    }
+
+    /**
+     * Gets platform cache configuration.
+     *
+     * @return Platform cache configuration or null.
+     */
+    @IgniteExperimental
+    public PlatformCacheConfiguration getPlatformCacheConfiguration() {
+        return platformCfg;
+    }
+
+    /**
+     * Sets platform cache configuration.
+     * Enables native platform (only .NET currently) cache when not null.
+     * Cache entries will be stored in deserialized form in native platform memory (e.g. .NET objects in CLR heap).
+     * <p>
+     * When enabled on server nodes, all primary keys will be stored in platform memory as well.
+     * <p>
+     * Same eviction policy applies to near cache entries for all keys on client nodes and
+     * non-primary keys on server nodes.
+     * <p>
+     * Enabling this can greatly improve performance for key-value operations and scan queries,
+     * at the expense of RAM usage.
+     *
+     * @return {@code this} for chaining.
+     */
+    @IgniteExperimental
+    public CacheConfiguration<K, V> setPlatformCacheConfiguration(PlatformCacheConfiguration platformCfg) {
+        this.platformCfg = platformCfg;
 
         return this;
     }
@@ -1196,14 +1225,15 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * Gets cache rebalance order. Rebalance order can be set to non-zero value for caches with
      * {@link CacheRebalanceMode#SYNC SYNC} or {@link CacheRebalanceMode#ASYNC ASYNC} rebalance modes only.
      * <p/>
-     * If cache rebalance order is positive, rebalancing for this cache will be started only when rebalancing for
+     * The rebalance order guarantees that rebalancing for this cache will start only when rebalancing for
      * all caches with smaller rebalance order will be completed.
      * <p/>
-     * Note that cache with order {@code 0} does not participate in ordering. This means that cache with
-     * rebalance order {@code 0} will never wait for any other caches. All caches with order {@code 0} will
-     * be rebalanced right away concurrently with each other and ordered rebalance processes.
+     * Note that a cache with {@link CacheRebalanceMode#SYNC SYNC} rebalancing mode always takes precedence
+     * over caches with {@link CacheRebalanceMode#ASYNC ASYNC} rebalancing mode
+     * in the group of caches with the same rebalance order. This means caches with {@link CacheRebalanceMode#SYNC SYNC}
+     * rebalancing mode will be rebalanced in the first place.
      * <p/>
-     * If not set, cache order is 0, i.e. rebalancing is not ordered.
+     * If not set, cache order is 0.
      *
      * @return Cache rebalance order.
      */
@@ -1316,7 +1346,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
 
     /**
      * Gets maximum inline size for sql indexes. If -1 returned then
-     * {@code IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE} system property is used.
+     * {@link IgniteSystemProperties#IGNITE_MAX_INDEX_PAYLOAD_SIZE} system property is used.
      * <p>
      * If not set, default value is {@link #DFLT_SQL_INDEX_MAX_INLINE_SIZE}.
      *
@@ -1779,7 +1809,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * Gets timeout in milliseconds after which long query warning will be printed.
      *
      * @return Timeout in milliseconds.
-     * @deprecated Use {@link IgniteConfiguration#getLongQueryWarningTimeout()} instead.
+     * @deprecated Use {@link SqlConfiguration#getLongQueryWarningTimeout()} instead.
      */
     @Deprecated
     public long getLongQueryWarningTimeout() {
@@ -1791,7 +1821,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @param longQryWarnTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
-     * @deprecated Use {@link IgniteConfiguration#setLongQueryWarningTimeout(long)} instead.
+     * @deprecated Use {@link SqlConfiguration#setLongQueryWarningTimeout(long)} instead.
      */
     @Deprecated
     public CacheConfiguration<K, V> setLongQueryWarningTimeout(long longQryWarnTimeout) {
@@ -2351,54 +2381,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      */
     public CacheConfiguration<K, V> setEncryptionEnabled(boolean encryptionEnabled) {
         this.encryptionEnabled = encryptionEnabled;
-        
-        return this;
-    }
-
-    /**
-     * Gets disk page compression algorithm.
-     * Makes sense only with enabled {@link DataRegionConfiguration#setPersistenceEnabled persistence}.
-     *
-     * @return Disk page compression algorithm.
-     * @see #getDiskPageCompressionLevel
-     */
-    public DiskPageCompression getDiskPageCompression() {
-        return diskPageCompression == null ? DFLT_DISK_PAGE_COMPRESSION : diskPageCompression;
-    }
-
-    /**
-     * Sets disk page compression algorithm.
-     * Makes sense only with enabled {@link DataRegionConfiguration#setPersistenceEnabled persistence}.
-     *
-     * @param diskPageCompression Disk page compression algorithm.
-     * @return {@code this} for chaining.
-     * @see #setDiskPageCompressionLevel
-     */
-    public CacheConfiguration<K,V> setDiskPageCompression(DiskPageCompression diskPageCompression) {
-        this.diskPageCompression = diskPageCompression;
-
-        return this;
-    }
-
-    /**
-     * Gets {@link #getDiskPageCompression algorithm} specific disk page compression level.
-     *
-     * @return Disk page compression level or {@code null} for default.
-     */
-    public Integer getDiskPageCompressionLevel() {
-        return diskPageCompressionLevel;
-    }
-
-    /**
-     * Sets {@link #setDiskPageCompression algorithm} specific disk page compression level.
-     *
-     * @param diskPageCompressionLevel Disk page compression level or {@code null} to use default.
-     *                             {@link DiskPageCompression#ZSTD Zstd}: from {@code -131072} to {@code 22} (default {@code 3}).
-     *                             {@link DiskPageCompression#LZ4 LZ4}: from {@code 0} to {@code 17} (default {@code 0}).
-     * @return {@code this} for chaining.
-     */
-    public CacheConfiguration<K,V> setDiskPageCompressionLevel(Integer diskPageCompressionLevel) {
-        this.diskPageCompressionLevel = diskPageCompressionLevel;
 
         return this;
     }

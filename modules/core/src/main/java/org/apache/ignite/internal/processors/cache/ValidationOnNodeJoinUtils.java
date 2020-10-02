@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import javax.cache.configuration.FactoryBuilder;
+import javax.cache.expiry.EternalExpiryPolicy;
+import javax.cache.expiry.ExpiryPolicy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,9 +29,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.cache.configuration.FactoryBuilder;
-import javax.cache.expiry.EternalExpiryPolicy;
-import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -41,7 +41,6 @@ import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DeploymentMode;
-import org.apache.ignite.configuration.DiskPageCompression;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.MemoryConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
@@ -49,6 +48,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.internal.processors.affinity.LocalAffinityFunction;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
@@ -327,7 +327,12 @@ public class ValidationOnNodeJoinUtils {
                 "Custom IndexingSpi cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
         }
 
-        if (cc.isWriteBehindEnabled() && ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName())) {
+        // This method can be called when memory recovery is in progress,
+        // which means that the GridDiscovery manager is not started, and therefore localNode is also not initialized.
+        ClusterNode locNode = ctx.discovery().localNode() != null ? ctx.discovery().localNode() :
+            new DetachedClusterNode(ctx.pdsFolderResolver().resolveFolders().consistentId(), ctx.nodeAttributes());
+
+        if (cc.isWriteBehindEnabled() && ctx.discovery().cacheAffinityNode(locNode, cc.getName())) {
             if (cfgStore == null)
                 throw new IgniteCheckedException("Cannot enable write-behind (writer or store is not provided) " +
                     "for cache: " + U.maskName(cc.getName()));
@@ -342,13 +347,11 @@ public class ValidationOnNodeJoinUtils {
                     "'writeBehindFlushSize' parameters to 0 for cache: " + U.maskName(cc.getName()));
         }
 
-        if (cc.isReadThrough() && cfgStore == null
-            && ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName()))
+        if (cc.isReadThrough() && cfgStore == null && ctx.discovery().cacheAffinityNode(locNode, cc.getName()))
             throw new IgniteCheckedException("Cannot enable read-through (loader or store is not provided) " +
                 "for cache: " + U.maskName(cc.getName()));
 
-        if (cc.isWriteThrough() && cfgStore == null
-            && ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName()))
+        if (cc.isWriteThrough() && cfgStore == null && ctx.discovery().cacheAffinityNode(locNode, cc.getName()))
             throw new IgniteCheckedException("Cannot enable write-through (writer or store is not provided) " +
                 "for cache: " + U.maskName(cc.getName()));
 
@@ -392,7 +395,7 @@ public class ValidationOnNodeJoinUtils {
         if (ctx.query().moduleEnabled()) {
             String schema = QueryUtils.normalizeSchemaName(cc.getName(), cc.getSqlSchema());
 
-            if (F.eq(schema, QueryUtils.SCHEMA_SYS)) {
+            if (F.eq(schema, QueryUtils.sysSchemaName())) {
                 if (cc.getSqlSchema() == null) {
                     // Conflict on cache name.
                     throw new IgniteCheckedException("SQL schema name derived from cache name is reserved (" +
@@ -424,10 +427,6 @@ public class ValidationOnNodeJoinUtils {
                 throw new IgniteCheckedException("EncryptionSpi should be configured to use encrypted cache " +
                     cacheSpec.toString());
             }
-
-            if (cc.getDiskPageCompression() != DiskPageCompression.DISABLED)
-                throw new IgniteCheckedException("Encryption cannot be used with disk page compression " +
-                    cacheSpec.toString());
         }
 
         Collection<QueryEntity> ents = cc.getQueryEntities();

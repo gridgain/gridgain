@@ -48,6 +48,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * Effective page ID is page ID with zeroed bits used for page ID rotation.
  */
 public class FullPageId {
+    /** */
+    public static final FullPageId NULL_PAGE = new FullPageId(-1, -1);
+
     /** Page ID. */
     private final long pageId;
 
@@ -104,6 +107,7 @@ public class FullPageId {
 
         return z ^ (z >>> 32);
     }
+
     /**
      * @param pageId Page ID.
      * @param grpId Cache group ID.
@@ -120,6 +124,13 @@ public class FullPageId {
      */
     public long pageId() {
         return pageId;
+    }
+
+    /**
+     * @return Effective page ID.
+     */
+    public long effectivePageId() {
+        return effectivePageId;
     }
 
     /**

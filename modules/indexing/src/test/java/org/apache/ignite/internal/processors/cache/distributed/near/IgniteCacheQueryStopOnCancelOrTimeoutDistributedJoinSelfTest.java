@@ -25,6 +25,7 @@ import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -115,7 +116,7 @@ public class IgniteCacheQueryStopOnCancelOrTimeoutDistributedJoinSelfTest extend
             if (checkCanceled)
                 fail("Query not canceled");
         }
-        catch (CacheException ex) {
+        catch (CacheException | IgniteException ex) {
             log().error("Got expected exception", ex);
 
             assertNotNull("Must throw correct exception", X.cause(ex, QueryCancelledException.class));

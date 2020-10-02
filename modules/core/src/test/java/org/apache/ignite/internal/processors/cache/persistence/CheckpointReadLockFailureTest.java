@@ -45,6 +45,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.IGNITE_PDS_LOG_CP_READ_LOCK_HOLDERS;
 import static org.apache.ignite.internal.util.IgniteUtils.LOCK_HOLD_MESSAGE;
+
 /**
  * Tests critical failure handling on checkpoint read lock acquisition errors.
  */
@@ -137,8 +138,6 @@ public class CheckpointReadLockFailureTest extends GridCommonAbstractTest {
                 db.checkpointLock.writeLock().unlock();
             }
         });
-
-        GridTestUtils.waitForCondition(() -> db.checkpointLock.writeLock().isHeldByCurrentThread(), 5000);
 
         IgniteInternalFuture acquireReadLock = GridTestUtils.runAsync(() -> {
             db.checkpointReadLock();

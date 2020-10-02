@@ -217,4 +217,53 @@ public interface TransactionsMXBean {
     @MXBeanParametersNames("limit")
     @MXBeanParametersDescriptions("Samples per second limit.")
     public void setTransactionTimeDumpSamplesPerSecondLimit(int limit);
+
+    /**
+     * Setting a timeout (in millis) for printing to log long-running
+     * transactions as well as transactions that cannot receive locks for all
+     * their keys for a long time. Set less than or equal {@code 0} to disable.
+     *
+     * @param timeout Frequency of output of long (running longer than this
+     *      time) transactions to log.
+     */
+    @MXBeanDescription(
+        "Setting a timeout (in millis) for printing to log long-running transactions as well as transactions that " +
+            "cannot receive locks for all their keys for a long time. Set less than or equal {@code 0} to disable."
+    )
+    @MXBeanParametersNames("timeout")
+    @MXBeanParametersDescriptions("Timeout threshold (in millis) for printing to log long-running transactions.")
+    void setLongOperationsDumpTimeout(long timeout);
+
+    /**
+     * Returns a timeout (in millis) for printing to log long-running
+     * transactions as well as transactions that cannot receive locks for all
+     * their keys for a long time. Returns {@code 0} or less if not set.
+     *
+     * @return Timeout.
+     */
+    @MXBeanDescription(
+        "Returns a timeout (in millis) for printing to log long-running transactions as well as transactions that " +
+            "cannot receive locks for all their keys for a long time. Returns {@code 0} or less if not set."
+    )
+    long getLongOperationsDumpTimeout();
+
+    /**
+     * Set timeout interval for tx key contention analysis.
+     * @param timeout Interval in millis.
+     */
+    @MXBeanParametersNames("timeout")
+    @MXBeanDescription("Timeout interval (in millis) for printing tx key contention queue size info. Each transaction " +
+        "besides OPTIMISTIC SERIALIZABLE capture locks on all enlisted keys, for some reasons per key lock queue may " +
+        "rise. This property sets the interval during which keys and appropriate queue size statistics has been " +
+        "collected.")
+    void setTxKeyCollisionsInterval(int timeout);
+
+    /**
+     * @return Current interval in millis.
+     */
+    @MXBeanDescription("Returns a timeout (in millis) for printing tx key contention queue size info. Each transaction " +
+        "besides OPTIMISTIC SERIALIZABLE capture locks on all enlisted keys, for some reasons per key lock queue may " +
+        "rise. Returns the interval during which keys and appropriate queue size statistics has been " +
+        "collected.")
+    int getTxKeyCollisionsInterval();
 }

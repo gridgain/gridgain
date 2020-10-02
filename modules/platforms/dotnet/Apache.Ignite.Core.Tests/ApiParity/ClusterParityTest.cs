@@ -22,7 +22,7 @@
     /// <summary>
     /// Tests that <see cref="ICluster"/> has all APIs from Java Ignite interface.
     /// </summary>
-    [Ignore(ParityTest.IgnoreReason)]
+    [Explicit(ParityTest.IgnoreReason)]
     public class ClusterParityTest
     {
         /** Members that are not needed on .NET side. */
@@ -48,7 +48,7 @@
             "currentBaselineTopology",   // GG-21247
             "id",                       // GG-21621
             "tag",                       // GG-21621
-            "readOnly"                  // GG-23363
+            "state"                     // GG-23363
         };
 
         /// <summary>

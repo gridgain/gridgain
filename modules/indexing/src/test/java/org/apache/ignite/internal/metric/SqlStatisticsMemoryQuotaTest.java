@@ -22,6 +22,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.junit.After;
@@ -30,7 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests for {@link SqlStatisticsHolderMemoryQuotas}. In this test we check that memory metrics reports plausible
+ * Tests for {@link SqlMemoryStatisticsHolder}. In this test we check that memory metrics reports plausible
  * values. Here we want to verify metrics based on the new framework work well, not {@link H2MemoryTracker}.
  */
 public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
@@ -59,13 +60,12 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     }
 
     /**
-     * Clean up.
+     * Set up.
      */
     @Before
     public void setup() {
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.refresh();
     }
-
 
     /**
      * Check values of all sql memory metrics right after grid starts and no queries are executed.
@@ -79,13 +79,13 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         assertEquals(0, longMetricValue(0, "requests"));
         assertEquals(0, longMetricValue(1, "requests"));
 
-        long dfltSqlGlobQuota = (long)(Runtime.getRuntime().maxMemory() * 0.6);
+        long dfltSqlGlobQuota = IgniteUtils.parseBytes("60%");
 
-        assertEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"));
-        assertEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"));
+        assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
+        assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
 
-        assertEquals(dfltSqlGlobQuota, longMetricValue(0, "freeMem"));
-        assertEquals(dfltSqlGlobQuota, longMetricValue(1, "freeMem"));
+        assertEquals(longMetricValue(0, "maxMem"), longMetricValue(0, "freeMem"));
+        assertEquals(longMetricValue(1, "maxMem"), longMetricValue(1, "freeMem"));
     }
 
     /**
@@ -109,7 +109,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         final String scanQry = "SELECT * FROM TAB WHERE ID <> 5";
 
         for (int i = 0; i < runCnt; i++)
-            cache.query(new SqlFieldsQuery(scanQry)).getAll();
+            cache.query(new SqlFieldsQuery(scanQry).setLazy(false)).getAll();
 
         long otherCntAfterDistQry = longMetricValue(otherNodeIdx, "requests");
         long connCntAfterDistQry = longMetricValue(connNodeIdx, "requests");
@@ -120,7 +120,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         // And then run local query and check that only connect node metric has changed.
 
         for (int i = 0; i < runCnt; i++)
-            cache.query(new SqlFieldsQuery(scanQry).setLocal(true)).getAll();
+            cache.query(new SqlFieldsQuery(scanQry).setLocal(true).setLazy(false)).getAll();
 
         long otherCntAfterLocQry = longMetricValue(otherNodeIdx, "requests");
         long connCntAfterLocQry = longMetricValue(connNodeIdx, "requests");
@@ -147,7 +147,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
 
         IgniteInternalFuture distQryIsDone =
-            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
+            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry).setLazy(false)).getAll());
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
@@ -180,7 +180,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
 
         IgniteInternalFuture locQryIsDone =
-            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true)).getAll());
+            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true).setLazy(false)).getAll());
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
@@ -205,7 +205,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     public void testMaxMemMetricShowCustomMaxMemoryValuesForDifferentNodes() throws Exception {
         final int oneMaxMem = 512 * 1024;
         final int otherMaxMem = 1024 * 1024;
-        final int unlimMaxMem = -1;
+        final int unlimMaxMem = 0;
 
         final int oneNodeIdx = 0;
         final int otherNodeIdx = 1;
@@ -228,30 +228,31 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     @Test
     public void testAllMetricsIfMemoryQuotaIsUnlimited() throws Exception {
         final MemValidator quotaUnlim = (free, max) -> {
-            assertEquals(-1, max);
-            assertEquals(max, free);
+            assertEquals(0, max);
+            assertTrue(0 >= free);
         };
 
         int connNodeIdx = 1;
         int otherNodeIdx = 0;
 
-        startGridWithMaxMem(connNodeIdx, -1);
-        startGridWithMaxMem(otherNodeIdx, -1);
+        startGridWithMaxMem(connNodeIdx, 0);
+        startGridWithMaxMem(otherNodeIdx, 0);
 
         IgniteCache cache = createCacheFrom(grid(connNodeIdx));
 
-        final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
+        final SqlFieldsQuery scanQry = new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(5)");
 
         IgniteInternalFuture distQryIsDone =
-            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
+            runAsyncX(() -> cache.query(scanQry).getAll());
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+        // we don't track memory for lazy queries for now
+        assertEquals(scanQry.isLazy() ? 0 : 1, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(scanQry.isLazy() ? 0 : 1, longMetricValue(otherNodeIdx, "requests"));
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.resumeQueryExecution();
 
@@ -260,8 +261,8 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+        assertEquals(scanQry.isLazy() ? 0 : 3, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(scanQry.isLazy() ? 0 : 3, longMetricValue(otherNodeIdx, "requests"));
     }
 
     /**
@@ -281,7 +282,6 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         validator.validate(free, maxMem);
     }
 
-
     /**
      * Finds LongMetric from sql memory registry by specified metric name and returns it's value.
      *
@@ -289,18 +289,27 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
      * @param metricName short name of the metric from the "sql memory" metric registry.
      */
     private long longMetricValue(int gridIdx, String metricName) {
-        MetricRegistry sqlMemReg = grid(gridIdx).context().metric().registry(SqlStatisticsHolderMemoryQuotas.SQL_QUOTAS_REG_NAME);
+        MetricRegistry sqlMemReg = grid(gridIdx).context().metric().registry(SqlMemoryStatisticsHolder.SQL_QUOTAS_REG_NAME);
 
         Metric metric = sqlMemReg.findMetric(metricName);
 
         Assert.assertNotNull("Didn't find metric " + metricName, metric);
 
-        Assert.assertTrue("Expected long metric, but got "+ metric.getClass(),  metric instanceof LongMetric);
+        Assert.assertTrue("Expected long metric, but got " + metric.getClass(), metric instanceof LongMetric);
 
         return ((LongMetric)metric).value();
     }
 
-
+    /**
+     * @param l1 First number.
+     * @param l2 Second number.
+     * @param error Max difference between numbers.
+     *
+     * @return {@code true} if the numbers differ from each other no more than {@code error}.
+     */
+    private boolean almostEquals(long l1, long l2, long error) {
+        return Math.max(l1, l2) - Math.min(l1, l2) <= Math.abs(error);
+    }
 
     /**
      * Functional interface to validate memory metrics values.

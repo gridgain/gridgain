@@ -25,6 +25,7 @@ import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -57,12 +58,13 @@ public class SqlMetricsOnWebConsoleSelfTest extends AbstractIndexingCommonTest {
      * @return System schema name.
      */
     protected String systemSchemaName() {
-        return "SYS";
+        return "IGNITE";
     }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration() throws Exception {
-        return super.getConfiguration().setSqlQueryHistorySize(10);
+        return super.getConfiguration().setSqlConfiguration(new SqlConfiguration()
+            .setSqlQueryHistorySize(10));
     }
 
     /**
@@ -85,7 +87,7 @@ public class SqlMetricsOnWebConsoleSelfTest extends AbstractIndexingCommonTest {
         cache.put(100, "200");
 
         String sqlHist = "SELECT SCHEMA_NAME, SQL, LOCAL, EXECUTIONS, FAILURES, DURATION_MIN, DURATION_MAX, LAST_START_TIME " +
-            "FROM " + systemSchemaName() + ".LOCAL_SQL_QUERY_HISTORY ORDER BY LAST_START_TIME";
+            "FROM " + systemSchemaName() + ".SQL_QUERIES_HISTORY ORDER BY LAST_START_TIME";
 
         // Execute query without cache context.
         cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();

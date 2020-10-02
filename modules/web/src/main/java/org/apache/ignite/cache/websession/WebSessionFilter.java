@@ -420,8 +420,12 @@ public class WebSessionFilter implements Filter {
     private String doFilterV1(HttpServletRequest httpReq, ServletResponse res, FilterChain chain) throws IOException,
         ServletException, CacheException {
         WebSession cached = null;
+        String sesId;
 
-        String sesId = httpReq.getRequestedSessionId();
+        if (httpReq.getSession(false) != null)
+            sesId = httpReq.getSession(false).getId();
+        else
+            sesId = httpReq.getRequestedSessionId();
 
         if (sesId != null) {
             sesId = transformSessionId(sesId);
@@ -502,8 +506,12 @@ public class WebSessionFilter implements Filter {
     private String doFilterV2(HttpServletRequest httpReq, ServletResponse res, FilterChain chain)
         throws IOException, ServletException, CacheException {
         WebSessionV2 cached = null;
+        String sesId;
 
-        String sesId = httpReq.getRequestedSessionId();
+        if (httpReq.getSession(false) != null)
+            sesId = httpReq.getSession(false).getId();
+        else
+            sesId = httpReq.getRequestedSessionId();
 
         if (sesId != null) {
             sesId = transformSessionId(sesId);
@@ -861,7 +869,7 @@ public class WebSessionFilter implements Filter {
      * Handles cache operation exception.
      * @param e Exception
      */
-    void handleCacheOperationException(Exception e){
+    void handleCacheOperationException(Exception e) {
         IgniteFuture<?> retryFut = null;
 
         if (e instanceof IllegalStateException) {
@@ -956,7 +964,7 @@ public class WebSessionFilter implements Filter {
         }
 
         /** {@inheritDoc} */
-        @Override public void login(String username, String password) throws ServletException{
+        @Override public void login(String username, String password) throws ServletException {
             HttpServletRequest req = (HttpServletRequest)getRequest();
 
             req.login(username, password);
@@ -1040,7 +1048,7 @@ public class WebSessionFilter implements Filter {
         }
 
         /** {@inheritDoc} */
-        @Override public void login(String username, String password) throws ServletException{
+        @Override public void login(String username, String password) throws ServletException {
             final HttpServletRequest req = (HttpServletRequest)getRequest();
 
             req.login(username, password);

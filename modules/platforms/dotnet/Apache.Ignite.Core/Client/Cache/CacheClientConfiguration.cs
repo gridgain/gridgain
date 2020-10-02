@@ -25,6 +25,8 @@ namespace Apache.Ignite.Core.Client.Cache
     using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Expiry;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Configuration;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -115,12 +117,12 @@ namespace Apache.Ignite.Core.Client.Cache
             {
                 using (var stream = IgniteManager.Memory.Allocate().GetStream())
                 {
-                    ClientCacheConfigurationSerializer.Write(stream, other, ClientSocket.CurrentProtocolVersion, true);
+                    ClientCacheConfigurationSerializer.Write(stream, other, ClientFeatures.CurrentFeatures, true);
 
                     stream.SynchronizeOutput();
                     stream.Seek(0, SeekOrigin.Begin);
 
-                    ClientCacheConfigurationSerializer.Read(stream, this, ClientSocket.CurrentProtocolVersion);
+                    ClientCacheConfigurationSerializer.Read(stream, this, ClientFeatures.CurrentFeatures);
                 }
 
                 CopyLocalProperties(other);
@@ -156,11 +158,11 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <summary>
         /// Initializes a new instance of the <see cref="CacheClientConfiguration"/> class.
         /// </summary>
-        internal CacheClientConfiguration(IBinaryStream stream, ClientProtocolVersion srvVer)
+        internal CacheClientConfiguration(IBinaryStream stream, ClientFeatures features)
         {
             Debug.Assert(stream != null);
 
-            ClientCacheConfigurationSerializer.Read(stream, this, srvVer);
+            ClientCacheConfigurationSerializer.Read(stream, this, features);
         }
 
         /// <summary>
@@ -409,5 +411,13 @@ namespace Apache.Ignite.Core.Client.Cache
         /// </summary>
         [DefaultValue(CacheConfiguration.DefaultQueryParallelism)]
         public int QueryParallelism { get; set; }
+
+        /// <summary>
+        /// Gets or sets the factory for <see cref="IExpiryPolicy"/> to be used for all cache operations,
+        /// unless <see cref="ICacheClient{TK,TV}.WithExpiryPolicy"/> is called.
+        /// <para />
+        /// Default is null, which means no expiration.
+        /// </summary>
+        public IFactory<IExpiryPolicy> ExpiryPolicyFactory { get; set; }
     }
 }

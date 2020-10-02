@@ -87,7 +87,8 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         String schemaName,
         String qry,
         @Nullable Object[] params,
-        IgniteDataStreamer<?, ?> streamer
+        IgniteDataStreamer<?, ?> streamer,
+        String qryInitiatorId
     ) throws IgniteCheckedException {
         return 0;
     }
@@ -97,7 +98,8 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         String schemaName,
         String qry,
         List<Object[]> params,
-        SqlClientContext cliCtx
+        SqlClientContext cliCtx,
+        String qryInitiatorId
     ) throws IgniteCheckedException {
         return null;
     }
@@ -151,7 +153,7 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         List<String> cols,
         boolean ifTblExists,
         boolean ifColExists
-    ) throws IgniteCheckedException  {
+    ) throws IgniteCheckedException {
 
     }
 
@@ -272,6 +274,11 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
+    @Override public void onKernalStart() {
+
+    }
+
+    /** {@inheritDoc} */
     @Override public void onKernalStop() {
 
     }
@@ -299,6 +306,11 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     /** {@inheritDoc} */
     @Override public @Nullable GridCacheContextInfo registeredCacheInfo(String cacheName) {
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void closeCacheOnClient(String cacheName) {
+        // No-op.
     }
 
     /** {@inheritDoc} */

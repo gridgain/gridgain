@@ -45,18 +45,27 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
     /** Value of the system property that enables page locks dumping on failure. */
     private static final boolean IGNITE_DUMP_PAGE_LOCK_ON_FAILURE =
         IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DUMP_PAGE_LOCK_ON_FAILURE, true);
+
     /** Time formatter for dump file name. */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss_SSS");
+
     /** Folder name for store diagnostic info. **/
     public static final String DEFAULT_TARGET_FOLDER = "diagnostic";
+
     /** File format. */
     static final String FILE_FORMAT = ".txt";
+
     /** Raw file format. */
     static final String RAW_FILE_FORMAT = ".raw";
+
     /** Full path for store dubug info. */
     private final Path diagnosticPath;
 
+    /** */
     private final PageHistoryDiagnoster pageHistoryDiagnoster;
+
+    /** */
+    private final ReconciliationExecutionContext reconciliationExecutionContext;
 
     /**
      * @param ctx Kernal context.
@@ -68,6 +77,7 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
         pageHistoryDiagnoster = new PageHistoryDiagnoster(ctx, this::diagnosticFile);
 
+        reconciliationExecutionContext = new ReconciliationExecutionContext(ctx);
     }
 
     /** {@inheritDoc} */
@@ -131,6 +141,13 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
                     "Failed to dump diagnostic info on tree corruption. PageIds=" + sb, e);
             }
         }
+    }
+
+    /**
+     * @return Reconciliation execution context.
+     */
+    public ReconciliationExecutionContext reconciliationExecutionContext() {
+        return reconciliationExecutionContext;
     }
 
     /**

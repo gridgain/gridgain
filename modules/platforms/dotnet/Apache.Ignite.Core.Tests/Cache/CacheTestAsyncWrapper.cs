@@ -518,6 +518,12 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
 
         /** <inheritDoc /> */
+        public IContinuousQueryHandleFields QueryContinuous(ContinuousQuery<TK, TV> qry, SqlFieldsQuery initialQry)
+        {
+            return _cache.QueryContinuous(qry, initialQry);
+        }
+
+        /** <inheritDoc /> */
         public IEnumerable<ICacheEntry<TK, TV>> GetLocalEntries(params CachePeekMode[] peekModes)
         {
             return _cache.GetLocalEntries(peekModes);
@@ -536,7 +542,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
 
         /** <inheritDoc /> */
-        public ICollection<ICacheEntryProcessorResult<TK, TRes>> InvokeAll<TArg, TRes>(IEnumerable<TK> keys, 
+        public ICollection<ICacheEntryProcessorResult<TK, TRes>> InvokeAll<TArg, TRes>(IEnumerable<TK> keys,
             ICacheEntryProcessor<TK, TV, TArg, TRes> processor, TArg arg)
         {
             return _cache.InvokeAllAsync(keys, processor, arg).GetResult();
@@ -582,6 +588,18 @@ namespace Apache.Ignite.Core.Tests.Cache
         public ICacheMetrics GetLocalMetrics()
         {
             return _cache.GetLocalMetrics();
+        }
+
+        /** <inheritDoc /> */
+        public void EnableStatistics(bool enabled)
+        {
+            _cache.EnableStatistics(enabled);
+        }
+
+        /** <inheritDoc /> */
+        public void ClearStatistics()
+        {
+            _cache.ClearStatistics();
         }
 
         /** <inheritDoc /> */

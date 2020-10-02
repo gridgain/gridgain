@@ -18,12 +18,17 @@ package org.apache.ignite.internal.metric;
 
 import java.util.Arrays;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -60,7 +65,17 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
     public boolean nearEnabled;
 
     /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setDataStorageConfiguration(new DataStorageConfiguration()
+                .setDataRegionConfigurations(
+                    new DataRegionConfiguration().setName("persisted").setPersistenceEnabled(true)));
+    }
+
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
+        cleanPersistenceDir();
+
         startGridsMultiThreaded(2);
 
         IgniteConfiguration clientCfg = getConfiguration("client")
@@ -86,15 +101,58 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
     }
 
     /** */
+    @Test
+    public void testCacheMetricsNotRemovedOnStop() throws Exception {
+        String cachePrefix = cacheMetricsRegistryName("other-cache", false);
+
+        checkMetricsEmpty(cachePrefix);
+
+        createCache("persisted", "other-cache");
+
+        grid("client").cache("other-cache").put(1L, 1L);
+
+        checkMetricsNotEmpty(cachePrefix);
+
+        //Cache will be stopped during deactivation.
+        grid("client").cluster().state(ClusterState.INACTIVE);
+
+        checkMetricsNotEmpty(cachePrefix);
+
+        grid("client").cluster().state(ClusterState.ACTIVE);
+
+        assertEquals(1L, grid("client").cache("other-cache").get(1L));
+
+        checkMetricsNotEmpty(cachePrefix);
+
+        destroyCache();
+
+        checkMetricsEmpty(cachePrefix);
+    }
+
+    /** */
     private void destroyCache() throws InterruptedException {
-        grid("client").destroyCache(DEFAULT_CACHE_NAME);
+        IgniteEx client = grid("client");
+
+        for (String name : client.cacheNames())
+            client.destroyCache(name);
 
         awaitPartitionMapExchange();
     }
 
     /** */
     private void createCache() throws InterruptedException {
+        createCache(null, null);
+    }
+
+    /** */
+    private void createCache(@Nullable String dataRegionName, @Nullable String cacheName) throws InterruptedException {
         CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
+
+        if (dataRegionName != null)
+            ccfg.setDataRegionName(dataRegionName);
+
+        if (cacheName != null)
+            ccfg.setName(cacheName);
 
         if (nearEnabled)
             ccfg.setNearConfiguration(new NearCacheConfiguration());
@@ -106,7 +164,7 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
 
     /** */
     private void checkMetricsNotEmpty(String cachePrefix) {
-        for (int i=0; i<2; i++) {
+        for (int i = 0; i < 2; i++) {
             GridMetricManager mmgr = metricManager(i);
 
             MetricRegistry mreg = mmgr.registry(cachePrefix);
@@ -115,7 +173,7 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
             assertNotNull(mreg.findMetric(CACHE_PUTS));
 
             if (nearEnabled) {
-                mreg = mmgr.registry(cacheMetricsRegistryName(DEFAULT_CACHE_NAME, true));
+                mreg = mmgr.registry(metricName(cachePrefix, "near"));
 
                 assertNotNull(mreg.findMetric(CACHE_GETS));
                 assertNotNull(mreg.findMetric(CACHE_PUTS));
@@ -125,7 +183,7 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
 
     /** */
     private void checkMetricsEmpty(String cachePrefix) {
-        for (int i=0; i<3; i++) {
+        for (int i = 0; i < 3; i++) {
             GridMetricManager mmgr = metricManager(i);
 
             MetricRegistry mreg = mmgr.registry(cachePrefix);
@@ -134,7 +192,7 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
             assertNull(mreg.findMetric(metricName(cachePrefix, CACHE_PUTS)));
 
             if (nearEnabled) {
-                mreg = mmgr.registry(cacheMetricsRegistryName(DEFAULT_CACHE_NAME, true));
+                mreg = mmgr.registry(metricName(cachePrefix, "near"));
 
                 assertNull(mreg.findMetric(CACHE_GETS));
                 assertNull(mreg.findMetric(CACHE_PUTS));

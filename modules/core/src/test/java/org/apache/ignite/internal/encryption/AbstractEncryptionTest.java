@@ -71,6 +71,8 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
+        cfg.setConsistentId(name);
+
         KeystoreEncryptionSpi encSpi = new KeystoreEncryptionSpi();
 
         encSpi.setKeyStorePath(keystorePath());
@@ -151,7 +153,7 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
 
         assertNotNull(cache);
 
-        for (long i=0; i<100; i++)
+        for (long i = 0; i < 100; i++)
             assertEquals("" + i, cache.get(i));
     }
 

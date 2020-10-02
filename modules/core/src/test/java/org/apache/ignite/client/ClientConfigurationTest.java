@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.ClusterNode;
@@ -41,6 +40,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -61,13 +62,13 @@ public class ClientConfigurationTest {
                 .setClassNames(Collections.singleton("Person"))
             )
             .setSslMode(SslMode.REQUIRED)
-            .setSslClientCertificateKeyStorePath("client.jks")
-            .setSslClientCertificateKeyStoreType("JKS")
-            .setSslClientCertificateKeyStorePassword("123456")
-            .setSslTrustCertificateKeyStorePath("trust.jks")
-            .setSslTrustCertificateKeyStoreType("JKS")
-            .setSslTrustCertificateKeyStorePassword("123456")
-            .setSslKeyAlgorithm("SunX509");
+            .setSslClientCertificateKeyStorePath(GridTestUtils.keyStorePath("node01"))
+            .setSslClientCertificateKeyStoreType(DFLT_STORE_TYPE)
+            .setSslClientCertificateKeyStorePassword(GridTestUtils.keyStorePassword())
+            .setSslTrustCertificateKeyStorePath(GridTestUtils.keyStorePath("trustone"))
+            .setSslTrustCertificateKeyStoreType(DFLT_STORE_TYPE)
+            .setSslTrustCertificateKeyStorePassword(GridTestUtils.keyStorePassword())
+            .setSslKeyAlgorithm(DFLT_KEY_ALGORITHM);
 
         ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
 

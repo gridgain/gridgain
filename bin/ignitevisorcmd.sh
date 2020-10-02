@@ -99,13 +99,13 @@ fi
 #
 # Save terminal setting. Used to restore terminal on finish.
 #
-SAVED_STTY=`stty -g 2>/dev/null`
+SAVED_STTY=$(stty -g 2>/dev/null || true)
 
 #
 # Restores terminal.
 #
 function restoreSttySettings() {
-    stty ${SAVED_STTY}
+    stty ${SAVED_STTY} || true
 }
 
 #
@@ -140,6 +140,7 @@ elif [ $version -ge 11 ] ; then
         --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
         --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
         --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
+        --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
         --illegal-access=permit \
         ${JVM_OPTS}"
 fi

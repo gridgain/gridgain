@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Optimized string builder with better API.
@@ -273,6 +274,17 @@ public class GridStringBuilder implements Serializable {
     }
 
     /**
+     * Adds a platform-dependent newline to this buffer.
+     *
+     * @return This buffer for chaining method calls.
+     */
+    public GridStringBuilder nl() {
+        impl.append(U.nl());
+
+        return this;
+    }
+
+    /**
      *
      * @param start Start position to replace from.
      * @param end End position.
@@ -476,8 +488,8 @@ public class GridStringBuilder implements Serializable {
      * @throws IOException Thrown in case of any IO errors.
      * @throws ClassNotFoundException Thrown if read class cannot be found.
      */
-    private void readObject(ObjectInputStream s) throws IOException, ClassNotFoundException   {
-        impl= (StringBuilder) s.readObject();
+    private void readObject(ObjectInputStream s) throws IOException, ClassNotFoundException {
+        impl = (StringBuilder) s.readObject();
     }
 
     /** {@inheritDoc} */

@@ -458,6 +458,8 @@ public class GridTestLog4jLogger implements IgniteLogger, LoggerNodeIdAware {
         if (!impl.isTraceEnabled())
             warning("Logging at TRACE level without checking if TRACE level is enabled: " + msg);
 
+            assert impl.isTraceEnabled() : "Logging at TRACE level without checking if TRACE level is enabled: " + msg;
+
         impl.trace(msg);
     }
 
@@ -466,6 +468,8 @@ public class GridTestLog4jLogger implements IgniteLogger, LoggerNodeIdAware {
         if (!impl.isDebugEnabled())
             warning("Logging at DEBUG level without checking if DEBUG level is enabled: " + msg);
 
+        assert impl.isDebugEnabled() : "Logging at DEBUG level without checking if DEBUG level is enabled: " + msg;
+
         impl.debug(msg);
     }
 
@@ -473,6 +477,8 @@ public class GridTestLog4jLogger implements IgniteLogger, LoggerNodeIdAware {
     @Override public void info(String msg) {
         if (!impl.isInfoEnabled())
             warning("Logging at INFO level without checking if INFO level is enabled: " + msg);
+
+        assert impl.isInfoEnabled() : "Logging at INFO level without checking if INFO level is enabled: " + msg;
 
         impl.info(msg);
     }

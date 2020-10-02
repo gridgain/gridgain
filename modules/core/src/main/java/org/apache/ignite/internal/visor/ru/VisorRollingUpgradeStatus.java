@@ -88,7 +88,7 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
             status.enabled(),
             status.forcedModeEnabled(),
             status.initialVersion().toString(),
-            (status.targetVersion() != null)? status.targetVersion().toString(): "",
+            (status.targetVersion() != null) ? status.targetVersion().toString() : "",
             status.supportedFeatures().stream().map(Enum::name).collect(Collectors.toSet()));
     }
 

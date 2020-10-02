@@ -459,6 +459,8 @@ public interface IgniteCacheOffheapManager {
      */
     public GridIterator<CacheDataRow> partitionIterator(final int part, boolean withTombstones) throws IgniteCheckedException;
 
+    public GridIterator<CacheDataRow> tombstoneIterator(final int part) throws IgniteCheckedException;
+
     /**
      * @param part Partition number.
      * @return Iterator for given partition that skips tombstones.
@@ -1070,6 +1072,11 @@ public interface IgniteCacheOffheapManager {
         public void destroy() throws IgniteCheckedException;
 
         /**
+         * Mark store as destroyed.
+         */
+        public void markDestroyed() throws IgniteCheckedException;
+
+        /**
          * Clears all the records associated with logical cache with given ID.
          *
          * @param cacheId Cache ID.
@@ -1116,9 +1123,14 @@ public interface IgniteCacheOffheapManager {
         public void preload() throws IgniteCheckedException;
 
         /**
-         * Reset counters for partition.
+         * Reset counter for partition.
          */
         public void resetUpdateCounter();
+
+        /**
+         * Reset the initial value of the partition counter.
+         */
+        void resetInitialUpdateCounter();
 
         /**
          * Partition storage.

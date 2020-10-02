@@ -23,6 +23,8 @@ import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
@@ -35,12 +37,13 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneIndex;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.index.Index;
-import org.h2.result.SortOrder;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -106,9 +109,10 @@ public class H2TableDescriptor {
     /**
      * @return {@code true} In case table was created from SQL.
      */
-    public boolean sql(){
+    public boolean sql() {
         return isSql;
     }
+
     /**
      * @return Indexing.
      */
@@ -161,7 +165,7 @@ public class H2TableDescriptor {
     /**
      * @return Cache name.
      */
-    public String cacheName(){
+    public String cacheName() {
         return cacheInfo.name();
     }
 
@@ -322,16 +326,33 @@ public class H2TableDescriptor {
             keyCols = new ArrayList<>(type.fields().size() + 1);
 
             // Check if key is simple type.
-            if(QueryUtils.isSqlType(type.keyClass()))
+            if (QueryUtils.isSqlType(type.keyClass()))
                 keyCols.add(keyCol);
             else {
-                for (String propName : type.fields().keySet()) {
-                    GridQueryProperty prop = type.property(propName);
+                // SPECIFIED_SEQ_PK_KEYS check guarantee that request running on heterogeneous (RU) cluster can
+                // perform equally on all nodes.
+                if (!idx.kernalContext().recoveryMode() && IgniteFeatures.allNodesSupports(idx.kernalContext(),
+                    F.view(idx.kernalContext().discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
+                    IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
+                    for (String keyName : type.primaryKeyFields()) {
+                        GridQueryProperty prop = type.property(keyName);
 
-                    if (prop.key()) {
-                        Column col = tbl.getColumn(propName);
+                        assert prop.key() : keyName + " is not a key field";
+
+                        Column col = tbl.getColumn(prop.name());
 
                         keyCols.add(tbl.indexColumn(col.getColumnId(), SortOrder.ASCENDING));
+                    }
+                }
+                else {
+                    for (String propName : type.fields().keySet()) {
+                        GridQueryProperty prop = type.property(propName);
+
+                        if (prop.key()) {
+                            Column col = tbl.getColumn(propName);
+
+                            keyCols.add(tbl.indexColumn(col.getColumnId(), SortOrder.ASCENDING));
+                        }
                     }
                 }
 

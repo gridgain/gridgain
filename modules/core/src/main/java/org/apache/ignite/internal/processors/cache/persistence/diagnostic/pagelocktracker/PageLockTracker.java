@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager.MemoryCalculator;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
-import org.apache.ignite.lang.IgniteFuture;
 
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
@@ -32,44 +30,61 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 public abstract class PageLockTracker<T extends PageLockDump> implements PageLockListener, DumpSupported<T> {
     /** */
     private static final long OVERHEAD_SIZE = 16 + 8 + 8 + 4 + 4 + 4 + 8 + 8 + 4 + 4 + 8;
+
     /** */
     public static final int OP_OFFSET = 16;
+
     /** */
     public static final int LOCK_IDX_MASK = 0xFFFF0000;
+
     /** */
     public static final int LOCK_OP_MASK = 0x000000000000FF;
 
     /** Page read lock operation id. */
     public static final int READ_LOCK = 1;
+
     /** Page read unlock operation id. */
     public static final int READ_UNLOCK = 2;
+
     /** Page write lock operation id. */
     public static final int WRITE_LOCK = 3;
+
     /** Page write unlock operation id. */
     public static final int WRITE_UNLOCK = 4;
+
     /** Page read before lock operation id. */
     public static final int BEFORE_READ_LOCK = 5;
+
     /** Page write before lock operation id. */
     public static final int BEFORE_WRITE_LOCK = 6;
 
     /** */
     protected final String name;
+
     /** */
     protected final PageMetaInfoStore pages;
+
     /** Counter for track lock/unlock operations. */
     protected int heldLockCnt;
+
     /** */
     protected int nextOp;
+
     /** */
     protected int nextOpStructureId;
+
     /** */
     protected long nextOpPageId;
+
     /** */
     private long opCntr;
+
     /** */
     private volatile boolean dump;
+
     /** */
     private volatile boolean locked;
+
     /** */
     private volatile InvalidContext<T> invalidCtx;
 
@@ -159,7 +174,7 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
 
     /** {@inheritDoc} */
     @Override public void onReadLock(int structureId, long pageId, long page, long pageAddr) {
-        if (checkFailedLock(pageAddr) ||isInvalid())
+        if (checkFailedLock(pageAddr) || isInvalid())
             return;
 
         lock();
@@ -205,7 +220,7 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
     }
 
     /** */
-    private boolean checkFailedLock(long pageAddr){
+    private boolean checkFailedLock(long pageAddr) {
         if (pageAddr == 0) {
             this.nextOp = 0;
             this.nextOpStructureId = 0;
@@ -223,7 +238,7 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
     }
 
     /** */
-    protected void free(){
+    protected void free() {
         pages.free();
     }
 
@@ -279,7 +294,7 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
     /**
      * @return Number of locks operations.
      */
-    public long operationsCounter(){
+    public long operationsCounter() {
         // Read  volatile for thread safety.
         boolean locked = this.locked;
 
@@ -323,7 +338,6 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
     /** {@inheritDoc} */
     @Override public synchronized boolean acquireSafePoint() {
         return dump ? false : (dump = true);
-
     }
 
     /** {@inheritDoc} */
@@ -343,11 +357,6 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
             releaseSafePoint();
 
         return dump0;
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteFuture<T> dumpSync() {
-        throw new UnsupportedOperationException();
     }
 
     /** */

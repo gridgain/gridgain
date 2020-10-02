@@ -171,6 +171,26 @@ public class TransactionsMXBeanImpl implements TransactionsMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public void setLongOperationsDumpTimeout(long timeout) {
+        ctx.cache().context().tm().longOperationsDumpTimeoutDistributed(timeout);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getLongOperationsDumpTimeout() {
+        return ctx.cache().context().tm().longOperationsDumpTimeout();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setTxKeyCollisionsInterval(int timeout) {
+        ctx.cache().context().tm().collisionsDumpIntervalDistributed(timeout);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getTxKeyCollisionsInterval() {
+        return ctx.cache().context().tm().collisionsDumpInterval();
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TransactionsMXBeanImpl.class, this);
     }

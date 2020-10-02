@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-schedule</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <properties>
@@ -62,6 +62,13 @@
         </dependency>
 
         <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-beans</artifactId>
             <version>${spring.version}</version>
@@ -82,23 +89,6 @@
         </dependency>
     </dependencies>
 
-    <profiles>
-        <profile>
-            <id>lgpl</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-deploy-plugin</artifactId>
-                        <configuration>
-                            <skip>false</skip>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
     <build>
         <plugins>
             <!-- Generate the OSGi MANIFEST.MF for this fragment. It is a fragment because it contains internal processors
@@ -117,6 +107,14 @@
                 <artifactId>maven-deploy-plugin</artifactId>
                 <configuration>
                     <skip>true</skip>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>false</skip>
                 </configuration>
             </plugin>
         </plugins>

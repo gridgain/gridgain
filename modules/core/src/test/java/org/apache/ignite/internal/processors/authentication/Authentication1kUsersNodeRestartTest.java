@@ -114,7 +114,7 @@ public class Authentication1kUsersNodeRestartTest extends GridCommonAbstractTest
                 AuthorizationContext.context(actxDflt);
 
                 try {
-                    authenticationProcessor.updateUser("test"  + i, "passwd_" + i);
+                    authenticationProcessor.updateUser("test" + i, "passwd_" + i);
                 }
                 catch (IgniteCheckedException e) {
                     throw new IgniteException(e);

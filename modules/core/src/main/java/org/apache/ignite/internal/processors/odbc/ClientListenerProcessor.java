@@ -35,6 +35,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.OdbcConfiguration;
 import org.apache.ignite.configuration.SqlConnectorConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.direct.DirectMessageWriter;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.systemview.walker.ClientConnectionViewWalker;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
@@ -51,16 +54,25 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.spi.IgnitePortProtocol;
+import org.apache.ignite.spi.systemview.view.ClientConnectionView;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.apache.ignite.thread.OomExceptionHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_META_KEY;
 
 /**
  * Client connector processor.
  */
 public class ClientListenerProcessor extends GridProcessorAdapter {
+    /** */
+    public static final String CLI_CONN_VIEW = metricName("client", "connections");
+
+    /** */
+    public static final String CLI_CONN_VIEW_DESC = "Client connections";
+
     /** Default client connector configuration. */
     public static final ClientConnectorConfiguration DFLT_CLI_CFG = new ClientConnectorConfigurationEx();
 
@@ -70,17 +82,14 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
     /** Cancel counter. For testing purposes only. */
     public static final AtomicLong CANCEL_COUNTER = new AtomicLong(0);
 
-    /** Default number of selectors. */
-    private static final int DFLT_SELECTOR_CNT = Math.min(4, Runtime.getRuntime().availableProcessors());
-
     /** Default TCP direct buffer flag. */
-    private static final boolean DFLT_TCP_DIRECT_BUF = false;
+    private static final boolean DFLT_TCP_DIRECT_BUF = true;
 
     /** Busy lock. */
     private final GridSpinBusyLock busyLock = new GridSpinBusyLock();
 
     /** TCP Server. */
-    private GridNioServer<byte[]> srv;
+    private GridNioServer<ClientMessage> srv;
 
     /** Executor service. */
     private ExecutorService execSvc;
@@ -98,7 +107,8 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
         // Daemon node should not open client port
         if (cfg.isDaemon()) {
-            log.debug("Client connection configuration ignored for daemon node.");
+            if (log.isDebugEnabled())
+                log.debug("Client connection configuration ignored for daemon node.");
 
             return;
         }
@@ -130,7 +140,9 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                     cliConnCfg.getThreadPoolSize(),
                     cliConnCfg.getThreadPoolSize(),
                     0,
-                    new LinkedBlockingQueue<Runnable>());
+                    new LinkedBlockingQueue<Runnable>(),
+                    GridIoPolicy.UNDEFINED,
+                    new OomExceptionHandler(ctx));
 
                 Exception lastErr = null;
 
@@ -143,14 +155,16 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
                 long idleTimeout = cliConnCfg.getIdleTimeout();
 
+                int selectorCnt = cliConnCfg.getSelectorCount();
+
                 for (int port = cliConnCfg.getPort(); port <= portTo && port <= 65535; port++) {
                     try {
-                        GridNioServer<byte[]> srv0 = GridNioServer.<byte[]>builder()
+                        srv = GridNioServer.<ClientMessage>builder()
                             .address(hostAddr)
                             .port(port)
                             .listener(new ClientListenerNioListener(ctx, busyLock, cliConnCfg))
                             .logger(log)
-                            .selectorCount(DFLT_SELECTOR_CNT)
+                            .selectorCount(selectorCnt)
                             .igniteInstanceName(ctx.igniteInstanceName())
                             .serverName("client-listener")
                             .tcpNoDelay(cliConnCfg.isTcpNoDelay())
@@ -159,11 +173,10 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                             .socketSendBufferSize(cliConnCfg.getSocketSendBufferSize())
                             .socketReceiveBufferSize(cliConnCfg.getSocketReceiveBufferSize())
                             .filters(filters)
-                            .directMode(false)
+                            .directMode(true)
+                            .writerFactory(ses -> new DirectMessageWriter((byte)1))
                             .idleTimeout(idleTimeout > 0 ? idleTimeout : Long.MAX_VALUE)
                             .build();
-
-                        srv = srv0;
 
                         ctx.ports().registerPort(port, IgnitePortProtocol.TCP, getClass());
 
@@ -190,6 +203,11 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
                 if (!U.IGNITE_MBEANS_DISABLED)
                     registerMBean();
+
+                ctx.systemView().registerView(CLI_CONN_VIEW, CLI_CONN_VIEW_DESC,
+                    new ClientConnectionViewWalker(),
+                    srv.sessions(),
+                    ClientConnectionView::new);
             }
             catch (Exception e) {
                 throw new IgniteCheckedException("Failed to start client connector processor.", e);
@@ -267,14 +285,14 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                 ClientListenerConnectionContext connCtx = ses.meta(ClientListenerNioListener.CONN_CTX_META_KEY);
 
                 if (connCtx != null && connCtx.parser() != null && connCtx.handler().isCancellationSupported()) {
-                    byte[] inMsg;
+                    ClientMessage inMsg;
 
                     int cmdType;
 
                     long reqId;
 
                     try {
-                        inMsg = (byte[])msg;
+                        inMsg = (ClientMessage)msg;
 
                         cmdType = connCtx.parser().decodeCommandType(inMsg);
 
@@ -304,7 +322,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             }
         };
 
-        GridNioFilter codecFilter = new GridNioCodecFilter(new ClientListenerBufferedParser(), log, false);
+        GridNioFilter codecFilter = new GridNioCodecFilter(new ClientListenerNioMessageParser(log), log, true);
 
         if (cliConnCfg.isSslEnabled()) {
             Factory<SSLContext> sslCtxFactory = cliConnCfg.isUseIgniteSslContextFactory() ?
@@ -317,7 +335,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtxFactory.create(),
                 true, ByteOrder.nativeOrder(), log);
 
-            sslFilter.directMode(false);
+            sslFilter.directMode(true);
 
             boolean auth = cliConnCfg.isSslClientAuth();
 
@@ -358,6 +376,75 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             if (log.isDebugEnabled())
                 log.debug("Client connector processor stopped.");
         }
+    }
+
+    /**
+     *
+     */
+    public void closeAllSessions() {
+        Collection<? extends GridNioSession> sessions = srv.sessions();
+
+        for (GridNioSession ses : sessions) {
+            ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
+
+            if (connCtx == null || ses.closeTime() != 0)
+                continue; // Skip non-initialized or closed session.
+
+            srv.close(ses);
+
+            if (log.isInfoEnabled()) {
+                log.info("Client session has been dropped: "
+                    + clientConnectionDescription(ses, connCtx));
+            }
+        }
+    }
+
+    /**
+     * Compose connection description string.
+     * @param ses Client's NIO session.
+     * @param ctx Client's connection context.
+     * @return connection description.
+     */
+    @SuppressWarnings("StringConcatenationInsideStringBufferAppend")
+    private static String clientConnectionDescription(
+        GridNioSession ses,
+        ClientListenerConnectionContext ctx
+    ) {
+        AuthorizationContext authCtx = ctx.authorizationContext();
+
+        StringBuilder sb = new StringBuilder();
+
+        if (ctx instanceof JdbcConnectionContext)
+            sb.append("JdbcClient [");
+        else if (ctx instanceof OdbcConnectionContext)
+            sb.append("OdbcClient [");
+        else
+            sb.append("ThinClient [");
+
+        InetSocketAddress rmtAddr = ses.remoteAddress();
+        InetSocketAddress locAddr = ses.localAddress();
+
+        assert rmtAddr != null;
+        assert locAddr != null;
+
+        String rmtAddrStr = rmtAddr.getHostString() + ":" + rmtAddr.getPort();
+        String locAddrStr = locAddr.getHostString() + ":" + locAddr.getPort();
+
+        String login;
+
+        if (authCtx != null)
+            login = authCtx.userName();
+        else if (ctx.securityContext() != null)
+            login = "@" + ctx.securityContext().subject().login();
+        else
+            login = "<anonymous>";
+
+        sb.append("id=" + ctx.connectionId());
+        sb.append(", user=").append(login);
+        sb.append(", rmtAddr=" + rmtAddrStr);
+        sb.append(", locAddr=" + locAddrStr);
+
+        return sb.append(']').toString();
     }
 
     /**
@@ -410,11 +497,13 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                 cliConnCfg.setTcpNoDelay(sqlConnCfg.isTcpNoDelay());
                 cliConnCfg.setThreadPoolSize(sqlConnCfg.getThreadPoolSize());
 
-                U.warn(log, "Automatically converted deprecated " + SqlConnectorConfiguration.class.getSimpleName() +
+                U.warn(log, "Automatically converted deprecated "
+                    + SqlConnectorConfiguration.class.getSimpleName() +
                     " to " + ClientConnectorConfiguration.class.getSimpleName() + ".");
 
                 if (odbcCfg != null) {
-                    U.warn(log, "Deprecated " + OdbcConfiguration.class.getSimpleName() + " will be ignored because " +
+                    U.warn(log, "Deprecated " + OdbcConfiguration.class.getSimpleName() +
+                        " will be ignored because " +
                         SqlConnectorConfiguration.class.getSimpleName() + " is set.");
                 }
             }
@@ -518,19 +607,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void dropAllConnections() {
-            Collection<? extends GridNioSession> sessions = srv.sessions();
-
-            for (GridNioSession ses : sessions) {
-                ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
-
-                if (connCtx == null || ses.closeTime() != 0)
-                    continue; // Skip non-initialized or closed session.
-
-                srv.close(ses);
-
-                if (log.isInfoEnabled())
-                    log.info("Client session has been dropped: " + clientConnectionDescription(ses, connCtx));
-            }
+            closeAllSessions();
         }
 
         /** {@inheritDoc} */
@@ -546,57 +623,25 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                     continue;
 
                 if (ses.closeTime() != 0) {
-                    if (log.isDebugEnabled())
-                        log.debug("Client session is already closed: " + clientConnectionDescription(ses, connCtx));
+                    if (log.isDebugEnabled()) {
+                        log.debug("Client session is already closed: " +
+                            clientConnectionDescription(ses, connCtx));
+                    }
 
                     return false;
                 }
 
                 srv.close(ses);
 
-                if (log.isInfoEnabled())
-                    log.info("Client session has been dropped: " + clientConnectionDescription(ses, connCtx));
+                if (log.isInfoEnabled()) {
+                    log.info("Client session has been dropped: " +
+                        clientConnectionDescription(ses, connCtx));
+                }
 
                 return true;
             }
 
             return false;
-        }
-
-        /**
-         * Compose connection description string.
-         * @param ses client NIO session.
-         * @param ctx client connection context.
-         * @return connection description
-         */
-        @SuppressWarnings("StringConcatenationInsideStringBufferAppend")
-        private String clientConnectionDescription(GridNioSession ses, ClientListenerConnectionContext ctx) {
-            AuthorizationContext authCtx = ctx.authorizationContext();
-
-            StringBuilder sb = new StringBuilder();
-
-            if(ctx instanceof JdbcConnectionContext)
-                sb.append("JdbcClient [");
-            else if (ctx instanceof OdbcConnectionContext)
-                sb.append("OdbcClient [");
-            else
-                sb.append("ThinClient [");
-
-            InetSocketAddress rmtAddr = ses.remoteAddress();
-            InetSocketAddress locAddr = ses.localAddress();
-
-            assert rmtAddr != null;
-            assert locAddr != null;
-
-            String rmtAddrStr = rmtAddr.getHostString() + ":" + rmtAddr.getPort();
-            String locAddrStr = locAddr.getHostString() + ":" + locAddr.getPort();
-
-            sb.append("id=" + ctx.connectionId());
-            sb.append(", user=").append(authCtx == null ? "<anonymous>" : authCtx.userName());
-            sb.append(", rmtAddr=" + rmtAddrStr);
-            sb.append(", locAddr=" + locAddrStr);
-
-            return sb.append(']').toString();
         }
     }
 }

@@ -46,6 +46,8 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.JmxSystemViewExporterSpi;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
@@ -64,6 +66,7 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessor;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
@@ -89,6 +92,7 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.NoopTracing;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
+import org.apache.ignite.internal.stat.IoStatisticsManager;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -106,9 +110,6 @@ import org.jetbrains.annotations.Nullable;
  * Dummy grid kernal context
  */
 public class StandaloneGridKernalContext implements GridKernalContext {
-    /** Binary metadata file store folder. */
-    public static final String BINARY_META_FOLDER = "binary_meta";
-
     /** Config for fake Ignite instance. */
     private final IgniteConfiguration cfg;
 
@@ -120,6 +121,9 @@ public class StandaloneGridKernalContext implements GridKernalContext {
 
     /** Metrics manager. */
     private final GridMetricManager metricMgr;
+
+    /** System view manager. */
+    private final GridSystemViewManager sysViewMgr;
 
     /**
      * Cache object processor. Used for converting cache objects and keys into binary objects. Null means there is no
@@ -156,10 +160,11 @@ public class StandaloneGridKernalContext implements GridKernalContext {
         this.marshallerCtx = new MarshallerContextImpl(null, null);
         this.cfg = prepareIgniteConfiguration();
         this.metricMgr = new GridMetricManager(this);
+        this.sysViewMgr = new GridSystemViewManager(this);
 
         // Fake folder provided to perform processor startup on empty folder.
         if (binaryMetadataFileStoreDir == null)
-            binaryMetadataFileStoreDir = new File(BINARY_META_FOLDER).getAbsoluteFile();
+            binaryMetadataFileStoreDir = new File(DataStorageConfiguration.DFLT_BINARY_METADATA_PATH).getAbsoluteFile();
 
         this.cacheObjProcessor = binaryProcessor(this, binaryMetadataFileStoreDir);
 
@@ -212,6 +217,7 @@ public class StandaloneGridKernalContext implements GridKernalContext {
         marshaller.setContext(marshallerCtx);
 
         cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
+        cfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
 
         return cfg;
     }
@@ -303,6 +309,11 @@ public class StandaloneGridKernalContext implements GridKernalContext {
     /** {@inheritDoc} */
     @Override public GridMetricManager metric() {
         return metricMgr;
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridSystemViewManager systemView() {
+        return sysViewMgr;
     }
 
     /** {@inheritDoc} */
@@ -665,6 +676,11 @@ public class StandaloneGridKernalContext implements GridKernalContext {
     }
 
     /** {@inheritDoc} */
+    @Override public IoStatisticsManager ioStats() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
     @Override public Thread.UncaughtExceptionHandler uncaughtExceptionHandler() {
         return null;
     }
@@ -706,6 +722,16 @@ public class StandaloneGridKernalContext implements GridKernalContext {
 
     /** {@inheritDoc} */
     @Override public DiagnosticProcessor diagnostic() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public ExecutorService buildIndexExecutorService() {
         return null;
     }
 }

@@ -45,6 +45,8 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteJdbcDriver.CFG_URL_PREFIX;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 
 /**
  * Data streaming test.
@@ -171,10 +173,10 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
         try (Connection conn = createStreamedConnection(true)) {
             populateData(conn, 0, 1);
 
-            grid(0).cluster().readOnly(true);
+            grid(0).cluster().state(ACTIVE_READ_ONLY);
 
             try {
-                assertTrue(grid(0).cluster().readOnly());
+                assertEquals(ACTIVE_READ_ONLY, grid(0).cluster().state());
 
                 try (Connection ordinalCon = createOrdinaryConnection()) {
                     assertEquals(1, countPersons(ordinalCon));
@@ -194,7 +196,7 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
                 }
             }
             finally {
-                grid(0).cluster().readOnly(false);
+                grid(0).cluster().state(ACTIVE);
             }
         }
     }

@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.AbstractNodeNameAwareMarshaller;
@@ -99,6 +100,12 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
     /** Class descriptors by class. */
     private final ConcurrentMap<Class, OptimizedClassDescriptor> clsMap = new ConcurrentHashMap<>();
 
+    /** */
+    private OptimizedObjectStreamRegistry registry = new OptimizedObjectSharedStreamRegistry();
+
+    /** Non cached registry. */
+    private OptimizedObjectSharedStreamRegistry nonCachedRegistry = new OptimizedObjectSharedStreamRegistry();
+
     /**
      * Creates new marshaller will all defaults.
      *
@@ -161,7 +168,9 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
      * @return {@code this} for chaining.
      */
     public OptimizedMarshaller setPoolSize(int poolSize) {
-        OptimizedObjectStreamRegistry.poolSize(poolSize);
+        registry = poolSize > 0 ?
+            new OptimizedObjectPooledStreamRegistry(poolSize) :
+            new OptimizedObjectSharedStreamRegistry();
 
         return this;
     }
@@ -173,7 +182,7 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
         OptimizedObjectOutputStream objOut = null;
 
         try {
-            objOut = OptimizedObjectStreamRegistry.out();
+            objOut = registry.out();
 
             objOut.context(clsMap, ctx, mapper, requireSer);
 
@@ -185,7 +194,7 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
             throw new IgniteCheckedException("Failed to serialize object: " + obj, e);
         }
         finally {
-            OptimizedObjectStreamRegistry.closeOut(objOut);
+            registry.closeOut(objOut);
         }
     }
 
@@ -194,7 +203,7 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
         OptimizedObjectOutputStream objOut = null;
 
         try {
-            objOut = OptimizedObjectStreamRegistry.out();
+            objOut = registry.out();
 
             objOut.context(clsMap, ctx, mapper, requireSer);
 
@@ -206,27 +215,43 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
             throw new IgniteCheckedException("Failed to serialize object: " + obj, e);
         }
         finally {
-            OptimizedObjectStreamRegistry.closeOut(objOut);
+            registry.closeOut(objOut);
         }
     }
 
     /** {@inheritDoc} */
     @Override protected <T> T unmarshal0(InputStream in, @Nullable ClassLoader clsLdr) throws IgniteCheckedException {
+        return unmarshal0(in, clsLdr, GridBinaryMarshaller.USE_CACHE.get());
+    }
+
+    /**
+     * Unmarshals object from the input stream using given class loader.
+     * This method should not close given input stream.
+     *
+     * @param <T> Type of unmarshalled object.
+     * @param in Input stream.
+     * @param clsLdr Class loader to use.
+     * @param useCache True if class loader cache will be used, false otherwise.
+     * @return Unmarshalled object.
+     * @throws IgniteCheckedException If unmarshalling failed.
+     */
+    protected <T> T unmarshal0(InputStream in, @Nullable ClassLoader clsLdr, boolean useCache) throws IgniteCheckedException {
         assert in != null;
 
         OptimizedObjectInputStream objIn = null;
 
         try {
-            objIn = OptimizedObjectStreamRegistry.in();
+            objIn = !useCache ? nonCachedRegistry.in() : registry.in();
 
-            objIn.context(clsMap, ctx, mapper, clsLdr != null ? clsLdr : dfltClsLdr);
+            objIn.context(clsMap, ctx, mapper, clsLdr != null ? clsLdr : dfltClsLdr, useCache);
 
             objIn.in().inputStream(in);
 
             return (T)objIn.readObject();
         }
         catch (ClassNotFoundException e) {
-            throw new IgniteCheckedException("Failed to find class with given class loader for unmarshalling " +
+            throw new OptimizedMarshallerInaccessibleClassException(
+                "Failed to find class with given class loader for unmarshalling " +
                 "(make sure same versions of all classes are available on all nodes or enable peer-class-loading) " +
                 "[clsLdr=" + clsLdr + ", cls=" + e.getMessage() + "]", e);
         }
@@ -235,7 +260,10 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
                 "[clsLdr=" + clsLdr + ", err=" + e.getMessage() + "]", e);
         }
         finally {
-            OptimizedObjectStreamRegistry.closeIn(objIn);
+            if (!useCache)
+                nonCachedRegistry.closeNotCachedIn(objIn);
+            else
+                registry.closeIn(objIn);
         }
     }
 
@@ -246,9 +274,10 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
         OptimizedObjectInputStream objIn = null;
 
         try {
-            objIn = OptimizedObjectStreamRegistry.in();
+            objIn = registry.in();
 
-            objIn.context(clsMap, ctx, mapper, clsLdr != null ? clsLdr : dfltClsLdr);
+            objIn.context(clsMap, ctx, mapper,
+                clsLdr != null ? clsLdr : dfltClsLdr, GridBinaryMarshaller.USE_CACHE.get());
 
             objIn.in().bytes(arr, arr.length);
 
@@ -263,7 +292,7 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
             throw new IgniteCheckedException("Failed to deserialize object with given class loader: " + clsLdr, e);
         }
         finally {
-            OptimizedObjectStreamRegistry.closeIn(objIn);
+            registry.closeIn(objIn);
         }
     }
 

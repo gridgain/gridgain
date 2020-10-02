@@ -23,6 +23,7 @@ import java.io.ObjectOutput;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -35,14 +36,12 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.IDLE_VERIFY;
-
 /**
  * Encapsulates result of {@link VerifyBackupPartitionsTaskV2}.
  */
 public class IdleVerifyResultV2 extends VisorDataTransferObject {
     /** */
-    public static final String IDLE_VERIFY_FILE_PREFIX = IDLE_VERIFY + "-";
+    public static final String IDLE_VERIFY_FILE_PREFIX = "idle_verify-";
 
     /** Time formatter for log file name. */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss_SSS");
@@ -142,7 +141,7 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
      * @return Moving partitions.
      */
     public Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingPartitions() {
-        return movingPartitions;
+        return Collections.unmodifiableMap(movingPartitions);
     }
 
     /**
@@ -235,7 +234,12 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
             else
                 printConflicts(printer);
 
-            printSkippedPartitions(printer, movingPartitions(), "MOVING");
+            Map<PartitionKeyV2, List<PartitionHashRecordV2>> moving = movingPartitions();
+
+            if (!moving.isEmpty())
+                printer.accept("Possible results are not full due to rebalance still in progress." + U.nl());
+
+            printSkippedPartitions(printer, moving, "MOVING");
             printSkippedPartitions(printer, lostPartitions(), "LOST");
         }
         else {

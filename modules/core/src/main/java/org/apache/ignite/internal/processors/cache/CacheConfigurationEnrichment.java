@@ -18,7 +18,9 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.io.Serializable;
 import java.util.Map;
-import org.jetbrains.annotations.Nullable;
+import java.util.Set;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Object that contains serialized values for fields marked with {@link org.apache.ignite.configuration.SerializeSeparately}
@@ -34,13 +36,13 @@ public class CacheConfigurationEnrichment implements Serializable {
     private final Map<String, byte[]> enrichFields;
 
     /** Field name -> Field value class name. */
+    @GridToStringInclude
     private final Map<String, String> fieldClassNames;
 
-    /** Enrichment fields for {@link org.apache.ignite.configuration.NearCacheConfiguration}. */
-    private volatile @Nullable CacheConfigurationEnrichment nearCacheCfgEnrichment;
-
     /**
-     * @param enrichFields Enrich fields.
+     * Creates a new instance of CacheConfigurationEnrichment.
+     *
+     * @param enrichFields Mapping a field name to its serialized value.
      * @param fieldClassNames Field class names.
      */
     public CacheConfigurationEnrichment(
@@ -53,36 +55,52 @@ public class CacheConfigurationEnrichment implements Serializable {
 
     /**
      * @param fieldName Field name.
+     * @return Serialized value of the given field.
      */
     public byte[] getFieldSerializedValue(String fieldName) {
         return enrichFields.get(fieldName);
     }
 
     /**
+     * Returns all field names that can be potentially enriched.
+     *
+     * @return Set of field names.
+     */
+    public Set<String> fields() {
+        return fieldClassNames.keySet();
+    }
+
+    /**
      * @param fieldName Field name.
+     * @return Class name of the given field.
      */
     public String getFieldClassName(String fieldName) {
         return fieldClassNames.get(fieldName);
     }
 
     /**
-     * @param nearCacheCfgEnrichment Enrichment configured for {@link org.apache.ignite.configuration.NearCacheConfiguration}.
+     * Returns {@code true} if this enrichment contains serialized valued for the specified field.
+     *
+     * @param name Field name.
+     * @return True when field presents, false otherwise.
      */
-    public void nearCacheConfigurationEnrichment(CacheConfigurationEnrichment nearCacheCfgEnrichment) {
-        this.nearCacheCfgEnrichment = nearCacheCfgEnrichment;
+    public boolean hasField(String name) {
+        return fieldClassNames.containsKey(name);
     }
 
     /**
-     * @return Enrichment for configured {@link org.apache.ignite.configuration.NearCacheConfiguration}.
+     * Returns {@code true} if all field class names are {@code null}.
+     * The current implementation assumes that {@code null} value is the default value for an enriched field.
+     * Be aware this method is used for backward compatibility only and will be removed in future releases.
+     *
+     * @return {@code true} if all field values are {@code null}.
      */
-    public CacheConfigurationEnrichment nearCacheConfigurationEnrichment() {
-        return nearCacheCfgEnrichment;
+    public boolean isEmpty() {
+        return !fieldClassNames.values().stream().filter(s -> s != null).findAny().isPresent();
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "CacheConfigurationEnrichment{" +
-            "enrichFields=" + enrichFields +
-            '}';
+        return S.toString(CacheConfigurationEnrichment.class, this);
     }
 }

@@ -27,7 +27,8 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionDataTypeUtils;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionParameterType;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.value.Value;
 import org.junit.Test;
 
 /**
@@ -334,10 +335,10 @@ public class SqlDataTypeConversionTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void makeSureThatConvertationResultsExactTheSameAsWithinH2(Object arg,
-        PartitionParameterType ... excludedTargetTypesFromCheck) throws Exception {
+        PartitionParameterType... excludedTargetTypesFromCheck) throws Exception {
 
         Iterable<PartitionParameterType> targetTypes = excludedTargetTypesFromCheck.length > 0 ?
-            EnumSet.complementOf(EnumSet.of(excludedTargetTypesFromCheck[0], excludedTargetTypesFromCheck)):
+            EnumSet.complementOf(EnumSet.of(excludedTargetTypesFromCheck[0], excludedTargetTypesFromCheck)) :
             EnumSet.allOf(PartitionParameterType.class);
 
         for (PartitionParameterType targetType : targetTypes) {
@@ -349,7 +350,7 @@ public class SqlDataTypeConversionTest extends GridCommonAbstractTest {
 
                     fail("Data conversion failed in Ignite but not in H2.");
                 }
-                catch (org.h2.message.DbException h2Exception) {
+                catch (DbException h2Exception) {
                     assertTrue(h2Exception.getMessage().contains("Numeric value out of range") ||
                         h2Exception.getMessage().contains("Data conversion error"));
                 }

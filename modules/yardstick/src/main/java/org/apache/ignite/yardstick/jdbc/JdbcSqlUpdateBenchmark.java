@@ -55,7 +55,7 @@ public class JdbcSqlUpdateBenchmark extends AbstractJdbcBenchmark {
 
         PreparedStatement update;
 
-        if (idGen.rangeWidth() == 1){
+        if (idGen.rangeWidth() == 1) {
             update = singleUpdate.get();
 
             // startId == endId

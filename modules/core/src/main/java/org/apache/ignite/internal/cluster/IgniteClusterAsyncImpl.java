@@ -34,7 +34,9 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.AsyncSupportAdapter;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
@@ -350,6 +352,7 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     @Override public boolean enableWal(String cacheName) throws IgniteException {
         return cluster.enableWal(cacheName);
     }
+
     /** {@inheritDoc} */
     @Override public boolean disableWal(String cacheName) throws IgniteException {
         return cluster.disableWal(cacheName);
@@ -361,21 +364,6 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public UUID id() {
-        return cluster.id();
-    }
-
-    /** {@inheritDoc} */
-    @Override public String tag() {
-        return cluster.tag();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void tag(String tag) throws IgniteCheckedException {
-        cluster.tag(tag);
-    }
-
-    /** {@inheritDoc} */
     @Override public boolean isBaselineAutoAdjustEnabled() {
         return cluster.isBaselineAutoAdjustEnabled();
     }
@@ -383,15 +371,6 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     /** {@inheritDoc} */
     @Override public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) throws IgniteException {
         cluster.baselineAutoAdjustEnabled(baselineAutoAdjustEnabled);
-    }
-
-    /**
-     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust. {@code False} If cluster in manuale.
-     * @return Future for await operation completion.
-     */
-    public IgniteFuture<?> baselineAutoAdjustEnabledAsync(boolean baselineAutoAdjustEnabled) {
-        return cluster.baselineAutoAdjustEnabledAsync(baselineAutoAdjustEnabled);
     }
 
     /** {@inheritDoc} */
@@ -409,13 +388,14 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
         return cluster.baselineAutoAdjustStatus();
     }
 
-    /**
-     * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * server topology change (node join/left/fail).
-     * @return Future for await operation completion.
-     */
-    public IgniteFuture<?> baselineAutoAdjustTimeoutAsync(long baselineAutoAdjustTimeout) {
-        return cluster.baselineAutoAdjustTimeoutAsync(baselineAutoAdjustTimeout);
+    /** {@inheritDoc} */
+    @Override public ShutdownPolicy shutdownPolicy() {
+        return cluster.shutdownPolicy();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void shutdownPolicy(ShutdownPolicy policy) {
+        cluster.shutdownPolicy(policy);
     }
 
     /** {@inheritDoc} */
@@ -429,12 +409,12 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public boolean readOnly() {
-        return cluster.readOnly();
+    @Override public ClusterState state() {
+        return cluster.state();
     }
 
     /** {@inheritDoc} */
-    @Override public void readOnly(boolean readOnly) throws IgniteException {
-        cluster.readOnly(readOnly);
+    @Override public void state(ClusterState newState) throws IgniteException {
+        cluster.state(newState);
     }
 }

@@ -28,7 +28,7 @@ import org.apache.ignite.mxbean.CacheMetricsMXBean;
  * @deprecated Use {@link GridMetricManager} instead.
  */
 @Deprecated
-class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
+public class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
     /** Cache. */
     private GridCacheAdapter<?, ?> cache;
 
@@ -509,5 +509,20 @@ class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
         catch (IgniteCheckedException e) {
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getTxKeyCollisions() {
+        return cache.metrics0().getTxKeyCollisions();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isIndexRebuildInProgress() {
+        return cache.metrics0().isIndexRebuildInProgress();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getIndexRebuildKeysProcessed() {
+        return cache.metrics0().getIndexRebuildKeysProcessed();
     }
 }

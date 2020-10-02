@@ -57,7 +57,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryMetadataResult;
  * JDBC result set implementation.
  */
 public class JdbcThinResultSet implements ResultSet {
-    /** Decimal format to convert streing to decimal. */
+    /** Decimal format to convert string to decimal. */
     private static final ThreadLocal<DecimalFormat> decimalFormat = new ThreadLocal<DecimalFormat>() {
         /** {@inheritDoc} */
         @Override protected DecimalFormat initialValue() {
@@ -1828,7 +1828,7 @@ public class JdbcThinResultSet implements ResultSet {
 
             Class<?> cls = val.getClass();
 
-            if (targetCls == cls)
+            if (targetCls.isAssignableFrom(cls))
                 return val;
             else
                 throw new SQLException("Cannot convert to " + targetCls.getName() + ": " + val,
@@ -1925,10 +1925,10 @@ public class JdbcThinResultSet implements ResultSet {
      * @return Column order map.
      */
     private Map<String, Integer> columnOrder() throws SQLException {
-        if(colOrder != null)
+        if (colOrder != null)
             return colOrder;
 
-        if(!metaInit)
+        if (!metaInit)
             meta();
 
         initColumnOrder();
@@ -1945,7 +1945,7 @@ public class JdbcThinResultSet implements ResultSet {
         for (int i = 0; i < meta.size(); ++i) {
             String colName = meta.get(i).columnName().toUpperCase();
 
-            if(!colOrder.containsKey(colName))
+            if (!colOrder.containsKey(colName))
                 colOrder.put(colName, i);
         }
     }

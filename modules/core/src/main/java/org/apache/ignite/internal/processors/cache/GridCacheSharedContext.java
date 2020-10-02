@@ -38,6 +38,7 @@ import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentManager;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
+import org.apache.ignite.internal.managers.systemview.ScanQuerySystemView;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -63,7 +64,6 @@ import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
@@ -138,7 +138,7 @@ public class GridCacheSharedContext<K, V> {
     private DeadlockDetectionManager deadlockDetectionMgr;
 
     /** Cache contexts map. */
-    private ConcurrentHashMap<Integer, GridCacheContext<K, V>> ctxMap;
+    private final ConcurrentHashMap<Integer, GridCacheContext<K, V>> ctxMap;
 
     /** Tx metrics. */
     private final TransactionMetricsAdapter txMetrics;
@@ -257,6 +257,8 @@ public class GridCacheSharedContext<K, V> {
         txMetrics = new TransactionMetricsAdapter(kernalCtx);
 
         ctxMap = new ConcurrentHashMap<>();
+
+        kernalCtx.systemView().registerView(new ScanQuerySystemView<>(ctxMap.values()));
 
         locStoreCnt = new AtomicInteger();
 
@@ -649,16 +651,6 @@ public class GridCacheSharedContext<K, V> {
     }
 
     /**
-     * @return Data center ID.
-     */
-    public byte dataCenterId() {
-        // Data center ID is same for all caches, so grab the first one.
-        GridCacheContext<?, ?> cacheCtx = F.first(cacheContexts());
-
-        return cacheCtx.dataCenterId();
-    }
-
-    /**
      * @return Transactional metrics adapter.
      */
     public TransactionMetricsAdapter txMetrics() {
@@ -850,7 +842,7 @@ public class GridCacheSharedContext<K, V> {
     /**
      * @return Diagnostic manager.
      */
-    public CacheDiagnosticManager diagnostic(){
+    public CacheDiagnosticManager diagnostic() {
         return diagnosticMgr;
     }
 
@@ -939,7 +931,7 @@ public class GridCacheSharedContext<K, V> {
         f.add(mvcc().finishAtomicUpdates(topVer));
         f.add(mvcc().finishDataStreamerUpdates(topVer));
 
-        IgniteInternalFuture<?> finishLocalTxsFuture = tm().finishLocalTxs(topVer);
+        IgniteInternalFuture<?> finishLocalTxsFuture = tm().finishLocalTxs(topVer, null);
         // To properly track progress of finishing local tx updates we explicitly add this future to compound set.
         f.add(finishLocalTxsFuture);
         f.add(tm().finishAllTxs(finishLocalTxsFuture, topVer));
@@ -947,6 +939,21 @@ public class GridCacheSharedContext<K, V> {
         f.markInitialized();
 
         return f;
+    }
+
+    /**
+     * Captures all prepared operations that we need to wait before we able to perform PME-free switch.
+     * This method must be called only after {@link GridDhtPartitionTopology#updateTopologyVersion}
+     * method is called so that all new updates will wait to switch to the new version.
+     * <p>
+     * Captured updates are wrapped in a future that will be completed once pending objects are released.
+     *
+     * @param topVer Topology version.
+     * @param node Failed node.
+     * @return {@code True} if waiting was successful.
+     */
+    public IgniteInternalFuture<?> partitionRecoveryFuture(AffinityTopologyVersion topVer, ClusterNode node) {
+        return tm().finishLocalTxs(topVer, node);
     }
 
     /**

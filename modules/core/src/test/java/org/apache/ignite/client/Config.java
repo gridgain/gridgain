@@ -49,7 +49,11 @@ public class Config {
 
         igniteCfg.setCacheConfiguration(dfltCacheCfg);
 
-        igniteCfg.setIgniteInstanceName(UUID.randomUUID().toString());
+        String id = UUID.randomUUID().toString();
+
+        igniteCfg.setConsistentId(id);
+
+        igniteCfg.setIgniteInstanceName(id);
 
         return igniteCfg;
     }

@@ -18,12 +18,13 @@ package org.apache.ignite.internal.processors.query.h2.twostep.msg;
 
 import java.nio.ByteBuffer;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
-import org.h2.value.ValueJavaObject;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueJavaObject;
 
-import static org.h2.util.StringUtils.convertBytesToHex;
+import static org.gridgain.internal.h2.util.StringUtils.convertBytesToHex;
 
 /**
  * H2 Java Object.
@@ -50,7 +51,7 @@ public class GridH2JavaObject extends GridH2ValueMessage {
 
     /** {@inheritDoc} */
     @Override public Value value(GridKernalContext ctx) {
-        return ValueJavaObject.getNoCopy(null, b, null);
+        return ValueJavaObject.getNoCopy(null, b, H2Utils.getHandler(ctx));
     }
 
     /** {@inheritDoc} */

@@ -21,11 +21,18 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
@@ -62,11 +69,16 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
      * Setup.
      */
     @Override protected void beforeTestsStarted() throws Exception {
-        SuspendQuerySqlFunctions.refresh();
-
         startGrids(2);
 
         cache = createCacheFrom(grid(REDUCER_IDX));
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        SuspendQuerySqlFunctions.refresh();
     }
 
     /** {@inheritDoc} */
@@ -180,7 +192,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
      * @return update count.
      */
     private int insertWithStreaming(Integer id, String name) {
-        try (Connection conn= GridTestUtils.connect(grid(REDUCER_IDX), null)) {
+        try (Connection conn = GridTestUtils.connect(grid(REDUCER_IDX), null)) {
             conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
 
             try (Statement stat = conn.createStatement()) {
@@ -224,7 +236,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
      * @param pathToCsv Path to csv file to upload.
      */
     private int doCopyCommand(String pathToCsv) {
-        try (Connection conn= GridTestUtils.connect(grid(REDUCER_IDX), null)) {
+        try (Connection conn = GridTestUtils.connect(grid(REDUCER_IDX), null)) {
             conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
 
             try (Statement copy = conn.createStatement()) {
@@ -281,15 +293,41 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
 
     /**
      * Check general failure metric if local select failed.
-     *
      */
     @Test
     public void testLocalSelectFailed() {
-        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
-            log,
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()").setLocal(true)).getAll(),
-            CacheException.class,
-            null),
+        assertMetricsIncrementedOnlyOnReducer(() -> {
+                try {
+                    cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()").setLocal(true)).getAll();
+                    fail("Exception must be thrown");
+                }
+                catch (CacheException | IgniteSQLException e) {
+                    // Expected exception.
+                }
+            },
+            "failed");
+    }
+
+    /**
+     * Check general failure metric if local select failed.
+     */
+    @Test
+    public void testLocalLazySelectFailedOnIterator() {
+        assertMetricsIncrementedOnlyOnReducer(() -> {
+                try (FieldsQueryCursor<List<?>> cur = cache.query(
+                    new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()")
+                        .setLocal(true)
+                        .setLazy(true))) {
+                    Iterator<List<?>> it = cur.iterator();
+
+                    it.next();
+
+                    fail("Exception must be thrown");
+                }
+                catch (CacheException | IgniteSQLException e) {
+                    // Expected exception.
+                }
+            },
             "failed");
     }
 
@@ -300,6 +338,49 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
     public void testLocalSelectCanceled() {
         assertMetricsIncrementedOnlyOnReducer(() ->
                 startAndKillQuery(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)").setLocal(true)),
+            "success",
+            "failed",
+            "canceled");
+    }
+
+    /**
+     * Check cancel metric if local select cancelled.
+     */
+    @Test
+    public void testLocalLazySelectCanceledOnIterator() {
+        assertMetricsIncrementedOnlyOnReducer(() -> {
+                IgniteInternalFuture qryCanceled = runAsyncX(() -> GridTestUtils.assertThrowsAnyCause(
+                    log,
+                    () -> {
+                        Iterator<List<?>> it = jcache(REDUCER_IDX).query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)")
+                            .setLocal(true)
+                            .setLazy(true)).iterator();
+
+                        while (it.hasNext())
+                            it.next();
+
+                        return null;
+                    },
+                    QueryCancelledException.class,
+                    null)
+                );
+
+                try {
+                    SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+
+                    // We perform async kill and hope it does it's job in some time.
+                    killAsyncAllQueriesOn(REDUCER_IDX);
+
+                    TimeUnit.SECONDS.sleep(WAIT_FOR_KILL_SEC);
+
+                    SuspendQuerySqlFunctions.resumeQueryExecution();
+
+                    qryCanceled.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+                }
+                catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            },
             "success",
             "failed",
             "canceled");

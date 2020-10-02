@@ -60,13 +60,18 @@ public class JettyRestProcessorAuthenticationWithTokenSelfTest extends JettyRest
     }
 
     /** {@inheritDoc} */
-    @Override protected String restUrl() {
-        String url = super.restUrl();
+    @Override protected TestRestClient createRestClient() {
+        return new TestRestClient(this::signature) {
+            /** {@inheritDoc} */
+            @Override public String restUrl() {
+                String url = super.restUrl();
 
-        if (!F.isEmpty(tok))
-            url += "sessionToken=" + tok + "&";
+                if (!F.isEmpty(tok))
+                    url += "sessionToken=" + tok + "&";
 
-        return url;
+                return url;
+            }
+        };
     }
 
     /**

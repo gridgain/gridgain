@@ -33,9 +33,9 @@ Creating NuGet package:
         <version>$version$</version>
         <authors>GridGain</authors>
         <owners>GridGain</owners>
-        <licenseUrl>https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license</licenseUrl>
+        <license type="file">LICENSE</license>
         <projectUrl>https://gridgain.com/</projectUrl>
-        <iconUrl>https://www.gridgain.com/sites/default/files/GG-logo64-01.png</iconUrl>
+        <icon>images\logo_gg_64x64.png</icon>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>
 GridGain Ignite EntityFramework Second Level Cache: caches EF query results in a distributed in-memory cache.
@@ -47,13 +47,23 @@ More info: https://docs.gridgain.com/
         </summary>
         <copyright>Copyright 2019</copyright>
         <tags>EntityFramework Second-Level GridGain Ignite In-Memory Distributed Computing SQL NoSQL Grid Map Reduce Cache</tags>
+        <repository type="git" url="https://github.com/gridgain/gridgain.git" />
+        
         <dependencies>
-            <dependency id="GridGain.Ignite" version="[$version$]" />
-            <dependency id="EntityFramework" version="[6.1.0,7.0.0)" />
+            <group targetFramework=".NETFramework4.0">
+                <dependency id="GridGain.Ignite" version="[$version$]" />
+                <dependency id="EntityFramework" version="[6.1.0,7.0.0)" />
+            </group>
         </dependencies>    
     </metadata>
     <files>
 	    <file src="bin\$configuration$\Apache.Ignite.EntityFramework.dll" target="lib\net40" />
 		<file src="bin\$configuration$\Apache.Ignite.EntityFramework.xml" target="lib\net40" />
+
+        <!-- Icon -->
+        <file src="..\logo_gg_64x64.png" target="images\" />
+
+        <!-- License -->
+        <file src="..\..\..\..\LICENSE" target="LICENSE" />
     </files>
 </package>

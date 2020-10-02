@@ -19,14 +19,11 @@ package org.apache.ignite.internal.processors.query.oom;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import javax.cache.CacheException;
 import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
@@ -34,7 +31,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager test for distributed queries.
  */
-public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTest {
+public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
         return false;
@@ -43,7 +40,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
     /** {@inheritDoc} */
     @Test
     @Override public void testUnionOfSmallDataSetsWithLargeResult() {
-        maxMem = 2 * MB;
+        maxMem = 3 * MB;
 
         // OOM on reducer.
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 1 " +
@@ -120,6 +117,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
     @Override public void testQueryWithDistinctAndGroupBy() {
         checkQueryExpectOOM("select DISTINCT K.name from K GROUP BY K.id", true);
 
+        // Local result is quite small.
         // Local result is quite small.
         assertEquals(1, localResults.size());
         assertTrue(maxMem > localResults.get(0).memoryReserved());
@@ -201,34 +199,31 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         final List<QueryCursor> cursors = new ArrayList<>();
 
         try {
-            CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
-                for (int i = 0; i < 100; i++) {
-                    QueryCursor<List<?>> cur = query("select DISTINCT T.name, T.id from T ORDER BY T.name",
-                        true);
+            for (int i = 0; i < 100; i++) {
+                QueryCursor<List<?>> cur = query("select DISTINCT T.name, T.id from T ORDER BY T.name",
+                    true);
 
-                    cursors.add(cur);
+                cursors.add(cur);
 
-                    Iterator<List<?>> iter = cur.iterator();
-                    iter.next();
-                }
+                Iterator<List<?>> iter = cur.iterator();
+                iter.next();
+            }
 
-                return null;
-            }, CacheException.class, "SQL query run out of memory: Global quota exceeded.");
+            fail("Exception not thrown.");
+        }
+        catch (SqlMemoryQuotaExceededException ex) {
+            assertTrue(ex.getMessage().contains("SQL query ran out of memory: Global quota was exceeded."));
+            assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.statusCode());
+            assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.sqlState());
 
-            IgniteSQLException sqlEx = X.cause(ex, IgniteSQLException.class);
-
-            assertNotNull("SQL exception missed.", sqlEx);
-            assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, sqlEx.statusCode());
-            assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), sqlEx.sqlState());
-
-            assertEquals(61, localResults.size());
+            assertEquals(42, localResults.size());
             assertEquals(21, cursors.size());
 
             IgniteH2Indexing h2 = (IgniteH2Indexing)grid(1).context().query().getIndexing();
 
-            long globalAllocated = h2.memoryManager().memoryReserved();
+            long globalAllocated = h2.memoryManager().reserved();
 
-            assertTrue(h2.memoryManager().maxMemory() < globalAllocated + MB);
+            assertTrue(h2.memoryManager().memoryLimit() < globalAllocated + MB);
         }
         finally {
             for (QueryCursor c : cursors)

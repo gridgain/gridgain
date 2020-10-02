@@ -31,7 +31,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxRemoteAdapter;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxRemoteSingleStateImpl;
@@ -245,7 +244,7 @@ public class GridDhtTxRemote extends GridDistributedTxRemoteAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override  public boolean storeWriteThrough() {
+    @Override public boolean storeWriteThrough() {
         return storeWriteThrough;
     }
 
@@ -301,10 +300,10 @@ public class GridDhtTxRemote extends GridDistributedTxRemoteAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public void addInvalidPartition(GridCacheContext cacheCtx, int part) {
-        super.addInvalidPartition(cacheCtx, part);
+    @Override public void addInvalidPartition(int cacheId, int part) {
+        super.addInvalidPartition(cacheId, part);
 
-        txState.invalidPartition(cacheCtx.cacheId(), part);
+        txState.invalidPartition(cacheId, part, xidVersion());
     }
 
     /**
@@ -317,21 +316,16 @@ public class GridDhtTxRemote extends GridDistributedTxRemoteAdapter {
 
         GridCacheContext cacheCtx = entry.context();
 
-        try {
-            GridDhtCacheEntry cached = cacheCtx.dht().entryExx(entry.key(), topologyVersion());
+        GridDhtCacheEntry cached = cacheCtx.dht().entryExx(entry.key(), topologyVersion());
 
-            checkInternal(entry.txKey());
+        checkInternal(entry.txKey());
 
-            // Initialize cache entry.
-            entry.cached(cached);
+        // Initialize cache entry.
+        entry.cached(cached);
 
-            txState.addWriteEntry(entry.txKey(), entry);
+        txState.addWriteEntry(entry.txKey(), entry);
 
-            addExplicit(entry);
-        }
-        catch (GridDhtInvalidPartitionException e) {
-            addInvalidPartition(cacheCtx, e.partition());
-        }
+        addExplicit(entry);
     }
 
     /**

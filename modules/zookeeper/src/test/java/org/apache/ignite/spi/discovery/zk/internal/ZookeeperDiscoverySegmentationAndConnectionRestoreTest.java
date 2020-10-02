@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteState;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -401,7 +402,7 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
         if (failWhenDisconnected) {
             helper.checkEvents(ignite(1), evts, ZookeeperDiscoverySpiTestHelper.failEvent(4));
 
-            IgnitionEx.stop(getTestIgniteInstanceName(2), true, true);
+            IgnitionEx.stop(getTestIgniteInstanceName(2), true, ShutdownPolicy.IMMEDIATE, true);
         }
 
         fut.get();

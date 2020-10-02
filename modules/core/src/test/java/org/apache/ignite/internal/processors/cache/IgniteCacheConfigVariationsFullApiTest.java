@@ -1729,7 +1729,6 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
                 IgniteFuture<?> fut1 = cache.invokeAsync(key2, INCR_PROCESSOR, dataMode);
 
-
                 IgniteFuture<?> fut2 = cache.invokeAsync(key3, RMV_PROCESSOR);
 
                 fut0.get();
@@ -6084,7 +6083,6 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
                 else
                     val0 = cache.get(keys.get(0));
 
-
                 assertEquals(0, val0.intValue());
 
                 Map<String, Integer> allOutTx;
@@ -6510,7 +6508,7 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
             if (!entry.isNear())
                 entry.context().cache().removeEntry(entry);
 
-            return  pair;
+            return pair;
         }
     }
 

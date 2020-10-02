@@ -30,6 +30,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -117,16 +118,19 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
 
     /** {@inheritDoc} */
     @Override public List<JdbcStatementResultInfo> call() throws Exception {
-        SqlFieldsQuery qry = (isQry != null ? new SqlFieldsQueryEx(sql, isQry).setMaxMemory(maxMem) :
-            new SqlFieldsQuery(sql)).setArgs(args);
+        SqlFieldsQuery qry = new SqlFieldsQueryEx(sql, isQry)
+            .setMaxMemory(maxMem)
+            .setArgs(args)
+            .setPageSize(fetchSize)
+            .setLocal(locQry)
+            .setCollocated(collocatedQry)
+            .setDistributedJoins(distributedJoins)
+            .setEnforceJoinOrder(enforceJoinOrder)
+            .setLazy(lazy)
+            .setSchema(schemaName);
 
-        qry.setPageSize(fetchSize);
-        qry.setLocal(locQry);
-        qry.setCollocated(collocatedQry);
-        qry.setDistributedJoins(distributedJoins);
-        qry.setEnforceJoinOrder(enforceJoinOrder);
-        qry.setLazy(lazy);
-        qry.setSchema(schemaName);
+        if (!F.isEmpty(queryInitiatorId()))
+            qry.setQueryInitiatorId(queryInitiatorId());
 
         GridKernalContext ctx = ((IgniteKernal)ignite).context();
 
@@ -184,5 +188,12 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
      */
     protected boolean allowMultipleStatements() {
         return true;
+    }
+
+    /**
+     * @return query initiator identifier.
+     */
+    protected String queryInitiatorId() {
+        return null;
     }
 }

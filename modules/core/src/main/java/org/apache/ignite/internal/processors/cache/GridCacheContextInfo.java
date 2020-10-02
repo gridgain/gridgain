@@ -91,6 +91,15 @@ public class GridCacheContextInfo<K, V> {
     }
 
     /**
+     * Returns name of cache group.
+     *
+     * @return Cache group name.
+     */
+    public String groupName() {
+        return CacheGroupContext.cacheOrGroupName(config);
+    }
+
+    /**
      * @return Cache group id.
      */
     public int groupId() {
@@ -142,6 +151,14 @@ public class GridCacheContextInfo<K, V> {
         assert cctx != null;
 
         this.cctx = cctx;
+    }
+
+    /**
+     * Clear real cache context; the method is used on cache.close() on not-affinity nodes to
+     * set up cache on idle state (not started on client, similar to state after join client node).
+     */
+    public void clearCacheContext( ) {
+        cctx = null;
     }
 
     /**

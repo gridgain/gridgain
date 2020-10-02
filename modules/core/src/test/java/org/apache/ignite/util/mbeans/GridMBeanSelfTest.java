@@ -21,7 +21,9 @@ import javax.management.MBeanInfo;
 import javax.management.MBeanOperationInfo;
 import javax.management.MBeanParameterInfo;
 import javax.management.StandardMBean;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.mxbean.IgniteStandardMXBean;
 import org.apache.ignite.mxbean.IgniteMXBean;
 import org.apache.ignite.mxbean.MXBeanDescription;
@@ -45,37 +47,39 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
 
         MBeanInfo info = mbean.getMBeanInfo();
 
-        assert info.getDescription().equals("MBeanDescription.") == true;
+        assertEquals("MBeanDescription.", info.getDescription());
 
-        assert info.getOperations().length == 2;
+        assertEquals(2, info.getOperations().length);
 
         for (MBeanOperationInfo opInfo : info.getOperations()) {
-            if (opInfo.getDescription().equals("MBeanOperation."))
-                assert opInfo.getSignature().length == 2;
+            if (opInfo.getDescription().equals("MBeanOperation.")) {
+                assertEquals(2, opInfo.getSignature().length);
+
+                for (MBeanParameterInfo paramInfo : opInfo.getSignature()) {
+                    if (paramInfo.getName().equals("ignored"))
+                        assertTrue(paramInfo.getDescription().equals("MBeanOperationParameter1."));
+                    else {
+                        assertTrue(paramInfo.getName().equals("someData"));
+                        assertTrue(paramInfo.getDescription().equals("MBeanOperationParameter2."));
+                    }
+                }
+            }
             else {
-                assert opInfo.getDescription().equals("MBeanSuperOperation.") == true;
-                assert opInfo.getSignature().length == 1;
+                assertEquals("MBeanSuperOperation.", opInfo.getDescription());
+                assertEquals(1, opInfo.getSignature().length);
             }
         }
 
-        for (MBeanParameterInfo paramInfo : info.getOperations()[0].getSignature()) {
-            if (paramInfo.getName().equals("ignored"))
-                assert paramInfo.getDescription().equals("MBeanOperationParameter1.") == true;
-            else {
-                assert paramInfo.getName().equals("someData") == true;
-                assert paramInfo.getDescription().equals("MBeanOperationParameter2.") == true;
-            }
-        }
-
-        assert info.getAttributes().length == 4 : "Expected 4 attributes but got " + info.getAttributes().length;
+        assertEquals("Expected 4 attributes but got " + info.getAttributes().length,
+            4, info.getAttributes().length);
 
         for (MBeanAttributeInfo attrInfo : info.getAttributes()) {
-            if (attrInfo.isWritable() == false) {
-                assert (attrInfo.getDescription().equals("MBeanReadonlyGetter.") == true ||
+            if (!attrInfo.isWritable()) {
+                assertTrue(attrInfo.getDescription().equals("MBeanReadonlyGetter.") ||
                     attrInfo.getDescription().equals("MBeanROGetter."));
             }
             else {
-                assert (attrInfo.getDescription().equals("MBeanWritableGetter.") == true ||
+                assertTrue(attrInfo.getDescription().equals("MBeanWritableGetter.") ||
                     attrInfo.getDescription().equals("MBeanWritableIsGetter."));
             }
         }
@@ -97,7 +101,7 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
             return;
         }
 
-        assert false;
+        fail();
     }
 
     /**
@@ -117,7 +121,7 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
             return;
         }
 
-        assert false;
+        fail();
     }
 
     /**
@@ -137,7 +141,7 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
             return;
         }
 
-        assert false;
+        fail();
     }
 
     /**
@@ -157,7 +161,7 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
             return;
         }
 
-        assert false;
+        fail();
     }
 
     /**
@@ -184,6 +188,25 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
         }
         finally {
             stopAllGrids();
+        }
+    }
+
+    /**
+     * Tests correct MBean interface.
+     *
+     * @throws Exception Thrown if test fails.
+     */
+    @Test
+    public void testIgniteKernalReturnsValidPublicThreadPoolSize() throws Exception {
+        try {
+            IgniteEx igniteCrd = startGrid(0);
+
+            IgniteMXBean igniteMXBean = getMxBean(igniteCrd.name(), "Kernal", IgniteMXBean.class, IgniteKernal.class);
+
+            assertEquals(IgniteConfiguration.DFLT_PUBLIC_THREAD_CNT, igniteMXBean.getPublicThreadPoolSize());
+        }
+        finally {
+            stopGrid(0);
         }
     }
 

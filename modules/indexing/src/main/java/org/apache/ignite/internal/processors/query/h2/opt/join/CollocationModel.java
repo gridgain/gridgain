@@ -27,21 +27,21 @@ import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.processors.query.h2.sql.SplitterContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.h2.command.dml.Query;
-import org.h2.command.dml.Select;
-import org.h2.command.dml.SelectUnion;
-import org.h2.engine.Session;
-import org.h2.expression.condition.Comparison;
-import org.h2.expression.Expression;
-import org.h2.expression.ExpressionColumn;
-import org.h2.index.IndexCondition;
-import org.h2.index.ViewIndex;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.SubQueryInfo;
-import org.h2.table.Table;
-import org.h2.table.TableFilter;
-import org.h2.table.TableView;
+import org.gridgain.internal.h2.command.dml.Query;
+import org.gridgain.internal.h2.command.dml.Select;
+import org.gridgain.internal.h2.command.dml.SelectUnion;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.condition.Comparison;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.expression.ExpressionColumn;
+import org.gridgain.internal.h2.index.IndexCondition;
+import org.gridgain.internal.h2.index.ViewIndex;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.SubQueryInfo;
+import org.gridgain.internal.h2.table.Table;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.table.TableView;
 
 /**
  * Collocation model for a query.
@@ -209,15 +209,13 @@ public final class CollocationModel {
         else if (Arrays.equals(this.childFilters, childFilters))
             return false;
 
-        if (this.childFilters == null) {
+        if (this.childFilters == null || this.childFilters.length != childFilters.length) {
             // We have to clone because H2 reuses array and reorders elements.
             this.childFilters = childFilters.clone();
 
             children = new CollocationModel[childFilters.length];
         }
         else {
-            assert this.childFilters.length == childFilters.length;
-
             // We have to copy because H2 reuses array and reorders elements.
             System.arraycopy(childFilters, 0, this.childFilters, 0, childFilters.length);
 

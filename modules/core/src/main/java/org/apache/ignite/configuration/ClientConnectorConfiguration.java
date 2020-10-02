@@ -44,6 +44,9 @@ public class ClientConnectorConfiguration {
     /** Default size of thread pool. */
     public static final int DFLT_THREAD_POOL_SIZE = IgniteConfiguration.DFLT_PUBLIC_THREAD_CNT;
 
+    /** Default selector count. */
+    public static final int DFLT_SELECTOR_CNT = Math.max(4, Runtime.getRuntime().availableProcessors() / 2);
+
     /** Default handshake timeout. */
     public static final int DFLT_HANDSHAKE_TIMEOUT = 10_000;
 
@@ -77,6 +80,9 @@ public class ClientConnectorConfiguration {
     /** Thread pool size. */
     private int threadPoolSize = DFLT_THREAD_POOL_SIZE;
 
+    /** Selector count. */
+    private int selectorCnt = DFLT_SELECTOR_CNT;
+
     /** Idle timeout. */
     private long idleTimeout = DFLT_IDLE_TIMEOUT;
 
@@ -103,6 +109,9 @@ public class ClientConnectorConfiguration {
 
     /** SSL connection factory. */
     private Factory<SSLContext> sslCtxFactory;
+
+    /** Thin-client specific configuration. */
+    private ThinClientConfiguration thinCliCfg = new ThinClientConfiguration();
 
     /**
      * Creates SQL connector configuration with all default values.
@@ -136,6 +145,7 @@ public class ClientConnectorConfiguration {
         sslClientAuth = cfg.isSslClientAuth();
         useIgniteSslCtxFactory = cfg.isUseIgniteSslContextFactory();
         sslCtxFactory = cfg.getSslContextFactory();
+        thinCliCfg = new ThinClientConfiguration(cfg.getThinClientConfiguration());
     }
 
     /**
@@ -292,25 +302,49 @@ public class ClientConnectorConfiguration {
     }
 
     /**
-     * Size of thread pool that is in charge of processing SQL requests.
+     * Size of thread pool that is in charge of processing client requests.
      * <p>
      * Defaults {@link #DFLT_THREAD_POOL_SIZE}.
      *
-     * @return Thread pool that is in charge of processing SQL requests.
+     * @return Thread pool that is in charge of processing client requests.
      */
     public int getThreadPoolSize() {
         return threadPoolSize;
     }
 
     /**
-     * Sets thread pool that is in charge of processing SQL requests. See {@link #getThreadPoolSize()} for more
+     * Sets thread pool that is in charge of processing client requests. See {@link #getThreadPoolSize()} for more
      * information.
      *
-     * @param threadPoolSize Thread pool that is in charge of processing SQL requests.
+     * @param threadPoolSize Thread pool that is in charge of processing client requests.
      * @return This instance for chaining.
      */
     public ClientConnectorConfiguration setThreadPoolSize(int threadPoolSize) {
         this.threadPoolSize = threadPoolSize;
+
+        return this;
+    }
+
+    /**
+     * Get count of selectors to use in TCP server.
+     * <p>
+     * Defaults {@link #DFLT_SELECTOR_CNT}.
+     *
+     * @return Count of selectors to use in TCP server.
+     */
+    public int getSelectorCount() {
+        return selectorCnt;
+    }
+
+    /**
+     * Sets count of selectors to use in TCP server. See {@link #getSelectorCount()} for more
+     * information.
+     *
+     * @param selectorCnt Count of selectors to use in TCP server.
+     * @return This instance for chaining.
+     */
+    public ClientConnectorConfiguration setSelectorCount(int selectorCnt) {
+        this.selectorCnt = selectorCnt;
 
         return this;
     }
@@ -536,6 +570,24 @@ public class ClientConnectorConfiguration {
      */
     public Factory<SSLContext> getSslContextFactory() {
         return sslCtxFactory;
+    }
+
+    /**
+     * Gets thin-client specific configuration.
+     */
+    public ThinClientConfiguration getThinClientConfiguration() {
+        return thinCliCfg;
+    }
+
+    /**
+     * Sets thin-client specific configuration.
+     *
+     * @return {@code this} for chaining.
+     */
+    public ClientConnectorConfiguration setThinClientConfiguration(ThinClientConfiguration thinCliCfg) {
+        this.thinCliCfg = thinCliCfg;
+
+        return this;
     }
 
     /** {@inheritDoc} */

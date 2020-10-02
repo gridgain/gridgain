@@ -53,6 +53,7 @@ import org.apache.ignite.internal.client.util.GridClientStripedLock;
 import org.apache.ignite.internal.client.util.GridClientUtils;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeStateBeforeStartRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientPingPacket;
 import org.apache.ignite.internal.processors.rest.protocols.tcp.GridTcpRestParser;
 import org.apache.ignite.internal.util.nio.GridNioCodecFilter;
@@ -67,6 +68,7 @@ import org.apache.ignite.logger.java.JavaLogger;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.logging.Level.INFO;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 import static org.apache.ignite.internal.client.impl.connection.GridClientConnectionCloseReason.CLIENT_CLOSED;
@@ -127,6 +129,9 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
     /** Marshaller ID. */
     private final Byte marshId;
 
+    /** Connecting to a node before starting it without getting/updating topology. */
+    private final boolean beforeNodeStart;
+
     /**
      * @param clientId Client ID.
      * @param sslCtx SSL context to enable secured connection or {@code null} to use unsecured one.
@@ -134,6 +139,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
      * @param routers Routers or empty collection to use endpoints from topology info.
      * @param top Topology.
      * @param marshId Marshaller ID.
+     * @param beforeNodeStart Connecting to a node before starting it without getting/updating topology.
      * @throws GridClientException In case of error.
      */
     @SuppressWarnings("unchecked")
@@ -143,8 +149,9 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
         Collection<InetSocketAddress> routers,
         GridClientTopology top,
         @Nullable Byte marshId,
-        boolean routerClient)
-        throws GridClientException {
+        boolean routerClient,
+        boolean beforeNodeStart
+    ) throws GridClientException {
         assert clientId != null : "clientId != null";
         assert cfg != null : "cfg != null";
         assert routers != null : "routers != null";
@@ -155,6 +162,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
         this.cfg = cfg;
         this.routers = new ArrayList<>(routers);
         this.top = top;
+        this.beforeNodeStart = beforeNodeStart;
 
         log = Logger.getLogger(getClass().getName());
 
@@ -217,59 +225,19 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings("BusyWait")
     @Override public void init(Collection<InetSocketAddress> srvs) throws GridClientException, InterruptedException {
         init0();
 
-        GridClientException firstEx = null;
-
-        for (int i = 0; i < INIT_RETRY_CNT; i++) {
-            Collection<InetSocketAddress> srvsCp = new ArrayList<>(srvs);
-
-            while (!srvsCp.isEmpty()) {
-                GridClientConnection conn = null;
-
-                try {
-                    conn = connect(null, srvsCp);
-
-                    conn.topology(cfg.isAutoFetchAttributes(), cfg.isAutoFetchMetrics(), null).get();
-
-                    return;
-                }
-                catch (GridServerUnreachableException e) {
-                    // No connection could be opened to any of initial addresses - exit to retry loop.
-                    assert conn == null :
-                        "GridClientConnectionResetException was thrown from GridClientConnection#topology";
-
-                    if (firstEx == null)
-                        firstEx = e;
-
-                    break;
-                }
-                catch (GridClientConnectionResetException e) {
-                    // Connection was established but topology update failed -
-                    // trying other initial addresses if any.
-                    assert conn != null : "GridClientConnectionResetException was thrown from connect()";
-
-                    if (firstEx == null)
-                        firstEx = e;
-
-                    if (!srvsCp.remove(conn.serverAddress()))
-                        // We have misbehaving collection or equals - just exit to avoid infinite loop.
-                        break;
-                }
+        connect(srvs, conn -> {
+            if (beforeNodeStart) {
+                conn.messageBeforeStart(new GridClientNodeStateBeforeStartRequest())
+                    .get(cfg.getConnectTimeout(), MILLISECONDS);
             }
-
-            Thread.sleep(INIT_RETRY_INTERVAL);
-        }
-
-        for (GridClientConnection c : conns.values()) {
-            conns.remove(c.serverAddress(), c);
-
-            c.close(FAILED, false);
-        }
-
-        throw firstEx;
+            else {
+                conn.topology(cfg.isAutoFetchAttributes(), cfg.isAutoFetchMetrics(), null)
+                    .get(cfg.getConnectTimeout(), MILLISECONDS);
+            }
+        });
     }
 
     /**
@@ -330,9 +298,13 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
             srvs.addAll(resolvedEndpoints);
         }
         else {
-            for (InetSocketAddress endpoint : resolvedEndpoints)
+            for (InetSocketAddress endpoint : resolvedEndpoints) {
                 if (!endpoint.getAddress().isLoopbackAddress())
                     srvs.add(endpoint);
+            }
+
+            if (srvs.isEmpty())
+                srvs.addAll(resolvedEndpoints);
         }
 
         return connection(node.nodeId(), srvs);
@@ -472,7 +444,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
                 try {
                     conn = new GridClientNioTcpConnection(srv, clientId, addr, sslCtx, pingExecutor,
                         cfg.getConnectTimeout(), cfg.getPingInterval(), cfg.getPingTimeout(),
-                        cfg.isTcpNoDelay(), marsh, marshId, top, cred);
+                        cfg.isTcpNoDelay(), marsh, marshId, top, cred, cfg.getUserAttributes());
                 }
                 catch (GridClientException e) {
                     if (marsh instanceof GridClientZipOptimizedMarshaller) {
@@ -482,7 +454,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
                         conn = new GridClientNioTcpConnection(srv, clientId, addr, sslCtx, pingExecutor,
                             cfg.getConnectTimeout(), cfg.getPingInterval(), cfg.getPingTimeout(),
                             cfg.isTcpNoDelay(), ((GridClientZipOptimizedMarshaller)marsh).defaultMarshaller(), marshId,
-                            top, cred);
+                            top, cred, cfg.getUserAttributes());
                     }
                     else
                         throw e;
@@ -514,7 +486,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
 
         closeIdle();
 
-        conn.close(FAILED, false);
+        conn.close(FAILED, false, e);
     }
 
     /**
@@ -550,6 +522,78 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
 
         if (srv != null)
             srv.stop();
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridClientConnection connection(
+        Collection<InetSocketAddress> srvs
+    ) throws GridClientException, InterruptedException {
+        return connect(srvs, null);
+    }
+
+    /**
+     * Returns connection to node using given server addresses.
+     *
+     * @param srvs Server addresses.
+     * @param clo Client connection closure.
+     * @return Established connection.
+     * @throws GridClientException If failed.
+     * @throws InterruptedException If was interrupted while waiting for connection to be established.
+     */
+    private GridClientConnection connect(
+        Collection<InetSocketAddress> srvs,
+        @Nullable GridClientConnectionInClosure clo
+    ) throws InterruptedException, GridClientException {
+        GridClientException firstEx = null;
+
+        for (int i = 0; i < INIT_RETRY_CNT; i++) {
+            Collection<InetSocketAddress> srvsCp = new ArrayList<>(srvs);
+
+            while (!srvsCp.isEmpty()) {
+                GridClientConnection conn = null;
+
+                try {
+                    conn = connect(null, srvsCp);
+
+                    if (clo != null)
+                        clo.apply(conn);
+
+                    return conn;
+                }
+                catch (GridServerUnreachableException e) {
+                    // No connection could be opened to any of initial addresses - exit to retry loop.
+                    assert conn == null :
+                        "GridClientConnectionResetException was thrown from GridClientConnection#topology";
+
+                    if (firstEx == null)
+                        firstEx = e;
+
+                    break;
+                }
+                catch (GridClientConnectionResetException e) {
+                    // Connection was established but topology update failed -
+                    // trying other initial addresses if any.
+                    assert conn != null : "GridClientConnectionResetException was thrown from connect()";
+
+                    if (firstEx == null)
+                        firstEx = e;
+
+                    if (!srvsCp.remove(conn.serverAddress()))
+                        // We have misbehaving collection or equals - just exit to avoid infinite loop.
+                        break;
+                }
+            }
+
+            Thread.sleep(INIT_RETRY_INTERVAL);
+        }
+
+        for (GridClientConnection c : conns.values()) {
+            conns.remove(c.serverAddress(), c);
+
+            c.close(FAILED, false);
+        }
+
+        throw firstEx;
     }
 
     /**
@@ -619,7 +663,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
                 GridClientNioTcpConnection conn = ses.meta(GridClientNioTcpConnection.SES_META_CONN);
 
                 if (conn != null)
-                    conn.close(FAILED, false);
+                    conn.close(FAILED, false, e);
             }
         }
 
@@ -694,5 +738,19 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
 
             ses.close();
         }
+    }
+
+    /**
+     * Client connection in closure.
+     */
+    @FunctionalInterface
+    private static interface GridClientConnectionInClosure {
+        /**
+         * Closure body.
+         *
+         * @param conn Client connection.
+         * @throws GridClientException If failed.
+         */
+        void apply(GridClientConnection conn) throws GridClientException;
     }
 }

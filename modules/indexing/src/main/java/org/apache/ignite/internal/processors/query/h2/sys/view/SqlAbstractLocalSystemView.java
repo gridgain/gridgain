@@ -22,14 +22,14 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.h2.engine.Session;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.table.Column;
-import org.h2.value.Value;
-import org.h2.value.ValueNull;
-import org.h2.value.ValueString;
-import org.h2.value.ValueTimestamp;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueNull;
+import org.gridgain.internal.h2.value.ValueString;
+import org.gridgain.internal.h2.value.ValueTimestamp;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -50,7 +50,6 @@ public abstract class SqlAbstractLocalSystemView extends SqlAbstractSystemView {
 
         assert tblName != null;
         assert cols != null;
-        assert indexes != null;
     }
 
     /**
@@ -72,8 +71,8 @@ public abstract class SqlAbstractLocalSystemView extends SqlAbstractSystemView {
      * @param cols Columns.
      */
     @SuppressWarnings("ZeroLengthArrayAllocation")
-    protected SqlAbstractLocalSystemView(String tblName, String desc, GridKernalContext ctx, Column ... cols) {
-        this(tblName, desc, ctx, new String[] {} , cols);
+    public SqlAbstractLocalSystemView(String tblName, String desc, GridKernalContext ctx, Column... cols) {
+        this(tblName, desc, ctx, new String[] {}, cols);
     }
 
     /**

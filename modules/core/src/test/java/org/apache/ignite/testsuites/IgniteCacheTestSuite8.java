@@ -19,8 +19,10 @@ package org.apache.ignite.testsuites;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.apache.ignite.cache.ClientCreateCacheGroupOnJoinNodeMapsTest;
 import org.apache.ignite.internal.processors.cache.CacheStoreTxPutAllMultiNodeTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOrderedPreloadingSelfTest;
+import org.apache.ignite.internal.processors.cache.GridCacheRebalanceOrderTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRebalanceThreadPoolTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRabalancingDelayedPartitionMapExchangeSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingAsyncSelfTest;
@@ -66,6 +68,7 @@ public class IgniteCacheTestSuite8 {
 
         // Rebalancing.
         GridTestUtils.addTestIfNeeded(suite, GridCacheOrderedPreloadingSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, GridCacheRebalanceOrderTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheRebalancingSyncSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheRebalancingSyncCheckDataTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheRebalancingUnmarshallingFailedSelfTest.class, ignoredTests);
@@ -76,6 +79,7 @@ public class IgniteCacheTestSuite8 {
         GridTestUtils.addTestIfNeeded(suite, CacheRebalanceThreadPoolTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CleanupRestoredCachesSlowTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ClientCreateCacheGroupOnJoinNodeMapsTest.class, ignoredTests);
 
         return suite;
     }

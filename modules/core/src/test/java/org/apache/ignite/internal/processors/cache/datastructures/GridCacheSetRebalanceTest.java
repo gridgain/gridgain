@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.datastructures;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
@@ -28,6 +29,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.NoOpFailureHandler;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
@@ -35,12 +37,16 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+
 /**
- * Tests rebalancing of IgniteSet for a case when a custom class, that is used as a key, is absent
- * in the classpath on the joined node.
+ * Tests rebalancing of IgniteSet for a case when a custom class, that is used as a key, is absent in the classpath on
+ * the joined node.
  */
 public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
     /** */
@@ -54,6 +60,9 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
     /** Flag indicates additional classes should be included into the class-path. */
     private boolean useExtendedClasses;
+
+    /** */
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -85,9 +94,8 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
     public void testCollocatedSet() throws Exception {
         useExtendedClasses = true;
 
-        Ignite ignite0 = startGrid(0);
+        IgniteEx ignite0 = startGrid(0);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(false);
         ignite0.cluster().active(true);
 
         IgniteSet set = ignite0.set("test-set", new CollectionConfiguration().setBackups(1).setCollocated(true));
@@ -107,19 +115,25 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
         useExtendedClasses = false;
 
-        startGrid(1);
+        GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(1);
 
-        ignite0.cluster().setBaselineTopology(ignite0.cluster().forServers().nodes());
+                if (bltForInMemoryCachesSup)
+                    resetBaselineTopology();
 
-        assertTrue(
-            "Data rebalancing is not started.",
-            TestRecordingCommunicationSpi.spi(ignite0).waitForBlocked(1, 10_000));
+                return null;
+            }
+        });
+
+        assertTrue("Data rebalancing is not started.",
+                TestRecordingCommunicationSpi.spi(ignite0).waitForBlocked(1, 10_000));
 
         // Resend delayed rebalance messages.
         TestRecordingCommunicationSpi.spi(ignite0).stopBlock(true);
 
-        GridDhtPartitionDemander.RebalanceFuture fut = (GridDhtPartitionDemander.RebalanceFuture)grid(1).context().
-            cache().internalCache(DATA_STRUCTURES_CACHE_NAME).preloader().rebalanceFuture();
+        GridDhtPartitionDemander.RebalanceFuture fut = (GridDhtPartitionDemander.RebalanceFuture) grid(1).context().
+                cache().internalCache(DATA_STRUCTURES_CACHE_NAME).preloader().rebalanceFuture();
 
         // Rebalance future should not be cancelled or failed.
         assertTrue(fut.get(10, TimeUnit.SECONDS));

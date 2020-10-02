@@ -28,15 +28,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
-import static org.apache.ignite.internal.processors.tracing.MTC.trace;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioServer.OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC;
 import static org.apache.ignite.internal.util.nio.GridNioServer.OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME;
@@ -86,7 +85,7 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
     private Object sysMsg;
 
     /** Outbound messages queue size metric. */
-    @Nullable private final AtomicLongMetric outboundMessagesQueueSizeMetric;
+    @Nullable private final LongAdderMetric outboundMessagesQueueSizeMetric;
 
     /**
      * Creates session instance.
@@ -141,7 +140,7 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
             this.readBuf = readBuf;
         }
 
-        outboundMessagesQueueSizeMetric = mreg == null ? null : mreg.longMetric(
+        outboundMessagesQueueSizeMetric = mreg == null ? null : mreg.longAdderMetric(
             OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME,
             OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC
         );
@@ -292,8 +291,7 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
 
         boolean res = queue.offerFirst(writeFut);
 
-        if (isTraceable())
-            trace("Added to system queue - " + traceName(writeFut.message()));
+        MTC.span().addLog(() -> "Added to system queue - " + traceName(writeFut.message()));
 
         assert res : "Future was not added to queue";
 
@@ -323,8 +321,7 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
 
         boolean res = queue.offer(writeFut);
 
-        if (isTraceable())
-            trace("Added to queue - " + traceName(writeFut.message()));
+        MTC.span().addLog(() -> "Added to queue - " + traceName(writeFut.message()));
 
         assert res : "Future was not added to queue";
 

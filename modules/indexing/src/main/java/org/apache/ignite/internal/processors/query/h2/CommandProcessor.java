@@ -113,16 +113,16 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.security.SecurityPermission;
-import org.h2.command.Prepared;
-import org.h2.command.ddl.AlterTableAlterColumn;
-import org.h2.command.ddl.CreateIndex;
-import org.h2.command.ddl.CreateTable;
-import org.h2.command.ddl.DropIndex;
-import org.h2.command.ddl.DropTable;
-import org.h2.command.dml.NoOperation;
-import org.h2.table.Column;
-import org.h2.value.DataType;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.command.ddl.AlterTableAlterColumn;
+import org.gridgain.internal.h2.command.ddl.CreateIndex;
+import org.gridgain.internal.h2.command.ddl.CreateTable;
+import org.gridgain.internal.h2.command.ddl.DropIndex;
+import org.gridgain.internal.h2.command.ddl.DropTable;
+import org.gridgain.internal.h2.command.dml.NoOperation;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.DataType;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -312,10 +312,11 @@ public class CommandProcessor {
         if (err == null) {
             try {
                 runningQryInfo.cancel();
-            } catch (Exception e){
+            }
+            catch (Exception e) {
                 U.warn(log, "Cancellation of query failed: [qryId=" + qryId + "]", e);
 
-                if(!msg.asyncResponse())
+                if (!msg.asyncResponse())
                     sendKillResponse(msg, node, e.getMessage());
 
                 return;
@@ -410,7 +411,7 @@ public class CommandProcessor {
             }
             else if (cmdNative instanceof SqlSetStreamingCommand)
                 processSetStreamingCommand((SqlSetStreamingCommand)cmdNative, cliCtx);
-            else if(cmdNative instanceof SqlKillQueryCommand)
+            else if (cmdNative instanceof SqlKillQueryCommand)
                 processKillQueryCommand((SqlKillQueryCommand) cmdNative);
             else
                 processTxCommand(cmdNative, params);
@@ -430,6 +431,8 @@ public class CommandProcessor {
      * @param cmd Command.
      */
     private void processKillQueryCommand(SqlKillQueryCommand cmd) {
+        ctx.security().authorize(SecurityPermission.KILL_QUERY);
+
         GridFutureAdapter<String> fut = new GridFutureAdapter<>();
 
         lock.readLock().lock();
@@ -459,7 +462,7 @@ public class CommandProcessor {
                     null,
                     locNodeMsgHnd,
                     GridIoPolicy.MANAGEMENT_POOL,
-                    false
+                    cmd.async()
                 );
 
                 if (!snd) {
@@ -898,7 +901,7 @@ public class CommandProcessor {
      * @param schemaName Schema name.
      */
     private static void isDdlOnSchemaSupported(String schemaName) {
-        if (F.eq(QueryUtils.SCHEMA_SYS, schemaName))
+        if (F.eq(QueryUtils.sysSchemaName(), schemaName))
             throw new IgniteSQLException("DDL statements are not supported on " + schemaName + " schema",
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
     }

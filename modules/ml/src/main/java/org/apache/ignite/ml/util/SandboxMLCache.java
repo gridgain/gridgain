@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Scanner;
 import java.util.UUID;
@@ -71,6 +73,31 @@ public class SandboxMLCache {
     }
 
     /**
+     * Loads dataset as a list of rows.
+     *
+     * @param dataset The chosen dataset.
+     * @return List of rows.
+     * @throws IOException If file not found.
+     */
+    public List<String> loadDataset(MLSandboxDatasets dataset) throws IOException {
+        List<String> res = new ArrayList<>();
+
+        Resource[] resources = RESOURCE_RESOLVER.getResources("classpath*:*/" + dataset.getFileName());
+        A.ensure(resources.length == 1, "Cannot find resource");
+
+        Scanner scanner = new Scanner(resources[0].getInputStream());
+        if (dataset.hasHeader() && scanner.hasNextLine())
+            scanner.nextLine();
+
+        while (scanner.hasNextLine()) {
+            String row = scanner.nextLine();
+            res.add(row);
+        }
+
+        return res;
+    }
+
+    /**
      * Fills cache with data and returns it.
      *
      * @param dataset The chosen dataset.
@@ -105,7 +132,8 @@ public class SandboxMLCache {
                         data[i] = Double.NaN;
                     else
                         data[i] = Double.valueOf(cells[i]);
-                } catch (java.lang.NumberFormatException e) {
+                }
+                catch (java.lang.NumberFormatException e) {
                     try {
                         data[i] = format.parse(cells[i]).doubleValue();
                     }

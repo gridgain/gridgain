@@ -34,10 +34,10 @@ public class IgniteSQLException extends IgniteException {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** State to return as {@link SQLException#SQLState} */
+    /** State to return as {@link SQLException#getSQLState()}. */
     private final String sqlState;
 
-    /** Code to return as {@link SQLException#vendorCode} */
+    /** Code to return as {@link SQLException#getErrorCode()}. */
     private final int statusCode;
 
     /**
@@ -58,7 +58,7 @@ public class IgniteSQLException extends IgniteException {
         super(cause);
 
         this.sqlState = cause.getSQLState();
-        this.statusCode =  cause.getErrorCode() == 0 ? UNKNOWN : cause.getErrorCode();
+        this.statusCode = cause.getErrorCode() == 0 ? UNKNOWN : cause.getErrorCode();
     }
 
     /**

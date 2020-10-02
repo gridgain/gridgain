@@ -905,7 +905,7 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
      */
     public void addExplicitLock(long threadId, GridCacheMvccCandidate cand, AffinityTopologyVersion topVer) {
         while (true) {
-            GridCacheExplicitLockSpan span = pendingExplicit.get(cand.threadId());
+            GridCacheExplicitLockSpan span = pendingExplicit.get(threadId);
 
             if (span == null) {
                 span = new GridCacheExplicitLockSpan(topVer, cand);
@@ -1007,7 +1007,7 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
         GridCacheMvccCandidate cand = span.removeCandidate(key, ver);
 
         if (cand != null && span.isEmpty())
-            pendingExplicit.remove(cand.threadId(), span);
+            pendingExplicit.remove(threadId, span);
 
         return cand;
     }
@@ -1329,9 +1329,6 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
                     recheck(entry);
             }
 
-            if (log.isDebugEnabled())
-                log.debug("After rechecking finished future: " + this);
-
             if (pendingLocks.isEmpty()) {
                 if (exchLog.isDebugEnabled())
                     exchLog.debug("Finish lock future is done: " + this);
@@ -1355,13 +1352,8 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
 
             if (cands != null) {
                 synchronized (cands) {
-                    for (Iterator<GridCacheMvccCandidate> it = cands.iterator(); it.hasNext(); ) {
-                        GridCacheMvccCandidate cand = it.next();
-
-                        // Check exclude ID again, as key could have been reassigned.
-                        if (cand.removed())
-                            it.remove();
-                    }
+                    // Check exclude ID again, as key could have been reassigned.
+                    cands.removeIf(GridCacheMvccCandidate::removed);
 
                     if (cands.isEmpty())
                         pendingLocks.remove(entry.txKey());

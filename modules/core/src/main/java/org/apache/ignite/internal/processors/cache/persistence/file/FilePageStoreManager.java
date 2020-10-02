@@ -88,7 +88,6 @@ import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.String.format;
 import static java.nio.file.Files.delete;
 import static java.nio.file.Files.newDirectoryStream;
 import static java.util.Objects.requireNonNull;
@@ -113,7 +112,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     public static final String INDEX_FILE_NAME = "index" + FILE_SUFFIX;
 
     /** */
-    public static final String PART_FILE_TEMPLATE = PART_FILE_PREFIX+ "%d" + FILE_SUFFIX;
+    public static final String PART_FILE_TEMPLATE = PART_FILE_PREFIX + "%d" + FILE_SUFFIX;
 
     /** */
     public static final String CACHE_DIR_PREFIX = "cache-";
@@ -199,7 +198,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         pageStoreV1FileIoFactory = pageStoreFileIoFactory = dsCfg.getFileIOFactory();
 
-        marshaller =  MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
+        marshaller = MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
     }
 
     /** {@inheritDoc} */
@@ -217,13 +216,13 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         String tmpDir = System.getProperty("java.io.tmpdir");
 
-        if (tmpDir != null && storeWorkDir.getAbsolutePath().contains(tmpDir)) {
+        if (tmpDir != null && storeWorkDir.getAbsolutePath().startsWith(tmpDir)) {
             log.warning("Persistence store directory is in the temp directory and may be cleaned." +
                 "To avoid this set \"IGNITE_HOME\" environment variable properly or " +
                 "change location of persistence directories in data storage configuration " +
                 "(see DataStorageConfiguration#walPath, DataStorageConfiguration#walArchivePath, " +
                 "DataStorageConfiguration#storagePath properties). " +
-                "Current persistence store directory is: [" + tmpDir + "]");
+                "Current persistence store directory is: [" + storeWorkDir.getAbsolutePath() + "]");
         }
 
         File[] files = storeWorkDir.listFiles();
@@ -248,7 +247,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         try {
             File cacheWorkDir = cacheWorkDir(cacheConfiguration);
 
-            if(!cacheWorkDir.exists())
+            if (!cacheWorkDir.exists())
                 return;
 
             try (DirectoryStream<Path> files = newDirectoryStream(cacheWorkDir.toPath(),
@@ -519,7 +518,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         try {
             store.read(pageId, pageBuf, keepCrc);
 
-            assert keepCrc || PageIO.getCrc(pageBuf) == 0: store.size() - store.pageOffset(pageId);
+            assert keepCrc || PageIO.getCrc(pageBuf) == 0 : store.size() - store.pageOffset(pageId);
 
             cctx.kernalContext().compress().decompressPage(pageBuf, store.getPageSize());
         }
@@ -585,7 +584,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             GridCacheContext cctx0 = cctx.cacheContext(cacheId);
 
             if (cctx0 != null) {
-                assert pageBuf.position() == 0 && pageBuf.limit() == pageSize: pageBuf;
+                assert pageBuf.position() == 0 && pageBuf.limit() == pageSize : pageBuf;
 
                 ByteBuffer compressedPageBuf = cctx0.compress().compressPage(pageBuf, store);
 
@@ -672,7 +671,6 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             if (dirExisted && !idxFile.exists())
                 grpsWithoutIdx.add(grpId);
 
-
             FileIOFactory pageStoreFileIoFactory = this.pageStoreFileIoFactory;
             FileIOFactory pageStoreV1FileIoFactory = this.pageStoreV1FileIoFactory;
 
@@ -705,11 +703,11 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                 ((EncryptedFileIOFactory)pageStoreV1FileIoFactory).headerSize(headerSize);
             }
 
-            PageStore idxStore =
-            pageStoreFactory.createPageStore(
+            PageStore idxStore = pageStoreFactory.createPageStore(
                 PageMemory.FLAG_IDX,
                 idxFile,
-                allocatedTracker);
+                allocatedTracker
+            );
 
             PageStore[] partStores = new PageStore[partitions];
 
@@ -1065,7 +1063,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             };
 
             try (DirectoryStream<Path> dirStream = newDirectoryStream(cacheGrpDir.toPath(), cacheCfgFileFilter)) {
-                for(Path path: dirStream)
+                for (Path path: dirStream)
                     Files.deleteIfExists(path);
             }
             catch (IOException e) {
@@ -1339,17 +1337,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
          * Cancels async tasks.
          */
         public void awaitAsyncTaskCompletion(boolean cancel) {
-            for (GridWorker worker : workers) {
-                try {
-                    if (cancel)
-                        worker.cancel();
-
-                    worker.join();
-                }
-                catch (Exception e) {
-                    log.warning(format("Failed to cancel grid runnable [%s]: %s", worker.toString(), e.getMessage()));
-                }
-            }
+            U.awaitForWorkersStop(workers, cancel, log);
         }
     }
 

@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.sql;
 
 import javax.cache.CacheException;
-import org.h2.command.dml.SelectUnion;
+import org.gridgain.internal.h2.command.dml.SelectUnion;
 
 /**
  * Select query with UNION.

@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-scalar</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
@@ -51,6 +51,13 @@
             <artifactId>ignite-core</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -107,7 +114,7 @@
                         <executions>
                             <execution>
                                 <id>scaladoc</id>
-                                <phase>prepare-package</phase>
+                                <phase>validate</phase>
                                 <goals>
                                     <goal>doc</goal>
                                 </goals>
@@ -122,7 +129,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>3.0.0</version>
                         <dependencies>
                             <dependency>
                                 <groupId>org.gridgain</groupId>

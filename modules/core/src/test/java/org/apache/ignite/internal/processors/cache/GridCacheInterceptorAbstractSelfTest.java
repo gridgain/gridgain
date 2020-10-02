@@ -18,15 +18,17 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.MutableEntry;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.cache.CacheInterceptor;
@@ -35,13 +37,13 @@ import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.Nullable;
-import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -64,9 +66,14 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
         interceptor = new Interceptor();
 
-        super.beforeTestsStarted();
+        for (Ignite ign : G.allGrids()) {
+            for (String cacheName: ign.cacheNames())
+                ign.cache(cacheName).getConfiguration(CacheConfiguration.class).setInterceptor(interceptor);
+        }
 
         awaitPartitionMapExchange();
     }
@@ -121,10 +128,6 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
             MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.CACHE_STORE);
 
         CacheConfiguration ccfg = super.cacheConfiguration(igniteInstanceName);
-
-        assertNotNull(interceptor);
-
-        ccfg.setInterceptor(interceptor);
 
         if (!storeEnabled()) {
             ccfg.setCacheStoreFactory(null);
@@ -253,7 +256,6 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
         log.info("GetAsync 1.");
 
-
         if (needVer)
             assertEquals((Integer)101, cache.getEntryAsync(key).get().getValue());
         else
@@ -300,11 +302,11 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
         Collection<CacheEntry<String, Integer>> c;
         Map<String, Integer> map;
 
-        if (needVer){
+        if (needVer) {
             c = cache.getEntries(keys);
 
             assertTrue(c.isEmpty());
-        }else {
+        } else {
             map = cache.getAll(keys);
 
             for (String key : keys)
@@ -941,7 +943,7 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
         // Interceptor returns incremented new value.
         interceptor.retInterceptor = new PutIncrementInterceptor();
 
-        Map<String, Integer> map = new HashMap<>();
+        Map<String, Integer> map = new TreeMap<>();
 
         final String key1;
         String key2;
@@ -1030,7 +1032,7 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
      */
     @SuppressWarnings("unchecked")
     private void testBatchRemove(Operation op) throws Exception {
-        Map<String, Integer> map = new HashMap<>();
+        Map<String, Integer> map = new TreeMap<>();
 
         final String key1;
         String key2;
@@ -1587,7 +1589,7 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
             Object ret = retInterceptor.onBeforePut(entry, newVal);
 
-            System.out.println("Before put [key=" + entry.getKey() + ", oldVal=" + entry.getValue()+ ", newVal=" + newVal
+            System.out.println("Before put [key=" + entry.getKey() + ", oldVal=" + entry.getValue() + ", newVal=" + newVal
                 + ", ret=" + ret + ']');
 
             invokeCnt.incrementAndGet();

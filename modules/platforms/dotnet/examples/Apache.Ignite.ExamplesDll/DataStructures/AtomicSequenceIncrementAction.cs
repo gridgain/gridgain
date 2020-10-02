@@ -32,6 +32,7 @@ namespace Apache.Ignite.ExamplesDll.DataStructures
         public const string AtomicSequenceName = "dotnet_atomic_sequence";
 
         /** */
+        // ReSharper disable once UnassignedReadonlyField
         [InstanceResource] private readonly IIgnite _ignite;
 
         /// <summary>

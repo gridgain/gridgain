@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal.crc;
 
-
 import java.nio.ByteBuffer;
 
 /**
@@ -72,7 +71,6 @@ public class PureJavaCrc32 {
     public final void update(int b) {
         crc = (crc >>> 8) ^ T[(((crc ^ b) << 24) >>> 24)];
     }
-
 
     /**
      * Calculates CRC32 checksum. This method will move buffer's position to {@code len} bytes forward.

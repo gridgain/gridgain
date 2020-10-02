@@ -67,6 +67,8 @@ public class IgniteDataStreamerTest extends GridCommonAbstractTest {
         super.afterTest();
 
         grid("client").destroyCache(CACHE_NAME);
+
+        awaitPartitionMapExchange();
     }
 
     /**
@@ -90,14 +92,14 @@ public class IgniteDataStreamerTest extends GridCommonAbstractTest {
         IgniteCache<IgniteUuid, Integer> cache =
             client.createCache(cacheConfiguration(IgniteUuid.class, Integer.class));
 
-        try(IgniteDataStreamer<IgniteUuid, Integer> streamer = client.dataStreamer(CACHE_NAME)) {
+        try (IgniteDataStreamer<IgniteUuid, Integer> streamer = client.dataStreamer(CACHE_NAME)) {
             assertTrue("Expecting " + DataStreamerImpl.class.getName(), streamer instanceof DataStreamerImpl);
 
             ((DataStreamerImpl<IgniteUuid, Integer>)streamer).maxRemapCount(0);
 
             List<IgniteFuture> futs = new ArrayList<>();
 
-            for(int i=0; i<DATA_SIZE; i++) {
+            for (int i = 0; i < DATA_SIZE; i++) {
                 IgniteFuture<?> fut = streamer.addData(IgniteUuid.randomUuid(), i);
 
                 futs.add(fut);
@@ -109,8 +111,10 @@ public class IgniteDataStreamerTest extends GridCommonAbstractTest {
                 //This should not throw any exception.
                 Object res = fut.get(WAIT_TIMEOUT);
 
-                //Printing future result to log to prevent jvm optimization
-                log.debug(res == null ? null : res.toString());
+                if (log.isDebugEnabled()) {
+                    //Printing future result to log to prevent jvm optimization
+                    log.debug(String.valueOf(res));
+                }
             }
 
             assertTrue(cache.size(ALL) == DATA_SIZE);

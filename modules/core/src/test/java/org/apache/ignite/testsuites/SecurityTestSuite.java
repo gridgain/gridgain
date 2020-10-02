@@ -16,19 +16,29 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.processors.security.IgniteSecurityProcessorTest;
+import org.apache.ignite.internal.processors.security.InvalidServerTest;
 import org.apache.ignite.internal.processors.security.cache.CacheOperationPermissionCheckTest;
+import org.apache.ignite.internal.processors.security.cache.CacheOperationPermissionCreateDestroyCheckTest;
 import org.apache.ignite.internal.processors.security.cache.EntryProcessorPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.cache.ScanQueryPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.cache.closure.CacheLoadRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.cache.closure.EntryProcessorRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.cache.closure.ScanQueryRemoteSecurityContextCheckTest;
+import org.apache.ignite.internal.processors.security.client.AttributeSecurityCheckTest;
+import org.apache.ignite.internal.processors.security.client.AdditionalSecurityCheckTest;
+import org.apache.ignite.internal.processors.security.client.AdditionalSecurityCheckWithGlobalAuthTest;
+import org.apache.ignite.internal.processors.security.client.ThinClientPermissionCheckSecurityTest;
 import org.apache.ignite.internal.processors.security.client.ThinClientPermissionCheckTest;
+import org.apache.ignite.internal.processors.security.client.ThinClientSecurityContextOnRemoteNodeTest;
+import org.apache.ignite.internal.processors.security.client.ThinClientSslPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.compute.ComputePermissionCheckTest;
 import org.apache.ignite.internal.processors.security.compute.closure.ComputeTaskRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.compute.closure.DistributedClosureRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.compute.closure.ExecutorServiceRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.datastreamer.DataStreamerPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.datastreamer.closure.DataStreamerRemoteSecurityContextCheckTest;
+import org.apache.ignite.ssl.MultipleSSLContextsTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -44,10 +54,13 @@ import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSO
 @WithSystemProperty(key = "IGNITE_SECURITY_PROCESSOR", value = "true")
 @Suite.SuiteClasses({
     CacheOperationPermissionCheckTest.class,
+    CacheOperationPermissionCreateDestroyCheckTest.class,
     DataStreamerPermissionCheckTest.class,
     ScanQueryPermissionCheckTest.class,
     EntryProcessorPermissionCheckTest.class,
     ComputePermissionCheckTest.class,
+    ThinClientPermissionCheckTest.class,
+    ThinClientPermissionCheckSecurityTest.class,
 
     DistributedClosureRemoteSecurityContextCheckTest.class,
     ComputeTaskRemoteSecurityContextCheckTest.class,
@@ -57,6 +70,16 @@ import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSO
     DataStreamerRemoteSecurityContextCheckTest.class,
     CacheLoadRemoteSecurityContextCheckTest.class,
     ThinClientPermissionCheckTest.class,
+    ThinClientSslPermissionCheckTest.class,
+    ThinClientSecurityContextOnRemoteNodeTest.class,
+    IgniteSecurityProcessorTest.class,
+
+    MultipleSSLContextsTest.class,
+    AdditionalSecurityCheckTest.class,
+    AttributeSecurityCheckTest.class,
+    AdditionalSecurityCheckWithGlobalAuthTest.class,
+
+    InvalidServerTest.class
 })
 public class SecurityTestSuite {
     /**

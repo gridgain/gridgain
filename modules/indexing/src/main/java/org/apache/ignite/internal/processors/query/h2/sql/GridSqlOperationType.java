@@ -16,13 +16,13 @@
 
 package org.apache.ignite.internal.processors.query.h2.sql;
 
-import org.h2.util.StringUtils;
+import org.gridgain.internal.h2.util.StringUtils;
 
 /**
  * Operation type.
  */
 public enum GridSqlOperationType {
-    // from org.h2.expression.Operation
+    // from org.gridgain.internal.h2.expression.Operation
     CONCAT(2, new BiExpressionSqlGenerator("||")),
     PLUS(2, new BiExpressionSqlGenerator("+")),
     MINUS(2, new BiExpressionSqlGenerator("-")),
@@ -31,7 +31,7 @@ public enum GridSqlOperationType {
     MODULUS(2, new BiExpressionSqlGenerator("%")),
     NEGATE(1, new PrefixSqlGenerator("-", true)),
 
-    // from org.h2.expression.Comparison
+    // from org.gridgain.internal.h2.expression.Comparison
     EQUAL(2, new BiExpressionSqlGenerator("=")),
     EQUAL_NULL_SAFE(2, new BiExpressionSqlGenerator("IS")),
     BIGGER_EQUAL(2, new BiExpressionSqlGenerator(">=")),
@@ -47,7 +47,7 @@ public enum GridSqlOperationType {
 
     NOT(1, new PrefixSqlGenerator("NOT", true)),
 
-    // from org.h2.expression.ConditionAndOr
+    // from org.gridgain.internal.h2.expression.ConditionAndOr
     AND(2, new BiExpressionSqlGenerator("AND")),
     OR(2, new BiExpressionSqlGenerator("OR")),
 
@@ -56,9 +56,8 @@ public enum GridSqlOperationType {
     LIKE(2, new BiExpressionSqlGenerator("LIKE")),
 
     IN(-1, new ConditionInSqlGenerator()),
-    EXISTS(1, new PrefixSqlGenerator("EXISTS", false)),
+    EXISTS(1, new PrefixSqlGenerator("EXISTS", false));
 
-    ;
     /** */
     private final SqlGenerator sqlGenerator;
 

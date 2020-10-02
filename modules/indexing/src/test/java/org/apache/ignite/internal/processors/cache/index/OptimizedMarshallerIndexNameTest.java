@@ -51,6 +51,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 public class OptimizedMarshallerIndexNameTest extends AbstractIndexingCommonTest {
     /** Test name 1 */
     private static final String TEST_NAME1 = "Name1";
+
     /** Test name 2 */
     private static final String TEST_NAME2 = "Name2";
 
@@ -126,7 +127,7 @@ public class OptimizedMarshallerIndexNameTest extends AbstractIndexingCommonTest
 
         // If fix for IGNITE-6915 doesn't work you should see exception like the one below in the log:
         //
-        // org.h2.jdbc.JdbcSQLException: General error: "class org.apache.ignite.IgniteCheckedException:
+        // org.gridgain.internal.h2.jdbc.JdbcSQLException: General error: "class org.apache.ignite.IgniteCheckedException:
         // Failed to invoke getter method [type=int, property=name,
         // obj=org.apache.ignite.internal.processors.cache.index.OptimizedMarshallerIndexNameTest$Person@...:
         // org.apache.ignite.internal.processors.cache.index.OptimizedMarshallerIndexNameTest$Person@...,

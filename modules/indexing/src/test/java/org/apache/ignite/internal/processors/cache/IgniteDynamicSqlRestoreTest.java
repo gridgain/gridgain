@@ -58,6 +58,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class IgniteDynamicSqlRestoreTest extends GridCommonAbstractTest implements Serializable {
 
     public static final String TEST_CACHE_NAME = "test";
+
     public static final String TEST_INDEX_OBJECT = "TestIndexObject";
 
     /** {@inheritDoc} */
@@ -257,7 +258,7 @@ public class IgniteDynamicSqlRestoreTest extends GridCommonAbstractTest implemen
         try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10802")) {
             try (PreparedStatement stmt = conn.prepareStatement(
                 "SELECT COUNT(*) FROM Person USE INDEX(PERSON_FIRST_NAME_IDX) WHERE FIRST_NAME=?")) {
-                for (int i = 0; i < entryCnt; i ++) {
+                for (int i = 0; i < entryCnt; i++) {
                     stmt.setString(1, String.valueOf(i));
 
                     try (ResultSet rs = stmt.executeQuery()) {
@@ -365,6 +366,8 @@ public class IgniteDynamicSqlRestoreTest extends GridCommonAbstractTest implemen
             IgniteEx ig = startGrid(1);
 
             ig.cluster().active(true);
+            resetBaselineTopology();
+            ig.resetLostPartitions(Collections.singleton(TEST_CACHE_NAME));
 
             IgniteCache<Object, Object> cache = ig.cache(TEST_CACHE_NAME);
 
@@ -494,6 +497,7 @@ public class IgniteDynamicSqlRestoreTest extends GridCommonAbstractTest implemen
             ig.cluster().active(true);
 
             ig = startGrid(1);
+            ig.resetLostPartitions(Collections.singleton(TEST_CACHE_NAME));
 
             //then: config should be merged
             try (IgniteDataStreamer<Object, Object> s = ig.dataStreamer(TEST_CACHE_NAME)) {

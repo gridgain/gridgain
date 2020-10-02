@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
@@ -34,11 +35,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedExceptio
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.ReaderArguments;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter.LostPolicyValidator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -47,10 +48,11 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.util.Collections.singleton;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter.OperationType.READ;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_SINGLE_GET_FUTURE;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_MAP;
 
 /**
  *
@@ -168,7 +170,7 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
 
         futId = IgniteUuid.randomUuid();
 
-        ver = cctx.versions().next();
+        ver = cctx.cache().nextVersion();
 
         if (log == null)
             log = U.logger(cctx.kernalContext(), logRef, GridDhtGetSingleFuture.class);
@@ -178,7 +180,11 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
      * Initializes future.
      */
     void init() {
-        map();
+        try (TraceSurroundings ignored =
+                 MTC.supportContinual(span = cctx.kernalContext().tracing().
+                     create(CACHE_API_DHT_SINGLE_GET_FUTURE, MTC.span()))) {
+            map();
+        }
     }
 
     /**
@@ -212,52 +218,57 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
      *
      */
     private void map() {
-        // TODO Get rid of force keys request https://issues.apache.org/jira/browse/IGNITE-10251.
-        if (cctx.group().preloader().needForceKeys()) {
-            assert !cctx.mvccEnabled();
+        try (TraceSurroundings ignored =
+                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_GET_MAP, span))) {
+            MTC.span().addTag("topology.version", () -> Objects.toString(topVer));
 
-            GridDhtFuture<Object> fut = cctx.group().preloader().request(
-                cctx,
-                Collections.singleton(key),
-                topVer);
+            // TODO Get rid of force keys request https://issues.apache.org/jira/browse/IGNITE-10251.
+            if (cctx.group().preloader().needForceKeys()) {
+                assert !cctx.mvccEnabled();
 
-            if (fut != null) {
-                if (!F.isEmpty(fut.invalidPartitions())) {
-                    assert fut.invalidPartitions().size() == 1 : fut.invalidPartitions();
+                GridDhtFuture<Object> fut = cctx.group().preloader().request(
+                    cctx,
+                    Collections.singleton(key),
+                    topVer);
 
-                    retry = F.first(fut.invalidPartitions());
+                if (fut != null) {
+                    if (!F.isEmpty(fut.invalidPartitions())) {
+                        assert fut.invalidPartitions().size() == 1 : fut.invalidPartitions();
 
-                    onDone((GridCacheEntryInfo)null);
+                        retry = F.first(fut.invalidPartitions());
+
+                        onDone((GridCacheEntryInfo)null);
+
+                        return;
+                    }
+
+                    fut.listen(
+                        new IgniteInClosure<IgniteInternalFuture<Object>>() {
+                            @Override public void apply(IgniteInternalFuture<Object> fut) {
+                                Throwable e = fut.error();
+
+                                if (e != null) { // Check error first.
+                                    if (log.isDebugEnabled())
+                                        log.debug("Failed to request keys from preloader " +
+                                            "[keys=" + key + ", err=" + e + ']');
+
+                                    if (e instanceof NodeStoppingException)
+                                        return;
+
+                                    onDone(e);
+                                }
+                                else
+                                    map0(true);
+                            }
+                        }
+                    );
 
                     return;
                 }
-
-                fut.listen(
-                    new IgniteInClosure<IgniteInternalFuture<Object>>() {
-                        @Override public void apply(IgniteInternalFuture<Object> fut) {
-                            Throwable e = fut.error();
-
-                            if (e != null) { // Check error first.
-                                if (log.isDebugEnabled())
-                                    log.debug("Failed to request keys from preloader " +
-                                        "[keys=" + key + ", err=" + e + ']');
-
-                                if (e instanceof NodeStoppingException)
-                                    return;
-
-                                onDone(e);
-                            }
-                            else
-                                map0(true);
-                        }
-                    }
-                );
-
-                return;
             }
-        }
 
-        map0(false);
+            map0(false);
+        }
     }
 
     /**
@@ -311,16 +322,6 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
                 return false;
 
             assert this.part == -1;
-
-            if (!forceKeys && part.state() == LOST && !recovery) {
-                Throwable error = LostPolicyValidator.validate(cctx, key, READ, singleton(part.id()));
-
-                if (error != null) {
-                    onDone(null, error);
-
-                    return false;
-                }
-            }
 
             // By reserving, we make sure that partition won't be unloaded while processed.
             if (part.reserve()) {

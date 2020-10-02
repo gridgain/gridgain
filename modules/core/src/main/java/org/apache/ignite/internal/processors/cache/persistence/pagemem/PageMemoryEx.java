@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -26,7 +27,6 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
-import org.apache.ignite.lang.IgniteBiTuple;
 
 /**
  * Page memory with some persistence related additions.
@@ -85,6 +85,18 @@ public interface PageMemoryEx extends PageMemory {
 
     /**
      * @see #acquirePage(int, long)
+     * Sets additional flag indicating that page was not found in memory and had to be allocated.
+     *
+     * @param grpId Cache group ID.
+     * @param pageId Page ID.
+     * @param pageAllocated Flag is set if new page was allocated in offheap memory.
+     * @return Page.
+     * @throws IgniteCheckedException
+     */
+    public long acquirePage(int grpId, long pageId, AtomicBoolean pageAllocated) throws IgniteCheckedException;
+
+    /**
+     * @see #acquirePage(int, long)
      * Will read page from file if it is not present in memory
      *
      * @param grpId Cache group ID.
@@ -99,7 +111,7 @@ public interface PageMemoryEx extends PageMemory {
 
     /**
      * Heuristic method which allows a thread to check if it safe to start memory struture modifications
-     * in regard with checkpointing.
+     * in regard with checkpointing. May return false-negative result during or after partition eviction.
      *
      * @return {@code False} if there are too many dirty pages and a thread should wait for a
      *      checkpoint to begin.
@@ -117,20 +129,6 @@ public interface PageMemoryEx extends PageMemory {
      * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
      */
     public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(IgniteInternalFuture allowToReplace) throws IgniteException;
-
-    /**
-     * Gets a collection of dirty page IDs since the last checkpoint and dirty pages with user data are presented. If a
-     * dirty page is being written after the checkpointing operation begun, the modifications will be written to a
-     * temporary buffer which will be flushed to the main memory after the checkpointing finished. This method must be
-     * called when no concurrent operations on pages are performed.
-     *
-     * @return Couple of collection of dirty page IDs and flag. The flag is {@code true}, if since last checkpoint at
-     * least one page with user data (not relates with system cache) became a dirty, and {@code false} otherwise.
-     * @throws IgniteException If checkpoint has been already started and was not finished.
-     * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
-     */
-    public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
-        IgniteInternalFuture allowToReplace) throws IgniteException;
 
     /**
      * Finishes checkpoint operation.
@@ -179,4 +177,19 @@ public interface PageMemoryEx extends PageMemory {
      * @return Future that will be completed when all pages are cleared.
      */
     public IgniteInternalFuture<Void> clearAsync(LoadedPagesMap.KeyPredicate pred, boolean cleanDirty);
+
+    /**
+     * Pull page from checkpoint buffer.
+     */
+    public FullPageId pullPageFromCpBuffer();
+
+    /**
+     * Calculates throttling condition.
+     */
+    public boolean shouldThrottle();
+
+    /**
+     * Total pages can be placed to memory.
+     */
+    public long totalPages();
 }

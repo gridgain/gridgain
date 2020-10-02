@@ -36,11 +36,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteComponentType;
@@ -48,6 +51,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedEnumProperty;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
@@ -65,10 +69,13 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IPS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.util.nodestart.IgniteNodeStartUtils.parseFile;
 import static org.apache.ignite.internal.util.nodestart.IgniteNodeStartUtils.specifications;
 
@@ -95,6 +102,22 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** User-defined human-readable tag. Generated automatically on start, can be changed later. */
     private volatile String tag;
 
+    /** Ignite logger. */
+    private IgniteLogger log;
+
+    /** Property for update policy of shutdown. */
+    private DistributedEnumProperty<ShutdownPolicy> shutdown = new DistributedEnumProperty<>(
+        "shutdown.policy",
+        (ordinal) -> ordinal == null ? null : ShutdownPolicy.fromOrdinal(ordinal),
+        (policy) -> policy == null ? null : policy.index(),
+        ShutdownPolicy.class
+    );
+
+    /**
+     * Flag indicates that the feature is disabled.
+     */
+    private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
+
     /**
      * Required by {@link Externalizable}.
      */
@@ -111,6 +134,20 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         cfg = ctx.config();
 
         nodeLoc = new ClusterNodeLocalMapImpl(ctx);
+
+        log = ctx.log(getClass());
+    }
+
+    /**
+     * Invoke when metastorage ready to start component.
+     */
+    public void start() {
+        ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+            shutdown.addListener((name, oldVal, newVal) ->
+                U.log(log, "Shutdown policy was updated [oldVal=" + oldVal + ", newVal=" + newVal + "]"));
+
+            dispatcher.registerProperty(shutdown);
+        });
     }
 
     /** {@inheritDoc} */
@@ -309,7 +346,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         guard();
 
         try {
-            ctx.state().changeGlobalState(active, baselineNodes(), false).get();
+            ctx.state().changeGlobalState(active, serverNodes(), false).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -320,11 +357,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public boolean readOnly() {
+    @Override public ClusterState state() {
         guard();
 
         try {
-            return ctx.state().publicApiReadOnlyMode();
+            return ctx.state().publicApiState(true);
         }
         finally {
             unguard();
@@ -332,13 +369,14 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public void readOnly(boolean readOnly) throws IgniteException {
+    @Override public void state(ClusterState newState) throws IgniteException {
         guard();
 
         try {
-            verifyReadOnlyModeSupport();
+            if (newState == ACTIVE_READ_ONLY)
+                verifyReadOnlyModeSupport();
 
-            ctx.state().changeGlobalState(readOnly).get();
+            ctx.state().changeGlobalState(newState, serverNodes(), false).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -351,11 +389,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** */
     private void verifyReadOnlyModeSupport() {
         if (!allNodesSupports(ctx, ctx.discovery().discoCache().serverNodes(), CLUSTER_READ_ONLY_MODE))
-            throw new IgniteException("Not all nodes in cluster supports cluster read-only mode");
+            throw new IgniteException("Not all nodes in cluster supports cluster state " + ACTIVE_READ_ONLY);
     }
 
     /** */
-    private Collection<BaselineNode> baselineNodes() {
+    private Collection<BaselineNode> serverNodes() {
         return new ArrayList<>(ctx.cluster().get().forServers().nodes());
     }
 
@@ -438,6 +476,21 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         }
         finally {
             unguard();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public ShutdownPolicy shutdownPolicy() {
+        return shutdown.getOrDefault(ctx.config().getShutdownPolicy());
+    }
+
+    /** {@inheritDoc} */
+    @Override public void shutdownPolicy(ShutdownPolicy shutdownPolicy) {
+        try {
+            shutdown.propagate(shutdownPolicy);
+        }
+        catch (IgniteCheckedException e) {
+            U.warn(log, "Context is not initialized, the new policy was ignored: " + shutdownPolicy, e);
         }
     }
 
@@ -568,6 +621,9 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** {@inheritDoc} */
     @Override public void tag(String tag) throws IgniteCheckedException {
+        if (!clusterIdAndTagSupport)
+            return;
+
         if (tag == null)
             throw new IgniteCheckedException("Tag cannot be null.");
 
@@ -657,7 +713,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(){
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
         return ctx.state().baselineAutoAdjustStatus();
     }
 

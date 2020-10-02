@@ -33,6 +33,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
@@ -131,7 +132,7 @@ public class CacheDataLossOnPartitionMoveTest extends GridCommonAbstractTest {
     @Test
     public void testDataLossOnPartitionMove() throws Exception {
         try {
-            Ignite ignite = startGridsMultiThreaded(GRIDS_CNT / 2, false);
+            IgniteEx ignite = (IgniteEx)startGridsMultiThreaded(GRIDS_CNT / 2, false);
 
             ignite.cluster().baselineAutoAdjustEnabled(false);
             ignite.cluster().active(true);
@@ -185,7 +186,7 @@ public class CacheDataLossOnPartitionMoveTest extends GridCommonAbstractTest {
 
             int i = 0;
 
-            while(i < GRIDS_CNT / 2) {
+            while (i < GRIDS_CNT / 2) {
                 stopGrid(GRIDS_CNT / 2 + i);
 
                 i++;

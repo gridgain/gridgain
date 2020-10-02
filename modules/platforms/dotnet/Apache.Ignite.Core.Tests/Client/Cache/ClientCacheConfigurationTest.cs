@@ -52,9 +52,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             TestSerializeDeserializeUnspported(cfg, "EvictionPolicy");
             cfg.EvictionPolicy = null;
 
-            TestSerializeDeserializeUnspported(cfg, "ExpiryPolicyFactory");
-            cfg.ExpiryPolicyFactory = null;
-
             TestSerializeDeserializeUnspported(cfg, "PluginConfigurations");
             cfg.PluginConfigurations = null;
 
@@ -178,9 +175,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         {
             using (var stream = new BinaryHeapStream(128))
             {
-                ClientCacheConfigurationSerializer.Write(stream, cfg, ClientSocket.CurrentProtocolVersion, true);
+                ClientCacheConfigurationSerializer.Write(stream, cfg, ClientFeatures.CurrentFeatures, true);
                 stream.Seek(0, SeekOrigin.Begin);
-                return new CacheClientConfiguration(stream, ClientSocket.CurrentProtocolVersion);
+                return new CacheClientConfiguration(stream, ClientFeatures.CurrentFeatures);
             }
         }
 

@@ -190,7 +190,7 @@ public abstract class IgniteAbstractWalIteratorInvalidCrcTest extends GridCommon
 
         FileDescriptor corruptedDesc = descPicker.apply(archiveDescs, descs);
 
-        FileWALPointer beforeCorruptedPtr = WalTestUtils.corruptWalSegmentFile(
+        FileWALPointer beforeCorruptedPtr = WalTestUtils.corruptRandomWalRecord(
             corruptedDesc,
             iterFactory,
             random

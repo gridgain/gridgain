@@ -40,7 +40,7 @@ import static org.apache.ignite.internal.processors.query.RunningQueryManager.SQ
  */
 public class UserQueriesTestBase extends SqlStatisticsAbstractTest {
     /** Sleep interval in seconds, we expect kill query does it's job. */
-    private static final int WAIT_FOR_KILL_SEC = 1;
+    protected static final int WAIT_FOR_KILL_SEC = 1;
 
     /** Short names of all tested metrics. */
     private static final String[] ALL_METRICS = {"success", "failed", "canceled", "failedByOOM"};
@@ -170,7 +170,7 @@ public class UserQueriesTestBase extends SqlStatisticsAbstractTest {
      *
      * @param nodeIdx Node index.
      */
-    private void killAsyncAllQueriesOn(int nodeIdx) {
+    protected void killAsyncAllQueriesOn(int nodeIdx) {
         IgniteEx node = grid(nodeIdx);
 
         Collection<GridRunningQueryInfo> queries = node.context().query().getIndexing().runningQueries(-1);

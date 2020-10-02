@@ -18,18 +18,18 @@ package org.apache.ignite.internal.client.impl;
 
 import java.util.Collection;
 import java.util.UUID;
-import org.apache.ignite.internal.client.GridClientClosedException;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientException;
-import org.apache.ignite.internal.client.GridClientFuture;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.client.GridClientPredicate;
 import org.apache.ignite.internal.client.balancer.GridClientLoadBalancer;
 import org.apache.ignite.internal.client.impl.connection.GridClientConnection;
-import org.apache.ignite.internal.client.impl.connection.GridClientConnectionResetException;
 import org.apache.ignite.internal.client.impl.id_and_tag.IdAndTagViewTask;
 import org.apache.ignite.internal.client.impl.id_and_tag.IdAndTagViewTaskResult;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
+
+import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
 
 /**
  *
@@ -66,14 +66,7 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
 
     /** {@inheritDoc} */
     @Override public void active(final boolean active) throws GridClientException {
-        withReconnectHandling(new ClientProjectionClosure<Void>() {
-            @Override public GridClientFuture apply(
-                GridClientConnection conn,
-                UUID nodeId
-            ) throws GridClientConnectionResetException, GridClientClosedException {
-                return conn.changeState(active, nodeId);
-            }
-        }).get();
+        withReconnectHandling((conn, nodeId) -> conn.changeState(active, nodeId)).get();
     }
 
     /** {@inheritDoc} */
@@ -82,20 +75,13 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
     }
 
     /** {@inheritDoc} */
-    @Override public boolean readOnly() throws GridClientException {
-        return withReconnectHandling(GridClientConnection::readOnlyState).get();
+    @Override public ClusterState state() throws GridClientException {
+        return withReconnectHandling(GridClientConnection::state, nonSupportedNodes).get();
     }
 
     /** {@inheritDoc} */
-    @Override public void readOnly(boolean readOnly) throws GridClientException {
-        withReconnectHandling(new ClientProjectionClosure<Void>() {
-            @Override public GridClientFuture apply(
-                GridClientConnection conn,
-                UUID nodeId
-            ) throws GridClientConnectionResetException, GridClientClosedException {
-                return conn.changeReadOnlyState(readOnly, nodeId);
-            }
-        }).get();
+    @Override public void state(ClusterState newState) throws GridClientException {
+        withReconnectHandling((con, nodeId) -> con.changeState(newState, nodeId), nonSupportedNodes).get();
     }
 
     /** {@inheritDoc} */
@@ -112,4 +98,19 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
     @Override public String clusterName() throws GridClientException {
         return withReconnectHandling(GridClientConnection::clusterName).get();
     }
+
+    /**
+     * Filter nodes without support cluster read-only mode.
+     */
+    private static final GridClientPredicate<GridClientNode> nonSupportedNodes = new GridClientPredicate<GridClientNode>() {
+        /** {@inheritDoc} */
+        @Override public boolean apply(GridClientNode n) {
+            return !n.supports(CLUSTER_READ_ONLY_MODE);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "Filter nodes without support " + CLUSTER_READ_ONLY_MODE + " feature.";
+        }
+    };
 }

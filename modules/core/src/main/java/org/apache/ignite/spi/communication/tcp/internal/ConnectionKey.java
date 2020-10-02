@@ -25,9 +25,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ConnectionKey {
     /** */
-    private final Object consistentId;
-
-    /** */
     private final UUID nodeId;
 
     /** */
@@ -42,25 +39,22 @@ public class ConnectionKey {
     /**
      * Creates ConnectionKey with false value of dummy flag.
      *
-     * @param consistentId Consistent id of the node.
      * @param nodeId Node ID. Should be not null.
      * @param idx Connection index.
      * @param connCnt Connection counter (set only for incoming connections).
      */
-    public ConnectionKey(@NotNull Object consistentId, @NotNull UUID nodeId, int idx, long connCnt) {
-        this(consistentId, nodeId, idx, connCnt, false);
+    public ConnectionKey(@NotNull UUID nodeId, int idx, long connCnt) {
+        this(nodeId, idx, connCnt, false);
     }
 
     /**
-     * @param consistentId Consistent id of the node.
      * @param nodeId Node ID. Should be not null.
      * @param idx Connection index.
      * @param connCnt Connection counter (set only for incoming connections).
      * @param dummy Indicates that session with this ConnectionKey is temporary
      *              (for now dummy sessions are used only for Communication Failure Resolving process).
      */
-    public ConnectionKey(@NotNull Object consistentId, @NotNull UUID nodeId, int idx, long connCnt, boolean dummy) {
-        this.consistentId = consistentId;
+    public ConnectionKey(@NotNull UUID nodeId, int idx, long connCnt, boolean dummy) {
         this.nodeId = nodeId;
         this.idx = idx;
         this.connCnt = connCnt;
@@ -79,11 +73,6 @@ public class ConnectionKey {
      */
     public UUID nodeId() {
         return nodeId;
-    }
-
-    /** */
-    public Object consistentId() {
-        return consistentId;
     }
 
     /**

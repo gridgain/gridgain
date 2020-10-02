@@ -24,18 +24,19 @@ import java.util.Map;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
 /**
- * Tests for {@link SqlFieldsQueryEx#skipReducerOnUpdate} flag.
+ * Tests for {@link SqlFieldsQuery#isSkipReducerOnUpdate()} flag.
  */
 public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexingCommonTest {
     /** */
@@ -104,6 +105,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             CacheConfiguration ccfg = new CacheConfiguration(CACHE_STOCK);
 
             ccfg.setCacheMode(CacheMode.REPLICATED);
+            ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
 
             QueryEntity entity = new QueryEntity(Integer.class, Stock.class);
 
@@ -190,7 +192,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
 
         String text = "UPDATE \"acc\".Account SET depo = depo - ? WHERE depo > 0";
 
-        checkUpdate(client.cache(CACHE_ACCOUNT), accounts, new SqlFieldsQueryEx(text, false).setArgs(10));
+        checkUpdate(client.cache(CACHE_ACCOUNT), accounts, new SqlFieldsQuery(text).setArgs(10));
     }
 
     /**
@@ -202,8 +204,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
 
         String text = "UPDATE \"acc\".Account SET depo = depo - ? WHERE _key = ?";
 
-        checkUpdate(client.cache(CACHE_ACCOUNT), accounts,
-            new SqlFieldsQueryEx(text, false).setArgs(10, 1));
+        checkUpdate(client.cache(CACHE_ACCOUNT), accounts, new SqlFieldsQuery(text).setArgs(10, 1));
     }
 
     /**
@@ -215,8 +216,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
 
         String text = "UPDATE \"acc\".Account SET depo = depo - ? WHERE sn >= ? AND sn < ? LIMIT ?";
 
-        checkUpdate(client.cache(CACHE_ACCOUNT), accounts,
-            new SqlFieldsQueryEx(text, false).setArgs(10, 0, 10, 10));
+        checkUpdate(client.cache(CACHE_ACCOUNT), accounts, new SqlFieldsQuery(text).setArgs(10, 0, 10, 10));
     }
 
     /**
@@ -233,8 +233,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
         String text = "UPDATE \"trade\".Trade t SET qty = ? " +
             "WHERE accountId IN (SELECT p._key FROM \"acc\".Account p WHERE depo < ?)";
 
-        checkUpdate(client.cache(CACHE_TRADE), trades,
-            new SqlFieldsQueryEx(text, false).setArgs(0, 0));
+        checkUpdate(client.cache(CACHE_TRADE), trades, new SqlFieldsQuery(text).setArgs(0, 0));
     }
 
     /**
@@ -250,8 +249,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
         String text = "UPDATE \"trade\".Trade t SET qty = " +
             "(SELECT a.depo/t.price FROM \"acc\".Account a WHERE t.accountId = a._key)";
 
-        checkUpdate(client.cache(CACHE_TRADE), trades,
-            new SqlFieldsQueryEx(text, false));
+        checkUpdate(client.cache(CACHE_TRADE), trades, new SqlFieldsQuery(text));
     }
 
     /**
@@ -267,8 +265,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
         String text = "UPDATE \"trade\".Trade t SET (qty) = " +
             "(SELECT a.depo/t.price FROM \"acc\".Account a WHERE t.accountId = a._key)";
 
-        checkUpdate(client.cache(CACHE_TRADE), trades,
-            new SqlFieldsQueryEx(text, false));
+        checkUpdate(client.cache(CACHE_TRADE), trades, new SqlFieldsQuery(text));
     }
 
     /**
@@ -280,7 +277,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             " VALUES (?, ?, ?, ?), (?, ?, ?, ?)";
 
         checkUpdate(client.<Integer, Account>cache(CACHE_ACCOUNT), null,
-            new SqlFieldsQueryEx(text, false).setArgs(1, "John Marry", 11111, 100, 2, "Marry John", 11112, 200));
+            new SqlFieldsQuery(text).setArgs(1, "John Marry", 11111, 100, 2, "Marry John", 11112, 200));
     }
 
     /**
@@ -295,8 +292,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
         String text = "INSERT INTO \"trade\".Trade (_key, accountId, stockId, qty, price) " +
             "SELECT a._key, a._key, ?, a.depo/?, ? FROM \"acc\".Account a";
 
-        checkUpdate(client.<Integer, Trade>cache(CACHE_TRADE), null,
-            new SqlFieldsQueryEx(text, false).setArgs(1, 10, 10));
+        checkUpdate(client.<Integer, Trade>cache(CACHE_TRADE), null, new SqlFieldsQuery(text).setArgs(1, 10, 10));
     }
 
     /**
@@ -312,8 +308,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             "SELECT a._key, a._key, ?, a.depo/?, ? FROM \"acc\".Account a " +
             "ORDER BY a.sn DESC";
 
-        checkUpdate(client.<Integer, Trade>cache(CACHE_TRADE), null,
-            new SqlFieldsQueryEx(text, false).setArgs(1, 10, 10));
+        checkUpdate(client.<Integer, Trade>cache(CACHE_TRADE), null, new SqlFieldsQuery(text).setArgs(1, 10, 10));
     }
 
     /**
@@ -330,8 +325,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             "UNION " +
             "SELECT 101 + a2._key, a2._key, 1, a2.depo, 1 FROM \"acc\".Account a2";
 
-        checkUpdate(client.<Integer, Trade>cache(CACHE_TRADE), null,
-            new SqlFieldsQueryEx(text, false));
+        checkUpdate(client.<Integer, Trade>cache(CACHE_TRADE), null, new SqlFieldsQuery(text));
     }
 
     /**
@@ -350,8 +344,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             "FROM \"trade\".Trade " +
             "GROUP BY accountId";
 
-        checkUpdate(client.<Integer, Report>cache(CACHE_REPORT), null,
-            new SqlFieldsQueryEx(text, false));
+        checkUpdate(client.<Integer, Report>cache(CACHE_REPORT), null, new SqlFieldsQuery(text));
     }
 
     /**
@@ -366,8 +359,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
         String text = "INSERT INTO \"list\".String (_key, _val) " +
             "SELECT DISTINCT sn, name FROM \"acc\".Account ";
 
-        checkUpdate(client.<Integer, String>cache(CACHE_LIST), null,
-            new SqlFieldsQueryEx(text, false));
+        checkUpdate(client.<Integer, String>cache(CACHE_LIST), null, new SqlFieldsQuery(text));
     }
 
     /**
@@ -385,8 +377,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             "SELECT 5*a._key + s._key, a._key, s._key, ?, a.depo/? " +
             "FROM \"acc\".Account a JOIN \"stock\".Stock s ON 1=1";
 
-        checkUpdate(client.<Integer, Trade>cache(CACHE_TRADE), null,
-            new SqlFieldsQueryEx(text, false).setArgs(10, 10));
+        checkUpdate(client.<Integer, Trade>cache(CACHE_TRADE), null, new SqlFieldsQuery(text).setArgs(10, 10));
     }
 
     /**
@@ -400,8 +391,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
 
         String text = "DELETE FROM \"acc\".Account WHERE sn > ?";
 
-        checkUpdate(client.cache(CACHE_ACCOUNT), accounts,
-            new SqlFieldsQueryEx(text, false).setArgs(10));
+        checkUpdate(client.cache(CACHE_ACCOUNT), accounts, new SqlFieldsQuery(text).setArgs(10));
     }
 
     /**
@@ -415,8 +405,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
 
         String text = "DELETE TOP ? FROM \"acc\".Account WHERE sn < ?";
 
-        checkUpdate(client.cache(CACHE_ACCOUNT), accounts,
-            new SqlFieldsQueryEx(text, false).setArgs(10, 10));
+        checkUpdate(client.cache(CACHE_ACCOUNT), accounts, new SqlFieldsQuery(text).setArgs(10, 10));
     }
 
     /**
@@ -433,8 +422,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
         String text = "DELETE FROM \"acc\".Account " +
             "WHERE _key IN (SELECT t.accountId FROM \"trade\".Trade t)";
 
-        checkUpdate(client.cache(CACHE_ACCOUNT), accounts,
-            new SqlFieldsQueryEx(text, false));
+        checkUpdate(client.cache(CACHE_ACCOUNT), accounts, new SqlFieldsQuery(text));
     }
 
     /**
@@ -447,8 +435,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
         String text = "MERGE INTO \"acc\".Account (_key, name, sn, depo)" +
             " VALUES (?, ?, ?, ?), (?, ?, ?, ?)";
 
-        checkUpdate(client.cache(CACHE_ACCOUNT), accounts,
-            new SqlFieldsQueryEx(text, false).setArgs(0, "John Marry", 11111, 100, 1, "Marry John", 11112, 200));
+        checkUpdate(client.cache(CACHE_ACCOUNT), accounts, new SqlFieldsQuery(text).setArgs(0, "John Marry", 11111, 100, 1, "Marry John", 11112, 200));
     }
 
     /**
@@ -470,8 +457,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             "SELECT 5*a._key + s._key, a._key, s._key, ?, a.depo/? " +
             "FROM \"acc\".Account a JOIN \"stock\".Stock s ON 1=1";
 
-        checkUpdate(client.cache(CACHE_TRADE), trades,
-            new SqlFieldsQueryEx(text, false).setArgs(10, 10));
+        checkUpdate(client.cache(CACHE_TRADE), trades, new SqlFieldsQuery(text).setArgs(10, 10));
     }
 
     /**
@@ -491,8 +477,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             "SELECT a._key, a._key, ?, a.depo/?, ? FROM \"acc\".Account a " +
             "ORDER BY a.sn DESC";
 
-        checkUpdate(client.cache(CACHE_TRADE), trades,
-            new SqlFieldsQueryEx(text, false).setArgs(1, 10, 10));
+        checkUpdate(client.cache(CACHE_TRADE), trades, new SqlFieldsQuery(text).setArgs(1, 10, 10));
     }
 
     /**
@@ -515,8 +500,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             "FROM \"trade\".Trade " +
             "GROUP BY accountId";
 
-        checkUpdate(client.<Integer, Report>cache(CACHE_REPORT), reports,
-            new SqlFieldsQueryEx(text, false));
+        checkUpdate(client.<Integer, Report>cache(CACHE_REPORT), reports, new SqlFieldsQuery(text));
     }
 
     /**
@@ -581,16 +565,16 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
      * Executes provided sql update with skipReducerOnUpdate flag on and off and checks results are the same.
      *
      * @param cache Cache.
-     * @param initial Initial content of the cache.
+     * @param init Initial content of the cache.
      * @param qry Query to execute.
      * @param <K> Key type.
      * @param <V> Value type.
      */
-    private <K, V> void checkUpdate(IgniteCache<K, V> cache, Map<K, V> initial, SqlFieldsQueryEx qry) {
+    private <K, V> void checkUpdate(IgniteCache<K, V> cache, Map<K, V> init, SqlFieldsQuery qry) {
         cache.clear();
 
-        if (!F.isEmpty(initial))
-            cache.putAll(initial);
+        if (!F.isEmpty(init))
+            cache.putAll(init);
 
         List<List<?>> updRes = cache.query(qry.setSkipReducerOnUpdate(true)).getAll();
 
@@ -601,8 +585,8 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
 
         cache.clear();
 
-        if (!F.isEmpty(initial))
-            cache.putAll(initial);
+        if (!F.isEmpty(init))
+            cache.putAll(init);
 
         List<List<?>> updRes2 = cache.query(qry.setSkipReducerOnUpdate(false)).getAll();
 

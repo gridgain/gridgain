@@ -23,14 +23,15 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
-import org.h2.message.DbException;
-import org.h2.util.Bits;
-import org.h2.util.JdbcUtils;
-import org.h2.util.Utils;
-import org.h2.value.CompareMode;
-import org.h2.value.TypeInfo;
-import org.h2.value.Value;
-import org.h2.value.ValueJavaObject;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.util.Bits;
+import org.gridgain.internal.h2.util.JdbcUtils;
+import org.gridgain.internal.h2.util.Utils;
+import org.gridgain.internal.h2.value.CompareMode;
+import org.gridgain.internal.h2.value.TypeInfo;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueJavaObject;
 
 /**
  * H2 Value over {@link CacheObject}. Replacement for {@link ValueJavaObject}.
@@ -117,7 +118,7 @@ public class GridH2ValueCacheObject extends Value {
         }
 
         // For user-provided and array types.
-        return JdbcUtils.serialize(obj, null);
+        return JdbcUtils.serialize(obj, H2Utils.getHandler(valCtx.kernalContext()));
     }
 
     /** {@inheritDoc} */

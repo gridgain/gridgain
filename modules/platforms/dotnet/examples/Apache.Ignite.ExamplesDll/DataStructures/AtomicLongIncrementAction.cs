@@ -32,6 +32,7 @@ namespace Apache.Ignite.ExamplesDll.DataStructures
         public const string AtomicLongName = "dotnet_atomic_long";
 
         /** */
+        // ReSharper disable once UnassignedReadonlyField
         [InstanceResource] private readonly IIgnite _ignite;
 
         /// <summary>

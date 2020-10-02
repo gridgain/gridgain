@@ -48,6 +48,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CommunicationFailureResolver;
 import org.apache.ignite.events.EventType;
@@ -75,6 +76,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.MarshallerUtils;
@@ -106,6 +108,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2;
+import static org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoveryImpl.ConnectionState.STARTED;
 import static org.apache.zookeeper.CreateMode.EPHEMERAL_SEQUENTIAL;
 import static org.apache.zookeeper.CreateMode.PERSISTENT;
 
@@ -174,7 +177,7 @@ public class ZookeeperDiscoveryImpl {
     private ZkRuntimeState rtState;
 
     /** */
-    private volatile ConnectionState connState = ConnectionState.STARTED;
+    private volatile ConnectionState connState = STARTED;
 
     /** */
     private final AtomicBoolean stop = new AtomicBoolean();
@@ -446,7 +449,7 @@ public class ZookeeperDiscoveryImpl {
         assert clientReconnectEnabled;
 
         synchronized (stateMux) {
-            if (connState == ConnectionState.STARTED) {
+            if (connState == STARTED) {
                 connState = ConnectionState.DISCONNECTED;
 
                 rtState.onCloseStart(disconnectError());
@@ -575,14 +578,15 @@ public class ZookeeperDiscoveryImpl {
 
     /**
      * @param feature Feature to check.
+     * @param nodesPred  Predicate to filter cluster nodes.
      * @return {@code true} if all nodes support the given feature, {@code false} otherwise.
      */
-    public boolean allNodesSupport(IgniteFeatures feature) {
-        checkState();
+    public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
+        GridKernalContext ctx =
+                (connState == STARTED && spi.ignite() instanceof IgniteEx) ? ((IgniteEx)spi.ignite()).context() : null;
 
-        GridKernalContext ctx = (spi.ignite() instanceof IgniteEx) ? ((IgniteEx)spi.ignite()).context() : null;
-
-        return rtState != null && rtState.top.isAllNodes(n -> IgniteFeatures.nodeSupports(ctx, n, feature));
+        return rtState != null
+            && rtState.top.isAllNodes(n -> !nodesPred.apply(n) || IgniteFeatures.nodeSupports(ctx, n, feature));
     }
 
     /**
@@ -642,6 +646,11 @@ public class ZookeeperDiscoveryImpl {
      */
     public void sendCustomMessage(DiscoverySpiCustomMessage msg) {
         assert msg != null;
+
+        List<ClusterNode> nodes = rtState.top.topologySnapshot();
+
+        if (nodes.stream().allMatch(ClusterNode::isClient))
+            throw new IgniteException("Failed to send custom message: no server nodes in topology.");
 
         byte[] msgBytes;
 
@@ -784,7 +793,7 @@ public class ZookeeperDiscoveryImpl {
                 if (connState == ConnectionState.STOPPED)
                     return;
 
-                connState = ConnectionState.STARTED;
+                connState = STARTED;
             }
 
             ZkRuntimeState rtState = this.rtState = new ZkRuntimeState(reconnect);
@@ -1093,7 +1102,7 @@ public class ZookeeperDiscoveryImpl {
      * @param locCred Local security credentials for authentication.
      * @throws IgniteSpiException If any error occurs.
      */
-    private void localAuthentication(DiscoverySpiNodeAuthenticator nodeAuth, SecurityCredentials locCred){
+    private void localAuthentication(DiscoverySpiNodeAuthenticator nodeAuth, SecurityCredentials locCred) {
         assert nodeAuth != null;
         assert locCred != null;
 
@@ -1267,7 +1276,7 @@ public class ZookeeperDiscoveryImpl {
                         return;
 
                     synchronized (stateMux) {
-                        if (connState != ConnectionState.STARTED)
+                        if (connState != STARTED)
                             return;
                     }
 
@@ -1416,7 +1425,7 @@ public class ZookeeperDiscoveryImpl {
         }
 
         // This situation may appear while reconnection and this callback can be skipped.
-        if(!aliveClients.containsKey(locInternalOrder))
+        if (!aliveClients.containsKey(locInternalOrder))
             return;
 
         Map.Entry<Long, String> oldest = aliveClients.firstEntry();
@@ -3652,7 +3661,7 @@ public class ZookeeperDiscoveryImpl {
             boolean reconnect = false;
 
             synchronized (stateMux) {
-                if (connState == ConnectionState.STARTED) {
+                if (connState == STARTED) {
                     reconnect = true;
 
                     connState = ConnectionState.DISCONNECTED;
@@ -4034,7 +4043,7 @@ public class ZookeeperDiscoveryImpl {
         new Thread(new Runnable() {
             @Override public void run() {
                 try {
-                    IgnitionEx.stop(igniteInstanceName, true, true);
+                    IgnitionEx.stop(igniteInstanceName, true, ShutdownPolicy.IMMEDIATE, true);
 
                     U.log(log, "Stopped the node successfully in response to fatal error in ZookeeperDiscoverySpi.");
                 }
@@ -4158,7 +4167,7 @@ public class ZookeeperDiscoveryImpl {
         @Override public void run() {
             if (clientReconnectEnabled) {
                 synchronized (stateMux) {
-                    if (connState == ConnectionState.STARTED) {
+                    if (connState == STARTED) {
                         connState = ConnectionState.DISCONNECTED;
 
                         rtState.onCloseStart(disconnectError());
@@ -4448,7 +4457,7 @@ public class ZookeeperDiscoveryImpl {
                 return;
 
             synchronized (stateMux) {
-                if (connState != ConnectionState.STARTED)
+                if (connState != STARTED)
                     return;
             }
 

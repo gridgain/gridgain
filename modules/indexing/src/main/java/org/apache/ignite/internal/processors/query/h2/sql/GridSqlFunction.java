@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.command.Parser;
-import org.h2.value.ValueString;
+import org.gridgain.internal.h2.command.Parser;
+import org.gridgain.internal.h2.value.ValueString;
 
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.CASE;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.CAST;
@@ -63,7 +63,7 @@ public class GridSqlFunction extends GridSqlElement {
      * @param type Type.
      * @param name Name.
      */
-    private GridSqlFunction(String schema, GridSqlFunctionType type, String name) {
+    protected GridSqlFunction(String schema, GridSqlFunctionType type, String name) {
         super(new ArrayList<GridSqlAst>());
 
         if (name == null)
@@ -83,6 +83,17 @@ public class GridSqlFunction extends GridSqlElement {
      */
     public GridSqlFunction(String schema, String name) {
         this(schema, TYPE_MAP.get(name), name);
+    }
+
+    /**
+     * @return Copy function.
+     */
+    public GridSqlFunction copy() {
+        GridSqlFunction func = new GridSqlFunction(schema, type, name);
+
+        func.resultType(resultType());
+
+        return func;
     }
 
     /** {@inheritDoc}  */

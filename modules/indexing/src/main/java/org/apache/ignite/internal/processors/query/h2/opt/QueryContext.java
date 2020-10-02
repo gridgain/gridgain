@@ -17,9 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -45,9 +43,6 @@ public class QueryContext implements H2QueryContext {
     /** */
     private final PartitionReservation reservations;
 
-    /** */
-    private QueryMemoryTracker memTracker;
-
     /** {@code True} for local queries, {@code false} for distributed ones. */
     private final boolean loc;
 
@@ -57,7 +52,6 @@ public class QueryContext implements H2QueryContext {
      * @param filter Filter.
      * @param distributedJoinCtx Distributed join context.
      * @param mvccSnapshot MVCC snapshot.
-     * @param memTracker Query memory tracker.
      * @param loc {@code True} for local queries, {@code false} for distributed ones.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
@@ -67,15 +61,12 @@ public class QueryContext implements H2QueryContext {
         @Nullable DistributedJoinContext distributedJoinCtx,
         @Nullable MvccSnapshot mvccSnapshot,
         @Nullable PartitionReservation reservations,
-        @Nullable QueryMemoryTracker memTracker,
-        boolean loc
-    ) {
+        boolean loc) {
         this.segment = segment;
         this.filter = filter;
         this.distributedJoinCtx = distributedJoinCtx;
         this.mvccSnapshot = mvccSnapshot;
         this.reservations = reservations;
-        this.memTracker = memTracker;
         this.loc = loc;
     }
 
@@ -91,9 +82,7 @@ public class QueryContext implements H2QueryContext {
             null,
             null,
             null,
-            null,
-            local
-        );
+            local);
     }
 
     /**
@@ -134,13 +123,6 @@ public class QueryContext implements H2QueryContext {
      */
     public IndexingQueryFilter filter() {
         return filter;
-    }
-
-    /**
-     * @return Query memory tracker.
-     */
-    @Override public @Nullable H2MemoryTracker queryMemoryTracker() {
-        return memTracker;
     }
 
     /**

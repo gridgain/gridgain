@@ -121,4 +121,23 @@ public class IgniteCacheMergeSqlQuerySelfTest extends IgniteCacheAbstractInsertS
 
         assertEquals(4, (int)p.get(3));
     }
+
+    /**
+     * Test insert with implicit column names.
+     */
+    @Test
+    public void testImplicitColumnNames() {
+        IgniteCache<Key, Person> p = ignite(0).cache("K2P").withKeepBinary();
+
+        p.query(new SqlFieldsQuery(
+            "merge into Person values (1, 1, 'Vova')")).getAll();
+
+        assertEquals(createPerson(1, "Vova"), p.get(new Key(1)));
+
+        p.query(new SqlFieldsQuery(
+            "merge into Person values (2, 2, 'Sergi'), (3, 3, 'Alex')")).getAll();
+
+        assertEquals(createPerson(2, "Sergi"), p.get(new Key(2)));
+        assertEquals(createPerson(3, "Alex"), p.get(new Key(3)));
+    }
 }

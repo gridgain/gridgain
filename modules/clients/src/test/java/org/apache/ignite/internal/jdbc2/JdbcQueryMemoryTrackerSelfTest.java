@@ -30,7 +30,8 @@ public class JdbcQueryMemoryTrackerSelfTest extends JdbcThinQueryMemoryTrackerSe
     @Override protected Connection createConnection(boolean lazy) throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:ignite:cfg://" +
             "queryMaxMemory=" + (maxMem) + ":lazy=" + lazy +
-            "@modules/clients/src/test/config/jdbc-config.xml"
+            (useJdbcV2GlobalQuotaCfg ? "@modules/clients/src/test/config/jdbc-config-mem-limit.xml" :
+                "@modules/clients/src/test/config/jdbc-config.xml")
         );
 
         conn.setSchema("\"PUBLIC\"");

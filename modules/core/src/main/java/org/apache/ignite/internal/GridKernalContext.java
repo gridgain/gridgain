@@ -32,6 +32,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
@@ -48,6 +49,7 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessor;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
@@ -72,6 +74,7 @@ import org.apache.ignite.internal.processors.task.GridTaskProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
+import org.apache.ignite.internal.stat.IoStatisticsManager;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -198,6 +201,13 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Monitoring manager.
      */
     public GridMetricManager metric();
+
+    /**
+     * Gets system view manager.
+     *
+     * @return Monitoring manager.
+     */
+    public GridSystemViewManager systemView();
 
     /**
      * Gets caches processor.
@@ -719,6 +729,11 @@ public interface GridKernalContext extends Iterable<GridComponent> {
     public GridInternalSubscriptionProcessor internalSubscriptionProcessor();
 
     /**
+     * @return IO statistic manager.
+     */
+    public IoStatisticsManager ioStats();
+
+    /**
      * @return Default uncaught exception handler used by thread pools.
      */
     public Thread.UncaughtExceptionHandler uncaughtExceptionHandler();
@@ -739,4 +754,16 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Rolling Upgrade processor.
      */
     public RollingUpgradeProcessor rollingUpgrade();
+
+    /**
+     * @return Local continuous tasks processor.
+     */
+    public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor();
+
+    /**
+     * Return Thread pool for create/rebuild indexes.
+     *
+     * @return Thread pool for create/rebuild indexes.
+     */
+    public ExecutorService buildIndexExecutorService();
 }

@@ -51,7 +51,7 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
         GridNioSession ses,
         IgniteLogger log
     ) {
-        super(connIdx, null);
+        super(connIdx);
 
         assert ses != null;
         assert log != null;

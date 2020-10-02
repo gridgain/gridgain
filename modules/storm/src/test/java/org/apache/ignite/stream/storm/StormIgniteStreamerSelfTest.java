@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheEvent;
@@ -63,7 +64,7 @@ public class StormIgniteStreamerSelfTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        IgniteConfiguration cfg = loadConfiguration(GRID_CONF_FILE);
+        IgniteConfiguration cfg = Ignition.loadSpringBean(GRID_CONF_FILE, "ignite.cfg");
 
         cfg.setClientMode(false);
 

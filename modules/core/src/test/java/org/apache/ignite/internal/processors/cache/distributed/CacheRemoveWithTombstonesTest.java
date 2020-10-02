@@ -62,14 +62,16 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     public static Collection parameters() {
         List<Object[]> res = new ArrayList<>();
 
-        for (boolean persistenceEnabled : new boolean[] {false, true}) {
-            for (boolean histRebalance : new boolean[] {false, true}) {
-                if (!persistenceEnabled && histRebalance)
-                    continue;
+        res.add(new Object[]{false, false});
 
-                res.add(new Object[]{persistenceEnabled, histRebalance});
-            }
-        }
+//        for (boolean persistenceEnabled : new boolean[] {false, true}) {
+//            for (boolean histRebalance : new boolean[] {false, true}) {
+//                if (!persistenceEnabled && histRebalance)
+//                    continue;
+//
+//                res.add(new Object[]{persistenceEnabled, histRebalance});
+//            }
+//        }
 
         return res;
     }
@@ -93,7 +95,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         cfg.setCommunicationSpi(commSpi);
 
         if (persistence) {
-            DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+            DataStorageConfiguration dsCfg = new DataStorageConfiguration().setWalSegmentSize(4 * 1024 * 1024)
                     .setDefaultDataRegionConfiguration(
                             new DataRegionConfiguration()
                                 .setInitialSize(256L * 1024 * 1024)
@@ -132,6 +134,28 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    @Test
+    public void testSimple() throws Exception {
+        IgniteEx crd = startGrids(3);
+
+        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(ATOMIC));
+
+        final int part = 0;
+        List<Integer> keys = loadDataToPartition(part, crd.name(), DEFAULT_CACHE_NAME, 100, 0);
+
+        assertEquals(100, cache0.size());
+
+        for (Integer key : keys)
+            cache0.remove(key);
+
+        final LongMetric tombstoneMetric0 = crd.context().metric().registry(
+            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
+
+        long value = tombstoneMetric0.value();
+
+        assertEquals(100, value);
     }
 
     /**

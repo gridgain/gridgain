@@ -31,6 +31,7 @@ import java.util.Map;
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -50,11 +51,11 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
-import org.h2.util.LocalDateTimeUtils;
-import org.h2.value.Value;
-import org.h2.value.ValueDate;
-import org.h2.value.ValueTime;
-import org.h2.value.ValueTimestamp;
+import org.gridgain.internal.h2.util.LocalDateTimeUtils;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueDate;
+import org.gridgain.internal.h2.value.ValueTime;
+import org.gridgain.internal.h2.value.ValueTimestamp;
 
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.DUPLICATE_KEY;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.createJdbcSqlException;
@@ -134,7 +135,7 @@ public class DmlUtils {
         }
         catch (Exception e) {
             throw new IgniteSQLException("Value conversion failed [column=" + columnName + ", from=" + currCls.getName() + ", to=" +
-                expCls.getName() +']', IgniteQueryErrorCode.CONVERSION_FAILED, e);
+                expCls.getName() + ']', IgniteQueryErrorCode.CONVERSION_FAILED, e);
         }
     }
 
@@ -203,7 +204,7 @@ public class DmlUtils {
             for (List<?> row : cursor) {
                 final IgniteBiTuple keyValPair = plan.processRow(row);
 
-                sender.add(keyValPair.getKey(), new DmlStatementsProcessor.InsertEntryProcessor(keyValPair.getValue()),  0);
+                sender.add(keyValPair.getKey(), new DmlStatementsProcessor.InsertEntryProcessor(keyValPair.getValue()), 0);
             }
 
             sender.flush();
@@ -440,7 +441,13 @@ public class DmlUtils {
                         sqlState = ((IgniteSQLException)e).sqlState();
 
                         code = ((IgniteSQLException)e).statusCode();
-                    } else {
+                    }
+                    else if (e instanceof SqlCacheException) {
+                        sqlState = ((SqlCacheException)e).sqlState();
+
+                        code = ((SqlCacheException)e).statusCode();
+                    }
+                    else {
                         sqlState = SqlStateCode.INTERNAL_ERROR;
 
                         code = IgniteQueryErrorCode.UNKNOWN;
@@ -486,7 +493,7 @@ public class DmlUtils {
         for (int i = 0; i < cntPerRow.length; i++ ) {
             int cnt = cntPerRow[i];
 
-            res.add(new UpdateResult(cnt , X.EMPTY_OBJECT_ARRAY));
+            res.add(new UpdateResult(cnt, X.EMPTY_OBJECT_ARRAY));
         }
 
         return res;

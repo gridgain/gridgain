@@ -32,7 +32,7 @@
     </parent>
 
     <artifactId>ignite-h2</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <description>H2 Database Engine Fork</description>
 
     <licenses>
@@ -86,6 +86,12 @@
             <version>7.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
         <!-- END TEST DEPENDENCIES !-->
     </dependencies>
 
@@ -116,8 +122,8 @@
                     <include>**/*.gif</include>
                     <include>**/*.css</include>
                     <include>**/*.js</include>
-                    <include>org/h2/res/help.csv</include>
-                    <include>org/h2/res/javadoc.properties</include>
+                    <include>org/gridgain/internal/h2/res/help.csv</include>
+                    <include>org/gridgain/internal/h2/res/javadoc.properties</include>
                     <include>META-INF/**</include>
                 </includes>
             </resource>
@@ -130,9 +136,9 @@
             <testResource>
                 <directory>src/test/java</directory>
                 <includes>
-                    <include>org/h2/test/scripts/**/*.sql</include>
-                    <include>org/h2/samples/newsfeed.sql</include>
-                    <include>org/h2/samples/optimizations.sql</include>
+                    <include>org/gridgain/internal/h2/test/scripts/**/*.sql</include>
+                    <include>org/gridgain/internal/h2/samples/newsfeed.sql</include>
+                    <include>org/gridgain/internal/h2/samples/optimizations.sql</include>
                 </includes>
             </testResource>
         </testResources>

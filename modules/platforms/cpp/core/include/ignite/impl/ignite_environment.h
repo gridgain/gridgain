@@ -29,16 +29,21 @@
 
 namespace ignite
 {
+    /* Forward declaration. */
+    class Ignite;
+
     namespace impl
     {
         /* Forward declarations. */
+        class IgniteEnvironment;
         class IgniteBindingImpl;
         class ModuleManager;
         class ClusterNodesHolder;
         namespace cluster {
             class ClusterNodeImpl;
         }
-        
+
+        typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
 
         /**
          * Defines environment in which Ignite operates.
@@ -132,6 +137,29 @@ namespace ignite
             int64_t OnContinuousQueryFilterApply(common::concurrent::SharedPointer<interop::InteropMemory>& mem);
 
             /**
+             * Callback on future result recieved.
+             *
+             * @param handle Task handle.
+             * @param mem Memory with data.
+             */
+            int64_t OnFutureResult(int64_t handle, common::concurrent::SharedPointer<interop::InteropMemory> &mem);
+
+            /**
+             * Callback on future error recieved.
+             *
+             * @param handle Task handle.
+             * @param mem Memory with data.
+             */
+            int64_t OnFutureError(int64_t handle, common::concurrent::SharedPointer<interop::InteropMemory>& mem);
+
+            /**
+             * Callback on compute function execute request.
+             *
+             * @param mem Memory with data.
+             */
+            int64_t OnComputeFuncExecute(common::concurrent::SharedPointer<interop::InteropMemory>& mem);
+
+            /**
              * Cache Invoke callback.
              *
              * @param mem Input-output memory.
@@ -195,6 +223,13 @@ namespace ignite
              * @return Type updater.
              */
             binary::BinaryTypeUpdater* GetTypeUpdater();
+
+            /**
+             * Get local cluster node implementation.
+             *
+             * @return Cluster node implementation or NULL if does not exist.
+             */
+            SP_ClusterNodeImpl GetLocalNode();
 
             /**
              * Get cluster node implementation by id.
@@ -292,6 +327,13 @@ namespace ignite
             int32_t ComputeTaskJobResult(common::concurrent::SharedPointer<interop::InteropMemory>& mem);
 
             /**
+             * Get pointer to ignite node.
+             *
+             * @return Pointer to ignite node.
+             */
+            ignite::Ignite* GetIgnite();
+
+            /**
              * InLongOutLong callback.
              * Allow access to private nodes member.
              *
@@ -334,6 +376,9 @@ namespace ignite
 
             /** Cluster nodes. */
             common::concurrent::SharedPointer<ClusterNodesHolder> nodes;
+
+            /** Ignite node. */
+            ignite::Ignite* ignite;
 
             IGNITE_NO_COPY_ASSIGNMENT(IgniteEnvironment);
         };

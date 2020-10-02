@@ -19,6 +19,7 @@ package org.apache.ignite.internal.metric;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
@@ -72,20 +73,20 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @Test
     public void testMetricsOnRemoteMapFail() throws Exception {
         int strongMemQuota = 1024 * 1024;
-        int memQuotaUnlimited = -1;
+        int memQuotaUnlimited = 0;
 
         startGridWithMaxMem(MAPPER_IDX, strongMemQuota);
         startGridWithMaxMem(REDUCER_IDX, memQuotaUnlimited, true);
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        final String mapFailMsg = "Failed to execute map query on remote node";
+        final String mapFailMsg = "SQL query ran out of memory: Global quota was exceeded.";
 
         // map phase failure affects only general fail metric, not OOM metric.
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
-            CacheException.class,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB").setLazy(false)).getAll(),
+            SqlMemoryQuotaExceededException.class,
             mapFailMsg),
             "failed");
 
@@ -97,8 +98,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
             log,
             () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 200 AND failFunction() = 5")).getAll(),
             CacheException.class,
-            mapFailMsg), "failed");
-
+            "Failed to execute map query on remote node"), "failed");
 
         SuspendQuerySqlFunctions.refresh();
 
@@ -120,20 +120,20 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @Test
     public void testMetricsOnLocalMapFail() throws Exception {
         int strongMemQuota = 1024 * 1024;
-        int memQuotaUnlimited = -1;
+        int memQuotaUnlimited = 0;
 
         startGridWithMaxMem(REDUCER_IDX, strongMemQuota);
         startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited, true);
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        final String mapFailMsg = "Failed to execute map query on remote node";
+        final String mapFailMsg = "SQL query ran out of memory: Global quota was exceeded.";
 
         // map phase failure affects only general fail metric, not OOM metric.
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
-            CacheException.class,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB").setLazy(false)).getAll(),
+            SqlMemoryQuotaExceededException.class,
             mapFailMsg),
             "failed");
 
@@ -145,8 +145,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
             log,
             () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 200 AND failFunction() = 5")).getAll(),
             CacheException.class,
-            mapFailMsg), "failed");
-
+            "Failed to execute map query on remote node"), "failed");
 
         SuspendQuerySqlFunctions.refresh();
 
@@ -167,7 +166,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @Test
     public void testMetricsOnRemoteReduceStepFail() throws Exception {
         int strongMemQuota = 1024 * 1024;
-        int memQuotaUnlimited = -1;
+        int memQuotaUnlimited = 0;
 
         startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited);
 
@@ -176,7 +175,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        final String rdcFailMsg = "Failed to run reduce query locally";
+        final String rdcFailMsg = "SQL query ran out of memory: Global quota was exceeded.";
 
         // general failure
         SuspendQuerySqlFunctions.refresh();
@@ -187,14 +186,14 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
                 () -> cache.query(new SqlFieldsQuery(
                     "SELECT id, failFunction(count(id)) FROM TAB WHERE ID < 5 GROUP BY NAME HAVING ID < 5")).getAll(),
                 CacheException.class,
-                rdcFailMsg);
+                "Failed to run reduce query locally.");
         }, "failed");
 
         // OOM protection
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
             () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB GROUP BY NAME")).getAll(),
-            CacheException.class,
+            SqlMemoryQuotaExceededException.class,
             rdcFailMsg),
             "failed", "failedByOOM");
 
@@ -207,7 +206,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @Test
     public void testLocalSelectFailedByOOM() throws Exception {
         int strongMemQuota = 1024 * 1024;
-        int memQuotaUnlimited = -1;
+        int memQuotaUnlimited = 0;
 
         startGridWithMaxMem(REDUCER_IDX, strongMemQuota);
         startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited, true);
@@ -216,7 +215,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
 
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB").setLocal(true)).getAll(),
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB").setLocal(true).setLazy(false)).getAll(),
             CacheException.class,
             null),
             "failed", "failedByOOM");

@@ -47,6 +47,8 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.tracing.GridTracingManager;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.cache.CacheConflictResolutionManager;
@@ -65,6 +67,7 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessor;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
@@ -90,8 +93,8 @@ import org.apache.ignite.internal.processors.subscription.GridInternalSubscripti
 import org.apache.ignite.internal.processors.task.GridTaskProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.Tracing;
-import org.apache.ignite.internal.processors.tracing.TracingProcessor;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
+import org.apache.ignite.internal.stat.IoStatisticsManager;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -110,6 +113,8 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
 import static org.apache.ignite.internal.IgniteComponentType.SPRING;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Implementation of kernal context.
@@ -171,6 +176,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     @GridToStringExclude
     private GridEncryptionManager encryptionMgr;
 
+    /** */
+    @GridToStringExclude
+    private GridTracingManager tracingMgr;
+
     /*
      * Processors.
      * ==========
@@ -210,6 +219,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringInclude
+    private GridSystemViewManager sysViewMgr;
+
+    /** */
+    @GridToStringInclude
     private GridClosureProcessor closProc;
 
     /** */
@@ -231,10 +244,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** Global metastorage. */
     @GridToStringInclude
     private DistributedConfigurationProcessor distributedConfigurationProcessor;
-
-    /** Tracing. */
-    @GridToStringInclude
-    private TracingProcessor tracingProcessor;
 
     /** */
     @GridToStringInclude
@@ -368,6 +377,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     @GridToStringExclude
     protected ExecutorService idxExecSvc;
 
+    /** Thread pool for create/rebuild indexes. */
+    @GridToStringExclude
+    private ExecutorService buildIdxExecSvc;
+
     /** */
     @GridToStringExclude
     protected IgniteStripedThreadPoolExecutor callbackExecSvc;
@@ -399,6 +412,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** */
     @GridToStringExclude
     private LongJVMPauseDetector pauseDetector;
+
+    /** */
+    @GridToStringExclude
+    private DurableBackgroundTasksProcessor durableBackgroundTasksProcessor;
 
     /** */
     private Thread.UncaughtExceptionHandler hnd;
@@ -442,6 +459,9 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** Recovery mode flag. Flag is set to {@code false} when discovery manager started. */
     private boolean recoveryMode = true;
 
+    /** IO statistics manager. */
+    private IoStatisticsManager ioStatMgr;
+
     /**
      * No-arg constructor is required by externalization.
      */
@@ -466,6 +486,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
      * @param restExecSvc REST executor service.
      * @param affExecSvc Affinity executor service.
      * @param idxExecSvc Indexing executor service.
+     * @param buildIdxExecSvc Create/rebuild indexes executor service.
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
@@ -493,6 +514,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         ExecutorService restExecSvc,
         ExecutorService affExecSvc,
         @Nullable ExecutorService idxExecSvc,
+        @Nullable ExecutorService buildIdxExecSvc,
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
@@ -522,6 +544,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         this.restExecSvc = restExecSvc;
         this.affExecSvc = affExecSvc;
         this.idxExecSvc = idxExecSvc;
+        this.buildIdxExecSvc = buildIdxExecSvc;
         this.callbackExecSvc = callbackExecSvc;
         this.qryExecSvc = qryExecSvc;
         this.schemaExecSvc = schemaExecSvc;
@@ -541,6 +564,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
                 log.debug("Failed to load spring component, will not be able to extract userVersion from " +
                     "META-INF/ignite.xml.");
         }
+
+        ioStatMgr = new IoStatisticsManager();
     }
 
     /** {@inheritDoc} */
@@ -592,6 +617,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             indexingMgr = (GridIndexingManager)comp;
         else if (comp instanceof GridEncryptionManager)
             encryptionMgr = (GridEncryptionManager)comp;
+        else if (comp instanceof GridTracingManager)
+            tracingMgr = (GridTracingManager) comp;
 
         /*
          * Processors.
@@ -612,6 +639,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             jobMetricsProc = (GridJobMetricsProcessor)comp;
         else if (comp instanceof GridMetricManager)
             metricMgr = (GridMetricManager)comp;
+        else if (comp instanceof GridSystemViewManager)
+            sysViewMgr = (GridSystemViewManager)comp;
         else if (comp instanceof GridCacheProcessor)
             cacheProc = (GridCacheProcessor)comp;
         else if (comp instanceof GridClusterStateProcessor)
@@ -620,8 +649,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             distributedMetastorage = (DistributedMetaStorage)comp;
         else if (comp instanceof DistributedConfigurationProcessor)
             distributedConfigurationProcessor = (DistributedConfigurationProcessor)comp;
-        else if (comp instanceof TracingProcessor)
-            tracingProcessor = (TracingProcessor) comp;
         else if (comp instanceof GridTaskSessionProcessor)
             sesProc = (GridTaskSessionProcessor)comp;
         else if (comp instanceof GridPortProcessor)
@@ -678,6 +705,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             diagnosticProcessor = (DiagnosticProcessor)comp;
         else if (comp instanceof RollingUpgradeProcessor)
             rollingUpgradeProc = (RollingUpgradeProcessor)comp;
+        else if (comp instanceof DurableBackgroundTasksProcessor)
+            durableBackgroundTasksProcessor = (DurableBackgroundTasksProcessor)comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
             || comp instanceof PlatformPluginProcessor))
             assert (comp instanceof GridPluginComponent) : "Unknown manager class: " + comp.getClass();
@@ -766,6 +795,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
+    @Override public GridSystemViewManager systemView() {
+        return sysViewMgr;
+    }
+
+    /** {@inheritDoc} */
     @Override public GridCacheProcessor cache() {
         return cacheProc;
     }
@@ -777,6 +811,9 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** {@inheritDoc} */
     @Override public DistributedMetaStorage distributedMetastorage() {
+        if (!isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
+            throw new UnsupportedOperationException("Distributed Meta Storage feature is not enabled.");
+
         return distributedMetastorage;
     }
 
@@ -787,7 +824,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** {@inheritDoc} */
     @Override public Tracing tracing() {
-        return tracingProcessor;
+        return tracingMgr;
     }
 
     /** {@inheritDoc} */
@@ -1190,6 +1227,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         return internalSubscriptionProc;
     }
 
+    /** {@inheritDoc} */
+    @Override public IoStatisticsManager ioStats() {
+        return ioStatMgr;
+    }
+
     /**
      * @param disconnected Disconnected flag.
      */
@@ -1250,6 +1292,16 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public RollingUpgradeProcessor rollingUpgrade() {
         return rollingUpgradeProc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor() {
+        return durableBackgroundTasksProcessor;
+    }
+
+    /** {@inheritDoc} */
+    @Override public ExecutorService buildIndexExecutorService() {
+        return buildIdxExecSvc;
     }
 
     /** {@inheritDoc} */

@@ -26,11 +26,10 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE;
 
 /**
  * Abstract test for sql metrics tests.
@@ -65,16 +64,13 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
      * @param client if we need to start client node.
      */
     protected void startGridWithMaxMem(int nodeIdx, long maxMem, boolean client) throws Exception {
-        try {
-            System.setProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(maxMem));
+        String name = getTestIgniteInstanceName(nodeIdx);
 
-            String name = getTestIgniteInstanceName(nodeIdx);
-
-            startGrid(name, getConfiguration(name).setClientMode(client));
-        }
-        finally {
-            System.clearProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
-        }
+        startGrid(name, getConfiguration(name)
+            .setClientMode(client)
+            .setSqlConfiguration(new SqlConfiguration()
+                .setSqlGlobalMemoryQuota(Long.toString(maxMem)))
+        );
     }
 
     /**

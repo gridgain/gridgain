@@ -29,6 +29,9 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.AffinityKey;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -52,6 +55,21 @@ public class IgniteCacheGroupsSqlTest extends GridCommonAbstractTest {
 
     /** */
     private static final String GROUP2 = "grp2";
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        cfg.setDataStorageConfiguration(
+            new DataStorageConfiguration()
+                .setDefaultDataRegionConfiguration(
+                    new DataRegionConfiguration()
+                        .setMaxSize(200L * 1024 * 1024)
+                        .setPersistenceEnabled(false)
+                ));
+
+        return cfg;
+    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -173,14 +191,13 @@ public class IgniteCacheGroupsSqlTest extends GridCommonAbstractTest {
             .setCacheMode(cm2)
             .setAtomicityMode(cam2)).withAllowAtomicOpsInTx();
 
-        try(Transaction tx = cam1 == TRANSACTIONAL || cam2 == TRANSACTIONAL ? srv0.transactions().txStart() : null) {
+        try (Transaction tx = cam1 == TRANSACTIONAL || cam2 == TRANSACTIONAL ? srv0.transactions().txStart() : null) {
             for (int i = 0; i < keys; i++) {
 
                 int pKey = i - (i % accsPerPerson);
 
                 if (i % accsPerPerson == 0)
                     pers.put(pKey, new Person("pers-" + pKey));
-
 
                 acc.put(new AffinityKey(i, pKey), new Account(pKey, "acc-" + i));
             }

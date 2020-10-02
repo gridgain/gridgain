@@ -16,6 +16,9 @@
 
 package org.apache.ignite.spi.discovery;
 
+import javax.management.MBeanServer;
+import javax.management.MBeanServerFactory;
+import javax.management.ObjectName;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -24,11 +27,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.management.MBeanServer;
-import javax.management.MBeanServerFactory;
-import javax.management.ObjectName;
 import mx4j.tools.adaptor.http.HttpAdaptor;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -44,6 +45,7 @@ import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.IgniteMock;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.spi.GridSpiAbstractTest;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
@@ -51,6 +53,7 @@ import static org.apache.ignite.lang.IgniteProductVersion.fromString;
 
 /**
  * Base discovery self-test class.
+ *
  * @param <T> SPI implementation class.
  */
 public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends GridSpiAbstractTest<T> {
@@ -85,6 +88,7 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
 
     /**
      * Checks that each started discovery spi found all other SPI's.
+     *
      * @throws Exception If failed.
      */
     @SuppressWarnings({"UnconditionalWait"})
@@ -146,8 +150,6 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
         private boolean isMetricsUpdate;
 
         /**
-         *
-         *
          * @return Metrics updates.
          */
         public boolean isMetricsUpdated() {
@@ -161,9 +163,13 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
 
         /** {@inheritDoc} */
         @Override public IgniteFuture<?> onDiscovery(
-            DiscoveryNotification notification
+            int type,
+            long topVer,
+            ClusterNode node,
+            Collection<ClusterNode> topSnapshot,
+            Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
         ) {
-            if (notification.type() == EVT_NODE_METRICS_UPDATED)
+            if (type == EVT_NODE_METRICS_UPDATED)
                 isMetricsUpdate = true;
 
             return new IgniteFinishedFutureImpl<>();
@@ -242,10 +248,16 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
                     // No-op.
                 }
 
-                @Override public IgniteFuture<?> onDiscovery(DiscoveryNotification notification) {
+                @Override public IgniteFuture<?> onDiscovery(
+                    int type,
+                    long topVer,
+                    ClusterNode node,
+                    Collection<ClusterNode> topSnapshot,
+                    Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
+                ) {
                     // If METRICS_UPDATED came from local node
-                    if (notification.type() == EVT_NODE_METRICS_UPDATED
-                        && notification.getNode().id().equals(spi.getLocalNode().id()))
+                    if (type == EVT_NODE_METRICS_UPDATED
+                        && node.id().equals(spi.getLocalNode().id()))
                         spiCnt.addAndGet(1);
 
                     return new IgniteFinishedFutureImpl<>();
@@ -415,10 +427,14 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
 
                     @SuppressWarnings({"NakedNotify"})
                     @Override public IgniteFuture<?> onDiscovery(
-                        DiscoveryNotification notification
+                        int type,
+                        long topVer,
+                        ClusterNode node,
+                        Collection<ClusterNode> topSnapshot,
+                        Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
                     ) {
                         info("Discovery event [type="
-                            + notification.type() + ", node=" + notification.getNode() + ']');
+                            + type + ", node=" + node + ']');
 
                         synchronized (mux) {
                             mux.notifyAll();

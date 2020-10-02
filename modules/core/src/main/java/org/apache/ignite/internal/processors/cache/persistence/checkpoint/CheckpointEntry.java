@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
@@ -34,6 +35,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_GRP_STATE_LAZY_STORE;
 
 /**
  * Class represents checkpoint state.
@@ -61,7 +64,7 @@ public class CheckpointEntry {
      * @param cpId Checkpoint ID.
      * @param cacheGrpStates Cache groups states.
      */
-    public CheckpointEntry(
+    CheckpointEntry(
         long cpTs,
         WALPointer cpMark,
         UUID cpId,
@@ -112,7 +115,7 @@ public class CheckpointEntry {
     private GroupStateLazyStore initIfNeeded(GridCacheSharedContext cctx) throws IgniteCheckedException {
         GroupStateLazyStore store = grpStateLazyStore.get();
 
-        if (store == null) {
+        if (store == null || IgniteSystemProperties.getBoolean(IGNITE_DISABLE_GRP_STATE_LAZY_STORE, false)) {
             store = new GroupStateLazyStore();
 
             grpStateLazyStore = new SoftReference<>(store);
@@ -151,13 +154,19 @@ public class CheckpointEntry {
      *
      */
     public static class GroupState {
-        /** */
+        /**
+         *
+         */
         private int[] parts;
 
-        /** */
+        /**
+         *
+         */
         private long[] cnts;
 
-        /** */
+        /**
+         *
+         */
         private int idx;
 
         /**
@@ -203,9 +212,22 @@ public class CheckpointEntry {
         }
 
         /**
+         * Return a partition id by an index of this group state. Index was passed through parameter have to be less
+         * than size.
          *
+         * @param idx Partition index.
+         * @return Patition id.
          */
-        public long size(){
+        public int getPartitionByIndex(int idx) {
+            return parts[idx];
+        }
+
+        /**
+         * Returns number of partitions.
+         *
+         * @return Number of partitions.
+         */
+        public int size() {
             return idx;
         }
 
@@ -224,20 +246,26 @@ public class CheckpointEntry {
     }
 
     /**
-     *  Group state lazy store.
+     * Group state lazy store.
      */
     public static class GroupStateLazyStore {
-        /** */
+        /**
+         *
+         */
         private static final AtomicIntegerFieldUpdater<GroupStateLazyStore> initGuardUpdater =
             AtomicIntegerFieldUpdater.newUpdater(GroupStateLazyStore.class, "initGuard");
 
         /** Cache states. Initialized lazily. */
         private volatile Map<Integer, GroupState> grpStates;
 
-        /** */
+        /**
+         *
+         */
         private final CountDownLatch latch;
 
-        /** */
+        /**
+         *
+         */
         @SuppressWarnings("unused")
         private volatile int initGuard;
 
@@ -340,9 +368,10 @@ public class CheckpointEntry {
 
                         grpStates = remap(stateRec);
                     }
-                    else
-                        initEx = new IgniteCheckedException(
+                    else {
+                        throw new IgniteCheckedException(
                             "Failed to find checkpoint record at the given WAL pointer: " + ptr);
+                    }
                 }
                 catch (IgniteCheckedException e) {
                     initEx = e;

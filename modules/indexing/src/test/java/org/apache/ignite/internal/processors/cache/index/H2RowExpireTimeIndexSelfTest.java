@@ -30,8 +30,8 @@ import org.apache.ignite.internal.processors.query.h2.H2Cursor;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.h2.engine.Session;
-import org.h2.result.SearchRow;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.result.SearchRow;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -184,7 +184,6 @@ public class H2RowExpireTimeIndexSelfTest extends GridCommonAbstractTest {
 
             assertEqualsCollections(asList(asList(3, 4), asList(5, 6)), mixed);
         }
-
 
         {
             List<List<?>> expired = cache.query(new SqlFieldsQuery("SELECT * FROM \"notEager\".Integer WHERE id >= 42")).getAll();

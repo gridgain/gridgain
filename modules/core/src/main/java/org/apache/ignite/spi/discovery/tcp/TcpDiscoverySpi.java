@@ -69,6 +69,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
@@ -1143,7 +1144,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             try {
                 addrs = U.resolveLocalAddresses(locHost);
             }
-            catch (IOException | IgniteCheckedException e) {
+            catch (IOException e) {
                 throw new IgniteSpiException("Failed to resolve local host to set of external addresses: " + locHost,
                     e);
             }
@@ -1581,9 +1582,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
             sock.bind(new InetSocketAddress(locHost, 0));
 
-            sock.setTcpNoDelay(true);
-
-            sock.setSoLinger(getSoLinger() >= 0, getSoLinger());
+            configureSocketOptions(sock);
 
             return sock;
         } catch (IOException e) {
@@ -1592,6 +1591,20 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
             throw e;
         }
+    }
+
+    /**
+     * Configures socket options.
+     *
+     * @param sock Socket.
+     * @throws SocketException If failed.
+     */
+    void configureSocketOptions(Socket sock) throws SocketException {
+        sock.setTcpNoDelay(true);
+
+        sock.setSoLinger(getSoLinger() >= 0, getSoLinger());
+
+        sock.setKeepAlive(true);
     }
 
     /**
@@ -2308,7 +2321,15 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
         if (impl == null)
             return false;
 
-        return impl.allNodesSupport(feature);
+        return impl.allNodesSupport(feature, ALL_NODES);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
+        if (impl == null)
+            return false;
+
+        return impl.allNodesSupport(feature, nodesPred);
     }
 
     /** {@inheritDoc} */
@@ -2498,7 +2519,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
         }
 
         /** {@inheritDoc} */
-        @Override public  IgniteUuid id() {
+        @Override public IgniteUuid id() {
             return id;
         }
 

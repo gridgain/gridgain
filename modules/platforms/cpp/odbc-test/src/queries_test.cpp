@@ -94,7 +94,7 @@ struct QueriesTestSuiteFixture : odbc::OdbcTestSuite
         cache1.Put(1, in1);
         cache1.Put(2, in2);
 
-        const size_t columnsCnt = 12;
+        const SQLSMALLINT columnsCnt = 12;
 
         T columns[columnsCnt] = { 0 };
 
@@ -289,7 +289,7 @@ BOOST_AUTO_TEST_CASE(TestTwoRowsString)
     cache1.Put(1, in1);
     cache1.Put(2, in2);
 
-    const size_t columnsCnt = 12;
+    const SQLSMALLINT columnsCnt = 12;
 
     SQLCHAR columns[columnsCnt][ODBC_BUFFER_SIZE] = { 0 };
 
@@ -388,7 +388,7 @@ BOOST_AUTO_TEST_CASE(TestOneRowString)
 
     cache1.Put(1, in);
 
-    const size_t columnsCnt = 12;
+    const SQLSMALLINT columnsCnt = 12;
 
     SQLCHAR columns[columnsCnt][ODBC_BUFFER_SIZE] = { 0 };
 
@@ -456,7 +456,7 @@ BOOST_AUTO_TEST_CASE(TestOneRowStringLen)
 
     cache1.Put(1, in);
 
-    const size_t columnsCnt = 12;
+    const SQLSMALLINT columnsCnt = 12;
 
     SQLLEN columnLens[columnsCnt] = { 0 };
 
@@ -569,7 +569,7 @@ BOOST_AUTO_TEST_CASE(TestDataAtExecution)
     cache1.Put(1, in1);
     cache1.Put(2, in2);
 
-    const size_t columnsCnt = 12;
+    const SQLSMALLINT columnsCnt = 12;
 
     SQLLEN columnLens[columnsCnt] = { 0 };
     SQLCHAR columns[columnsCnt][ODBC_BUFFER_SIZE] = { 0 };
@@ -696,7 +696,7 @@ BOOST_AUTO_TEST_CASE(TestNullFields)
     cache1.Put(2, inNull);
     cache1.Put(3, in);
 
-    const size_t columnsCnt = 11;
+    const SQLSMALLINT columnsCnt = 11;
 
     SQLLEN columnLens[columnsCnt] = { 0 };
 
@@ -821,7 +821,7 @@ BOOST_AUTO_TEST_CASE(TestDistributedJoins)
 
     SQLRETURN ret;
 
-    const size_t columnsCnt = 2;
+    const SQLSMALLINT columnsCnt = 2;
 
     SQLBIGINT columns[columnsCnt] = { 0 };
 
@@ -919,7 +919,7 @@ BOOST_AUTO_TEST_CASE(TestInsertSelect)
         if (!SQL_SUCCEEDED(ret))
             BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-        std::string expectedStr = getTestString(selectedRecordsNum);
+        std::string expectedStr = GetTestString(selectedRecordsNum);
         int64_t expectedKey = selectedRecordsNum + 1;
 
         BOOST_CHECK_EQUAL(key, expectedKey);
@@ -996,7 +996,7 @@ BOOST_AUTO_TEST_CASE(TestInsertUpdateSelect)
         if (expectedKey == 42)
             expectedStr = "Updated value";
         else
-            expectedStr = getTestString(selectedRecordsNum);
+            expectedStr = GetTestString(selectedRecordsNum);
 
         BOOST_CHECK_EQUAL(std::string(strField, strFieldLen), expectedStr);
 
@@ -1063,7 +1063,7 @@ BOOST_AUTO_TEST_CASE(TestInsertDeleteSelect)
             BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
         int64_t expectedKey = (selectedRecordsNum + 1) * 2;
-        std::string expectedStr = getTestString(expectedKey - 1);
+        std::string expectedStr = GetTestString(expectedKey - 1);
 
         BOOST_CHECK_EQUAL(key, expectedKey);
         BOOST_CHECK_EQUAL(std::string(strField, strFieldLen), expectedStr);
@@ -1124,7 +1124,7 @@ BOOST_AUTO_TEST_CASE(TestInsertMergeSelect)
         if (!SQL_SUCCEEDED(ret))
             BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-        std::string expectedStr = getTestString(selectedRecordsNum);
+        std::string expectedStr = GetTestString(selectedRecordsNum);
         int64_t expectedKey = selectedRecordsNum + 1;
 
         BOOST_CHECK_EQUAL(key, expectedKey);
@@ -1626,16 +1626,12 @@ BOOST_AUTO_TEST_CASE(TestErrorMessage)
 
 BOOST_AUTO_TEST_CASE(TestAffectedRows)
 {
-    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache;PAGE_SIZE=1024");
 
     const int recordsNum = 100;
 
     // Inserting values.
     InsertTestStrings(recordsNum);
-
-    int64_t key = 0;
-    char strField[1024] = { 0 };
-    SQLLEN strFieldLen = 0;
 
     SQLCHAR updateReq[] = "UPDATE TestType SET strField = 'Updated value' WHERE _key > 20 AND _key < 40";
 
@@ -1671,7 +1667,41 @@ BOOST_AUTO_TEST_CASE(TestAffectedRows)
     if (!SQL_SUCCEEDED(ret))
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-    BOOST_CHECK_EQUAL(affected, 0);
+    BOOST_CHECK_EQUAL(affected, 1024);
+}
+
+BOOST_AUTO_TEST_CASE(TestAffectedRowsOnSelect)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache;PAGE_SIZE=123");
+
+    const int recordsNum = 1000;
+
+    // Inserting values.
+    InsertTestStrings(recordsNum);
+
+    // Just selecting everything to make sure everything is OK
+    SQLCHAR selectReq[] = "SELECT _key, strField FROM TestType ORDER BY _key";
+
+    SQLRETURN ret = SQLExecDirect(stmt, selectReq, sizeof(selectReq));
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    for (int i = 0; i < 200; ++i)
+    {
+        SQLLEN affected = -1;
+        ret = SQLRowCount(stmt, &affected);
+
+        if (!SQL_SUCCEEDED(ret))
+            BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+        BOOST_CHECK_EQUAL(affected, 123);
+
+        ret = SQLFetch(stmt);
+
+        if (!SQL_SUCCEEDED(ret))
+            BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+    }
 }
 
 BOOST_AUTO_TEST_CASE(TestMultipleSelects)

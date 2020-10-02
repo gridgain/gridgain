@@ -20,31 +20,43 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.gridgain.internal.h2.value.ValueInt;
+import org.gridgain.internal.h2.value.ValueString;
 import org.junit.Test;
 
+import static java.util.stream.Collectors.summarizingLong;
+import static org.apache.ignite.internal.processors.query.h2.H2Utils.rowSizeInBytes;
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
+import static org.apache.ignite.testframework.GridTestUtils.inRange;
+import static org.junit.Assert.assertThat;
 
 /**
  * Query memory manager for local queries.
  */
-public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends AbstractQueryMemoryTrackerSelfTest {
+public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQueryMemoryTrackerSelfTest {
+    /** Parallelism. */
+    private static final int PARALLELISM = 4;
+
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
         return true;
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void createSchema() {
-        execSql("create table T (id int primary key, ref_key int, name varchar) WITH \"PARALLELISM=4\"");
-        execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar) WITH \"PARALLELISM=4\"");
+    @Override protected void createSchema() {
+        execSql("create table T (id int primary key, ref_key int, name varchar)" +
+            " WITH \"PARALLELISM=" + PARALLELISM + "\"");
+        execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar)" +
+            " WITH \"PARALLELISM=" + PARALLELISM + "\"");
         execSql("create index K_IDX on K(indexed)");
         execSql("create index K_GRP_IDX on K(grp_indexed)");
     }
@@ -68,26 +80,36 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
         // Order by non-indexed field.
         checkQueryExpectOOM("select * from K ORDER BY K.grp", false);
 
-        assertEquals(5, localResults.size());
-        // Map
-        assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(r -> r.getRowCount()).sum());
-        // Reduce
-        assertTrue(BIG_TABLE_SIZE > localResults.get(4).getRowCount());
+        assertEquals(4, localResults.size());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testGlobalQuota() throws Exception {
+        maxMem = -1L;
+
         final List<QueryCursor> cursors = new ArrayList<>();
 
         IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
 
-        assertEquals(10L * MB, h2.memoryManager().maxMemory());
+        assertEquals(globalQuotaSize(), h2.memoryManager().memoryLimit());
 
         try {
+            long rowSize = rowSizeInBytes(new Object[]{ValueString.get(UUID.randomUUID().toString()),
+                ValueInt.get(512), ValueInt.get(512)});
+
+            long resSetSize = rowSize * SMALL_TABLE_SIZE;
+
+            // adjust to the size of the reservation block
+            if (resSetSize % RESERVATION_BLOCK_SIZE != 0)
+                resSetSize = (resSetSize / RESERVATION_BLOCK_SIZE + 1) * RESERVATION_BLOCK_SIZE;
+
+            int expCursorCnt = (int)(globalQuotaSize() / resSetSize);
+
             CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
-                for (int i = 0; i < 100; i++) {
-                    QueryCursor<List<?>> cur = query("select T.name, avg(T.id), sum(T.ref_key) from T GROUP BY T.name",
+                for (int i = 0; i < expCursorCnt * 2; i++) {
+                    QueryCursor<List<?>> cur = query("select T.name, 512, 512 from T ORDER BY T.name LIMIT 1000000",
                         true);
 
                     cursors.add(cur);
@@ -97,11 +119,11 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
                 }
 
                 return null;
-            }, CacheException.class, "SQL query run out of memory: Global quota exceeded.");
+            }, CacheException.class, "SQL query ran out of memory: Global quota was exceeded.");
 
-            assertEquals(18, cursors.size());
+            assertEquals(expCursorCnt, cursors.size());
 
-            assertTrue(h2.memoryManager().maxMemory() < h2.memoryManager().memoryReserved() + MB);
+            assertTrue(h2.memoryManager().memoryLimit() < h2.memoryManager().reserved() + MB);
         }
         finally {
             for (QueryCursor c : cursors)
@@ -118,13 +140,13 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
 
         assertEquals(11, localResults.size());
 
-        long rowCount = localResults.stream().mapToLong(r -> r.getRowCount()).sum();
+        long rowCnt = localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum();
 
-        assertTrue(3000 > rowCount);
+        assertTrue(3000 > rowCnt);
 
         Map<H2MemoryTracker, Long> collect = localResults.stream().collect(
-            Collectors.toMap(r -> r.getMemoryTracker(), r -> r.memoryReserved(), Long::sum));
-        assertTrue(collect.values().stream().anyMatch(s -> s + 1000 > maxMem));
+            Collectors.toMap(H2ManagedLocalResult::memoryTracker, H2ManagedLocalResult::memoryReserved, Long::sum));
+        assertTrue(collect.values().stream().allMatch(s -> s < maxMem));
     }
 
     /** {@inheritDoc} */
@@ -135,7 +157,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
 
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertTrue(localResults.stream().anyMatch(r -> r.memoryReserved() + 500 > maxMem));
+        assertTrue(localResults.stream().allMatch(r -> r.memoryReserved() < maxMem));
     }
 
     /** {@inheritDoc} */
@@ -183,21 +205,20 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
 
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertTrue(localResults.stream().anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
+        assertTrue(localResults.stream().allMatch(r -> r.memoryReserved() < maxMem));
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testLazyQueryWithSort() {
+        maxMem = 2 * MB;
+
         checkQueryExpectOOM("select * from K ORDER BY K.grp", true);
 
-        assertEquals(5, localResults.size());
-        assertFalse(localResults.stream().limit(4).anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
-        assertTrue(maxMem < localResults.get(4).memoryReserved() + 1000);
+        assertEquals(4, localResults.size());
+        assertFalse(localResults.stream().anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
         // Map
-        assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(r -> r.getRowCount()).sum());
-        // Reduce
-        assertTrue(BIG_TABLE_SIZE > localResults.get(4).getRowCount());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().limit(4).mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */
@@ -208,7 +229,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
 
         // Reduce only.
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryReserved() + 500);
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -221,7 +242,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
         // Local result is quite small.
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertTrue(BIG_TABLE_SIZE >  localResults.stream().mapToLong(r -> r.getRowCount()).sum());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(r -> r.getRowCount()).sum());
     }
 
     /** {@inheritDoc} */
@@ -251,14 +272,14 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
     /** {@inheritDoc} */
     @Test
     @Override public void testQueryWithSortByIndexedCol() {
+        maxMem = 2 * MB;
+
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
 
-        assertEquals(5, localResults.size());
+        assertEquals(4, localResults.size());
         assertFalse(localResults.stream().limit(4).anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
         // Map
-        assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(r -> r.getRowCount()).sum());
-        // Reduce
-        assertTrue(BIG_TABLE_SIZE > localResults.get(4).getRowCount());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */
@@ -281,21 +302,28 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
         checkQueryExpectOOM("select * from K LIMIT 8000", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryReserved() + 1000);
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(8000 > localResults.get(0).getRowCount());
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testQueryWithHighLimit() {
-        checkQueryExpectOOM("select * from K LIMIT 8000", false);
+        long rowSize = rowSizeInBytes(new Object[]{ValueInt.get(1), ValueInt.get(1),
+            ValueInt.get(1), ValueString.get(UUID.randomUUID().toString())});
 
-        assertEquals(5, localResults.size());
-        // Map
-        assertFalse(localResults.stream().limit(4).anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
-        // Reduce
-        assertTrue(maxMem < localResults.get(4).memoryReserved() + 1000);
-        assertTrue(8000 > localResults.get(4).getRowCount());
+        long rowCntPerSegment = BIG_TABLE_SIZE / PARALLELISM;
+
+        // there should be enough memory for (PARALLELISM - 1) and a half segments
+        maxMem = (long)(rowSize * rowCntPerSegment * (1.0 * PARALLELISM - 0.5));
+
+        checkQueryExpectOOM("select 1, 1, 1, name from K LIMIT 8000", false);
+
+        assertEquals(PARALLELISM, localResults.size());
+
+        long rowsRetrieved = localResults.stream().collect(summarizingLong(H2ManagedLocalResult::getRowCount)).getSum();
+
+        assertThat(rowsRetrieved, inRange(rowCntPerSegment * (PARALLELISM - 1), rowCntPerSegment * PARALLELISM));
     }
 
     /** {@inheritDoc} */
@@ -320,11 +348,12 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
     /** {@inheritDoc} */
     @Test
     @Override public void testSimpleQueryLargeResult() throws Exception {
+        maxMem = 3 * MB;
         execQuery("select * from K", false);
 
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(r -> r.getRowCount()).sum());
+        assertEquals(BIG_TABLE_SIZE, localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */
@@ -352,9 +381,9 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
         // Distinct on indexed column with unique values.
         checkQueryExpectOOM("select DISTINCT K.id from K", true);
 
-        assertEquals(5, localResults.size());
-        assertFalse(localResults.stream().limit(4).anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
-        assertTrue(BIG_TABLE_SIZE > localResults.get(4).getRowCount());
+        assertEquals(4, localResults.size());
+        assertFalse(localResults.stream().allMatch(r -> r.memoryReserved() + 1000 > maxMem));
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */

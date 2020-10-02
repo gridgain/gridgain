@@ -22,7 +22,6 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System.Threading;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Configuration;
-    using Apache.Ignite.Core.Impl;
     using NUnit.Framework;
 
     /// <summary>
@@ -58,7 +57,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         public void TestMemoryMetrics()
         {
             var ignite = StartIgniteWithThreeDataRegions();
-            
+
             // Verify metrics.
             var metrics = ignite.GetDataRegionMetrics()
                 .OrderBy(x => x.Name, StringComparer.InvariantCultureIgnoreCase).ToArray();
@@ -73,7 +72,8 @@ namespace Apache.Ignite.Core.Tests.Cache
                     RegionWithMetrics,
                     RegionWithMetricsAndPersistence,
                     "sysMemPlc",
-                    "TxLog"
+                    "TxLog",
+                    "volatileDsMemPlc"
                 },
                 names,
                 string.Join(", ", names));
@@ -92,14 +92,19 @@ namespace Apache.Ignite.Core.Tests.Cache
             Assert.Greater(memMetrics.PhysicalMemoryPages, 1000);
             Assert.AreEqual(memMetrics.TotalAllocatedSize,
                 memMetrics.TotalAllocatedPages * (memMetrics.PageSize + PageOverhead));
+            Assert.AreEqual(memMetrics.TotalUsedPages * (memMetrics.PageSize + PageOverhead), memMetrics.TotalUsedSize);
             Assert.AreEqual(memMetrics.PhysicalMemorySize,
                 memMetrics.PhysicalMemoryPages * (memMetrics.PageSize + PageOverhead));
             Assert.Greater(memMetrics.OffHeapSize, memMetrics.PhysicalMemoryPages);
             Assert.Greater(memMetrics.OffheapUsedSize, memMetrics.PhysicalMemoryPages);
-            
+
             var sysMetrics = metrics[4];
             Assert.AreEqual("sysMemPlc", sysMetrics.Name);
             AssertMetricsAreEmpty(sysMetrics);
+
+            var volatileMetrics = metrics[6];
+            Assert.AreEqual("volatileDsMemPlc", volatileMetrics.Name);
+            AssertMetricsAreEmpty(volatileMetrics);
 
             // Metrics by name.
             // In-memory region.
@@ -111,7 +116,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             memMetrics = ignite.GetDataRegionMetrics(RegionWithMetrics);
             Assert.AreEqual(RegionWithMetrics, memMetrics.Name);
             AssertMetrics(memMetrics, false);
-            
+
             memMetrics = ignite.GetDataRegionMetrics(RegionWithMetricsAndPersistence);
             Assert.AreEqual(RegionWithMetricsAndPersistence, memMetrics.Name);
             AssertMetrics(memMetrics, true);
@@ -119,6 +124,10 @@ namespace Apache.Ignite.Core.Tests.Cache
             sysMetrics = ignite.GetDataRegionMetrics("sysMemPlc");
             Assert.AreEqual("sysMemPlc", sysMetrics.Name);
             AssertMetricsAreEmpty(sysMetrics);
+
+            volatileMetrics = ignite.GetDataRegionMetrics("volatileDsMemPlc");
+            Assert.AreEqual("volatileDsMemPlc", volatileMetrics.Name);
+            AssertMetricsAreEmpty(volatileMetrics);
 
             // Invalid name.
             Assert.IsNull(ignite.GetDataRegionMetrics("boo"));
@@ -157,7 +166,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 #pragma warning restore 618
             }
         }
-        
+
         /// <summary>
         /// Asserts that metrics are empty.
         /// </summary>
@@ -202,12 +211,12 @@ namespace Apache.Ignite.Core.Tests.Cache
                             MetricsEnabled = true
                         }
                     }
-                },  
+                },
                 WorkDirectory = TempDir
             };
 
             var ignite = Ignition.Start(cfg);
-            
+
             ignite.GetCluster().SetActive(true);
 
             // Create caches and do some things with them.
@@ -226,8 +235,8 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             cacheWithMetrics.Put(1, 1);
             cacheWithMetrics.Get(1);
-            
-            var cacheWithMetricsAndPersistence = 
+
+            var cacheWithMetricsAndPersistence =
                 ignite.CreateCache<int, int>(new CacheConfiguration("cacheWithMetricsAndPersistence")
             {
                 DataRegionName = RegionWithMetricsAndPersistence
@@ -238,7 +247,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Wait for checkpoint. Wait for two times than CheckpointFrequency.
             Thread.Sleep(CheckpointFrequency.Add(CheckpointFrequency));
-            
+
             return ignite;
         }
 
@@ -249,7 +258,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         public void TearDown()
         {
             Ignition.StopAll(true);
-            
+
             Directory.Delete(TempDir, true);
         }
     }

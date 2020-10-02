@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.metastorage.persistence;
 
 import java.util.UUID;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
@@ -24,9 +25,11 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRequiredFeatureSupport;
 import org.jetbrains.annotations.Nullable;
 
 /** */
+@TcpDiscoveryRequiredFeatureSupport(feature = IgniteFeatures.DISTRIBUTED_METASTORAGE)
 class DistributedMetaStorageUpdateMessage implements DiscoveryCustomMessage {
     /** */
     private static final long serialVersionUID = 0L;

@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
+import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -40,7 +41,7 @@ import static org.apache.ignite.internal.metric.IoStatisticsHolderCache.LOGICAL_
 import static org.apache.ignite.internal.metric.IoStatisticsHolderIndex.HASH_PK_IDX_NAME;
 import static org.apache.ignite.internal.metric.IoStatisticsHolderIndex.LOGICAL_READS_INNER;
 import static org.apache.ignite.internal.metric.IoStatisticsHolderIndex.LOGICAL_READS_LEAF;
-import static org.apache.ignite.internal.metric.IoStatisticsMetricsLocalMXBeanImplSelfTest.resetAllIoMetrics;
+import static org.apache.ignite.internal.metric.IoStatisticsMetricsLocalMxBeanCacheGroupsTest.resetAllIoMetrics;
 import static org.apache.ignite.internal.metric.IoStatisticsType.CACHE_GROUP;
 import static org.apache.ignite.internal.metric.IoStatisticsType.HASH_INDEX;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
@@ -112,7 +113,6 @@ public class IoStatisticsCacheSelfTest extends GridCommonAbstractTest {
             .setName(CACHE2_IN_GROUP_NAME)
             .setGroupName(CACHE_GROUP_NAME);
 
-
         DataStorageConfiguration dsCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration()
@@ -162,7 +162,7 @@ public class IoStatisticsCacheSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testTransactonalCache() throws Exception {
-        cacheTest(TRANSACTIONAL_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 3, RECORD_COUNT * 2);
+        cacheTest(TRANSACTIONAL_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 3 + RECORD_COUNT * 2, RECORD_COUNT * 2);
     }
 
     /**
@@ -170,7 +170,7 @@ public class IoStatisticsCacheSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMvccCache() throws Exception {
-        cacheTest(MVCC_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 6, RECORD_COUNT * 3);
+        cacheTest(MVCC_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 14, RECORD_COUNT * 3);
     }
 
     /**
@@ -178,7 +178,7 @@ public class IoStatisticsCacheSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testAtomicCache() throws Exception {
-        cacheTest(ATOMIC_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 2, RECORD_COUNT);
+        cacheTest(ATOMIC_CACHE_NAME, RECORD_COUNT, RECORD_COUNT * 2 + RECORD_COUNT, RECORD_COUNT);
     }
 
     /**
@@ -216,7 +216,7 @@ public class IoStatisticsCacheSelfTest extends GridCommonAbstractTest {
 
         long logicalReads = logicalReads(mmgr, CACHE_GROUP, CACHE_GROUP_NAME);
 
-        assertEquals(RECORD_COUNT * 4, logicalReads);
+        assertEquals(RECORD_COUNT * 6, logicalReads);
     }
 
     /**
@@ -257,7 +257,7 @@ public class IoStatisticsCacheSelfTest extends GridCommonAbstractTest {
 
         GridMetricManager mmgr = ignite.context().metric();
 
-        Stream<MetricRegistry> grpsStream = StreamSupport.stream(mmgr.spliterator(), false)
+        Stream<ReadOnlyMetricRegistry> grpsStream = StreamSupport.stream(mmgr.spliterator(), false)
                 .filter(grp -> grp.name().startsWith(statType.metricGroupName()));
 
         return grpsStream.flatMap(grp -> StreamSupport.stream(grp.spliterator(), false))
@@ -281,6 +281,7 @@ public class IoStatisticsCacheSelfTest extends GridCommonAbstractTest {
             for (int i = 0; i < cnt; i++) {
                 cache.put(i, i);
                 cache.put(i, i); //Second invocation required to warm up MVCC cache to fill old versions chains.
+                // Total 4 data page reads.
             }
         }
 
@@ -292,13 +293,16 @@ public class IoStatisticsCacheSelfTest extends GridCommonAbstractTest {
 
             for (int i = 0; i < cnt; i++)
                 cache.put(i, i);
+            // Total 2 data page reads.
         }
+
+        // Overall - 6 data page reads per record.
     }
 
     /**
      * @param mmgr Metric manager.
      * @param type Staticstics type.
-     * @param id Metric set id.
+     * @param id Metric registry id.
      * @return Logical reads count.
      */
     public static long logicalReads(GridMetricManager mmgr, IoStatisticsType type, String id) {

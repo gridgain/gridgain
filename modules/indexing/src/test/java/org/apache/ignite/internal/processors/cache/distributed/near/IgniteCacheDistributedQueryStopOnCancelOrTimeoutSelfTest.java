@@ -197,7 +197,7 @@ public class IgniteCacheDistributedQueryStopOnCancelOrTimeoutSelfTest extends Gr
                 Arrays.fill(tmp, ' ');
                 cache.put(i, new String(tmp));
 
-                if (i/(float)keyCnt >= p/10f) {
+                if (i / (float)keyCnt >= p / 10f) {
                     log().info("Loaded " + i + " of " + keyCnt);
 
                     p++;
@@ -206,7 +206,7 @@ public class IgniteCacheDistributedQueryStopOnCancelOrTimeoutSelfTest extends Gr
 
             assertEquals(0, cache.localSize());
 
-            SqlFieldsQuery qry = new SqlFieldsQueryEx(sql, true).setMaxMemory(-1);
+            SqlFieldsQuery qry = new SqlFieldsQueryEx(sql, true);
 
             final QueryCursor<List<?>> cursor;
             if (timeout) {

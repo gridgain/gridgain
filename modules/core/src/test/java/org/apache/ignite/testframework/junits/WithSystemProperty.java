@@ -94,7 +94,7 @@ import org.junit.Rule;
  *  }
  * }</pre>
  * For class level annotation it applies system properties for the whole class hierarchy (ignoring interfaces, there's
- * no linearization implemented). More specific classes have bigger priority and set their properties last. It all
+ * no linearization implemented). More specific classes have higher priority and set their properties last. It all
  * starts with {@link Object} which, of course, is not annotated.<br/>
  * <br/>
  * Test methods do not inherit their annotations from overriden methods of super class.<br/>

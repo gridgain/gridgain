@@ -44,7 +44,7 @@ public class FilesListResponse extends ClientResponse {
         super.encode(ctx, writer);
 
         writer.writeInt(filesList.size());
-        for(String fileName : filesList)
+        for (String fileName : filesList)
             writer.writeString(fileName);
     }
 

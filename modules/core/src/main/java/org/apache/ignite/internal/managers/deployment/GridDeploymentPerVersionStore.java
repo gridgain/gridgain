@@ -279,18 +279,16 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
 
     /** {@inheritDoc} */
     @Override public GridDeployment searchDeploymentCache(GridDeploymentMetadata meta) {
-        List<SharedDeployment> deps = null;
-
         synchronized (mux) {
-            deps = cache.get(meta.userVersion());
-        }
+            List<SharedDeployment> deps = cache.get(meta.userVersion());
 
-        if (deps != null) {
-            assert !deps.isEmpty();
+            if (deps != null) {
+                assert !deps.isEmpty();
 
-            for (SharedDeployment d : deps) {
-                if (d.hasParticipant(meta.senderNodeId(), meta.classLoaderId()))
-                    return d;
+                for (SharedDeployment d : deps) {
+                    if (d.hasParticipant(meta.senderNodeId(), meta.classLoaderId()))
+                        return d;
+                }
             }
         }
 
@@ -961,7 +959,6 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
 
                 for (Iterator<SharedDeployment> i2 = deps.iterator(); i2.hasNext();) {
                     SharedDeployment dep = i2.next();
-
 
                     if (dep.hasName(rsrcName)) {
                         if (!dep.undeployed()) {

@@ -57,6 +57,7 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVTS_ALL;
+import static org.apache.ignite.internal.util.IgniteUtils.validateDeploymentInfo;
 
 /**
  * Continuous routine handler for remote event listening.
@@ -305,7 +306,7 @@ class GridEventConsumeHandler implements GridContinuousHandler {
             if (filter instanceof PlatformEventFilterListener)
                 ((PlatformEventFilterListener)filter).onClose();
         }
-        catch(RuntimeException ex) {
+        catch (RuntimeException ex) {
             err = ex;
         }
 
@@ -344,30 +345,30 @@ class GridEventConsumeHandler implements GridContinuousHandler {
 
                 ClassLoader ldr = null;
 
-                if (cache != null) {
-                    GridCacheDeploymentManager depMgr = cache.context().deploy();
+                try {
+                    if (cache != null) {
+                        GridCacheDeploymentManager depMgr = cache.context().deploy();
 
-                    GridDeploymentInfo depInfo = wrapper.depInfo;
+                        GridDeploymentInfo depInfo = wrapper.depInfo;
 
-                    if (depInfo != null) {
-                        depMgr.p2pContext(
-                            nodeId,
-                            depInfo.classLoaderId(),
-                            depInfo.userVersion(),
-                            depInfo.deployMode(),
-                            depInfo.participants()
-                        );
+                        if (depInfo != null) {
+                            depMgr.p2pContext(
+                                nodeId,
+                                depInfo.classLoaderId(),
+                                depInfo.userVersion(),
+                                depInfo.deployMode(),
+                                depInfo.participants()
+                            );
+                        }
+
+                        ldr = depMgr.globalLoader();
+                    }
+                    else {
+                        U.warn(ctx.log(getClass()), "Received cache event for cache that is not configured locally " +
+                            "when peer class loading is enabled: " + wrapper.cacheName + ". Will try to unmarshal " +
+                            "with default class loader.");
                     }
 
-                    ldr = depMgr.globalLoader();
-                }
-                else {
-                    U.warn(ctx.log(getClass()), "Received cache event for cache that is not configured locally " +
-                        "when peer class loading is enabled: " + wrapper.cacheName + ". Will try to unmarshal " +
-                        "with default class loader.");
-                }
-
-                try {
                     wrapper.p2pUnmarshal(ctx.config().getMarshaller(), U.resolveClassLoader(ldr, ctx.config()));
                 }
                 catch (IgniteCheckedException e) {
@@ -428,6 +429,11 @@ class GridEventConsumeHandler implements GridContinuousHandler {
                 throw e;
             }
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean p2pContextValid(GridKernalContext ctx) throws IgniteCheckedException {
+        return depInfo == null || validateDeploymentInfo(ctx, depInfo, clsName);
     }
 
     /** {@inheritDoc} */

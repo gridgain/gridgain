@@ -57,7 +57,13 @@ public class BPlusMetaIO extends PageIO {
     private static final long FLAG_INLINE_OBJECT_SUPPORTED = 2L;
 
     /** */
-    public static final long FLAGS_DEFAULT = FLAG_UNWRAPPED_PK | FLAG_INLINE_OBJECT_SUPPORTED;
+    private static final long FLAG_INLINE_OBJECT_HASH = 4L;
+
+    /** */
+    private static final long FLAG_DECIMAL_SUPPORTED = 8L;
+
+    /** */
+    public static final long DEFAULT_FLAGS = FLAG_UNWRAPPED_PK | FLAG_INLINE_OBJECT_SUPPORTED | FLAG_INLINE_OBJECT_HASH | FLAG_DECIMAL_SUPPORTED;
 
     /** */
     private final int refsOff;
@@ -230,6 +236,27 @@ public class BPlusMetaIO extends PageIO {
     }
 
     /**
+     * Whether Java objects should be inlined as hash or as bytes array.
+     *
+     * @param pageAddr Page address.
+     */
+    public boolean inlineObjectHash(long pageAddr) {
+        assert supportFlags();
+
+        return (flags(pageAddr) & FLAG_INLINE_OBJECT_HASH) != 0L;
+    }
+
+    /**
+      * @param pageAddr Page address.
+      * @return {@code true} In case decimal is supported by the tree.
+      */
+    public boolean inlineDecimalSupported(long pageAddr) {
+        assert supportFlags();
+
+        return (flags(pageAddr) & FLAG_DECIMAL_SUPPORTED) != 0L;
+    }
+
+    /**
      * @return {@code true} If flags are supported.
      */
     public boolean supportFlags() {
@@ -306,8 +333,7 @@ public class BPlusMetaIO extends PageIO {
         sb.a("BPlusMeta [\n\tlevelsCnt=").a(getLevelsCount(addr))
             .a(",\n\trootLvl=").a(getRootLevel(addr))
             .a(",\n\tinlineSize=").a(getInlineSize(addr))
-            .a("\n]")
-        ;
+            .a("\n]");
             //TODO print firstPageIds by level
     }
 

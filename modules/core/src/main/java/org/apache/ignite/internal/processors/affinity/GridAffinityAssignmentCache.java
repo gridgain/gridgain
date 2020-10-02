@@ -17,12 +17,12 @@
 package org.apache.ignite.internal.processors.affinity;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -59,6 +59,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PART_DISTRIBUTION_
 import static org.apache.ignite.IgniteSystemProperties.getFloat;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 
 /**
@@ -135,6 +137,12 @@ public class GridAffinityAssignmentCache {
     /** */
     private final boolean locCache;
 
+    /** */
+    private final boolean persistentCache;
+
+    /** */
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
+
     /** Node stop flag. */
     private volatile IgniteCheckedException stopErr;
 
@@ -161,7 +169,8 @@ public class GridAffinityAssignmentCache {
         AffinityFunction aff,
         IgnitePredicate<ClusterNode> nodeFilter,
         int backups,
-        boolean locCache
+        boolean locCache,
+        boolean persistentCache
     ) {
         assert ctx != null;
         assert aff != null;
@@ -175,6 +184,7 @@ public class GridAffinityAssignmentCache {
         this.grpId = grpId;
         this.backups = backups;
         this.locCache = locCache;
+        this.persistentCache = persistentCache;
 
         log = ctx.log(GridAffinityAssignmentCache.class);
 
@@ -343,7 +353,10 @@ public class GridAffinityAssignmentCache {
         if (discoCache != null) {
             blt = discoCache.state().baselineTopology();
 
-            hasBaseline = blt != null;
+            hasBaseline = !ctx.state().inMemoryClusterWithoutBlt() && blt != null;
+
+            if (!persistentCache && hasBaseline)
+                hasBaseline = bltForInMemoryCachesSup;
 
             changedBaseline = !hasBaseline ? baselineTopology != null : !blt.equals(baselineTopology);
         }
@@ -368,7 +381,7 @@ public class GridAffinityAssignmentCache {
             if (hasBaseline && changedBaseline) {
                 recalculateBaselineAssignment(topVer, events, prevAssignment, sorted, blt);
 
-                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(topVer));
+                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(discoCache));
             }
             else if (skipCalculation)
                 assignment = prevAssignment;
@@ -376,7 +389,7 @@ public class GridAffinityAssignmentCache {
                 if (baselineAssignment == null)
                     recalculateBaselineAssignment(topVer, events, prevAssignment, sorted, blt);
 
-                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(topVer));
+                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(discoCache));
             }
             else {
                 List<List<ClusterNode>> calculated = aff.assignPartitions(new GridAffinityFunctionContextImpl(
@@ -394,7 +407,7 @@ public class GridAffinityAssignmentCache {
             if (hasBaseline) {
                 recalculateBaselineAssignment(topVer, events, prevAssignment, sorted, blt);
 
-                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(topVer));
+                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(discoCache));
             }
             else {
                 List<List<ClusterNode>> calculated = aff.assignPartitions(new GridAffinityFunctionContextImpl(sorted,
@@ -459,16 +472,14 @@ public class GridAffinityAssignmentCache {
     }
 
     /**
-     * @param topVer Topology version.
+     * @param disco Discovery history.
      * @return Baseline assignment with filtered out offline nodes.
      */
-    private List<List<ClusterNode>> baselineAssignmentWithoutOfflineNodes(AffinityTopologyVersion topVer) {
+    private List<List<ClusterNode>> baselineAssignmentWithoutOfflineNodes(DiscoCache disco) {
         Map<Object, ClusterNode> alives = new HashMap<>();
 
-        for (ClusterNode node : ctx.discovery().nodes(topVer)) {
-            if (!node.isClient() && !node.isDaemon())
-                alives.put(node.consistentId(), node);
-        }
+        for (ClusterNode node : disco.serverNodes())
+            alives.put(node.consistentId(), node);
 
         List<List<ClusterNode>> assignment = baselineAssignment.assignment();
 
@@ -579,7 +590,7 @@ public class GridAffinityAssignmentCache {
     }
 
     /**
-     * @return Last calculated affinity version.
+     * @return Last initialized affinity version.
      */
     public AffinityTopologyVersion lastVersion() {
         return head.get().topologyVersion();
@@ -594,6 +605,7 @@ public class GridAffinityAssignmentCache {
 
         return aff.assignment();
     }
+
     /**
      * @param topVer Topology version.
      * @return Affinity assignment.
@@ -658,6 +670,13 @@ public class GridAffinityAssignmentCache {
     public List<ClusterNode> nodes(int part, AffinityTopologyVersion topVer) {
         // Resolve cached affinity nodes.
         return cachedAffinity(topVer).get(part);
+    }
+
+    /**
+     * @param topVer Topology version.
+     */
+    public Set<Integer> partitionPrimariesDifferentToIdeal(AffinityTopologyVersion topVer) {
+        return cachedAffinity(topVer).partitionPrimariesDifferentToIdeal();
     }
 
     /**
@@ -978,7 +997,7 @@ public class GridAffinityAssignmentCache {
     /**
      * @return All initialized versions.
      */
-    public Collection<AffinityTopologyVersion> cachedVersions() {
+    public NavigableSet<AffinityTopologyVersion> cachedVersions() {
         return affCache.keySet();
     }
 

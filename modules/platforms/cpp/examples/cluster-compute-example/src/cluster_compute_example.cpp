@@ -122,18 +122,18 @@ int main()
         node3.GetBinding().RegisterComputeFunc<PrintMsg>();
         client.GetBinding().RegisterComputeFunc<PrintMsg>();
 
-        // Create cluster groups splitted up by demo attribute value.
+        // Create cluster groups split up by demo attribute value.
         ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
         ClusterGroup group1 = localGroup.ForAttribute("DemoAttribute", "Value0");
         ClusterGroup group2 = localGroup.ForAttribute("DemoAttribute", "Value1");
 
-        // Making calls.
+        // Broadcast compute jobs.
         client.GetCompute(group1).Broadcast(PrintMsg("DemoAttribute=Value0"));
         client.GetCompute(group2).Broadcast(PrintMsg("DemoAttribute=Value1"));
 
-        // Waiting the compute jobs.
+        // Waiting the compute jobs to complete.
         std::cout << std::endl;
-        std::cout << ">>> Waiting all compute jobs done, before shutting down the cluster, press 'Enter to continue ..." << std::endl;
+        std::cout << ">>> Example finished. Press 'Enter to stop cluster nodes ..." << std::endl;
         std::cout << std::endl;
         std::cin.get();
 
@@ -149,10 +149,6 @@ int main()
 
         return err.GetCode();
     }
-
-    std::cout << std::endl;
-    std::cout << ">>> Example finished, press 'Enter' to exit ..." << std::endl;
-    std::cout << std::endl;
 
     std::cin.get();
 

@@ -41,6 +41,9 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractTraceabl
     private transient volatile DiscoverySpiCustomMessage msg;
 
     /** */
+    private transient volatile Class<?> msgClass;
+
+    /** */
     private byte[] msgBytes;
 
     /**
@@ -65,6 +68,7 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractTraceabl
 
         this.msgBytes = msg.msgBytes;
         this.msg = msg.msg;
+        this.msgClass = msg.msgClass;
     }
 
     /**
@@ -79,6 +83,17 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractTraceabl
      */
     public byte[] messageBytes() {
         return msgBytes;
+    }
+
+    /**
+     * @return Class of DiscoveryCustomMessage enclosed in this discovery custom event.
+     * @throws IgniteCheckedException If message was not deserialized from byte array.
+     */
+    public Class<?> messageClass() throws IgniteCheckedException {
+        if (msgClass == null)
+            throw new IgniteCheckedException("Message has not been deserialized yet: " + this);
+
+        return msgClass;
     }
 
     /**
@@ -111,6 +126,9 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractTraceabl
 
             assert msg != null;
         }
+
+        if (msg instanceof CustomMessageWrapper)
+            msgClass = ((CustomMessageWrapper)msg).delegate().getClass();
 
         return msg;
     }

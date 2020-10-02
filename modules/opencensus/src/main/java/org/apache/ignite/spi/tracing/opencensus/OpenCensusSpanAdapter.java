@@ -16,18 +16,14 @@
 
 package org.apache.ignite.spi.tracing.opencensus;
 
-import java.util.Map;
-import java.util.stream.Collectors;
-import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
-import org.apache.ignite.internal.processors.tracing.Span;
-import org.apache.ignite.internal.processors.tracing.SpanStatus;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.tracing.SpanStatus;
+import org.apache.ignite.spi.tracing.SpiSpecificSpan;
 
 /**
  * Span implementation based on OpenCensus library.
  */
-public class OpenCensusSpanAdapter implements Span {
+public class OpenCensusSpanAdapter implements SpiSpecificSpan {
     /** OpenCensus span delegate. */
     private final io.opencensus.trace.Span span;
 
@@ -37,7 +33,7 @@ public class OpenCensusSpanAdapter implements Span {
     /**
      * @param span OpenCensus span delegate.
      */
-    public OpenCensusSpanAdapter(io.opencensus.trace.Span span) {
+    OpenCensusSpanAdapter(io.opencensus.trace.Span span) {
         this.span = span;
     }
 
@@ -56,29 +52,8 @@ public class OpenCensusSpanAdapter implements Span {
     }
 
     /** {@inheritDoc} */
-    @Override public Span addTag(String tagName, long tagVal) {
-        span.putAttribute(tagName, AttributeValue.longAttributeValue(tagVal));
-
-        return this;
-    }
-
-    /** {@inheritDoc} */
     @Override public OpenCensusSpanAdapter addLog(String logDesc) {
         span.addAnnotation(logDesc);
-
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Override public OpenCensusSpanAdapter addLog(String logDesc, Map<String, String> attrs) {
-        span.addAnnotation(Annotation.fromDescriptionAndAttributes(
-            logDesc,
-            attrs.entrySet().stream()
-                .collect(Collectors.toMap(
-                    Map.Entry::getKey,
-                    e -> AttributeValue.stringAttributeValue(e.getValue())
-                ))
-        ));
 
         return this;
     }
@@ -92,20 +67,6 @@ public class OpenCensusSpanAdapter implements Span {
 
     /** {@inheritDoc} */
     @Override public OpenCensusSpanAdapter end() {
-        try {
-            // TODO: https://ggsystems.atlassian.net/browse/GG-22503
-            // This sleep hack is needed to consider span as sampled.
-            // @see io.opencensus.implcore.trace.export.InProcessSampledSpanStoreImpl.Bucket.considerForSampling
-            // Meaningful only for tracing tests.
-            Thread.sleep(10);
-        }
-        catch (InterruptedException ignored) {
-            Thread.currentThread().interrupt();
-        }
-
-        // Useful for debug.
-        span.putAttribute("end.stack.trace", AttributeValue.stringAttributeValue(U.stackTrace()));
-
         span.end();
 
         ended = true;

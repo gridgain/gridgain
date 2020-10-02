@@ -25,6 +25,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcColumnMeta;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcIndexMeta;
@@ -33,6 +34,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcTableMeta;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.plugin.security.SecurityException;
 
 import static java.sql.DatabaseMetaData.columnNullable;
 import static java.sql.DatabaseMetaData.tableIndexOther;
@@ -51,6 +53,7 @@ import static java.sql.Types.TIME;
 import static java.sql.Types.TIMESTAMP;
 import static java.sql.Types.TINYINT;
 import static java.sql.Types.VARCHAR;
+
 /**
  * Utility methods for JDBC driver.
  */
@@ -167,7 +170,6 @@ public class JdbcUtils {
         return QueryUtils.isSqlType(cls) || cls == URL.class;
     }
 
-
     /**
      * Convert exception to {@link SQLException}.
      *
@@ -198,11 +200,17 @@ public class JdbcUtils {
             if (t instanceof SQLException) {
                 if (t.getCause() instanceof IgniteSQLException)
                     return ((IgniteSQLException)t.getCause()).toJdbcException();
+                else if (t.getCause() instanceof SqlCacheException)
+                    return ((SqlCacheException)t.getCause()).toJdbcException();
                 else
                     return (SQLException)t;
             }
             else if (t instanceof IgniteSQLException)
                 return ((IgniteSQLException)t).toJdbcException();
+            else if (t instanceof SecurityException)
+                return new SQLException(t.getMessage(), sqlStateForUnknown, t);
+            else if (t instanceof SqlCacheException)
+                return ((SqlCacheException)t).toJdbcException();
 
             t = t.getCause();
         }
@@ -319,7 +327,6 @@ public class JdbcUtils {
 
         return row;
     }
-
 
     /**
      * Normalize schema name. If it is quoted - unquote and leave as is, otherwise - convert to upper case.

@@ -61,6 +61,9 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlock;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
+import org.apache.ignite.internal.processors.tracing.MTC;
+import org.apache.ignite.internal.processors.tracing.SpanType;
+import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -68,7 +71,6 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.C2;
-import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -82,6 +84,8 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_READ;
+import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import static org.apache.ignite.internal.processors.tracing.SpanType.TX_COLOCATED_LOCK_MAP;
 
 /**
  * Colocated cache lock future.
@@ -228,7 +232,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
         threadId = tx == null ? Thread.currentThread().getId() : tx.threadId();
 
-        lockVer = tx != null ? tx.xidVersion() : cctx.versions().next();
+        lockVer = tx != null ? tx.xidVersion() : cctx.cache().nextVersion();
 
         futId = IgniteUuid.randomUuid();
 
@@ -576,10 +580,11 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
      */
     @Override public boolean cancel() {
         if (inTx()) {
-            onError(tx.rollbackException());
+            onError(tx.commitError() != null ?
+                new IgniteTxRollbackCheckedException(tx.commitError()) : tx.rollbackException());
 
             /** Should wait until {@link mappings} are ready before continuing with async rollback
-             * or some primary nodes might not receive tx finish messages because of race.
+             * or some primary nodes might not receive tx finish messages because of a race.
              * If prepare phase has not started waiting is not necessary.
              */
             synchronized (this) {
@@ -598,23 +603,25 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
     /** {@inheritDoc} */
     @Override public boolean onDone(Boolean success, Throwable err) {
-        if (log.isDebugEnabled())
-            log.debug("Received onDone(..) callback [success=" + success + ", err=" + err + ", fut=" + this + ']');
+        try (TraceSurroundings ignored = MTC.support(span)) {
+            if (log.isDebugEnabled())
+                log.debug("Received onDone(..) callback [success=" + success + ", err=" + err + ", fut=" + this + ']');
 
-        // Local GridDhtLockFuture
-        if (inTx() && this.err instanceof IgniteTxTimeoutCheckedException && cctx.tm().deadlockDetectionEnabled())
-            return false;
+            // Local GridDhtLockFuture
+            if (inTx() && this.err instanceof IgniteTxTimeoutCheckedException && cctx.tm().deadlockDetectionEnabled())
+                return false;
 
-        if (isDone())
-            return false;
+            if (isDone())
+                return false;
 
-        if (err != null)
-            onError(err);
+            if (err != null)
+                onError(err);
 
-        if (err != null)
-            success = false;
+            if (err != null)
+                success = false;
 
-        return onComplete(success, true);
+            return onComplete(success, true);
+        }
     }
 
     /**
@@ -752,75 +759,80 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
      * part. Note that if primary node leaves grid, the future will fail and transaction will be rolled back.
      */
     void map() {
-        if (isDone()) // Possible due to async rollback.
-            return;
+        try (TraceSurroundings ignored =
+                 MTC.supportContinual(span = cctx.kernalContext().tracing().create(TX_COLOCATED_LOCK_MAP, MTC.span()))) {
+            if (isDone()) // Possible due to async rollback.
+                return;
 
-        if (timeout > 0) {
-            timeoutObj = new LockTimeoutObject();
+            if (timeout > 0) {
+                timeoutObj = new LockTimeoutObject();
 
-            cctx.time().addTimeoutObject(timeoutObj);
-        }
-
-        // Obtain the topology version to use.
-        AffinityTopologyVersion topVer = cctx.mvcc().lastExplicitLockTopologyVersion(threadId);
-
-        // If there is another system transaction in progress, use it's topology version to prevent deadlock.
-        if (topVer == null && tx != null && tx.system())
-            topVer = cctx.tm().lockedTopologyVersion(Thread.currentThread().getId(), tx);
-
-        if (topVer != null && tx != null)
-            tx.topologyVersion(topVer);
-
-        if (topVer == null && tx != null)
-            topVer = tx.topologyVersionSnapshot();
-
-        if (topVer != null) {
-            AffinityTopologyVersion lastChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
-
-            IgniteInternalFuture<AffinityTopologyVersion> affFut = cctx.shared().exchange().affinityReadyFuture(lastChangeVer);
-
-            if (!affFut.isDone()) {
-                try {
-                    affFut.get();
-                }
-                catch (IgniteCheckedException e) {
-                    onDone(err);
-
-                    return;
-                }
+                cctx.time().addTimeoutObject(timeoutObj);
             }
 
-            for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
-                if (fut.exchangeDone() && fut.topologyVersion().equals(lastChangeVer)) {
-                    Throwable err = fut.validateCache(cctx, recovery, read, null, keys);
+            // Obtain the topology version to use.
+            AffinityTopologyVersion topVer = cctx.mvcc().lastExplicitLockTopologyVersion(threadId);
 
-                    if (err != null) {
+            // If there is another system transaction in progress, use it's topology version to prevent deadlock.
+            if (topVer == null && tx != null && tx.system())
+                topVer = cctx.tm().lockedTopologyVersion(Thread.currentThread().getId(), tx);
+
+            if (topVer != null && tx != null)
+                tx.topologyVersion(topVer);
+
+            if (topVer == null && tx != null)
+                topVer = tx.topologyVersionSnapshot();
+
+            if (topVer != null) {
+                AffinityTopologyVersion lastChangeVer =
+                    cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
+
+                IgniteInternalFuture<AffinityTopologyVersion> affFut =
+                    cctx.shared().exchange().affinityReadyFuture(lastChangeVer);
+
+                if (!affFut.isDone()) {
+                    try {
+                        affFut.get();
+                    }
+                    catch (IgniteCheckedException e) {
                         onDone(err);
 
                         return;
                     }
-
-                    break;
                 }
+
+                for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
+                    if (fut.exchangeDone() && fut.topologyVersion().equals(lastChangeVer)) {
+                        Throwable err = fut.validateCache(cctx, recovery, read, null, keys);
+
+                        if (err != null) {
+                            onDone(err);
+
+                            return;
+                        }
+
+                        break;
+                    }
+                }
+
+                // Continue mapping on the same topology version as it was before.
+                synchronized (this) {
+                    if (this.topVer == null)
+                        this.topVer = topVer;
+                }
+
+                cctx.mvcc().addFuture(this);
+
+                map(keys, false, true);
+
+                markInitialized();
+
+                return;
             }
 
-            // Continue mapping on the same topology version as it was before.
-            synchronized (this) {
-                if (this.topVer == null)
-                    this.topVer = topVer;
-            }
-
-            cctx.mvcc().addFuture(this);
-
-            map(keys, false, true);
-
-            markInitialized();
-
-            return;
+            // Must get topology snapshot and map on that version.
+            mapOnTopology(false, null);
         }
-
-        // Must get topology snapshot and map on that version.
-        mapOnTopology(false, null);
     }
 
     /**
@@ -841,8 +853,8 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
         try {
             if (cctx.topology().stopping()) {
                 onDone(
-                    cctx.shared().cache().isCacheRestarting(cctx.name())?
-                        new IgniteCacheRestartingException(cctx.name()):
+                    cctx.shared().cache().isCacheRestarting(cctx.name()) ?
+                        new IgniteCacheRestartingException(cctx.name()) :
                         new CacheStoppedException(cctx.name()));
 
                 return;
@@ -1172,14 +1184,17 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
      * @throws IgniteCheckedException If failed.
      */
     private void proceedMapping() throws IgniteCheckedException {
-        boolean set = tx != null && cctx.shared().tm().setTxTopologyHint(tx.topologyVersionSnapshot());
+        try (TraceSurroundings ignored =
+                 MTC.support(cctx.kernalContext().tracing().create(SpanType.TX_MAP_PROCEED, MTC.span()))) {
+            boolean set = tx != null && cctx.shared().tm().setTxTopologyHint(tx.topologyVersionSnapshot());
 
-        try {
-            proceedMapping0();
-        }
-        finally {
-            if (set)
-                cctx.tm().setTxTopologyHint(null);
+            try {
+                proceedMapping0();
+            }
+            finally {
+                if (set)
+                    cctx.tm().setTxTopologyHint(null);
+            }
         }
     }
 
@@ -1233,56 +1248,19 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
             add(fut); // Append new future.
 
-            IgniteInternalFuture<?> txSync = null;
+            try {
+                cctx.io().send(node, req, cctx.ioPolicy());
 
-            if (inTx())
-                txSync = cctx.tm().awaitFinishAckAsync(node.id(), tx.threadId());
-
-            if (txSync == null || txSync.isDone()) {
-                try {
-                    cctx.io().send(node, req, cctx.ioPolicy());
-
-                    if (msgLog.isDebugEnabled()) {
-                        msgLog.debug("Collocated lock fut, sent request [txId=" + lockVer +
-                            ", inTx=" + inTx() +
-                            ", node=" + node.id() + ']');
-                    }
-                }
-                catch (ClusterTopologyCheckedException ex) {
-                    assert fut != null;
-
-                    fut.onResult(ex);
+                if (msgLog.isDebugEnabled()) {
+                    msgLog.debug("Collocated lock fut, sent request [txId=" + lockVer +
+                        ", inTx=" + inTx() +
+                        ", node=" + node.id() + ']');
                 }
             }
-            else {
-                txSync.listen(new CI1<IgniteInternalFuture<?>>() {
-                    @Override public void apply(IgniteInternalFuture<?> t) {
-                        try {
-                            cctx.io().send(node, req, cctx.ioPolicy());
+            catch (ClusterTopologyCheckedException ex) {
+                assert fut != null;
 
-                            if (msgLog.isDebugEnabled()) {
-                                msgLog.debug("Collocated lock fut, sent request [txId=" + lockVer +
-                                    ", inTx=" + inTx() +
-                                    ", node=" + node.id() + ']');
-                            }
-                        }
-                        catch (ClusterTopologyCheckedException ex) {
-                            assert fut != null;
-
-                            fut.onResult(ex);
-                        }
-                        catch (IgniteCheckedException e) {
-                            if (msgLog.isDebugEnabled()) {
-                                msgLog.debug("Collocated lock fut, failed to send request [txId=" + lockVer +
-                                    ", inTx=" + inTx() +
-                                    ", node=" + node.id() +
-                                    ", err=" + e + ']');
-                            }
-
-                            onError(e);
-                        }
-                    }
-                });
+                fut.onResult(ex);
             }
         }
     }

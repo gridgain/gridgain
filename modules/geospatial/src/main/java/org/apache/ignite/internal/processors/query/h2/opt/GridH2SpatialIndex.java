@@ -33,26 +33,28 @@ import org.apache.ignite.internal.util.GridCursorIteratorWrapper;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
-import org.h2.command.dml.AllColumnsForPlan;
-import org.h2.engine.Session;
-import org.h2.index.Cursor;
-import org.h2.index.IndexLookupBatch;
-import org.h2.index.IndexType;
-import org.h2.index.SingleRowCursor;
-import org.h2.index.SpatialIndex;
-import org.h2.index.SpatialTreeIndex;
-import org.h2.message.DbException;
-import org.h2.mvstore.MVStore;
-import org.h2.mvstore.rtree.MVRTreeMap;
-import org.h2.mvstore.rtree.SpatialKey;
-import org.h2.result.SearchRow;
-import org.h2.result.SortOrder;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableFilter;
-import org.h2.value.Value;
-import org.h2.value.ValueGeometry;
+import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.IndexLookupBatch;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.index.SingleRowCursor;
+import org.gridgain.internal.h2.index.SpatialIndex;
+import org.gridgain.internal.h2.index.SpatialTreeIndex;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.mvstore.MVStore;
+import org.gridgain.internal.h2.mvstore.rtree.MVRTreeMap;
+import org.gridgain.internal.h2.mvstore.rtree.SpatialKey;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueGeometry;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
+
+import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 
 /**
  * Spatial index.
@@ -103,7 +105,7 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
      */
     @SuppressWarnings("unchecked")
     public GridH2SpatialIndex(GridH2Table tbl, String idxName, int segmentsCnt, IndexColumn... cols) {
-        super(tbl, idxName,  validateColumns(cols), IndexType.createNonUnique(false, false, true));
+        super(tbl, idxName, validateColumns(cols), IndexType.createNonUnique(false, false, true));
 
         // Index in memory
         store = MVStore.open(null);
@@ -349,7 +351,7 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
     @SuppressWarnings("unchecked")
     private GridCursor<H2Row> rowIterator(Iterator<SpatialKey> i, TableFilter filter) {
         if (!i.hasNext())
-            return H2Utils.EMPTY_CURSOR;
+            return EMPTY_CURSOR;
 
         long time = System.currentTimeMillis();
 

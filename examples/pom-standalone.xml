@@ -40,6 +40,13 @@
     <artifactId>ignite-examples</artifactId>
     <version>to_be_replaced_by_ignite_version</version>
 
+    <repositories>
+        <repository>
+            <id>GridGain External Repository</id>
+            <url>http://www.gridgainsystems.com/nexus/content/repositories/external</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>javax.cache</groupId>
@@ -79,25 +86,19 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-ml</artifactId>
+            <artifactId>ignite-hibernate_5.1</artifactId>
             <version>to_be_replaced_by_ignite_version</version>
         </dependency>
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-ml-xgboost-model-parser</artifactId>
+            <artifactId>ignite-schedule</artifactId>
             <version>to_be_replaced_by_ignite_version</version>
         </dependency>
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-ml-spark-model-parser</artifactId>
-            <version>to_be_replaced_by_ignite_version</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.gridgain</groupId>
-            <artifactId>ignite-ml-tensorflow-model-parser</artifactId>
+            <artifactId>ignite-geospatial</artifactId>
             <version>to_be_replaced_by_ignite_version</version>
         </dependency>
 
@@ -114,9 +115,21 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jpmml</groupId>
-            <artifactId>pmml-model</artifactId>
-            <version>1.4.7</version>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-core</artifactId>
+            <version>2.3.0</version>
         </dependency>
     </dependencies>
 
@@ -138,12 +151,6 @@
                 <dependency>
                     <groupId>org.gridgain</groupId>
                     <artifactId>ignite-spark</artifactId>
-                    <version>to_be_replaced_by_ignite_version</version>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-ml-mleap-model-parser</artifactId>
                     <version>to_be_replaced_by_ignite_version</version>
                 </dependency>
             </dependencies>
@@ -183,36 +190,58 @@
         </profile>
 
         <profile>
-            <!-- See README.txt for details -->
-            <id>lgpl</id>
-
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
+            <id>spark-2.4</id>
 
             <properties>
-                <lgpl.folder>src/main/java-lgpl</lgpl.folder>
+                <spark.folder>src/main/spark</spark.folder>
             </properties>
 
             <dependencies>
                 <dependency>
                     <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-hibernate_5.1</artifactId>
+                    <artifactId>ignite-scalar</artifactId>
                     <version>to_be_replaced_by_ignite_version</version>
                 </dependency>
 
                 <dependency>
                     <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-schedule</artifactId>
-                    <version>to_be_replaced_by_ignite_version</version>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-geospatial</artifactId>
+                    <artifactId>ignite-spark-2.4</artifactId>
                     <version>to_be_replaced_by_ignite_version</version>
                 </dependency>
             </dependencies>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>net.alchim31.maven</groupId>
+                        <artifactId>scala-maven-plugin</artifactId>
+                        <version>3.2.0</version>
+                        <configuration>
+                            <jvmArgs>
+                                <jvmArg>-Xms512m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                            </jvmArgs>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>scala-compile-first</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                    <goal>compile</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>scala-test-compile</id>
+                                <phase>process-test-resources</phase>
+                                <goals>
+                                    <goal>testCompile</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 

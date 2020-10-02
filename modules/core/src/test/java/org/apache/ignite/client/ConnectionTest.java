@@ -78,6 +78,7 @@ public class ConnectionTest {
                      .setAddresses(addrs))) {
         }
     }
+
     /**
      * @param userName User name.
      * @param addrs Addresses to connect.

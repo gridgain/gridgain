@@ -28,7 +28,9 @@
 #include <ignite/impl/transactions/transactions_impl.h>
 #include <ignite/impl/cluster/cluster_group_impl.h>
 #include <ignite/impl/cluster/ignite_cluster_impl.h>
+#include <ignite/impl/cache/cache_affinity_impl.h>
 #include <ignite/impl/compute/compute_impl.h>
+#include <ignite/impl/cluster/cluster_group_impl.h>
 
 namespace ignite
 {
@@ -39,11 +41,11 @@ namespace ignite
          */
         class IGNITE_FRIEND_EXPORT IgniteImpl : private interop::InteropTarget
         {
-            typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
             typedef common::concurrent::SharedPointer<transactions::TransactionsImpl> SP_TransactionsImpl;
             typedef common::concurrent::SharedPointer<cluster::IgniteClusterImpl> SP_IgniteClusterImpl;
             typedef common::concurrent::SharedPointer<compute::ComputeImpl> SP_ComputeImpl;
             typedef common::concurrent::SharedPointer<IgniteBindingImpl> SP_IgniteBindingImpl;
+            typedef common::concurrent::SharedPointer<cache::CacheAffinityImpl> SP_CacheAffinityImpl;
         public:
             /**
              * Constructor used to create new instance.
@@ -51,6 +53,15 @@ namespace ignite
              * @param env Environment.
              */
             IgniteImpl(SP_IgniteEnvironment env);
+
+            /**
+             * Get affinity service to provide information about data partitioning and distribution.
+             *
+             * @param name Cache name.
+             * @param err Error.
+             * @return Pointer to cache affinity implementation.
+             */
+            SP_CacheAffinityImpl GetAffinity(const std::string& cacheName, IgniteError& err);
 
             /**
              * Get name of the Ignite.
@@ -222,14 +233,14 @@ namespace ignite
              *
              * @param topVer Topology version.
              */
-            void SetBaselineTopologyVersion(long topVer);
+            void SetBaselineTopologyVersion(int64_t topVer);
 
             /**
              * Set transaction timeout on partition map exchange.
              *
              * @param timeout Timeout in milliseconds.
              */
-            void SetTxTimeoutOnPartitionMapExchange(long timeout);
+            void SetTxTimeoutOnPartitionMapExchange(int64_t timeout);
 
         private:
             /**

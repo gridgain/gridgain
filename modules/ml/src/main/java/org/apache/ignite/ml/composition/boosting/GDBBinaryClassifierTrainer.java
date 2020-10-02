@@ -40,6 +40,7 @@ import org.apache.ignite.ml.tree.boosting.GDBBinaryClassifierOnTreesTrainer;
 public abstract class GDBBinaryClassifierTrainer extends GDBTrainer {
     /** External representation of first class. */
     private double externalFirstCls; //internal 0.0
+
     /** External representation of second class. */
     private double externalSecondCls; //internal 1.0
 
@@ -74,7 +75,7 @@ public abstract class GDBBinaryClassifierTrainer extends GDBTrainer {
             new EmptyContextBuilder<>(),
             new LabeledDatasetPartitionDataBuilderOnHeap<>(preprocessor),
             learningEnvironment()
-        ).compute((IgniteFunction<LabeledVectorSet<Double, LabeledVector>, Set<Double>>)x ->
+        ).compute((IgniteFunction<LabeledVectorSet<LabeledVector>, Set<Double>>)x ->
                 Arrays.stream(x.labels()).boxed().collect(Collectors.toSet()), (a, b) -> {
                 if (a == null)
                     return b;

@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.GridHandleTable;
 import org.apache.ignite.internal.util.io.GridDataOutput;
 import org.apache.ignite.internal.util.typedef.F;
@@ -200,6 +201,7 @@ public class OptimizedObjectOutputStream extends ObjectOutputStream {
                 OptimizedClassDescriptor desc = classDescriptor(
                     clsMap,
                     obj instanceof Object[] ? Object[].class : obj.getClass(),
+                    GridBinaryMarshaller.USE_CACHE.get(),
                     ctx,
                     mapper);
 
@@ -227,6 +229,7 @@ public class OptimizedObjectOutputStream extends ObjectOutputStream {
 
                     desc = classDescriptor(clsMap,
                         obj instanceof Object[] ? Object[].class : obj.getClass(),
+                        GridBinaryMarshaller.USE_CACHE.get(),
                         ctx,
                         mapper);
                 }
@@ -240,7 +243,7 @@ public class OptimizedObjectOutputStream extends ObjectOutputStream {
                     else
                         desc.write(this, obj);
                 }
-                catch (IOException e){
+                catch (IOException e) {
                     throw new IOException("Failed to serialize object [typeName=" +
                         desc.describedClass().getName() + ']', e);
                 }
@@ -817,6 +820,7 @@ public class OptimizedObjectOutputStream extends ObjectOutputStream {
 
         /** Fields info. */
         private final OptimizedClassDescriptor.ClassFields curFields;
+
         /** Values. */
         private final IgniteBiTuple<OptimizedFieldType, Object>[] objs;
 

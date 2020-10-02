@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
+import javax.management.JMException;
+import javax.management.ObjectName;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
@@ -26,8 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.management.JMException;
-import javax.management.ObjectName;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -51,6 +51,7 @@ import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -66,6 +67,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -92,6 +94,8 @@ import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType
 import static org.apache.ignite.internal.GridTopic.TOPIC_INTERNAL_DIAGNOSTIC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  *
@@ -162,6 +166,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     private volatile boolean compatibilityMode;
 
     /**
+     * Flag indicates that the feature is disabled.
+     * No values should be stored in metastorage nor passed in joining node discovery data.
+     */
+    private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
+
+    /**
      * Listener for LEFT and FAILED events intended to catch the moment when all nodes in topology support ID and tag.
      */
     private final DiscoveryEventListener discoLsnr = new DiscoveryEventListener() {
@@ -169,7 +179,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (!compatibilityMode)
                 return;
 
-            if (IgniteFeatures.allNodesSupports(ctx, discoCache.remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
+            if (IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
+                IgniteFeatures.CLUSTER_ID_AND_TAG)
+            ) {
                 // Only coordinator initializes ID and tag.
                 if (U.isLocalNodeCoordinator(ctx.discovery())) {
                     locClusterId = locClusterId == null ? UUID.randomUUID() : locClusterId;
@@ -249,10 +261,15 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         GridInternalSubscriptionProcessor isp = ctx.internalSubscriptionProcessor();
 
         isp.registerDistributedMetastorageListener(this);
+
+        cluster.start();
     }
 
     /** {@inheritDoc} */
     @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+        if (!clusterIdAndTagSupport)
+            return;
+
         ClusterIdAndTag idAndTag = readKey(metastorage, CLUSTER_ID_TAG_KEY, "Reading cluster ID and tag from metastorage failed, " +
             "default values will be generated");
 
@@ -334,7 +351,26 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         this.metastorage = metastorage;
 
         // Fast and dirty workaround for tests.
-        if (ctx.clientNode())
+        if (ctx.clientNode()) {
+            try {
+                ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+                if (idAndTag != null) {
+                    locClusterId = idAndTag.id();
+                    locClusterTag = idAndTag.tag();
+
+                    cluster.setId(locClusterId);
+                    cluster.setTag(locClusterTag);
+                }
+            }
+            catch (IgniteCheckedException e) {
+                U.warn(log, e);
+            }
+
+            return;
+        }
+
+        if (!clusterIdAndTagSupport)
             return;
 
         //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
@@ -399,7 +435,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
-        if (!IgniteFeatures.allNodesSupports(ctx, ctx.discovery().remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
+        if (!clusterIdAndTagSupport)
+            return;
+
+        if (!IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
+            IgniteFeatures.CLUSTER_ID_AND_TAG)
+        ) {
             compatibilityMode = true;
 
             ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
@@ -407,14 +448,19 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             return;
         }
 
-        cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
+        if (!ctx.discovery().localNode().isClient()) {
+            cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
 
-        cluster.setTag(locClusterTag != null ? locClusterTag :
-            ClusterTagGenerator.generateTag());
+            cluster.setTag(locClusterTag != null ? locClusterTag :
+                ClusterTagGenerator.generateTag());
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
+        if (!clusterIdAndTagSupport)
+            return;
+
         assert ctx.clientNode();
 
         locClusterId = null;
@@ -426,6 +472,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
+        if (!clusterIdAndTagSupport)
+            return null;
+
         assert ctx.clientNode();
 
         cluster.setId(locClusterId);
@@ -595,7 +644,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
-        if (!compatibilityMode)
+        if (!clusterIdAndTagSupport)
+            return;
+
+        if (!compatibilityMode && !dataBag.isJoiningNodeClient())
             dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
     }
 
@@ -620,6 +672,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (lstFlag != null)
                 notifyEnabled.set(lstFlag);
         }
+
+        if (!clusterIdAndTagSupport)
+            return;
 
         ClusterIdAndTag commonData = (ClusterIdAndTag)data.commonData();
 
@@ -694,6 +749,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
             ctx.timeout().addTimeoutObject(new MetricsUpdateTimeoutObject(updateFreq));
         }
+
+        if (!clusterIdAndTagSupport)
+            return;
 
         IgniteClusterMXBeanImpl mxBeanImpl = new IgniteClusterMXBeanImpl(cluster);
 

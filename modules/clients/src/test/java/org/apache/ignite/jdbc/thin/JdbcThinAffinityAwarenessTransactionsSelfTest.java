@@ -28,7 +28,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
-import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
+import org.apache.ignite.internal.processors.query.QueryHistory;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridStringLogger;
@@ -184,7 +184,6 @@ public class JdbcThinAffinityAwarenessTransactionsSelfTest extends JdbcThinAbstr
         stmt.execute("COMMIT");
     }
 
-
     /**
      * Utility method that:
      *   1. warms up an affinity cache;
@@ -244,7 +243,7 @@ public class JdbcThinAffinityAwarenessTransactionsSelfTest extends JdbcThinAbstr
         int qryExecutionsCntr = 0;
 
         for (int i = 0; i < NODES_CNT; i++) {
-            Collection<QueryHistoryMetrics> metrics = ((IgniteH2Indexing)grid(i).context().query().getIndexing())
+            Collection<QueryHistory> metrics = ((IgniteH2Indexing)grid(i).context().query().getIndexing())
                 .runningQueryManager().queryHistoryMetrics().values();
 
             if (!metrics.isEmpty()) {
@@ -253,9 +252,9 @@ public class JdbcThinAffinityAwarenessTransactionsSelfTest extends JdbcThinAbstr
             }
         }
 
-        assertTrue("Unexpected amount of used nodes: expected [0 < nodesCnt <= 1"  +
-                "], got [" +  nonEmptyMetricsCntr + "]",
-            nonEmptyMetricsCntr == 1);
+        assertTrue("Unexpected amount of used nodes: expected [0 < nodesCnt <= 1" +
+                "], got [" + nonEmptyMetricsCntr + "]",
+                nonEmptyMetricsCntr == 1);
 
         assertEquals("Executions count doesn't match expeted value: expected [" +
                 NODES_CNT * QUERY_EXECUTION_MULTIPLIER + "], got [" + qryExecutionsCntr + "]",

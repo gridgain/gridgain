@@ -314,8 +314,7 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
         ctx.checkSecurity(SecurityPermission.CACHE_READ);
 
-        if (keyCheck)
-            validateCacheKeys(keys);
+        warnIfUnordered(keys, BulkOperation.GET);
 
         return getAllAsync0(ctx.cacheKeysView(keys),
             readThrough,
@@ -328,7 +327,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             opCtx != null && opCtx.recovery(),
             needVer); // TODO IGNITE-7371
     }
-
 
     /**
      * @param keys Keys.
@@ -374,6 +372,8 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             Map<KeyCacheObject, EntryGetResult> misses = null;
 
             Set<GridCacheEntryEx> newLocalEntries = null;
+
+            ctx.shared().database().checkpointReadLock();
 
             try {
                 int keysSize = keys.size();
@@ -567,7 +567,7 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
                                                 entry.unswap();
 
-                                                GridCacheVersion newVer = ctx.versions().next();
+                                                GridCacheVersion newVer = nextVersion();
 
                                                 EntryGetResult verVal = entry.versionedValue(
                                                     cacheVal,
@@ -694,6 +694,9 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             catch (IgniteCheckedException e) {
                 return new GridFinishedFuture<>(e);
             }
+            finally {
+                ctx.shared().database().checkpointReadUnlock();
+            }
         }
         else {
             return asyncOp(tx, new AsyncOp<Map<K1, V1>>(keys) {
@@ -711,5 +714,11 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
                 }
             }, ctx.operationContextPerCall(), /*retry*/false);
         }
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public GridCacheVersion nextVersion() {
+        return ctx.versions().next(ctx.shared().kernalContext().discovery().topologyVersion());
     }
 }

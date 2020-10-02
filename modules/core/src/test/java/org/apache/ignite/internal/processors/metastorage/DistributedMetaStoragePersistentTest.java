@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -288,7 +289,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         stopGrid(3);
 
-
         for (int i = 0; i < cnt; i++)
             startGrid(i);
 
@@ -296,6 +296,38 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         for (int i = 1; i < cnt; i++)
             assertDistributedMetastoragesAreEqual(grid(0), grid(i));
+    }
+
+    /**
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testComplexObjectWrite() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
+
+        ComponentConfig compCfg = new ComponentConfig(101, "comp: config");
+        AppConfig appCfg = new AppConfig(102, compCfg);
+
+        metastorage.write("appConf", appCfg);
+
+        stopGrid(0);
+
+        ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        AppConfig readAppCfg = ignite.context().distributedMetastorage().read("appConf");
+
+        assertNotNull(readAppCfg);
+
+        assertEquals(appCfg.appId, readAppCfg.appId);
+        assertEquals(appCfg.compConf.compId, readAppCfg.compConf.compId);
+        assertEquals(appCfg.compConf.config, readAppCfg.compConf.config);
     }
 
     /**
@@ -377,7 +409,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         stopGrid(4);
 
-
         startGrid(1);
 
         startGrid(0);
@@ -426,7 +457,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         metastorage(5).write("key5", "value5");
 
         stopGrid(5);
-
 
         startGrid(2);
 
@@ -566,5 +596,71 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         Object[] hist = GridTestUtils.getFieldValue(joiningNodeData, "hist");
 
         assertEquals(1, hist.length);
+    }
+
+    /**
+     * Class to test complex objects put to metastorage.
+     */
+    private static class AppConfig implements Serializable {
+        /** */
+        private final long appId;
+
+        /** */
+        private final ComponentConfig compConf;
+
+        /** */
+        private AppConfig(long id,
+            ComponentConfig conf) {
+            appId = id;
+            compConf = conf;
+        }
+    }
+
+    /**
+     * Class to test complex objects put to metastorage.
+     */
+    private static class ComponentConfig implements Serializable {
+        /** */
+        private final long compId;
+
+        /** */
+        private final String config;
+
+        /** */
+        private ComponentConfig(long compId, String config) {
+            this.compId = compId;
+            this.config = config;
+        }
+    }
+
+    /** */
+    @Test
+    public void testLongKey() throws Exception {
+        startGrid(0).cluster().active(true);
+
+        String l10 = "1234567890";
+        String longKey = l10 + l10 + l10 + l10 + l10 + l10 + l10;
+
+        metastorage(0).write(longKey, "value");
+
+        stopGrid(0);
+
+        // Check that the value was actually persisted to the storage.
+
+        IgniteEx ignite0 = startGrid(0);
+
+        awaitPartitionMapExchange();
+
+        assertSame(ignite0.cluster().state(), ClusterState.ACTIVE);
+
+        assertEquals("value", metastorage(0).read(longKey));
+
+        metastorage(0).remove(longKey);
+
+        stopGrid(0);
+
+        startGrid(0);
+
+        assertNull(metastorage(0).read(longKey));
     }
 }

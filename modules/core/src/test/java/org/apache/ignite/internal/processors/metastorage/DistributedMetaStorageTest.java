@@ -20,9 +20,11 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -30,6 +32,8 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -47,11 +51,24 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE
  * Test for {@link DistributedMetaStorageImpl} with disabled persistence.
  */
 public class DistributedMetaStorageTest extends GridCommonAbstractTest {
+    /** String exceeding max length of metastorage key. */
+    private static final String LONG_KEY;
+
     /**
      * Used in tests for updatesCount counter of metastorage and corresponds to keys CLUSTER_ID, CLUSTER_TAG and other
      * initial objects that were added but should not be counted along with keys defined in tests.
      */
-    private static final int INITIAL_UPDATES_COUNT = 3;
+    private static int initialUpdatesCount = -1;
+
+    /** **/
+    private TcpDiscoverySpi customTcpDiscoverySpi = null;
+
+    static {
+        String template = "012345678901234567890123456789";
+
+        // Two templates - 60 bytes. Key is considered as long if it is shorter than 62 bytes.
+        LONG_KEY = template + template + "01";
+    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -69,8 +86,18 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         DiscoverySpi discoSpi = cfg.getDiscoverySpi();
 
-        if (discoSpi instanceof TcpDiscoverySpi)
+        if (discoSpi instanceof TcpDiscoverySpi) {
+            if (customTcpDiscoverySpi != null)
+                cfg.setDiscoverySpi(
+                    customTcpDiscoverySpi
+                        .setIpFinder(((TcpDiscoverySpi)cfg.getDiscoverySpi()).getIpFinder())
+                );
+
             ((TcpDiscoverySpi)discoSpi).setNetworkTimeout(1000);
+        }
+
+        if (igniteInstanceName.contains("client"))
+            cfg.setClientMode(true);
 
         return cfg;
     }
@@ -87,6 +114,19 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         return new StopNodeFailureHandler();
     }
 
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        startGrid(0);
+
+        // We have to start the second node and wait when it is started
+        // to be sure that all async metastorage updates of the node_0 are completed.
+        startGrid(1);
+
+        initialUpdatesCount = (int)metastorage(0).getUpdatesCount();
+    }
+
     /** */
     @Before
     public void before() throws Exception {
@@ -96,7 +136,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     /** */
     @After
     public void after() throws Exception {
-        stopAllGrids();
+        stopAllGrids(true, false);
     }
 
     /**
@@ -119,6 +159,84 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         metastorage.remove("key");
 
         assertNull(metastorage.read("key"));
+    }
+
+    /**
+     * Test verifies that Distributed Metastorage on client yields error if client is not connected to some cluster.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDistributedMetastorageOperationsOnClient() throws Exception {
+        String clientName = "client0";
+
+        String key = "key";
+        String value = "value";
+
+        GridTestUtils.runAsync(() -> startGrid(clientName));
+
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                IgniteKernal clientGrid = IgnitionEx.gridx(clientName);
+
+                return clientGrid != null && clientGrid.context().distributedMetastorage() != null;
+            }
+            catch (Exception ignored) {
+                return false;
+            }
+        }, 20_000);
+
+        IgniteKernal cl0 = IgnitionEx.gridx("client0");
+
+        final DistributedMetaStorage clDms = cl0.context().distributedMetastorage();
+
+        assertNotNull(clDms);
+
+        GridTestUtils.assertThrows(null, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                clDms.write(key, value);
+
+                return null;
+            }
+        }, IgniteCheckedException.class, null);
+    }
+
+    /**
+     * Verifies that DistributedMetastorage doesn't allow writes of too long keys (exceeding 64 bytes limit).
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLongKeyOnWrite() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
+
+        metastorage.write(LONG_KEY, "randomValue");
+
+        metastorage.writeAsync(LONG_KEY, "randomValue");
+    }
+
+    /**
+     * Verifies that DistributedMetastorage doesn't allow writes of too long keys (exceeding 64 bytes limit).
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLongKeyOnCas() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
+
+        metastorage.compareAndSet(LONG_KEY, "randomValue", "newRandomValue");
+
+        metastorage.compareAndSetAsync(LONG_KEY, "randomValue", "newRandomValue");
+
+        metastorage.compareAndRemove(LONG_KEY, "randomValue");
     }
 
     /**
@@ -332,15 +450,15 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         metastorage(0).write("key1", "value1");
 
-        assertEquals(1, metastorage(0).getUpdatesCount() - INITIAL_UPDATES_COUNT);
+        assertEquals(1, metastorage(0).getUpdatesCount() - initialUpdatesCount);
 
         metastorage(0).write("key2", "value2");
 
-        assertEquals(2, metastorage(0).getUpdatesCount() - INITIAL_UPDATES_COUNT);
+        assertEquals(2, metastorage(0).getUpdatesCount() - initialUpdatesCount);
 
         metastorage(0).write("key1", "value1");
 
-        assertEquals(2, metastorage(0).getUpdatesCount() - INITIAL_UPDATES_COUNT);
+        assertEquals(2, metastorage(0).getUpdatesCount() - initialUpdatesCount);
     }
 
     /** */
@@ -356,7 +474,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         AtomicInteger clientLsnrUpdatesCnt = new AtomicInteger();
 
-        assertEquals(1, metastorage(1).getUpdatesCount() - INITIAL_UPDATES_COUNT);
+        assertEquals(1, metastorage(1).getUpdatesCount() - initialUpdatesCount);
 
         assertEquals("value0", metastorage(1).read("key0"));
 
@@ -398,7 +516,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         // Wait enough to cover failover timeout.
         assertTrue(GridTestUtils.waitForCondition(
-            () -> metastorage(1).getUpdatesCount() - INITIAL_UPDATES_COUNT == expUpdatesCnt, 15_000));
+            () -> metastorage(1).getUpdatesCount() - initialUpdatesCount == expUpdatesCnt, 15_000));
 
         if (isPersistent())
             assertEquals("value0", metastorage(1).read("key0"));

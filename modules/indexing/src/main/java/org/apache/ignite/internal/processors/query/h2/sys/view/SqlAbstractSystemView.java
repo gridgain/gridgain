@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.query.h2.sys.view;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
-import org.h2.table.Column;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * Meta view base class.
@@ -101,6 +101,11 @@ public abstract class SqlAbstractSystemView implements SqlSystemView {
     /** {@inheritDoc} */
     @Override public long getRowCount() {
         return DEFAULT_ROW_COUNT_APPROXIMATION;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getRowCountApproximation() {
+        return getRowCount();
     }
 
     /** {@inheritDoc} */

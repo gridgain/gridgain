@@ -44,8 +44,10 @@ import org.junit.Test;
 public class IgniteCheckpointDirtyPagesForLowLoadTest extends GridCommonAbstractTest {
     /** Caches in group. */
     private static final int CACHES_IN_GRP = 1;
+
     /** Groups. */
     private static final int GROUPS = 1;
+
     /** Parts. */
     private static final int PARTS = 1024;
 
@@ -197,7 +199,7 @@ public class IgniteCheckpointDirtyPagesForLowLoadTest extends GridCommonAbstract
 
         while (currCpPages == 0) {
             LockSupport.parkNanos(U.millisToNanos(1));
-            currCpPages = db.currentCheckpointPagesCount();
+            currCpPages = db.getCheckpointer().currentProgress().currentCheckpointPagesCount();
 
             if (currCpPages == 0 && ((System.currentTimeMillis() - start) > timeout))
                 return -1;

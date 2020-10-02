@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.mxbean.MetricsMxBean;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_DATA_STORAGE_PAGE_SIZE;
 
@@ -67,6 +69,9 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_DATA_STORA
 public class DataStorageConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** Value used for making WAL archive size unlimited */
+    public static final long UNLIMITED_WAL_ARCHIVE = -1;
 
     /** Default data region start size (256 MB). */
     public static final long DFLT_DATA_REGION_INITIAL_SIZE = 256L * 1024 * 1024;
@@ -156,6 +161,12 @@ public class DataStorageConfiguration implements Serializable {
 
     /** Default wal archive directory. */
     public static final String DFLT_WAL_ARCHIVE_PATH = "db/wal/archive";
+
+    /** Default path (relative to working directory) of binary metadata folder */
+    public static final String DFLT_BINARY_METADATA_PATH = "db/binary_meta";
+
+    /** Default path (relative to working directory) of marshaller mappings folder */
+    public static final String DFLT_MARSHALLER_PATH = "db/marshaller";
 
     /** Default write throttling enabled. */
     public static final boolean DFLT_WRITE_THROTTLING_ENABLED = false;
@@ -297,6 +308,9 @@ public class DataStorageConfiguration implements Serializable {
 
     /** Compression level for WAL page snapshot records. */
     private Integer walPageCompressionLevel;
+
+    /** Default warm-up configuration. */
+    @Nullable private WarmUpConfiguration dfltWarmUpCfg;
 
     /**
      * Creates valid durable memory configuration with all default values.
@@ -575,21 +589,29 @@ public class DataStorageConfiguration implements Serializable {
     /**
      * Gets a max allowed size(in bytes) of WAL archives.
      *
-     * @return max size(in bytes) of WAL archive directory(always greater than 0).
+     * @return max size(in bytes) of WAL archive directory(greater than 0, or {@link #UNLIMITED_WAL_ARCHIVE} if
+     * WAL archive size is unlimited).
      */
     public long getMaxWalArchiveSize() {
+        if (maxWalArchiveSize == UNLIMITED_WAL_ARCHIVE)
+            return UNLIMITED_WAL_ARCHIVE;
+
         return maxWalArchiveSize <= 0 ? DFLT_WAL_ARCHIVE_MAX_SIZE : maxWalArchiveSize;
     }
 
     /**
      * Sets a max allowed size(in bytes) of WAL archives.
      *
-     * If value is not positive, {@link #DFLT_WAL_ARCHIVE_MAX_SIZE} will be used.
+     * If value is not positive or {@link #UNLIMITED_WAL_ARCHIVE}, {@link #DFLT_WAL_ARCHIVE_MAX_SIZE} will be used.
      *
      * @param walArchiveMaxSize max size(in bytes) of WAL archive directory.
      * @return {@code this} for chaining.
      */
     public DataStorageConfiguration setMaxWalArchiveSize(long walArchiveMaxSize) {
+        if (walArchiveMaxSize != 0 && walArchiveMaxSize != UNLIMITED_WAL_ARCHIVE)
+            A.ensure(walArchiveMaxSize > 0, "Max WAL archive size can be only greater than 0 " +
+                "or must be equal to " + UNLIMITED_WAL_ARCHIVE + " (to be unlimited)");
+
         this.maxWalArchiveSize = walArchiveMaxSize;
 
         return this;
@@ -608,10 +630,13 @@ public class DataStorageConfiguration implements Serializable {
      * Sets a number of WAL segments to work with. For performance reasons,
      * the whole WAL is split into files of fixed length called segments.
      *
-     * @param walSegments Number of WAL segments.
+     * @param walSegments Number of WAL segments. Value must be greater than 1.
      * @return {@code this} for chaining.
      */
     public DataStorageConfiguration setWalSegments(int walSegments) {
+        if (walSegments != 0)
+            A.ensure(walSegments > 1, "Number of WAL segments must be greater than 1.");
+
         this.walSegments = walSegments;
 
         return this;
@@ -730,7 +755,9 @@ public class DataStorageConfiguration implements Serializable {
      * hits will be tracked. Default value is {@link #DFLT_RATE_TIME_INTERVAL_MILLIS}.
      *
      * @return Time interval in milliseconds.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public long getMetricsRateTimeInterval() {
         return metricsRateTimeInterval;
     }
@@ -740,7 +767,9 @@ public class DataStorageConfiguration implements Serializable {
      * hits will be tracked.
      *
      * @param metricsRateTimeInterval Time interval in milliseconds.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public DataStorageConfiguration setMetricsRateTimeInterval(long metricsRateTimeInterval) {
         this.metricsRateTimeInterval = metricsRateTimeInterval;
 
@@ -752,7 +781,9 @@ public class DataStorageConfiguration implements Serializable {
      * Default value is {@link #DFLT_SUB_INTERVALS}.
      *
      * @return The number of sub-intervals for history tracking.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public int getMetricsSubIntervalCount() {
         return metricsSubIntervalCnt;
     }
@@ -761,7 +792,9 @@ public class DataStorageConfiguration implements Serializable {
      * Sets the number of sub-intervals to split the {@link #getMetricsRateTimeInterval()} into to track the update history.
      *
      * @param metricsSubIntervalCnt The number of sub-intervals for history tracking.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public DataStorageConfiguration setMetricsSubIntervalCount(int metricsSubIntervalCnt) {
         this.metricsSubIntervalCnt = metricsSubIntervalCnt;
 
@@ -1089,6 +1122,29 @@ public class DataStorageConfiguration implements Serializable {
         this.walPageCompressionLevel = walPageCompressionLevel;
 
         return this;
+    }
+
+    /**
+     * Sets default warm-up configuration.
+     *
+     * @param dfltWarmUpCfg Default warm-up configuration. To assign a special
+     *      warm-up configuration for a data region, use
+     *      {@link DataRegionConfiguration#setWarmUpConfiguration}.
+     * @return {@code this} for chaining.
+     */
+    public DataStorageConfiguration setDefaultWarmUpConfiguration(@Nullable WarmUpConfiguration dfltWarmUpCfg) {
+        this.dfltWarmUpCfg = dfltWarmUpCfg;
+
+        return this;
+    }
+
+    /**
+     * Gets default warm-up configuration.
+     *
+     * @return Default warm-up configuration.
+     */
+    @Nullable public WarmUpConfiguration getDefaultWarmUpConfiguration() {
+        return dfltWarmUpCfg;
     }
 
     /** {@inheritDoc} */

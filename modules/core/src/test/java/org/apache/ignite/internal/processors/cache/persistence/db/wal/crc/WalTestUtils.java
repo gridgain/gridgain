@@ -16,8 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db.wal.crc;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -27,11 +29,14 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.logger.NullLogger;
 import org.jetbrains.annotations.Nullable;
 
 import static java.nio.ByteBuffer.allocate;
@@ -43,7 +48,8 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.serial
  */
 public class WalTestUtils {
     /**
-     * Put zero CRC in one of records for the specified segment.
+     * Puts zero CRC to the one of a randomly choosen record for the specified segment if {@code random} is not null,
+     * otherwsise to the last element.
      *
      * @param desc WAL segment descriptor.
      * @param iterFactory Iterator factory for segment iterating.
@@ -52,7 +58,7 @@ public class WalTestUtils {
      * @throws IOException If IO exception.
      * @throws IgniteCheckedException If iterator failed.
      */
-    public static FileWALPointer corruptWalSegmentFile(
+    public static FileWALPointer corruptRandomWalRecord(
         FileDescriptor desc,
         IgniteWalIteratorFactory iterFactory,
         @Nullable Random random
@@ -70,18 +76,18 @@ public class WalTestUtils {
 
         FileWALPointer pointer = pointers.get(idxCorrupted);
 
-        corruptWalSegmentFile(desc, pointer);
+        corruptWalRecord(desc, pointer);
 
         return pointers.get(idxCorrupted - 1);
     }
 
     /**
-     * Put zero CRC in one of records for the specified segment.
+     * Puts zero CRC to record that associated with {@code pointer} for the specified segment.
      *
      * @param desc WAL segment descriptor.
      * @param pointer WAL pointer.
      */
-    public static void corruptWalSegmentFile(
+    public static void corruptWalRecord(
         FileDescriptor desc,
         FileWALPointer pointer
     ) throws IOException {
@@ -93,6 +99,78 @@ public class WalTestUtils {
         FileIOFactory ioFactory = new RandomAccessFileIOFactory();
         try (FileIO io = ioFactory.create(desc.file(), WRITE)) {
             io.write(zeroCrc32, crc32Off);
+
+            io.force(true);
+        }
+    }
+
+    /**
+     * Put zero CRC in one of records for the specified compressed segment.
+     *
+     * @param desc WAL segment descriptor.
+     * @param pointer WAL pointer.
+     */
+    public static void corruptWalRecordInCompressedSegment(
+        FileDescriptor desc,
+        FileWALPointer pointer
+    ) throws IOException, IgniteCheckedException {
+        File tmp = Files.createTempDirectory("temp-dir").toFile();
+
+        U.unzip(desc.file(), tmp, new NullLogger());
+
+        File walFile = tmp.listFiles()[0];
+
+        String walFileName = desc.file().getName().replace(FilePageStoreManager.ZIP_SUFFIX, "");
+
+        // reanaming is needed because unzip removes leading zeros from archived wal segment file name,
+        // but strict name pattern of wal file is needed for WALIterator
+        walFile.renameTo(new File(tmp.getPath() + "/" + walFileName));
+
+        walFile = tmp.listFiles()[0];
+
+        final IgniteWalIteratorFactory factory = new IgniteWalIteratorFactory(new NullLogger());
+
+        IgniteWalIteratorFactory.IteratorParametersBuilder builder = new IgniteWalIteratorFactory.IteratorParametersBuilder()
+            .filesOrDirs(walFile);
+
+        try (WALIterator stIt = factory.iterator(builder)) {
+            while (stIt.hasNextX()) {
+                IgniteBiTuple<WALPointer, WALRecord> next = stIt.nextX();
+
+                final WALRecord record = next.get2();
+
+                if (pointer.equals(record.position())) {
+                    corruptWalRecord(new FileDescriptor(walFile), (FileWALPointer)next.get1());
+                    break;
+                }
+            }
+        }
+
+        byte[] fileBytes = U.zip(Files.readAllBytes(walFile.toPath()));
+
+        Files.write(desc.file().toPath(), fileBytes);
+
+        walFile.delete();
+
+        tmp.delete();
+    }
+
+    /**
+     * Corrupts zip file. According to section 4.3.7 of zip file specification, this method just sets 0
+     * to the first 30 bytes of the first local file header to achieve corruption.
+     *
+     * @param desc File descriptor.
+     * @see <a href="https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT">Zip file specification </a>
+     */
+    public static void corruptCompressedFile(FileDescriptor desc) throws IOException {
+        int firstLocFileHdrOff = 0;
+
+        ByteBuffer firstLocFileHdr = allocate(30);
+
+        FileIOFactory ioFactory = new RandomAccessFileIOFactory();
+
+        try (FileIO io = ioFactory.create(desc.file(), WRITE)) {
+            io.write(firstLocFileHdr, firstLocFileHdrOff);
 
             io.force(true);
         }

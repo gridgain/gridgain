@@ -130,7 +130,6 @@ public abstract class CacheDistributedGetFutureAdapter<K, V>
     /** */
     protected Map<AffinityTopologyVersion, Map<Integer, Set<ClusterNode>>> invalidNodes = Collections.emptyMap();
 
-
     /**
      * @param cctx Context.
      * @param keys Keys.
@@ -182,7 +181,7 @@ public abstract class CacheDistributedGetFutureAdapter<K, V>
     /**
      * @param aclass Class.
      */
-    protected void initLogger(Class<?> aclass){
+    protected void initLogger(Class<?> aclass) {
         if (log == null)
             log = U.logger(cctx.kernalContext(), logRef, aclass);
     }
@@ -227,9 +226,8 @@ public abstract class CacheDistributedGetFutureAdapter<K, V>
      * @param topVer Topology version.
      */
     protected synchronized void addNodeAsInvalid(ClusterNode node, int part, AffinityTopologyVersion topVer) {
-        if (invalidNodes == Collections.<AffinityTopologyVersion, Map<Integer, Set<ClusterNode>>>emptyMap()) {
+        if (invalidNodes == Collections.<AffinityTopologyVersion, Map<Integer, Set<ClusterNode>>>emptyMap())
             invalidNodes = new HashMap<>();
-        }
 
         Map<Integer, Set<ClusterNode>> invalidNodeMap = invalidNodes.get(topVer);
 

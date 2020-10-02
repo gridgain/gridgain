@@ -72,6 +72,7 @@ import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
+import org.apache.ignite.internal.processors.platform.services.PlatformService;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridEmptyIterator;
@@ -243,7 +244,8 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
             if (!ctx.clientNode()) {
                 DiscoveryDataClusterState clusterState = ctx.state().clusterState();
 
-                boolean isLocLsnr = !clusterState.hasBaselineTopology() ||
+                boolean isLocLsnr = ctx.state().inMemoryClusterWithoutBlt() ||
+                    !clusterState.hasBaselineTopology() ||
                     CU.baselineNode(ctx.cluster().get().localNode(), clusterState);
 
                 // Register query listener and run it for local entries, if data is available locally.
@@ -581,12 +583,12 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
     @Override public IgniteInternalFuture<?> deployAll(ClusterGroup prj, Collection<ServiceConfiguration> cfgs) {
         if (prj == null)
             // Deploy to servers by default if no projection specified.
-            return deployAll(cfgs,  ctx.cluster().get().forServers().predicate());
+            return deployAll(cfgs, ctx.cluster().get().forServers().predicate());
         else if (prj.predicate() == F.<ClusterNode>alwaysTrue())
-            return deployAll(cfgs,  null);
+            return deployAll(cfgs, null);
         else
             // Deploy to predicate nodes by default.
-            return deployAll(cfgs,  prj.predicate());
+            return deployAll(cfgs, prj.predicate());
     }
 
     /**
@@ -1030,11 +1032,12 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
                 Service svc = ctx.service();
 
                 if (svc != null) {
-                    if (!srvcCls.isAssignableFrom(svc.getClass()))
+                    if (srvcCls.isAssignableFrom(svc.getClass()))
+                        return (T)svc;
+                    else if (!PlatformService.class.isAssignableFrom(svc.getClass())) {
                         throw new IgniteException("Service does not implement specified interface [svcItf=" +
-                            srvcCls.getName() + ", svcCls=" + svc.getClass().getName() + ']');
-
-                    return (T)svc;
+                                srvcCls.getName() + ", svcCls=" + svc.getClass().getName() + ']');
+                    }
                 }
             }
         }

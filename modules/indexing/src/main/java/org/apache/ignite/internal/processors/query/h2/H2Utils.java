@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -63,45 +64,47 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
-import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
 import org.apache.ignite.internal.util.GridStringBuilder;
-import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.engine.Session;
-import org.h2.jdbc.JdbcConnection;
-import org.h2.result.Row;
-import org.h2.result.SortOrder;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.util.JdbcUtils;
-import org.h2.util.LocalDateTimeUtils;
-import org.h2.util.Utils;
-import org.h2.value.DataType;
-import org.h2.value.Value;
-import org.h2.value.ValueArray;
-import org.h2.value.ValueBoolean;
-import org.h2.value.ValueByte;
-import org.h2.value.ValueBytes;
-import org.h2.value.ValueDate;
-import org.h2.value.ValueDecimal;
-import org.h2.value.ValueDouble;
-import org.h2.value.ValueFloat;
-import org.h2.value.ValueGeometry;
-import org.h2.value.ValueInt;
-import org.h2.value.ValueJavaObject;
-import org.h2.value.ValueLong;
-import org.h2.value.ValueNull;
-import org.h2.value.ValueShort;
-import org.h2.value.ValueString;
-import org.h2.value.ValueTime;
-import org.h2.value.ValueTimestamp;
-import org.h2.value.ValueUuid;
+import org.gridgain.internal.h2.engine.Constants;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.aggregate.AggregateData;
+import org.gridgain.internal.h2.jdbc.JdbcConnection;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.store.DataHandler;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.util.JdbcUtils;
+import org.gridgain.internal.h2.util.LocalDateTimeUtils;
+import org.gridgain.internal.h2.util.Utils;
+import org.gridgain.internal.h2.value.DataType;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueArray;
+import org.gridgain.internal.h2.value.ValueBoolean;
+import org.gridgain.internal.h2.value.ValueByte;
+import org.gridgain.internal.h2.value.ValueBytes;
+import org.gridgain.internal.h2.value.ValueDate;
+import org.gridgain.internal.h2.value.ValueDecimal;
+import org.gridgain.internal.h2.value.ValueDouble;
+import org.gridgain.internal.h2.value.ValueFloat;
+import org.gridgain.internal.h2.value.ValueGeometry;
+import org.gridgain.internal.h2.value.ValueInt;
+import org.gridgain.internal.h2.value.ValueJavaObject;
+import org.gridgain.internal.h2.value.ValueLong;
+import org.gridgain.internal.h2.value.ValueNull;
+import org.gridgain.internal.h2.value.ValueRow;
+import org.gridgain.internal.h2.value.ValueShort;
+import org.gridgain.internal.h2.value.ValueString;
+import org.gridgain.internal.h2.value.ValueTime;
+import org.gridgain.internal.h2.value.ValueTimestamp;
+import org.gridgain.internal.h2.value.ValueUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -147,7 +150,6 @@ public class H2Utils {
     /** Quotation character. */
     private static final char ESC_CH = '\"';
 
-
     /** Hash join max table size (not final for test). */
     private static int hashJoinMaxTableSize
         = IgniteSystemProperties.getInteger(IGNITE_HASH_JOIN_MAX_TABLE_SIZE, DFLT_HASH_JOIN_MAX_TABLE_SIZE);
@@ -159,19 +161,6 @@ public class H2Utils {
      */
     private static boolean enableHashJoin
         = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_HASH_JOIN, false);
-
-    /** Empty cursor. */
-    public static final GridCursor<H2Row> EMPTY_CURSOR = new GridCursor<H2Row>() {
-        /** {@inheritDoc} */
-        @Override public boolean next() {
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public H2Row get() {
-            return null;
-        }
-    };
 
     /**
      * @param c1 First column.
@@ -429,6 +418,14 @@ public class H2Utils {
      * @param c Connection.
      * @return Session.
      */
+    public static Session session(H2PooledConnection c) {
+        return session(c.connection());
+    }
+
+    /**
+     * @param c Connection.
+     * @return Session.
+     */
     public static Session session(Connection c) {
         return (Session)((JdbcConnection)c).getSession();
     }
@@ -439,7 +436,7 @@ public class H2Utils {
      * @param distributedJoins If distributed joins are enabled.
      * @param enforceJoinOrder Enforce join order of tables.
      */
-    public static void setupConnection(Connection conn, QueryContext qctx,
+    public static void setupConnection(H2PooledConnection conn, QueryContext qctx,
         boolean distributedJoins, boolean enforceJoinOrder) {
         assert qctx != null;
 
@@ -454,7 +451,7 @@ public class H2Utils {
      * @param lazy Lazy query execution mode.
      */
     public static void setupConnection(
-        Connection conn,
+        H2PooledConnection conn,
         H2QueryContext qctx,
         boolean distributedJoins,
         boolean enforceJoinOrder,
@@ -470,7 +467,7 @@ public class H2Utils {
 
         H2QueryContext oldCtx = s.getQueryContext();
 
-        assert oldCtx == null || oldCtx == qctx || oldCtx.queryMemoryTracker() == null : oldCtx;
+        assert oldCtx == null || oldCtx == qctx || s.memoryTracker() == null : oldCtx;
 
         s.setQueryContext(qctx);
     }
@@ -480,10 +477,19 @@ public class H2Utils {
      *
      * @param conn Connection to use.
      */
-    public static void resetSession(Connection conn) {
+    public static void resetSession(H2PooledConnection conn) {
         Session s = session(conn);
 
-        U.closeQuiet(s.queryMemoryTracker());
+        // TODO: GG-19120: remove this check.
+        if (s == null) // Connection has been closed concurrently.
+            return;
+
+        H2MemoryTracker tracker = s.memoryTracker();
+
+        if (tracker != null)
+            tracker.close();
+
+        s.memoryTracker(null);
         s.setQueryContext(null);
     }
 
@@ -522,8 +528,8 @@ public class H2Utils {
      */
     @SuppressWarnings("unchecked")
     public static QueryCursorImpl<List<?>> zeroCursor() {
-        QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(Collections.singletonList
-            (Collections.singletonList(0L)), null, false);
+        QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(Collections.singletonList(
+            Collections.singletonList(0L)), null, false, false);
 
         resCur.fieldsMeta(UPDATE_RESULT_META);
 
@@ -634,7 +640,7 @@ public class H2Utils {
             case Value.BYTES:
                 return ValueBytes.get((byte[])obj);
             case Value.JAVA_OBJECT:
-                return ValueJavaObject.getNoCopy(obj, null, null);
+                return ValueJavaObject.getNoCopy(obj, null, getHandler(coCtx.kernalContext()));
             case Value.ARRAY:
                 Object[] arr = (Object[])obj;
 
@@ -665,7 +671,7 @@ public class H2Utils {
      * @see Value
      * @see DataType#getTypeFromClass(Class)
      */
-    public static int getTypeFromClass(Class <?> x) {
+    public static int getTypeFromClass(Class<?> x) {
         if (x == null || Void.TYPE == x)
             return Value.NULL;
 
@@ -762,8 +768,13 @@ public class H2Utils {
     private static String dbTypeFromClass(Class<?> cls, int precision, int scale) {
         String dbType = H2DatabaseType.fromClass(cls).dBTypeAsString();
 
-        if (precision != -1 && dbType.equalsIgnoreCase(H2DatabaseType.VARCHAR.dBTypeAsString()))
-            return dbType + "(" + precision + ")";
+        if (precision != -1 && scale != -1 && dbType.equalsIgnoreCase(H2DatabaseType.DECIMAL.dBTypeAsString()))
+            return dbType + "(" + precision + ", " + scale + ')';
+
+        if (precision != -1 && (
+                dbType.equalsIgnoreCase(H2DatabaseType.VARCHAR.dBTypeAsString())
+                        || dbType.equalsIgnoreCase(H2DatabaseType.DECIMAL.dBTypeAsString())))
+            return dbType + '(' + precision + ')';
 
         return dbType;
     }
@@ -819,7 +830,7 @@ public class H2Utils {
                 (upper.startsWith("WHERE") || upper.startsWith("ORDER") || upper.startsWith("LIMIT") ?
                     " " : " WHERE ");
 
-        if(tableAlias != null)
+        if (tableAlias != null)
             t = tableAlias;
 
         qry = "SELECT " + t + "." + KEY_FIELD_NAME + ", " + t + "." + VAL_FIELD_NAME + from + qry;
@@ -1030,7 +1041,7 @@ public class H2Utils {
         // Check for joins between system views and normal tables.
         if (!F.isEmpty(tbls)) {
             for (QueryTable tbl : tbls) {
-                if (QueryUtils.SCHEMA_SYS.equals(tbl.schema())) {
+                if (QueryUtils.sysSchemaName().equals(tbl.schema())) {
                     if (!F.isEmpty(cacheIds)) {
                         throw new IgniteSQLException("Normal tables and system views cannot be used in the same query.",
                             IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
@@ -1050,20 +1061,19 @@ public class H2Utils {
      *
      * @return Array of key and affinity columns. Key's, if it possible, splitted into simple components.
      */
-    @SuppressWarnings("ZeroLengthArrayAllocation")
     @NotNull public static IndexColumn[] unwrapKeyColumns(GridH2Table tbl, IndexColumn[] idxCols) {
         ArrayList<IndexColumn> keyCols = new ArrayList<>();
 
         boolean isSql = tbl.rowDescriptor().tableDescriptor().sql();
 
-        if(!isSql)
+        if (!isSql)
             return idxCols;
 
         GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
 
         for (IndexColumn idxCol : idxCols) {
-            if(idxCol.column.getColumnId() == KEY_COL){
-                if(QueryUtils.isSqlType(type.keyClass())) {
+            if (idxCol.column.getColumnId() == KEY_COL) {
+                if (QueryUtils.isSqlType(type.keyClass())) {
                     int altKeyColId = tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
 
                     //Remap simple key to alternative column.
@@ -1118,5 +1128,63 @@ public class H2Utils {
      */
     public static QueryContext context(Connection c) {
         return (QueryContext)((Session)((JdbcConnection)c).getSession()).getQueryContext();
+    }
+
+    /**
+     * @param row Data row.
+     * @return Row size in bytes.
+     */
+    public static long rowSizeInBytes(Object[] row) {
+        if (row == null)
+            return 0;
+
+        long rowSize = Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_POINTER;
+
+        for (int i = 0; i < row.length; i++) {
+            Object o = row[i];
+
+            if (o instanceof Value)
+                rowSize += ((Value)row[i]).getMemory();
+            else if (o instanceof AggregateData)
+                rowSize += ((AggregateData)row[i]).getMemory();
+            else
+                rowSize += Constants.MEMORY_ROW;
+        }
+
+        return rowSize;
+    }
+
+    /**
+     * Calculates memory delta when old row was replaced with a new one.
+     *
+     * @param distinctRowKey Distinct row key.
+     * @param oldRow Old row.
+     * @param newRow New row.
+     * @return Memory delta.
+     */
+    public static long calculateMemoryDelta(ValueRow distinctRowKey, Object[] oldRow, Object[] newRow) {
+        long oldRowSize = rowSizeInBytes(oldRow);
+        long newRowSize = rowSizeInBytes(newRow);
+
+        long memory = newRowSize - oldRowSize;
+
+        if (distinctRowKey != null && (oldRow == null || newRow == null)) {
+            if (oldRow == null)
+                memory += distinctRowKey.getMemory();
+            else
+                memory -= distinctRowKey.getMemory();
+        }
+
+        return memory;
+    }
+
+    /**
+     * @param ctx Kernal context/
+     * @return Data handler.
+     */
+    public static DataHandler getHandler(GridKernalContext ctx) {
+        GridQueryIndexing indexing = ctx.query().getIndexing();
+
+        return indexing instanceof IgniteH2Indexing ? ((IgniteH2Indexing)indexing).dataHandler() : null;
     }
 }

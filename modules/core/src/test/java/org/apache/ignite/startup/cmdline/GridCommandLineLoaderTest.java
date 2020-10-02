@@ -54,11 +54,11 @@ public class GridCommandLineLoaderTest extends GridCommonAbstractTest {
 
         IgniteProcessProxy proxy = new IgniteProcessProxy(
             new IgniteConfiguration().setIgniteInstanceName("fake"), log, null) {
-                @Override protected String igniteNodeRunnerClassName() throws Exception {
+                @Override protected String igniteNodeRunnerClassName() {
                     return CommandLineStartup.class.getCanonicalName();
                 }
 
-                @Override protected String params(IgniteConfiguration cfg, boolean resetDiscovery) throws Exception {
+                @Override protected String params(IgniteConfiguration cfg, boolean resetDiscovery) {
                     return path;
                 }
             };

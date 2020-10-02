@@ -412,8 +412,11 @@ public class TcpDiscoverySpiReconnectDelayTest extends GridCommonAbstractTest {
         @Override protected void writeToSocket(TcpDiscoveryAbstractMessage msg, Socket sock, int res,
             long timeout) throws IOException {
 
-            if (msg instanceof TcpDiscoveryJoinRequestMessage && failJoinReqRes.getAndDecrement() > 0)
+            if (msg instanceof TcpDiscoveryJoinRequestMessage && failJoinReqRes.getAndDecrement() > 0) {
                 res = RES_WAIT;
+
+                log.info("Replying with WAIT to join request, requests to wait left: " + failJoinReqRes.get());
+            }
 
             super.writeToSocket(msg, sock, res, timeout);
         }

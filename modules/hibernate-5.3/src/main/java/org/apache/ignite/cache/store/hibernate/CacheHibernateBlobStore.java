@@ -81,9 +81,9 @@ import org.jetbrains.annotations.Nullable;
 public class CacheHibernateBlobStore<K, V> extends CacheStoreAdapter<K, V> {
     /**
      * Default connection URL
-     * (value is <tt>jdbc:h2:mem:hibernateCacheStore;DB_CLOSE_DELAY=-1;DEFAULT_LOCK_TIMEOUT=5000</tt>).
+     * (value is <tt>jdbc:gg-h2:mem:hibernateCacheStore;DB_CLOSE_DELAY=-1;DEFAULT_LOCK_TIMEOUT=5000</tt>).
      */
-    public static final String DFLT_CONN_URL = "jdbc:h2:mem:hibernateCacheStore;DB_CLOSE_DELAY=-1;" +
+    public static final String DFLT_CONN_URL = "jdbc:gg-h2:mem:hibernateCacheStore;DB_CLOSE_DELAY=-1;" +
         "DEFAULT_LOCK_TIMEOUT=5000";
 
     /** Default show SQL property value (value is <tt>true</tt>). */

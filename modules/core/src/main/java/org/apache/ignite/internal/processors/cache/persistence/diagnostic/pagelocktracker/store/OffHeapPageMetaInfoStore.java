@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.store;
 
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageMetaInfoStore;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager.MemoryCalculator;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.MemoryCalculator;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,50 +27,37 @@ import static org.apache.ignite.internal.processors.cache.persistence.diagnostic
  *
  */
 public class OffHeapPageMetaInfoStore implements PageMetaInfoStore {
-    /**
-     *
-     */
+    /** */
     private static final long OVERHEAD_SIZE = 16 + 4 + 4 + 8 + 8;
-    /**
-     *
-     */
+
+    /** */
     private static final int PAGE_ID_OFFSET = 0;
-    /**
-     *
-     */
+
+    /** */
     private static final int PAGE_HEADER_ADDRESS_OFFSET = 8;
-    /**
-     *
-     */
+
+    /** */
     private static final int PAGE_ADDRESS_OFFSET = 16;
-    /**
-     *
-     */
+
+    /** */
     private static final int PAGE_META_OFFSET = 24;
-    /**
-     *
-     */
+
+    /** */
     private static final int ITEM_SIZE = 4;
-    /**
-     *
-     */
+
+    /** */
     private final int size;
-    /**
-     *
-     */
+
+    /** */
     private final int capacity;
-    /**
-     *
-     */
+
+    /** */
     private final long ptr;
-    /**
-     *
-     */
+
+    /** */
     private final MemoryCalculator memCalc;
 
-    /**
-     *
-     */
+    /** */
     public OffHeapPageMetaInfoStore(int capacity, @Nullable MemoryCalculator memCalc) {
         this.capacity = capacity;
         this.size = this.capacity * (8 * ITEM_SIZE);
@@ -154,13 +141,11 @@ public class OffHeapPageMetaInfoStore implements PageMetaInfoStore {
         return GridUnsafe.getLong(offset(itemIdx) + PAGE_ADDRESS_OFFSET);
     }
 
-    /**
-     *
-     */
+    /** */
     private long offset(long itemIdx) {
         long offset = ptr + itemIdx * 8 * ITEM_SIZE;
 
-        assert offset >= ptr && offset <= ((ptr + size) - 8 * ITEM_SIZE) :"offset=" + (offset - ptr) + ", size=" + size;
+        assert offset >= ptr && offset <= ((ptr + size) - 8 * ITEM_SIZE) : "offset=" + (offset - ptr) + ", size=" + size;
 
         return offset;
     }

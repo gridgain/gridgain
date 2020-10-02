@@ -23,13 +23,19 @@ import org.apache.ignite.internal.metric.CacheMetricsAddRemoveTest;
 import org.apache.ignite.internal.metric.IoStatisticsCachePersistenceSelfTest;
 import org.apache.ignite.internal.metric.IoStatisticsCacheSelfTest;
 import org.apache.ignite.internal.metric.IoStatisticsMetricsLocalMXBeanImplSelfTest;
+import org.apache.ignite.internal.metric.IoStatisticsMetricsLocalMxBeanCacheGroupsTest;
 import org.apache.ignite.internal.metric.IoStatisticsSelfTest;
-import org.apache.ignite.internal.metric.JmxMetricExporterSpiTest;
+import org.apache.ignite.internal.metric.JmxExporterSpiTest;
 import org.apache.ignite.internal.metric.LogExporterSpiTest;
+import org.apache.ignite.internal.metric.MetricsConfigurationTest;
 import org.apache.ignite.internal.metric.MetricsSelfTest;
 import org.apache.ignite.internal.metric.ReadMetricsOnNodeStartupTest;
+import org.apache.ignite.internal.metric.SystemViewComputeJobTest;
+import org.apache.ignite.internal.metric.SystemViewSelfTest;
 import org.apache.ignite.internal.processors.cache.CachePutIfAbsentTest;
+import org.apache.ignite.internal.processors.cache.GridCacheDataTypesCoverageTest;
 import org.apache.ignite.internal.processors.cache.GridCacheLongRunningTransactionDiagnosticsTest;
+import org.apache.ignite.internal.processors.cache.GridCacheVersionGenerationWithCacheStorageTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGetCustomCollectionsSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheLoadRebalanceEvictionSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheAtomicPrimarySyncBackPressureTest;
@@ -41,21 +47,25 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePrimar
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCacheWriteSynchronizationModesMultithreadedTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConcurrentRemoveObjectsTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.HistoricalRebalanceRemovesConsistencyTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.CacheRemoveWithTombstonesFailoverTest;
 import org.apache.ignite.internal.processors.cache.transactions.PartitionUpdateCounterTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCachePartitionConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxDataConsistencyOnCommitFailureTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyOptimisticHistoryRebalanceTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyOptimisticTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyVolatileRebalanceTest;
-import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryTwoBackupsFailAllHistoryRebalanceTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryOneBackupHistoryRebalanceTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryOneBackupTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryTwoBackupsFailAllHistoryRebalanceTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryTwoBackupsFailAllTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryTwoBackupsHistoryRebalanceTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryTwoBackupsTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStatePutTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateTwoPrimaryTwoBackupsTest;
-import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateWithFilterTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
@@ -110,21 +120,44 @@ public class IgniteCacheTestSuite9 {
         GridTestUtils.addTestIfNeeded(suite, TxPartitionCounterStateConsistencyHistoryRebalanceTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, TxPartitionCounterStateConsistencyVolatileRebalanceTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, TxCrossCachePartitionConsistencyTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, TxPartitionCounterStateConsistencyOptimisticTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, TxPartitionCounterStateConsistencyOptimisticHistoryRebalanceTest.class, ignoredTests);
 
-        // IO statistics
+        // IO statistics.
         GridTestUtils.addTestIfNeeded(suite, IoStatisticsCachePersistenceSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IoStatisticsCacheSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IoStatisticsSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IoStatisticsMetricsLocalMXBeanImplSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, MetricsSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MetricsConfigurationTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, SystemViewSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, SystemViewComputeJobTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheMetricsAddRemoveTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, JmxMetricExporterSpiTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, JmxExporterSpiTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, LogExporterSpiTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ReadMetricsOnNodeStartupTest.class, ignoredTests);
+
+        // Compatibility statistics tests.
+        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsManagerSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanImplSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanImplIllegalArgumentsTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCacheSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCachePersistenceSelfTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, GridCacheLongRunningTransactionDiagnosticsTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, FailBackupOnAtomicOperationTest.class, ignoredTests);
+
+        // Data Types coverage
+        GridTestUtils.addTestIfNeeded(suite, GridCacheDataTypesCoverageTest.class, ignoredTests);
+
+        // Grid Cache Version generation coverage.
+        GridTestUtils.addTestIfNeeded(suite, GridCacheVersionGenerationWithCacheStorageTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, HistoricalRebalanceRemovesConsistencyTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesLoadTest.class, ignoredTests);

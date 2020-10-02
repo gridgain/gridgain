@@ -18,27 +18,42 @@ package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BytesInlineIndexColumn;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.command.dml.AllColumnsForPlan;
-import org.h2.engine.Session;
-import org.h2.index.IndexType;
-import org.h2.result.SortOrder;
-import org.h2.table.IndexColumn;
-import org.h2.table.Table;
-import org.h2.table.TableFilter;
+import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.Table;
+import org.gridgain.internal.h2.table.TableFilter;
 
 /**
  * H2 tree index base.
  */
 public abstract class H2TreeIndexBase extends GridH2IndexBase {
+
     /** Default value for {@code IGNITE_MAX_INDEX_PAYLOAD_SIZE} */
-    static final int IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT = 10;
+    static final int IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT = 64;
+
+    /**
+     * Default sql index size for types with variable length (such as String or byte[]).
+     * Note that effective length will be lower, because 3 bytes will be taken for the inner representation of variable type.
+     */
+    static final int IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE = 10;
+
+    /** SQL pattern for the String with defined length. */
+    static final Pattern STRING_WITH_LENGTH_SQL_PATTERN = Pattern.compile("\\w+\\((\\d+)\\)");
 
     /**
      * Constructor.
@@ -53,50 +68,6 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
     }
 
     /**
-     * @param affinityKey {@code true} for affinity key.
-     * @param cacheName Cache name.
-     * @param idxName Index name.
-     * @param log Logger.
-     * @param pk PK flag.
-     * @param tbl table.
-     * @param cols Columns array.
-     * @return List of {@link InlineIndexHelper} objects.
-     */
-    static List<InlineIndexHelper> getAvailableInlineColumns(boolean affinityKey, String cacheName,
-        String idxName, IgniteLogger log, boolean pk, Table tbl, IndexColumn[] cols) {
-        List<InlineIndexHelper> res = new ArrayList<>();
-
-        for (IndexColumn col : cols) {
-            if (!InlineIndexHelper.AVAILABLE_TYPES.contains(col.column.getType().getValueType())) {
-                String idxType = pk ? "PRIMARY KEY" : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
-
-                U.warn(log, "Column cannot be inlined into the index because it's type doesn't support inlining, " +
-                    "index access may be slow due to additional page reads (change column type if possible) " +
-                    "[cacheName=" + cacheName +
-                    ", tableName=" + tbl.getName() +
-                    ", idxName=" + idxName +
-                    ", idxType=" + idxType +
-                    ", colName=" + col.columnName +
-                    ", columnType=" + InlineIndexHelper.nameTypeBycode(col.column.getType().getValueType()) + ']'
-                );
-
-                break;
-            }
-
-            InlineIndexHelper idx = new InlineIndexHelper(
-                col.columnName,
-                col.column.getType().getValueType(),
-                col.column.getColumnId(),
-                col.sortType,
-                tbl.getCompareMode());
-
-            res.add(idx);
-        }
-
-        return res;
-    }
-
-    /**
      * @return Inline size.
      */
     public abstract int inlineSize();
@@ -107,7 +78,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
         long rowCnt = getRowCountApproximation(ses);
 
-        double baseCost = getCostRangeIndex(masks, rowCnt, filters, filter, sortOrder, false, allColumnsSet);
+        double baseCost = costRangeIndex(masks, rowCnt, filters, filter, sortOrder, false, allColumnsSet);
 
         int mul = getDistributedMultiplier(ses, filters, filter);
 
@@ -125,34 +96,91 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
      * @param maxInlineSize Max inline size from cache config.
      * @return Inline size.
      */
-    static int computeInlineSize(List<InlineIndexHelper> inlineIdxs, int cfgInlineSize, int maxInlineSize) {
-        int propSize = maxInlineSize == -1 ? IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
-            IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT) : maxInlineSize;
-
+    static int computeInlineSize(List<InlineIndexColumn> inlineIdxs, int cfgInlineSize, int maxInlineSize) {
         if (cfgInlineSize == 0)
             return 0;
 
         if (F.isEmpty(inlineIdxs))
             return 0;
 
-        if (cfgInlineSize == -1) {
-            if (propSize == 0)
-                return 0;
+        if (cfgInlineSize != -1)
+            return Math.min(PageIO.MAX_PAYLOAD_SIZE, cfgInlineSize);
 
-            int size = 0;
+        int propSize = maxInlineSize == -1 ? IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
+            IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT) : maxInlineSize;
 
-            for (InlineIndexHelper idxHelper : inlineIdxs) {
-                if (idxHelper.size() <= 0) {
-                    size = propSize;
-                    break;
+        if (propSize == 0)
+            return 0;
+
+        int size = 0;
+
+        for (InlineIndexColumn idxHelper : inlineIdxs) {
+            // for variable types - default variable size, for other types - type's size + type marker
+            int sizeInc = idxHelper.size() < 0 ? IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE : idxHelper.size() + 1;
+
+            if (idxHelper instanceof StringInlineIndexColumn || idxHelper instanceof BytesInlineIndexColumn) {
+                String sql = idxHelper.columnSql();
+
+                if (sql != null) {
+                    Matcher m = STRING_WITH_LENGTH_SQL_PATTERN.matcher(sql);
+
+                    if (m.find())
+                        // if column has defined length we use it as default + 3 bytes for the inner info of the variable type
+                        sizeInc = Integer.parseInt(m.group(1)) + 3;
                 }
-                // 1 byte type + size
-                size += idxHelper.size() + 1;
             }
 
-            return Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
+            size += sizeInc;
+
+            // total index size is limited by the property
+            if (size > propSize)
+                size = propSize;
         }
-        else
-            return Math.min(PageIO.MAX_PAYLOAD_SIZE, cfgInlineSize);
+
+        return Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
+    }
+
+    /**
+     * Creates inline helper list for provided column list.
+     *
+     * @param affinityKey Affinity key.
+     * @param cacheName Cache name.
+     * @param idxName Index name.
+     * @param log Logger.
+     * @param pk Pk.
+     * @param tbl Table.
+     * @param cols Columns.
+     * @param factory Factory.
+     * @param inlineObjHashSupported Whether hash inlining is supported or not.
+     * @return List of {@link InlineIndexColumn} objects.
+     */
+    static List<InlineIndexColumn> getAvailableInlineColumns(boolean affinityKey, String cacheName,
+        String idxName, IgniteLogger log, boolean pk, Table tbl, IndexColumn[] cols,
+        InlineIndexColumnFactory factory, boolean inlineObjHashSupported) {
+        ArrayList<InlineIndexColumn> res = new ArrayList<>(cols.length);
+
+        for (IndexColumn col : cols) {
+            if (!InlineIndexColumnFactory.typeSupported(col.column.getType().getValueType())) {
+                String idxType = pk ? "PRIMARY KEY" : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
+
+                U.warn(log, "Column cannot be inlined into the index because it's type doesn't support inlining, " +
+                    "index access may be slow due to additional page reads (change column type if possible) " +
+                    "[cacheName=" + cacheName +
+                    ", tableName=" + tbl.getName() +
+                    ", idxName=" + idxName +
+                    ", idxType=" + idxType +
+                    ", colName=" + col.columnName +
+                    ", columnType=" + InlineIndexColumnFactory.nameTypeByCode(col.column.getType().getValueType()) + ']'
+                );
+
+                res.trimToSize();
+
+                break;
+            }
+
+            res.add(factory.createInlineHelper(col.column, inlineObjHashSupported));
+        }
+
+        return res;
     }
 }

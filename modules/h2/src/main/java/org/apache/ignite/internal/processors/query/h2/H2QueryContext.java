@@ -20,8 +20,4 @@ package org.apache.ignite.internal.processors.query.h2;
  * H2 query context.
  */
 public interface H2QueryContext {
-    /**
-     * @return Query memory tracker.
-     */
-    H2MemoryTracker queryMemoryTracker();
 }

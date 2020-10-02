@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -44,6 +45,7 @@ import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.metric.LongMetric;
 
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
@@ -68,6 +70,9 @@ public class CacheGroupMetricsImpl {
     /** */
     private final LongMetric sparseStorageSize;
 
+    /** Number of local partitions initialized on current node. */
+    private final AtomicLongMetric initLocalPartitionsNumber;
+
     /** Interface describing a predicate of two integers. */
     @FunctionalInterface
     private interface IntBiPredicate {
@@ -88,7 +93,7 @@ public class CacheGroupMetricsImpl {
 
         DataStorageConfiguration dsCfg = ctx.shared().kernalContext().config().getDataStorageConfiguration();
 
-        boolean persistentEnabled = CU.isPersistentCache(cacheCfg, dsCfg);
+        boolean persistentEnabled = !ctx.shared().kernalContext().clientNode() && CU.isPersistentCache(cacheCfg, dsCfg);
 
         MetricRegistry mreg = ctx.shared().kernalContext().metric().registry(metricGroupName());
 
@@ -104,6 +109,8 @@ public class CacheGroupMetricsImpl {
 
         idxBuildCntPartitionsLeft = mreg.longMetric("IndexBuildCountPartitionsLeft",
             "Number of partitions need processed for finished indexes create or rebuilding.");
+
+        initLocalPartitionsNumber = mreg.longMetric("InitializedLocalPartitionsNumber", "Number of local partitions initialized on current node.");
 
         DataRegion region = ctx.dataRegion();
 
@@ -180,16 +187,27 @@ public class CacheGroupMetricsImpl {
         return idxBuildCntPartitionsLeft.value();
     }
 
-    /** Set number of partitions need processed for finished indexes create or rebuilding. */
-    public void setIndexBuildCountPartitionsLeft(long idxBuildCntPartitionsLeft) {
-        this.idxBuildCntPartitionsLeft.value(idxBuildCntPartitionsLeft);
+    /** Decrement number of partitions need processed for finished indexes create or rebuilding. */
+    public void decrementIndexBuildCountPartitionsLeft() {
+        idxBuildCntPartitionsLeft.decrement();
     }
 
     /**
-     * Decrement number of partitions need processed for finished indexes create or rebuilding.
+     * Add number of partitions before processed indexes create or rebuilding.
+     * @param partitions Count partition for add.
      */
-    public void decrementIndexBuildCountPartitionsLeft() {
-        idxBuildCntPartitionsLeft.decrement();
+    public void addIndexBuildCountPartitionsLeft(long partitions) {
+        idxBuildCntPartitionsLeft.add(partitions);
+    }
+
+    /** Increments number of local partitions initialized on current node. */
+    public void incrementInitializedLocalPartitions() {
+        initLocalPartitionsNumber.increment();
+    }
+
+    /** Decrements number of local partitions initialized on current node. */
+    public void decrementInitializedLocalPartitions() {
+        initLocalPartitionsNumber.decrement();
     }
 
     /** */
@@ -230,7 +248,7 @@ public class CacheGroupMetricsImpl {
      *
      * @param pred Predicate.
      */
-    private int numberOfPartitionCopies(IntBiPredicate pred) {
+    private int numberOfPartitionCopies(boolean loc, BiFunction<Integer, Integer, Integer> conv) {
         GridDhtPartitionFullMap partFullMap = ctx.topology().partitionMap(false);
 
         if (partFullMap == null)
@@ -241,6 +259,10 @@ public class CacheGroupMetricsImpl {
         int res = -1;
 
         for (int part = 0; part < parts; part++) {
+            if (loc && (ctx.topology().localPartition(part) == null ||
+                ctx.topology().localPartition(part).state() != GridDhtPartitionState.OWNING))
+                continue;
+
             int cnt = 0;
 
             for (Map.Entry<UUID, GridDhtPartitionMap> entry : partFullMap.entrySet()) {
@@ -248,8 +270,10 @@ public class CacheGroupMetricsImpl {
                     cnt++;
             }
 
-            if (part == 0 || pred.apply(res, cnt))
+            if (res == -1)
                 res = cnt;
+
+            res = conv.apply(res, cnt);
         }
 
         return res;
@@ -257,12 +281,17 @@ public class CacheGroupMetricsImpl {
 
     /** */
     public int getMinimumNumberOfPartitionCopies() {
-        return numberOfPartitionCopies((targetVal, nextVal) -> nextVal < targetVal);
+        return numberOfPartitionCopies(false, Math::min);
     }
 
     /** */
     public int getMaximumNumberOfPartitionCopies() {
-        return numberOfPartitionCopies((targetVal, nextVal) -> nextVal > targetVal);
+        return numberOfPartitionCopies(false, Math::max);
+    }
+
+    /** */
+    public int getLocalNodeMinimumNumberOfPartitionCopies() {
+        return numberOfPartitionCopies(true, Math::min);
     }
 
     /**
@@ -440,12 +469,16 @@ public class CacheGroupMetricsImpl {
 
     /** */
     public long getTotalAllocatedPages() {
-        return grpPageAllocationTracker.value();
+        return ctx.shared().kernalContext().clientNode() ?
+            0 :
+            grpPageAllocationTracker.value();
     }
 
     /** */
     public long getTotalAllocatedSize() {
-        return getTotalAllocatedPages() * ctx.dataRegion().pageMemory().pageSize();
+        return ctx.shared().kernalContext().clientNode() ?
+            0 :
+            getTotalAllocatedPages() * ctx.dataRegion().pageMemory().pageSize();
     }
 
     /** */
@@ -466,6 +499,14 @@ public class CacheGroupMetricsImpl {
 
     /** Removes all metric for cache group. */
     public void remove() {
+        if (ctx.shared().kernalContext().isStopping())
+            return;
+
+        if (ctx.config().getNearConfiguration() != null)
+            ctx.shared().kernalContext().metric().remove(cacheMetricsRegistryName(ctx.config().getName(), true));
+
+        ctx.shared().kernalContext().metric().remove(cacheMetricsRegistryName(ctx.config().getName(), false));
+
         ctx.shared().kernalContext().metric().remove(metricGroupName());
     }
 

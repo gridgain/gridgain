@@ -117,13 +117,6 @@ public abstract class GridNearCacheAdapter<K, V> extends GridDistributedCacheAda
     public abstract GridDhtCacheAdapter<K, V> dht();
 
     /** {@inheritDoc} */
-    @Override public void forceKeyCheck() {
-        super.forceKeyCheck();
-
-        dht().forceKeyCheck();
-    }
-
-    /** {@inheritDoc} */
     @Override public void onReconnected() {
         map = new GridCacheLocalConcurrentMap(
             ctx,
@@ -385,7 +378,7 @@ public abstract class GridNearCacheAdapter<K, V> extends GridDistributedCacheAda
         assert configuration().getNearConfiguration() != null;
 
         if (ctx.affinityNode()) {
-            GridCacheVersion obsoleteVer = ctx.versions().next();
+            GridCacheVersion obsoleteVer = nextVersion();
 
             List<GridCacheClearAllRunnable<K, V>> dhtJobs = dht().splitClearLocally(srv, near, readers);
 

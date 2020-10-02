@@ -25,6 +25,7 @@ import java.util.StringTokenizer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.apache.ignite.internal.util.typedef.F;
@@ -50,7 +51,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private String url;
 
     /** Addresses. */
-    private HostAndPortRange [] addrs;
+    private HostAndPortRange[] addrs;
 
     /** Schema name. Hidden property. Is used to set default schema name part of the URL. */
     private StringProperty schema = new StringProperty(PROP_SCHEMA,
@@ -129,9 +130,14 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private StringProperty sslProtocol = new StringProperty("sslProtocol",
         "SSL protocol name", null, null, false, null);
 
+    /** SSL: Supported SSL cipher suites. */
+    private StringProperty sslCipherSuites = new StringProperty("sslCipherSuites",
+        "Supported SSL ciphers", null,
+        null, false, null);
+
     /** SSL: Key algorithm name. */
     private StringProperty sslKeyAlgorithm = new StringProperty("sslKeyAlgorithm",
-        "SSL key algorithm name", "SunX509", null, false, null);
+        "SSL key algorithm name", null, null, false, null);
 
     /** SSL: Client certificate key store url. */
     private StringProperty sslClientCertificateKeyStoreUrl =
@@ -175,6 +181,10 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private StringProperty sslFactory = new StringProperty("sslFactory",
         "Custom class name that implements Factory<SSLSocketFactory>", null, null, false, null);
 
+    /** Custom class name that implements Factory&lt;Map&lt;String, String&gt;&gt; which returns user attributes. */
+    private StringProperty userAttrsFactory = new StringProperty("userAttributesFactory",
+        "Custom class name that implements Factory<Map<String, String>> (user attributes)", null, null, false, null);
+
     /** User name to authenticate the client on the server side. */
     private StringProperty user = new StringProperty(
         "user", "User name to authenticate the client on the server side", null, null, false, null);
@@ -188,10 +198,10 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         "Whether data page scan for queries is allowed. If not specified, server defines the default behaviour.",
         null, false);
 
-    /** Affinity awareness flag. */
-    private BooleanProperty affinityAwareness = new BooleanProperty(
-        "affinityAwareness",
-        "Whether jdbc thin affinity awareness is enabled.",
+    /** Partition awareness flag. */
+    private BooleanProperty partitionAwareness = new BooleanProperty(
+        "partitionAwareness",
+        "Whether jdbc thin Partition Awareness is enabled.",
         false, false);
 
     /** Update batch size (the size of internal batches are used for INSERT/UPDATE/DELETE operation). */
@@ -200,15 +210,15 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
             "Set to 1 to prevent deadlock on update where keys sequence are different " +
             "in several concurrent updates.", null, false, 1, Integer.MAX_VALUE);
 
-    /** Affinity awareness SQL cache size. */
-    private IntegerProperty affinityAwarenessSQLCacheSize = new IntegerProperty("affinityAwarenessSQLCacheSize",
-        "The size of sql cache that is used within affinity awareness optimization.",
+    /** Partition awareness SQL cache size. */
+    private IntegerProperty partitionAwarenessSQLCacheSize = new IntegerProperty("partitionAwarenessSQLCacheSize",
+        "The size of sql cache that is used within Partition Awareness optimization.",
         1_000, false, 1, Integer.MAX_VALUE);
 
-    /** Affinity awareness partition distributions cache size. */
-    private IntegerProperty affinityAwarenessPartDistributionsCacheSize = new IntegerProperty(
-        "affinityAwarenessPartitionDistributionsCacheSize",
-        "The size of partition distributions cache that is used within affinity awareness optimization.",
+    /** Partition awareness partition distributions cache size. */
+    private IntegerProperty partitionAwarenessPartDistributionsCacheSize = new IntegerProperty(
+        "partitionAwarenessPartitionDistributionsCacheSize",
+        "The size of partition distributions cache that is used within Partition Awareness optimization.",
         1_000, false, 1, Integer.MAX_VALUE);
 
     /** Query memory limit. */
@@ -220,7 +230,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private IntegerProperty qryTimeout = new IntegerProperty("queryTimeout",
         "Sets the number of seconds the driver will wait for a <code>Statement</code> object to execute." +
             " Zero means there is no limits.",
-        0L, false, 0, Integer.MAX_VALUE);
+        null, false, 0, Integer.MAX_VALUE);
 
     /** JDBC connection timeout. */
     private IntegerProperty connTimeout = new IntegerProperty("connectionTimeout",
@@ -228,24 +238,58 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
             " Zero means there is no limits.",
         0L, false, 0, Integer.MAX_VALUE);
 
+    // TODO: GG-25595 remove when version 8.7.X support ends
+    /** */
+    private BooleanProperty limitedV2_8_0Enabled = new BooleanProperty("limitedV2_8_0Enabled",
+        "Whether to use limited protocol V2.8.0 or full. " +
+            "Note: this property was introduced to get around a compatibility problem which appears when newer" +
+            " clients try to fall back to protocol V2.8.0. Should not be used in general case.", false, false);
+
+    /** Disabled features. */
+    private StringProperty disabledFeatures = new StringProperty("disabledFeatures",
+        "Sets enumeration of features to force disable its.", null, null, false, new PropertyValidator() {
+        @Override public void validate(String val) throws SQLException {
+            if (val == null)
+                return;
+
+            String[] features = val.split("\\W+");
+
+            for (String f : features) {
+                try {
+                    JdbcThinFeature.valueOf(f.toUpperCase());
+                }
+                catch (IllegalArgumentException e) {
+                    throw new SQLException("Unknown feature: " + f);
+                }
+            }
+        }
+    });
+
+    /** Keep binary objects in binary form. */
+    private BooleanProperty keepBinary = new BooleanProperty("keepBinary",
+        "Whether to keep binary objects in binary form.", false, false);
 
     /** Properties array. */
-    private final ConnectionProperty [] propsArray = {
+    private final ConnectionProperty[] propsArray = {
         distributedJoins, enforceJoinOrder, collocated, replicatedOnly, autoCloseServerCursor,
         tcpNoDelay, lazy, socketSendBuffer, socketReceiveBuffer, skipReducerOnUpdate, nestedTxMode,
-        sslMode, sslProtocol, sslKeyAlgorithm,
+        sslMode, sslCipherSuites, sslProtocol, sslKeyAlgorithm,
         sslClientCertificateKeyStoreUrl, sslClientCertificateKeyStorePassword, sslClientCertificateKeyStoreType,
         sslTrustCertificateKeyStoreUrl, sslTrustCertificateKeyStorePassword, sslTrustCertificateKeyStoreType,
         sslTrustAll, sslFactory,
+        userAttrsFactory,
         user, passwd,
         dataPageScanEnabled,
-        affinityAwareness,
+        partitionAwareness,
         updateBatchSize,
-        affinityAwarenessSQLCacheSize,
-        affinityAwarenessPartDistributionsCacheSize,
+        partitionAwarenessSQLCacheSize,
+        partitionAwarenessPartDistributionsCacheSize,
         qryMaxMemory,
         qryTimeout,
-        connTimeout
+        connTimeout,
+        limitedV2_8_0Enabled,
+        disabledFeatures,
+        keepBinary
     };
 
     /** {@inheritDoc} */
@@ -268,7 +312,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
 
             StringBuilder sbUrl = new StringBuilder(JdbcThinUtils.URL_PREFIX);
 
-            HostAndPortRange [] addrs = getAddresses();
+            HostAndPortRange[] addrs = getAddresses();
 
             for (int i = 0; i < addrs.length; i++) {
                 if (i > 0)
@@ -422,6 +466,16 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
+    @Override public String getSslCipherSuites() {
+        return sslCipherSuites.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSslCipherSuites(String sslCipherSuites) {
+        this.sslCipherSuites.setValue(sslCipherSuites);
+    }
+
+    /** {@inheritDoc} */
     @Override public String getSslKeyAlgorithm() {
         return sslKeyAlgorithm.value();
     }
@@ -552,13 +606,13 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isAffinityAwareness() {
-        return affinityAwareness.value();
+    @Override public boolean isPartitionAwareness() {
+        return partitionAwareness.value();
     }
 
     /** {@inheritDoc} */
-    @Override public void setAffinityAwareness(boolean affinityAwareness) {
-        this.affinityAwareness.setValue(affinityAwareness);
+    @Override public void setPartitionAwareness(boolean partitionAwareness) {
+        this.partitionAwareness.setValue(partitionAwareness);
     }
 
     /** {@inheritDoc} */
@@ -572,26 +626,26 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
-    @Override public int getAffinityAwarenessSqlCacheSize() {
-        return affinityAwarenessSQLCacheSize.value();
+    @Override public int getPartitionAwarenessSqlCacheSize() {
+        return partitionAwarenessSQLCacheSize.value();
     }
 
     /** {@inheritDoc} */
-    @Override public void setAffinityAwarenessSqlCacheSize(int affinityAwarenessSQLCacheSize)
+    @Override public void setPartitionAwarenessSqlCacheSize(int partitionAwarenessSQLCacheSize)
         throws SQLException {
-        this.affinityAwarenessSQLCacheSize.setValue(affinityAwarenessSQLCacheSize);
+        this.partitionAwarenessSQLCacheSize.setValue(partitionAwarenessSQLCacheSize);
     }
 
     /** {@inheritDoc} */
-    @Override public int getAffinityAwarenessPartitionDistributionsCacheSize() {
-        return affinityAwarenessPartDistributionsCacheSize.value();
+    @Override public int getPartitionAwarenessPartitionDistributionsCacheSize() {
+        return partitionAwarenessPartDistributionsCacheSize.value();
     }
 
     /** {@inheritDoc} */
-    @Override public void setAffinityAwarenessPartitionDistributionsCacheSize(
-        int affinityAwarenessPartDistributionsCacheSize) throws SQLException {
-        this.affinityAwarenessPartDistributionsCacheSize.setValue(
-            affinityAwarenessPartDistributionsCacheSize);
+    @Override public void setPartitionAwarenessPartitionDistributionsCacheSize(
+        int partitionAwarenessPartDistributionsCacheSize) throws SQLException {
+        this.partitionAwarenessPartDistributionsCacheSize.setValue(
+            partitionAwarenessPartDistributionsCacheSize);
     }
 
     /** {@inheritDoc} */
@@ -610,7 +664,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
-    @Override public void setQueryMaxMemory(@Nullable Integer timeout) throws SQLException {
+    @Override public void setQueryTimeout(@Nullable Integer timeout) throws SQLException {
         qryTimeout.setValue(timeout);
     }
 
@@ -622,6 +676,46 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     /** {@inheritDoc} */
     @Override public void setConnectionTimeout(@Nullable Integer timeout) throws SQLException {
         connTimeout.setValue(timeout);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isLimitedV2_8_0Enabled() {
+        return limitedV2_8_0Enabled.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setLimitedV2_8_0Enabled(boolean enabled) {
+        limitedV2_8_0Enabled.setValue(enabled);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String disabledFeatures() {
+        return disabledFeatures.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void disabledFeatures(String features) {
+        disabledFeatures.setValue(features);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isKeepBinary() {
+        return keepBinary.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setKeepBinary(boolean keepBinary) {
+        this.keepBinary.setValue(keepBinary);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getUserAttributesFactory() {
+        return userAttrsFactory.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setUserAttributesFactory(String cls) {
+        userAttrsFactory.setValue(cls);
     }
 
     /**
@@ -766,7 +860,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
      * @throws SQLException If failed.
      */
     private void parseEndpoints(String endpointStr) throws SQLException {
-        String [] endpoints = endpointStr.split(",");
+        String[] endpoints = endpointStr.split(",");
 
         if (endpoints.length > 0)
             addrs = new HostAndPortRange[endpoints.length];
@@ -908,7 +1002,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
          * An array of possible values if the value may be selected
          * from a particular set of values; otherwise null.
          */
-        protected String [] choices;
+        protected String[] choices;
 
         /** Required flag. */
         protected boolean required;
@@ -1027,7 +1121,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
          * @return JDBC property info object.
          */
         DriverPropertyInfo getDriverPropertyInfo() {
-            DriverPropertyInfo dpi = new DriverPropertyInfo(name, valueObject());
+            DriverPropertyInfo dpi = new DriverPropertyInfo(PROP_PREFIX + name, valueObject());
 
             dpi.choices = choices();
             dpi.required = required;
@@ -1045,7 +1139,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         private static final long serialVersionUID = 0L;
 
         /** Bool choices. */
-        private static final String [] boolChoices = new String[] {Boolean.TRUE.toString(), Boolean.FALSE.toString()};
+        private static final String[] boolChoices = new String[] {Boolean.TRUE.toString(), Boolean.FALSE.toString()};
 
         /** Value. */
         private Boolean val;
@@ -1111,7 +1205,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         protected Number val;
 
         /** Allowed value range. */
-        private Number [] range;
+        private Number[] range;
 
         /**
          * @param name Name.

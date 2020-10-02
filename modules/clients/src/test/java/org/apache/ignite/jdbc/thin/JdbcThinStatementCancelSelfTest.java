@@ -65,7 +65,7 @@ public class JdbcThinStatementCancelSelfTest extends JdbcThinAbstractSelfTest {
     /** Max table rows. */
     private static final int MAX_ROWS = 10000;
 
-    /** Server thread pull size. */
+    /** Server thread pool size. */
     private static final int SERVER_THREAD_POOL_SIZE = 4;
 
     /** Cancellation processing timeout. */
@@ -319,7 +319,7 @@ public class JdbcThinStatementCancelSelfTest extends JdbcThinAbstractSelfTest {
 
         GridTestUtils.assertThrows(log, () -> {
             stmt.executeQuery("select * from Integer where _key in " +
-                "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()");
+                "(select abs(_key) from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()");
 
             return null;
         }, SQLException.class, "The query was cancelled while executing.");
@@ -371,7 +371,7 @@ public class JdbcThinStatementCancelSelfTest extends JdbcThinAbstractSelfTest {
 
         GridTestUtils.assertThrows(log, () -> {
             stmt.executeQuery("select * from Integer where _key in " +
-                "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()");
+                "(select abs(_key) from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()");
 
             return null;
         }, SQLException.class, "The query was cancelled while executing.");
@@ -492,7 +492,7 @@ public class JdbcThinStatementCancelSelfTest extends JdbcThinAbstractSelfTest {
             GridTestUtils.assertThrows(log, () -> {
                 statements.get(SERVER_THREAD_POOL_SIZE - 1).executeQuery(
                     "select * from Integer where _key in " +
-                        "(select _key from Integer where awaitLatchCancelled() = 0) and" +
+                        "(select abs(_key) from Integer where awaitLatchCancelled() = 0) and" +
                         " shouldNotBeCalledInCaseOfCancellation()");
 
                 return null;

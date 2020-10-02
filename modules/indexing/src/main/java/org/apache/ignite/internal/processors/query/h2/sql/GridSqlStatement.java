@@ -22,6 +22,7 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 public abstract class GridSqlStatement {
     /** */
     protected GridSqlAst limit;
+
     /** */
     private boolean explain;
 

@@ -37,12 +37,14 @@ import org.apache.ignite.internal.pagemem.wal.record.LazyMvccDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MvccDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MvccDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
+import org.apache.ignite.internal.pagemem.wal.record.OutOfOrderDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SnapshotRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType;
+import org.apache.ignite.internal.pagemem.wal.record.delta.TrackingPageRepairDeltaRecord;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -117,6 +119,12 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
             case ROLLBACK_TX_RECORD:
                 return 4 + 4 + 8 + 8;
+
+            case TRACKING_PAGE_REPAIR_DELTA:
+                return 4 + 8;
+
+            case OUT_OF_ORDER_UPDATE:
+                return 4/*entry count*/ + 8/*timestamp*/ + dataSize((DataRecord)rec);
 
             default:
                 return super.plainSize(rec);
@@ -224,6 +232,23 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
                 return new RollbackRecord(grpId, partId, start, range);
 
+            case TRACKING_PAGE_REPAIR_DELTA:
+                cacheId = in.readInt();
+                pageId = in.readLong();
+
+                return new TrackingPageRepairDeltaRecord(cacheId, pageId);
+
+            case OUT_OF_ORDER_UPDATE:
+                entryCnt = in.readInt();
+                timeStamp = in.readLong();
+
+                entries = new ArrayList<>(entryCnt);
+
+                for (int i = 0; i < entryCnt; i++)
+                    entries.add(readPlainDataEntry(in));
+
+                return new OutOfOrderDataRecord(entries, timeStamp);
+
             default:
                 return super.readPlainRecord(type, in, encrypted, recordSize);
         }
@@ -263,6 +288,7 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
             case MVCC_DATA_RECORD:
             case DATA_RECORD:
+            case OUT_OF_ORDER_UPDATE:
                 DataRecord dataRec = (DataRecord)rec;
 
                 buf.putInt(dataRec.writeEntries().size());
@@ -313,6 +339,14 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 buf.putInt(rb.partitionId());
                 buf.putLong(rb.start());
                 buf.putLong(rb.range());
+
+                break;
+
+            case TRACKING_PAGE_REPAIR_DELTA:
+                TrackingPageRepairDeltaRecord tprDelta = (TrackingPageRepairDeltaRecord)rec;
+
+                buf.putInt(tprDelta.groupId());
+                buf.putLong(tprDelta.pageId());
 
                 break;
 

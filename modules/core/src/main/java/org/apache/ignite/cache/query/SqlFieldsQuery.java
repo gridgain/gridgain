@@ -49,6 +49,12 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** Default value of the update internal batch size. */
     private static final int DFLT_UPDATE_BATCH_SIZE = 1;
 
+    /** Threaded query originator. */
+    private static ThreadLocal<String> threadedQryInitiatorId = new ThreadLocal<>();
+
+    /** Default value of Query timeout. Default is -1 means no timeout is set. */
+    private static final int DFLT_QUERY_TIMEOUT = -1;
+
     /** Do not remove. For tests only. */
     @SuppressWarnings("NonConstantFieldWithUpperCaseName")
     private static boolean DFLT_LAZY;
@@ -64,7 +70,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
     private boolean collocated;
 
     /** Query timeout in millis. */
-    private int timeout;
+    private int timeout = DFLT_QUERY_TIMEOUT;
 
     /** */
     private boolean enforceJoinOrder;
@@ -91,6 +97,15 @@ public class SqlFieldsQuery extends Query<List<?>> {
     private int updateBatchSize = DFLT_UPDATE_BATCH_SIZE;
 
     /**
+     * Query's originator string (client host+port, user name,
+     * job name or any user's information about query initiator).
+     */
+    private String qryInitiatorId;
+
+    /** Whether server side DML should be enabled. */
+    private boolean skipReducerOnUpdate;
+
+    /**
      * Copy constructs SQL fields query.
      *
      * @param qry SQL query.
@@ -107,6 +122,8 @@ public class SqlFieldsQuery extends Query<List<?>> {
         parts = qry.parts;
         schema = qry.schema;
         updateBatchSize = qry.updateBatchSize;
+        qryInitiatorId = qry.qryInitiatorId;
+        skipReducerOnUpdate = qry.skipReducerOnUpdate;
     }
 
     /**
@@ -192,6 +209,42 @@ public class SqlFieldsQuery extends Query<List<?>> {
         this.timeout = QueryUtils.validateTimeout(timeout, timeUnit);
 
         return this;
+    }
+
+    /**
+     * Switches update mode on server side.
+     * <p>
+     * By default, when processing DML command, Ignite first fetches all affected intermediate rows for analysis to the
+     * node which initiated the query and only then forms batches of updated values to be sent to remote nodes.
+     * For simple DML commands (that however affect great deal of rows) such approach may be an overkill in terms of
+     * network delays and memory usage on initiating node. Use this flag as hint for Ignite to do all intermediate rows
+     * analysis and updates in place on corresponding remote data nodes.
+     * <p>
+     * <b>IMPORTANT NOTE</b>: There are limitations to what DML command can be optimized this way. The command containing LIMIT, OFFSET,
+     * DISTINCT, ORDER BY, GROUP BY, sub-query or UNION will be processed the usual way despite this flag setting.
+     * <p>
+     * Defaults to {@code false}, meaning that intermediate results will be fetched to initiating node first.
+     * Only affects DML commands. Ignored when {@link #isLocal()} is {@code true}.
+     * Note that when set to {@code true}, the query may fail in the case of even single node failure.
+     *
+     * @param skipReducerOnUpdate Server side update flag.
+     * @return {@code this} For chaining.
+     */
+    public SqlFieldsQuery setSkipReducerOnUpdate(boolean skipReducerOnUpdate) {
+        this.skipReducerOnUpdate = skipReducerOnUpdate;
+
+        return this;
+    }
+
+    /**
+     * Gets server side update flag.
+     * <p>
+     * See {@link #setSkipReducerOnUpdate(boolean)} for more information.
+     *
+     * @return Server side update flag.
+     */
+    public boolean isSkipReducerOnUpdate() {
+        return skipReducerOnUpdate;
     }
 
     /**
@@ -410,10 +463,53 @@ public class SqlFieldsQuery extends Query<List<?>> {
     }
 
     /**
+     * @return Query's initiator identifier string (client host+port, user name,
+     *       job name or any user's information about query initiator).
+     */
+    public String getQueryInitiatorId() {
+        return qryInitiatorId;
+    }
+
+    /**
+     * @param qryInitiatorId Query's initiator identifier string (client host+port, user name,
+     *      job name or any user's information about query initiator).
+     *
+     * @return {@code this} for chaining.
+     */
+    public SqlFieldsQuery setQueryInitiatorId(String qryInitiatorId) {
+        this.qryInitiatorId = qryInitiatorId;
+
+        return this;
+    }
+
+    /**
      * @return Copy of this query.
      */
     public SqlFieldsQuery copy() {
         return new SqlFieldsQuery(this);
+    }
+
+    /**
+     * Used at the Job worker to setup originator by default for current thread.
+     *
+     * @param originator Query's originator string.
+     */
+    public static void setThreadedQueryInitiatorId(String originator) {
+        threadedQryInitiatorId.set(originator);
+    }
+
+    /**
+     * Used at the job worker to clear originator for current thread.
+     */
+    public static void resetThreadedQueryInitiatorId() {
+        threadedQryInitiatorId.remove();
+    }
+
+    /**
+     * @return originator set up by the job worker.
+     */
+    public static String threadedQueryInitiatorId() {
+        return threadedQryInitiatorId.get();
     }
 
     /** {@inheritDoc} */

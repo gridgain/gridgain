@@ -20,8 +20,9 @@ import java.io.Externalizable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,29 +30,31 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
-import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.TransactionConfiguration;
-import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.managers.discovery.DiscoCache;
-import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
+import org.apache.ignite.internal.managers.systemview.walker.TransactionViewWalker;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObjectsReleaseFuture;
+import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
@@ -62,13 +65,15 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturnCompletableWra
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.GridDeferredAckMessageSender;
+import org.apache.ignite.internal.processors.cache.LongOperationsDumpSettingsClosure;
 import org.apache.ignite.internal.processors.cache.LongRunningTxTimeDumpSettingsClosure;
 import org.apache.ignite.internal.processors.cache.TxOwnerDumpRequestAllowedSettingClosure;
 import org.apache.ignite.internal.processors.cache.TxTimeoutOnPartitionMapExchangeChangeMessage;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheMappedVersion;
-import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxFinishSync;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecoveryFuture;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocal;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxOnePhaseCommitAckRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxRemote;
@@ -84,8 +89,10 @@ import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccRecoveryFinished
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlockDetection.TxDeadlockFuture;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
+import org.apache.ignite.internal.util.lang.gridfunc.ReadOnlyCollectionView2X;
+import org.apache.ignite.spi.systemview.view.TransactionView;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
-import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
@@ -103,8 +110,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.lang.IgniteReducer;
-import org.apache.ignite.lang.IgniteRunnable;
-import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionState;
@@ -112,8 +117,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsr166.ConcurrentLinkedHashMap;
 
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_TX_COLLISIONS_INTERVAL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_COMPLETED_TX_COUNT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SLOW_TX_WARN_TIMEOUT;
@@ -121,15 +129,18 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_D
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_SALVAGE_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
+import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
+import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_TX_STARTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE_COORDINATOR;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TX;
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.IgniteFeatures.LRT_SYSTEM_USER_TIME_DUMP_SETTINGS;
 import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_TX_COLLISIONS_DUMP;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
@@ -137,6 +148,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearE
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.RECOVERY_FINISH;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.USER_FINISH;
 import static org.apache.ignite.internal.util.GridConcurrentFactory.newMap;
+import static org.apache.ignite.internal.util.IgniteUtils.broadcastToNodesSupportingFeature;
 import static org.apache.ignite.transactions.TransactionState.ACTIVE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
@@ -153,14 +165,17 @@ import static org.jsr166.ConcurrentLinkedHashMap.QueuePolicy.PER_SEGMENT_Q;
  * Cache transaction manager.
  */
 public class IgniteTxManager extends GridCacheSharedManagerAdapter {
+    /** */
+    public static final String TXS_MON_LIST = "transactions";
+
+    /** */
+    public static final String TXS_MON_LIST_DESC = "Running transactions";
+
     /** Default maximum number of transactions that have completed. */
     private static final int DFLT_MAX_COMPLETED_TX_CNT = 262144; // 2^18
 
     /** Slow tx warn timeout (initialized to 0). */
     private static final int SLOW_TX_WARN_TIMEOUT = Integer.getInteger(IGNITE_SLOW_TX_WARN_TIMEOUT, 0);
-
-    /** Tx salvage timeout. */
-    private static final int TX_SALVAGE_TIMEOUT = Integer.getInteger(IGNITE_TX_SALVAGE_TIMEOUT, 100);
 
     /** One phase commit deferred ack request timeout. */
     public static final int DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT =
@@ -170,15 +185,20 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private static final int DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE =
         Integer.getInteger(IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE, 256);
 
+    /** Node left rollback message. */
+    static final String NODE_LEFT_ROLLBACK_MSG = "Primary owner [nodeId=%s, consistentId=%s] of an affected partition " +
+        "has left the topology. The transaction was rolled back.";
+
     /** Deadlock detection maximum iterations. */
     static int DEADLOCK_MAX_ITERS =
         IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, 1000);
 
-    /** Long operation dump timeout. */
-    private static final long LONG_OPERATIONS_DUMP_TIMEOUT = IgniteSystemProperties.getLong(
-            IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
-            DFLT_LONG_OPERATIONS_DUMP_TIMEOUT
-    );
+    /** Collisions dump interval. */
+    private volatile int collisionsDumpInterval =
+        IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, 1000);
+
+    /** Lower tx collisions queue size threshold. */
+    private static final int COLLISIONS_QUEUE_THRESHOLD = 100;
 
     /** Committing transactions. */
     private final ThreadLocal<IgniteInternalTx> threadCtx = new ThreadLocal<>();
@@ -218,8 +238,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * commiting, etc) and user time (time when client node runs some code while holding transaction and not
      * waiting it). Equals 0 if not set. No transactions are dumped in log if this parameter is not set.
      */
-    private volatile long longTransactionTimeDumpThreshold =
-        IgniteSystemProperties.getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
+    private volatile long longTransactionTimeDumpThreshold = getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
 
     /**
      * The coefficient for samples of completed transactions that will be dumped in log.
@@ -252,17 +271,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /** Pending one phase commit ack requests sender. */
     private GridDeferredAckMessageSender deferredAckMsgSnd;
 
-    /** Transaction finish synchronizer. */
-    private GridCacheTxFinishSync txFinishSync;
-
-    /** For test purposes only. */
-    private boolean finishSyncDisabled;
-
     /** Slow tx warn timeout. */
     private int slowTxWarnTimeout = SLOW_TX_WARN_TIMEOUT;
 
     /** Long operations dump timeout. */
-    private long longOpsDumpTimeout = LONG_OPERATIONS_DUMP_TIMEOUT;
+    private volatile long longOpsDumpTimeout =
+        getLong(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, DFLT_LONG_OPERATIONS_DUMP_TIMEOUT);
 
     /** */
     private TxDumpsThrottling txDumpsThrottling = new TxDumpsThrottling();
@@ -287,6 +301,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private ConcurrentMap<UUID, TxTimeoutOnPartitionMapExchangeChangeFuture> txTimeoutOnPartitionMapExchangeFuts =
         new ConcurrentHashMap<>();
 
+    /** Timeout operations. */
+    private final Map<String, GridTimeoutProcessor.CancelableTask> timeoutOperations =
+        new HashMap<String, GridTimeoutProcessor.CancelableTask>() {{
+            put(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, null);
+            put(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, null);
+    }};
+
+    /** Key collisions info holder. */
+    private volatile KeyCollisionsHolder keyCollisionsInfo;
+
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
         cctx.gridIO().removeMessageListener(TOPIC_TX);
@@ -299,8 +323,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
-        txFinishSync = new GridCacheTxFinishSync<>(cctx);
-
         txHnd = new IgniteTxHandler(cctx);
 
         deferredAckMsgSnd = new GridDeferredAckMessageSender<GridCacheVersion>(cctx.time(), cctx.kernalContext().closure()) {
@@ -333,19 +355,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             }
         };
 
-        cctx.gridEvents().addDiscoveryEventListener(
-            new DiscoveryEventListener() {
-                @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
-                    assert evt.type() == EVT_NODE_FAILED || evt.type() == EVT_NODE_LEFT;
-
+        cctx.gridEvents().addDiscoveryEventListener((evt, discoCache) -> {
+                if (evt.type() == EVT_NODE_FAILED || evt.type() == EVT_NODE_LEFT) {
                     UUID nodeId = evt.eventNode().id();
 
-                    // Wait some time in case there are some unprocessed messages from failed node.
-                    cctx.time().addTimeoutObject(
-                        new NodeFailureTimeoutObject(evt.eventNode(), cctx.coordinators().currentCoordinator()));
-
-                    if (txFinishSync != null)
-                        txFinishSync.onNodeLeft(nodeId);
+                    cctx.kernalContext().closure().runLocalSafe(
+                        new TxRecoveryInitRunnable(evt.eventNode(), cctx.coordinators().currentCoordinator()));
 
                     for (TxDeadlockFuture fut : deadlockDetectFuts.values())
                         fut.onNodeLeft(nodeId);
@@ -354,12 +369,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                         Object obj = entry.getValue();
 
                         if (obj instanceof GridCacheReturnCompletableWrapper &&
-                            nodeId.equals(((GridCacheReturnCompletableWrapper)obj).nodeId()))
+                            nodeId.equals(((GridCacheReturnCompletableWrapper) obj).nodeId()))
                             removeTxReturn(entry.getKey());
                     }
                 }
             },
-            EVT_NODE_FAILED, EVT_NODE_LEFT);
+            EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_JOINED);
 
         this.txDeadlockDetection = new TxDeadlockDetection(cctx);
 
@@ -371,6 +386,17 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         this.logTxRecords = IgniteSystemProperties.getBoolean(IGNITE_WAL_LOG_TX_RECORDS, false);
 
         cctx.txMetrics().onTxManagerStarted();
+
+        keyCollisionsInfo = new KeyCollisionsHolder();
+
+        longOperationsDumpTimeout(longOperationsDumpTimeout());
+
+        txCollisionsDumpInterval(collisionsDumpInterval());
+
+        cctx.kernalContext().systemView().registerView(TXS_MON_LIST, TXS_MON_LIST_DESC,
+            new TransactionViewWalker(),
+            new ReadOnlyCollectionView2X<>(idMap.values(), nearIdMap.values()),
+            TransactionView::new);
     }
 
     /**
@@ -481,8 +507,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(IgniteFuture reconnectFut) {
-        txFinishSync.onDisconnected(reconnectFut);
-
         for (IgniteInternalTx tx : idMap.values()) {
             rollbackTx(tx, true, false);
 
@@ -710,8 +734,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         boolean storeEnabled,
         Boolean mvccOp,
         int txSize,
-        @Nullable String lb,
-        boolean tracingEnabled
+        @Nullable String lb
     ) {
         assert sysCacheCtx == null || sysCacheCtx.systemTx();
 
@@ -734,7 +757,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             subjId,
             taskNameHash,
             lb,
-            tracingEnabled,
             txDumpsThrottling
         );
 
@@ -823,9 +845,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * </ul>
      *
      * @param topVer Topology version.
+     * @param node Failed cluster node if free-switch PME.
+     *
      * @return Future that will be completed when all ongoing transactions are finished.
      */
-    public IgniteInternalFuture<Boolean> finishLocalTxs(AffinityTopologyVersion topVer) {
+    public IgniteInternalFuture<Boolean> finishLocalTxs(AffinityTopologyVersion topVer, @Nullable ClusterNode node) {
         GridCompoundFuture<IgniteInternalTx, Boolean> res =
             new CacheObjectsReleaseFuture<>(
                 "LocalTx",
@@ -841,7 +865,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 });
 
         for (IgniteInternalTx tx : activeTransactions()) {
-            if (needWaitTransaction(tx, topVer))
+            if (node != null) {
+                if (tx.originatingNodeId().equals(node.id())) {
+                    assert needWaitTransaction(tx, topVer);
+
+                    res.add(tx.finishFuture());
+                }
+            }
+            else if (needWaitTransaction(tx, topVer))
                 res.add(tx.finishFuture());
         }
 
@@ -1128,7 +1159,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         if (tx.pessimistic() && tx.local())
             return; // Nothing else to do in pessimistic mode.
 
-        // Optimistic.
+        // Optimistic or remote tx.
         assert tx.optimistic() || !tx.local();
 
         if (!lockMultiple(tx, entries != null ? entries : tx.optimisticLockEntries())) {
@@ -1144,33 +1175,43 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private void removeObsolete(IgniteInternalTx tx) {
         Collection<IgniteTxEntry> entries = tx.local() ? tx.allEntries() : tx.writeEntries();
 
-        for (IgniteTxEntry entry : entries) {
-            GridCacheEntryEx cached = entry.cached();
+        if (F.isEmpty(entries))
+            return;
 
-            GridCacheContext cacheCtx = entry.context();
+        cctx.database().checkpointReadLock();
 
-            if (cached == null)
-                cached = cacheCtx.cache().peekEx(entry.key());
+        try {
+            for (IgniteTxEntry entry : entries) {
+                GridCacheEntryEx cached = entry.cached();
 
-            if (cached.detached())
-                continue;
+                GridCacheContext cacheCtx = entry.context();
 
-            try {
-                if (cached.obsolete() || cached.markObsoleteIfEmpty(tx.xidVersion()))
-                    cacheCtx.cache().removeEntry(cached);
+                if (cached == null)
+                    cached = cacheCtx.cache().peekEx(entry.key());
 
-                if (!tx.near() && isNearEnabled(cacheCtx)) {
-                    GridNearCacheAdapter near = cacheCtx.isNear() ? cacheCtx.near() : cacheCtx.dht().near();
+                if (cached.detached())
+                    continue;
 
-                    GridNearCacheEntry e = near.peekExx(entry.key());
+                try {
+                    if (cached.obsolete() || cached.markObsoleteIfEmpty(tx.xidVersion()))
+                        cacheCtx.cache().removeEntry(cached);
 
-                    if (e != null && e.markObsoleteIfEmpty(null))
-                        near.removeEntry(e);
+                    if (!tx.near() && isNearEnabled(cacheCtx)) {
+                        GridNearCacheAdapter near = cacheCtx.isNear() ? cacheCtx.near() : cacheCtx.dht().near();
+
+                        GridNearCacheEntry e = near.peekExx(entry.key());
+
+                        if (e != null && e.markObsoleteIfEmpty(null))
+                            near.removeEntry(e);
+                    }
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Failed to remove obsolete entry from cache: " + cached, e);
                 }
             }
-            catch (IgniteCheckedException e) {
-                U.error(log, "Failed to remove obsolete entry from cache: " + cached, e);
-            }
+        }
+        finally {
+            cctx.database().checkpointReadUnlock();
         }
     }
 
@@ -1528,19 +1569,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             // 6. Remove obsolete entries from cache.
             removeObsolete(tx);
 
-            // 7. Assign transaction number at the end of transaction.
-            tx.endVersion(cctx.versions().next(tx.topologyVersion()));
-
-            // 8. Remove from per-thread storage.
+            // 7. Remove from per-thread storage.
             clearThreadMap(tx);
 
-            // 9. Unregister explicit locks.
+            // 8. Unregister explicit locks.
             if (!tx.alternateVersions().isEmpty()) {
                 for (GridCacheVersion ver : tx.alternateVersions())
                     idMap.remove(ver);
             }
 
-            // 10. Remove Near-2-DHT mappings.
+            // 9. Remove Near-2-DHT mappings.
             if (tx instanceof GridCacheMappedVersion) {
                 GridCacheVersion mapped = ((GridCacheMappedVersion)tx).mappedVersion();
 
@@ -1548,10 +1586,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     mappedVers.remove(mapped);
             }
 
-            // 11. Clear context.
+            // 10. Clear context.
             resetContext();
 
-            // 12. Update metrics.
+            // 11. Update metrics.
             if (!tx.dht() && tx.local()) {
                 if (!tx.system())
                     cctx.txMetrics().onTxCommit();
@@ -1562,7 +1600,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             if (slowTxWarnTimeout > 0 && tx.local() &&
                 U.currentTimeMillis() - tx.startTime() > slowTxWarnTimeout)
                 U.warn(log, "Slow transaction detected [tx=" + tx +
-                    ", slowTxWarnTimeout=" + slowTxWarnTimeout + ']') ;
+                    ", slowTxWarnTimeout=" + slowTxWarnTimeout + ']');
 
             if (log.isDebugEnabled())
                 log.debug("Committed from TM [locNodeId=" + cctx.localNodeId() + ", tx=" + tx + ']');
@@ -1864,62 +1902,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * Callback called by near finish future before sending near finish request to remote node. Will increment
-     * per-thread counter so that further awaitAck call will wait for finish response.
-     *
-     * @param rmtNodeId Remote node ID for which finish request is being sent.
-     * @param threadId Near tx thread ID.
-     */
-    public void beforeFinishRemote(UUID rmtNodeId, long threadId) {
-        if (finishSyncDisabled)
-            return;
-
-        assert txFinishSync != null;
-
-        txFinishSync.onFinishSend(rmtNodeId, threadId);
-    }
-
-    /**
-     * Callback invoked when near finish response is received from remote node.
-     *
-     * @param rmtNodeId Remote node ID from which response is received.
-     * @param threadId Near tx thread ID.
-     */
-    public void onFinishedRemote(UUID rmtNodeId, long threadId) {
-        if (finishSyncDisabled)
-            return;
-
-        assert txFinishSync != null;
-
-        txFinishSync.onAckReceived(rmtNodeId, threadId);
-    }
-
-    /**
-     * Asynchronously waits for last finish request ack.
-     *
-     * @param rmtNodeId Remote node ID.
-     * @param threadId Near tx thread ID.
-     * @return {@code null} if ack was received or future that will be completed when ack is received.
-     */
-    @Nullable public IgniteInternalFuture<?> awaitFinishAckAsync(UUID rmtNodeId, long threadId) {
-        if (finishSyncDisabled)
-            return null;
-
-        assert txFinishSync != null;
-
-        return txFinishSync.awaitAckAsync(rmtNodeId, threadId);
-    }
-
-    /**
-     * For test purposes only.
-     *
-     * @param finishSyncDisabled {@code True} if finish sync should be disabled.
-     */
-    public void finishSyncDisabled(boolean finishSyncDisabled) {
-        this.finishSyncDisabled = finishSyncDisabled;
-    }
-
-    /**
      * @param tx Transaction.
      * @param entries Entries to lock.
      * @return {@code True} if all keys were locked.
@@ -1990,7 +1972,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                             tx + ", invalidPart=" + e.partition() + ']';
 
                         // If partition is invalid, we ignore this entry.
-                        tx.addInvalidPartition(cacheCtx, e.partition());
+                        tx.addInvalidPartition(cacheCtx.cacheId(), e.partition());
 
                         break;
                     }
@@ -2031,7 +2013,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 if (log.isDebugEnabled())
                     log.debug("Got removed entry in TM txUnlock(..) method (will retry): " + txEntry);
 
-                txEntry.cached(txEntry.context().cache().entryEx(txEntry.key(), tx.topologyVersion()));
+                try {
+                    txEntry.cached(txEntry.context().cache().entryEx(txEntry.key(), tx.topologyVersion()));
+                }
+                catch (GridDhtInvalidPartitionException e) {
+                    return; // Ignore and proceed to next lock.
+                }
             }
         }
     }
@@ -2106,6 +2093,56 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     public void longOperationsDumpTimeout(long longOpsDumpTimeout) {
         this.longOpsDumpTimeout = longOpsDumpTimeout;
+
+        scheduleDumpTask(
+            IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
+            () -> cctx.kernalContext().closure().runLocalSafe(
+                () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpsDumpTimeout)),
+            longOpsDumpTimeout);
+    }
+
+    /**
+     * Schedule tx collisions collection task.
+     *
+     * @param timeout Sets tx key collisions analysis interval.
+     **/
+    void txCollisionsDumpInterval(int timeout) {
+        collisionsDumpInterval = timeout;
+
+        scheduleDumpTask(
+            IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
+            this::collectTxCollisionsInfo,
+            collisionsDumpInterval());
+    }
+
+    /**
+     * Scheduling tasks for dumping long operations. Closes current task
+     * (if any) and if the {@code timeout > 0} schedules a new task
+     * with a new timeout, delay and start period equal to
+     * {@code timeout}, otherwise task is deleted.
+     *
+     * @param taskKey Appropriate key in {@link IgniteTxManager#timeoutOperations}
+     * @param r Task.
+     * @param timeout Long operations dump timeout.
+     */
+    void scheduleDumpTask(String taskKey, Runnable r, long timeout) {
+        if (isStopping())
+            return;
+
+        GridTimeoutProcessor.CancelableTask longOpDumpTask;
+
+        GridTimeoutProcessor timeoutProc = cctx.kernalContext().timeout();
+
+        synchronized (timeoutOperations) {
+            GridTimeoutProcessor.CancelableTask task = timeoutOperations.get(taskKey);
+
+            if (nonNull(task))
+                task.close();
+
+            longOpDumpTask = timeout > 0 ? timeoutProc.schedule(r, timeout, timeout) : null;
+
+            timeoutOperations.put(taskKey, longOpDumpTask);
+        }
     }
 
     /**
@@ -2234,6 +2271,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 TransactionState state = tx.state();
 
                 if (state == PREPARED || state == COMMITTING || state == COMMITTED) {
+                    if (state == PREPARED)
+                        tx.markFinalizing(RECOVERY_FINISH); // Prevents concurrent rollback.
+
                     if (--txNum == 0) {
                         if (fut != null)
                             fut.onDone(true);
@@ -2242,7 +2282,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     }
                 }
                 else {
-                    if (tx.state(MARKED_ROLLBACK) || tx.state() == UNKNOWN) {
+                    if (tx.setRollbackOnly() || tx.state() == UNKNOWN) {
                         tx.rollbackAsync();
 
                         if (log.isDebugEnabled())
@@ -2279,7 +2319,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 }
 
                 if (processedVers == null)
-                    processedVers = new HashSet<>(txNum, 1.0f);
+                    processedVers = U.newHashSet(txNum);
 
                 processedVers.add(tx.xidVersion());
             }
@@ -2328,12 +2368,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         if (log.isInfoEnabled())
             log.info("Finishing prepared transaction [commit=" + commit + ", tx=" + tx + ']');
 
-        if (!tx.markFinalizing(RECOVERY_FINISH)) {
-            if (log.isInfoEnabled())
-                log.info("Will not try to commit prepared transaction (could not mark finalized): " + tx);
-
-            return;
-        }
+        // Transactions participating in recovery can be finished only by recovery consensus.
+        assert tx.finalizationStatus() == RECOVERY_FINISH : tx;
 
         if (tx instanceof IgniteTxRemoteEx) {
             IgniteTxRemoteEx rmtTx = (IgniteTxRemoteEx)tx;
@@ -2376,9 +2412,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param failedNodeIds Failed nodes IDs.
      */
     public void commitIfPrepared(IgniteInternalTx tx, Set<UUID> failedNodeIds) {
-        assert tx instanceof GridDhtTxLocal || tx instanceof GridDhtTxRemote  : tx;
+        assert tx instanceof GridDhtTxLocal || tx instanceof GridDhtTxRemote : tx;
         assert !F.isEmpty(tx.transactionNodes()) : tx;
         assert tx.nearXidVersion() != null : tx;
+
+        // Transaction will be completed by finish message.
+        if (!tx.markFinalizing(RECOVERY_FINISH))
+            return;
 
         GridCacheTxRecoveryFuture fut = new GridCacheTxRecoveryFuture(
             cctx,
@@ -2544,6 +2584,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                                 TxLock txLock = new TxLock(
                                     txId == null ? loc.version() : txId,
                                     nearNodeId == null ? loc.nodeId() : nearNodeId,
+                                    // We can get outdated value of thread ID, but this value only for information here.
                                     loc.threadId(),
                                     loc.owner() ? TxLock.OWNERSHIP_OWNER : TxLock.OWNERSHIP_CANDIDATE);
 
@@ -2645,14 +2686,28 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void suspendTx(final GridNearTxLocal tx) throws IgniteCheckedException {
         assert tx != null && !tx.system() : tx;
 
+        if (tx.concurrency() == TransactionConcurrency.PESSIMISTIC) {
+            for (GridDistributedTxMapping m : tx.mappings().mappings())
+                checkPessimisticSuspendSupported(cctx.kernalContext(), m.primary());
+        }
+
         if (!tx.state(SUSPENDED)) {
             throw new IgniteCheckedException("Trying to suspend transaction with incorrect state "
                 + "[expected=" + ACTIVE + ", actual=" + tx.state() + ']');
         }
 
         clearThreadMap(tx);
+    }
 
-        transactionMap(tx).remove(tx.xidVersion(), tx);
+    /**
+     * @param ctx Kernal context.
+     * @param node Node to check.
+     * @throws IgniteException If the remote node does not support {@code SUSPEND_RESUME_PESSIMISTIC_TX}.
+     */
+    private void checkPessimisticSuspendSupported(GridKernalContext ctx, ClusterNode node) throws IgniteException {
+        if (!IgniteFeatures.nodeSupports(ctx, node, IgniteFeatures.SUSPEND_RESUME_PESSIMISTIC_TX))
+            throw new IgniteException("Failed to suspend PESSIMISTIC transaction (the transaction touches a node " +
+                "which does not support suspend()): " + node);
     }
 
     /**
@@ -2676,13 +2731,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
 
         assert !threadMap.containsValue(tx) : tx;
-        assert !transactionMap(tx).containsValue(tx) : tx;
         assert !haveSystemTxForThread(Thread.currentThread().getId());
 
         if (threadMap.putIfAbsent(threadId, tx) != null)
-            throw new IgniteCheckedException("Thread already has started a transaction.");
-
-        if (transactionMap(tx).putIfAbsent(tx.xidVersion(), tx) != null)
             throw new IgniteCheckedException("Thread already has started a transaction.");
 
         tx.threadId(threadId);
@@ -2724,11 +2775,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * Enables pending transactions tracker.
      * Also enables transaction wal logging, if it was disabled.
      */
-    public void trackPendingTxs() {
+    public void trackPendingTxs(boolean logTxRecords) {
         pendingTracker.enable();
 
-        if (!logTxRecords) {
-            logTxRecords = true;
+        if (logTxRecords && !this.logTxRecords) {
+            this.logTxRecords = true;
 
             U.warn(log, "Transaction wal logging is enabled, because pending transaction tracker is enabled.");
         }
@@ -2791,24 +2842,32 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             record = new TxRecord(tx.state(), tx.nearXidVersion(), tx.writeVersion(), nodes);
 
         try {
-            WALPointer ptr = cctx.wal().log(record);
-
-            TransactionState txState = tx.state();
-
-            if (txState == PREPARED)
-                cctx.tm().pendingTxsTracker().onTxPrepared(tx.nearXidVersion());
-            else if (txState == ROLLED_BACK)
-                cctx.tm().pendingTxsTracker().onTxRolledBack(tx.nearXidVersion());
-            else
-                cctx.tm().pendingTxsTracker().onTxCommitted(tx.nearXidVersion());
-
-            return ptr;
+            return cctx.wal().log(record);
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to log TxRecord: " + record, e);
 
             throw new IgniteException("Failed to log TxRecord: " + record, e);
         }
+    }
+
+    /**
+     * Tracks transaction state.
+     *
+     * @param tx Transaction.
+     */
+    void trackTransaction(IgniteTxAdapter tx) {
+        if (!cctx.tm().pendingTxsTracker().enabled())
+            return;
+
+        TransactionState txState = tx.state();
+
+        if (txState == PREPARED)
+            cctx.tm().pendingTxsTracker().onTxPrepared(tx.nearXidVersion());
+        else if (txState == ROLLED_BACK)
+            cctx.tm().pendingTxsTracker().onTxRolledBack(tx.nearXidVersion());
+        else
+            cctx.tm().pendingTxsTracker().onTxCommitted(tx.nearXidVersion());
     }
 
     /**
@@ -2881,7 +2940,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             throw new IgniteException(errMsgConstructor.apply());
     }
 
-
     /**
      * Sets if dump requests from local node to near node are allowed, when long running transaction
      * is found. If allowed, the compute request to near node will be made to get thread dump of transaction
@@ -2890,15 +2948,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param allowed whether allowed
      */
     public void setTxOwnerDumpRequestsAllowedDistributed(boolean allowed) {
-        ClusterGroup grp = cctx.kernalContext().grid()
-            .cluster()
-            .forServers()
-            .forPredicate(node -> IgniteFeatures.nodeSupports(
-                cctx.kernalContext(), node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING));
-
-        IgniteCompute compute = cctx.kernalContext().grid().compute(grp);
-
-        compute.broadcast(new TxOwnerDumpRequestAllowedSettingClosure(allowed));
+        broadcastToNodesSupportingFeature(
+            cctx.kernalContext(),
+            new TxOwnerDumpRequestAllowedSettingClosure(allowed),
+            true,
+            TRANSACTION_OWNER_THREAD_DUMP_PROVIDING
+        );
     }
 
     /**
@@ -2914,7 +2969,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert threshold >= 0 : "Threshold timeout must be greater than or equal to 0.";
 
         broadcastToNodesSupportingFeature(
+            cctx.kernalContext(),
             new LongRunningTxTimeDumpSettingsClosure(threshold, null, null),
+            false,
             LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
         );
     }
@@ -2929,7 +2986,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert coefficient >= 0.0 && coefficient <= 1.0 : "Percentage value must be between 0.0 and 1.0 inclusively.";
 
         broadcastToNodesSupportingFeature(
+            cctx.kernalContext(),
             new LongRunningTxTimeDumpSettingsClosure(null, coefficient, null),
+            false,
             LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
         );
     }
@@ -2945,33 +3004,187 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert limit > 0 : "Limit value must be greater than 0.";
 
         broadcastToNodesSupportingFeature(
+            cctx.kernalContext(),
             new LongRunningTxTimeDumpSettingsClosure(null, null, limit),
+            false,
             LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
         );
     }
 
+    /** {@inheritDoc} */
+    @Override protected void stop0(boolean cancel) {
+        super.stop0(cancel);
+
+        synchronized (timeoutOperations) {
+            timeoutOperations.forEach((k, v) -> {
+                if (v != null)
+                    v.close();
+            });
+        }
+    }
+
     /**
-     * Broadcasts given job to nodes that support ignite feature.
+     * Setting (for all nodes) a timeout (in millis) for printing long-running
+     * transactions as well as transactions that cannot receive locks for all
+     * their keys for a long time. Set less than or equal {@code 0} to disable.
      *
-     * @param job Ignite job.
-     * @param feature Ignite feature.
+     * @param longOpsDumpTimeout Long operations dump timeout.
      */
-    private void broadcastToNodesSupportingFeature(IgniteRunnable job, IgniteFeatures feature) {
-        ClusterGroup grp = cctx.kernalContext().grid()
-            .cluster()
-            .forPredicate(node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, feature));
+    public void longOperationsDumpTimeoutDistributed(long longOpsDumpTimeout) {
+        broadcastToNodesSupportingFeature(
+            cctx.kernalContext(),
+            new LongOperationsDumpSettingsClosure(longOpsDumpTimeout),
+            false,
+            DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT
+        );
+    }
 
-        IgniteCompute compute = cctx.kernalContext().grid().compute(grp);
+    /**
+     * Returns tx keys collisions dump interval, for additional info check
+     * {@link IgniteSystemProperties#IGNITE_DUMP_TX_COLLISIONS_INTERVAL} description.
+     *
+     * @return Collisions dump interval.
+     */
+    public int collisionsDumpInterval() {
+        return collisionsDumpInterval;
+    }
 
-        compute.broadcast(job);
+    /**
+     * Changes tx key collisions dump interval.
+     * For additional info check {@link IgniteSystemProperties#IGNITE_DUMP_TX_COLLISIONS_INTERVAL} description.
+     *
+     * @param collisionsDumpInterval New collisions dump interval or negative for disabling.
+     */
+    public void collisionsDumpIntervalDistributed(int collisionsDumpInterval) {
+        broadcastToNodesSupportingFeature(
+            cctx.kernalContext(),
+            new TxCollisionsDumpSettingsClosure(collisionsDumpInterval),
+            true,
+            DISTRIBUTED_TX_COLLISIONS_DUMP
+        );
+    }
+
+    /**
+     * Collect queue size per key collisions info.
+     *
+     * @param key Key.
+     * @param queueSize Collisions queue size
+     */
+    public void pushCollidingKeysWithQueueSize(GridCacheMapEntry key, int queueSize) {
+        keyCollisionsInfo.put(key, queueSize);
+    }
+
+    /** Wrapper for inner collect logic. */
+    private void collectTxCollisionsInfo() {
+        keyCollisionsInfo.collectInfo();
+    }
+
+    /**
+     * Check local and remote candidates queue size.
+     *
+     * @param entry CacheEntry.
+     */
+    public void detectPossibleCollidingKeys(GridDistributedCacheEntry entry) {
+        int qSize = entry.remoteMvccSnapshot().size();
+
+        try {
+            qSize += entry.localCandidates().size();
+        }
+        catch (GridCacheEntryRemovedException ignored) {
+            // No-op, obsolete vers found.
+        }
+
+        if (qSize >= COLLISIONS_QUEUE_THRESHOLD)
+            pushCollidingKeysWithQueueSize(entry, qSize);
+    }
+
+    /** Tx key collisions info holder. */
+    private final class KeyCollisionsHolder {
+        /** Stripes count. */
+        private final int stripesCnt = cctx.kernalContext().config().getSystemThreadPoolSize();
+
+        /** Max objects per store. */
+        private static final int MAX_OBJS = 5;
+
+        /** Store for keys and collisions queue sizes. */
+        private final Map<GridCacheMapEntry, Integer> stores[] = new LinkedHashMap[stripesCnt];
+
+        /** Metric per cache store. */
+        private final Map<GridCacheAdapter<?, ?>, List<Map.Entry<GridCacheMapEntry, Integer>>> metricPerCacheStore =
+            new ConcurrentHashMap<>();
+
+        /** Guard. */
+        private final AtomicBoolean alreadyRun = new AtomicBoolean();
+
+        /** Constructor. */
+        private KeyCollisionsHolder() {
+            for (int i = 0; i < stripesCnt; ++i) {
+                stores[i] = new LinkedHashMap<GridCacheMapEntry, Integer>() {
+                    /** {@inheritDoc} */
+                    @Override protected boolean removeEldestEntry(Map.Entry<GridCacheMapEntry, Integer> eldest) {
+                        return size() > MAX_OBJS;
+                    }
+                };
+            }
+        }
+
+        /**
+         * Stores keys and values.
+         *
+         * @param key Key to store.
+         * @param val Value to store.
+         */
+        public void put(GridCacheMapEntry key, Integer val) {
+            int stripeIdx = key.hashCode() & (stripesCnt - 1);
+
+            synchronized (stores[stripeIdx]) {
+                stores[stripeIdx].put(key, val);
+            }
+        }
+
+        /** Print hot keys info. */
+        private void collectInfo() {
+            if (!alreadyRun.compareAndSet(false, true))
+                return;
+
+            metricPerCacheStore.clear();
+
+            for (int i = 0; i < stripesCnt; ++i) {
+                synchronized (stores[i]) {
+                    Map<GridCacheMapEntry, Integer> store = stores[i];
+
+                    if (store.isEmpty())
+                        continue;
+
+                    for (Map.Entry<GridCacheMapEntry, Integer> info : store.entrySet()) {
+                        GridCacheAdapter<Object, Object> cacheCtx = info.getKey().context().cache();
+
+                        metricPerCacheStore.computeIfAbsent(cacheCtx, k -> new ArrayList<>()).add(info);
+                    }
+
+                    store.clear();
+                }
+            }
+
+            metricPerCacheStore.forEach((k, v) -> {
+                if (k.metrics0().keyCollisionsInfo() == null) {
+                    k.metrics0().keyCollisionsInfo(
+                        () -> metricPerCacheStore.get(k)
+                    );
+                }
+            });
+
+            alreadyRun.getAndSet(false);
+        }
     }
 
     /**
      * Timeout object for node failure handler.
      */
-    private final class NodeFailureTimeoutObject extends GridTimeoutObjectAdapter {
+    private final class TxRecoveryInitRunnable implements GridPlainRunnable {
         /** */
         private final ClusterNode node;
+
         /** */
         private final MvccCoordinator mvccCrd;
 
@@ -2979,17 +3192,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
          * @param node Failed node.
          * @param mvccCrd Mvcc coordinator at time of node failure.
          */
-        private NodeFailureTimeoutObject(ClusterNode node, MvccCoordinator mvccCrd) {
-            super(IgniteUuid.fromUuid(cctx.localNodeId()), TX_SALVAGE_TIMEOUT);
-
+        private TxRecoveryInitRunnable(ClusterNode node, MvccCoordinator mvccCrd) {
             this.node = node;
             this.mvccCrd = mvccCrd;
         }
 
-        /**
-         *
-         */
-        private void onTimeout0() {
+        /** {@inheritDoc} */
+        @Override public void run() {
             try {
                 cctx.kernalContext().gateway().readLock();
             }
@@ -3008,12 +3217,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                         ", failedNodeId=" + evtNodeId + ']');
 
                 // Null means that recovery voting is not needed.
-                GridCompoundFuture<IgniteInternalTx, Void> allTxFinFut =
-                    node.isClient() && mvccCrd != null && mvccCrd.nodeId() != null
+                GridCompoundFuture<IgniteInternalTx, Void> allTxFinFut = isMvccRecoveryMessageRequired()
                     ? new GridCompoundFuture<>() : null;
 
                 for (final IgniteInternalTx tx : activeTransactions()) {
-                    if ((tx.near() && !tx.local()) || (tx.storeWriteThrough() && tx.masterNodeIds().contains(evtNodeId))) {
+                    if ((tx.near() && !tx.local() && tx.originatingNodeId().equals(evtNodeId))
+                        || (tx.storeWriteThrough() && tx.masterNodeIds().contains(evtNodeId))) {
                         // Invalidate transactions.
                         salvageTx(tx, RECOVERY_FINISH);
                     }
@@ -3044,6 +3253,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                         if (allTxFinFut != null && tx.eventNodeId().equals(evtNodeId)
                             && tx.mvccSnapshot() != null)
                             allTxFinFut.add(tx.finishFuture());
+                    }
+
+                    if (tx.near() && tx.state() == ACTIVE && ((GridNearTxLocal)tx).mappings().get(evtNodeId) != null) {
+                        ClusterTopologyCheckedException ex = new ClusterTopologyCheckedException(String.format(NODE_LEFT_ROLLBACK_MSG,
+                            evtNodeId, node.consistentId()));
+                        ex.retryReadyFuture(cctx.nextAffinityReadyFuture(tx.topologyVersion()));
+
+                        tx.commitError(ex);
+
+                        ((GridNearTxLocal)tx).rollbackNearTxLocalAsync(false, false);
                     }
                 }
 
@@ -3078,19 +3297,24 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     }
                 });
             }
+            catch (Throwable t) {
+                cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR,
+                    new IgniteException("Failed to perform tx recovery", t)));
+            }
             finally {
                 cctx.kernalContext().gateway().readUnlock();
             }
         }
 
-        /** {@inheritDoc} */
-        @Override public void onTimeout() {
-            // Should not block timeout thread.
-            cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
-                @Override public void run() {
-                    onTimeout0();
-                }
-            });
+        /**
+         * Determines need to send a recovery message or not.
+         *
+         * @return True if message required, false otherwise.
+         */
+        private boolean isMvccRecoveryMessageRequired() {
+            return node.isClient() && mvccCrd != null && mvccCrd.nodeId() != null &&
+                (cctx.kernalContext().coordinators().mvccEnabled() ||
+                !IgniteFeatures.nodeSupports(cctx.kernalContext(), cctx.node(mvccCrd.nodeId()), IgniteFeatures.MVCC_TX_RECOVERY_PROTOCOL_V2));
         }
     }
 
@@ -3227,7 +3451,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 try {
                     processFailedMessage(nodeId, cacheMsg, err);
                 }
-                catch(Throwable e){
+                catch (Throwable e) {
                     U.error(log, "Failed to process message [senderId=" + nodeId +
                         ", messageType=" + cacheMsg.getClass() + ']', e);
 

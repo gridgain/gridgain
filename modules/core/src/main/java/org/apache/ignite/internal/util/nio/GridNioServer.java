@@ -42,10 +42,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -55,12 +57,14 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import org.apache.ignite.internal.processors.tracing.NoopSpan;
 import org.apache.ignite.internal.processors.tracing.NoopTracing;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
+import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -87,12 +91,10 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
-import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
-import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
-import static org.apache.ignite.internal.processors.tracing.Traces.Communication.SOCKET_WRITE;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.MSG_WRITER;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.NIO_OPERATION;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_WRITE;
 
 /**
  * TCP NIO server. Due to asynchronous nature of connections processing
@@ -157,20 +159,6 @@ public class GridNioServer<T> {
 
     /** */
     public static final String SENT_BYTES_METRIC_DESC = "Total number of bytes sent by current node";
-
-    /**
-     *
-     */
-    static {
-        // This is a workaround for JDK bug (NPE in Selector.open()).
-        // http://bugs.sun.com/view_bug.do?bug_id=6427854
-        try {
-            Selector.open().close();
-        }
-        catch (IOException ignored) {
-            // No-op.
-        }
-    }
 
     /** Defines how many times selector should do {@code selectNow()} before doing {@code select(long)}. */
     private long selectorSpins;
@@ -246,11 +234,13 @@ public class GridNioServer<T> {
     @Nullable private final MetricRegistry mreg;
 
     /** Received bytes count metric. */
-    @Nullable private final AtomicLongMetric rcvdBytesCntMetric;
+    @Nullable private final LongAdderMetric rcvdBytesCntMetric;
 
     /** Sent bytes count metric. */
-    @Nullable private final AtomicLongMetric sentBytesCntMetric;
+    @Nullable private final LongAdderMetric sentBytesCntMetric;
 
+    /** Outbound messages queue size. */
+    @Nullable private final LongAdderMetric outboundMessagesQueueSizeMetric;
 
     /** Sessions. */
     private final GridConcurrentHashSet<GridSelectorNioSessionImpl> sessions = new GridConcurrentHashSet<>();
@@ -443,15 +433,20 @@ public class GridNioServer<T> {
             }
         }
 
-        balancer = balancer0;
+        this.balancer = balancer0;
 
         this.mreg = mreg;
 
         rcvdBytesCntMetric = mreg == null ?
-            null : mreg.longMetric(RECEIVED_BYTES_METRIC_NAME, RECEIVED_BYTES_METRIC_DESC);
+            null : mreg.longAdderMetric(RECEIVED_BYTES_METRIC_NAME, RECEIVED_BYTES_METRIC_DESC);
 
         sentBytesCntMetric = mreg == null ?
-            null : mreg.longMetric(SENT_BYTES_METRIC_NAME, SENT_BYTES_METRIC_DESC);
+            null : mreg.longAdderMetric(SENT_BYTES_METRIC_NAME, SENT_BYTES_METRIC_DESC);
+
+        outboundMessagesQueueSizeMetric = mreg == null ? null : mreg.longAdderMetric(
+            OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME,
+            OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC
+        );
     }
 
     /**
@@ -1238,7 +1233,9 @@ public class GridNioServer<T> {
                 }
 
                 if (!skipWrite) {
-                    try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
+                    Span span = tracing.create(COMMUNICATION_SOCKET_WRITE, req.span());
+
+                    try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
                         int cnt = sockCh.write(buf);
 
                         if (log.isTraceEnabled())
@@ -1571,9 +1568,10 @@ public class GridNioServer<T> {
             boolean finished;
             msg = (Message)req.message();
 
-            try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
-                if (isTraceable())
-                    traceTag(SpanTags.MESSAGE, traceName(msg));
+            Span span = tracing.create(SpanType.COMMUNICATION_SOCKET_WRITE, req.span());
+
+            try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
+                MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
 
                 assert msg != null;
 
@@ -1751,9 +1749,10 @@ public class GridNioServer<T> {
 
             assert msg != null : req;
 
-            try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
-                if (isTraceable())
-                    traceTag(SpanTags.MESSAGE, traceName(msg));
+            Span span = tracing.create(SpanType.COMMUNICATION_SOCKET_WRITE, req.span());
+
+            try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
+                MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
 
                 if (writer != null)
                     writer.setCurrentWriteClass(msg.getClass());
@@ -1969,6 +1968,9 @@ public class GridNioServer<T> {
          * @param req Change request.
          */
         @Override public void offer(SessionChangeRequest req) {
+            if (log.isDebugEnabled())
+                log.debug("The session change request was offered [req=" + req + "]");
+
             changeReqs.offer(req);
 
             if (select)
@@ -1977,6 +1979,12 @@ public class GridNioServer<T> {
 
         /** {@inheritDoc} */
         @Override public void offer(Collection<SessionChangeRequest> reqs) {
+            if (log.isDebugEnabled()) {
+                String strReqs = reqs.stream().map(Objects::toString).collect(Collectors.joining(","));
+
+                log.debug("The session change requests were offered [reqs=" + strReqs + "]");
+            }
+
             for (SessionChangeRequest req : reqs)
                 changeReqs.offer(req);
 
@@ -1986,6 +1994,9 @@ public class GridNioServer<T> {
         /** {@inheritDoc} */
         @Override public List<SessionChangeRequest> clearSessionRequests(GridNioSession ses) {
             List<SessionChangeRequest> sesReqs = null;
+
+            if (log.isDebugEnabled())
+                log.debug("The session was removed [ses=" + ses + "]");
 
             for (SessionChangeRequest changeReq : changeReqs) {
                 if (changeReq.session() == ses && !(changeReq instanceof SessionMoveFuture)) {
@@ -2021,6 +2032,9 @@ public class GridNioServer<T> {
 
                     while ((req0 = changeReqs.poll()) != null) {
                         updateHeartbeat();
+
+                        if (log.isDebugEnabled())
+                            log.debug("The session request will be processed [req=" + req0 + "]");
 
                         switch (req0.operation()) {
                             case CONNECT: {
@@ -2308,7 +2322,7 @@ public class GridNioServer<T> {
          * @param keys Keys.
          */
         private void dumpSelectorInfo(StringBuilder sb, Set<SelectionKey> keys) {
-            sb.append(">> Selector info [idx=").append(idx)
+            sb.append(">> Selector info [id=").append(idx)
                 .append(", keysCnt=").append(keys.size())
                 .append(", bytesRcvd=").append(bytesRcvd)
                 .append(", bytesRcvd0=").append(bytesRcvd0)
@@ -2910,17 +2924,12 @@ public class GridNioServer<T> {
      * Gets outbound messages queue size.
      *
      * @return Write queue size.
-     * @deprecated Will be removed in the next major release and replaced with new metrics API.
      */
-    @Deprecated
     public int outboundMessagesQueueSize() {
-        if (mreg == null)
+        if (outboundMessagesQueueSizeMetric == null)
             return -1;
 
-        return (int) mreg.longMetric(
-            OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME,
-            OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC
-        ).value();
+        return (int) outboundMessagesQueueSizeMetric.value();
     }
 
     /**
@@ -3737,7 +3746,7 @@ public class GridNioServer<T> {
         private boolean directBuf;
 
         /** Byte order. */
-        private ByteOrder byteOrder = ByteOrder.nativeOrder();
+        private ByteOrder byteOrder = ByteOrder.LITTLE_ENDIAN;
 
         /** NIO server listener. */
         private GridNioServerListener<T> lsnr;

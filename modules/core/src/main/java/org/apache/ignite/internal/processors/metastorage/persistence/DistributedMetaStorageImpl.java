@@ -38,6 +38,7 @@ import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.DiscoveryLocalJoinData;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
@@ -58,6 +59,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgniteProducer;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
@@ -71,6 +73,7 @@ import org.jetbrains.annotations.TestOnly;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.META_STORAGE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
+import static org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree.MAX_KEY_LEN;
 import static org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage.isSupported;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageHistoryItem.EMPTY_ARRAY;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.historyItemPrefix;
@@ -275,6 +278,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         }
         finally {
             lock.writeLock().unlock();
+
+            cancelUpdateFutures(new NodeStoppingException("Node is stopping."));
         }
     }
 
@@ -420,7 +425,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     @Override public void write(@NotNull String key, @NotNull Serializable val) throws IgniteCheckedException {
         assert val != null : key;
 
-        startWrite(key, marshal(marshaller, val)).get();
+        try {
+            startWrite(key, marshal(marshaller, val)).get();
+        }
+        catch (IgniteCheckedException ex) {
+            throw new IgniteCheckedException("Write was failed", ex);
+        }
     }
 
     /** {@inheritDoc} */
@@ -431,6 +441,11 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         assert val != null : key;
 
         return startWrite(key, marshal(marshaller, val));
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridFutureAdapter<?> removeAsync(@NotNull String key) throws IgniteCheckedException {
+        return startWrite(key, null);
     }
 
     /** {@inheritDoc} */
@@ -446,7 +461,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     ) throws IgniteCheckedException {
         assert newVal != null : key;
 
-        return compareAndSetAsync(key, expVal, newVal).get();
+        try {
+            return compareAndSetAsync(key, expVal, newVal).get();
+        }
+        catch (IgniteCheckedException ex) {
+            throw new IgniteCheckedException("Write was failed", ex);
+        }
     }
 
     /** {@inheritDoc} */
@@ -585,6 +605,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                     String errorMsg = "Node not supporting distributed metastorage feature" +
                         " is not allowed to join the cluster";
 
+                    log.warning(errorMsg);
                     return new IgniteNodeValidationResult(node.id(), errorMsg);
                 }
                 else
@@ -871,14 +892,21 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             ver = INITIAL_VERSION;
 
-            for (GridFutureAdapter<Boolean> fut : updateFuts.values())
-                fut.onDone(new IgniteCheckedException("Client was disconnected during the operation."));
-
-            updateFuts.clear();
+            cancelUpdateFutures(new IgniteCheckedException("Client was disconnected during the operation."));
         }
         finally {
             lock.writeLock().unlock();
         }
+    }
+
+    /**
+     * Cancel all waiting futures and clear the map.
+     */
+    private void cancelUpdateFutures(Exception e) {
+        for (GridFutureAdapter<Boolean> fut : updateFuts.values())
+            fut.onDone(e);
+
+        updateFuts.clear();
     }
 
     /** {@inheritDoc} */
@@ -975,6 +1003,24 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /**
+     * Checks that key is shorter than maximum allowed key length.
+     * If it is longer an {@code IgniteCheckedException}  is thrown.
+     *
+     * @param key Key to check length.
+     * @throws IgniteCheckedException If key exceeds maximum key length.
+     */
+    private void checkMaxKeyLengthExceeded(String key) throws IgniteCheckedException {
+        if (DistributedMetaStorage.longKeysSupported(ctx))
+            return;
+
+        if (DistributedMetaStorageUtil.localKey(key).getBytes().length > MAX_KEY_LEN) {
+            throw new IgniteCheckedException("Key is too long. Maximum key length is " +
+                (MAX_KEY_LEN - DistributedMetaStorageUtil.localKeyPrefix().getBytes().length) +
+                " bytes in UTF8");
+        }
+    }
+
+    /**
      * Common implementation for {@link #write(String, Serializable)} and {@link #remove(String)}. Synchronously waits
      * for operation to be completed.
      *
@@ -983,8 +1029,10 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      * @throws IgniteCheckedException If there was an error while sending discovery message.
      */
     private GridFutureAdapter<?> startWrite(String key, byte[] valBytes) throws IgniteCheckedException {
-       if (!isSupported(ctx))
+        if (!isSupported(ctx))
             throw new IgniteCheckedException(NOT_SUPPORTED_MSG);
+
+        checkMaxKeyLengthExceeded(key);
 
         UUID reqId = UUID.randomUUID();
 
@@ -1004,8 +1052,10 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      */
     private GridFutureAdapter<Boolean> startCas(String key, byte[] expValBytes, byte[] newValBytes)
         throws IgniteCheckedException {
-         if (!isSupported(ctx))
+        if (!isSupported(ctx))
             throw new IgniteCheckedException(NOT_SUPPORTED_MSG);
+
+        checkMaxKeyLengthExceeded(key);
 
         UUID reqId = UUID.randomUUID();
 
@@ -1117,8 +1167,15 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             ver = ver.nextVersion(histItem);
 
-            for (int i = 0, len = histItem.keys.length; i < len; i++)
-                notifyListeners(histItem.keys[i], bridge.read(histItem.keys[i]), unmarshal(marshaller, histItem.valBytesArray[i]));
+            for (int i = 0, len = histItem.keys.length; i < len; i++) {
+                String key = histItem.keys[i];
+                byte[] valBytes = histItem.valBytesArray[i];
+
+                notifyListeners(
+                    histItem.keys[i],
+                    () -> bridge.read(key),
+                    () -> unmarshal(marshaller, valBytes));
+            }
 
             for (int i = 0, len = histItem.keys.length; i < len; i++)
                 bridge.write(histItem.keys[i], histItem.valBytesArray[i]);
@@ -1276,21 +1333,20 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             int c = oldKey.compareTo(newKey);
 
             if (c < 0) {
-                notifyListeners(oldKey, unmarshal(marshaller, oldValBytes), null);
+                notifyListeners(oldKey, () -> unmarshal(marshaller, oldValBytes), () -> null);
 
                 ++oldIdx;
             }
             else if (c > 0) {
-                notifyListeners(newKey, null, unmarshal(marshaller, newValBytes));
+                notifyListeners(newKey, () -> null, () -> unmarshal(marshaller, newValBytes));
 
                 ++newIdx;
             }
             else {
-                Serializable oldVal = unmarshal(marshaller, oldValBytes);
-
-                Serializable newVal = Arrays.equals(oldValBytes, newValBytes) ? oldVal : unmarshal(marshaller, newValBytes);
-
-                notifyListeners(oldKey, oldVal, newVal);
+                notifyListeners(
+                    oldKey,
+                    () -> unmarshal(marshaller, oldValBytes),
+                    () -> unmarshal(marshaller, newValBytes));
 
                 ++oldIdx;
 
@@ -1298,23 +1354,41 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             }
         }
 
-        for (; oldIdx < oldData.length; ++oldIdx)
-            notifyListeners(oldData[oldIdx].key, unmarshal(marshaller, oldData[oldIdx].valBytes), null);
+        for (; oldIdx < oldData.length; ++oldIdx) {
+            byte[] oldValBytes = oldData[oldIdx].valBytes;
+            notifyListeners(oldData[oldIdx].key, () -> unmarshal(marshaller, oldValBytes), () -> null);
+        }
 
-        for (; newIdx < newData.length; ++newIdx)
-            notifyListeners(newData[newIdx].key, null, unmarshal(marshaller, newData[newIdx].valBytes));
+        for (; newIdx < newData.length; ++newIdx) {
+            byte[] newValBytes = newData[newIdx].valBytes;
+            notifyListeners(newData[newIdx].key, () -> null, () -> unmarshal(marshaller, newValBytes));
+        }
     }
 
     /**
      * Notify listeners.
      *
      * @param key The key.
-     * @param oldVal Old value.
-     * @param newVal New value.
+     * @param oldValProducer Lazy getter for an old value and is executed only if there are listeners for the given key.
+     * @param newValProducer Lazy getter for a new value and is executed only if there are listeners for the given key.
      */
-    private void notifyListeners(String key, Serializable oldVal, Serializable newVal) {
+    private void notifyListeners(String key,
+                                 @NotNull IgniteProducer<Serializable> oldValProducer,
+                                 @NotNull IgniteProducer<Serializable> newValProducer) throws IgniteCheckedException {
+        boolean valuesProduced = false;
+
+        Serializable newVal = null;
+
+        Serializable oldVal = null;
+
         for (IgniteBiTuple<Predicate<String>, DistributedMetaStorageListener<Serializable>> entry : lsnrs) {
             if (entry.get1().test(key)) {
+                if (!valuesProduced) {
+                    newVal = newValProducer.produce();
+                    oldVal = oldValProducer.produce();
+                    valuesProduced = true;
+                }
+
                 try {
                     // ClassCastException might be thrown here for crappy listeners.
                     entry.get2().onUpdate(key, oldVal, newVal);

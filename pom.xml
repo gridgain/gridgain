@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>apache-ignite</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
@@ -98,6 +98,12 @@
         <module>modules/tensorflow</module>
         <module>modules/opencensus</module>
         <module>modules/h2</module>
+        <module>modules/hibernate-4.2</module>
+        <module>modules/hibernate-5.1</module>
+        <module>modules/hibernate-5.3</module>
+        <module>modules/geospatial</module>
+        <module>modules/schedule</module>
+        <module>modules/control-utility</module>
     </modules>
 
     <profiles>
@@ -105,6 +111,7 @@
             <id>all-java</id> <!-- used to update project versions and check all modules compilation -->
             <modules> <!-- sorted alphabetically -->
                 <module>examples</module>
+                <module>examples-ml</module>
                 <module>modules/benchmarks</module>
                 <module>modules/compatibility</module>
                 <module>modules/geospatial</module>
@@ -112,7 +119,6 @@
                 <module>modules/hibernate-5.1</module>
                 <module>modules/hibernate-5.3</module>
                 <module>modules/schedule</module>
-                <module>modules/web-console</module>
                 <module>modules/yardstick</module>
             </modules>
         </profile>
@@ -124,16 +130,10 @@
                 <module>modules/scalar-2.10</module>
                 <module>modules/scalar</module>
                 <module>modules/spark</module>
+                <module>modules/spark-2.4</module>
                 <module>modules/visor-console-2.10</module>
                 <module>modules/visor-console</module>
                 <module>modules/visor-plugins</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>all-other</id> <!-- used to update project versions and check all modules compilation -->
-            <modules> <!-- sorted alphabetically -->
-                <module>modules/web-console</module>
             </modules>
         </profile>
 
@@ -144,7 +144,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-assembly-plugin</artifactId>
-                        <version>2.4</version>
+                        <version>2.5.2</version>
                         <inherited>false</inherited>
                         <executions>
                             <execution>
@@ -284,7 +284,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>3.0.0</version>
                         <inherited>false</inherited>
                         <dependencies>
                             <dependency>
@@ -327,17 +327,6 @@
         </profile>
 
         <profile>
-            <id>lgpl</id>
-            <modules>
-                <module>modules/hibernate-4.2</module>
-                <module>modules/hibernate-5.1</module>
-                <module>modules/hibernate-5.3</module>
-                <module>modules/geospatial</module>
-                <module>modules/schedule</module>
-            </modules>
-        </profile>
-
-        <profile>
             <id>licenses</id>
             <build>
                 <plugins>
@@ -366,10 +355,10 @@
             <id>release</id>
             <build>
                 <plugins>
-                     <plugin>
+                    <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>3.0.0</version>
                         <inherited>false</inherited>
                         <dependencies>
                             <dependency>
@@ -386,109 +375,156 @@
                                 </goals>
                                 <phase>initialize</phase>
                                 <configuration>
-                                    <target>
+                                    <target name="release-postprocessing">
+                                        <property name="release.dir" value="${basedir}/target/release-package-${ignite.edition}"/>
+
                                         <replaceregexp byline="true">
                                             <regexp pattern="pushd &quot;%~dp0&quot;/\.\./\.\.(\s*&amp;::.+)?" />
                                             <substitution expression="pushd &quot;%~dp0&quot;/.." />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${release.dir}">
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="IGNITE_HOME_TMP=&quot;\$\(dirname &quot;\$\{IGNITE_HOME_TMP\}&quot;\)&quot;(\s*#.*)?" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
+                                            <fileset dir="${release.dir}">
+                                                <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="set SCRIPTS_HOME=%IGNITE_HOME%\\bin(\s*&amp;::.*)?" />
                                             <substitution expression="set SCRIPTS_HOME=%IGNITE_HOME%\\\\bin" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${release.dir}">
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="SCRIPTS_HOME=&quot;\$\{IGNITE_HOME_TMP\}/bin&quot;(\s*#.*)?" />
                                             <substitution expression="SCRIPTS_HOME=&quot;$${IGNITE_HOME_TMP}/bin&quot;" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
+                                            <fileset dir="${release.dir}">
+                                                <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="\. &quot;\$\{SCRIPTS_HOME\}&quot;/include/build-classpath.sh(\s*#.*)?" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
+                                            <fileset dir="${release.dir}">
+                                                <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="call &quot;%SCRIPTS_HOME%\\include\\build-classpath.bat&quot;(\s*&amp;::.*)?" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${release.dir}">
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="ENABLE_ASSERTIONS=.*" />
                                             <substitution expression="ENABLE_ASSERTIONS=&quot;0&quot;" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
+                                            <fileset dir="${release.dir}">
+                                                <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="ENABLE_ASSERTIONS=.*" />
                                             <substitution expression="ENABLE_ASSERTIONS=0" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${release.dir}">
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="-DIGNITE_UPDATE_NOTIFIER=false" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${release.dir}">
+                                                <include name="bin/**/*.sh" />
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
-                                        <replaceregexp file="${basedir}/target/release-package-${ignite.edition}/examples/pom.xml" byline="true">
+                                        <replaceregexp file="${release.dir}/examples/pom.xml" byline="true">
                                             <regexp pattern="to_be_replaced_by_ignite_version" />
                                             <substitution expression="${project.version}" />
                                         </replaceregexp>
 
-                                        <replaceregexp file="${basedir}/target/release-package-${ignite.edition}/benchmarks/sources/pom.xml" byline="true">
+                                        <replaceregexp file="${release.dir}/examples-ml/pom.xml" byline="true">
                                             <regexp pattern="to_be_replaced_by_ignite_version" />
                                             <substitution expression="${project.version}" />
                                         </replaceregexp>
 
-                                        <chmod dir="${basedir}/target/release-package-${ignite.edition}" perm="755" includes="**/*.sh" />
+                                        <replaceregexp file="${release.dir}/benchmarks/sources/pom.xml" byline="true">
+                                            <regexp pattern="to_be_replaced_by_ignite_version" />
+                                            <substitution expression="${project.version}" />
+                                        </replaceregexp>
+
+                                        <chmod dir="${release.dir}" perm="755" includes="**/*.sh" />
 
                                         <!--
                                         Line ending bugfix for builds packaged in MS Windows machine to adjust Linux based
                                         end-of-line characters for Linux shell scripts
                                         -->
-                                        <fixcrlf srcdir="${basedir}/target/release-package-${ignite.edition}" eol="lf" eof="remove">
+                                        <fixcrlf srcdir="${release.dir}" eol="lf" eof="remove">
                                             <include name="**/*.sh" />
                                         </fixcrlf>
 
-                                        <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}-bin.zip" encoding="UTF-8">
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}-bin" filemode="755">
+                                        <available file="${release.dir}/platforms/cpp/configure.ac" property="cpp"/>
+                                    </target>
+                                    <exportAntProperties>true</exportAntProperties>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>release-cpp</id>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <target name="release-autotools" if="${cpp}">
+                                        <exec executable="libtoolize" dir="${release.dir}/platforms/cpp">
+                                            <arg value="--copy"/>
+                                        </exec>
+
+                                        <exec executable="aclocal" dir="${release.dir}/platforms/cpp"/>
+
+                                        <exec executable="autoheader" dir="${release.dir}/platforms/cpp"/>
+
+                                        <exec executable="automake" dir="${release.dir}/platforms/cpp">
+                                            <arg value="--add-missing"/>
+                                            <arg value="--copy"/>
+                                        </exec>
+
+                                        <exec executable="autoreconf" dir="${release.dir}/platforms/cpp"/>
+
+                                        <delete dir="${release.dir}/platforms/cpp/autom4te.cache" quiet="true"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>release-zip</id>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <target name="release-zip">
+                                        <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}.zip" encoding="UTF-8">
+                                            <zipfileset dir="${release.dir}" prefix="${ignite.edition}-${project.version}" filemode="755">
                                                 <include name="**/*.sh" />
                                                 <include name="**/configure" />
                                                 <include name="**/install-sh" />
                                                 <include name="**/compile" />
                                                 <include name="**/missing" />
                                             </zipfileset>
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}-bin">
+                                            <zipfileset dir="${release.dir}" prefix="${ignite.edition}-${project.version}">
                                                 <exclude name="**/*.sh" />
                                                 <exclude name="**/configure" />
                                                 <exclude name="**/install-sh" />
@@ -516,7 +552,7 @@
                                 </goals>
                                 <configuration>
                                     <descriptors>
-                                        <descriptor>${basedir}/assembly/dependencies-${ignite.edition}.xml</descriptor>
+                                        <descriptor>${basedir}/assembly/dependencies-${ignite.orig.edition}.xml</descriptor>
                                     </descriptors>
                                     <outputDirectory>${basedir}/target/release-package-${ignite.edition}</outputDirectory>
                                     <finalName>libs</finalName>
@@ -532,57 +568,9 @@
                                 </goals>
                                 <configuration>
                                     <descriptors>
-                                        <descriptor>assembly/release-${ignite.edition}.xml</descriptor>
+                                        <descriptor>assembly/release-${ignite.orig.edition}.xml</descriptor>
                                     </descriptors>
                                     <finalName>release-package-${ignite.edition}</finalName>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>dependencies-visor-console</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>assembly/dependencies-visor-console.xml</descriptor>
-                                    </descriptors>
-                                    <outputDirectory>target/release-package-${ignite.edition}/bin</outputDirectory>
-                                    <finalName>include</finalName>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>dependencies-sqlline</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>assembly/dependencies-sqlline.xml</descriptor>
-                                    </descriptors>
-                                    <outputDirectory>target/release-package-${ignite.edition}</outputDirectory>
-                                    <finalName>bin</finalName>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>scala-scripts</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>assembly/release-scala.xml</descriptor>
-                                    </descriptors>
-                                    <outputDirectory>target/release-package-${ignite.edition}</outputDirectory>
-                                    <finalName>bin</finalName>
                                     <appendAssemblyId>false</appendAssemblyId>
                                 </configuration>
                             </execution>
@@ -631,6 +619,19 @@
         </profile>
 
         <profile>
+            <id>spark-2.4</id>
+
+            <activation>
+                <property><name>!scala-2.10</name></property>
+            </activation>
+
+            <modules>
+                <module>modules/spark-2.4</module>
+                <module>modules/scalar</module>
+            </modules>
+        </profile>
+
+        <profile>
             <id>scala-2.10</id>
 
             <activation>
@@ -655,13 +656,7 @@
             <id>examples</id>
             <modules>
                 <module>examples</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>web-console</id>
-            <modules>
-                <module>modules/web-console</module>
+                <module>examples-ml</module>
             </modules>
         </profile>
 
@@ -673,7 +668,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>3.0.0</version>
                         <executions>
                             <execution>
                                 <id>update-versions</id>

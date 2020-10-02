@@ -25,6 +25,8 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteFuture;
@@ -36,11 +38,6 @@ import org.apache.ignite.lang.IgniteFuture;
  * caching nodes, and get other useful information about topology.
  */
 public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
-    /**
-     * Maximum length of {@link IgniteCluster#tag()} tag.
-     */
-    public static final int MAX_TAG_LENGTH = 280;
-
     /**
      * Gets local grid node.
      *
@@ -447,7 +444,9 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * Checks Ignite grid is active or not active.
      *
      * @return {@code True} if grid is active. {@code False} If grid is not active.
+     * @deprecated Use {@link #state()} instead.
      */
+    @Deprecated
     public boolean active();
 
     /**
@@ -455,23 +454,25 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      *
      * @param active If {@code True} start activation process. If {@code False} start deactivation process.
      * @throws IgniteException If there is an already started transaction or lock in the same thread.
+     * @deprecated Use {@link #state(ClusterState)} instead.
      */
+    @Deprecated
     public void active(boolean active);
 
     /**
-     * Checks Ignite grid is in read-only mode or not.
+     * Gets current cluster state.
      *
-     * @return {@code True} if grid is in read-only mode and {@code False} otherwise.
+     * @return Current cluster state.
      */
-    public boolean readOnly();
+    public ClusterState state();
 
     /**
-     * Enable or disable Ignite grid read-only mode.
+     * Changes current cluster state to given {@code newState} cluster state.
      *
-     * @param readOnly If {@code True} enable read-only mode. If {@code False} disable read-only mode.
-     * @throws IgniteException If Ignite grid isn't active.
+     * @param newState New cluster state.
+     * @throws IgniteException If there is an already started transaction or lock in the same thread.
      */
-    public void readOnly(boolean readOnly) throws IgniteException;
+    public void state(ClusterState newState) throws IgniteException;
 
     /**
      * Gets current baseline topology. If baseline topology was not set, will return {@code null}.
@@ -549,41 +550,6 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public boolean isWalEnabled(String cacheName);
 
     /**
-     * Cluster ID is a unique identifier automatically generated when cluster starts up for the very first time.
-     *
-     * It is a cluster-wide property so all nodes of the cluster (including client nodes) return the same value.
-     *
-     * In in-memory clusters ID is generated again upon each cluster restart.
-     * In clusters running in persistent mode cluster ID is stored to disk and is used even after full cluster restart.
-     *
-     * @return Unique cluster ID.
-     */
-    public UUID id();
-
-    /**
-     * User-defined tag describing the cluster.
-     *
-     * @return Current tag value same across all nodes of the cluster..
-     */
-    public String tag();
-
-    /**
-     * Enables user to add a specific label to the cluster e.g. to describe purpose of the cluster
-     * or any its characteristics.
-     * Tag is set cluster-wide,
-     * value set on one node will be distributed across all nodes (including client nodes) in the cluster.
-     *
-     * Maximum tag length is limited by {@link #MAX_TAG_LENGTH} value.
-     *
-     * @param tag New tag to be set.
-     *
-     * @throws IgniteCheckedException In case tag change is requested on inactive cluster
-     *  or concurrent tag change request was completed before the current one.
-     *  Also provided tag is checked for max length.
-     */
-    public void tag(String tag) throws IgniteCheckedException;
-
-    /**
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
      * {@code False} If cluster in manual.
      */
@@ -614,4 +580,21 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @return Status of baseline auto-adjust.
      */
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus();
+
+    /**
+     * Returns a policy of shutdown or default value {@code IgniteConfiguration.DFLT_SHUTDOWN_POLICY}
+     * if the property is not set.
+     *
+     * @return Shutdown policy.
+     */
+    public ShutdownPolicy shutdownPolicy();
+
+    /**
+     * Sets a shutdown policy on a cluster.
+     * If a policy is specified here the value will override static configuration on
+     * {@link IgniteConfiguration#setShutdownPolicy(ShutdownPolicy)} and persists to cluster meta storage.
+     *
+     * @param policy Shutdown policy.
+     */
+    public void shutdownPolicy(ShutdownPolicy policy);
 }

@@ -23,6 +23,7 @@ import java.util.Collection;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Metrics snapshot.
@@ -318,6 +319,15 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
      */
     private boolean isValidForWriting;
 
+    /** Tx key collisions with appropriate queue size string representation. */
+    private String txKeyCollisions;
+
+    /** Index rebuilding in progress. */
+    private boolean idxRebuildInProgress;
+
+    /** Number of keys processed during index rebuilding. */
+    private long idxRebuildKeyProcessed;
+
     /**
      * Default constructor.
      */
@@ -427,6 +437,10 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         rebalanceStartTime = m.rebalancingStartTime();
         rebalanceFinishTime = m.estimateRebalancingFinishTime();
         rebalanceClearingPartitionsLeft = m.getRebalanceClearingPartitionsLeft();
+        txKeyCollisions = m.getTxKeyCollisions();
+
+        idxRebuildInProgress = m.isIndexRebuildInProgress();
+        idxRebuildKeyProcessed = m.getIndexRebuildKeysProcessed();
     }
 
     /**
@@ -1043,6 +1057,21 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     }
 
     /** {@inheritDoc} */
+    @Override public String getTxKeyCollisions() {
+        return txKeyCollisions;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isIndexRebuildInProgress() {
+        return idxRebuildInProgress;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getIndexRebuildKeysProcessed() {
+        return idxRebuildKeyProcessed;
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(CacheMetricsSnapshotV2.class, this);
     }
@@ -1123,6 +1152,12 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         out.writeBoolean(isEmpty);
         out.writeInt(size);
         out.writeInt(keySize);
+        U.writeLongString(out, txKeyCollisions);
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
     }
 
     /** {@inheritDoc} */
@@ -1201,5 +1236,8 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         isEmpty = in.readBoolean();
         size = in.readInt();
         keySize = in.readInt();
+
+        if (protoVer >= V2)
+            txKeyCollisions = U.readLongString(in);
     }
 }

@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +34,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.spi.discovery.DiscoveryNotification;
+import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -44,12 +46,11 @@ import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
- * Tests situation when two nodes in cluster simultaneously propose different classes with the same typeId
- * (which is actually class name's <b>hashCode</b> ).
+ * Tests situation when two nodes in cluster simultaneously propose different classes with the same typeId (which is
+ * actually class name's <b>hashCode</b> ).
  *
- * In that case one of the propose requests should be rejected
- * and {@link org.apache.ignite.internal.processors.marshaller.MappingProposedMessage} is sent
- * with not-null <b>conflictingClsName</b> field.
+ * In that case one of the propose requests should be rejected and {@link org.apache.ignite.internal.processors.marshaller.MappingProposedMessage}
+ * is sent with not-null <b>conflictingClsName</b> field.
  */
 public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstractTest {
     /** */
@@ -121,7 +122,8 @@ public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstra
 
                 try {
                     startLatch.await();
-                } catch (InterruptedException e) {
+                }
+                catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
@@ -142,7 +144,8 @@ public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstra
 
                 try {
                     startLatch.await();
-                } catch (InterruptedException e) {
+                }
+                catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
@@ -193,10 +196,14 @@ public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstra
 
             /** {@inheritDoc} */
             @Override public IgniteFuture<?> onDiscovery(
-                DiscoveryNotification notification
+                int type,
+                long topVer,
+                ClusterNode node,
+                Collection<ClusterNode> topSnapshot,
+                Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
             ) {
-                DiscoveryCustomMessage customMsg = notification.getCustomMsgData() == null ? null
-                        : (DiscoveryCustomMessage) U.field(notification.getCustomMsgData(), "delegate");
+                DiscoveryCustomMessage customMsg = data == null ? null
+                    : (DiscoveryCustomMessage)U.field(data, "delegate");
 
                 if (customMsg != null) {
                     //don't want to make this class public, using equality of class name instead of instanceof operator
@@ -213,7 +220,7 @@ public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstra
                 }
 
                 if (delegate != null)
-                    return delegate.onDiscovery(notification);
+                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, data);
 
                 return new IgniteFinishedFutureImpl<>();
             }

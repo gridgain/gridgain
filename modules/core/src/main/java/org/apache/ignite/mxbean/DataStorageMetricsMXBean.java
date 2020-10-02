@@ -69,7 +69,7 @@ public interface DataStorageMetricsMXBean extends DataStorageMetrics {
 
     /** {@inheritDoc} */
     @MXBeanDescription("Total size in bytes for checkpoint buffer.")
-    @Override  long getCheckpointBufferSize();
+    @Override long getCheckpointBufferSize();
 
     /** {@inheritDoc} */
     @MXBeanDescription("Duration of the last checkpoint in milliseconds.")
@@ -148,6 +148,7 @@ public interface DataStorageMetricsMXBean extends DataStorageMetrics {
      * {@link DataStorageConfiguration#setMetricsRateTimeInterval(long)} configuration property.
      *
      * @param rateTimeInterval Time interval (in milliseconds) used for allocation and eviction rates calculations.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
     @MXBeanDescription(
         "Sets time interval for pages allocation and eviction monitoring purposes."
@@ -158,6 +159,7 @@ public interface DataStorageMetricsMXBean extends DataStorageMetrics {
     @MXBeanParametersDescriptions(
         "Time interval (in milliseconds) to set."
     )
+    @Deprecated
     public void rateTimeInterval(long rateTimeInterval);
 
     /**
@@ -166,6 +168,7 @@ public interface DataStorageMetricsMXBean extends DataStorageMetrics {
      * property.
      *
      * @param subInts A number of sub-intervals.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
     @MXBeanDescription(
         "Sets a number of sub-intervals to calculate allocation and eviction rates metrics."
@@ -176,6 +179,7 @@ public interface DataStorageMetricsMXBean extends DataStorageMetrics {
     @MXBeanParametersDescriptions(
         "Number of subintervals to set."
     )
+    @Deprecated
     public void subIntervals(int subInts);
 
     /** {@inheritDoc} */

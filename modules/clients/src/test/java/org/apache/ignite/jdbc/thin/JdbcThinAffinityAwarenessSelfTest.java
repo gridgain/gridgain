@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.AffinityFunction;
@@ -41,8 +42,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.jdbc.thin.AffinityCache;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinPartitionResultDescriptor;
 import org.apache.ignite.internal.jdbc.thin.QualifiedSQLQuery;
-import org.apache.ignite.internal.processors.cache.GridCacheUtils;
-import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
+import org.apache.ignite.internal.processors.query.QueryHistory;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
 import org.apache.ignite.internal.util.GridBoundedLinkedHashMap;
@@ -132,14 +132,14 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
      */
     @Test
     public void testExecuteQueries() throws Exception {
-        checkNodesUsage(null, stmt, "select * from Person where _key = 1", 1, 1,
+        checkNodesUsage(null, "select * from Person where _key = 1", 1, 1,
             false);
 
-        checkNodesUsage(null, stmt,  "select * from Person where _key = 1 or _key = 2", 2,
+        checkNodesUsage(null, "select * from Person where _key = 1 or _key = 2", 2,
             2, false);
 
-        checkNodesUsage(null, stmt, "select * from Person where _key in (1, 2)", 2,
-            2, false);
+        checkNodesUsage(null, "select * from Person where _key in (1, 2)", 2, 2,
+            false);
     }
 
     /**
@@ -154,7 +154,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         ps.setInt(1, 2);
 
-        checkNodesUsage(ps, null, null, 1, 1, false);
+        checkNodesUsage(ps, null, 1, 1, false);
 
         // Use case 2.
         ps = conn.prepareStatement("select * from Person where _key = ? or _key = ?");
@@ -163,7 +163,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         ps.setInt(2, 2);
 
-        checkNodesUsage(ps, null, null, 2, 2, false);
+        checkNodesUsage(ps, null, 2, 2, false);
 
         // Use case 3.
         ps = conn.prepareStatement("select * from Person where _key in (?, ?)");
@@ -172,7 +172,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         ps.setInt(2, 2);
 
-        checkNodesUsage(ps, null, null, 2, 2, false);
+        checkNodesUsage(ps, null, 2, 2, false);
     }
 
     /**
@@ -182,13 +182,13 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
      */
     @Test
     public void testUpdateQueries() throws Exception {
-        checkNodesUsage(null, stmt, "update Person set firstName = 'TestFirstName' where _key = 1",
+        checkNodesUsage(null, "update Person set firstName = 'TestFirstName' where _key = 1",
             1, 1, true);
 
-        checkNodesUsage(null, stmt,  "update Person set firstName = 'TestFirstName' where _key = 1 or _key = 2",
+        checkNodesUsage(null, "update Person set firstName = 'TestFirstName' where _key = 1 or _key = 2",
             2, 2, true);
 
-        checkNodesUsage(null, stmt, "update Person set firstName = 'TestFirstName' where _key in (1, 2)",
+        checkNodesUsage(null, "update Person set firstName = 'TestFirstName' where _key in (1, 2)",
             2, 2, true);
     }
 
@@ -205,7 +205,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         ps.setInt(1, 2);
 
-        checkNodesUsage(ps, null, null, 1, 1, true);
+        checkNodesUsage(ps, null, 1, 1, true);
 
         // Use case 2.
         ps = conn.prepareStatement("update Person set firstName = 'TestFirstName' where _key = ? or _key = ?");
@@ -214,7 +214,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         ps.setInt(2, 2);
 
-        checkNodesUsage(ps, null, null, 2, 2, true);
+        checkNodesUsage(ps, null, 2, 2, true);
 
         // Use case 3.
         ps = conn.prepareStatement("update Person set firstName = 'TestFirstName' where _key in (?, ?)");
@@ -223,7 +223,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         ps.setInt(2, 2);
 
-        checkNodesUsage(ps, null, null, 2, 2, true);
+        checkNodesUsage(ps, null, 2, 2, true);
     }
 
     /**
@@ -234,12 +234,12 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
     @Test
     public void testDeleteQueries() throws Exception {
         // In case of simple query like "delete from Person where _key = 1" fast update logic is used,
-        // so partition result is not calculated on the server side - nothing to check.
+        // so parition result is not calculated on the server side - nothing to check.
 
-        checkNodesUsage(null, stmt, "delete from Person where _key = 10000 or _key = 20000",
+        checkNodesUsage(null, "delete from Person where _key = 10000 or _key = 20000",
             2, 0, true);
 
-        checkNodesUsage(null, stmt, "delete from Person where _key in (10000, 20000)",
+        checkNodesUsage(null, "delete from Person where _key in (10000, 20000)",
             2, 0, true);
     }
 
@@ -251,7 +251,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
     @Test
     public void testDeleteParametrizedQueries() throws Exception {
         // In case of simple query like "delete from Person where _key = ?" fast update logic is used,
-        // so partition result is not calculated on the server side - nothing to check.
+        // so parition result is not calculated on the server side - nothing to check.
 
         // Use case 1.
         PreparedStatement ps = conn.prepareStatement("delete from Person where _key = ? or _key = ?");
@@ -260,7 +260,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         ps.setInt(2, 2000);
 
-        checkNodesUsage(ps, null, null, 2, 0, true);
+        checkNodesUsage(ps, null, 2, 0, true);
 
         // Use case 2.
         ps = conn.prepareStatement("delete from Person where _key in (?, ?)");
@@ -269,7 +269,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         ps.setInt(2, 2000);
 
-        checkNodesUsage(ps, null, null, 2, 0, true);
+        checkNodesUsage(ps, null, 2, 0, true);
     }
 
     /**
@@ -351,14 +351,14 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         fillCache(cacheName);
 
-        checkNodesUsage(null, stmt,
+        checkNodesUsage(null,
             "select * from \"" + cacheName + "\".Person where _key = 1",
             1, 1, false);
     }
 
     /**
      * Check that affinity cache is invalidated in case of changing topology,
-     * detected during partitions distribution retrieval.
+     * detected during partions destribution retrieval.
      *
      * @throws Exception If failed.
      */
@@ -433,22 +433,22 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
      */
     @Test
     public void testAffinityAwarenessIsSkippedIfItIsSwitchedOff() throws Exception {
-        try (Connection conn = DriverManager.getConnection(
+        Connection conn = DriverManager.getConnection(
             "jdbc:ignite:thin://127.0.0.1:10800..10802?affinityAwareness=false");
-             Statement stmt = conn.createStatement()) {
 
-            final String cacheName = "yac";
+        Statement stmt = conn.createStatement();
 
-            CacheConfiguration<Object, Object> cache = prepareCacheConfig(cacheName);
+        final String cacheName = "yac";
 
-            ignite(0).createCache(cache);
+        CacheConfiguration<Object, Object> cache = prepareCacheConfig(cacheName);
 
-            stmt.executeQuery("select * from \"" + cacheName + "\".Person where _key = 1");
+        ignite(0).createCache(cache);
 
-            AffinityCache affinityCache = GridTestUtils.getFieldValue(conn, "affinityCache");
+        stmt.executeQuery("select * from \"" + cacheName + "\".Person where _key = 1");
 
-            assertNull("Affinity cache is not null.", affinityCache);
-        }
+        AffinityCache affinityCache = GridTestUtils.getFieldValue(conn, "affinityCache");
+
+        assertNull("Affinity cache is not null.", affinityCache);
     }
 
     /**
@@ -458,22 +458,22 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
      */
     @Test
     public void testAffinityAwarenessIsSkippedByDefault() throws Exception {
-        try (Connection conn = DriverManager.getConnection(
+        Connection conn = DriverManager.getConnection(
             "jdbc:ignite:thin://127.0.0.1:10800..10802");
-             Statement stmt = conn.createStatement()) {
 
-            final String cacheName = "yacccc";
+        Statement stmt = conn.createStatement();
 
-            CacheConfiguration<Object, Object> cache = prepareCacheConfig(cacheName);
+        final String cacheName = "yacccc";
 
-            ignite(0).createCache(cache);
+        CacheConfiguration<Object, Object> cache = prepareCacheConfig(cacheName);
 
-            stmt.executeQuery("select * from \"" + cacheName + "\".Person where _key = 1");
+        ignite(0).createCache(cache);
 
-            AffinityCache affinityCache = GridTestUtils.getFieldValue(conn, "affinityCache");
+        stmt.executeQuery("select * from \"" + cacheName + "\".Person where _key = 1");
 
-            assertNull("Affinity cache is not null.", affinityCache);
-        }
+        AffinityCache affinityCache = GridTestUtils.getFieldValue(conn, "affinityCache");
+
+        assertNull("Affinity cache is not null.", affinityCache);
     }
 
     /**
@@ -482,7 +482,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
      * @throws Exception If failed.
      */
     @Test
-    public void testAffinityCacheStoresSchemaBindedQueries() throws Exception {
+    public void testAffinityCacheStoresSchemaBindedQuries() throws Exception {
         final String cacheName = "yacc";
 
         CacheConfiguration<Object, Object> cache = prepareCacheConfig(cacheName);
@@ -514,12 +514,12 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
     }
 
     /**
-     * Check that affinity cache stores compacted version of partitions distributions.
+     * Check that affinity cache stores compacted version of partitoins destributions.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testAffinityCacheCompactsPartitionDistributions() throws Exception {
+    public void testAffinityCacheCompactsPartitonDestributions() throws Exception {
         final String cacheName = "yaccc";
 
         CacheConfiguration<Object, Object> cache = prepareCacheConfig(cacheName);
@@ -545,69 +545,53 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
         assertEquals("Sql sub-cache of affinity cache has unexpected number of elements.",
             2, sqlCache.size());
 
-        assertEquals("Partitions distribution sub-cache of affinity cache has unexpected number of elements.",
+        assertEquals("Partitions destribution sub-cache of affinity cache has unexpected number of elements.",
             2, cachePartitionsDistribution.size());
 
-        // Main assertion of the test: we are checking that partitions distributions for different caches
+        // Main assertition of the test: we are checking that partitions destributions for different caches
         // are equal in therms of (==)
         assertTrue("Partitions distributions are not the same.",
             cachePartitionsDistribution.get(0) == cachePartitionsDistribution.get(1));
     }
 
     /**
-     * Check that affinityAwarenessSQLCacheSize and affinityAwarenessPartitionDistributionsCacheSize
-     * actually limit corresponding caches within affinity awareness cache.
+     * Check that affinity awareness works fine after reconnection.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testAffinityAwarenessLimitedCacheSize() throws Exception {
-        try (Connection conn = DriverManager.getConnection(
-            "jdbc:ignite:thin://127.0.0.1:10800..10802?affinityAwareness=true" +
-                "&affinityAwarenessSQLCacheSize=1&affinityAwarenessPartitionDistributionsCacheSize=1");
-             Statement stmt = conn.createStatement()) {
-            final String cacheName1 = UUID.randomUUID().toString().substring(0, 6);
+    public void testReconnect() throws Exception {
+        checkNodesUsage(null, "select * from Person where _key = 3", 1, 1,
+            false);
 
-            CacheConfiguration<Object, Object> cache1 = prepareCacheConfig(cacheName1);
+        startGrid(7);
 
-            ignite(0).createCache(cache1);
+        for (int i = 0; i < NODES_CNT; i++)
+            stopGrid(i);
 
-            fillCache(cacheName1);
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.execute("select * from Person where _key = 3");
 
-            final String cacheName2 = UUID.randomUUID().toString().substring(0, 6);
+                return null;
+            }
+        }, SQLException.class, "Failed to communicate with Ignite cluster.");
 
-            CacheConfiguration<Object, Object> cache2 = prepareCacheConfig(cacheName2);
+        for (int i = 0; i < NODES_CNT; i++)
+            startGrid(i);
 
-            ignite(0).createCache(cache2);
+        stopGrid(4);
+        stopGrid(5);
+        stopGrid(6);
+        stopGrid(7);
 
-            fillCache(cacheName2);
+        stmt = conn.createStatement();
 
-            stmt.executeQuery("select * from \"" + cacheName1 + "\".Person where _key = 1");
-            stmt.executeQuery("select * from \"" + cacheName1 + "\".Person where _key = 1");
+        // We need this extra query to invalidate obsolete affinity cache
+        stmt.execute("select * from Person where _key = 3");
 
-            stmt.executeQuery("select * from \"" + cacheName2 + "\".Person where _key = 1");
-            stmt.executeQuery("select * from \"" + cacheName2 + "\".Person where _key = 1");
-
-            AffinityCache affinityCache = GridTestUtils.getFieldValue(conn, "affinityCache");
-
-            GridBoundedLinkedHashMap<Integer, UUID[]> partitionsDistributionCache =
-                GridTestUtils.getFieldValue(affinityCache, "cachePartitionsDistribution");
-
-            GridBoundedLinkedHashMap<QualifiedSQLQuery, JdbcThinPartitionResultDescriptor> sqlCache =
-                GridTestUtils.getFieldValue(affinityCache, "sqlCache");
-
-            assertEquals("Unexpected count of partitions distributions.", 1,
-                partitionsDistributionCache.size());
-
-            assertEquals("Unexpected count of sql queries.", 1, sqlCache.size());
-
-            assertTrue("Unexpected distribution is found.",
-                partitionsDistributionCache.containsKey(GridCacheUtils.cacheId(cacheName2)));
-
-            assertTrue("Unexpected sql query is found.",
-                sqlCache.containsKey(new QualifiedSQLQuery("PUBLIC",
-                    "select * from \"" + cacheName2 + "\".Person where _key = 1")));
-        }
+        checkNodesUsage(null, "select * from Person where _key = 3", 1, 1,
+            false);
     }
 
     /**
@@ -622,7 +606,6 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
 
         cache.setName(cacheName);
         cache.setCacheMode(PARTITIONED);
-        cache.setBackups(1);
         cache.setIndexedTypes(
             Integer.class, Person.class
         );
@@ -631,8 +614,8 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
     }
 
     /**
-     * Utility method that executes given query and verifies that expected number of records was returned.
-     * Besides that given method verified that partition result for corresponding query is null.
+     * Utitlity method that executes given query and verifies that expeted number of records was returned.
+     * Besides that given method verified that partitoin result for corresponding query is null.
      *
      * @param sqlQry Sql query.
      * @param expRowsCnt Expected rows count.
@@ -672,8 +655,8 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
      * @param dml Flag that signals whether we execute dml or not.
      * @throws Exception If failed.
      */
-    private void checkNodesUsage(PreparedStatement ps, Statement stmt, String sql, int maxNodesUsedCnt, int expRowsCnt,
-        boolean dml) throws Exception {
+    private void checkNodesUsage(PreparedStatement ps, String sql, int maxNodesUsedCnt, int expRowsCnt, boolean dml)
+        throws Exception {
         // Warm up an affinity cache.
         if (ps != null)
             if (dml)
@@ -732,7 +715,7 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
         int nonEmptyMetricsCntr = 0;
         int qryExecutionsCntr = 0;
         for (int i = 0; i < NODES_CNT; i++) {
-            Collection<QueryHistoryMetrics> metrics = ((IgniteH2Indexing)grid(i).context().query().getIndexing())
+            Collection<QueryHistory> metrics = ((IgniteH2Indexing)grid(i).context().query().getIndexing())
                 .runningQueryManager().queryHistoryMetrics().values();
 
             if (!metrics.isEmpty()) {
@@ -742,10 +725,10 @@ public class JdbcThinAffinityAwarenessSelfTest extends JdbcThinAbstractSelfTest 
         }
 
         assertTrue("Unexpected amount of used nodes: expected [0 < nodesCnt <= " + maxNodesUsedCnt +
-                "], got [" +  nonEmptyMetricsCntr + "]",
+                "], got [" + nonEmptyMetricsCntr + "]",
             nonEmptyMetricsCntr > 0 && nonEmptyMetricsCntr <= maxNodesUsedCnt);
 
-        assertEquals("Executions count doesn't match expected value: expected [" +
+        assertEquals("Executions count doesn't match expeted value: expected [" +
                 NODES_CNT * QUERY_EXECUTION_MULTIPLIER + "], got [" + qryExecutionsCntr + "]",
             NODES_CNT * QUERY_EXECUTION_MULTIPLIER, qryExecutionsCntr);
     }

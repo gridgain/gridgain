@@ -274,7 +274,10 @@ public abstract class AbstractWalRecordsIterator
             if (e instanceof WalSegmentTailReachedException) {
                 throw new WalSegmentTailReachedException(
                     "WAL segment tail reached. [idx=" + hnd.idx() +
-                        ", isWorkDir=" + hnd.workDir() + ", serVer=" + hnd.ser() + "]", e);
+                        ", isWorkDir=" + hnd.workDir() + ", serVer=" + hnd.ser() +
+                        ", actualFilePtr=" + actualFilePtr + ']',
+                    e
+                );
             }
 
             if (!(e instanceof SegmentEofException) && !(e instanceof EOFException)) {
@@ -401,7 +404,7 @@ public abstract class AbstractWalRecordsIterator
         SegmentIO fileIO = null;
 
         try {
-            fileIO = desc.toIO(ioFactory);
+            fileIO = desc.toReadOnlyIO(ioFactory);
 
             SegmentHeader segmentHeader;
 
@@ -519,6 +522,6 @@ public abstract class AbstractWalRecordsIterator
          * @return One of implementation of {@link FileIO}.
          * @throws IOException if creation of fileIo was not success.
          */
-        SegmentIO toIO(FileIOFactory fileIOFactory) throws IOException;
+        SegmentIO toReadOnlyIO(FileIOFactory fileIOFactory) throws IOException;
     }
 }

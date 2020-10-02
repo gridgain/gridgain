@@ -17,9 +17,9 @@
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -229,9 +229,7 @@ public class GridNearCacheStoreUpdateTest extends GridCommonAbstractTest {
                 }
             });
 
-
 //            IgniteInternalFuture<Object> fut2 = null;
-
             // TODO Sometimes Near cache becomes inconsistent
 //            if (!tx) {
 //                // TODO: IGNITE-3498
@@ -279,8 +277,8 @@ public class GridNearCacheStoreUpdateTest extends GridCommonAbstractTest {
      * @throws Exception If fail.
      */
     private void checkNearBatch(TransactionConcurrency txConc, TransactionIsolation txIsolation) throws Exception {
-        final Map<String, String> data1 = new HashMap<>();
-        final Map<String, String> data2 = new HashMap<>();
+        final Map<String, String> data1 = new TreeMap<>();
+        final Map<String, String> data2 = new TreeMap<>();
 
         for (int i = 0; i < 10; i++) {
             data1.put(String.valueOf(i), String.valueOf(i));
@@ -338,8 +336,8 @@ public class GridNearCacheStoreUpdateTest extends GridCommonAbstractTest {
      */
     private void checkNearBatchConcurrent(TransactionConcurrency txConc, TransactionIsolation txIsolation)
         throws Exception {
-        final Map<String, String> data1 = new HashMap<>();
-        final Map<String, String> data2 = new HashMap<>();
+        final Map<String, String> data1 = new TreeMap<>();
+        final Map<String, String> data2 = new TreeMap<>();
 
         for (int j = 0; j < 10; j++) {
             data1.clear();
@@ -367,7 +365,7 @@ public class GridNearCacheStoreUpdateTest extends GridCommonAbstractTest {
                 }
             });
 
-            IgniteInternalFuture<Object> fut2 =  GridTestUtils.runAsync(new Callable<Object>() {
+            IgniteInternalFuture<Object> fut2 = GridTestUtils.runAsync(new Callable<Object>() {
                 @Override public Object call() throws Exception {
                     latch.await();
 

@@ -21,16 +21,20 @@ import java.sql.SQLException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.command.Prepared;
-import org.h2.engine.Session;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.engine.Session;
 
 /**
  * Base H2 query info with commons for MAP, LOCAL, REDUCE queries.
  */
 public class H2QueryInfo {
+    /** Query id assigned by {@link RunningQueryManager}. */
+    private final Long runningQryId;
+
     /** Type. */
     private final QueryType type;
 
@@ -59,13 +63,15 @@ public class H2QueryInfo {
      * @param type Query type.
      * @param stmt Query statement.
      * @param sql Query statement.
+     * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
-    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql) {
+    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, Long runningQryId) {
         try {
             assert stmt != null;
 
             this.type = type;
             this.sql = sql;
+            this.runningQryId = runningQryId;
 
             beginTs = U.currentTimeMillis();
 
@@ -102,28 +108,61 @@ public class H2QueryInfo {
     /**
      * @param log Logger.
      * @param msg Log message
+     * @param additionalInfo Additional query info.
      */
-    public void printLogMessage(IgniteLogger log, String msg) {
+    public void printLogMessage(IgniteLogger log, String msg, String additionalInfo) {
+        printLogMessage(log, null, msg, additionalInfo);
+    }
+
+    /** @return Query id assigned by {@link RunningQueryManager}. */
+    public Long runningQueryId() {
+        return runningQryId;
+    }
+
+    /**
+     * @param log Logger.
+     * @param msg Log message
+     * @param connMgr Connection manager.
+     * @param additionalInfo Additional query info.
+     */
+    public void printLogMessage(IgniteLogger log, ConnectionManager connMgr, String msg, String additionalInfo) {
         StringBuilder msgSb = new StringBuilder(msg + " [");
 
-        msgSb.append("time=").append(time()).append("ms")
+        if (additionalInfo != null)
+            msgSb.append(additionalInfo).append(", ");
+
+        msgSb.append("duration=").append(time()).append("ms")
             .append(", type=").append(type)
             .append(", distributedJoin=").append(distributedJoin)
             .append(", enforceJoinOrder=").append(enforceJoinOrder)
             .append(", lazy=").append(lazy)
             .append(", schema=").append(schema);
 
-        printInfo(msgSb);
-
         msgSb.append(", sql='")
             .append(sql);
 
-        if (type != QueryType.REDUCE)
-            msgSb.append("', plan=").append(stmt.getPlanSQL(false));
+        msgSb.append("', plan=").append(stmt.getPlanSQL(false));
+
+        printInfo(msgSb);
 
         msgSb.append(']');
 
         LT.warn(log, msgSb.toString());
+    }
+
+    /**
+     * Returns description of this query info.
+     */
+    public String description() {
+        return "H2QueryInfo ["
+            + "type=" + type
+            + ", runningQryId=" + runningQryId
+            + ", beginTs=" + beginTs
+            + ", distributedJoin=" + distributedJoin
+            + ", enforceJoinOrder=" + enforceJoinOrder
+            + ", lazy=" + lazy
+            + ", schema=" + schema
+            + ", sql='" + sql + "']";
     }
 
     /**

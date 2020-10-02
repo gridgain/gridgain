@@ -39,6 +39,7 @@ import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.MAX_PARTITION_ID;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.MAX_ITEMID_NUM;
+
 /**
  * Base class for all the data structures based on {@link PageMemory}.
  */
@@ -314,7 +315,8 @@ public abstract class DataStructure {
         X arg,
         int intArg,
         R lockFailed,
-        IoStatisticsHolder statHolder) throws IgniteCheckedException {
+        IoStatisticsHolder statHolder
+    ) throws IgniteCheckedException {
         return PageHandler.writePage(pageMem, grpId, pageId, lockLsnr, h,
             init, wal, null, arg, intArg, lockFailed, statHolder);
     }

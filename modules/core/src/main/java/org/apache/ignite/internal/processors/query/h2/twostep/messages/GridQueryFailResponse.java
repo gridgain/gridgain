@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.QueryRetryException;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -77,12 +78,16 @@ public class GridQueryFailResponse implements Message {
         else
             this.failCode = GENERAL_ERROR;
 
-        IgniteSQLException igniteSqlEx = X.cause(err, IgniteSQLException.class);
+        if (err instanceof SqlCacheException)
+            sqlErrCode = ((SqlCacheException)err).statusCode();
+        else {
+            IgniteSQLException igniteSqlEx = X.cause(err, IgniteSQLException.class);
 
-        SQLException sqlEx = igniteSqlEx != null ? igniteSqlEx.toJdbcException() : X.cause(err, SQLException.class);
+            SQLException sqlEx = igniteSqlEx != null ? igniteSqlEx.toJdbcException() : X.cause(err, SQLException.class);
 
-        if (sqlEx != null)
-            this.sqlErrCode = sqlEx.getErrorCode();
+            if (sqlEx != null)
+                sqlErrCode = sqlEx.getErrorCode();
+        }
     }
 
     /**
@@ -154,10 +159,11 @@ public class GridQueryFailResponse implements Message {
                 writer.incrementState();
 
             case 3:
-                if (!writer.writeLong("sqlErrCode", sqlErrCode))
+                if (!writer.writeInt("sqlErrCode", sqlErrCode))
                     return false;
 
                 writer.incrementState();
+
         }
 
         return true;
@@ -202,6 +208,7 @@ public class GridQueryFailResponse implements Message {
                     return false;
 
                 reader.incrementState();
+
         }
 
         return reader.afterMessageRead(GridQueryFailResponse.class);

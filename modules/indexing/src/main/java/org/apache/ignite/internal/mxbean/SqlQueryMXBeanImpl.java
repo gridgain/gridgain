@@ -52,4 +52,65 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
     @Override public void setLongQueryTimeoutMultiplier(int longQryTimeoutMultiplier) {
         h2idx.longRunningQueries().setTimeoutMultiplier(longQryTimeoutMultiplier);
     }
+
+    /** {@inheritDoc} */
+    @Override public long getResultSetSizeThreshold() {
+        return h2idx.longRunningQueries().getResultSetSizeThreshold();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResultSetSizeThreshold(long rsSizeThreshold) {
+        h2idx.longRunningQueries().setResultSetSizeThreshold(rsSizeThreshold);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getResultSetSizeThresholdMultiplier() {
+        return h2idx.longRunningQueries().getResultSetSizeThresholdMultiplier();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setResultSetSizeThresholdMultiplier(int rsSizeThresholdMultiplier) {
+        h2idx.longRunningQueries().setResultSetSizeThresholdMultiplier(rsSizeThresholdMultiplier);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Long getSqlGlobalMemoryQuotaBytes() {
+        return h2idx.memoryManager().getGlobalQuota();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getSqlGlobalMemoryQuota() {
+        return h2idx.memoryManager().getGlobalQuotaInOriginalNotation();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSqlGlobalMemoryQuota(String size) {
+        h2idx.memoryManager().setGlobalQuota(size);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Long getSqlQueryMemoryQuotaBytes() {
+        return h2idx.memoryManager().getQueryQuota();
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public String getSqlQueryMemoryQuota() {
+        return h2idx.memoryManager().getQueryQuotaStrinInOriginalNotation();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSqlQueryMemoryQuota(String size) {
+        h2idx.memoryManager().setQueryQuota(size);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isSqlOffloadingEnabled() {
+        return h2idx.memoryManager().isOffloadingEnabled();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSqlOffloadingEnabled(boolean enabled) {
+        h2idx.memoryManager().setOffloadingEnabled(enabled);
+    }
 }

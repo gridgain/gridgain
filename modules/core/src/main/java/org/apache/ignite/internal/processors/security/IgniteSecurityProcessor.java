@@ -18,9 +18,11 @@ package org.apache.ignite.internal.processors.security;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -45,7 +47,17 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
 
 /**
- * Default IgniteSecurity implementation.
+ * Default {@code IgniteSecurity} implementation.
+ * <p>
+ * {@code IgniteSecurityProcessor} serves here as a facade with is exposed to Ignite internal code,
+ * while {@code GridSecurityProcessor} is hidden and managed from {@code IgniteSecurityProcessor}.
+ * <p>
+ * This implementation of {@code IgniteSecurity} is responsible for:
+ * <ul>
+ *     <li>Keeping and propagating authenticated security contexts for cluster nodes;</li>
+ *     <li>Delegating calls for all actions to {@code GridSecurityProcessor};</li>
+ *     <li>Managing sandbox and proving point of entry to the internal sandbox API.</li>
+ * </ul>
  */
 public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     /** Internal attribute name constant. */
@@ -66,6 +78,9 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     /** Map of security contexts. Key is the node's id. */
     private final Map<UUID, SecurityContext> secCtxs = new ConcurrentHashMap<>();
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /**
      * @param ctx Grid kernal context.
      * @param secPrc Security processor.
@@ -75,6 +90,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         assert secPrc != null;
 
         this.ctx = ctx;
+        this.log = ctx.log(IgniteSecurityProcessor.class);
         this.secPrc = secPrc;
 
         marsh = MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
@@ -84,6 +100,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     @Override public OperationSecurityContext withContext(SecurityContext secCtx) {
         assert secCtx != null;
 
+        secPrc.touch(secCtx);
+
         SecurityContext old = curSecCtx.get();
 
         curSecCtx.set(secCtx);
@@ -92,14 +110,18 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     }
 
     /** {@inheritDoc} */
-    @Override public OperationSecurityContext withContext(UUID nodeId) {
-        return withContext(
-            secCtxs.computeIfAbsent(nodeId,
-                uuid -> nodeSecurityContext(
-                    marsh, U.resolveClassLoader(ctx.config()), ctx.discovery().node(uuid)
-                )
-            )
-        );
+    @Override public OperationSecurityContext withContext(UUID subjId) {
+        ClusterNode node = Optional.ofNullable(ctx.discovery().node(subjId))
+            .orElseGet(() -> ctx.discovery().historicalNode(subjId));
+
+        SecurityContext res = node != null ? secCtxs.computeIfAbsent(subjId,
+            uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
+            : secPrc.securityContext(subjId);
+
+        if (res == null)
+            throw new IllegalStateException("Failed to find security context for subject with given ID : " + subjId);
+
+        return withContext(res);
     }
 
     /** {@inheritDoc} */

@@ -16,8 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache.index;
 
-import java.io.File;
+import java.math.BigDecimal;
 import java.nio.file.Path;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,33 +29,46 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
-import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.table.Column;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
+import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Dated;
+import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.SqlStrConvertedValHolder;
+import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Timed;
+import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGNITE_THROTTLE_INLINE_SIZE_CALCULATION;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
 
@@ -64,6 +81,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** {@code True} If index need to be created throught static config. */
     private static boolean createIdx = true;
+
+    /** {@code True} If composite index required. */
+    private static boolean createCompositeIdx;
 
     /** {@code True} If cache nedd to be created throught static config. */
     private static boolean createStaticCache = true;
@@ -146,12 +166,11 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             );
         }
 
-        return igniteCfg;
+        return igniteCfg
+            .setFailureHandler(new StopNodeFailureHandler());
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
@@ -160,15 +179,15 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         cleanPersistenceDir();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
 
         srvLog = clientLog = null;
+
+        createCompositeIdx = false;
 
         super.afterTest();
     }
@@ -267,6 +286,65 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             stopAllGrids();
         }
+    }
+
+    /**
+     * Checks that fields in primary index have correct order.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCorrectPkFldsSequence() throws Exception {
+        inlineSize = 10;
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        IgniteH2Indexing idx = (IgniteH2Indexing)(ig0).context().query().getIndexing();
+
+        String tblName = "T1";
+
+        qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+            "CONSTRAINT PK PRIMARY KEY (F1, F2))"), true).getAll();
+
+        List<String> expect = Arrays.asList("F1", "F2");
+
+        checkPkFldSequence(tblName, expect, idx);
+
+        tblName = "T2";
+
+        qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+            "CONSTRAINT PK PRIMARY KEY (F2, F1))"), true).getAll();
+
+        expect = Arrays.asList("F2", "F1");
+
+        checkPkFldSequence(tblName, expect, idx);
+
+        tblName = "T3";
+
+        qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+            "CONSTRAINT PK PRIMARY KEY (F3, F2))"), true).getAll();
+
+        expect = Arrays.asList("F3", "F2");
+
+        checkPkFldSequence(tblName, expect, idx);
+    }
+
+    /**
+     * Fields correctness checker.
+     *
+     * @param tblName Table name.
+     * @param expect Expected fields sequence.
+     * @param idx Indexing.
+     */
+    private void checkPkFldSequence(String tblName, List<String> expect, IgniteH2Indexing idx) {
+        Index pkIdx = idx.schemaManager().dataTable("PUBLIC", tblName.toUpperCase()).getIndex(PK_IDX_NAME);
+
+        List<String> actual = Arrays.stream(pkIdx.getColumns()).map(Column::getName).collect(Collectors.toList());
+
+        if (!expect.equals(actual))
+            throw new AssertionError("Exp: " + expect + ", but was: " + actual);
     }
 
     /**
@@ -412,6 +490,11 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         cache.query(new SqlFieldsQuery("create index \"idx4\" on Val(valLong)"));
 
+        String plan = cache.query(new SqlFieldsQuery("explain select min(_key), max(_key) from Val")).getAll()
+            .get(0).get(0).toString().toUpperCase();
+
+        assertTrue(plan, plan.contains(PK_IDX_NAME.toUpperCase()));
+
         assertTrue(lsnr.check());
 
         srvLog.unregisterListener(lsnr);
@@ -470,7 +553,13 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         return lsnrIdx.check();
     }
 
-    /** */
+    /**
+     * Create and fills the table.
+     *
+     * @param qryProc Query processor.
+     * @param tblName Table name.
+     * @param consPkFldsNum Number of fields to use in pk, 0 - default pk, positive\negative value shows fields iteration direction.
+     */
     private void populateTable(GridQueryProcessor qryProc, String tblName, int consPkFldsNum, String... reqFlds) {
         assert consPkFldsNum <= reqFlds.length;
 
@@ -479,16 +568,22 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         String sqlIns = "INSERT INTO " + tblName + " (";
 
         for (int i = 0; i < reqFlds.length; ++i) {
-            sql += reqFlds[i] + " VARCHAR, ";
+            sql += reqFlds[i] + " VARCHAR" + (consPkFldsNum == 0 && i == 0 ? " PRIMARY KEY, " : ", ");
 
             sqlIns += reqFlds[i] + ((i < reqFlds.length - 1) ? ", " : ") values (");
         }
 
-        if (consPkFldsNum > 0) {
+        if (consPkFldsNum != 0) {
             sql += " CONSTRAINT PK_PERSON PRIMARY KEY (";
 
-            for (int i = 0; i < consPkFldsNum; ++i)
-                sql += reqFlds[i] + ((i < consPkFldsNum - 1) ? ", " : "))");
+            if (consPkFldsNum > 0) {
+                for (int i = 0; i < consPkFldsNum; ++i)
+                    sql += reqFlds[i] + ((i < consPkFldsNum - 1) ? ", " : "))");
+            }
+            else {
+                for (int i = -consPkFldsNum - 1; i >= 0; --i)
+                    sql += reqFlds[i] + ((i > 0) ? ", " : "))");
+            }
         }
         else
             sql += ")";
@@ -517,6 +612,29 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     *  Checks index usage with correct pk fields enumeration.
+     */
+    @Test
+    public void testCorrectFieldsSequenceInPk() throws Exception {
+        inlineSize = 10;
+
+        srvLog = new ListeningTestLogger(false, log);
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, TEST_TBL_NAME, -2, "FIRST_NAME", "LAST_NAME",
+            "ADDRESS", "LANG");
+
+        assertFalse(checkIdxAlreadyExistLog(
+            qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME"));
+
+        assertTrue(checkIdxAlreadyExistLog(
+            qryProc, "idx2", TEST_TBL_NAME, "LAST_NAME", "FIRST_NAME"));
+    }
+
+    /**
      *  Checks index usage for full coverage.
      */
     @Test
@@ -538,7 +656,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME"));
 
-        assertTrue(checkIdxUsed(qryProc, "_key_PK", TEST_TBL_NAME, "FIRST_NAME",
+        assertTrue(checkIdxUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME",
             "LAST_NAME", "LANG", "ADDRESS"));
 
         assertTrue(checkIdxAlreadyExistLog(
@@ -553,9 +671,41 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME",
             "LAST_NAME", "ADDRESS", "LANG"));
+    }
+
+    /**
+     *  Checks index usage for full coverage.
+     */
+    @Test
+    public void testConditionsWithoutIndexes() throws Exception {
+        inlineSize = 10;
+
+        srvLog = new ListeningTestLogger(false, log);
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, TEST_TBL_NAME, 2, "FIRST_NAME", "LAST_NAME", "ADDRESS", "LANG");
+
+        String sqlIdx = String.format("create index \"idx1\" on %s(LANG, ADDRESS)", TEST_TBL_NAME);
+
+        qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx), true).getAll();
+
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME"));
+
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "ADDRESS"));
+
+        assertTrue(checkIdxUsed(qryProc, "idx1", TEST_TBL_NAME, "LANG"));
+
         // first idx fields not belongs to request fields.
-        assertTrue(checkIdxUsed(qryProc, "idx2", TEST_TBL_NAME, "ADDRESS",
-            "LAST_NAME"));
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "ADDRESS", "LAST_NAME"));
+
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "ADDRESS", "ADDRESS"));
+
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
+
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "ADDRESS"));
     }
 
     /**
@@ -587,7 +737,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME"));
 
-        assertTrue(checkIdxUsed(qryProc, "_key_PK", TEST_TBL_NAME, "FIRST_NAME",
+        assertTrue(checkIdxUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME",
             "LAST_NAME", "LANG", "ADDRESS"));
 
         assertTrue(checkIdxAlreadyExistLog(
@@ -596,10 +746,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         String sqlIdx2 = String.format("create index \"idx2\" on %s(LANG, ADDRESS)", TEST_TBL_NAME);
 
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx2), true).getAll();
-        // _key_PK used.
-        assertTrue(checkIdxUsed(qryProc, "idx2", TEST_TBL_NAME, "FIRST_NAME",
-            "LAST_NAME", "LANG", "ADDRESS"));
-        // _key_PK used.
+
+        // PK_IDX_NAME used.
         assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME",
             "LAST_NAME", "LANG", "ADDRESS"));
 
@@ -615,7 +763,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertTrue(checkIdxAlreadyExistLog(
             qryProc, "idx4", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS", "LANG"));
 
-        LogListener lsnrIdx4 = LogListener.matches(msg0).andMatches("_key_PK").build();
+        LogListener lsnrIdx4 = LogListener.matches(msg0).andMatches(PK_IDX_NAME).build();
 
         srvLog.registerListener(lsnrIdx4);
 
@@ -627,7 +775,33 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Tests different fields sequence in indexes.
+     * Check three fields in pk index.
+     */
+    @Test
+    public void testCheckThreeFieldsInPk() throws Exception {
+        inlineSize = 10;
+
+        srvLog = new ListeningTestLogger(log);
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, TEST_TBL_NAME, 3, "c1", "c2", "c3", "c4", "c5", "c6");
+
+        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "c1"));
+
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "c2"));
+
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "c3"));
+    }
+
+    /**
+     * Test composite indices with PK field in first place.
+     *
+     * There is no sense to create such indices:
+     * 1. PK index will be enough for equality condition on PK field.
+     * 2. None of these indices will be used for non-equality condition on PK field.
      */
     @Test
     public void testCreateIdxWithDifferentIdxFldsSeq() throws Exception {
@@ -673,69 +847,285 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         isPersistenceEnabled = false;
 
-        String idxName = "idx2";
+        IgniteEx ignite = startGrid(0);
 
-        IgniteEx ig0 = startGrid(0);
+        GridQueryProcessor qryProc = ignite.context().query();
 
-        GridQueryProcessor qryProc = ig0.context().query();
+        checkInWithEqualsIdxUsageForDifferentTypes(qryProc);
 
-        populateTable(qryProc, TEST_TBL_NAME, 2, "FIRST_NAME", "LAST_NAME",
-            "ADDRESS", "LANG");
+        // Same checks for composite index.
+        createCompositeIdx = true;
+        checkInWithEqualsIdxUsageForDifferentTypes(qryProc);
+    }
 
-        String sqlIdx2 = String.format("create index \"%s\" on %s(LANG)", idxName, TEST_TBL_NAME);
+    private void checkInWithEqualsIdxUsageForDifferentTypes(final GridQueryProcessor qryProc) {
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.INT,
+            "val * 3",
+            1, 2, -3, null);
 
-        qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx2), true).getAll();
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.BIGINT,
+            null,
+            0L, Long.MAX_VALUE, Long.MIN_VALUE, null);
 
-        List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
-            " where LANG in (?1, ?2) and (ADDRESS = ?1 or ADDRESS = ?2)").setArgs(3, 4), true).getAll();
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.VARCHAR,
+            "_val",
+            new Quoted(""),
+            new Quoted("whatever"),
+            new Quoted("CamelCase"),
+            null);
 
-        assertTrue(checkIdxUsage(res, idxName));
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.DATE,
+            "_key",
+            new Dated(Date.valueOf("2001-09-11")),
+            new Dated(Date.valueOf("1806-08-12")),
+            new Dated(Date.valueOf("2051-11-21")),
+            null);
 
-        res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
-            " where LANG in (select ADDRESS from " + TEST_TBL_NAME + " where ADDRESS in(?1, ?2)) " +
-            "and (ADDRESS = ?1 or ADDRESS = ?2)").setArgs(3, 4), true).getAll();
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.TIME,
+            "fld, val",
+            new Timed(Time.valueOf("00:00:01")),
+            new Timed(Time.valueOf("12:00:00")),
+            new Timed(Time.valueOf("23:59:59")),
+            null);
 
-        assertTrue(checkIdxUsage(res, idxName));
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.TIMESTAMP,
+            "val, fld",
+            new Dated(Timestamp.valueOf("2019-01-01 00:00:00")),
+            new Dated(Timestamp.valueOf("2051-12-31 23:59:59")),
+            new Dated(Timestamp.valueOf("1806-08-12 12:00:00")),
+            null);
 
-        res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
-            " where LANG in (?1, ?2) and (ADDRESS = ?3 or ADDRESS = ?3)").setArgs(3, 4, 5), true).getAll();
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.DOUBLE,
+            "*, _key",
+            -1.0d, 1e-7d, new Quoted(Double.NEGATIVE_INFINITY), null);
 
-        assertTrue(checkIdxUsage(res, idxName));
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.UUID,
+            "val",
+            new Quoted("d9bc480e-1107-11ea-8d71-362b9e155667"),
+            new Quoted(UUID.fromString("d9bc4354-1107-11ea-8d71-362b9e155667")),
+            new Quoted(UUID.randomUUID()),
+            null);
 
-        res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
-            " where LANG in (?1, ?2) and ADDRESS = ?3").setArgs(3, 4, 5), true).getAll();
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.DECIMAL,
+            "ROUND(val + 0.05, 1)",
+            "10.2",
+            new BigDecimal("10.01"),
+            new BigDecimal(123.123),
+            null);
 
-        assertTrue(checkIdxUsage(res, idxName));
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.BINARY,
+            "BIT_LENGTH(val)",
+            new ByteArrayed(new byte[] {}),
+            new ByteArrayed(new byte[] {0, 1}),
+            new ByteArrayed(new byte[] {1, 2, 3}),
+            null);
 
-        res = qryProc.querySqlFields(new SqlFieldsQuery("explain select * from " + TEST_TBL_NAME +
-            " where LANG in (3, 4) and ADDRESS = 5"), true).getAll();
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.OTHER,
+            null,
+            new UserObject(new Pojo(1)),
+            new UserObject(new Pojo(2)),
+            new UserObject(new Pojo(-3)),
+            null);
+    }
 
-        assertTrue(checkIdxUsage(res, idxName));
+    /**
+     * Check IDX usage for different cases.
+     *
+     * @param qryProc Query processor.
+     * @param dataType SQL data type.
+     * @param proj Projection.
+     * @param values Values to put.
+     */
+    private void checkInWithEqualsIdxUsageForType(
+        final GridQueryProcessor qryProc,
+        SqlDataType dataType,
+        @Nullable String proj,
+        @NotNull Object... values) {
+        assert values.length >= 4;
 
-        res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
-            " where LANG in (?1, ?2) and (ADDRESS = ?3 or ADDRESS = ?4) ORDER BY LAST_NAME")
-            .setArgs(3, 4, 5, 6), true).getAll();
+        if (proj == null)
+            proj = "*";
 
-        assertEquals(res.size(), 0);
+        qryProc.querySqlFields(new SqlFieldsQuery(
+            "CREATE TABLE " + TEST_TBL_NAME +
+                "(id LONG PRIMARY KEY," +
+                " fld " + dataType + ", " +
+                " val " + dataType + ")"), true);
 
-        res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
-            " where LANG in (?3, ?4) and (ADDRESS = ?1 or ADDRESS = ?2) ORDER BY LAST_NAME")
-            .setArgs(3, 4, 5, 6), true).getAll();
+        final String idxName = "IDX_VAL";
 
-        assertEquals(res.size(), 1);
+        qryProc.querySqlFields(new SqlFieldsQuery(
+            "CREATE INDEX \"" + idxName + "\" ON " + TEST_TBL_NAME +
+                (createCompositeIdx ? "(val, fld)" : "(val)")), true);
 
-        res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
-            " where LANG in (?2, ?3) and (ADDRESS = ?1 or ADDRESS = ?2) ORDER BY LAST_NAME")
-            .setArgs(3, 4, 5), true).getAll();
+        for (int i = 0; i < values.length; i++) {
+            Object valToPut = toObjVal(values[i]);
 
-        assertEquals(res.size(), 2);
+            // INSERT
+            qryProc.querySqlFields(new SqlFieldsQuery("INSERT INTO " + TEST_TBL_NAME +
+                "(id, fld, val) VALUES (?1, ?2, ?3)").setArgs(i, valToPut, valToPut), true);
+        }
 
-        assertEquals(res.get(0).get(0), "1");
+        try {
+            final int rnd = ThreadLocalRandom.current().nextInt(values.length);
+            final Object val1 = values[(rnd) % values.length];
+            final Object val2 = values[(rnd + 1) % values.length];
+            final Object val3 = values[(rnd + 2) % values.length];
+            final Object val4 = values[(rnd + 3) % values.length];
 
-        res = qryProc.querySqlFields(new SqlFieldsQuery("select * from " + TEST_TBL_NAME +
-            " where LANG in (4, 5) and (ADDRESS = 3 or ADDRESS = 4) ORDER BY LAST_NAME"), true).getAll();
+            final String qry = "select " + proj + " from " + TEST_TBL_NAME + " ";
 
-        assertEquals(res.size(), 2);
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?1 or fld = ?2)";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (select fld from " +
+                    TEST_TBL_NAME + " where fld in(?1, ?2)) and (fld = ?1 or fld = ?2)";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?3 or fld = ?3)";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and fld = ?3";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (" + toStringVal(val1) + ", "
+                    + toStringVal(val2) + ") and " + "fld = " + toStringVal(val3);
+
+                List<List<?>> res = qryProc.querySqlFields(
+                    new SqlFieldsQuery("explain " + sql),true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql), true).getAll();
+            }
+
+            { //Check OR -> IN optimization is applied.
+                final String sql = qry + "where (val = ?1 OR val = ?2) and fld = " +
+                    toStringVal(val3);
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and " +
+                    "(fld = ?3 or fld = ?4) ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3),
+                        toObjVal(val4)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3),
+                        toObjVal(val4)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?3 or fld = ?1) ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?1 or fld = ?2) ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (" + toStringVal(val2) + ", " +
+                    toStringVal(val1) + ") and (fld = " + toStringVal(val1) +
+                    " or fld = " + toStringVal(val2) + ") ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(
+                    new SqlFieldsQuery("explain " + sql), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql), true).getAll();
+            }
+        }
+        finally {
+            qryProc.querySqlFields(new SqlFieldsQuery("DROP TABLE " + TEST_TBL_NAME + ";"), true);
+        }
+    }
+
+    /**
+     * Convert to string value for SQL injection if needed.
+     * @param val Value.
+     * @return Value to inject to SQL query.
+     */
+    private <T> String toStringVal(T val) {
+        return val instanceof SqlStrConvertedValHolder ?
+            ((SqlStrConvertedValHolder)val).sqlStrVal() :
+            String.valueOf(val);
+    }
+
+    /**
+     * Convert to object value if needed.
+     * @param val Value.
+     * @return Value for usage as prepared statement param.
+     */
+    private <T> Object toObjVal(T val) {
+        return val instanceof SqlStrConvertedValHolder ?
+            ((SqlStrConvertedValHolder)val).originalVal() :
+            val;
     }
 
     /**
@@ -761,7 +1151,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS"));
 
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME,  "LAST_NAME", "ADDRESS"));
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
     }
 
     /**
@@ -787,7 +1177,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS"));
 
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME,  "LAST_NAME", "ADDRESS"));
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
     }
 
     /** */
@@ -872,21 +1262,15 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         srvLog = new ListeningTestLogger(false, log);
 
         String msg1 = "curSize=1";
-
         String msg2 = "curSize=2";
-
         String msg3 = "curSize=3";
 
         LogListener lstn1 = LogListener.matches(msg1).build();
-
         LogListener lstn2 = LogListener.matches(msg2).build();
-
         LogListener lstn3 = LogListener.matches(msg3).build();
 
         srvLog.registerListener(lstn1);
-
         srvLog.registerListener(lstn2);
-
         srvLog.registerListener(lstn3);
 
         IgniteEx ig0 = startGrid(0);
@@ -897,23 +1281,21 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         IgniteCache<Key, Val> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("create index \"idx1\" on Val(valLong) INLINE_SIZE 1 PARALLEL 28"));
+        execSql(cache, "create index \"idx1\" on Val(valLong) INLINE_SIZE 1 PARALLEL 28");
 
-        List<List<?>> res = cache.query(new SqlFieldsQuery("explain select * from Val where valLong > ?").setArgs(10)).getAll();
+        List<List<?>> res = execSql(cache, "explain select * from Val where valLong > ?", 10);
 
-        System.err.println("exp: " + res.get(0).get(0));
+        assertTrue(((String)res.get(0).get(0)).toUpperCase().contains((DEFAULT_CACHE_NAME + ".idx1").toUpperCase()));
 
         assertTrue(lstn1.check());
 
-        cache.query(new SqlFieldsQuery("drop index \"idx1\"")).getAll();
-
-        cache.query(new SqlFieldsQuery("create index \"idx1\" on Val(valLong) INLINE_SIZE 2 PARALLEL 28"));
-
-        cache.query(new SqlFieldsQuery("explain select * from Val where valLong > ?").setArgs(10)).getAll();
+        execSql(cache, "drop index \"idx1\"");
+        execSql(cache, "create index \"idx1\" on Val(valLong) INLINE_SIZE 2 PARALLEL 28");
+        execSql(cache, "explain select * from Val where valLong > ?", 10);
 
         assertTrue(lstn2.check());
 
-        cache.query(new SqlFieldsQuery("drop index \"idx1\"")).getAll();
+        execSql(cache, "drop index \"idx1\"");
 
         stopAllGrids();
 
@@ -923,15 +1305,19 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         cache = ig0.cache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("create index \"idx1\" on Val(valLong) INLINE_SIZE 3 PARALLEL 28"));
-
-        cache.query(new SqlFieldsQuery("explain select * from Val where valLong > ?").setArgs(10)).getAll();
+        execSql(cache, "create index \"idx1\" on Val(valLong) INLINE_SIZE 3 PARALLEL 28");
+        execSql(cache, "explain select * from Val where valLong > ?", 10);
 
         assertTrue(lstn3.check());
+    }
 
-        stopAllGrids();
-
-        cleanPersistenceDir();
+    /**
+     * @param cache Cache.
+     * @param qry Query.
+     * @param args Args.
+     */
+    private List<List<?>> execSql(IgniteCache<?, ?> cache, String qry, Object... args) {
+        return cache.query(new SqlFieldsQuery(qry).setArgs(args)).getAll();
     }
 
     /** */
@@ -1036,7 +1422,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             checkAll();
 
-            List<Path> idxPaths = getIndexBinPaths();
+            List<Path> idxPaths = getIndexBinPaths(DEFAULT_CACHE_NAME);
 
             // Shutdown gracefully to ensure there is a checkpoint with index.bin.
             // Otherwise index.bin rebuilding may not work.
@@ -1085,7 +1471,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             checkAll();
 
-            List<Path> idxPaths = getIndexBinPaths();
+            List<Path> idxPaths = getIndexBinPaths(DEFAULT_CACHE_NAME);
 
             // Shutdown gracefully to ensure there is a checkpoint with index.bin.
             // Otherwise index.bin rebuilding may not work.
@@ -1134,7 +1520,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             checkAll();
 
-            List<Path> idxPaths = getIndexBinPaths();
+            List<Path> idxPaths = getIndexBinPaths(DEFAULT_CACHE_NAME);
 
             // Shutdown gracefully to ensure there is a checkpoint with index.bin.
             // Otherwise index.bin rebuilding may not work.
@@ -1154,6 +1540,164 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             cleanPersistenceDir();
         }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario1() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1  on TEST_TBL_NAME (FIRST_NAME, LAST_NAME)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME = 2 and FIRST_NAME >= 1 and FIRST_NAME <= 5 and ADDRESS in (1, 2, 3);");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario2() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (FIRST_NAME, LAST_NAME)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME >= 2 and FIRST_NAME = 1 and FIRST_NAME <= 5 and ADDRESS in (1, 2, 3)");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario3() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1 on TEST_TBL_NAME (FIRST_NAME)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME = 2 and FIRST_NAME >= 1 and FIRST_NAME <= 5 and ADDRESS in (1, 2, 3)");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-25338")
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario4() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1 on TEST_TBL_NAME (LAST_NAME, ADDRESS)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME = 2 and FIRST_NAME >= 1 and FIRST_NAME <= 5 and ADDRESS in (1, 2, 3)");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario5() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (LAST_NAME, ADDRESS)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME = 2 and ADDRESS >= 1");
+    }
+
+    /**
+     */
+    @Test
+    public void testStopNodeOnSqlQueryWithIncompatibleType() throws Exception {
+        inlineSize = 10;
+
+        startGrid();
+
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, val_int INT, VAL_OBJ OTHER)");
+        sql("CREATE INDEX TEST_VAL_INT ON TEST(VAL_INT)");
+        sql("CREATE INDEX TEST_VAL_OBJ ON TEST(VAL_OBJ)");
+
+        sql("INSERT INTO TEST VALUES (0, 0, ?)", Instant.now());
+
+        GridTestUtils.assertThrows(log, () -> {
+            sql("SELECT * FROM TEST WHERE VAL_OBJ < CURRENT_TIMESTAMP()").getAll();
+
+            return null;
+        }, CacheException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            sql("SELECT * FROM TEST WHERE VAL_INT < CURRENT_TIMESTAMP()").getAll();
+
+            return null;
+        }, CacheException.class, null);
+
+        assertFalse(grid().context().isStopping());
+    }
+
+    /**
+     * Checks index creation does not affect used index.
+     *
+     * @param wrongIdx1Name Wrong index name.
+     * @param properIdx2Name Proper index name.
+     * @param idx1Cmd Index 1 (wrong) creation command.
+     * @param idx2Cmd Index 1 (proper) creation command.
+     * @param qry Query to test index selection.
+     * @throws Exception If failed.
+     */
+    private void checkRightIndexChosen(String wrongIdx1Name,
+        String properIdx2Name,
+        String idx1Cmd,
+        String idx2Cmd,
+        String qry)
+        throws Exception {
+        inlineSize = 10;
+
+        wrongIdx1Name = wrongIdx1Name.toUpperCase();
+        properIdx2Name = properIdx2Name.toUpperCase();
+
+        // Check preconditions are correct.
+        assertTrue(idx1Cmd, idx1Cmd.toUpperCase().contains(wrongIdx1Name));
+        assertTrue(idx2Cmd, idx2Cmd.toUpperCase().contains(properIdx2Name));
+
+        // Empty grid is started.
+        IgniteEx ig0 = startGrids(gridCount());
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        // SQL Table with fields FIRST_NAME, LAST_NAME, ADDRESS, LANG is created.
+        // Some initial data is populated to the table.
+        populateTable(qryProc, "TEST_TBL_NAME", 1, "ID","FIRST_NAME", "LAST_NAME",
+            "ADDRESS", "LANG");
+
+        // Create index idx2.
+        qryProc.querySqlFields(new SqlFieldsQuery(idx2Cmd), true).getAll();
+
+        // Create index idx1.
+        qryProc.querySqlFields(new SqlFieldsQuery(idx1Cmd), true).getAll();
+
+        // Execute EXPLAIN SELECT sql.
+        String plan = qryProc.querySqlFields(new SqlFieldsQuery("explain " + qry), true)
+            .getAll().get(0).get(0).toString().toUpperCase();
+
+        // Ensure proper idx2 is used in execution plan.
+        assertTrue("plan=" + plan, plan.contains(properIdx2Name));
+        assertFalse("plan=" + plan, plan.contains(wrongIdx1Name));
+
+        // Drop indices idx1 and idx2.
+        qryProc.querySqlFields(new SqlFieldsQuery("DROP INDEX " + wrongIdx1Name), true).getAll();
+        qryProc.querySqlFields(new SqlFieldsQuery("DROP INDEX " + properIdx2Name), true).getAll();
+
+        // Create index idx1.
+        qryProc.querySqlFields(new SqlFieldsQuery(idx1Cmd), true).getAll();
+
+        // Create index idx2.
+        qryProc.querySqlFields(new SqlFieldsQuery(idx2Cmd), true).getAll();
+
+        // Execute EXPLAIN SELECT sql.
+        plan = qryProc.querySqlFields(new SqlFieldsQuery("explain " + qry), true)
+            .getAll().get(0).get(0).toString().toUpperCase();
+
+        // Ensure proper idx2 is used in execution plan.
+        assertTrue("plan=" + plan, plan.contains(properIdx2Name));
+        assertFalse("plan=" + plan, plan.contains(wrongIdx1Name));
+
+        // Tables and indices are dropped.
+        stopAllGrids();
+
+        cleanPersistenceDir();
     }
 
     /** */
@@ -1313,28 +1857,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
     }
 
-    /**
-     * Must be called when the grid is up.
-     */
-    private List<Path> getIndexBinPaths() {
-        return G.allGrids().stream()
-            .map(grid -> (IgniteEx) grid)
-            .map(grid -> {
-                IgniteInternalCache<Object, Object> cachex = grid.cachex(DEFAULT_CACHE_NAME);
-
-                assertNotNull(cachex);
-
-                FilePageStoreManager pageStoreMgr = (FilePageStoreManager) cachex.context().shared().pageStore();
-
-                assertNotNull(pageStoreMgr);
-
-                File cacheWorkDir = pageStoreMgr.cacheWorkDir(cachex.configuration());
-
-                return cacheWorkDir.toPath().resolve("index.bin");
-            })
-            .collect(Collectors.toList());
-    }
-
     /** */
     private void createDynamicIndexes(String... cols) {
         IgniteCache<Key, Val> cache = grid(0).cache(DEFAULT_CACHE_NAME);
@@ -1366,17 +1888,37 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         cache.indexReadyFuture().get();
     }
 
-    /** */
+    /** Key object factory method. */
     private static Key key(long i) {
         return new Key(String.format("foo%03d", i), i, new Pojo(i));
     }
 
-    /** */
+    /** Value object factory method.*/
     private static Val val(long i) {
         return new Val(String.format("bar%03d", i), i, new Pojo(i));
     }
 
-    /** */
+    /**
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
+        return sql(grid(), sql, args);
+    }
+
+    /**
+     * @param ign Node.
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object... args) {
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
+            .setArgs(args), false);
+    }
+
+    /** Key object. */
     private static class Key {
         /** */
         private String keyStr;
@@ -1394,9 +1936,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             keyPojo = pojo;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public boolean equals(Object o) {
             if (this == o)
                 return true;
@@ -1411,22 +1951,18 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                 Objects.equals(keyPojo, key.keyPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(keyStr, keyLong, keyPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Key.class, this);
         }
     }
 
-    /** */
+    /** Value object. */
     private static class Val {
         /** */
         private String valStr;
@@ -1444,9 +1980,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             valPojo = pojo;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public boolean equals(Object o) {
             if (this == o)
                 return true;
@@ -1461,22 +1995,18 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                 Objects.equals(valPojo, val.valPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(valStr, valLong, valPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Val.class, this);
         }
     }
 
-    /** */
+    /** User object. */
     private static class Pojo {
         /** */
         private long pojoLong;
@@ -1486,9 +2016,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             this.pojoLong = pojoLong;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public boolean equals(Object o) {
             if (this == o)
                 return true;
@@ -1501,18 +2029,84 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             return pojoLong == pojo.pojoLong;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(pojoLong);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Pojo.class, this);
+        }
+    }
+
+    /** User object converter. */
+    static class UserObject implements SqlStrConvertedValHolder {
+        /** User object. */
+        private Object obj;
+
+        /** Constructor. */
+        public UserObject(Object obj) {
+            this.obj = obj;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Object originalVal() {
+            return obj;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String sqlStrVal() {
+            return null; // UserObject has no string representation.
+        }
+    }
+
+    /**
+     * Supported sql data types with corresponding java mappings.
+     * https://apacheignite-sql.readme.io/docs/data-types
+     */
+    private enum SqlDataType {
+        /** */
+        INT(Integer.class),
+
+        /** */
+        BIGINT(Long.class),
+
+        /** */
+        DECIMAL(BigDecimal.class),
+
+        /** */
+        DOUBLE(Double.class),
+
+        /** */
+        TIME(java.sql.Time.class),
+
+        /** */
+        DATE(java.sql.Date.class),
+
+        /** */
+        TIMESTAMP(java.sql.Timestamp.class),
+
+        /** */
+        VARCHAR(String.class),
+
+        /** */
+        OTHER(Pojo.class),
+
+        /** */
+        UUID(UUID.class),
+
+        /** */
+        BINARY(byte[].class);
+
+        /**
+         * Corresponding java type https://docs.oracle.com/javase/1.5.0/docs/guide/jdbc/getstart/mapping.html
+         */
+        private Object javaType;
+
+        /** */
+        SqlDataType(Object javaType) {
+            this.javaType = javaType;
         }
     }
 }

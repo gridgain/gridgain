@@ -237,7 +237,7 @@ public abstract class GridCacheBinaryObjectsAbstractSelfTest extends GridCommonA
         String typeName = nameMapper.typeName(TestReferenceObject.class.getName());
 
         assertTrue("Unexpected toString: " + str,
-            S.INCLUDE_SENSITIVE ?
+            S.includeSensitive() ?
             str.startsWith(typeName) && str.contains("obj=" + typeName + " [") :
             str.startsWith("BinaryObject") && str.contains("idHash=") && str.contains("hash=")
         );
@@ -593,7 +593,6 @@ public abstract class GridCacheBinaryObjectsAbstractSelfTest extends GridCommonA
 
             cache.put(0, arr);
         }
-
 
         for (int i = 0; i < ENTRY_CNT; i++) {
             TestObject[] obj = cache.get(i);

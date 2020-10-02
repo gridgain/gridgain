@@ -33,6 +33,8 @@
             <includes>
                 <include>org.gridgain:ignite-spring</include>
                 <include>org.gridgain:ignite-indexing</include>
+                <include>org.gridgain:ignite-opencensus</include>
+                <include>org.gridgain:ignite-control-utility</include>
             </includes>
             <sources>
                 <includeModuleDirectory>true</includeModuleDirectory>
@@ -119,34 +121,30 @@
                 <exclude>org.gridgain:ignite-extdata-uri</exclude>
                 <exclude>org.gridgain:ignite-extdata-uri-dep</exclude>
                 <exclude>org.gridgain:ignite-examples</exclude>
+                <exclude>org.gridgain:ignite-examples-ml</exclude>
                 <exclude>org.gridgain:ignite-indexing</exclude>
                 <exclude>org.gridgain:ignite-visor-console</exclude>
                 <exclude>org.gridgain:ignite-visor-console_2.10</exclude>
                 <exclude>org.gridgain:ignite-visor-plugins</exclude>
                 <exclude>org.gridgain:ignite-codegen</exclude>
                 <exclude>org.gridgain:ignite-apache-license-gen</exclude>
-                <exclude>org.gridgain:ignite-hibernate-core</exclude>
-                <exclude>org.gridgain:ignite-hibernate_4.2</exclude>
-                <exclude>org.gridgain:ignite-hibernate_5.1</exclude>
-                <exclude>org.gridgain:ignite-hibernate_5.3</exclude>
-                <exclude>org.gridgain:ignite-schedule</exclude>
-                <exclude>org.gridgain:ignite-geospatial</exclude>
                 <exclude>org.gridgain:ignite-appserver-test</exclude>
                 <exclude>org.gridgain:ignite-websphere-test</exclude>
                 <exclude>org.gridgain:ignite-cassandra</exclude>
                 <exclude>org.gridgain:ignite-yardstick</exclude>
                 <exclude>org.gridgain:ignite-benchmarks</exclude>
-                <exclude>org.gridgain:ignite-web-console</exclude>
-                <exclude>org.gridgain:ignite-web-console-agent</exclude>
-                <exclude>org.gridgain:ignite-web-console-common</exclude>
-                <exclude>org.gridgain:ignite-web-console-configuration-tests</exclude>
-                <exclude>org.gridgain:ignite-web-console-mail</exclude>
-                <exclude>org.gridgain:ignite-web-console-server</exclude>
                 <exclude>org.gridgain:ignite-dev-utils</exclude>
                 <exclude>org.gridgain:ignite-extdata-platform</exclude>
                 <exclude>org.gridgain:ignite-compatibility</exclude>
                 <exclude>org.gridgain:ignite-sqlline</exclude>
                 <exclude>org.gridgain:ignite-h2</exclude>
+                <exclude>org.gridgain:ignite-ml</exclude>
+                <exclude>org.gridgain:ignite-ml-mleap-model-parser</exclude>
+                <exclude>org.gridgain:ignite-ml-spark-model-parser</exclude>
+                <exclude>org.gridgain:ignite-ml-tensorflow-model-parser</exclude>
+                <exclude>org.gridgain:ignite-ml-xgboost-model-parser</exclude>
+                <exclude>org.gridgain:ignite-opencensus</exclude>
+                <exclude>org.gridgain:ignite-control-utility</exclude>
             </excludes>
             <sources>
                 <includeModuleDirectory>true</includeModuleDirectory>
@@ -191,4 +189,31 @@
             </sources>
         </moduleSet>
     </moduleSets>
+
+    <fileSets>
+        <fileSet>
+            <directory>${basedir}/../control-center-agent/modules/control-center-agent/target</directory>
+            <outputDirectory>optional/control-center-agent</outputDirectory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+            <excludes>
+                <exclude>*-tests.jar</exclude>
+                <exclude>*-javadoc.jar</exclude>
+                <exclude>*-sources.jar</exclude>
+            </excludes>
+        </fileSet>
+        <fileSet>
+            <directory>${basedir}/../control-center-agent/modules/control-center-agent/target/libs</directory>
+            <outputDirectory>optional/control-center-agent</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>${basedir}/../control-center-agent</directory>
+            <outputDirectory>optional/control-center-agent</outputDirectory>
+            <includes>
+                <include>README.txt</include>
+                <include>licenses/**</include>
+            </includes>
+        </fileSet>
+    </fileSets>
 </assembly>
