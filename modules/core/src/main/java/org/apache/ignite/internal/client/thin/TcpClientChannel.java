@@ -368,7 +368,7 @@ class TcpClientChannel implements ClientChannel {
 
         // For every known class derived from ClientException, wrap cause in a new instance.
         // We could rethrow e.getCause() when instanceof ClientException,
-        // but this results in a cryptic and incomplete stack trace.
+        // but this results in an incomplete stack trace from the receiver thread.
         // This is similar to IgniteUtils.exceptionConverters.
         if (e.getCause() instanceof ClientConnectionException)
             return new ClientConnectionException(e.getMessage(), e.getCause());
