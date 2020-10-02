@@ -16,7 +16,6 @@
 
 package org.apache.ignite.tests.p2p.compute;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -36,7 +35,6 @@ import org.apache.ignite.tests.p2p.cache.Person;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
-import sun.reflect.generics.tree.Tree;
 
 /**
  * This closure calculate average salary of person in the defined key range.
