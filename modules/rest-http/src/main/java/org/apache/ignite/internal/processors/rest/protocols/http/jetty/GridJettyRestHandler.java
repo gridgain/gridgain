@@ -772,7 +772,8 @@ public class GridJettyRestHandler extends AbstractHandler {
             case DATA_REGION_METRICS:
             case DATA_STORAGE_METRICS:
             case NAME:
-            case VERSION: {
+            case VERSION:
+            case PROBE: {
                 restReq = new GridRestRequest();
 
                 break;
