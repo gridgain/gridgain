@@ -53,9 +53,7 @@ public interface CacheObject extends Message {
      * @param ldr Class loader, if it is {@code null}, default class loader will be used.
      * @return Value.
      */
-    default @Nullable public <T> T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr){
-        throw new NotImplementedException();
-    }
+    @Nullable public <T> T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr);
 
     /**
      * @param ctx Context.
