@@ -317,7 +317,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             assertEquals(Arrays.toString(expRow), expRow.length, resRow.size());
 
             for (int j = 0; j < expRow.length; j++)
-                assertEquals(expRow[j], resRow.get(j));
+                assertEquals("Row num: " + i, expRow[j], resRow.get(j));
         }
     }
 
