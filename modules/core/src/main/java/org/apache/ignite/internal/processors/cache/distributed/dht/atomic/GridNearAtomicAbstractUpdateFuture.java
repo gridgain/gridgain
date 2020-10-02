@@ -369,11 +369,11 @@ public abstract class GridNearAtomicAbstractUpdateFuture extends GridCacheFuture
      */
     final void completeFuture(@Nullable GridCacheReturn ret, Throwable err, @Nullable Long futId) {
         Object retval = ret == null ? null : rawRetval ? ret : (this.retval || op == TRANSFORM) ?
-                cctx.unwrapBinaryIfNeeded(
-                    ret.value(),
-                    keepBinary,
-                    U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId)
-                ): ret.success();
+            cctx.unwrapBinaryIfNeeded(
+                ret.value(),
+                keepBinary,
+                U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId)
+            ) : ret.success();
 
         if (op == TRANSFORM && retval == null)
             retval = Collections.emptyMap();

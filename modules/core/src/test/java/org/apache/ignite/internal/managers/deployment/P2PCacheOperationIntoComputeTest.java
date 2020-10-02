@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal;
+package org.apache.ignite.internal.managers.deployment;
 
 import java.lang.reflect.Constructor;
 import org.apache.ignite.Ignite;
@@ -45,7 +45,6 @@ public class P2PCacheOperationIntoComputeTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setConsistentId(igniteInstanceName)
-            .setFailureDetectionTimeout(60_000)
             .setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME),
                 new CacheConfiguration(DEFAULT_TX_CACHE_NAME)
                     .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));

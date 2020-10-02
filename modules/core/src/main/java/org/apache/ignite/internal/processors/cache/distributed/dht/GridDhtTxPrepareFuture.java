@@ -110,10 +110,10 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOO
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
-import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
-import static org.apache.ignite.transactions.TransactionState.PREPARED;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_DHT_PREPARE;
+import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
+import static org.apache.ignite.transactions.TransactionState.PREPARED;
 
 /**
  *
@@ -512,10 +512,10 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                             }
                         }
                         else if (retVal) {
-                            assert keepBinary || tx instanceof GridNearTxLocal || !tx.localResult() :
-                                "An attempt to deserialize entry in not near node [key=" + txEntry.key() +
-                                    ", tx=" + tx.getClass().getSimpleName() +
-                                    ", cache="  + cctx.cacheContext(txEntry.cacheId()).name() + ']';
+//                            assert keepBinary || tx instanceof GridNearTxLocal || !tx.localResult() :
+//                                "An attempt to deserialize entry in not near node [key=" + txEntry.key() +
+//                                    ", tx=" + tx.getClass().getSimpleName() +
+//                                    ", cache=" + cctx.cacheContext(txEntry.cacheId()).name() + ']';
 
                             ret.value(cacheCtx, val, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                         }
@@ -2003,9 +2003,9 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                                         false, null, null, null, false);
 
                                 if (retVal && !invoke) {
-                                    assert tx instanceof GridNearTxLocal || !tx.localResult() :
-                                        "An attempt to deserialize entry in not near node [key=" + info.key() +
-                                            ", tx=" + this.getClass().getSimpleName() + ']';
+//                                    assert tx instanceof GridNearTxLocal || !tx.localResult() :
+//                                        "An attempt to deserialize entry in not near node [key=" + info.key() +
+//                                            ", tx=" + this.getClass().getSimpleName() + ']';
 
                                     ret.value(
                                         cacheCtx,

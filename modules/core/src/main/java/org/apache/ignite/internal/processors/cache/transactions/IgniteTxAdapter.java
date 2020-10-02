@@ -1663,9 +1663,9 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
         if (F.isEmpty(txEntry.entryProcessors())) {
             if (ret != null) {
-                assert txEntry.keepBinary() || this instanceof GridNearTxLocal || !localResult() :
-                    "An attempt to deserialize entry in not near node [key=" + txEntry.key() +
-                        ", tx=" + this.getClass().getSimpleName() + ']';
+//                assert txEntry.keepBinary() || this instanceof GridNearTxLocal || !localResult() :
+//                    "An attempt to deserialize entry in not near node [key=" + txEntry.key() +
+//                        ", tx=" + this.getClass().getSimpleName() + ']';
 
                 ret.value(
                     cacheCtx,
