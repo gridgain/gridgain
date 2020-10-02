@@ -38,10 +38,10 @@ import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.DiscoveryLocalJoinData;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
-import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -72,8 +72,6 @@ import org.jetbrains.annotations.TestOnly;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.META_STORAGE;
-import static org.apache.ignite.internal.IgniteFeatures.METASTORAGE_LONG_KEYS;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
 import static org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree.MAX_KEY_LEN;
 import static org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage.isSupported;
@@ -281,7 +279,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         finally {
             lock.writeLock().unlock();
 
-            cancelUpdateFutures();
+            cancelUpdateFutures(new NodeStoppingException("Node is stopping."));
         }
     }
 
@@ -443,6 +441,11 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         assert val != null : key;
 
         return startWrite(key, marshal(marshaller, val));
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridFutureAdapter<?> removeAsync(@NotNull String key) throws IgniteCheckedException {
+        return startWrite(key, null);
     }
 
     /** {@inheritDoc} */
@@ -889,7 +892,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             ver = INITIAL_VERSION;
 
-            cancelUpdateFutures();
+            cancelUpdateFutures(new IgniteCheckedException("Client was disconnected during the operation."));
         }
         finally {
             lock.writeLock().unlock();
@@ -899,9 +902,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     /**
      * Cancel all waiting futures and clear the map.
      */
-    private void cancelUpdateFutures() {
+    private void cancelUpdateFutures(Exception e) {
         for (GridFutureAdapter<Boolean> fut : updateFuts.values())
-            fut.onDone(new IgniteCheckedException("Client was disconnected during the operation."));
+            fut.onDone(e);
 
         updateFuts.clear();
     }
@@ -1007,7 +1010,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      * @throws IgniteCheckedException If key exceeds maximum key length.
      */
     private void checkMaxKeyLengthExceeded(String key) throws IgniteCheckedException {
-        if (longKeysSupported())
+        if (DistributedMetaStorage.longKeysSupported(ctx))
             return;
 
         if (DistributedMetaStorageUtil.localKey(key).getBytes().length > MAX_KEY_LEN) {
@@ -1015,11 +1018,6 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                 (MAX_KEY_LEN - DistributedMetaStorageUtil.localKeyPrefix().getBytes().length) +
                 " bytes in UTF8");
         }
-    }
-
-    /** */
-    private boolean longKeysSupported() {
-        return allNodesSupport(ctx, METASTORAGE_LONG_KEYS, IgniteDiscoverySpi.SRV_NODES);
     }
 
     /**
