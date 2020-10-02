@@ -364,11 +364,8 @@ class TcpClientChannel implements ClientChannel {
         if (e.getCause() instanceof ClientError)
             return new ClientException(e.getMessage(), e.getCause());
 
-        if (e.getCause() instanceof ClientConnectionException)
-            return new ClientConnectionException(e.getMessage(), e.getCause());
-
         if (e.getCause() instanceof ClientException)
-            return new ClientException(e.getMessage(), e.getCause());
+            return (ClientException) e.getCause();
 
         return new ClientException(e.getMessage(), e);
     }
