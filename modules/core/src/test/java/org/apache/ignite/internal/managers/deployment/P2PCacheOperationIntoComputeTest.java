@@ -21,6 +21,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -28,33 +29,68 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * Using cache API in P2P closure.
+ * Using cache API in P2P tasks.
  */
 public class P2PCacheOperationIntoComputeTest extends GridCommonAbstractTest {
 
     /** Person class name. */
     private static final String PERSON_CLASS_NAME = "org.apache.ignite.tests.p2p.cache.Person";
 
-    /** Closure class name. */
+    /** Deployment task name. */
     private static final String AVERAGE_PERSON_SALARY_CLOSURE_NAME = "org.apache.ignite.tests.p2p.compute.AveragePersonSalaryCallable";
 
     /** Transactional cache name. */
     private static final String DEFAULT_TX_CACHE_NAME = DEFAULT_CACHE_NAME + "_tx";
 
+    /** Deployment mode for node configuration. */
+    public DeploymentMode deplymentMode;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setConsistentId(igniteInstanceName)
+            .setPeerClassLoadingEnabled(true)
+            .setDeploymentMode(deplymentMode)
             .setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME),
                 new CacheConfiguration(DEFAULT_TX_CACHE_NAME)
                     .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
     }
 
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        super.afterTest();
+    }
+
     /**
+     * Checks cache API in the deployed tasks with SHARED mode.
+     *
      * @throws Exception If failed.
      */
     @Test
-    public void test() throws Exception {
+    public void testShared() throws Exception {
+        deplymentMode = DeploymentMode.SHARED;
+
+        Ignite ignite0 = startGrids(2);
+
+        awaitPartitionMapExchange();
+
+        Ignite client = startClientGrid(2);
+
+        calculateAverageSalary(client, DEFAULT_CACHE_NAME);
+        calculateAverageSalary(client, DEFAULT_TX_CACHE_NAME);
+    }
+
+    /**
+     * Checks cache API in the deployed tasks with CONTINUOUS mode.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testContinuous() throws Exception {
+        deplymentMode = DeploymentMode.CONTINUOUS;
+
         Ignite ignite0 = startGrids(2);
 
         awaitPartitionMapExchange();
@@ -107,5 +143,4 @@ public class P2PCacheOperationIntoComputeTest extends GridCommonAbstractTest {
         GridTestUtils.setFieldValue(person, "salary", id * Math.PI);
         return person;
     }
-
 }
