@@ -47,6 +47,15 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtP
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCacheStartWithLoadTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.BlockedEvictionsTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest1;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest2;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest3;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest4;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest5;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest6;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest7;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest8;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest9;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PreloadingRestartWhileClearingPartitionTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.RentingPartitionIsOwnedDuringEvictionTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingPartitionCountersTest;
@@ -153,6 +162,15 @@ public class IgniteCacheTestSuite7 {
 //        GridTestUtils.addTestIfNeeded(suite, BlockedEvictionsTest.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PreloadingRestartWhileClearingPartitionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest1.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest2.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest3.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest4.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest5.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest6.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest7.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest8.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest9.class, ignoredTests);
 
         return suite;
     }
