@@ -7849,18 +7849,20 @@ public abstract class IgniteUtils {
         if (ctx.deploy().enabled() && ldrId != null) {
             GridDeployment dep = ctx.deploy().getDeployment(ldrId);
 
-            try {
-                ctx.cache().context().deploy().p2pContext(
-                    dep.classLoaderId().globalId(),
-                    dep.classLoaderId(),
-                    dep.userVersion(),
-                    dep.deployMode(),
-                    dep.participants()
-                );
-            }
-            catch (IgnitePeerToPeerClassLoadingException e) {
-                ctx.log(ctx.cache().context().deploy().getClass())
-                    .error("Could not restore P2P context [ldrId=" + ldrId + ']', e);
+            if (dep != null) {
+                try {
+                    ctx.cache().context().deploy().p2pContext(
+                        dep.classLoaderId().globalId(),
+                        dep.classLoaderId(),
+                        dep.userVersion(),
+                        dep.deployMode(),
+                        dep.participants()
+                    );
+                }
+                catch (IgnitePeerToPeerClassLoadingException e) {
+                    ctx.log(ctx.cache().context().deploy().getClass())
+                        .error("Could not restore P2P context [ldrId=" + ldrId + ']', e);
+                }
             }
         }
     }
