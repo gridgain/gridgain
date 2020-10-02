@@ -18,6 +18,8 @@ package org.apache.ignite.yardstick.sql;
 
 import java.lang.reflect.Constructor;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
@@ -26,6 +28,8 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSemaphore;
 import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -38,24 +42,37 @@ import static org.yardstickframework.BenchmarkUtils.println;
  * Ignite benchmark for composite PK.
  */
 public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
+    /**
+     * Key class and query to create TEST table.
+     */
+    private static final Map<Class<?>, String> setupQrys = new HashMap<>();
+
+    static {
+        setupQrys.put(
+            TestKey2Integers.class,
+            "CREATE TABLE TEST (ID0 INT, ID1 INT, VALINT INT, VALSTR VARCHAR, " +
+                "PRIMARY KEY (ID0, ID1)) " +
+                "WITH \"CACHE_NAME=TEST,KEY_TYPE=" + TestKey2Integers.class.getName() + ",VALUE_TYPE=" + Value.class.getName() + "\""
+        );
+        setupQrys.put(
+            TestKey8Integers.class,
+
+            "CREATE TABLE TEST (ID0 INT, ID1 INT, ID2 INT, ID3 INT, ID4 INT, ID5 INT, ID6 INT, ID7 INT, VALINT INT, VALSTR VARCHAR, " +
+                "PRIMARY KEY (ID0, ID1, ID2, ID3, ID4, ID5, ID6, ID7)) " +
+                "WITH \"CACHE_NAME=TEST,KEY_TYPE=" + TestKey8Integers.class.getName() + ",VALUE_TYPE=" + Value.class.getName() + "\""
+        );
+        setupQrys.put(
+            TestKeyHugeStringAndInteger.class,
+
+            "CREATE TABLE TEST (ID0 VARCHAR, ID1 INT, VALINT INT, VALSTR VARCHAR, " +
+                "PRIMARY KEY (ID0, ID1)) " +
+                "WITH \"CACHE_NAME=TEST,KEY_TYPE=" + TestKeyHugeStringAndInteger.class.getName() + ",VALUE_TYPE=" + Value.class.getName() + "\""
+        );
+    }
+
     /** Cache name. */
     private static final String cacheName = "TEST";
 
-    /**
-     * Enum of key types possible for testing
-     */
-    private enum TestedType {
-        /** */
-        JAVA_OBJECT,
-        /** */
-        PRIMITIVE,
-        /** */
-        DECIMAL,
-        /** */
-        LARGE_DECIMAL,
-        /** */
-        SMALL_DECIMAL
-    }
 
     /** How many entries should be preloaded and within which range. */
     private int range;
@@ -64,11 +81,9 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
     private Class<?> keyCls;
 
     /** Value class. */
-    private Class<?> valCls;
+    private boolean addIndexes;
 
     private Function<Integer, Object> keyCreator;
-
-    private Function<Integer, Object> valCreator;
 
     /** {@inheritDoc} */
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
@@ -76,7 +91,6 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
         range = args.range();
         String keyClsName = args.getStringParameter("keyClass", TestKey2Integers.class.getSimpleName());
-        String valClsName = args.getStringParameter("valClass", Value.class.getSimpleName());
 
         keyCls = Class.forName(IgniteCompositePkIndexBenchmark.class.getName() + "$" + keyClsName);
         final Constructor<?> keyConstructor = keyCls.getConstructor(int.class);
@@ -90,17 +104,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
             }
         };
 
-        valCls = Class.forName(IgniteCompositePkIndexBenchmark.class.getName() + "$" + valClsName);
-        final Constructor<?> valConstructor = valCls.getConstructor(int.class);
-
-        valCreator = (key) -> {
-            try {
-                return valConstructor.newInstance(key);
-            }
-            catch (Exception e) {
-                throw new IgniteException("Unexpected exception", e);
-            }
-        };
+        addIndexes = args.getBooleanParameter("addIndexes", false);
 
         printParameters();
 
@@ -128,17 +132,16 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
      *
      */
     private void init() {
-        IgniteCache c = ignite().createCache(
-            new CacheConfiguration(cacheName)
-                .setSqlSchema("PUBLIC")
-                .setQueryEntities(Collections.singleton(
-                    new QueryEntity(keyCls, valCls)
-                        .setTableName("TEST")
-                )
-            )
-        );
+        String createTblQry = setupQrys.get(keyCls);
 
-        println(cfg, "Cache entities: " + ((IgniteEx)ignite()).cachex(cacheName).configuration().getQueryEntities());
+        assert createTblQry != null : "Invalid key class: " + keyCls;
+
+        sql(createTblQry);
+
+        if (addIndexes) {
+            sql("CREATE INDEX IDX_VAL_INT ON TEST(VALINT)");
+            sql("CREATE INDEX IDX_VAL_STR ON TEST(VALSTR)");
+        }
 
         println(cfg, "Populate cache, range: " + range);
 
@@ -146,10 +149,13 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
             stream.allowOverwrite(false);
 
             for (int k = 0; k < range; ++k)
-                stream.addData(keyCreator.apply(k), valCreator.apply(k));
+                stream.addData(keyCreator.apply(k), new Value(k));
         }
 
         println(cfg, "Cache populated. ");
+        List<?> row = sql("SELECT * FROM TEST LIMIT 1").getAll().get(0);
+
+        println(cfg, "TEST table row: \n" + row);
     }
 
     /** {@inheritDoc} */
@@ -157,18 +163,29 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         int k = ThreadLocalRandom.current().nextInt(range);
         int v = ThreadLocalRandom.current().nextInt(range);
 
-        ignite().cache(cacheName).put(keyCreator.apply(k), valCreator.apply(v));
+        ignite().cache(cacheName).put(keyCreator.apply(k), new Value(v));
 
         return true;
     }
 
-
+    /**
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
+        return ((IgniteEx)ignite()).context().query().querySqlFields(new SqlFieldsQuery(sql)
+            .setSchema("PUBLIC")
+            .setLazy(true)
+            .setEnforceJoinOrder(true)
+            .setArgs(args), false);
+    }
     /** */
     private void printParameters() {
         println("Benchmark parameter:");
         println("    range: " + range);
         println("    key: " + keyCls.getSimpleName());
-        println("    val: " + valCls.getSimpleName());
+        println("    idxs: " + addIndexes);
     }
 
     /** */
@@ -259,22 +276,6 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
         /** */
         public Value(int key) {
-            this.valInt = key;
-            this.valStr = "val_str" + key;
-        }
-    }
-
-    /** */
-    public static class ValueIndexed {
-        /** */
-        @QuerySqlField(index = true)
-        private final int valInt;
-
-        @QuerySqlField(index = true)
-        private final String valStr;
-
-        /** */
-        public ValueIndexed(int key) {
             this.valInt = key;
             this.valStr = "val_str" + key;
         }
