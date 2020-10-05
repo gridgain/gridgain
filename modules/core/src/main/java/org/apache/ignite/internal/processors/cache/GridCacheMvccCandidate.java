@@ -123,8 +123,8 @@ public class GridCacheMvccCandidate implements Externalizable,
     /** */
     private GridCacheVersion serOrder;
 
-    // TODO: 28.09.20 Implement properly.
-    public CountDownLatch latch = new CountDownLatch(1);
+//    // TODO: 28.09.20 Implement properly.
+//    public CountDownLatch latch = new CountDownLatch(1);
 
     /**
      * Empty constructor required by {@link Externalizable}.

@@ -402,13 +402,13 @@ public final class GridCacheMvcc {
 
                 rmts.set2(cand);
 
-                try {
-                    cand.latch.await();
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                    assert false;
-                }
+//                try {
+//                    cand.latch.await();
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                    assert false;
+//                }
             }
         }
 
@@ -1042,7 +1042,7 @@ public final class GridCacheMvcc {
 
             rmts.get1().setOwner();
 
-            rmts.get1().latch.countDown();
+//            rmts.get1().latch.countDown();
 
             // TODO: 28.09.20 Critical issue here, release lock on sendingPrepareResponse or send listener notification.
         }
