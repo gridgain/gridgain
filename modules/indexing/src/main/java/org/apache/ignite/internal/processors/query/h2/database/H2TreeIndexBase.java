@@ -186,34 +186,4 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
         return res;
     }
-
-    /**
-     * @return Index columns.
-     */
-    public IndexColumn[] getColumnsInfo() {
-        IndexColumn[] colsOrig = getIndexColumns();
-        IndexColumn[] colsInfo = new IndexColumn[colsOrig.length];
-
-        GridH2Table tbl = (GridH2Table)table;
-        GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
-
-        for (int i = 0; i < colsOrig.length; ++i) {
-            if (colsOrig[i].column.getColumnId() == KEY_COL && QueryUtils.isSqlType(type.keyClass())) {
-                int altKeyColId = tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
-
-                //Remap simple key to alternative column.
-                IndexColumn idxKeyCol = new IndexColumn();
-
-                idxKeyCol.column = tbl.getColumn(altKeyColId);
-                idxKeyCol.columnName = idxKeyCol.column.getName();
-                idxKeyCol.sortType = colsOrig[i].sortType;
-
-                colsInfo[i] = idxKeyCol;
-            }
-            else
-                colsInfo[i] = colsOrig[i];
-        }
-
-        return colsInfo;
-    }
 }
