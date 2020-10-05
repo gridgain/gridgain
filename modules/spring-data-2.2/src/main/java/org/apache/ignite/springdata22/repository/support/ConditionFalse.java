@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef _IGNITE_NETWORK_UTILS
-#define _IGNITE_NETWORK_UTILS
+package org.apache.ignite.springdata22.repository.support;
 
-#include <set>
-#include <string>
-#include <vector>
-#include <algorithm>
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 
-namespace ignite
-{
-    namespace network
-    {
-        namespace utils
-        {
-            /**
-             * Get set of local addresses.
-             *
-             * @param addrs Addresses set.
-             */
-            void GetLocalAddresses(std::set<std::string>& addrs);
-        }
+/**
+ * Always false condition.
+ * Tells spring context never load bean with such Condition.
+ */
+public class ConditionFalse implements Condition {
+    /**{@inheritDoc}*/
+    @Override public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return false;
     }
 }
-
-#endif //_IGNITE_NETWORK_UTILS

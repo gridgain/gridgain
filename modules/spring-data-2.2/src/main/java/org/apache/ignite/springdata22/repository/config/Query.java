@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef _IGNITE_NETWORK_UTILS
-#define _IGNITE_NETWORK_UTILS
 
-#include <set>
-#include <string>
-#include <vector>
-#include <algorithm>
+package org.apache.ignite.springdata22.repository.config;
 
-namespace ignite
-{
-    namespace network
-    {
-        namespace utils
-        {
-            /**
-             * Get set of local addresses.
-             *
-             * @param addrs Addresses set.
-             */
-            void GetLocalAddresses(std::set<std::string>& addrs);
-        }
-    }
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Annotation to provide a user defined SQL query for a method.
+ */
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface Query {
+    /**
+     * SQL query text string.
+     */
+    String value() default "";
 }
-
-#endif //_IGNITE_NETWORK_UTILS

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef _IGNITE_NETWORK_UTILS
-#define _IGNITE_NETWORK_UTILS
+package org.apache.ignite.testsuites;
 
-#include <set>
-#include <string>
-#include <vector>
-#include <algorithm>
+import org.apache.ignite.springdata.IgniteSpringDataCrudSelfTest;
+import org.apache.ignite.springdata.IgniteSpringDataQueriesSelfTest;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-namespace ignite
-{
-    namespace network
-    {
-        namespace utils
-        {
-            /**
-             * Get set of local addresses.
-             *
-             * @param addrs Addresses set.
-             */
-            void GetLocalAddresses(std::set<std::string>& addrs);
-        }
-    }
+/**
+ * Ignite Spring Data 2.2 test suite.
+ */
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+    IgniteSpringDataCrudSelfTest.class,
+    IgniteSpringDataQueriesSelfTest.class
+})
+public class IgniteSpringData22TestSuite {
 }
-
-#endif //_IGNITE_NETWORK_UTILS

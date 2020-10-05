@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _IGNITE_NETWORK_UTILS
-#define _IGNITE_NETWORK_UTILS
-
-#include <set>
-#include <string>
-#include <vector>
-#include <algorithm>
-
-namespace ignite
-{
-    namespace network
-    {
-        namespace utils
-        {
-            /**
-             * Get set of local addresses.
-             *
-             * @param addrs Addresses set.
-             */
-            void GetLocalAddresses(std::set<std::string>& addrs);
-        }
-    }
-}
-
-#endif //_IGNITE_NETWORK_UTILS
+/**
+ * <!-- Package description. -->
+ * Package contains Apache Ignite Spring Data integration.
+ */
+package org.apache.ignite.springdata22.repository;
