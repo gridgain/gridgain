@@ -22,16 +22,13 @@ import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepository;
 import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatistics;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.resources.LoggerResource;
 
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepository {
     /** Logger. */
@@ -70,14 +67,14 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
-    @Override
-    public void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> statistics,
+    @Override public void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> statistics,
                                               boolean fullStat) {
         if (partsStats != null) {
             Map<Integer, ObjectPartitionStatistics> statisticsMap = new ConcurrentHashMap<>();
             for (ObjectPartitionStatistics s : statistics) {
                 if (statisticsMap.put(s.partId(), s) != null) {
-                    // TODO throw new IllegalStateException("Duplicate key"); or just log warning
+                    log.warning(String.format("Trying to save more than one %s.%s partition statistics for partition %d",
+                            tbl.schema(), tbl.table(), s.partId()));
                 }
             }
 
@@ -91,7 +88,6 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
                     return v;
                 });
             else
-                // TODO implement me
                 throw new UnsupportedOperationException();
         }
     }
@@ -106,20 +102,15 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         return Collections.emptyList();
     }
 
-    @Override
-    public void clearLocalPartitionsStatistics(QueryTable tbl, String ... colNames) {
-        if (colNames == null || colNames.length == 0) {
-            if (partsStats != null) {
+    @Override public void clearLocalPartitionsStatistics(QueryTable tbl, String ... colNames) {
+        if (colNames == null || colNames.length == 0)
+            if (partsStats != null)
                 partsStats.remove(tbl);
-            }
-        } else {
-            // TODO implement me
+        else
             throw new UnsupportedOperationException();
-        }
     }
 
-    @Override
-    public void saveLocalPartitionStatistics(QueryTable tbl, int partId, ObjectPartitionStatistics statistics,
+    @Override public void saveLocalPartitionStatistics(QueryTable tbl, int partId, ObjectPartitionStatistics statistics,
                                              boolean fullStat) {
         if (partsStats != null) {
             partsStats.compute(tbl, (k,v) -> {
@@ -132,8 +123,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
-    @Override
-    public ObjectPartitionStatistics getLocalPartitionStatistics(QueryTable tbl, int partId) {
+    @Override public ObjectPartitionStatistics getLocalPartitionStatistics(QueryTable tbl, int partId) {
         if (partsStats != null) {
             Map<Integer, ObjectPartitionStatistics> objectPartStats = partsStats.get(tbl);
             return objectPartStats == null ? null : objectPartStats.get(partId);
@@ -141,71 +131,55 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         return null;
     }
 
-    @Override
-    public void clearLocalPartitionStatistics(QueryTable tbl, int partId) {
-        if (partsStats != null) {
+    @Override public void clearLocalPartitionStatistics(QueryTable tbl, int partId) {
+        if (partsStats != null)
             partsStats.computeIfPresent(tbl, (k,v) -> {
                 v.remove(partId);
                 return v.isEmpty() ? null : v;
             });
-        }
     }
 
-    @Override
-    public void saveLocalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat) {
+    @Override public void saveLocalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat) {
         if (localStats != null)
             localStats.put(tbl, statistics);
     }
 
-    @Override
-    public void cacheLocalStatistics(QueryTable tbl, ObjectStatistics statistics) {
+    @Override public void cacheLocalStatistics(QueryTable tbl, ObjectStatistics statistics) {
         if (localStats != null)
             localStats.put(tbl, statistics);
     }
 
-    @Override
-    public ObjectStatistics getLocalStatistics(QueryTable tbl, boolean tryLoad) {
-        // TODO tryLoad
+    @Override public ObjectStatistics getLocalStatistics(QueryTable tbl) {
         return localStats == null ? null : localStats.get(tbl);
     }
 
-    @Override
-    public void clearLocalStatistics(QueryTable tbl, String ... colNames) {
-        if (colNames == null || colNames.length == 0) {
+    @Override public void clearLocalStatistics(QueryTable tbl, String ... colNames) {
+        if (colNames == null || colNames.length == 0)
             if (localStats != null)
                 localStats.remove(tbl);
-        } else {
-            // TODO implement me
+        else
             throw new UnsupportedOperationException();
-        }
     }
 
-    @Override
-    public void saveGlobalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat) {
+    @Override public void saveGlobalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat) {
         if (!fullStat)
-            // TODO implement me
             throw new UnsupportedOperationException();
 
         globalStats.put(tbl, statistics);
     }
 
-    @Override
-    public void cacheGlobalStatistics(QueryTable tbl, ObjectStatistics statistics) {
+    @Override public void cacheGlobalStatistics(QueryTable tbl, ObjectStatistics statistics) {
         globalStats.put(tbl, statistics);
     }
 
-    public ObjectStatistics getGlobalStatistics(QueryTable tbl, boolean tryLoad) {
-        // TODO tryLoad
+    public ObjectStatistics getGlobalStatistics(QueryTable tbl) {
         return globalStats.get(tbl);
     }
 
-    @Override
-    public void clearGlobalStatistics(QueryTable tbl, String ... colNames) {
-        if (colNames == null || colNames.length == 0) {
+    @Override public void clearGlobalStatistics(QueryTable tbl, String ... colNames) {
+        if (colNames == null || colNames.length == 0)
             globalStats.remove(tbl);
-        } else {
-            // TODO implement me
+        else
             throw new UnsupportedOperationException();
-        }
     }
 }

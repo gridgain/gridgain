@@ -1,6 +1,5 @@
 package org.apache.ignite.internal.processors.query.stat.hll.serialization;
 
-
 /*
  * Copyright 2013 Aggregate Knowledge, Inc.
  *

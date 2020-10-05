@@ -1,4 +1,3 @@
-package org.apache.ignite.internal.processors.query.stat.hll.util;
 /*
  * Copyright 2013 Aggregate Knowledge, Inc.
  *
@@ -14,6 +13,8 @@ package org.apache.ignite.internal.processors.query.stat.hll.util;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.ignite.internal.processors.query.stat.hll.util;
+
 
 /**
  * A <code>long</code>-based iterator.  This is not <i>is-a</i> {@link java.util.Iterator}

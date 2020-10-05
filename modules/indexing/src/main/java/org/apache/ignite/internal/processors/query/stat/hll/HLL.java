@@ -19,8 +19,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 
-//import it.unimi.dsi.fastutil.ints.Int2ByteOpenHashMap;
-//import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.ignite.internal.processors.query.stat.hll.util.BitVector;
 import org.apache.ignite.internal.processors.query.stat.hll.util.BitUtil;
 import org.apache.ignite.internal.processors.query.stat.hll.util.HLLUtil;
@@ -32,7 +30,6 @@ import org.apache.ignite.internal.processors.query.stat.hll.serialization.ISchem
 import org.apache.ignite.internal.processors.query.stat.hll.serialization.IWordDeserializer;
 import org.apache.ignite.internal.processors.query.stat.hll.serialization.IWordSerializer;
 import org.apache.ignite.internal.processors.query.stat.hll.serialization.SerializationUtil;
-
 
 /**
  * A probabilistic set of hashed <code>long</code> elements. Useful for computing
@@ -1049,7 +1046,6 @@ public class HLL implements Cloneable {
         //       sparse are enabled, the easiest thing to do here is to re-derive
         //       the expthresh parameter and create a new HLL with the public
         //       constructor.
-        // TODO: add a more sensible constructor to make this less obfuscated
         final int copyExpthresh;
         if(explicitAuto) {
             copyExpthresh = -1;
@@ -1083,5 +1079,4 @@ public class HLL implements Cloneable {
         }
         return copy;
     }
-
 }

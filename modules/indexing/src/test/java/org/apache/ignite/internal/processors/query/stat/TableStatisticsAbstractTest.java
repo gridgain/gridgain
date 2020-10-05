@@ -57,7 +57,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
      */
     protected void checkOptimalPlanChosenForDifferentIndexes(Ignite grid, String[] optimal, String sql, String[][] indexes) {
         int size = -1;
-        for(String[] idxs : indexes) {
+        for (String[] idxs : indexes) {
             if (size == -1)
                 size = (idxs == null) ? 0 : idxs.length;
 
@@ -134,7 +134,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
         Matcher m = Pattern.compile(".*\\/\\*.+?\\.(\\w+):.*\\R*.*\\R*.*\\R*.*\\R*\\*\\/.*").matcher(explainRes);
         //".*\\/\\*.+?\\.(\\w+).*\\/.*").matcher(explainRes);
         List<String> result = new ArrayList<>();
-        while(m.find()) {
+        while (m.find()) {
             result.add(m.group(1).trim());
         }
         return result.toArray(new String[result.size()]);
@@ -205,8 +205,8 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
             assert sql.contains(idxPlaceHolder);
 
             if (idx != null && idx.length > 0) {
-                String idxStr = "USE INDEX (" +String.join(",", idx) + ")";
-                sql = sql.replaceAll(idxPlaceHolder,  idxStr);
+                String idxStr = "USE INDEX (" + String.join(",", idx) + ")";
+                sql = sql.replaceAll(idxPlaceHolder, idxStr);
             } else
                 sql = sql.replaceAll(idxPlaceHolder, "");
 
@@ -242,14 +242,13 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
         return sql;
     }
 
-
     /**
      * Update statistics on specified objects in PUBLIC schema.
      *
-     * @param table table where to update statistics, just to require al least one name
+     * @param table table where to update statistics, just to require al least one name.
      * @param tables tables where to update statistics.
      */
-    protected void updateStatistics(String table, String ... tables) {
+    protected void updateStatistics(String table, String... tables) {
         List<String> allTbls = new ArrayList<>();
         allTbls.add(table);
         if (null != tables) {

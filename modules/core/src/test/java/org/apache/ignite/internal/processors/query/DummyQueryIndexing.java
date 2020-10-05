@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.query;
 
 import java.util.Collection;
@@ -340,8 +339,7 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         return null;
     }
 
-    @Override
-    public IgniteStatisticsManager statsManager() {
+    @Override public IgniteStatisticsManager statsManager() {
         return null;
     }
 }

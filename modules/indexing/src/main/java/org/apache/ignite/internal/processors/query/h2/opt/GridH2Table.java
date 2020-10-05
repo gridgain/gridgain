@@ -468,14 +468,8 @@ public class GridH2Table extends TableBase {
     }
 
     public ObjectStatistics tableStatistics() {
-        // TODO get without typecast
-        try {
-            IgniteStatisticsManager statManager = cacheInfo.cacheContext().kernalContext().query().getIndexing().statsManager();
-            return statManager.getLocalStatistics(identifier.schema(), identifier.table());
-        } catch (NullPointerException e) {
-            // TODO remove try/catch
-            return null;
-        }
+        IgniteStatisticsManager statManager = cacheInfo.cacheContext().kernalContext().query().getIndexing().statsManager();
+        return statManager.getLocalStatistics(identifier.schema(), identifier.table());
     }
 
     /**
