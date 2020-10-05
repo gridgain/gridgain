@@ -18,9 +18,6 @@
 #include <windows.h>
 #endif
 
-#include <time.h>
-#include <unistd.h>
-
 #include <sql.h>
 #include <sqlext.h>
 
@@ -33,12 +30,7 @@
 #include "ignite/ignite.h"
 #include "ignite/ignition.h"
 
-#include "ignite/examples/person.h"
-#include "ignite/examples/organization.h"
-
 using namespace ignite;
-
-using namespace examples;
 
 /**
  * This example populates cache with sample data and runs several SQL queries
