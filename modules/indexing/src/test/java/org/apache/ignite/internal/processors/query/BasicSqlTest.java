@@ -16,18 +16,10 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.annotations.QuerySqlField;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 /**
@@ -113,41 +105,6 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     */
-    @Test
-    public void testDbg() throws Exception {
-        sql("CREATE TABLE TEST2 (ID0 INT, ID1 INT, VALINT INT, VALSTR VARCHAR, " +
-            "PRIMARY KEY (ID0, ID1))");
-
-        sql("CREATE TABLE TEST8 (ID0 INT, ID1 INT, ID2 INT, " +
-            "ID3 INT, ID4 INT, ID5 INT, ID6 INT, ID7 INT, VALINT INT, VALSTR VARCHAR, " +
-            "PRIMARY KEY (ID0, ID1, ID2, ID3, ID4, ID5, ID6, ID7)) ");
-
-        sql("INSERT INTO TEST2 (ID0, ID1, VALINT, VALSTR) VALUES (0, 0, 0, '0')");
-        sql("INSERT INTO TEST2 (ID0, ID1, VALINT, VALSTR) VALUES (1, 1, 1, '1')");
-        sql("MERGE INTO TEST2 (ID0, ID1, VALINT, VALSTR) VALUES (0, 0, 2, '2')");
-
-        sql("INSERT INTO TEST8 (ID0, ID1, ID2, ID3, ID4, ID5, ID6, ID7, VALINT, VALSTR) VALUES (0, 0, 0, 0, 0, 0, 0, 0,  0, '0')");
-        sql("INSERT INTO TEST8 (ID0, ID1, ID2, ID3, ID4, ID5, ID6, ID7, VALINT, VALSTR) VALUES (1, 1, 1, 1, 1, 1, 1, 1,  1, '1')");
-        sql("MERGE INTO TEST8 (ID0, ID1, ID2, ID3, ID4, ID5, ID6, ID7, VALINT, VALSTR) VALUES (1, 1, 1, 1, 1, 1, 1, 1,  2, '2')");
-
-        List<BinaryObject> objs = new ArrayList<>();
-        Set<Integer> hashes2 = new HashSet<>();
-        Set<Integer> hashes8 = new HashSet<>();
-
-        for (int i = 0; i < 1000_000; ++i) {
-            BinaryObject bob2 = grid(0).binary().toBinary(new TestKey2Integers(i));
-            BinaryObject bob8 = grid(0).binary().toBinary(new TestKey8Integers(i));
-
-            hashes2.add(bob2.hashCode());
-            hashes8.add(bob8.hashCode());
-        }
-
-        System.out.println("+++ 2 " + hashes2.size());
-        System.out.println("+++ 8 " + hashes8.size());
-    }
-
-    /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
@@ -163,82 +120,5 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      */
     private FieldsQueryCursor<List<?>> execute(SqlFieldsQuery qry) {
         return grid(0).context().query().querySqlFields(qry, false);
-    }
-
-    /** */
-    public static class TestKey2Integers {
-        /** */
-        @QuerySqlField
-        private final int id0;
-
-        @QuerySqlField
-        private final int id1;
-
-        /** */
-        public TestKey2Integers(int key) {
-            this.id0 = key / 1000;
-            this.id1 = key;
-        }
-    }
-
-    /** */
-    public static class TestKeyHugeStringAndInteger {
-        /** Prefix. */
-        private static final String PREFIX = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-
-        /** */
-        @QuerySqlField
-        private final String id0;
-
-        @QuerySqlField
-        private final int id1;
-
-        /** */
-        public TestKeyHugeStringAndInteger(int key) {
-            this.id0 = PREFIX + key;
-            this.id1 = key;
-        }
-    }
-
-    /** */
-    public static class TestKey8Integers {
-        /** */
-        @QuerySqlField
-        private final int id0;
-
-        @QuerySqlField
-        private final int id1;
-
-        @QuerySqlField
-        private final int id2;
-
-        @QuerySqlField
-        private final int id3;
-
-        @QuerySqlField
-        private final int id4;
-
-        @QuerySqlField
-        private final int id5;
-
-        @QuerySqlField
-        private final int id6;
-
-        @QuerySqlField
-        private final int id7;
-
-        /** */
-        public TestKey8Integers(int key) {
-            this.id0 = 0;
-            this.id1 = key / 100_000;
-            this.id2 = key / 10_000;
-            this.id3 = key / 1_000;
-            this.id4 = key / 1000;
-            this.id5 = key / 100;
-            this.id6 = key / 10;
-            this.id7 = key;
-        }
     }
 }
