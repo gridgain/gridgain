@@ -1076,7 +1076,7 @@ public class H2Utils {
      * Create list of index columns. Where possible _KEY columns will be unwrapped.
      *
      * @param tbl GridH2Table instance
-     * @param idxCols List of index columns.
+     * @param colsOrig List of index columns.
      *
      * @return Array of key and affinity columns. Key's, if it possible, splitted into simple components.
      */
