@@ -976,7 +976,10 @@ public class CacheDataRowAdapter implements CacheDataRow {
         NO_KEY_WITH_HINTS,
 
         /** Do not read row data for non-tombstone entries. */
-        TOMBSTONES
+        TOMBSTONES,
+
+        /** Used for rebalancing. */
+        FULL_WITH_TOMBSTONES;
     }
 
     /** {@inheritDoc} */

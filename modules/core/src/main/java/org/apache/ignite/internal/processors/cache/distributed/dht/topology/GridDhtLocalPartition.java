@@ -778,6 +778,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /**
      * Adds async task that will clear tombstone entries from partition.
+     * TODO must use compact iterator form, use ts indexes or PendingTree ?
      */
     public IgniteInternalFuture<?> clearTombstonesAsync() {
         return grp.shared().evict().clearTombstonesAsync(grp, this);

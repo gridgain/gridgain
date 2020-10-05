@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -558,7 +559,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
                 if (arg.checkCrc())
                     checkPartitionCrc(grpCtx, part);
 
-                GridIterator<CacheDataRow> it = grpCtx.offheap().partitionIterator(part.id());
+                GridIterator<CacheDataRow> it = grpCtx.offheap().partitionIterator(part.id(), IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
 
                 while (it.hasNextX()) {
                     CacheDataRow row = it.nextX();

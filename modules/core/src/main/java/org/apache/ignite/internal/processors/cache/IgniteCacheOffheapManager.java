@@ -474,6 +474,8 @@ public interface IgniteCacheOffheapManager {
     }
 
     /**
+     * Rebalancing supply iterator.
+     *
      * @param part Partition number.
      * @param topVer Topology version.
      * @return Iterator for given partition that will reserve partition state until it is closed.

@@ -1157,7 +1157,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         CacheDataStore data = partitionData(part);
 
-        final GridCursor<? extends CacheDataRow> cur = data.cursor(CacheDataRowAdapter.RowData.FULL_WITH_HINTS);
+        final GridCursor<? extends CacheDataRow> cur = data.cursor(grp.mvccEnabled() ? CacheDataRowAdapter.RowData.FULL_WITH_HINTS : CacheDataRowAdapter.RowData.FULL_WITH_TOMBSTONES);
 
         return new GridCloseableIteratorAdapter<CacheDataRow>() {
             /** */
@@ -1697,7 +1697,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     CacheDataRow oldRow = c.oldRow();
 
                     if (isTombstone(c.newRow())) {
-                        assert oldRow != null && !isTombstone(oldRow): oldRow;
+                        assert oldRow == null || !isTombstone(oldRow): oldRow;
 
                         tombstoneCreated();
 
@@ -1718,9 +1718,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
 
                 case IN_PLACE:
-                    assert !isTombstone(c.newRow());
-
-                    if (isTombstone(c.oldRow())) {
+                    if (isTombstone(c.newRow()))
+                        finishRemove(cctx, row.key(), c.oldRow(), c.newRow());
+                    else if (isTombstone(c.oldRow())) {
+                        // TODO can be broken for atomic caches - should update index on replacing ts with data.
+                        // TODO replace with finishUpdate.
                         tombstoneRemoved();
 
                         incrementSize(cctx.cacheId());
@@ -3042,7 +3044,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Override public GridCursor<? extends CacheDataRow> cursor(CacheDataRowAdapter.RowData x) throws IgniteCheckedException {
             GridCursor<? extends CacheDataRow> cur = dataTree.find(null, null, x);
 
-            return x == CacheDataRowAdapter.RowData.TOMBSTONES ? cursorSkipEmpty(cur) : cursorSkipTombstone(cur);
+            return x == CacheDataRowAdapter.RowData.TOMBSTONES ? cursorSkipEmpty(cur) : x == CacheDataRowAdapter.RowData.FULL_WITH_TOMBSTONES ? cur : cursorSkipTombstone(cur);
         }
 
         /** {@inheritDoc} */

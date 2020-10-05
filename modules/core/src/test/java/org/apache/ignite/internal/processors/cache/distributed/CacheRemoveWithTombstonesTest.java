@@ -18,16 +18,22 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -36,14 +42,25 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.lang.GridIterator;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -63,6 +80,9 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
  */
 @RunWith(Parameterized.class)
 public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
+    /** */
+    public static final int PARTS = 64;
+
     /** Test parameters. */
     @Parameterized.Parameters(name = "persistenceEnabled={0}, historicalRebalance={1}")
     public static Collection parameters() {
@@ -229,6 +249,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         assertEquals(0, tombstoneMetric0.value());
     }
 
+    // TODO org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest.forceTransformBackups
     @Test
     public void testRemoveValueUsingInvoke() {
         // TODO
@@ -237,6 +258,168 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     @Test
     public void testPartitionHavingTombstonesIsRented() {
         // TODO Data and tombstones must be cleared.
+    }
+
+    /**
+     * Tests put-remove on primary reordered to remove-put on backup.
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testAtomicReorderPutRemove() throws Exception {
+        IgniteEx crd = startGrids(2);
+        awaitPartitionMapExchange();
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+
+        Integer pk = primaryKey(crd.cache(DEFAULT_CACHE_NAME));
+
+        TestRecordingCommunicationSpi.spi(crd).blockMessages((n, msg) -> msg instanceof GridDhtAtomicSingleUpdateRequest);
+
+        IgniteInternalFuture<?> op1 = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                cache.put(pk, 0);
+            }
+        }, 1, "op1-thread");
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+        IgniteInternalFuture<?> op2 = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                cache.remove(pk);
+            }
+        }, 1, "op2-thread");
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
+
+        // Apply on reverse order on backup.
+        TestRecordingCommunicationSpi.spi(crd).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
+            @Override public boolean apply(T2<ClusterNode, GridIoMessage> pair) {
+                GridIoMessage io = pair.get2();
+                GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
+
+                return msg0.value(0) == null;
+            }
+        });
+
+        op2.get();
+
+        validateTombstones(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateTombstones(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+
+        TestRecordingCommunicationSpi.spi(crd).stopBlock();
+
+        op1.get();
+
+        validateTombstones(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateTombstones(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    @Test
+    public void testTombstonesArePreloaded() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+
+        int pk = 0;
+        cache.put(pk, 0);
+        cache.remove(pk);
+
+        List<CacheDataRow> rows = new ArrayList<>();
+        IgniteRebalanceIterator iter = grid(0).cachex(DEFAULT_CACHE_NAME).context().group().offheap().rebalanceIterator(
+            new IgniteDhtDemandedPartitionsMap(null, Collections.singleton(pk)), new AffinityTopologyVersion(2, 1));
+        iter.forEach(rows::add);
+
+        IgniteEx g1 = startGrid(1);
+        awaitPartitionMapExchange();
+
+        List<CacheDataRow> rows2 = new ArrayList<>();
+        GridIterator<CacheDataRow> iter2 = g1.cachex(DEFAULT_CACHE_NAME).context().group().offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
+        iter2.forEach(rows2::add);
+
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+
+        cache.put(pk, 1);
+
+        validateTombstones(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+        validateTombstones(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+    }
+
+    @Test
+    public void testPreloadingCancelledUnderLoadPutRemove() {
+        // TODO.
+    }
+
+    @Test
+    public void testAtomicReorder2() throws Exception {
+        IgniteEx crd = startGrids(2);
+        awaitPartitionMapExchange();
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+
+        Integer pk = primaryKey(crd.cache(DEFAULT_CACHE_NAME));
+
+        cache.put(pk, 0);
+
+        TestRecordingCommunicationSpi.spi(crd).blockMessages((n, msg) -> msg instanceof GridDhtAtomicSingleUpdateRequest);
+
+        IgniteInternalFuture<?> op1 = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                cache.remove(pk);
+            }
+        }, 1, "op1-thread");
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+        IgniteInternalFuture<?> op2 = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                cache.put(pk, 1);
+            }
+        }, 1, "op2-thread");
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
+
+        // Apply on reverse order on backup.
+        TestRecordingCommunicationSpi.spi(crd).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
+            @Override public boolean apply(T2<ClusterNode, GridIoMessage> pair) {
+                GridIoMessage io = pair.get2();
+                GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
+
+                return msg0.value(0) != null;
+            }
+        });
+
+        op2.get();
+
+        TestRecordingCommunicationSpi.spi(crd).stopBlock();
+
+        op1.get();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+        assertEquals(1, cache.get(pk));
+    }
+
+    /**
+     * @param grid Grid.
+     * @param part Partition.
+     * @param expTsCnt Expected timestamp count.
+     * @param expDataCnt Expected data count.
+     */
+    private void validateTombstones(CacheGroupContext grpCtx, int part, int expTsCnt, int expDataCnt) throws IgniteCheckedException {
+        List<CacheDataRow> dataRows0 = new ArrayList<>();
+        List<CacheDataRow> dataRows1 = new ArrayList<>();
+
+        grpCtx.offheap().partitionIterator(part, IgniteCacheOffheapManager.TOMBSTONES).forEach(dataRows0::add);
+        grpCtx.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA).forEach(dataRows1::add);
+
+        final LongMetric tombstoneMetric0 = grpCtx.cacheObjectContext().kernalContext().metric().registry(
+            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
+
+        assertEquals(expTsCnt, dataRows0.size());
+        assertEquals(expDataCnt, dataRows1.size());
+        assertEquals(expTsCnt, tombstoneMetric0.value());
     }
 
     /**

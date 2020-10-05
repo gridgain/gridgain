@@ -2322,6 +2322,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
+     * TODO how to handle ts by default ?
      * Compares checksums between primary and backup partitions of specified caches.
      * Works properly only on idle cluster - there may be false positive conflict reports if data in cluster is being
      * concurrently updated.

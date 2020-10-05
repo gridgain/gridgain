@@ -1424,7 +1424,9 @@ public class GridDhtPartitionDemander {
                     // from RENTING to MOVING state in the middle of clearing.
                     final int fullSetSize = d.partitions().fullSet().size();
 
-                    AtomicInteger waitCnt = new AtomicInteger(fullSetSize);
+                    //AtomicInteger waitCnt = new AtomicInteger(fullSetSize);
+
+                    // TODO start rebalancing (-> moving, requestPartitions0) after renting is cleared - possible ?
 
                     for (Integer partId : d.partitions().fullSet()) {
                         GridDhtLocalPartition part = grp.topology().localPartition(partId);
@@ -1436,26 +1438,26 @@ public class GridDhtPartitionDemander {
                         // Reset the initial update counter value to prevent historical rebalancing on this partition.
                         part.dataStore().resetInitialUpdateCounter();
 
-                        part.clearAsync().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
-                            @Override public void apply(IgniteInternalFuture<?> fut) {
-                                if (fut.error() != null) {
-                                    tryCancel();
-
-                                    log.error("Failed to clear a partition, cancelling rebalancing for a group [grp="
-                                        + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
-
-                                    return;
-                                }
-
-                                if (waitCnt.decrementAndGet() == 0)
-                                    ctx.kernalContext().closure().runLocalSafe(() -> requestPartitions0(node, parts, d));
-                            }
-                        });
+//                        part.clearAsync().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
+//                            @Override public void apply(IgniteInternalFuture<?> fut) {
+//                                if (fut.error() != null) {
+//                                    tryCancel();
+//
+//                                    log.error("Failed to clear a partition, cancelling rebalancing for a group [grp="
+//                                        + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
+//
+//                                    return;
+//                                }
+//
+//                                if (waitCnt.decrementAndGet() == 0)
+//                                    ctx.kernalContext().closure().runLocalSafe(() -> requestPartitions0(node, parts, d));
+//                            }
+//                        });
                     }
 
                     // The special case for historical only rebalancing.
-                    if (d.partitions().fullSet().isEmpty() && !d.partitions().historicalSet().isEmpty())
-                        ctx.kernalContext().closure().runLocalSafe(() -> requestPartitions0(node, parts, d));
+                    //if (d.partitions().fullSet().isEmpty() && !d.partitions().historicalSet().isEmpty())
+                    ctx.kernalContext().closure().runLocalSafe(() -> requestPartitions0(node, parts, d));
                 }
             }
         }

@@ -5865,6 +5865,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         CacheObject expiredVal = row.value();
 
+        // TODO remove.
         if (cctx.deferredDelete() && !detached() && !isInternal()) {
             update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
 
@@ -6811,7 +6812,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             entry.update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, newVer, true);
 
-            treeOp = (oldRow == null || readFromStore) ? IgniteTree.OperationType.NOOP :
+            treeOp = readFromStore ? IgniteTree.OperationType.NOOP :
                 IgniteTree.OperationType.PUT; // Always delete with tombston.
 
             GridDhtLocalPartition part = entry.localPartition();
