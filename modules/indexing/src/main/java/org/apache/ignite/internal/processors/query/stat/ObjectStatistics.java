@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Collections;
@@ -37,17 +36,28 @@ public class ObjectStatistics {
         this.colNameToStat = Collections.unmodifiableMap(colNameToStat);
     }
 
+    /**
+     * @return object rows count.
+     */
     public long rowCount() {
         return rowsCnt;
     }
 
+    /**
+     * Get column statistics.
+     *
+     * @param colName column name.
+     * @return column statistics or {@code null} if there are no statistics for specified column.
+     */
     public ColumnStatistics columnStatistics(String colName) {
         return colNameToStat.get(colName);
     }
 
-    public Map<String, ColumnStatistics> getColNameToStat() {
+    /**
+     * @return column statistics map.
+     */
+    public Map<String, ColumnStatistics> getColumnsStatistics() {
         return colNameToStat;
     }
-
 }
 

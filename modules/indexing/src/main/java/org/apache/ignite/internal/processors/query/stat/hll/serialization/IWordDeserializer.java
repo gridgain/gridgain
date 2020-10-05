@@ -1,5 +1,3 @@
-package org.apache.ignite.internal.processors.query.stat.hll.serialization;
-
 /*
  * Copyright 2013 Aggregate Knowledge, Inc.
  *
@@ -15,6 +13,7 @@ package org.apache.ignite.internal.processors.query.stat.hll.serialization;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.ignite.internal.processors.query.stat.hll.serialization;
 
 /**
  * Reads 'words' of a fixed width, in sequence, from a byte array.

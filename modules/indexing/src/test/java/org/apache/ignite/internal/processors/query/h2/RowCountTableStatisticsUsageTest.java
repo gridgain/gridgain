@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.Arrays;
@@ -83,7 +82,7 @@ public class RowCountTableStatisticsUsageTest extends TableStatisticsAbstractTes
     }
 
     /**
-     *
+     * Join two tables with similar where clauses on both of it.
      */
     @Test
     public void compareJoinsWithConditionsOnBothTables() {

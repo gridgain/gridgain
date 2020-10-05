@@ -28,5 +28,8 @@
     <suppress checks="EmptyLineSeparator|GenericWhitespace|SingleSpaceSeparator|NoWhitespaceBefore|WhitespaceAround|org.apache.ignite.tools.checkstyle.OverrideAnnotationOnTheSameLineCheck"
               files="modules[\/\\]h2[\/\\].*\.java"/>
 
+    <suppress checks="EmptyLineSeparator|GenericWhitespace|SingleSpaceSeparator|NoWhitespaceBefore|WhitespaceAround|org.apache.ignite.tools.checkstyle.OverrideAnnotationOnTheSameLineCheck"
+              files="modules[\/\\]indexing[\/\\]src[\/\\]main|test[\/\\]java[\/\\]org[\/\\]apache[\/\\]ignite[\/\\]internal[\/\\]processors[\/\\]query[\/\\]stat[\/\\]hll[\/\\].*\.java"/>
+
     <suppress checks="NoWhitespaceBefore" files="ConcurrentLinkedHashMap\.java"/>
 </suppressions>

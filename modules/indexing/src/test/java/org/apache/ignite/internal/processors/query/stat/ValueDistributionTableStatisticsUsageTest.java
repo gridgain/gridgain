@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMode;
 import org.junit.Ignore;
@@ -87,8 +86,6 @@ public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAb
         updateStatistics("sized");
     }
 
-
-
     @Test
     public void selectWithManyCond() {
         String sql = "SELECT COUNT(*) FROM sized i1 USE INDEX (sized_small) where big like '3%' and small like '3%'";
@@ -103,7 +100,8 @@ public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAb
 
     @Test
     @Ignore
-    public void selectNotNullCond() {String sql = "select count(*) from sized i1 where small is not null";
+    public void selectNotNullCond() {
+        String sql = "select count(*) from sized i1 where small is not null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SIZED_SMALL"}, sql, new String[1][]);
     }
 

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.math.BigInteger;
@@ -51,8 +50,6 @@ public class ColumnStatisticsCollector {
 
     /** Temporary byte buffer just to avoid unnecessary object creation. */
     private ByteBuffer bb;
-
-    //private final NavigableMap<Value, Long> valFreq;
 
     /** Column value comparator. */
     private final Comparator<Value> comp;
@@ -100,18 +97,17 @@ public class ColumnStatisticsCollector {
             default:
                 return value.getBytes();
         }
-
     }
 
     public void add(Value val) {
         total++;
-
 
         if (isNull((val))) {
             nullsCnt++;
 
             return;
         }
+
         byte bytes[] = getBytes(val);
         size += bytes.length;
 
@@ -157,6 +153,9 @@ public class ColumnStatisticsCollector {
         return 0;
     }
 
+    /**
+     * @return get column.
+     */
     public Column col() {
         return col;
     }
@@ -169,7 +168,6 @@ public class ColumnStatisticsCollector {
      * @return column statistics for all partitions.
      */
     public static ColumnStatistics aggregate(Comparator<Value> comp, List<ColumnStatistics> partStats) {
-
         HLL hll = new HLL(13/*log2m*/, 5/*registerWidth*/);
 
         Value min = null;
@@ -204,16 +202,4 @@ public class ColumnStatisticsCollector {
         return new ColumnStatistics(min, max, nullsPercent(nullsCnt, total),
                 cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes());
     }
-
-    public static void main(String[] args) {
-        byte[] arr = new byte[]{0,0,123,22,10};
-
-        arr = ByteBuffer.allocate(8).putLong(81879).array();
-
-        Hasher h = new Hasher();
-        System.out.println(h.fastHash(arr));
-    }
-
-
-
 }
