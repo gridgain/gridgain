@@ -17,12 +17,15 @@
 #include "network/sockets.h"
 
 #include <sstream>
+#include <vector>
+#include <algorithm>
 
 #include <ignite/ignite_error.h>
 
 #include <ignite/common/concurrent.h>
 
 #include "network/tcp_socket_client.h"
+#include "network/internal_utils.h"
 
 namespace ignite
 {
@@ -79,17 +82,21 @@ namespace ignite
             if (res != 0)
                 ThrowNetworkError("Can not resolve host: " + std::string(hostname) + ":" + strPort);
 
+            std::vector<addrinfo*> shuffled = internal_utils::ShuffleAddresses(result);
+
             std::string lastErrorMsg = "Failed to resolve host";
             bool isTimeout = false;
 
             // Attempt to connect to an address until one succeeds
-            for (addrinfo *it = result; it != NULL; it = it->ai_next)
+            for (std::vector<addrinfo*>::iterator it = shuffled.begin(); it != shuffled.end(); ++it)
             {
+                addrinfo* addr = *it;
+
                 lastErrorMsg = "Failed to establish connection with the host";
                 isTimeout = false;
 
                 // Create a SOCKET for connecting to server
-                socketHandle = socket(it->ai_family, it->ai_socktype, it->ai_protocol);
+                socketHandle = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 
                 if (socketHandle == INVALID_SOCKET)
                     ThrowNetworkError("Socket creation failed: " + sockets::GetLastSocketErrorMessage());
@@ -97,7 +104,7 @@ namespace ignite
                 TrySetOptions();
 
                 // Connect to server.
-                res = connect(socketHandle, it->ai_addr, static_cast<int>(it->ai_addrlen));
+                res = connect(socketHandle, addr->ai_addr, static_cast<int>(addr->ai_addrlen));
                 if (SOCKET_ERROR == res)
                 {
                     int lastError = WSAGetLastError();
