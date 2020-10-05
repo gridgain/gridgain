@@ -65,15 +65,21 @@ public class DistributedSqlConfiguration {
     public static final int DFLT_QRY_TIMEOUT = 0;
 
     /** Disabled SQL functions. */
-    private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs
-        = new SimpleDistributedProperty<>("sql.disabledFunctions");
+    private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs = new SimpleDistributedProperty<>(
+        "sql.disabledFunctions",
+        SimpleDistributedProperty::parseStringSet
+    );
 
     /** Value of cluster time zone. */
-    private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>("sql.timeZone");
+    private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>(
+        "sql.timeZone",
+        TimeZone::getTimeZone);
 
     /** Query timeout. */
-    private final SimpleDistributedProperty<Integer> dfltQueryTimeout
-        = new SimpleDistributedProperty<>("sql.defaultQueryTimeout");
+    private final SimpleDistributedProperty<Integer> dfltQueryTimeout = new SimpleDistributedProperty<>(
+        "sql.defaultQueryTimeout",
+        SimpleDistributedProperty::parseNonNegativeInteger
+    );
 
     /** Context. */
     private final GridKernalContext ctx;

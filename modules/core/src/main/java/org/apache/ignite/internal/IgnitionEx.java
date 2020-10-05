@@ -187,6 +187,9 @@ public class IgnitionEx {
     /** Default configuration path relative to Ignite home. */
     public static final String DFLT_CFG = "config/default-config.xml";
 
+    /** Class name for a SQL view exporter of system views. */
+    public static final String SYSTEM_VIEW_SQL_SPI = "org.apache.ignite.spi.systemview.SqlViewExporterSpi";
+
     /** */
     private static final int WAIT_FOR_BACKUPS_CHECK_INTERVAL = 1000;
 

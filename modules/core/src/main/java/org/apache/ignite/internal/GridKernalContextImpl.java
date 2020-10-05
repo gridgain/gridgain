@@ -47,6 +47,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.managers.tracing.GridTracingManager;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
@@ -82,7 +83,7 @@ import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
-import org.apache.ignite.internal.processors.ru.RollingUpgrade;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeProcessor;
 import org.apache.ignite.internal.processors.schedule.IgniteScheduleProcessorAdapter;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
@@ -218,6 +219,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringInclude
+    private GridSystemViewManager sysViewMgr;
+
+    /** */
+    @GridToStringInclude
     private GridClosureProcessor closProc;
 
     /** */
@@ -326,7 +331,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
-    RollingUpgrade rollingUpgradeProc;
+    RollingUpgradeProcessor rollingUpgradeProc;
 
     /** */
     @GridToStringExclude
@@ -634,6 +639,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             jobMetricsProc = (GridJobMetricsProcessor)comp;
         else if (comp instanceof GridMetricManager)
             metricMgr = (GridMetricManager)comp;
+        else if (comp instanceof GridSystemViewManager)
+            sysViewMgr = (GridSystemViewManager)comp;
         else if (comp instanceof GridCacheProcessor)
             cacheProc = (GridCacheProcessor)comp;
         else if (comp instanceof GridClusterStateProcessor)
@@ -696,8 +703,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             txDrProc = (TransactionalDrProcessor)comp;
         else if (comp instanceof DiagnosticProcessor)
             diagnosticProcessor = (DiagnosticProcessor)comp;
-        else if (comp instanceof RollingUpgrade)
-            rollingUpgradeProc = (RollingUpgrade)comp;
+        else if (comp instanceof RollingUpgradeProcessor)
+            rollingUpgradeProc = (RollingUpgradeProcessor)comp;
         else if (comp instanceof DurableBackgroundTasksProcessor)
             durableBackgroundTasksProcessor = (DurableBackgroundTasksProcessor)comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
@@ -785,6 +792,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public GridMetricManager metric() {
         return metricMgr;
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridSystemViewManager systemView() {
+        return sysViewMgr;
     }
 
     /** {@inheritDoc} */
@@ -1278,7 +1290,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public RollingUpgrade rollingUpgrade() {
+    @Override public RollingUpgradeProcessor rollingUpgrade() {
         return rollingUpgradeProc;
     }
 

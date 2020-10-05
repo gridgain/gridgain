@@ -315,6 +315,15 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /** {@inheritDoc} */
+    @Override public <F> @Nullable F fieldNoHandle(int fieldId) throws BinaryObjectException {
+        return (F) reader(new BinaryReaderHandles() {
+            @Override public boolean ignoreHandle() {
+                return true;
+            }
+        }, false).unmarshalField(fieldId);
+    }
+
+    /** {@inheritDoc} */
     @Override public BinarySerializedFieldComparator createFieldComparator() {
         int schemaOff = BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
 

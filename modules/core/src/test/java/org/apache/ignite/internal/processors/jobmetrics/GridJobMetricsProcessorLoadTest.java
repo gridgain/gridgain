@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.jobmetrics;
 
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
+import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -43,6 +44,7 @@ public class GridJobMetricsProcessorLoadTest extends GridCommonAbstractTest {
 
         ctx.add(new GridResourceProcessor(ctx));
         ctx.add(new GridJobMetricsProcessor(ctx));
+        ctx.add(new GridInternalSubscriptionProcessor(ctx));
 
         ctx.start();
     }
