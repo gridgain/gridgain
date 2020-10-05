@@ -314,9 +314,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
         ctx.checkSecurity(SecurityPermission.CACHE_READ);
 
-        if (keyCheck)
-            validateCacheKeys(keys);
-
         warnIfUnordered(keys, BulkOperation.GET);
 
         return getAllAsync0(ctx.cacheKeysView(keys),
@@ -375,6 +372,8 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             Map<KeyCacheObject, EntryGetResult> misses = null;
 
             Set<GridCacheEntryEx> newLocalEntries = null;
+
+            ctx.shared().database().checkpointReadLock();
 
             try {
                 int keysSize = keys.size();
@@ -694,6 +693,9 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             }
             catch (IgniteCheckedException e) {
                 return new GridFinishedFuture<>(e);
+            }
+            finally {
+                ctx.shared().database().checkpointReadUnlock();
             }
         }
         else {

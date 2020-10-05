@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.query.schema;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -59,7 +61,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
     private final AtomicBoolean stop;
 
     /** Cancellation token between all workers for all caches. */
-    private final SchemaIndexOperationCancellationToken cancel;
+    @Nullable private final SchemaIndexOperationCancellationToken cancel;
 
     /** Index closure. */
     private final SchemaIndexCacheVisitorClosureWrapper wrappedClo;
@@ -70,6 +72,9 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
     /** Worker future. */
     private final GridFutureAdapter<SchemaIndexCacheStat> fut;
 
+    /** Count of partitions to be processed */
+    private final AtomicInteger partsCnt;
+
     /**
      * Constructor.
      *
@@ -79,14 +84,16 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
      * @param cancel Cancellation token between all workers for all caches.
      * @param clo Index closure.
      * @param fut Worker future.
+     * @param partsCnt Count of partitions to be processed.
      */
     public SchemaIndexCachePartitionWorker(
         GridCacheContext cctx,
         GridDhtLocalPartition locPart,
         AtomicBoolean stop,
-        SchemaIndexOperationCancellationToken cancel,
+        @Nullable SchemaIndexOperationCancellationToken cancel,
         SchemaIndexCacheVisitorClosure clo,
-        GridFutureAdapter<SchemaIndexCacheStat> fut
+        GridFutureAdapter<SchemaIndexCacheStat> fut,
+        AtomicInteger partsCnt
     ) {
         super(
             cctx.igniteInstanceName(),
@@ -105,6 +112,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
         this.stop = stop;
         wrappedClo = new SchemaIndexCacheVisitorClosureWrapper(clo);
         this.fut = fut;
+        this.partsCnt = partsCnt;
     }
 
     /** {@inheritDoc} */
@@ -121,7 +129,10 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
 
             stop.set(true);
 
-            cctx.group().metrics().setIndexBuildCountPartitionsLeft(0);
+            int cnt = partsCnt.getAndSet(0);
+
+            if (cnt > 0)
+                cctx.group().metrics().addIndexBuildCountPartitionsLeft(-cnt);
         }
         finally {
             fut.onDone(wrappedClo.indexCacheStat, err);
@@ -148,14 +159,12 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
         if (!reserved)
             return;
 
-        try {
-            GridCursor<? extends CacheDataRow> cursor = locPart.dataStore().cursor(
-                cctx.cacheId(),
-                null,
-                null,
-                KEY_ONLY
-            );
-
+        try (GridCursor<? extends CacheDataRow> cursor = locPart.dataStore().cursor(
+            cctx.cacheId(),
+            null,
+            null,
+            KEY_ONLY
+        )) {
             boolean locked = false;
 
             try {
@@ -178,6 +187,8 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
                         locked = false;
                     }
 
+                    cctx.cache().metrics0().addIndexRebuildKeyProcessed(1);
+
                     if (locPart.state() == RENTING)
                         break;
                 }
@@ -189,10 +200,14 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
                     cctx.shared().database().checkpointReadUnlock();
             }
         }
+        catch (Exception e) {
+            throw new IgniteCheckedException(e);
+        }
         finally {
             locPart.release();
 
-            cctx.group().metrics().decrementIndexBuildCountPartitionsLeft();
+            if (partsCnt.getAndUpdate(v -> v > 0 ? v - 1 : 0) > 0)
+                cctx.group().metrics().decrementIndexBuildCountPartitionsLeft();
         }
     }
 

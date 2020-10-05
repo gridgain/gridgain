@@ -69,8 +69,8 @@ import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.ERROR_PREFIX;
-import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.HORIZONTAL_SCAN_NAME;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_GRP_DIR_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
@@ -303,8 +303,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
                 return;
             }
-
-            throw new IgniteCheckedException("Didn't find pageIdx=" + pageIdxCorrupt);
         }
         finally {
             GridUnsafe.freeBuffer(buf);
@@ -809,7 +807,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
 
-            checkOutput(output, 19, 22, 0, 2, false);
+            checkOutput(output, 19, 23, 0, 2, false);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);
@@ -839,7 +837,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
 
-            checkOutput(output, 19, 22, 0, 0, true);
+            checkOutput(output, 19, 23, 0, 0, true);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);

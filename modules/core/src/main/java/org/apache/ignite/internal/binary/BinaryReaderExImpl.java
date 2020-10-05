@@ -409,6 +409,11 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
         return hnds;
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean ignoreHandle() {
+        return handles().ignoreHandle();
+    }
+
     /**
      * Recreating field value from a handle.
      *
@@ -1407,7 +1412,7 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
             if (cls == null)
                 cls = cls0;
 
-            return BinaryUtils.doReadEnum(in, cls);
+            return BinaryUtils.doReadEnum(in, cls, GridBinaryMarshaller.USE_CACHE.get());
         }
         else
             return null;
@@ -1928,7 +1933,8 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
                 break;
 
             case ENUM:
-                obj = BinaryUtils.doReadEnum(in, BinaryUtils.doReadClass(in, ctx, ldr));
+                obj = BinaryUtils.doReadEnum(in, BinaryUtils.doReadClass(in, ctx, ldr),
+                    GridBinaryMarshaller.USE_CACHE.get());
 
                 break;
 
@@ -1973,7 +1979,7 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
         if (!findFieldById(fieldId))
             return null;
 
-        return new BinaryReaderExImpl(ctx, in, ldr, hnds, true).deserialize();
+        return new BinaryReaderExImpl(ctx, in, ldr, hnds, false, true).deserialize();
     }
 
     /**
@@ -2001,8 +2007,8 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
                 BinaryMetadata meta = type != null ? type.metadata() : null;
 
                 if (type == null || meta == null)
-                    throw new BinaryObjectException("Cannot find metadata for object with compact footer: " +
-                        typeId);
+                    throw new BinaryObjectException("Cannot find metadata for object with compact footer: [typeId=" +
+                        typeId + ", schemaId=" + schemaId + ']');
 
                 Collection<BinarySchema> existingSchemas = meta.schemas();
 

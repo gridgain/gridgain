@@ -121,6 +121,16 @@ import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
  */
 public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl implements DbCheckpointListener {
     /**
+     * Margin for WAL iterator, that used for historical rebalance on atomic cache.
+     * It is intended for prevent  partition divergence due to reordering in WAL.
+     * <p>
+     * Default is {@code 5}. Iterator starts from 5 updates earlier than expected.
+     *
+     */
+    private final long walAtomicCacheMargin = IgniteSystemProperties.getLong(
+        "WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE", 5);
+
+    /**
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind
      * if there is nothing to clean yet.
      */
@@ -776,15 +786,30 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         int grpId = grp.groupId();
         PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
 
-        long metaPageId = pageMem.metaPageId(grpId);
+        long metaPageId = PageIdUtils.pageId(PageIdAllocator.INDEX_PARTITION, PageIdAllocator.FLAG_IDX, 0);
+
         long metaPage = pageMem.acquirePage(grpId, metaPageId);
 
         try {
             long metaPageAddr = pageMem.writeLock(grpId, metaPageId, metaPage);
 
+            if (metaPageAddr == 0L) {
+                U.warn(log, "Failed to acquire write lock for index meta page [grpId=" + grpId +
+                    ", metaPageId=" + metaPageId + ']');
+
+                return;
+            }
+
+            boolean changed = false;
+
             try {
                 PageMetaIO metaIo = PageMetaIO.getPageIO(metaPageAddr);
 
+                int pageCnt = this.ctx.pageStore().pages(grpId, PageIdAllocator.INDEX_PARTITION);
+
+                changed = metaIo.setCandidatePageCount(metaPageAddr, pageCnt);
+
+                // Following method doesn't modify page data, it only reads last allocated page count from it.
                 addPartition(
                     null,
                     ctx.partitionStatMap(),
@@ -792,11 +817,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     metaIo,
                     grpId,
                     PageIdAllocator.INDEX_PARTITION,
-                    this.ctx.pageStore().pages(grpId, PageIdAllocator.INDEX_PARTITION),
+                    pageCnt,
                     -1);
             }
             finally {
-                pageMem.writeUnlock(grpId, metaPageId, metaPage, null, true);
+                pageMem.writeUnlock(grpId, metaPageId, metaPage, null, changed);
             }
         }
         finally {
@@ -1020,6 +1045,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (grp.mvccEnabled()) // TODO IGNITE-7384
             return super.historicalIterator(partCntrs, missing);
 
+        GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
+
+        FileWALPointer latestReservedPointer = (FileWALPointer)database.latestWalPointerReservedForPreloading();
+
+        if (latestReservedPointer == null)
+            throw new IgniteHistoricalIteratorException("Historical iterator wasn't created, because WAL isn't reserved.");
+
         Map<Integer, Long> partsCounters = new HashMap<>();
 
         for (int i = 0; i < partCntrs.size(); i++) {
@@ -1029,14 +1061,18 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             partsCounters.put(p, initCntr);
         }
 
-        GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
+        FileWALPointer minPtr = database.checkpointHistory().searchEarliestWalPointer(grp.groupId(),
+            partsCounters, latestReservedPointer, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
 
-        FileWALPointer minPtr = (FileWALPointer)database.checkpointHistory().searchEarliestWalPointer(grp.groupId(), partsCounters);
+        assert latestReservedPointer.compareTo(minPtr) <= 0
+            : "Historical iterator tries to iterate WAL out of reservation [cache=" + grp.cacheOrGroupName()
+            + ", reservedPointer=" + database.latestWalPointerReservedForPreloading()
+            + ", historicalPointer=" + minPtr + ']';
 
         try {
             WALIterator it = grp.shared().wal().replay(minPtr);
 
-            WALHistoricalIterator iterator = new WALHistoricalIterator(log, grp, partCntrs, it);
+            WALHistoricalIterator iterator = new WALHistoricalIterator(log, grp, partCntrs, partsCounters, it);
 
             // Add historical partitions which are unabled to reserve to missing set.
             missing.addAll(iterator.missingParts);
@@ -1227,7 +1263,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @param grp Cache context.
          * @param walIt WAL iterator.
          */
-        private WALHistoricalIterator(IgniteLogger log, CacheGroupContext grp, CachePartitionPartialCountersMap partMap,
+        private WALHistoricalIterator(
+            IgniteLogger log,
+            CacheGroupContext grp,
+            CachePartitionPartialCountersMap partMap,
+            Map<Integer, Long> updatedPartCntr,
             WALIterator walIt) {
             this.log = log;
             this.grp = grp;
@@ -1238,8 +1278,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             rebalancedCntrs = new long[partMap.size()];
 
-            for (int i = 0; i < rebalancedCntrs.length; i++)
-                rebalancedCntrs[i] = partMap.initialUpdateCounterAt(i);
+            for (int i = 0; i < rebalancedCntrs.length; i++) {
+                int p = partMap.partitionAt(i);
+
+                rebalancedCntrs[i] = updatedPartCntr.get(p);
+
+                partMap.initialUpdateCounterAt(i, rebalancedCntrs[i]);
+            }
 
             reservePartitions();
 
@@ -1649,6 +1694,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         private volatile long nextStoreCleanTimeNanos;
 
         /** */
+        private GridQueryRowCacheCleaner rowCacheCleaner;
+
+        /**
+         * Mutex used to synchronise publication of initialized delegate link and actions that should change
+         * the delegate's state, so the delegate will not be in obsolete state.
+         */
+        private final Object delegatePublicationMux = new Object();
+
+        /** */
         private PartitionMetaStorage<SimpleDataRow> partStorage;
 
         /** */
@@ -1899,7 +1953,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         pageMem.releasePage(grpId, partMetaId, partMetaPage);
                     }
 
-                    delegate = delegate0;
+                    synchronized (delegatePublicationMux) {
+                        delegate0.setRowCacheCleaner(rowCacheCleaner);
+
+                        delegate = delegate0;
+                    }
                 }
                 catch (Throwable ex) {
                     U.error(log, "Unhandled exception during page store initialization. All further operations will " +
@@ -2292,6 +2350,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** {@inheritDoc} */
         @Override public void setRowCacheCleaner(GridQueryRowCacheCleaner rowCacheCleaner) {
             try {
+                synchronized (delegatePublicationMux) {
+                    this.rowCacheCleaner = rowCacheCleaner;
+                }
+
                 CacheDataStore delegate0 = init0(true);
 
                 if (delegate0 != null)
@@ -2724,19 +2786,24 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion> c,
             int amount
         ) throws IgniteCheckedException {
-            GridDhtLocalPartition part = cctx.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
+            GridDhtLocalPartition part = null;
 
-            // Skip non-owned partitions.
-            if (part == null || part.state() != OWNING)
-                return 0;
+            if (!grp.isLocal()) {
+                part = cctx.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
+
+                // Skip non-owned partitions.
+                if (part == null || part.state() != OWNING)
+                    return 0;
+            }
 
             cctx.shared().database().checkpointReadLock();
+
             try {
-                if (!part.reserve())
+                if (part != null && !part.reserve())
                     return 0;
 
                 try {
-                    if (part.state() != OWNING)
+                    if (part != null && part.state() != OWNING)
                         return 0;
 
                     long now = U.currentTimeMillis();
@@ -2782,7 +2849,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     return cleared;
                 }
                 finally {
-                    part.release();
+                    if (part != null)
+                        part.release();
                 }
             }
             finally {

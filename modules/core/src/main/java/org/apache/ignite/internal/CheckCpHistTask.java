@@ -39,8 +39,11 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
 /**
- * Task for test last checkpoint about applicable of history to all groups and partitions of parameters.
- * If one of group or partition does not applicable force checkpoint will trigger.
+ * Task that checks whether last checkpoint is applicable for providing history for all groups and partitions that are
+ * passed as parameters. If at least one group or partition can't be supplied due to absence of last checkpoint, the task
+ * enforces a checkpoint to ensure possibility of the historical rebalancing.
+ * The task takes as parametes a collection by fillowing structure: Map{node id -> Map{Group id -> Set{Partition id}}}.
+ * Each node that is mentioned in parameter is receiving own particular collection: Map{Group id -> Set{Partition id}}.
  */
 @GridInternal
 public class CheckCpHistTask extends ComputeTaskAdapter<Map<UUID, Map<Integer, Set<Integer>>>, Boolean> {
@@ -48,7 +51,7 @@ public class CheckCpHistTask extends ComputeTaskAdapter<Map<UUID, Map<Integer, S
     private static final long serialVersionUID = 0L;
 
     /** Reason of checkpoint, which can be triggered by this task. */
-    public static final String CP_REASON = "required by other node that shutdown was gracefully";
+    public static final String CP_REASON = "required by another node which is performing a graceful shutdown";
 
     /** {@inheritDoc} */
     @Override public Map<CheckCpHistClosureJob, ClusterNode> map(
@@ -111,7 +114,7 @@ public class CheckCpHistTask extends ComputeTaskAdapter<Map<UUID, Map<Integer, S
         Map<Integer, Set<Integer>> grpIds;
 
         /**
-         * @param grpIds List of ids.
+         * @param grpIds Map of group id to set of partitions.
          */
         public CheckCpHistClosureJob(Map<Integer, Set<Integer>> grpIds) {
             this.grpIds = grpIds;
@@ -134,11 +137,9 @@ public class CheckCpHistTask extends ComputeTaskAdapter<Map<UUID, Map<Integer, S
                 CheckpointEntry lastCp = cpHist.lastCheckpoint();
 
                 try {
-
                     Map<Integer, CheckpointEntry.GroupState> states = lastCp.groupState(cctx);
 
                     for (Integer grpId : grpIds.keySet()) {
-
                         if (cancelled)
                             return false;
 

@@ -47,9 +47,9 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.command.Prepared;
-import org.h2.command.dml.Query;
-import org.h2.table.Column;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.command.dml.Query;
+import org.gridgain.internal.h2.table.Column;
 
 import static org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModel.isCollocated;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlConst.TRUE;

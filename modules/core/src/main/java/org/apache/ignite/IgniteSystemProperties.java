@@ -16,13 +16,13 @@
 
 package org.apache.ignite;
 
-import javax.net.ssl.HostnameVerifier;
 import java.io.Serializable;
 import java.lang.management.RuntimeMXBean;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.lang.IgniteExperimental;
+import org.apache.ignite.mxbean.MetricsMxBean;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
@@ -350,6 +351,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_MARSHAL_BUFFERS_RECHECK = "IGNITE_MARSHAL_BUFFERS_RECHECK";
 
     /**
+     * System property to specify per thread binary allocator chunk pool size. Default value is {@code 32}.
+     */
+    public static final String IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE = "IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE";
+
+    /**
      * System property to disable {@link HostnameVerifier} for SSL connections.
      * Can be used for development with self-signed certificates. Default value is {@code false}.
      */
@@ -451,7 +457,10 @@ public final class IgniteSystemProperties {
 
     /**
      * Flag indicating whether validation of keys put to cache should be disabled.
+     *
+     * @deprecated Since 2.7.26. Obsolete because of common use of binary marshaller.
      */
+    @Deprecated
     public static final String IGNITE_CACHE_KEY_VALIDATION_DISABLED = "IGNITE_CACHE_KEY_VALIDATION_DISABLED";
 
     /**
@@ -558,6 +567,14 @@ public final class IgniteSystemProperties {
      */
     @Deprecated
     public static final String IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA = "IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA";
+
+    /**
+     * Enables subquery rewriting optimization.
+     * If enabled, subquery will be rewritten to JOIN where possible.
+     * Default is {@code true}.
+     */
+    @IgniteExperimental
+    public static final String IGNITE_ENABLE_SUBQUERY_REWRITE_OPTIMIZATION = "IGNITE_ENABLE_SUBQUERY_REWRITE_OPTIMIZATION";
 
     /** Maximum size for affinity assignment history. */
     public static final String IGNITE_AFFINITY_HISTORY_SIZE = "IGNITE_AFFINITY_HISTORY_SIZE";
@@ -738,7 +755,9 @@ public final class IgniteSystemProperties {
 
     /**
      * Time interval for calculating rebalance rate statistics, in milliseconds. Defaults to 60000.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public static final String IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL = "IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL";
 
     /**
@@ -776,6 +795,13 @@ public final class IgniteSystemProperties {
      * WAL rebalance threshold.
      */
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
+
+    /**
+     * Prefer historical rebalance if there's enough history regardless off all heuristics.
+     * This property is intended for integration or performance tests.
+     * Default is {@code false}.
+     */
+    public static final String IGNITE_PREFER_WAL_REBALANCE = "IGNITE_PREFER_WAL_REBALANCE";
 
     /** Ignite page memory concurrency level. */
     public static final String IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL = "IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL";
@@ -1061,6 +1087,7 @@ public final class IgniteSystemProperties {
     /**
      * Number of concurrent operation for evict partitions.
      */
+    @Deprecated
     public static final String IGNITE_EVICTION_PERMITS = "IGNITE_EVICTION_PERMITS";
 
     /**
@@ -1255,7 +1282,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED = "IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED";
 
     /**
-     * Defines factory class for H2 LocalResult (see org.h2.result.LocalResult).
+     * Defines factory class for H2 LocalResult (see org.gridgain.internal.h2.result.LocalResult).
      */
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
@@ -1390,14 +1417,6 @@ public final class IgniteSystemProperties {
      */
     @IgniteExperimental
     public static final String IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN = "IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN";
-
-    /**
-     * Time threshold (in milliseconds) of rebalance after which partition
-     * distribution will be present in rebalance statistics.
-     * Default value is {@code 10} min.
-     */
-    public static final String IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD =
-        "IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD";
 
     /**
      * Choose the index cost function. May be used to compatibility with old version

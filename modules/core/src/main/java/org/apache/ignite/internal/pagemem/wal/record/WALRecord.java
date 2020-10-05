@@ -224,8 +224,11 @@ public abstract class WALRecord {
         /** Record that indicates that "corrupted" flag should be removed from tracking page. */
         TRACKING_PAGE_REPAIR_DELTA(61, PHYSICAL),
 
+        /** Atomic out-of-order update. */
+        OUT_OF_ORDER_UPDATE(62, LOGICAL),
+
         /** Master key change record. */
-        MASTER_KEY_CHANGE_RECORD(62, LOGICAL);
+        MASTER_KEY_CHANGE_RECORD(63, LOGICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;

@@ -106,7 +106,7 @@ public:
     virtual void log_entry_context(std::ostream& os, boost::unit_test::log_level, boost::unit_test::const_string ctx) {
         log_entry_context(os, ctx);
     }
-    virtual void entry_context_finish(std::ostream& os, boost::unit_test::log_level) override {
+    virtual void entry_context_finish(std::ostream& os, boost::unit_test::log_level) {
         entry_context_finish(os);
     }
 #endif
@@ -151,8 +151,8 @@ void TeamcityBoostLogFormatter::log_build_info(std::ostream& /*out*/)
 #if BOOST_VERSION >= 107000
  // Since v1.70.0 the second argument indicates whether build info should be logged or not
  // See boostorg/test.git:7e20f966dca4e4b49585bbe7654334f31b35b3db
-void log_build_info(std::ostream& os, bool log_build_info) override {
-    if (log_build_info) this->log_build_info(os);
+void TeamcityBoostLogFormatter::log_build_info(std::ostream& os, bool log_build_info) {
+   if (log_build_info) this->log_build_info(os);
 }
 #endif
 

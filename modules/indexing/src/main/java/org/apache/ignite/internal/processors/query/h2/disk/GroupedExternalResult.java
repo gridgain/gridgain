@@ -19,9 +19,9 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import org.h2.engine.Session;
-import org.h2.value.Value;
-import org.h2.value.ValueRow;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueRow;
 
 /**
  * Wrapper for spilled groups file.

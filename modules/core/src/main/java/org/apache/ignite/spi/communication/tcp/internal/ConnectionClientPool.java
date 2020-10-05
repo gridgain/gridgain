@@ -55,9 +55,11 @@ import org.apache.ignite.spi.communication.tcp.AttributeNames;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.shmem.SHMemHandshakeClosure;
+import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DISABLED_CLIENT_PORT;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.OUT_OF_RESOURCES_TCP_MSG;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.handshakeTimeoutException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.nodeAddresses;
@@ -83,7 +85,7 @@ public class ConnectionClientPool {
     private final IgniteLogger log;
 
     /** Statistics. */
-    private final TcpCommunicationMetricsListener metricsLsnr;
+    private final Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier;
 
     /** Local node supplier. */
     private final Supplier<ClusterNode> locNodeSupplier;
@@ -116,11 +118,14 @@ public class ConnectionClientPool {
     /** Stopping flag (set to {@code true} when SPI gets stopping signal). */
     private volatile boolean stopping = false;
 
+    /** External connection requestor. */
+    private final ConnectionRequestor connRequestor;
+
     /**
      * @param cfg Config.
      * @param attrs Attributes.
      * @param log Logger.
-     * @param metricsLsnr Metrics listener.
+     * @param metricLsnrSupplier Metrics listener supplier.
      * @param locNodeSupplier Local node supplier.
      * @param nodeGetter Node getter.
      * @param msgFormatterSupplier Message formatter supplier.
@@ -129,12 +134,13 @@ public class ConnectionClientPool {
      * @param timeObjProcessor Time object processor.
      * @param clusterStateProvider Cluster state provider.
      * @param nioSrvWrapper Nio server wrapper.
+     * @param connRequestor External connection requestor.
      */
     public ConnectionClientPool(
         TcpCommunicationConfiguration cfg,
         AttributeNames attrs,
         IgniteLogger log,
-        TcpCommunicationMetricsListener metricsLsnr,
+        Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier,
         Supplier<ClusterNode> locNodeSupplier,
         Function<UUID, ClusterNode> nodeGetter,
         Supplier<MessageFormatter> msgFormatterSupplier,
@@ -142,12 +148,13 @@ public class ConnectionClientPool {
         TcpCommunicationSpi tcpCommSpi,
         GridTimeoutProcessor timeObjProcessor,
         ClusterStateProvider clusterStateProvider,
-        GridNioServerWrapper nioSrvWrapper
+        GridNioServerWrapper nioSrvWrapper,
+        @Nullable ConnectionRequestor connRequestor
     ) {
         this.cfg = cfg;
         this.attrs = attrs;
         this.log = log;
-        this.metricsLsnr = metricsLsnr;
+        this.metricLsnrSupplier = metricLsnrSupplier;
         this.locNodeSupplier = locNodeSupplier;
         this.nodeGetter = nodeGetter;
         this.msgFormatterSupplier = msgFormatterSupplier;
@@ -156,6 +163,7 @@ public class ConnectionClientPool {
         this.timeObjProcessor = timeObjProcessor;
         this.clusterStateProvider = clusterStateProvider;
         this.nioSrvWrapper = nioSrvWrapper;
+        this.connRequestor = connRequestor;
     }
 
     /**
@@ -163,6 +171,13 @@ public class ConnectionClientPool {
      */
     public void stop() {
         this.stopping = true;
+
+        for (GridFutureAdapter<GridCommunicationClient> fut : clientFuts.values()) {
+            if (fut instanceof ConnectionRequestFuture) {
+                // There's no way it would be done by itself at this point.
+                fut.onDone(new IgniteSpiException("SPI is being stopped."));
+            }
+        }
     }
 
     /**
@@ -176,6 +191,13 @@ public class ConnectionClientPool {
     public GridCommunicationClient reserveClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
         assert node != null;
         assert (connIdx >= 0 && connIdx < cfg.connectionsPerNode()) || !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection())) : connIdx;
+
+        if (locNodeSupplier.get().isClient()) {
+            if (node.isClient()) {
+                if (DISABLED_CLIENT_PORT.equals(node.attribute(attrs.port())))
+                    throw new IgniteSpiException("Cannot send message to the client node with no server socket opened.");
+            }
+        }
 
         UUID nodeId = node.id();
 
@@ -236,10 +258,12 @@ public class ConnectionClientPool {
 
                         fut.onDone(client0);
                     }
-                    catch (Throwable e) {
-                        if (e instanceof NodeUnreachableException)
-                            throw e;
+                    catch (NodeUnreachableException e) {
+                        log.warning(e.getMessage());
 
+                        fut = handleUnreachableNodeException(node, connIdx, fut, e);
+                    }
+                    catch (Throwable e) {
                         fut.onDone(e);
 
                         if (e instanceof IgniteTooManyOpenFilesException)
@@ -305,6 +329,76 @@ public class ConnectionClientPool {
                 // Client has just been closed by idle worker. Help it and try again.
                 removeNodeClient(nodeId, client);
         }
+    }
+
+    /**
+     * Handles {@link NodeUnreachableException}. This means that the method will try to trigger client itself to open
+     * connection. The only possible way of doing this is to use {@link #connRequestor}'s trigger and wait.
+     * Specifics of triggers implementation technically should be considered unknown, but for now it's not true and we
+     * expect that {@link NodeUnreachableException} won't be thrown in {@link IgniteDiscoveryThread}.
+     *
+     * @param node Node to open connection to.
+     * @param connIdx Connection index.
+     * @param fut Current future for opening connection.
+     * @param e Curent exception.
+     * @return New future that will return the client or error. {@code null} client is possible if newly opened
+     *      connection has been closed by idle worker, at least that's what documentation says.
+     * @throws IgniteCheckedException If trigerring failed or trigger is not configured.
+     */
+    private GridFutureAdapter<GridCommunicationClient> handleUnreachableNodeException(
+        ClusterNode node,
+        int connIdx,
+        GridFutureAdapter<GridCommunicationClient> fut,
+        NodeUnreachableException e
+    ) throws IgniteCheckedException {
+        if (connRequestor != null) {
+            ConnectFuture fut0 = (ConnectFuture)fut;
+
+            ConnectionRequestFuture triggerFut = new ConnectionRequestFuture();
+
+            triggerFut.listen(f -> {
+                try {
+                    fut0.onDone(f.get());
+                }
+                catch (Throwable t) {
+                    fut0.onDone(t);
+                }
+            });
+
+            clientFuts.put(new ConnectionKey(node.id(), connIdx, -1), triggerFut);
+
+            fut = triggerFut;
+
+            try {
+                connRequestor.request(node, connIdx);
+
+                long failTimeout = cfg.failureDetectionTimeoutEnabled()
+                    ? cfg.failureDetectionTimeout()
+                    : cfg.connectionTimeout();
+
+                fut.get(failTimeout);
+            }
+            catch (IgniteCheckedException triggerException) {
+                IgniteSpiException spiE = new IgniteSpiException(triggerException);
+
+                spiE.addSuppressed(e);
+
+                String msg = "Failed to wait for establishing inverse communication connection from node " + node;
+
+                log.warning(msg, spiE);
+
+                fut.onDone(spiE);
+
+                throw spiE;
+            }
+        }
+        else {
+            fut.onDone(e);
+
+            throw new IgniteCheckedException(e);
+        }
+
+        return fut;
     }
 
     /**
@@ -421,7 +515,7 @@ public class ConnectionClientPool {
             try {
                 client = new GridShmemCommunicationClient(
                     connIdx,
-                    metricsLsnr.metricRegistry(),
+                    metricLsnrSupplier.get().metricRegistry(),
                     port,
                     timeoutHelper.nextTimeoutChunk(cfg.connectionTimeout()),
                     log,
@@ -633,13 +727,6 @@ public class ConnectionClientPool {
      */
     public void removeFut(ConnectionKey connKey, GridFutureAdapter<GridCommunicationClient> fut) {
         clientFuts.remove(connKey, fut);
-    }
-
-    /**
-     * @param connKey Connection key.
-     */
-    public GridFutureAdapter<GridCommunicationClient> getFut(ConnectionKey connKey) {
-        return clientFuts.get(connKey);
     }
 
     /**

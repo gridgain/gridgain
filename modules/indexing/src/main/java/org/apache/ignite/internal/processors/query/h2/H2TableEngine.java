@@ -21,9 +21,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.h2.api.TableEngine;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.table.TableBase;
+import org.gridgain.internal.h2.api.TableEngine;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.table.TableBase;
 
 /**
  * H2 Table engine.

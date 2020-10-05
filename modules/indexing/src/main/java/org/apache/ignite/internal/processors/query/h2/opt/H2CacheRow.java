@@ -24,18 +24,20 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
+import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.engine.Constants;
-import org.h2.result.Row;
-import org.h2.value.Value;
-import org.h2.value.ValueNull;
+import org.gridgain.internal.h2.engine.Constants;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueNull;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 
@@ -179,6 +181,10 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
     private Value wrap(Object val, int type) {
         try {
             return H2Utils.wrap(desc.indexing().objectContext(), val, type);
+        }
+        catch (ClassCastException e) {
+            throw new IgniteSQLException("Failed to wrap object into H2 Value. " + e.getMessage(),
+                IgniteQueryErrorCode.FIELD_TYPE_MISMATCH, e);
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException("Failed to wrap object into H2 Value.", e);
@@ -371,13 +377,18 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
 
         if (v != null) {
             for (int i = QueryUtils.DEFAULT_COLUMNS_COUNT, cnt = getColumnCount(); i < cnt; i++) {
-                v = getValue(i);
-
                 if (i != QueryUtils.DEFAULT_COLUMNS_COUNT)
                     sb.a(", ");
 
-                if (!desc.isKeyValueOrVersionColumn(i))
-                    sb.a(v == null ? "nil" : (S.includeSensitive() ? v.getString() : "data hidden"));
+                try {
+                    v = getValue(i);
+
+                    if (!desc.isKeyValueOrVersionColumn(i))
+                        sb.a(v == null ? "nil" : (S.includeSensitive() ? v.getString() : "data hidden"));
+                }
+                catch (Exception e) {
+                    sb.a("<value skipped on error: " + e.getMessage() + '>');
+                }
             }
         }
 

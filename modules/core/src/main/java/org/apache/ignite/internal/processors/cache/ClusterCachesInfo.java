@@ -52,15 +52,20 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.managers.systemview.walker.CacheGroupViewWalker;
+import org.apache.ignite.internal.managers.systemview.walker.CacheViewWalker;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
+import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
+import org.apache.ignite.spi.systemview.view.CacheGroupView;
+import org.apache.ignite.spi.systemview.view.CacheView;
 import org.apache.ignite.internal.processors.query.QuerySchema;
 import org.apache.ignite.internal.processors.query.QuerySchemaPatch;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
 import org.apache.ignite.internal.util.lang.GridFunc;
 import org.apache.ignite.internal.util.lang.GridPlainCallable;
 import org.apache.ignite.internal.util.typedef.F;
@@ -83,11 +88,25 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
+import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT;
+import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
  * Logic related to cache discovery data processing.
  */
-class ClusterCachesInfo {
+public class ClusterCachesInfo {
+    /** */
+    public static final String CACHES_VIEW = "caches";
+
+    /** */
+    public static final String CACHES_VIEW_DESC = "Caches";
+
+    /** */
+    public static final String CACHE_GRPS_VIEW = "cacheGroups";
+
+    /** */
+    public static final String CACHE_GRPS_VIEW_DESC = "Cache groups";
+
     /** Representation of null for restarting caches map */
     private static final IgniteUuid NULL_OBJECT = new IgniteUuid();
 
@@ -153,6 +172,16 @@ class ClusterCachesInfo {
      */
     public ClusterCachesInfo(GridKernalContext ctx) {
         this.ctx = ctx;
+
+        ctx.systemView().registerView(CACHES_VIEW, CACHES_VIEW_DESC,
+            new CacheViewWalker(),
+            registeredCaches.values(),
+            CacheView::new);
+
+        ctx.systemView().registerView(CACHE_GRPS_VIEW, CACHE_GRPS_VIEW_DESC,
+            new CacheGroupViewWalker(),
+            registeredCacheGrps.values(),
+            CacheGroupView::new);
 
         log = ctx.log(getClass());
     }
@@ -919,35 +948,39 @@ class ClusterCachesInfo {
         DynamicCacheChangeRequest req,
         String cacheName
     ) {
+        CacheConfiguration<?, ?> ccfg = req.startCacheConfiguration();
+
+        IgniteCheckedException err = null;
+
+        IgniteCacheSnapshotManager snapshotMgr = ctx.cache().context().snapshot();
+
+        String dataReg = ccfg.getDataRegionName();
+
+        if (ctx.cache().context().readOnlyMode() && !snapshotMgr.restoreOrRecoveryInProgress() &&
+            !VOLATILE_DATA_REGION_NAME.equals(dataReg)) {
+            err = new IgniteClusterReadOnlyException(
+                String.format(CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT, "start cache", ccfg.getGroupName(), cacheName)
+            );
+        }
+
+        if (!validateStartNewCache(err, persistedCfgs, res, req))
+            return false;
+
         String conflictErr = checkCacheConflict(req.startCacheConfiguration());
 
         if (conflictErr != null) {
             U.warn(log, "Ignore cache start request. " + conflictErr);
 
-            IgniteCheckedException err = new IgniteCheckedException("Failed to start " +
-                "cache. " + conflictErr);
-
-            if (persistedCfgs)
-                res.errs.add(err);
-            else
-                ctx.cache().completeCacheStartFuture(req, false, err);
-
-            return false;
+            err = new IgniteCheckedException("Failed to start cache. " + conflictErr);
         }
 
-        SchemaOperationException err = QueryUtils.checkQueryEntityConflicts(
-            req.startCacheConfiguration(), registeredCaches.values());
-
-        if (err != null) {
-            if (persistedCfgs)
-                res.errs.add(err);
-            else
-                ctx.cache().completeCacheStartFuture(req, false, err);
-
+        if (!validateStartNewCache(err, persistedCfgs, res, req))
             return false;
-        }
 
-        CacheConfiguration<?, ?> ccfg = req.startCacheConfiguration();
+        err = QueryUtils.checkQueryEntityConflicts(req.startCacheConfiguration(), registeredCaches.values());
+
+        if (!validateStartNewCache(err, persistedCfgs, res, req))
+            return false;
 
         GridEncryptionManager encMgr = ctx.encryption();
 
@@ -1023,6 +1056,34 @@ class ClusterCachesInfo {
         res.addedDescs.add(startDesc);
 
         exchangeActions.addCacheToStart(req, startDesc);
+
+        return true;
+    }
+
+    /**
+     * Validate correcteness of new cache start request.
+     *
+     * @param err Current error.
+     * @param persistedCfgs {@code True} if process start of persisted caches during cluster activation.
+     * @param res Accumulator for cache change process results.
+     * @param req Cache change request.
+     *
+     * @return {@code True} if there is no errors due initialization.
+     */
+    private boolean validateStartNewCache(
+        @Nullable IgniteCheckedException err,
+        boolean persistedCfgs,
+        CacheChangeProcessResult res,
+        DynamicCacheChangeRequest req
+    ) {
+        if (err != null) {
+            if (persistedCfgs)
+                res.errs.add(err);
+            else
+                ctx.cache().completeCacheStartFuture(req, false, err);
+
+            return false;
+        }
 
         return true;
     }
@@ -1218,7 +1279,8 @@ class ClusterCachesInfo {
                 grpDesc.persistenceEnabled(),
                 grpDesc.walEnabled(),
                 grpDesc.walChangeRequests(),
-                splitCfg.get2());
+                splitCfg.get2() != null ? grpDesc.cacheConfigurationEnrichment() : null
+            );
 
             cacheGrps.put(grpDesc.groupId(), grpData);
         }
@@ -1239,7 +1301,7 @@ class ClusterCachesInfo {
                 desc.sql(),
                 false,
                 0,
-                splitCfg.get2()
+                splitCfg.get2() != null ? desc.cacheConfigurationEnrichment() : null
             );
 
             caches.put(desc.cacheName(), cacheData);
@@ -1262,7 +1324,7 @@ class ClusterCachesInfo {
                 false,
                 true,
                 0,
-                splitCfg.get2()
+                splitCfg.get2() != null ? desc.cacheConfigurationEnrichment() : null
             );
 
             templates.put(desc.cacheName(), cacheData);
@@ -2570,7 +2632,7 @@ class ClusterCachesInfo {
                 if (o1.cacheType().userCache() ^ o2.cacheType().userCache())
                     return o2.cacheType().userCache() ? -1 : 1;
 
-                return o1.cacheId().compareTo(o2.cacheId());
+                return Integer.compare(o1.cacheId(), o2.cacheId());
             }
         };
 

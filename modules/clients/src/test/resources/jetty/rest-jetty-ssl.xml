@@ -37,11 +37,13 @@
         </Call>
     </New>
 
-    <New id="sslContextFactory" class="org.eclipse.jetty.util.ssl.SslContextFactory">
-        <Set name="keyStorePath"><SystemProperty name="CLIENTS_MODULE_PATH"/>/src/test/keystore/server.jks</Set>
+    <New id="sslContextFactory" class="org.eclipse.jetty.util.ssl.SslContextFactory$Server">
+        <Set name="keyStorePath"><SystemProperty
+                name="IGNITE_HOME" default="${IGNITE_HOME}"/>/modules/clients/src/test/keystore/fqdn/server.jks</Set>
         <Set name="keyStorePassword">123456</Set>
         <Set name="keyManagerPassword">123456</Set>
-        <Set name="trustStorePath"><SystemProperty name="CLIENTS_MODULE_PATH"/>/src/test/keystore/trust-one.jks</Set>
+        <Set name="trustStorePath"><SystemProperty
+                name="IGNITE_HOME" default="${IGNITE_HOME}"/>/modules/clients/src/test/keystore/fqdn/trust.jks</Set>
         <Set name="trustStorePassword">123456</Set>
     </New>
 

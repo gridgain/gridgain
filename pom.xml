@@ -54,6 +54,7 @@
         <module>modules/spring</module>
         <module>modules/spring-data</module>
         <module>modules/spring-data-2.0</module>
+        <module>modules/spring-data-2.2</module>
         <module>modules/web</module>
         <module>modules/aop</module>
         <module>modules/urideploy</module>
@@ -103,6 +104,7 @@
         <module>modules/hibernate-5.3</module>
         <module>modules/geospatial</module>
         <module>modules/schedule</module>
+        <module>modules/control-utility</module>
     </modules>
 
     <profiles>
@@ -129,6 +131,7 @@
                 <module>modules/scalar-2.10</module>
                 <module>modules/scalar</module>
                 <module>modules/spark</module>
+                <module>modules/spark-2.4</module>
                 <module>modules/visor-console-2.10</module>
                 <module>modules/visor-console</module>
                 <module>modules/visor-plugins</module>
@@ -613,6 +616,19 @@
                 <module>modules/spark</module>
                 <module>modules/visor-console</module>
                 <module>modules/visor-plugins</module>
+            </modules>
+        </profile>
+
+        <profile>
+            <id>spark-2.4</id>
+
+            <activation>
+                <property><name>!scala-2.10</name></property>
+            </activation>
+
+            <modules>
+                <module>modules/spark-2.4</module>
+                <module>modules/scalar</module>
             </modules>
         </profile>
 

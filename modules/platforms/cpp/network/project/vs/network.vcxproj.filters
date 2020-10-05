@@ -33,6 +33,9 @@
     <ClInclude Include="..\..\src\network\tcp_socket_client.h">
       <Filter>Code\network</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\network\internal_utils.h">
+      <Filter>Code\network</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\ignite\network\network.h">
       <Filter>Code\network</Filter>
     </ClInclude>

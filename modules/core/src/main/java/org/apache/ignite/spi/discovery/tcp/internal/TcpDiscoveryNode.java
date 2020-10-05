@@ -184,7 +184,6 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
         Serializable consistentId)
     {
         assert id != null;
-        assert !F.isEmpty(addrs);
         assert metricsProvider != null;
         assert ver != null;
 
@@ -524,6 +523,13 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
      */
     public boolean clientAliveTimeSet() {
         return aliveCheckTimeNanos != 0;
+    }
+
+    /**
+     * @return Time in nanoseconds before which client is considered alive.
+     */
+    public long aliveCheckTimeNanos() {
+        return aliveCheckTimeNanos;
     }
 
     /**

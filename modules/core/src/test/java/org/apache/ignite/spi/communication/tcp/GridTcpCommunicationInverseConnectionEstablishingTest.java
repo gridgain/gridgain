@@ -23,15 +23,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.EnvironmentType;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
@@ -82,10 +81,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     private static final int SRVS_NUM = 2;
 
     /** */
-    private boolean clientMode;
-
-    /** */
-    private EnvironmentType envType = EnvironmentType.STANDALONE;
+    private boolean forceClientToSrvConnections;
 
     /** */
     private CacheConfiguration ccfg;
@@ -95,6 +91,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         super.beforeTest();
 
         stopAllGrids();
+
+        forceClientToSrvConnections = false;
     }
 
     /** {@inheritDoc} */
@@ -110,9 +108,10 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         cfg.setFailureDetectionTimeout(8_000);
 
-        cfg.setActiveOnStart(true);
-
-        cfg.setCommunicationSpi(new TestCommunicationSpi());
+        cfg.setCommunicationSpi(
+            new TestCommunicationSpi()
+                .setForceClientToServerConnections(forceClientToSrvConnections)
+        );
 
         if (ccfg != null) {
             cfg.setCacheConfiguration(ccfg);
@@ -120,16 +119,12 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             ccfg = null;
         }
 
-        if (clientMode) {
-            cfg.setEnvironmentType(envType);
-            cfg.setClientMode(true);
-        }
-
         return cfg;
     }
 
     /**
-     * Verifies that server successfully connects to "unreachable" client with {@link EnvironmentType#VIRTUALIZED} hint.
+     * Verifies that server successfully connects to "unreachable" client with
+     * {@link TcpCommunicationSpi#forceClientToServerConnections()}} flag.
      *
      * @throws Exception If failed.
      */
@@ -138,11 +133,12 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         UNREACHABLE_DESTINATION.set(UNREACHABLE_IP);
         RESPOND_TO_INVERSE_REQUEST.set(true);
 
-        executeCacheTestWithUnreachableClient(EnvironmentType.VIRTUALIZED);
+        executeCacheTestWithUnreachableClient(true);
     }
 
     /**
-     * Verifies that server successfully connects to "unreachable" client with {@link EnvironmentType#STANDALONE} hint.
+     * Verifies that server successfully connects to "unreachable" client with
+     * {@link TcpCommunicationSpi#forceClientToServerConnections()}} flag.
      *
      * @throws Exception If failed.
      */
@@ -151,7 +147,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         UNREACHABLE_DESTINATION.set(UNREACHABLE_IP);
         RESPOND_TO_INVERSE_REQUEST.set(true);
 
-        executeCacheTestWithUnreachableClient(EnvironmentType.STANDALONE);
+        executeCacheTestWithUnreachableClient(false);
     }
 
     /**
@@ -164,7 +160,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         UNREACHABLE_DESTINATION.set(UNRESOLVED_HOST);
         RESPOND_TO_INVERSE_REQUEST.set(true);
 
-        executeCacheTestWithUnreachableClient(EnvironmentType.VIRTUALIZED);
+        executeCacheTestWithUnreachableClient(true);
     }
 
     /**
@@ -177,7 +173,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         UNREACHABLE_DESTINATION.set(UNRESOLVED_HOST);
         RESPOND_TO_INVERSE_REQUEST.set(true);
 
-        executeCacheTestWithUnreachableClient(EnvironmentType.STANDALONE);
+        executeCacheTestWithUnreachableClient(false);
     }
 
     /**
@@ -187,13 +183,14 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      */
     @Test
     public void testClientReconnectDuringInverseConnection() throws Exception {
+        UNREACHABLE_DESTINATION.set(UNRESOLVED_HOST);
+        RESPOND_TO_INVERSE_REQUEST.set(true);
+
         Assume.assumeThat(System.getProperty("zookeeper.forceSync"), is(nullValue()));
 
-        startGrid(0).cluster().active(true);
+        startGrid(0).cluster().state(ClusterState.ACTIVE);
 
-        startGrid(1, (UnaryOperator<IgniteConfiguration>) cfg -> {
-            cfg.setEnvironmentType(EnvironmentType.STANDALONE);
-
+        startGridWithCfg(1, cfg -> {
             cfg.setClientMode(true);
 
             ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setIpFinder(new TcpDiscoveryVmIpFinder(false)
@@ -212,6 +209,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         });
 
         UUID clientNodeId = grid(1).context().localNodeId();
+        UUID oldRouterNode = ((TcpDiscoveryNode)grid(1).localNode()).clientRouterNodeId();
 
         startGrid(2);
 
@@ -229,22 +227,28 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         fut.get(8000L);
 
+        UUID newId = grid(1).localNode().id();
+        UUID newRouterNode = ((TcpDiscoveryNode)grid(1).localNode()).clientRouterNodeId();
+
+        assertEquals(clientNodeId, newId);
+        assertFalse(oldRouterNode + " " + newRouterNode, newRouterNode.equals(oldRouterNode));
+
         assertTrue(GridTestUtils.waitForCondition(msgRcvd::get, 1000L));
     }
 
     /**
      * Executes cache test with "unreachable" client.
      *
-     * @param envType {@code EnvironmentType} hint.
+     * @param forceClientToSrvConnections Flag for the client mode.
      * @throws Exception If failed.
      */
-    private void executeCacheTestWithUnreachableClient(EnvironmentType envType) throws Exception {
+    private void executeCacheTestWithUnreachableClient(boolean forceClientToSrvConnections) throws Exception {
         LogListener lsnr = LogListener.matches("Failed to send message to remote node").atMost(0).build();
 
         for (int i = 0; i < SRVS_NUM; i++) {
             ccfg = cacheConfiguration(CACHE_NAME, ATOMIC);
 
-            startGrid(i, (UnaryOperator<IgniteConfiguration>) cfg -> {
+            startGridWithCfg(i, cfg -> {
                 ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
 
                 log.registerListener(lsnr);
@@ -253,10 +257,9 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             });
         }
 
-        clientMode = true;
-        this.envType = envType;
+        this.forceClientToSrvConnections = forceClientToSrvConnections;
 
-        startGrid(SRVS_NUM);
+        startClientGrid(SRVS_NUM);
 
         putAndCheckKey();
 
@@ -279,7 +282,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             "Failed to wait for establishing inverse communication connection"
         ).build();
 
-        startGrid(SRVS_NUM - 1, (UnaryOperator<IgniteConfiguration>) cfg -> {
+        startGridWithCfg(SRVS_NUM - 1, cfg -> {
             ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
 
             log.registerListener(lsnr);
@@ -287,10 +290,9 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             return cfg.setGridLogger(log);
         });
 
-        clientMode = true;
-        envType = EnvironmentType.STANDALONE;
+        forceClientToSrvConnections = false;
 
-        IgniteEx client = startGrid(SRVS_NUM);
+        IgniteEx client = startClientGrid(SRVS_NUM);
         ClusterNode clientNode = client.localNode();
 
         IgniteEx srv = grid(SRVS_NUM - 1);
@@ -301,7 +303,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         // due to bug in inverse connection protocol & comm worker - it will be fixed later.
         List<Thread> tcpCommWorkerThreads = Thread.getAllStackTraces().keySet().stream()
             .filter(t -> t.getName().contains("tcp-comm-worker"))
-            .filter(t -> t.getName().contains(srv.name()) || t.getName().contains(client.name()))
+            .filter(t -> /*t.getName().contains(srv.name()) || */t.getName().contains(client.name()))
             .collect(Collectors.toList());
 
         for (Thread tcpCommWorkerThread : tcpCommWorkerThreads) {

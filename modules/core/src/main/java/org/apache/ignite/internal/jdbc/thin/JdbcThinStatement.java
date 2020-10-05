@@ -82,6 +82,9 @@ public class JdbcThinStatement implements Statement {
     /** Query timeout. */
     private int timeout;
 
+    /** Explicit timeout ({@code true} is the timeout is set explicitly for the query. Otherwise {@code false}). */
+    boolean explicitTimeout;
+
     /** Request timeout. */
     private int reqTimeout;
 
@@ -224,8 +227,16 @@ public class JdbcThinStatement implements Statement {
             return;
         }
 
-        JdbcQueryExecuteRequest req = new JdbcQueryExecuteRequest(stmtType, schema, pageSize,
-            maxRows, conn.getAutoCommit(), sql, args == null ? null : args.toArray(new Object[args.size()]));
+        JdbcQueryExecuteRequest req = new JdbcQueryExecuteRequest(
+            stmtType,
+            schema,
+            pageSize,
+            maxRows,
+            conn.getAutoCommit(),
+            explicitTimeout,
+            sql,
+            args == null ? null : args.toArray(new Object[args.size()])
+        );
 
         JdbcResultWithIo resWithIo = conn.sendRequest(req, this, null);
 
@@ -497,9 +508,7 @@ public class JdbcThinStatement implements Statement {
         if (timeout < 0)
             throw new SQLException("Invalid timeout value.");
 
-        this.timeout = timeout * 1000;
-
-        reqTimeout = this.timeout;
+        timeout(timeout * 1000 > timeout ? timeout * 1000 : Integer.MAX_VALUE);
     }
 
     /** {@inheritDoc} */
@@ -910,10 +919,18 @@ public class JdbcThinStatement implements Statement {
     /**
      * Sets timeout in milliseconds.
      *
+     * For test purposes.
+     *
      * @param timeout Timeout.
      */
-    void timeout(int timeout) {
+    public final void timeout(int timeout) {
+        assert timeout >= 0;
+
         this.timeout = timeout;
+
+        reqTimeout = this.timeout;
+
+        explicitTimeout = true;
     }
 
     /**

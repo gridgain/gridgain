@@ -115,7 +115,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
                 }
 
                 return count == client.GetConnections().Count();
-            }, 1000);
+            }, 9000);
 
             if (!res)
             {

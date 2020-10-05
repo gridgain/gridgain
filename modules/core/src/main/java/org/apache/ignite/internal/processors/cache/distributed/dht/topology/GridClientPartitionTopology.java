@@ -848,7 +848,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
             consistencyCheck();
 
-            this.lostParts = lostParts == null ? null : new TreeSet<>(lostParts);
+            if (exchangeVer != null)
+                this.lostParts = lostParts == null ? null : new TreeSet<>(lostParts);
 
             if (log.isDebugEnabled())
                 log.debug("Partition map after full update: " + fullMapString());
@@ -1221,22 +1222,22 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public void onEvicted(GridDhtLocalPartition part, boolean updateSeq) {
-        assert updateSeq || lock.isWriteLockedByCurrentThread();
-
+    @Override public boolean tryFinishEviction(GridDhtLocalPartition part) {
         lock.writeLock().lock();
 
         try {
             if (stopping)
-                return;
+                return false;
 
             assert part.state() == EVICTED;
 
-            long seq = updateSeq ? this.updateSeq.incrementAndGet() : this.updateSeq.get();
+            long seq = updateSeq.incrementAndGet();
 
             updateLocal(part.id(), cctx.localNodeId(), part.state(), seq);
 
             consistencyCheck();
+
+            return true;
         }
         finally {
             lock.writeLock().unlock();
@@ -1471,5 +1472,10 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
                 }
             }
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean rent(int p) {
+        return false;
     }
 }

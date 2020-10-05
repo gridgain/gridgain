@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -54,6 +55,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheQueryExecutedEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -255,6 +257,17 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
         super.start();
+
+        IgniteConfiguration cfg = ctx.config();
+        CacheConfiguration[] cacheConfiguration = cfg.getCacheConfiguration();
+
+        if (cacheConfiguration != null && cacheConfiguration.length > 0) {
+            boolean hasConfiguredIndexes = Arrays.stream(cacheConfiguration).anyMatch(QueryUtils::isEnabled);
+            
+            if (hasConfiguredIndexes && idx == null)
+                log.warning("Indexed types for caches are configured but ignite-indexing is missing from classpath " +
+                        "and no GridQueryIndexing is set up.");
+        }
 
         if (idx != null) {
             ctx.resource().injectGeneric(idx);
@@ -546,6 +559,20 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                         msg.deploymentId(cacheDesc.deploymentId());
 
                     assert F.eq(cacheDesc.deploymentId(), msg.deploymentId());
+
+                    if (msg.operation() instanceof SchemaAlterTableAddColumnOperation) {
+                        SchemaAlterTableAddColumnOperation alterOp = (SchemaAlterTableAddColumnOperation) msg.operation();
+
+                        try {
+                            for (QueryField field : alterOp.columns()) {
+                                if (!field.isNullable())
+                                    QueryUtils.checkNotNullAllowed(ccfg);
+                            }
+                        } catch (IgniteSQLException ex) {
+                            msg.onError(new SchemaOperationException("Received schema propose discovery message, but " +
+                                "cache doesn't applicable for this modification", ex));
+                        }
+                    }
                 }
             }
         }

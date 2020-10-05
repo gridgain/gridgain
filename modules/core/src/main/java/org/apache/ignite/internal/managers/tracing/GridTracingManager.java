@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.managers.tracing;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
@@ -34,6 +35,7 @@ import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.processors.tracing.Tracing;
+import org.apache.ignite.spi.tracing.SpiSpecificSpan;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.apache.ignite.spi.tracing.TracingSpi;
@@ -46,7 +48,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE;
-import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 import static org.apache.ignite.internal.util.GridClientByteUtils.bytesToInt;
 import static org.apache.ignite.internal.util.GridClientByteUtils.bytesToShort;
@@ -191,7 +192,8 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
             generateSpan(
                 parentSpan,
                 spanType,
-                null));
+                null,
+                false));
     }
 
     /** {@inheritDoc} */
@@ -332,8 +334,18 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     @Override public @NotNull Span create(
         @NotNull SpanType spanType,
         @Nullable Span parentSpan,
-        @Nullable String lb
+        @Nullable String lb,
+        boolean forceTracing
     ) {
+        if (forceTracing) {
+            return enrichWithLocalNodeParameters(
+                generateSpan(
+                    parentSpan,
+                    spanType,
+                    lb,
+                    forceTracing));
+        }
+
         // Optimization for noop spi.
         if (noop)
             return NoopSpan.INSTANCE;
@@ -349,7 +361,8 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
             generateSpan(
                 parentSpan,
                 spanType,
-                lb));
+                lb,
+                false));
     }
 
     /** {@inheritDoc} */
@@ -453,34 +466,42 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
      * Generates child span if it's possible due to parent/child included scopes, otherwise returns patent span as is.
      * @param parentSpan Parent span.
      * @param spanTypeToCreate Span type to create.
+     * @param forceTracing Trace given span regardless tracing configuration parameters.
      * @param lb Label.
      */
     @SuppressWarnings("unchecked")
     private @NotNull Span generateSpan(
         @Nullable Span parentSpan,
         @NotNull SpanType spanTypeToCreate,
-        @Nullable String lb
+        @Nullable String lb,
+        boolean forceTracing
     ) {
         if (parentSpan instanceof DeferredSpan)
             return create(spanTypeToCreate, ((DeferredSpan)parentSpan).serializedSpan());
 
         if (parentSpan == NoopSpan.INSTANCE || parentSpan == null) {
             if (spanTypeToCreate.rootSpan()) {
+                if (forceTracing) {
+                    return new SpanImpl(
+                        getSpi().create(
+                            spanTypeToCreate.spanName(),
+                            (SpiSpecificSpan)null),
+                        spanTypeToCreate,
+                        Collections.emptySet());
+                }
+
                 // Get tracing configuration.
                 TracingConfigurationParameters tracingConfigurationParameters = tracingConfiguration.get(
                     new TracingConfigurationCoordinates.Builder(spanTypeToCreate.scope()).withLabel(lb).build());
 
-                // Optimization
-                if (tracingConfigurationParameters.samplingRate() == SAMPLING_RATE_NEVER)
-                    return NoopSpan.INSTANCE;
-
-                return new SpanImpl(
-                    getSpi().create(
-                        spanTypeToCreate.spanName(),
-                        null,
-                        tracingConfigurationParameters.samplingRate()),
-                    spanTypeToCreate,
-                    tracingConfigurationParameters.includedScopes());
+                return shouldSample(tracingConfigurationParameters.samplingRate()) ?
+                    new SpanImpl(
+                        getSpi().create(
+                            spanTypeToCreate.spanName(),
+                            (SpiSpecificSpan)null),
+                        spanTypeToCreate,
+                        tracingConfigurationParameters.includedScopes()) :
+                    NoopSpan.INSTANCE;
             }
             else
                 return NoopSpan.INSTANCE;
@@ -498,8 +519,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                 return new SpanImpl(
                     getSpi().create(
                         spanTypeToCreate.spanName(),
-                        ((SpanImpl)parentSpan).spiSpecificSpan(),
-                        SAMPLING_RATE_ALWAYS),
+                        ((SpanImpl)parentSpan).spiSpecificSpan()),
                     spanTypeToCreate,
                     mergedIncludedScopes);
             }
@@ -522,5 +542,16 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     /** {@inheritDoc} */
     @Override public @NotNull TracingConfigurationManager configuration() {
         return tracingConfiguration;
+    }
+
+    /**
+     * @param samlingRate Sampling rate.
+     * @return {@code true} if according to given sampling-rate span should be sampled.
+     */
+    private boolean shouldSample(double samlingRate) {
+        if (samlingRate == SAMPLING_RATE_NEVER)
+            return false;
+
+        return Math.random() <= samlingRate;
     }
 }

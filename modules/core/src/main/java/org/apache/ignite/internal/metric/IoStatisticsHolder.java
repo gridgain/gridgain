@@ -60,4 +60,9 @@ public interface IoStatisticsHolder {
      * Reset statistics. All counters will be reset to 0.
      */
     public void resetStatistics();
+
+    /**
+     * @return Metric registry name.
+     */
+    public String metricRegistryName();
 }

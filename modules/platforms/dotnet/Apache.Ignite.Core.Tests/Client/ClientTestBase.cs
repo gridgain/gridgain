@@ -52,6 +52,9 @@ namespace Apache.Ignite.Core.Tests.Client
         /** SSL. */
         private readonly bool _enableSsl;
 
+        /** Partition Awareness */
+        private readonly bool _enablePartitionAwareness;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientTestBase"/> class.
         /// </summary>
@@ -63,10 +66,14 @@ namespace Apache.Ignite.Core.Tests.Client
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientTestBase"/> class.
         /// </summary>
-        public ClientTestBase(int gridCount, bool enableSsl = false)
+        public ClientTestBase(
+            int gridCount, 
+            bool enableSsl = false, 
+            bool enablePartitionAwareness = false)
         {
             _gridCount = gridCount;
             _enableSsl = enableSsl;
+            _enablePartitionAwareness = enablePartitionAwareness;
         }
 
         /// <summary>
@@ -121,6 +128,18 @@ namespace Apache.Ignite.Core.Tests.Client
         public IIgniteClient Client { get; set; }
 
         /// <summary>
+        /// Gets Ignite.
+        /// </summary>
+        protected static IIgnite GetIgnite(int? idx = null)
+        {
+            if (idx == null)
+            {
+                return Ignition.GetAll().First(i => i.Name == null);
+            }
+            return Ignition.GetIgnite(idx.ToString());
+        }
+
+        /// <summary>
         /// Gets the cache.
         /// </summary>
         protected static ICache<int, T> GetCache<T>()
@@ -158,7 +177,7 @@ namespace Apache.Ignite.Core.Tests.Client
         protected virtual IgniteClientConfiguration GetClientConfiguration()
         {
             var port = _enableSsl ? 11110 : IgniteClientConfiguration.DefaultPort;
-            
+
             return new IgniteClientConfiguration
             {
                 Endpoints = new List<string> {IPAddress.Loopback + ":" + port},
@@ -177,7 +196,8 @@ namespace Apache.Ignite.Core.Tests.Client
                         SslProtocols = SslProtocols.Tls12
 #endif
                     }
-                    : null
+                    : null,
+                EnablePartitionAwareness = _enablePartitionAwareness
             };
         }
 
@@ -188,7 +208,7 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             return new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
-                Logger = new ListLogger(new ConsoleLogger()),
+                Logger = new ListLogger(new TestUtils.TestContextLogger()),
                 SpringConfigUrl = _enableSsl ? Path.Combine("Config", "Client", "server-with-ssl.xml") : null
             };
         }
@@ -243,7 +263,7 @@ namespace Apache.Ignite.Core.Tests.Client
             var listLogger = (ListLogger) logger;
             return listLogger.Entries;
         }
-        
+
         /// <summary>
         /// Gets client request names for a given server node.
         /// </summary>
@@ -252,7 +272,7 @@ namespace Apache.Ignite.Core.Tests.Client
             var instanceName = serverIndex == 0 ? null : serverIndex.ToString();
             var grid = Ignition.GetIgnite(instanceName);
             var logger = (ListLogger) grid.Logger;
-         
+
             return GetServerRequestNames(logger, prefix);
         }
 
@@ -287,7 +307,7 @@ namespace Apache.Ignite.Core.Tests.Client
         /// <summary>
         /// Gets loggers from all server nodes.
         /// </summary>
-        private static IEnumerable<ListLogger> GetLoggers()
+        protected static IEnumerable<ListLogger> GetLoggers()
         {
             return Ignition.GetAll()
                 .OrderBy(i => i.Name)

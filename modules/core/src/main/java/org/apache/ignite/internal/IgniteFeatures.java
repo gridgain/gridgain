@@ -160,8 +160,29 @@ public enum IgniteFeatures {
     /** Support policy of shutdown. */
     SHUTDOWN_POLICY(40),
 
+    /** New security processor with a security context support. */
+    IGNITE_SECURITY_PROCESSOR_V2(41),
+
+    /** Force rebuild, list or request indexes rebuild status from control script. */
+    INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(42),
+
+    /** Snapshots without PME. */
+    EXCHANGELESS_SNAPSHOT(43),
+
+    /** Optimization of recovery protocol for cluster which doesn't contain MVCC caches. */
+    MVCC_TX_RECOVERY_PROTOCOL_V2(44),
+
+    /** Pk index keys are applied in correct order. */
+    SPECIFIED_SEQ_PK_KEYS(45),
+
+    /** Compatibility support for new fields which are configured split. */
+    SPLITTED_CACHE_CONFIGURATIONS_V2(46),
+
+    /** Snapshots upload via sftp. */
+    SNAPSHOT_SFTP_UPLOAD(47),
+
     /** Master key change. See {@link GridEncryptionManager#changeMasterKey(String)}. */
-    MASTER_KEY_CHANGE(41);
+    MASTER_KEY_CHANGE(48);
 
     /**
      * Unique feature identifier.
@@ -314,6 +335,9 @@ public enum IgniteFeatures {
         for (IgniteFeatures value : IgniteFeatures.values()) {
             // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
             if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), false))
+                continue;
+
+            if (IGNITE_SECURITY_PROCESSOR_V2 == value && !getBoolean(IGNITE_SECURITY_PROCESSOR_V2.name(), true))
                 continue;
 
             //Disable new rolling upgrade

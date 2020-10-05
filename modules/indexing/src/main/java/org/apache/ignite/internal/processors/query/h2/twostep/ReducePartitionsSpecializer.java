@@ -21,7 +21,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2DmlReque
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
 import org.apache.ignite.internal.util.typedef.C2;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.h2.util.IntArray;
+import org.gridgain.internal.h2.util.IntArray;
 
 import java.util.Map;
 

@@ -68,13 +68,22 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
         return putEntryIfObsoleteOrAbsent(null, ctx, topVer, key, create, touch);
     }
 
+    /**
+     * @param hld Holder.
+     * @param ctx Context.
+     * @param topVer Topology version.
+     * @param key Key.
+     * @param create Create flag.
+     * @param clearing {@code True} if called by partition clearing.
+     */
     protected final GridCacheMapEntry putEntryIfObsoleteOrAbsent(
         @Nullable CacheMapHolder hld,
         GridCacheContext ctx,
         final AffinityTopologyVersion topVer,
         KeyCacheObject key,
         final boolean create,
-        final boolean touch) {
+        final boolean clearing
+    ) {
         if (hld == null)
             hld = entriesMapIfExists(ctx.cacheIdBoxed());
 
@@ -84,7 +93,7 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
         GridCacheMapEntry doomed = null;
 
         boolean done = false;
-        boolean reserved = false;
+        boolean reserved = clearing;
         int sizeChange = 0;
 
         try {
@@ -200,9 +209,6 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
                         null,
                         null,
                         true);
-
-                if (touch)
-                    cur.touch();
             }
 
             assert Math.abs(sizeChange) <= 1;
@@ -210,15 +216,23 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
             return cur;
         }
         finally {
-            if (reserved)
-                release(sizeChange, hld, cur);
-            else {
-                if (sizeChange != 0) {
-                    assert sizeChange == -1;
-                    assert doomed != null;
+            if (!clearing) {
+                if (reserved)
+                    release(sizeChange, hld, cur);
+                else {
+                    if (sizeChange != 0) {
+                        assert sizeChange == -1;
+                        assert doomed != null;
 
-                    decrementPublicSize(hld, doomed);
+                        decrementPublicSize(hld, doomed);
+                    }
                 }
+            }
+            else {
+                if (sizeChange == 1)
+                    incrementPublicSize(hld, cur);
+                else if (sizeChange == -1)
+                    decrementPublicSize(hld, doomed);
             }
         }
     }

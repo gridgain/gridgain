@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
     using Apache.Ignite.Core.Cache.Configuration;
@@ -130,6 +129,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Loose data and verify lost partition.
             var lostPart = PrepareTopology();
+            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any());
             var lostParts = cache.GetLostPartitions();
             Assert.IsTrue(lostParts.Contains(lostPart));
 
@@ -140,8 +140,9 @@ namespace Apache.Ignite.Core.Tests.Cache
 
                 // Check reads are possible from a cache in recovery mode.
                 var recoverCache = cache.WithPartitionRecover();
-                int res;
-                Assert.IsFalse(recoverCache.TryGet(part, out res));
+
+                int unused;
+                Assert.IsFalse(recoverCache.TryGet(part, out unused));
             }
 
             // Reset and verify.
@@ -150,6 +151,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Check another ResetLostPartitions overload.
             PrepareTopology();
+            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any());
             Assert.IsNotEmpty(cache.GetLostPartitions());
             ignite.ResetLostPartitions(new List<string> {CacheName, "foo"});
             Assert.IsEmpty(cache.GetLostPartitions());
@@ -162,8 +164,9 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             if (safe)
             {
-                int val;
-                var ex = Assert.Throws<CacheException>(() => cache.TryGet(part, out val));
+                int unused;
+                var ex = Assert.Throws<CacheException>(() => cache.TryGet(part, out unused));
+
                 Assert.AreEqual(string.Format(
                     "class org.apache.ignite.internal.processors.cache.CacheInvalidStateException" +
                     ": Failed to execute the cache operation (all partition owners have left the grid, " +
@@ -173,8 +176,8 @@ namespace Apache.Ignite.Core.Tests.Cache
             }
             else
             {
-                int val;
-                Assert.IsFalse(cache.TryGet(part, out val));
+                int unused;
+                Assert.IsFalse(cache.TryGet(part, out unused));
             }
 
             if (canWrite)
@@ -215,6 +218,9 @@ namespace Apache.Ignite.Core.Tests.Cache
                 Backups = 0,
                 WriteSynchronizationMode = CacheWriteSynchronizationMode.FullSync,
                 PartitionLossPolicy = policy,
+                RebalanceDelay = TimeSpan.Zero,
+                RebalanceMode = CacheRebalanceMode.Sync,
+                RebalanceThrottle = TimeSpan.Zero,
                 AffinityFunction = new RendezvousAffinityFunction
                 {
                     ExcludeNeighbors = false,
@@ -244,13 +250,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 // Wait for rebalance to complete.
                 var node = ignite.GetCluster().GetLocalNode();
                 Func<int, bool> isPrimary = x => affinity.IsPrimary(node, x);
-
-                while (!keys.Any(isPrimary))
-                {
-                    Thread.Sleep(10);
-                }
-
-                Thread.Sleep(100);  // Some extra wait.
+                TestUtils.WaitForTrueCondition(() => keys.Any(isPrimary));
 
                 return keys.First(isPrimary);
             }

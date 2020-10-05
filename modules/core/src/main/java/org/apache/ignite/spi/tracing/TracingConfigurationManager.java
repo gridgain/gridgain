@@ -64,6 +64,20 @@ public interface TracingConfigurationManager {
             withIncludedScopes(Collections.emptySet()).
             build();
 
+    /** Default cache API write configuration. */
+    static final TracingConfigurationParameters DEFAULT_CACHE_API_WRITE_CONFIGURATION =
+        new TracingConfigurationParameters.Builder().
+            withSamplingRate(0d).
+            withIncludedScopes(Collections.emptySet()).
+            build();
+
+    /** Default cache API read configuration. */
+    static final TracingConfigurationParameters DEFAULT_CACHE_API_READ_CONFIGURATION =
+        new TracingConfigurationParameters.Builder().
+            withSamplingRate(0d).
+            withIncludedScopes(Collections.emptySet()).
+            build();
+
     /**
      * Set new tracing configuration for the specific tracing coordinates (scope, label, etc.).
      * If tracing configuration with specified coordinates already exists it'll be overrided,
@@ -104,25 +118,26 @@ public interface TracingConfigurationManager {
         @NotNull TracingConfigurationCoordinates coordinates) throws IgniteException
     {
         switch (coordinates.scope()) {
-            case TX: {
+            case TX:
                 return DEFAULT_TX_CONFIGURATION;
-            }
 
-            case EXCHANGE: {
+            case EXCHANGE:
                 return DEFAULT_EXCHANGE_CONFIGURATION;
-            }
 
-            case DISCOVERY: {
+            case DISCOVERY:
                 return DEFAULT_DISCOVERY_CONFIGURATION;
-            }
 
-            case COMMUNICATION: {
+            case COMMUNICATION:
                 return DEFAULT_COMMUNICATION_CONFIGURATION;
-            }
 
-            default: {
+            case CACHE_API_WRITE:
+                return DEFAULT_CACHE_API_WRITE_CONFIGURATION;
+
+            case CACHE_API_READ:
+                return DEFAULT_CACHE_API_READ_CONFIGURATION;
+
+            default:
                 return NOOP_CONFIGURATION;
-            }
         }
     }
 

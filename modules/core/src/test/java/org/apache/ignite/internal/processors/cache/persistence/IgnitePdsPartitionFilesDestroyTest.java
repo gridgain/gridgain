@@ -33,7 +33,6 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -368,10 +367,7 @@ public class IgnitePdsPartitionFilesDestroyTest extends GridCommonAbstractTest {
         List<GridDhtLocalPartition> parts = crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartitions();
         for (GridDhtLocalPartition part : parts)
             if (part.state() != GridDhtPartitionState.EVICTED) {
-                IgniteInternalFuture<?> fut = part.rent(false);
-
-                if (fut != null)
-                    fut.get();
+                part.rent().get();
 
                 break;
             }

@@ -199,7 +199,7 @@ public class OdbcUtils {
 
     /**
      * Tries to retrieve H2 engine error message from exception. If the exception is not of type
-     * "org.h2.jdbc.JdbcSQLException" returns original error message.
+     * "org.gridgain.internal.h2.jdbc.JdbcSQLException" returns original error message.
      *
      * @param err Exception.
      * @return Error message.
@@ -210,7 +210,7 @@ public class OdbcUtils {
         Throwable e = err.getCause();
 
         while (e != null) {
-            if (e.getClass().getCanonicalName().equals("org.h2.jdbc.JdbcSQLException")) {
+            if (e.getClass().getCanonicalName().equals("org.gridgain.internal.h2.jdbc.JdbcSQLException")) {
                 msg = e.getMessage();
 
                 break;
@@ -258,7 +258,7 @@ public class OdbcUtils {
      * @return Odbc query field metadata.
      */
     public static Collection<OdbcColumnMeta> convertMetadata(Collection<GridQueryFieldMetadata> meta,
-                                                              ClientListenerProtocolVersion ver) {
+        ClientListenerProtocolVersion ver) {
         List<OdbcColumnMeta> res = new ArrayList<>();
 
         if (meta != null) {

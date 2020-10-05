@@ -38,7 +38,7 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.h2.value.DataType;
+import org.gridgain.internal.h2.value.DataType;
 
 import static org.apache.ignite.internal.processors.cache.index.AbstractSchemaSelfTest.connect;
 

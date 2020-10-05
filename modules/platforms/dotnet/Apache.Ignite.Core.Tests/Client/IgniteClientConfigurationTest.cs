@@ -25,8 +25,10 @@ namespace Apache.Ignite.Core.Tests.Client
     using System.Xml;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Client.Transactions;
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Log;
+    using Apache.Ignite.Core.Transactions;
     using NUnit.Framework;
 
     /// <summary>
@@ -99,6 +101,12 @@ namespace Apache.Ignite.Core.Tests.Client
                 Logger = new ConsoleLogger
                 {
                     MinLevel = LogLevel.Debug
+                },
+                TransactionConfiguration = new TransactionClientConfiguration
+                {
+                    DefaultTimeout = TimeSpan.FromSeconds(1),
+                    DefaultTransactionConcurrency = TransactionConcurrency.Optimistic,
+                    DefaultTransactionIsolation = TransactionIsolation.Serializable
                 }
             };
 
@@ -137,7 +145,7 @@ namespace Apache.Ignite.Core.Tests.Client
             Assert.AreEqual("<?xml version=\"1.0\" encoding=\"utf-16\"?>" + Environment.NewLine +
                             "<igniteClientConfiguration " +
                             "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\">" +
-                            Environment.NewLine + "  <logger type=\"null\" />" + Environment.NewLine + 
+                            Environment.NewLine + "  <logger type=\"null\" />" + Environment.NewLine +
                             "</igniteClientConfiguration>",
                 emptyConfig.ToXml());
 
@@ -152,7 +160,7 @@ namespace Apache.Ignite.Core.Tests.Client
             Assert.AreEqual("<?xml version=\"1.0\" encoding=\"utf-16\"?>" + Environment.NewLine +
                             "<igniteClientConfiguration host=\"myHost\" port=\"123\" " +
                             "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\">" +
-                            Environment.NewLine + "  <logger type=\"null\" />" + Environment.NewLine + 
+                            Environment.NewLine + "  <logger type=\"null\" />" + Environment.NewLine +
                             "</igniteClientConfiguration>",
                 cfg.ToXml());
 
@@ -187,7 +195,7 @@ namespace Apache.Ignite.Core.Tests.Client
         public void TestDefaultLoggerWritesToConsole()
         {
             IgniteClientConfiguration cfg = null;
-            
+
             TestConsoleLogging(c => { cfg = c;}, (client, log) =>
             {
                 Assert.AreSame(cfg.Logger, client.GetConfiguration().Logger);
@@ -262,7 +270,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 var ex = Assert.Throws<ConfigurationErrorsException>(() => Ignition.StartClient("foo", "bar"));
                 Assert.AreEqual("Specified config file does not exist: bar", ex.Message);
 
-#if !NETCOREAPP2_0 && !NETCOREAPP3_0  // Test runners do not pick up default config.
+#if !NETCOREAPP // Test runners do not pick up default config.
                 // Default section.
                 using (var client = Ignition.StartClient())
                 {
@@ -290,7 +298,7 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
 
-#if !NETCOREAPP2_0 && !NETCOREAPP2_1 && !NETCOREAPP3_0
+#if !NETCOREAPP
         /// <summary>
         /// Tests the schema validation.
         /// </summary>
@@ -315,5 +323,25 @@ namespace Apache.Ignite.Core.Tests.Client
                 typeof(IgniteClientConfiguration));
         }
 #endif
+
+        /// <summary>
+        /// Tests <see cref="TransactionClientConfiguration"/> copy ctor. 
+        /// </summary>
+        [Test]
+        public void TestTransactionConfigurationCopyCtor()
+        {
+            var sourceCfg = new TransactionClientConfiguration
+            {
+                DefaultTimeout = TimeSpan.MaxValue,
+                DefaultTransactionConcurrency = TransactionConcurrency.Pessimistic,
+                DefaultTransactionIsolation = TransactionIsolation.Serializable
+            };
+            
+            var resultCfg = new TransactionClientConfiguration(sourceCfg);
+            
+            Assert.AreEqual(sourceCfg.DefaultTimeout, resultCfg.DefaultTimeout);
+            Assert.AreEqual(sourceCfg.DefaultTransactionConcurrency, resultCfg.DefaultTransactionConcurrency);
+            Assert.AreEqual(sourceCfg.DefaultTransactionIsolation, resultCfg.DefaultTransactionIsolation);
+        }
     }
 }

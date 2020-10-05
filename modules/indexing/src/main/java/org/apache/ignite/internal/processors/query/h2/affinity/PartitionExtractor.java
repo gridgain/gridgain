@@ -59,8 +59,8 @@ import org.apache.ignite.internal.sql.optimizer.affinity.PartitionTable;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionTableAffinityDescriptor;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionTableModel;
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.table.Column;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
 /**

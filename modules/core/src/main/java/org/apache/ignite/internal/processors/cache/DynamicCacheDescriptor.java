@@ -63,7 +63,7 @@ public class DynamicCacheDescriptor {
     private boolean updatesAllowed = true;
 
     /** */
-    private Integer cacheId;
+    private int cacheId;
 
     /** */
     private final UUID rcvdFrom;
@@ -176,7 +176,7 @@ public class DynamicCacheDescriptor {
     /**
      * @return Cache ID.
      */
-    public Integer cacheId() {
+    public int cacheId() {
         return cacheId;
     }
 
@@ -405,10 +405,12 @@ public class DynamicCacheDescriptor {
         res.sql(sql());
 
         if (isConfigurationEnriched()) {
-            T2<CacheConfiguration, CacheConfigurationEnrichment> splitCfg = splitter.split(this);
+            T2<CacheConfiguration, CacheConfigurationEnrichment> splitCfg = splitter.split(cacheCfg);
 
             res.config(splitCfg.get1());
-            res.cacheConfigurationEnrichment(splitCfg.get2());
+
+            // If original enrichment is present, it should be written instead of result of split.
+            res.cacheConfigurationEnrichment(cacheCfgEnrichment == null ? splitCfg.get2() : cacheCfgEnrichment);
         }
         else
             res.cacheConfigurationEnrichment(cacheCfgEnrichment);

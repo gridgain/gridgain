@@ -348,6 +348,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private long rebalanceThrottle = DFLT_REBALANCE_THROTTLE;
 
     /** */
+    @SerializeSeparately
     private CacheInterceptor<K, V> interceptor;
 
     /** */
@@ -375,7 +376,10 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** */
     private boolean sqlEscapeAll;
 
-    /** */
+    /**
+     * @deprecated {@link #qryEntities} is used instead. This field is preserved for serialization compatibility.
+     * */
+    @Deprecated
     private transient Class<?>[] indexedTypes;
 
     /** Copy on read flag. */
