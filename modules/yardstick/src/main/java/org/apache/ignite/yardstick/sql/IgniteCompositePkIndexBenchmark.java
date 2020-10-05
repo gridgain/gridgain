@@ -199,7 +199,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
         /** */
         public TestKey2Integers(int key) {
-            this.id0 = 0;
+            this.id0 = key / 1000;
             this.id1 = key;
         }
     }

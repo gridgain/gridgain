@@ -20,9 +20,13 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 /**
@@ -198,5 +202,82 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      */
     private FieldsQueryCursor<List<?>> execute(SqlFieldsQuery qry) {
         return grid(0).context().query().querySqlFields(qry, false);
+    }
+
+    /** */
+    public static class TestKey2Integers {
+        /** */
+        @QuerySqlField
+        private final int id0;
+
+        @QuerySqlField
+        private final int id1;
+
+        /** */
+        public TestKey2Integers(int key) {
+            this.id0 = key / 1000;
+            this.id1 = key;
+        }
+    }
+
+    /** */
+    public static class TestKeyHugeStringAndInteger {
+        /** Prefix. */
+        private static final String PREFIX = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+        /** */
+        @QuerySqlField
+        private final String id0;
+
+        @QuerySqlField
+        private final int id1;
+
+        /** */
+        public TestKeyHugeStringAndInteger(int key) {
+            this.id0 = PREFIX + key;
+            this.id1 = key;
+        }
+    }
+
+    /** */
+    public static class TestKey8Integers {
+        /** */
+        @QuerySqlField
+        private final int id0;
+
+        @QuerySqlField
+        private final int id1;
+
+        @QuerySqlField
+        private final int id2;
+
+        @QuerySqlField
+        private final int id3;
+
+        @QuerySqlField
+        private final int id4;
+
+        @QuerySqlField
+        private final int id5;
+
+        @QuerySqlField
+        private final int id6;
+
+        @QuerySqlField
+        private final int id7;
+
+        /** */
+        public TestKey8Integers(int key) {
+            this.id0 = 0;
+            this.id1 = key / 100_000;
+            this.id2 = key / 10_000;
+            this.id3 = key / 1_000;
+            this.id4 = key / 1000;
+            this.id5 = key / 100;
+            this.id6 = key / 10;
+            this.id7 = key;
+        }
     }
 }
