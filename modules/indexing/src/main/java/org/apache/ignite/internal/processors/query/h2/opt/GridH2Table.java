@@ -468,7 +468,10 @@ public class GridH2Table extends TableBase {
     }
 
     public ObjectStatistics tableStatistics() {
-        IgniteStatisticsManager statManager = cacheInfo.cacheContext().kernalContext().query().getIndexing().statsManager();
+        GridCacheContext cacheContext = cacheInfo.cacheContext();
+        if (cacheContext == null)
+            return null;
+        IgniteStatisticsManager statManager = cacheContext.kernalContext().query().getIndexing().statsManager();
         return statManager.getLocalStatistics(identifier.schema(), identifier.table());
     }
 
