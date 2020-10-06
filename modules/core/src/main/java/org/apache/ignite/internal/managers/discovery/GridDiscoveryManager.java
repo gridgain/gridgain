@@ -82,6 +82,7 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheChangeRequest;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
@@ -292,8 +293,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
     /**
      * Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress
-     * This map is used to ensure that on client nodes the ChangeGlobalStateMessage is fully processed
-     * in the GridCachePartitionExchangeManager before the ChangeGlobalStateFinishMessage is processed.
+     * This map is used to ensure that on client nodes the {@link ChangeGlobalStateMessage} is fully processed
+     * in the {@link GridCachePartitionExchangeManager} before the {@link ChangeGlobalStateFinishMessage} is processed.
      */
     private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
 
