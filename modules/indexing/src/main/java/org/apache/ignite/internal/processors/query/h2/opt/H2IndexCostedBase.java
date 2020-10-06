@@ -911,6 +911,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * @return {@code true} if column value should be null, {@code falce} otherwise (or if it not sure)
          */
         private boolean isNullFilter(Session ses, Column column, TableFilter filter) {
+            if (filter == null)
+                return false;
             for(IndexCondition cond : filter.getIndexConditions()) {
                 if (column.equals(cond.getColumn()))
                     continue;
@@ -1137,7 +1139,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
             rowCount += Constants.COST_ROW_OFFSET;
 
-            TableFilter tableFilter = filters[filter];
+            TableFilter tableFilter = (filters == null) ? null : filters[filter];
 
             long rowsCost = getCostRangeIndexRowCost_Last(ses, tableFilter, masks, rowCount, locTblStats);
 
