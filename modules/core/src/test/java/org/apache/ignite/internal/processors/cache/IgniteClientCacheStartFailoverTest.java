@@ -27,6 +27,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -43,12 +44,14 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffini
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.TransactionSerializationException;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -395,13 +398,20 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
                         try {
                             cache.put(key, i);
                         }
-                        catch (Exception e) {
+                        catch (CacheException e) {
                             log.error("It couldn't put a value [cache=" + cacheName +
                                 ", key=" + key +
                                 ", val=" + i +
                                 ", cache=" + cacheName + ']', e);
 
-                            fail("Assert violated because exception was thrown [e=" + e.getMessage() + ']');
+                            CacheConfiguration ccfg = cache.getConfiguration(CacheConfiguration.class);
+
+                            TransactionSerializationException txEx = X.cause(e, TransactionSerializationException.class);
+
+                            if (txEx == null ||
+                                ccfg.getAtomicityMode() != TRANSACTIONAL_SNAPSHOT ||
+                                !txEx.getMessage().contains("Cannot serialize transaction due to write conflict (transaction is marked for rollback)"))
+                                fail("Assert violated because exception was thrown [e=" + e.getMessage() + ']');
                         }
                     }
                 }
