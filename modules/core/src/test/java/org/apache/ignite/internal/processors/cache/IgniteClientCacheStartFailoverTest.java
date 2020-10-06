@@ -386,9 +386,23 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
 
                         Map<Object, Object> map0 = cache.getAll(keys);
 
-                        assertEquals(KEYS, map0.size());
+                        assertEquals("[cache=" + cacheName +
+                            ", expected=" + KEYS +
+                            ", actual=" + map0.size() + ']', KEYS, map0.size());
 
-                        cache.put(rnd.nextInt(KEYS), i);
+                        int key = rnd.nextInt(KEYS);
+
+                        try {
+                            cache.put(key, i);
+                        }
+                        catch (Exception e) {
+                            log.error("It couldn't put a value [cache=" + cacheName +
+                                ", key=" + key +
+                                ", val=" + i +
+                                ", cache=" + cacheName + ']', e);
+
+                            fail("Assert violated because exception was thrown [e=" + e.getMessage() + ']');
+                        }
                     }
                 }
 
