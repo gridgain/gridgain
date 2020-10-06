@@ -133,6 +133,10 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractTraceabl
         return msg;
     }
 
+    public DiscoverySpiCustomMessage qwer() {
+        return msg;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object obj) {
         return super.equals(obj) &&

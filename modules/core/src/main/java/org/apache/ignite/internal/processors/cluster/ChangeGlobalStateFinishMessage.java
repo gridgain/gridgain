@@ -37,10 +37,10 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
     private static final long serialVersionUID = 0L;
 
     /** Custom message ID. */
-    private final IgniteUuid id = IgniteUuid.randomUuid();
+    public IgniteUuid id = IgniteUuid.randomUuid();
 
     /** State change request ID. */
-    private final UUID reqId;
+    public UUID reqId;
 
     /** New cluster state. */
     @Deprecated

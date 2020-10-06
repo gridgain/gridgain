@@ -603,6 +603,22 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                 ExchangeActions exchActions = stateChangeMsg.exchangeActions();
 
+//                try {
+//                    if (Thread.currentThread().getName().contains("Test2")) {
+//                        Thread.sleep(5000);
+//                        System.out.println("qaz1");
+//                        System.out.println("!9" + ((ChangeGlobalStateMessage)customMsg).requestId());
+//                    }
+////                    if (Thread.currentThread().getName().contains("Test3")) {
+////                        Thread.sleep(5000);
+////                        System.out.println("qaz1");
+////                        System.out.println("!10" + ((ChangeGlobalStateMessage)customMsg).requestId());
+////                    }
+//                }
+//                catch (InterruptedException e) {
+//                    throw new RuntimeException("qqq");
+//                }
+
                 if (exchActions != null) {
                     exchId = exchangeId(n.id(), affinityTopologyVersion(evt), evt);
 

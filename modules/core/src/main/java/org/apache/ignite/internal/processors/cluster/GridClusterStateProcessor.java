@@ -1107,7 +1107,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /** */
-    private BaselineTopology calculateNewBaselineTopology(
+    public BaselineTopology calculateNewBaselineTopology(
         ClusterState state,
         Collection<? extends BaselineNode> baselineNodes,
         boolean forceChangeBaselineTop

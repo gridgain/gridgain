@@ -414,7 +414,11 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     protected IgniteLogger log;
 
     /** */
-    protected TcpDiscoveryImpl impl;
+    public TcpDiscoveryImpl impl;
+
+    public TcpDiscoveryImpl getImpl() {
+        return impl;
+    }
 
     /** */
     private boolean forceSrvMode;
@@ -2442,7 +2446,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     /**
      * @return Marshaller.
      */
-    protected Marshaller marshaller() {
+    public Marshaller marshaller() {
         MarshallerUtils.setNodeName(marsh, igniteInstanceName);
 
         return marsh;

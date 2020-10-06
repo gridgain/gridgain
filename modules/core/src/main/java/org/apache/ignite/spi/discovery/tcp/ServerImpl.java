@@ -79,6 +79,8 @@ import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
+import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
+import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
@@ -205,7 +207,7 @@ import static org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryStatusChe
  *
  */
 @SuppressWarnings({"IfMayBeConditional"})
-class ServerImpl extends TcpDiscoveryImpl {
+public class ServerImpl extends TcpDiscoveryImpl {
     /** */
     private static final int ENSURED_MSG_HIST_SIZE = getInteger(IGNITE_DISCOVERY_CLIENT_RECONNECT_HISTORY_SIZE, 512);
 
@@ -235,11 +237,15 @@ class ServerImpl extends TcpDiscoveryImpl {
     @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
     private RingMessageWorker msgWorker;
 
+    public RingMessageWorker getMsgWorker() {
+        return msgWorker;
+    }
+
     /** Thread executing message worker */
     private Thread msgWorkerThread;
 
     /** Client message workers. */
-    private final ConcurrentMap<UUID, ClientMessageWorker> clientMsgWorkers = new ConcurrentHashMap<>();
+    public final ConcurrentMap<UUID, ClientMessageWorker> clientMsgWorkers = new ConcurrentHashMap<>();
 
     /** IP finder cleaner. */
     @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
@@ -3149,6 +3155,18 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
             else {
                 queue.add(msg);
+
+                if (msg instanceof TcpDiscoveryCustomEventMessage) {
+                    TcpDiscoveryCustomEventMessage msg1 = (TcpDiscoveryCustomEventMessage) msg;
+                    if (msg1.qwer() instanceof CustomMessageWrapper) {
+                        CustomMessageWrapper msg2 = (CustomMessageWrapper)msg1.qwer();
+                        if (msg2.delegate() instanceof ChangeGlobalStateMessage
+                        || msg2.delegate() instanceof ChangeGlobalStateFinishMessage) {
+                            System.out.println("!qwer" + Thread.currentThread().getName() + msg2.delegate());
+                            System.out.println("!qwer1" + Thread.currentThread().getName() + msg);
+                        }
+                    }
+                }
 
                 if (log.isDebugEnabled())
                     log.debug("Message has been added to a worker's queue: " + msg);
@@ -7772,7 +7790,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     }
 
     /** */
-    private class ClientMessageWorker extends MessageWorker<T2<TcpDiscoveryAbstractMessage, byte[]>> {
+    public class ClientMessageWorker extends MessageWorker<T2<TcpDiscoveryAbstractMessage, byte[]>> {
         /** Node ID. */
         private final UUID clientNodeId;
 
@@ -7841,7 +7859,7 @@ class ServerImpl extends TcpDiscoveryImpl {
          * @param msg Message.
          * @param msgBytes Optional message bytes.
          */
-        void addMessage(TcpDiscoveryAbstractMessage msg, @Nullable byte[] msgBytes) {
+        public void addMessage(TcpDiscoveryAbstractMessage msg, @Nullable byte[] msgBytes) {
             T2<TcpDiscoveryAbstractMessage, byte[]> t = new T2<>(msg, msgBytes);
 
             if (msg.highPriority())
@@ -8164,7 +8182,13 @@ class ServerImpl extends TcpDiscoveryImpl {
                     processMessage(msg);
             }
         }
-
+//msg.msg.delegate() instanceof ChangeGlobalStateMessage
+//        boolean b1 = msg instanceof TcpDiscoveryCustomEventMessage;
+//        boolean b2 = false;
+//if (msg instanceof T2) {
+//            b2 = ((T2)msg).get1() instanceof TcpDiscoveryCustomEventMessage;
+//        }
+//return b1 || b2;
         /**
          * @return Current message queue size.
          */

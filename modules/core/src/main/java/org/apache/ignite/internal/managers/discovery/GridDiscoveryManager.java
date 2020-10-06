@@ -213,7 +213,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     private final DiscoveryWorker discoWrk = new DiscoveryWorker();
 
     /** Discovery event notyfier worker. */
-    private final DiscoveryMessageNotifierWorker discoNtfWrk = new DiscoveryMessageNotifierWorker();
+    public final DiscoveryMessageNotifierWorker discoNtfWrk = new DiscoveryMessageNotifierWorker();
 
     /** Network segment check worker. */
     private SegmentCheckWorker segChkWrk;
@@ -634,28 +634,28 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
                         ChangeGlobalStateFinishMessage finishStateChangeMsg = (ChangeGlobalStateFinishMessage)customMsg;
 
-                        if (ctx.clientNode()) {
-                            UUID reqId = finishStateChangeMsg.requestId();
-
-                            CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
-
-                            if (changeStateLatch != null) {
-                                boolean awaited = true;
-
-                                try {
-                                    awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
-                                }
-                                catch (InterruptedException e) {
-                                    Thread.currentThread().interrupt();
-                                }
-
-                                if (!awaited)
-                                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
-                                        "before ChangeGlobalStateMessage was processed.");
-
-                                changeStatesInProgress.remove(reqId);
-                            }
-                        }
+//                        if (ctx.clientNode()) {
+//                            UUID reqId = finishStateChangeMsg.requestId();
+//
+//                            CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
+//
+//                            if (changeStateLatch != null) {
+//                                boolean awaited = true;
+//
+//                                try {
+//                                    awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
+//                                }
+//                                catch (InterruptedException e) {
+//                                    Thread.currentThread().interrupt();
+//                                }
+//
+//                                if (!awaited)
+//                                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
+//                                        "before ChangeGlobalStateMessage was processed.");
+//
+//                                changeStatesInProgress.remove(reqId);
+//                            }
+//                        }
 
                         ctx.state().onStateFinishMessage(finishStateChangeMsg);
 
@@ -2768,7 +2768,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
      */
     private class DiscoveryMessageNotifierWorker extends GridWorker {
         /** Queue. */
-        private final BlockingQueue<T2<GridFutureAdapter, Runnable>> queue = new LinkedBlockingQueue<>();
+        public final BlockingQueue<T2<GridFutureAdapter, Runnable>> queue = new LinkedBlockingQueue<>();
 
         /**
          * Default constructor.

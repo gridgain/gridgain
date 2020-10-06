@@ -126,7 +126,7 @@ public abstract class GridManagerAdapter<T extends IgniteSpi> implements GridMan
      *
      * @return Wrapped SPI.
      */
-    protected final T getSpi() {
+    public final T getSpi() {
         return spis[0];
     }
 

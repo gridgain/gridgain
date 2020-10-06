@@ -42,10 +42,10 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
     private static final long serialVersionUID = 0L;
 
     /** Custom message ID. */
-    private IgniteUuid id = IgniteUuid.randomUuid();
+    public IgniteUuid id = IgniteUuid.randomUuid();
 
     /** Request ID */
-    private UUID reqId;
+    public UUID reqId;
 
     /** Initiator node ID. */
     private UUID initiatingNodeId;
@@ -61,17 +61,17 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
     private List<StoredCacheData> storedCfgs;
 
     /** */
-    @Nullable private BaselineTopology baselineTopology;
+    @Nullable public BaselineTopology baselineTopology;
 
     /** */
     private boolean forceChangeBaselineTopology;
 
     /** */
-    private long timestamp;
+    public long timestamp;
 
     /** */
     @GridToStringExclude
-    private transient ExchangeActions exchangeActions;
+    public transient ExchangeActions exchangeActions;
 
     /** Services deployment actions to be processed on services deployment process. */
     @GridToStringExclude
