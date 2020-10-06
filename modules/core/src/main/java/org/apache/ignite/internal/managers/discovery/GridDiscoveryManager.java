@@ -290,7 +290,11 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     /** Local node compatibility consistent ID. */
     private Serializable consistentId;
 
-    /** Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress*/
+    /**
+     * Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress
+     * This map is used to ensure that on client nodes the ChangeGlobalStateMessage is fully processed
+     * in the GridCachePartitionExchangeManager before the ChangeGlobalStateFinishMessage is processed.
+     */
     private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
 
     /** @param ctx Context. */
