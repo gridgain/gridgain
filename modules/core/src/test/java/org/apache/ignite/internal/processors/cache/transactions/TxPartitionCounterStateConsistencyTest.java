@@ -76,6 +76,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.tcp.BlockTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
@@ -354,10 +355,13 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
+     * TODO queue no longer used, test should be adapted.
+     * May be actual for modes with deferredDelete=true.
      * Tests reproduces the problem: deferred removal queue should never be cleared during rebalance OR rebalanced
      * entries could undo deletion causing inconsistency.
      */
     @Test
+    @WithSystemProperty(key = "IGNITE_CACHE_REMOVED_ENTRIES_TTL", value = "500")
     public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_RemoveQueueCleared() throws Exception {
         backups = 2;
 
@@ -395,9 +399,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             prim.cache(DEFAULT_CACHE_NAME).remove(keys.get(0));
 
-            doSleep(2000);
-
             // Ensure queue cleanup is triggered before releasing supply message.
+            doSleep(2000); // TODO seems incorrect, because queue cleanup not called.
+
             spiPrim.stopBlock();
             spiBack.stopBlock();
         });

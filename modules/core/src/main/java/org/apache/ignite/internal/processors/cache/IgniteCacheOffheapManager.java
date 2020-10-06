@@ -924,6 +924,8 @@ public interface IgniteCacheOffheapManager {
         ) throws IgniteCheckedException;
 
         /**
+         * TODO can be used for atomic cache. forces removes of tombstones.
+         *
          * @param cctx Cache context.
          * @param key Key.
          * @param partId Partition number.
@@ -932,6 +934,9 @@ public interface IgniteCacheOffheapManager {
         public void remove(GridCacheContext cctx, KeyCacheObject key, int partId) throws IgniteCheckedException;
 
         /**
+         * TODO not needed, all removes with TS. Direct remove used only for tx. TODO refactor atomic update closure to put/remove ?
+         * TODO rename to logicalRemove.
+         *
          * @param cctx Cache context.
          * @param key Key.
          * @param ver Version.

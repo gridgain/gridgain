@@ -2353,9 +2353,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 needVal)
                 cctx.cache().metrics0().onRead(oldVal != null);
 
-            if (updateMetrics && INVOKE_NO_OP.equals(updateRes.outcome()) && (transformOp || updateRes.transformed()))
+            // TODO metrics cleanup
+            if (updateMetrics && INVOKE_NO_OP == updateRes.outcome() && (transformOp || updateRes.transformed()))
                 cctx.cache().metrics0().onReadOnlyInvoke(oldVal != null);
-            else if (updateMetrics && REMOVE_NO_VAL.equals(updateRes.outcome())
+            else if (updateMetrics && REMOVE_NO_VAL == updateRes.outcome()
                 && (transformOp || updateRes.transformed()))
                 cctx.cache().metrics0().onInvokeRemove(oldVal != null);
 
@@ -3414,7 +3415,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 else
                     update0 = isStartVer;
 
-                // Such combination may exist during datastreamer first update.
+                // TODO do we need this change ? looks like not.
+                // Such combination may exist during datastreamer first update. (special case for isolatedupdater ?)
                 update0 |= (!preload && val0 == null);
 
                 return update0;
@@ -4673,6 +4675,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         return true;
 
                     // TODO IGNITE-5286: need keep removed entries in heap map, otherwise removes can be lost.
+                    // TODO get rid or not ?
                     if (cctx.deferredDelete() && deletedUnlocked())
                         return false;
 
@@ -5950,7 +5953,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     *
+     * TODO use closure for remove ?
      */
     private static class UpdateClosure implements IgniteCacheOffheapManager.OffheapInvokeClosure {
         /** */
@@ -6713,7 +6716,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     oldRow);
 
                 treeOp = oldRow != null && oldRow.link() == newRow.link() ?
-                    IgniteTree.OperationType.NOOP : IgniteTree.OperationType.PUT;
+                    IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;
             }
             else
                 treeOp = IgniteTree.OperationType.PUT;
@@ -6812,15 +6815,19 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             entry.update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, newVer, true);
 
-            treeOp = readFromStore ? IgniteTree.OperationType.NOOP :
-                IgniteTree.OperationType.PUT; // Always delete with tombston.
+            // TODO javadoc for tx and atomic update closures (only logical removal).
+            treeOp = readFromStore || oldRow != null && cctx.offheap().isTombstone(oldRow) ?
+                IgniteTree.OperationType.NOOP : // Prevent removal of existing ts.
+                IgniteTree.OperationType.PUT; // Always delete with tombstone.
 
-            GridDhtLocalPartition part = entry.localPartition();
+            if (treeOp != IgniteTree.OperationType.NOOP) { // If oldRow is tombstone do nothing.
+                GridDhtLocalPartition part = entry.localPartition();
 
-            newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer, 0, oldRow);
+                newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer, 0, oldRow);
 
-            if (oldRow != null && oldRow.link() == newRow.link())
-                treeOp = IgniteTree.OperationType.IN_PLACE;
+                if (oldRow != null && oldRow.link() == newRow.link())
+                    treeOp = IgniteTree.OperationType.IN_PLACE;
+            }
 
             UpdateOutcome outcome = oldVal != null ? UpdateOutcome.SUCCESS : UpdateOutcome.REMOVE_NO_VAL;
 

@@ -1690,16 +1690,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             dataTree.invoke(row, CacheDataRowAdapter.RowData.NO_KEY, c);
 
+            // TODO old and new can be both ts.
+
             switch (c.operationType()) {
                 case PUT: {
                     assert c.newRow() != null : c;
 
                     CacheDataRow oldRow = c.oldRow();
 
-                    if (isTombstone(c.newRow())) {
-                        assert oldRow == null || !isTombstone(oldRow): oldRow;
+                    if (isTombstone(c.newRow())) { // Row was logically removed by update closure.
+                        // TODO revisit assertions and move to finishXXX methods.
+                        //assert oldRow == null || !isTombstone(oldRow): oldRow;
 
-                        tombstoneCreated();
+                        //tombstoneCreated();
 
                         finishRemove(cctx, row.key(), oldRow, c.newRow());
                     }
@@ -1709,7 +1712,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     break;
                 }
 
-                case REMOVE: {
+                case REMOVE: { // TODO closures should not produce physical removes, add assert.
                     CacheDataRow oldRow = c.oldRow();
 
                     finishRemove(cctx, row.key(), oldRow, null);
@@ -1718,11 +1721,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
 
                 case IN_PLACE:
-                    if (isTombstone(c.newRow()))
-                        finishRemove(cctx, row.key(), c.oldRow(), c.newRow());
+                    assert isTombstone(c.oldRow()) ^ isTombstone(c.newRow()) : "old=" + c.oldRow() + ", new=" + c.newRow();
+
+                    if (isTombstone(c.newRow())) {
+                        tombstoneCreated();
+
+                        decrementSize(cctx.cacheId());
+                    }
                     else if (isTombstone(c.oldRow())) {
-                        // TODO can be broken for atomic caches - should update index on replacing ts with data.
-                        // TODO replace with finishUpdate.
                         tombstoneRemoved();
 
                         incrementSize(cctx.cacheId());
@@ -2702,6 +2708,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             /** */
             private CacheDataRow newRow;
 
+            /** */
+            private IgniteTree.OperationType operationType;
+
             /**
              * @param cctx Context.
              * @param key Key.
@@ -2725,7 +2734,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 this.oldRow = oldRow;
 
-                newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver, 0, oldRow);
+                // An attempt of removal of existing tombstone should be no-op, otherwise ts is lost.
+                if (oldRow != null && isTombstone(oldRow))
+                    operationType = NOOP;
+                else {
+                    newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver, 0, oldRow);
+
+                    operationType = oldRow != null && oldRow.link() == newRow.link() ?
+                        IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;
+                }
             }
 
             /** {@inheritDoc} */
@@ -2735,10 +2752,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             /** {@inheritDoc} */
             @Override public IgniteTree.OperationType operationType() {
-                if (oldRow != null && oldRow.link() == newRow.link())
-                    return IgniteTree.OperationType.IN_PLACE;
-
-                return PUT;
+                return operationType;
             }
         }
 
@@ -2761,12 +2775,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 dataTree.invoke(new SearchRow(cacheId, key), CacheDataRowAdapter.RowData.NO_KEY, c);
 
-                assert c.operationType() == PUT || c.operationType() == IN_PLACE : c.operationType();
+                // assert c.operationType() == PUT || c.operationType() == IN_PLACE : c.operationType();
 
-                if (!isTombstone(c.oldRow))
-                    tombstoneCreated();
-
-                finishRemove(cctx, key, c.oldRow, c.newRow);
+                if (c.operationType() != NOOP)
+                    finishRemove(cctx, key, c.oldRow, c.newRow);
             }
             finally {
                 busyLock.leaveBusy();
@@ -2774,10 +2786,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /**
+         * TODO maybe use finishRemoveTs as separate method to avoid tombstoneRow null comparisons.
+         *
          * @param cctx Cache context.
          * @param key Key.
-         * @param oldRow Removed row.
-         * @param tombstoneRow Tombstone row (if tombstone was created for remove).
+         * @param oldRow Removed row. Can be null for logical remove (ts write as first entry op).
+         * @param tombstoneRow Tombstone row (if tombstone was created for remove). Not null means logical removal.
          * @throws IgniteCheckedException If failed.
          */
         private void finishRemove(
@@ -2803,8 +2817,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
 
+            // TODO looks like oldTombstone chech is redundant because it's always should be true (can force remove only ts)
             if (oldTombstone && tombstoneRow == null)
                 tombstoneRemoved();
+
+            if (tombstoneRow != null)
+                tombstoneCreated();
         }
 
         /**

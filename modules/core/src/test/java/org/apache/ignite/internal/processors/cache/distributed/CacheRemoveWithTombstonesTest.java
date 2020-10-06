@@ -16,23 +16,32 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -331,6 +340,8 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
             new IgniteDhtDemandedPartitionsMap(null, Collections.singleton(pk)), new AffinityTopologyVersion(2, 1));
         iter.forEach(rows::add);
 
+        assertEquals("Expecting ts row " + rows.toString(), 1, rows.size());
+
         IgniteEx g1 = startGrid(1);
         awaitPartitionMapExchange();
 
@@ -348,7 +359,92 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
     @Test
     public void testPreloadingCancelledUnderLoadPutRemove() {
-        // TODO.
+        // Test partition preloading retry in the middle after cancellation.
+    }
+
+    @Test
+    public void testRemoveNonExistentRow() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+
+        // Should create TS.
+        int pk = 0;
+        cache.remove(pk);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        validateTombstones(grpCtx, pk, 1, 0);
+
+        grpCtx.topology().localPartition(pk).clearTombstonesAsync().get();
+        validateTombstones(grpCtx, pk, 0, 0);
+    }
+
+    @Test
+    public void testRemoveExpicitTombstoneRow() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+
+        // Should create TS.
+        int pk = 0;
+        cache.remove(pk);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        validateTombstones(grpCtx, pk, 1, 0);
+
+        // Should be no-op.
+        cache.remove(pk);
+
+        validateTombstones(grpCtx, pk, 1, 0);
+    }
+
+    @Test
+    public void testInPlaceTombstoneRow() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+
+        // Should create ts.
+        int pk = 0;
+        cache.put(pk, new byte[0]); // Same size as ts for in-place update.
+
+        cache.remove(pk);
+
+        validateTombstones(grpCtx, pk, 1, 0);
+
+        cache.put(pk, new byte[0]);
+
+        validateTombstones(grpCtx, pk, 0, 1);
+    }
+
+    @Test
+    public void testInPlaceUpdateWithIndexes() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        QueryEntity qe = new QueryEntity();
+        qe.setKeyType(Integer.class.getName()).
+            setKeyFieldName("id").
+            setValueType(Integer.class.getName()).
+            setValueFieldName("val").
+            setFields(Stream.of(
+                new AbstractMap.SimpleEntry<>("id", Integer.class.getName()),
+                new AbstractMap.SimpleEntry<>("val", Integer.class.getName())
+            ).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue, (a, b) -> a, LinkedHashMap::new)))
+            .setIndexes(Collections.singletonList(new QueryIndex("val")));
+
+        CacheConfiguration<Object, Object> cfg = cacheConfiguration(ATOMIC);
+        cfg.setQueryEntities(Collections.singleton(qe));
+        IgniteCache<Object, Object> cache = crd.createCache(cfg);
+
+        cache.put(0, 1);
+        cache.put(0, 2);
+
+        List<Cache.Entry<Integer, Integer>> rows = cache.query(new SqlQuery<Integer, Integer>(Integer.class, "val = 2")).getAll();
+
+        System.out.println();
+
+        assertEquals(2, cache.get(0));
     }
 
     @Test
@@ -402,6 +498,8 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     }
 
     /**
+     * TODO validate cache size, add test for many caches in group.
+     *
      * @param grid Grid.
      * @param part Partition.
      * @param expTsCnt Expected timestamp count.
