@@ -444,9 +444,889 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testConcurrentStartServersAndClients() throws Exception {
+    public void testConcurrentStartServersAndClients1() throws Exception {
         concurrentStart(true);
     }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients2() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients3() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients4() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients5() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients6() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients7() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients8() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients9() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients10() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients11() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients12() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients13() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients14() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients15() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients16() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients17() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients18() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients19() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients20() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients21() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients22() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients23() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients24() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients25() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients26() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients27() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients28() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients29() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients30() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients31() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients32() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients33() throws Exception {
+        concurrentStart(true);
+    }
+
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients34() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients35() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients36() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients37() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients38() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients39() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients40() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients41() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients42() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients43() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients44() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients45() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients46() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients47() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients48() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients49() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients50() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients51() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients52() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients53() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients54() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients55() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients56() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients57() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients58() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients59() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients60() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients61() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients62() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients63() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients64() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients65() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients66() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients67() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients68() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients69() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients70() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients71() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients72() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients73() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients74() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients75() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients76() throws Exception {
+        concurrentStart(true);
+    }
+
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients77() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients78() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients79() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients80() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients81() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients82() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients83() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients84() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients85() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients86() throws Exception {
+        concurrentStart(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients87() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients88() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients89() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients90() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients91() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients92() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients93() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients94() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients95() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients96() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients97() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients98() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients99() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients100() throws Exception {
+        concurrentStart(true);
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConcurrentStartServersAndClients101() throws Exception {
+        concurrentStart(true);
+    }
+
 
     /**
      * @param withClients If {@code true} also starts client nodes.
