@@ -37,7 +37,7 @@ namespace benchmark
  */
 class MeasureThread
 {
-    enum { CALCULATIONS_TO_ACCUMULATE = 50 };
+    enum { CALCULATIONS_TO_ACCUMULATE = 20 };
 public:
     /**
      * Constructor.
@@ -116,12 +116,12 @@ private:
 
             while (!stop)
             {
-                int64_t action_us_pass = MeasureAction(benchmark);
+                int64_t action_ns_pass = MeasureAction(benchmark);
 
-                arr.push_back(action_us_pass);
+                arr.push_back(action_ns_pass);
                 accumulator.fetch_add(1);
 
-                if (arr.size() > CALCULATIONS_TO_ACCUMULATE)
+                if (arr.size() >= CALCULATIONS_TO_ACCUMULATE)
                 {
                     lastLatency = std::accumulate(arr.begin(), arr.end(), 0) / arr.size();
                     arr.clear();

@@ -196,6 +196,8 @@ public:
                 for (ThreadsIter it = threads.begin(); it != threads.end(); ++it)
                     latency += it->GetLatency();
 
+                latency /= threads.size();
+
                 uint_fast64_t counterNow = accumulator.load();
                 uint_fast64_t operations = counterNow - lastSeenCounter;
                 lastSeenCounter = counterNow;
