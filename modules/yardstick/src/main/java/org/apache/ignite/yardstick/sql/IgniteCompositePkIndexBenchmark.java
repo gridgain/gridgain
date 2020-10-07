@@ -17,21 +17,17 @@
 package org.apache.ignite.yardstick.sql;
 
 import java.lang.reflect.Constructor;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSemaphore;
-import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.yardstick.IgniteAbstractBenchmark;
 import org.yardstickframework.BenchmarkConfiguration;
@@ -63,7 +59,6 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         );
         setupQrys.put(
             TestKeyHugeStringAndInteger.class,
-
             "CREATE TABLE TEST (ID0 VARCHAR, ID1 INT, VALINT INT, VALSTR VARCHAR, " +
                 "PRIMARY KEY (ID0, ID1)) " +
                 "WITH \"CACHE_NAME=TEST,KEY_TYPE=" + TestKeyHugeStringAndInteger.class.getName() + ",VALUE_TYPE=" + Value.class.getName() + "\""
@@ -83,7 +78,11 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
     /** Value class. */
     private boolean addIndexes;
 
+    /** */
     private Function<Integer, Object> keyCreator;
+
+    /** */
+    private TestAction testAct;
 
     /** {@inheritDoc} */
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
@@ -105,6 +104,8 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         };
 
         addIndexes = args.getBooleanParameter("addIndexes", false);
+
+        testAct = TestAction.valueOf(args.getStringParameter("action", "PUT").toUpperCase());
 
         printParameters();
 
@@ -163,7 +164,18 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         int k = ThreadLocalRandom.current().nextInt(range);
         int v = ThreadLocalRandom.current().nextInt(range);
 
-        ignite().cache(cacheName).put(keyCreator.apply(k), new Value(v));
+        switch (testAct) {
+            case PUT:
+                ignite().cache(cacheName).put(keyCreator.apply(k), new Value(v));
+
+                break;
+
+            case SCAN: {
+                List<List<?>> res = sql("SELECT ID1 FROM TEST WHERE VALINT=?", k).getAll();
+
+                assert res.size() == 1;
+            }
+        }
 
         return true;
     }
@@ -186,6 +198,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         println("    range: " + range);
         println("    key: " + keyCls.getSimpleName());
         println("    idxs: " + addIndexes);
+        println("    action: " + testAct);
     }
 
     /** */
@@ -279,5 +292,11 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
             this.valInt = key;
             this.valStr = "val_str" + key;
         }
+    }
+
+    /** */
+    public static enum TestAction {
+        PUT,
+        SCAN
     }
 }
