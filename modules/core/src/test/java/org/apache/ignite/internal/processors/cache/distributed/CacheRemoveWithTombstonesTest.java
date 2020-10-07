@@ -24,19 +24,21 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.Cache;
+import javax.cache.configuration.FactoryBuilder;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.TouchedExpiryPolicy;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -54,7 +56,6 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
@@ -66,10 +67,8 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -79,13 +78,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 
 /**
- *
+ * TODO add test multicache group, filtered nodes, client nodes.
  */
 @RunWith(Parameterized.class)
 public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
@@ -312,19 +312,76 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
         op2.get();
 
-        validateTombstones(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
-        validateTombstones(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateCache(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
 
         TestRecordingCommunicationSpi.spi(crd).stopBlock();
 
         op1.get();
 
-        validateTombstones(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
-        validateTombstones(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateCache(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
 
+    /**
+     * Tests put-remove on primary reordered to remove-put on backup.
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testAtomicReorderPutRemoveInvoke() throws Exception {
+        IgniteEx crd = startGrids(2);
+        awaitPartitionMapExchange();
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+
+        Integer pk = primaryKey(crd.cache(DEFAULT_CACHE_NAME));
+
+        TestRecordingCommunicationSpi.spi(crd).blockMessages((n, msg) -> msg instanceof GridDhtAtomicSingleUpdateRequest);
+
+        IgniteInternalFuture<?> op1 = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                cache.invoke(pk, new InsertClosure(0));
+            }
+        }, 1, "op1-thread");
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+        IgniteInternalFuture<?> op2 = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                cache.invoke(pk, new RemoveClosure());
+            }
+        }, 1, "op2-thread");
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
+
+        // Apply on reverse order on backup.
+        TestRecordingCommunicationSpi.spi(crd).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
+            @Override public boolean apply(T2<ClusterNode, GridIoMessage> pair) {
+                GridIoMessage io = pair.get2();
+                GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
+
+                return msg0.value(0) == null;
+            }
+        });
+
+        op2.get();
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateCache(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+
+        TestRecordingCommunicationSpi.spi(crd).stopBlock();
+
+        op1.get();
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateCache(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    // TODO not needed ?
     @Test
     public void testTombstonesArePreloaded() throws Exception {
         IgniteEx crd = startGrid(0);
@@ -353,8 +410,25 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
         cache.put(pk, 1);
 
-        validateTombstones(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
-        validateTombstones(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+        validateCache(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+    }
+
+    // TODO if eagerttl=true explicit clearing not needed.
+    @Test
+    public void testWithTTLNoNear() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        //cacheCfg.setEagerTtl(true);
+        cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new TouchedExpiryPolicy(new Duration(MILLISECONDS, 1000))));
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+    }
+
+    @Test
+    public void testRemoveOnSupplierAppliedOnDemander() {
+        // TODO
     }
 
     @Test
@@ -366,6 +440,23 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     public void testRemoveNonExistentRow() throws Exception {
         IgniteEx crd = startGrid(0);
 
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+
+        // Should create TS.
+        int pk = 0;
+        cache.remove(pk);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        validateCache(grpCtx, pk, 1, 0);
+
+        grpCtx.topology().localPartition(pk).clearTombstonesAsync().get();
+        validateCache(grpCtx, pk, 0, 0);
+    }
+
+    @Test
+    public void testRemoveExpicitTombstoneRow() throws Exception {
+        IgniteEx crd = startGrid(0);
+
         IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
 
         // Should create TS.
@@ -373,14 +464,17 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         cache.remove(pk);
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateTombstones(grpCtx, pk, 1, 0);
+        validateCache(grpCtx, pk, 1, 0);
 
-        grpCtx.topology().localPartition(pk).clearTombstonesAsync().get();
-        validateTombstones(grpCtx, pk, 0, 0);
+        // Should be no-op.
+        cache.remove(pk);
+
+        validateCache(grpCtx, pk, 1, 0);
     }
 
+    // TODO test for many keys for each node, various tx types.
     @Test
-    public void testRemoveExpicitTombstoneRow() throws Exception {
+    public void testTombstoneReplaceWithInvoke() throws Exception {
         IgniteEx crd = startGrid(0);
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
@@ -390,19 +484,19 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         cache.remove(pk);
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateTombstones(grpCtx, pk, 1, 0);
+        validateCache(grpCtx, pk, 1, 0);
 
         // Should be no-op.
-        cache.remove(pk);
+        cache.invoke(pk, new InsertClosure(0));
 
-        validateTombstones(grpCtx, pk, 1, 0);
+        validateCache(grpCtx, pk, 0, 1);
     }
 
     @Test
     public void testInPlaceTombstoneRow() throws Exception {
         IgniteEx crd = startGrid(0);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
 
         // Should create ts.
@@ -411,13 +505,14 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
         cache.remove(pk);
 
-        validateTombstones(grpCtx, pk, 1, 0);
+        validateCache(grpCtx, pk, 1, 0);
 
         cache.put(pk, new byte[0]);
 
-        validateTombstones(grpCtx, pk, 0, 1);
+        validateCache(grpCtx, pk, 0, 1);
     }
 
+    // in-place not possible with indexes.
     @Test
     public void testInPlaceUpdateWithIndexes() throws Exception {
         IgniteEx crd = startGrid(0);
@@ -505,7 +600,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
      * @param expTsCnt Expected timestamp count.
      * @param expDataCnt Expected data count.
      */
-    private void validateTombstones(CacheGroupContext grpCtx, int part, int expTsCnt, int expDataCnt) throws IgniteCheckedException {
+    private void validateCache(CacheGroupContext grpCtx, int part, int expTsCnt, int expDataCnt) throws IgniteCheckedException {
         List<CacheDataRow> dataRows0 = new ArrayList<>();
         List<CacheDataRow> dataRows1 = new ArrayList<>();
 
@@ -517,6 +612,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
         assertEquals(expTsCnt, dataRows0.size());
         assertEquals(expDataCnt, dataRows1.size());
+        assertEquals(expDataCnt, grpCtx.topology().localPartition(part).dataStore().cacheSize(CU.cacheId(DEFAULT_CACHE_NAME)));
         assertEquals(expTsCnt, tombstoneMetric0.value());
     }
 
@@ -670,5 +766,30 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
             .setRebalanceMode(ASYNC)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setAffinity(new RendezvousAffinityFunction(false, 64));
+    }
+
+    /** Insert new value into cache. */
+    private static class InsertClosure implements CacheEntryProcessor {
+        private final Object newVal;
+
+        public InsertClosure(Object newVal) {
+            this.newVal = newVal;
+        }
+
+        @Override public Object process(MutableEntry entry, Object... arguments) throws EntryProcessorException {
+            assert entry.getValue() == null : entry;
+
+            entry.setValue(newVal);
+
+            return null;
+        }
+    }
+
+    private static class RemoveClosure implements CacheEntryProcessor {
+        @Override public Object process(MutableEntry entry, Object... arguments) throws EntryProcessorException {
+            entry.remove();
+
+            return null;
+        }
     }
 }

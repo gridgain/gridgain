@@ -106,6 +106,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        // TODO remove.
         cfg.setFailureDetectionTimeout(100000);
         cfg.setClientFailureDetectionTimeout(100000);
 

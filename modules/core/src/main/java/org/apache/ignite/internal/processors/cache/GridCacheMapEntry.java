@@ -6245,7 +6245,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (oldRow != null) {
                 oldRow.key(entry.key());
 
-                // unswap
+                // unswap TODO need to set oldrow value if expired or ts, or use null ?
                 entry.update(oldRow.value(), oldRow.expireTime(), 0, oldRow.version(), false);
 
                 if (entry.checkRowExpired(oldRow)) {
@@ -6255,7 +6255,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 }
             }
 
-            oldVal = (oldRow != null) ? oldRow.value() : null;
+            // Tombstone must be treated as empty value, same as expired row.
+            oldVal = (oldRow != null && !cctx.offheap().isTombstone(oldRow)) ? oldRow.value() : null;
 
             if (oldVal == null && readThrough) {
                 storeLoadedVal = cctx.toCacheObject(cctx.store().load(null, entry.key));
@@ -6402,55 +6403,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
 
             assert updateRes != null && treeOp != null;
-        }
-
-        /**
-         * Check row expiration and fire expire events if needed.
-         *
-         * @param row Old row.
-         * @return {@code True} if row was expired, {@code False} otherwise.
-         * @throws IgniteCheckedException if failed.
-         */
-        private boolean checkRowExpired(CacheDataRow row) throws IgniteCheckedException {
-            assert row != null;
-
-            if (!(row.expireTime() > 0 && row.expireTime() <= U.currentTimeMillis()))
-                return false;
-
-            GridCacheContext cctx = entry.context();
-
-            CacheObject expiredVal = row.value();
-
-            if (cctx.deferredDelete() && !entry.detached() && !entry.isInternal()) {
-                entry.update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, entry.ver, true);
-
-                if (!entry.deletedUnlocked())
-                    entry.deletedUnlocked(true);
-            }
-            else
-                entry.markObsolete0(cctx.cache().nextVersion(), true, null);
-
-            if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
-                cctx.events().addEvent(entry.partition(),
-                    entry.key(),
-                    cctx.localNodeId(),
-                    null,
-                    EVT_CACHE_OBJECT_EXPIRED,
-                    null,
-                    false,
-                    expiredVal,
-                    expiredVal != null,
-                    null,
-                    null,
-                    null,
-                    true);
-            }
-
-            cctx.continuousQueries().onEntryExpired(entry, entry.key(), expiredVal);
-
-            entry.updatePlatformCache(null, null);
-
-            return true;
         }
 
         /**

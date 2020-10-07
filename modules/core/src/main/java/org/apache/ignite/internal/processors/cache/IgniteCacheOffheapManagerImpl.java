@@ -1721,7 +1721,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
 
                 case IN_PLACE:
-                    assert isTombstone(c.oldRow()) ^ isTombstone(c.newRow()) : "old=" + c.oldRow() + ", new=" + c.newRow();
+                    // TODO FIXME assert isTombstone(c.oldRow()) ^ isTombstone(c.newRow()) : "old=" + c.oldRow() + ", new=" + c.newRow();
 
                     if (isTombstone(c.newRow())) {
                         tombstoneCreated();
@@ -2614,15 +2614,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          */
         private void finishUpdate(GridCacheContext cctx, CacheDataRow newRow, @Nullable CacheDataRow oldRow)
             throws IgniteCheckedException {
-            assert !isTombstone(newRow);
+            // TODO wrong assertion, can be on logical recovery: assert !isTombstone(newRow);
 
             boolean oldTombstone = isTombstone(oldRow);
             boolean oldNull = oldRow == null || oldTombstone;
 
             if (oldNull)
                 incrementSize(cctx.cacheId());
-
-            KeyCacheObject key = newRow.key();
 
             GridCacheQueryManager qryMgr = cctx.queries();
 
