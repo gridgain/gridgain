@@ -128,7 +128,6 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_MA
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.compareIgnoreOpCounter;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
-import static org.apache.ignite.internal.util.IgniteTree.OperationType.PUT;
 
 /**
  * Adapter for cache entry.
@@ -1036,7 +1035,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         if (cctx.mvccEnabled())
                             cctx.offheap().mvccRemoveAll(this);
                         else
-                            removeValue();
+                            removeValue(nextVer);
 
                         if (cctx.deferredDelete() && !isInternal() && !detached() && !deletedUnlocked())
                             deletedUnlocked(true);
@@ -1986,7 +1985,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (old != null)
                     storeValue(old, expireTime, ver);
                 else
-                    removeValue();
+                    removeValue(ver);
 
                 update(old, expireTime, ttl, ver, true);
             }
@@ -2175,10 +2174,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     // Must persist inside synchronization in non-tx mode.
                     cctx.store().remove(null, key);
 
-                removeValue();
+                removeValue(ver);
 
                 update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
 
+                // TODO fixme properly log tombstones
                 logUpdate(op, null, ver, CU.EXPIRE_TIME_ETERNAL, 0);
 
                 if (evt) {
@@ -2715,7 +2715,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (cctx.mvccEnabled())
                 cctx.offheap().mvccRemoveAll(this);
             else
-                removeValue(); // TODO write ts on cache clear.
+                removeValue(ver); // TODO write ts on cache clear.
         }
         finally {
             unlockEntry();
@@ -3205,7 +3205,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         ver0 = ver;
                     }
                     else {
-                        rmv = markObsolete0(nextVersion(), true, null);
+                        GridCacheVersion obsoleteVer = nextVersion();
+
+                        rmv = markObsolete0(obsoleteVer, true, null);
+
+                        if (cctx.mvccEnabled())
+                            cctx.offheap().mvccRemoveAll(this);
+                        else
+                            removeValue(obsoleteVer);
 
                         return null;
                     }
@@ -3253,28 +3260,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /**
      * TODO: IGNITE-3500: do we need to generate event and invalidate value?
      *
-     * @return {@code true} if expired.
-     * @throws IgniteCheckedException In case of failure.
+     * @return {@code True} if expired.
      */
-    private boolean checkExpired() throws IgniteCheckedException {
-        assert lock.isHeldByCurrentThread();
-
+    private boolean checkExpired() {
         long expireTime = expireTimeExtras();
 
-        if (expireTime > 0) {
-            long delta = expireTime - U.currentTimeMillis();
-
-            if (delta <= 0) {
-                if (cctx.mvccEnabled())
-                    cctx.offheap().mvccRemoveAll(this);
-                else
-                    removeValue();
-
-                return true;
-            }
-        }
-
-        return false;
+        return expireTime > 0 && expireTime <= U.currentTimeMillis();
     }
 
     /**
@@ -4157,7 +4148,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (cctx.mvccEnabled())
             cctx.offheap().mvccRemoveAll(this);
         else
-            removeValue();
+            removeValue(obsoleteVer);
 
         if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
             cctx.events().addEvent(partition(),
@@ -4508,13 +4499,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /**
      * Removes value from offheap.
      *
+     * @param clearVer Version.
      * @throws IgniteCheckedException If failed.
      */
-    protected void removeValue() throws IgniteCheckedException {
+    protected void removeValue(GridCacheVersion clearVer) throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
+        assert !cctx.deferredDelete();
 
         // Removals are possible from RENTING partition on clearing/evicting.
-        cctx.offheap().remove(cctx, key, partition(), localPartition());
+        cctx.offheap().removeWithTombstone(cctx, key, clearVer, localPartition());
     }
 
     /** {@inheritDoc} */
@@ -4675,7 +4668,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         return true;
 
                     // TODO IGNITE-5286: need keep removed entries in heap map, otherwise removes can be lost.
-                    // TODO get rid or not ?
+                    // TODO get rid or not ? TODO IGNITE-5286 remove !!!!
                     if (cctx.deferredDelete() && deletedUnlocked())
                         return false;
 
@@ -4684,7 +4677,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         value(null);
 
                         if (evictOffheap)
-                            removeValue();
+                            removeValue(obsoleteVer);
 
                         marked = true;
 
@@ -4737,7 +4730,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                             value(null);
 
                             if (evictOffheap)
-                                removeValue();
+                                removeValue(obsoleteVer);
 
                             marked = true;
 
@@ -4781,7 +4774,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return false;
 
                 if (checkExpired()) {
-                    rmv = markObsolete0(nextVersion(), true, null);
+                    GridCacheVersion obsoleteVer = nextVersion();
+
+                    rmv = markObsolete0(obsoleteVer, true, null);
+
+                    if (cctx.mvccEnabled())
+                        cctx.offheap().mvccRemoveAll(this);
+                    else
+                        removeValue(obsoleteVer);
 
                     return false;
                 }

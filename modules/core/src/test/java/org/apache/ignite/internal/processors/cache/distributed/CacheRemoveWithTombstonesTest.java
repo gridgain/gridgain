@@ -30,9 +30,11 @@ import java.util.stream.Stream;
 import javax.cache.Cache;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.expiry.Duration;
+import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.expiry.TouchedExpiryPolicy;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
@@ -49,6 +51,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -59,13 +62,16 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
+import org.apache.ignite.internal.processors.cache.MapCacheStoreStrategy;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.lang.GridIterator;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -86,6 +92,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 
 /**
  * TODO add test multicache group, filtered nodes, client nodes.
+ * TODO wal recovery should bring tombstone entry.
  */
 @RunWith(Parameterized.class)
 public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
@@ -414,16 +421,117 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         validateCache(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
     }
 
-    // TODO if eagerttl=true explicit clearing not needed.
+    // TODO if eagerttl=true explicit clearing not needed ????
     @Test
     public void testWithTTLNoNear() throws Exception {
         IgniteEx crd = startGrid(0);
 
         CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        cacheCfg.setEagerTtl(false);
         //cacheCfg.setEagerTtl(true);
-        cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new TouchedExpiryPolicy(new Duration(MILLISECONDS, 1000))));
+        cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+
+        int pk = 0;
+        cache.put(pk, 0);
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+
+        doSleep(1500);
+
+        assertNull(cache.get(pk));
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+    }
+
+    @Test
+    public void testWithTTLNoNear_EagerTTL() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        cacheCfg.setEagerTtl(true);
+        cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+
+        int pk = 0;
+        cache.put(pk, 0);
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+
+        // Default eager cleanup delay 500ms.
+        doSleep(1500);
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+    }
+
+    @Test
+    public void testWithCacheStore() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        cacheCfg.setEagerTtl(false);
+        cacheCfg.setCacheStoreFactory(new MapCacheStoreStrategy.MapStoreFactory());
+
+        //cacheCfg.setEagerTtl(true);
+        //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
+
+        // TODO with invokes, first put optional
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+        int pk = 0;
+        cache.put(pk, 0);
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+
+        cache.remove(pk);
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+    }
+
+    // Test reordering on atomic near cache.
+    @Test
+    public void testWithAtomicNearCache() throws Exception {
+        IgniteEx crd = startGrids(4);
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        cacheCfg.setNearConfiguration(new NearCacheConfiguration<>());
+        //cacheCfg.setEagerTtl(true);
+        //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+
+        Collection<ClusterNode> nodes = crd.affinity(DEFAULT_CACHE_NAME).mapPartitionToPrimaryAndBackups(0);
+
+        ClusterNode nearNode = null;
+
+        for (Ignite grid : G.allGrids()) {
+            if (!nodes.contains(grid.cluster().localNode())) {
+                nearNode = grid.cluster().localNode();
+
+                break;
+            }
+        }
+
+        Ignite near = grid(nearNode);
+
+        // Create reader
+        near.cache(DEFAULT_CACHE_NAME).put(0, 0);
+
+        System.out.println();
+
+
+//        int pk = 0;
+//        cache.put(pk, 0);
+//
+//        //validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+//
+//        doSleep(1500);
+//
+//        assertNull(cache.get(pk));
+//
+//        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
     }
 
     @Test

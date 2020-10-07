@@ -638,6 +638,8 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
      * Marks entry as obsolete and, if possible or required, removes it
      * from swap storage.
      *
+     * TODO get rid ??
+     *
      * @param ver Obsolete version.
      * @return {@code True} if entry was not being used, passed the filter and could be removed.
      * @throws IgniteCheckedException If failed to remove from swap.
@@ -674,7 +676,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
             if (cctx.mvccEnabled())
                 cctx.offheap().mvccRemoveAll(this);
             else
-                removeValue();
+                cctx.offheap().remove(cctx, key, partition(), locPart);
 
             // Give to GC.
             update(null, 0L, 0L, ver, true);
