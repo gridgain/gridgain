@@ -176,6 +176,7 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
         boolean putData) throws IgniteInterruptedCheckedException {
         CacheConfiguration<Long, String> ccfg = new CacheConfiguration<Long, String>(cacheName)
             .setWriteSynchronizationMode(FULL_SYNC)
+            .setBackups(1)
             .setGroupName(cacheGroup)
             .setEncryptionEnabled(true);
 
