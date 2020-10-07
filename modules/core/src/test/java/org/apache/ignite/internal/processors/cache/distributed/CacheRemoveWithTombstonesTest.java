@@ -74,7 +74,9 @@ import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -494,6 +496,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     @Test
     public void testWithAtomicNearCache() throws Exception {
         IgniteEx crd = startGrids(4);
+        awaitPartitionMapExchange();
 
         CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
         cacheCfg.setNearConfiguration(new NearCacheConfiguration<>());
@@ -501,8 +504,10 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+        awaitPartitionMapExchange();
 
-        Collection<ClusterNode> nodes = crd.affinity(DEFAULT_CACHE_NAME).mapPartitionToPrimaryAndBackups(0);
+        int part = 0;
+        Collection<ClusterNode> nodes = crd.affinity(DEFAULT_CACHE_NAME).mapPartitionToPrimaryAndBackups(part);
 
         ClusterNode nearNode = null;
 
@@ -514,10 +519,51 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
             }
         }
 
-        Ignite near = grid(nearNode);
+        IgniteEx near = (IgniteEx) grid(nearNode);
+
+        GridDhtPartitionTopology topology = near.cachex(DEFAULT_CACHE_NAME).context().near().dht().topology();
+        assertNull(topology.localPartition(part));
 
         // Create reader
-        near.cache(DEFAULT_CACHE_NAME).put(0, 0);
+        near.cache(DEFAULT_CACHE_NAME).put(part, 0);
+
+        Ignite prim = grid(nodes.iterator().next());
+
+        TestRecordingCommunicationSpi.spi(prim).blockMessages(GridDhtAtomicSingleUpdateRequest.class, near.name());
+
+        IgniteInternalFuture<?> putFut = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                prim.cache(DEFAULT_CACHE_NAME).put(part, 0);
+            }
+        }, 1, "put-thread");
+
+        TestRecordingCommunicationSpi.spi(prim).waitForBlocked();
+
+        IgniteInternalFuture<?> rmvFut = multithreadedAsync(new Runnable() {
+            @Override public void run() {
+                prim.cache(DEFAULT_CACHE_NAME).remove(part);
+            }
+        }, 1, "remove-thread");
+
+        TestRecordingCommunicationSpi.spi(prim).waitForBlocked(2);
+
+        // Apply on reverse order on backup.
+        TestRecordingCommunicationSpi.spi(prim).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
+            @Override public boolean apply(T2<ClusterNode, GridIoMessage> pair) {
+                GridIoMessage io = pair.get2();
+                GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
+
+                return msg0.value(0) == null;
+            }
+        });
+
+        rmvFut.get();
+
+        TestRecordingCommunicationSpi.spi(prim).stopBlock();
+
+        putFut.get();
+
+        Object val = near.cache(DEFAULT_CACHE_NAME).get(part);
 
         System.out.println();
 
