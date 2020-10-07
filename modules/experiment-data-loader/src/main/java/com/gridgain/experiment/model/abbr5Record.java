@@ -49,6 +49,8 @@ public class abbr5Record /*implements Binarylizable*/{
     @QuerySqlField
     private java.lang.String abbr7_dgns_9_cd;
     @QuerySqlField
+    private java.lang.String abbr7_dgns_10_cd;
+    @QuerySqlField
     private java.lang.String abbr7_dgns_11_cd;
     @QuerySqlField
     private java.lang.String abbr7_dgns_12_cd;
@@ -565,6 +567,14 @@ public class abbr5Record /*implements Binarylizable*/{
 
     public void setabbr7_dgns_9_cd(String abbr7_dgns_9_cd) {
         this.abbr7_dgns_9_cd = abbr7_dgns_9_cd;
+    }
+
+    public String getabbr7_dgns_10_cd() {
+        return abbr7_dgns_10_cd;
+    }
+
+    public void setabbr7_dgns_10_cd(String abbr7_dgns_10_cd) {
+        this.abbr7_dgns_10_cd = abbr7_dgns_10_cd;
     }
 
     public String getabbr7_dgns_11_cd() {

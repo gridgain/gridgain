@@ -24,6 +24,9 @@ import static org.apache.ignite.internal.storage.NativeType.INTEGER;
 import static org.apache.ignite.internal.storage.NativeType.LONG;
 import static org.apache.ignite.internal.storage.NativeType.STRING;
 import static org.apache.ignite.internal.storage.NativeType.VARLONG;
+import static org.apache.ignite.internal.storage.testing.ValueTupleAssembler.tupleChunkSize;
+import static org.apache.ignite.internal.storage.testing.ValueTupleAssembler.utf8EncodedLength;
+import static org.apache.ignite.internal.storage.testing.ValueTupleAssembler.varlongSize;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -33,18 +36,6 @@ import static org.junit.Assert.assertEquals;
  * TODO test sizing methods and move to tuple assembler
  */
 public class TupleTest {
-    public static final long[] VARLONG_BOUNDARIES = {
-        0xFFFFFFFFFFFFFFFFL >>> (64 - 7),
-        0xFFFFFFFFFFFFFFFFL >>> (64 - 14),
-        0xFFFFFFFFFFFFFFFFL >>> (64 - 21),
-        0xFFFFFFFFFFFFFFFFL >>> (64 - 28),
-        0xFFFFFFFFFFFFFFFFL >>> (64 - 35),
-        0xFFFFFFFFFFFFFFFFL >>> (64 - 42),
-        0xFFFFFFFFFFFFFFFFL >>> (64 - 49),
-        0xFFFFFFFFFFFFFFFFL >>> (64 - 56),
-        0xFFFFFFFFFFFFFFFFL >>> (64 - 63)
-    };
-
     @Test
     public void testFixedSizes() {
         checkSchema(
@@ -273,51 +264,5 @@ public class TupleTest {
             else
                 assertEquals(vals[i] == null ? 0L : vals[i], res);
         }
-    }
-
-    private int tupleChunkSize(Columns cols, int nonNullVarsizeCols, int nonNullVarsizeSize) {
-        int size = Tuple.TOTAL_LEN_FIELD_SIZE + Tuple.VARSIZE_TABLE_LEN_FIELD_SIZE +
-            TupleAssembler.varsizeTableSize(nonNullVarsizeCols) + cols.nullMapSize();
-
-        for (int i = 0; i < cols.numberOfFixsizeColumns(); i++)
-            size += cols.column(i).type().size();
-
-        return size + nonNullVarsizeSize;
-    }
-
-    private static int varlongSize(long val) {
-        if (val < 0)
-            return 10;
-
-        int idx = 0;
-
-        while (val > VARLONG_BOUNDARIES[idx])
-            idx++;
-
-        return idx + 1;
-    }
-
-    /**
-     * This implementation is not tolerant to malformed char sequences.
-     */
-    public static int utf8EncodedLength(CharSequence sequence) {
-        int cnt = 0;
-
-        for (int i = 0, len = sequence.length(); i < len; i++) {
-            char ch = sequence.charAt(i);
-
-            if (ch <= 0x7F)
-                cnt++;
-            else if (ch <= 0x7FF)
-                cnt += 2;
-            else if (Character.isHighSurrogate(ch)) {
-                cnt += 4;
-                ++i;
-            }
-            else
-                cnt += 3;
-        }
-
-        return cnt;
     }
 }

@@ -17,6 +17,8 @@
 
 package org.apache.ignite.internal.storage.testing;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import org.apache.ignite.internal.storage.Column;
 import org.apache.ignite.internal.storage.Columns;
 import org.apache.ignite.internal.storage.NativeType;
@@ -39,6 +41,20 @@ import org.apache.ignite.internal.storage.NativeType;
 public abstract class ValueTuple {
     public static final int TOTAL_LEN_FIELD_SIZE = 2;
     public static final int VARSIZE_TABLE_LEN_FIELD_SIZE = 2;
+
+    public int shortValue(Columns cols, int col) {
+        // Get base offset (key start or value start) for the given column.
+        int baseOff = 0;
+
+        checkColumn(cols, col, NativeType.SHORT);
+
+        if (isNull(baseOff, col))
+            return 0;
+
+        int off = fixlenColumnOffset(cols, baseOff, col);
+
+        return readShort(off);
+    }
 
     public int intValue(Columns cols, int col) {
         // Get base offset (key start or value start) for the given column.
@@ -96,6 +112,49 @@ public abstract class ValueTuple {
         int len = (int)(offLen >>> 32);
 
         return readString(off, len);
+    }
+
+    public BigDecimal bigDecimalValue(Columns cols, int col) {
+        // Get base offset (key start or value start) for the given column.
+        int baseOff = 0;
+
+        checkColumn(cols, col, NativeType.BIGDECIMAL);
+
+        if (isNull(baseOff, col))
+            return null;
+
+        long offLen = varlenColumnOffsetAndLength(cols, baseOff, col);
+        int off = (int)offLen;
+        int len = (int)(offLen >>> 32);
+
+        int scale = readInteger(off);
+        byte[] intBytes = new byte[len - 4];
+        readBytes(intBytes, off + 4);
+
+        return new BigDecimal(new BigInteger(intBytes), scale);
+    }
+
+    public Object objectValue(Columns cols, int colIdx) {
+        Column col = cols.column(colIdx);
+        NativeType type = col.type();
+
+        if (isNull(0, colIdx))
+            return null;
+
+        if (type == NativeType.VARLONG)
+            return varlongValue(cols, colIdx);
+        else if (type == NativeType.STRING)
+            return stringValue(cols, colIdx);
+        else if (type == NativeType.BIGDECIMAL)
+            return bigDecimalValue(cols, colIdx);
+        else if (type == NativeType.LONG)
+            return longValue(cols, colIdx);
+        else if (type == NativeType.INTEGER)
+            return intValue(cols, colIdx);
+        else if (type == NativeType.SHORT)
+            return shortValue(cols, colIdx);
+        else
+            throw new IllegalArgumentException("Unsupported column type: " + col);
     }
 
     private void checkColumn(Columns cols, int idx, NativeType type) {
@@ -194,6 +253,8 @@ public abstract class ValueTuple {
     protected abstract long readLong(int off);
 
     protected abstract int readInteger(int off);
+
+    protected abstract void readBytes(byte[] out, int off);
 
     protected abstract int readShort(int off);
 

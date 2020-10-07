@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResu
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccLinkAwareSearchRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
+import org.apache.ignite.internal.storage.Columns;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.IgniteTree;
@@ -569,6 +570,8 @@ public interface IgniteCacheOffheapManager {
      * @throws IgniteCheckedException If failed.
      */
     public void preloadPartition(int part) throws IgniteCheckedException;
+
+    public Columns initializeConverterSchema(String typeName);
 
     /**
      *

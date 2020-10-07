@@ -8,6 +8,13 @@
     <artifactId>data-loader</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <parent>
+        <groupId>org.gridgain</groupId>
+        <artifactId>community.parent</artifactId>
+        <version>1</version>
+        <relativePath>../../parent</relativePath>
+    </parent>
+
     <build>
         <pluginManagement>
             <plugins>
@@ -96,7 +103,7 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <ignite.version>2.8.0-SNAPSHOT</ignite.version>
+        <ignite.version>8.7.127-SNAPSHOT</ignite.version>
     </properties>
 
     <repositories>
@@ -108,19 +115,19 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.ignite</groupId>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
             <version>${ignite.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.ignite</groupId>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-spring</artifactId>
             <version>${ignite.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.ignite</groupId>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-indexing</artifactId>
             <version>${ignite.version}</version>
         </dependency>
@@ -132,7 +139,7 @@
         <!--</dependency>-->
 
         <dependency>
-            <groupId>org.apache.ignite</groupId>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-rest-http</artifactId>
             <version>${ignite.version}</version>
         </dependency>

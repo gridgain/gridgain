@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,7 +42,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.NodeStoppingException;
-import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
+import org.apache.ignite.internal.binary.nextgen.TupleCacheObject;
 import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
 import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
@@ -98,6 +99,12 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccSnapshot
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccTreeClosure;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
+import org.apache.ignite.internal.storage.Column;
+import org.apache.ignite.internal.storage.Columns;
+import org.apache.ignite.internal.storage.NativeType;
+import org.apache.ignite.internal.storage.TupleAssembler;
+import org.apache.ignite.internal.storage.testing.HeapValueTuple;
+import org.apache.ignite.internal.storage.testing.ValueTupleAssembler;
 import org.apache.ignite.internal.transactions.IgniteTxUnexpectedStateCheckedException;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
@@ -185,6 +192,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /** */
     protected GridStripedLock partStoreLock = new GridStripedLock(Runtime.getRuntime().availableProcessors());
+
+    /** */
+    protected Columns schemaCols;
 
     /** {@inheritDoc} */
     @Override public GridAtomicLong globalRemoveId() {
@@ -360,6 +370,20 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /** {@inheritDoc} */
     @Override public void preloadPartition(int p) throws IgniteCheckedException {
         throw new IgniteCheckedException("Operation only applicable to caches with enabled persistence");
+    }
+
+    /** {@inheritDoc} */
+    @Override public Columns initializeConverterSchema(String valClsName) {
+        try {
+            Class<?> valCls = Class.forName(valClsName);
+
+            schemaCols = Columns.ofClass(valCls);
+
+            return schemaCols;
+        }
+        catch (ClassNotFoundException e) {
+            return null;
+        }
     }
 
     /**
@@ -1752,18 +1776,62 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         private CacheObject tryConvert(CacheObject val) {
+//            if (true)
+//                return val;
+
             if (!(val instanceof BinaryObject))
                 return val;
 
+            Object[] vals = new Object[schemaCols.length()];
+            int nonNullVarsizeCols = 0;
+            int varsizeSize = 0;
             BinaryObject bin = (BinaryObject)val;
-            Function<BinaryObject, BikeTuple> tr = BikeConverterRegistry.converter(bin.type().typeId());
-            if (tr == null)
-                return val;
 
-            BikeTuple bike = tr.apply(bin);
+            for (int i = 0; i < vals.length; i++) {
+                Column col = schemaCols.column(i);
+
+                vals[i] = bin.field(col.name());
+
+                if (!col.type().fixedSize() && vals[i] != null) {
+                    nonNullVarsizeCols++;
+
+                    if (col.type() == NativeType.VARLONG)
+                        varsizeSize += ValueTupleAssembler.varlongSize(((Number)vals[i]).longValue());
+                    else if (col.type() == NativeType.STRING)
+                        varsizeSize += ValueTupleAssembler.utf8EncodedLength((CharSequence)vals[i]);
+                    else if (col.type() == NativeType.BIGDECIMAL)
+                        varsizeSize += ValueTupleAssembler.bigDecimalSize((BigDecimal)vals[i]);
+                    else
+                        throw new IllegalArgumentException("Unsupported type: " + col);
+                }
+            }
+
+            ValueTupleAssembler asm = new ValueTupleAssembler(schemaCols,
+                ValueTupleAssembler.tupleChunkSize(schemaCols, nonNullVarsizeCols, varsizeSize), nonNullVarsizeCols);
+
+            for (int i = 0; i < vals.length; i++) {
+                Column col = schemaCols.column(i);
+
+                if (vals[i] == null)
+                    asm.appendNull();
+                else if (col.type() == NativeType.SHORT)
+                    asm.appendShort((Short)vals[i]);
+                else if (col.type() == NativeType.INTEGER)
+                    asm.appendInt((Integer)vals[i]);
+                else if (col.type() == NativeType.LONG)
+                    asm.appendLong((Long)vals[i]);
+                else if (col.type() == NativeType.VARLONG)
+                    asm.appendVarlong(((Number)vals[i]).longValue());
+                else if (col.type() == NativeType.BIGDECIMAL)
+                    asm.appendBigDecimal((BigDecimal)vals[i]);
+                else if (col.type() == NativeType.STRING)
+                    asm.appendString((String)vals[i]);
+                else
+                    throw new IllegalArgumentException("Unsupported type: " + col);
+            }
 //            BikeConverterRegistry.binStat.appendStat(((BinaryObjectExImpl)bin).length());
 //            BikeConverterRegistry.bikeStat.appendStat(bike.data().length);
-            return new BikeCacheObject(bike, bin.type().typeId());
+            return new TupleCacheObject(new HeapValueTuple(asm.build()), bin.type().typeId());
         }
 
         /** {@inheritDoc} */

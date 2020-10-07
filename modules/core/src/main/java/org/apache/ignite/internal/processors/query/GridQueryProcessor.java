@@ -61,7 +61,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
-import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
+import org.apache.ignite.internal.binary.nextgen.TupleCacheObject;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -2279,8 +2279,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         boolean binaryVal = ctx.cacheObjects().isBinaryObject(val);
 
-        if (val instanceof BikeCacheObject) {
-            id = new QueryTypeIdKey(cacheName, ((BikeCacheObject)val).binaryTypeId());
+        if (val instanceof TupleCacheObject) {
+            id = new QueryTypeIdKey(cacheName, ((TupleCacheObject)val).binaryTypeId());
         }
         else if (binaryVal) {
             int typeId = ctx.cacheObjects().typeId(val);

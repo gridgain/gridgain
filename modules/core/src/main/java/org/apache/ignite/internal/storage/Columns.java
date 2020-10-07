@@ -17,7 +17,9 @@
 
 package org.apache.ignite.internal.storage;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.NoSuchElementException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -33,6 +35,7 @@ public class Columns {
     private final int nullMapSize;
 
     private int[][] foldingTable;
+
     private int[] foldingMask;
 
     static {
@@ -45,6 +48,22 @@ public class Columns {
 
     public static int numberOfNullColumns(int nullmapByte) {
         return NULL_COLUMNS_LOOKUP[nullmapByte];
+    }
+
+    public static Columns ofClass(Class cls) {
+        Field[] flds = cls.getDeclaredFields();
+
+        Column[] cols = new Column[flds.length];
+
+        for (int i = 0; i < flds.length; i++) {
+            Field fld = flds[i];
+
+            Class<?> fldCls = fld.getType();
+
+            cols[i] = new Column(fld.getName(), NativeType.mapType(fldCls), !fldCls.isPrimitive());
+        }
+
+        return new Columns(cols);
     }
 
     public Columns(Column... cols) {
@@ -172,5 +191,14 @@ public class Columns {
         }
 
         return size;
+    }
+
+    public int columnIndex(String fieldName) {
+        for (int i = 0; i < cols.length; i++) {
+            if (cols[i].name().equalsIgnoreCase(fieldName))
+                return i;
+        }
+
+        throw new NoSuchElementException("No field '" + fieldName + "' defined");
     }
 }

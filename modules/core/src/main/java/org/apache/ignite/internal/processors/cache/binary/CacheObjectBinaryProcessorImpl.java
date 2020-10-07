@@ -68,7 +68,7 @@ import org.apache.ignite.internal.binary.BinaryTypeImpl;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
-import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
+import org.apache.ignite.internal.binary.nextgen.TupleCacheObject;
 import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOffheapInputStream;
@@ -91,6 +91,7 @@ import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectByteArra
 import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectImpl;
 import org.apache.ignite.internal.processors.cacheobject.UserKeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.storage.testing.HeapValueTuple;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.MutableSingletonList;
@@ -1231,11 +1232,8 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             case CacheObject.TYPE_BIKE:
                 // t0d0 schema
-                BikeTuple bikeTuple = new BikeTuple(bytes);
-//                return BikeConverterRegistry.queryApi.get()
-//                    ? new BikeCacheObject(bikeTuple, 0)
-//                    : BikeConverterRegistry.backConverter(bikeTuple.typeId()).apply(bikeTuple);
-                return new BikeCacheObject(bikeTuple, 0);
+                HeapValueTuple tup = new HeapValueTuple(bytes);
+                return new TupleCacheObject(tup, 0);
         }
 
         throw new IllegalArgumentException("Invalid object type: " + type);

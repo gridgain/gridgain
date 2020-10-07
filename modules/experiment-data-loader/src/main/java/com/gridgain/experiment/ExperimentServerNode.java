@@ -24,7 +24,7 @@ public class ExperimentServerNode {
         Thread spaceMetricsThread = new Thread(() -> {
             try {
                 for (int i = 0; i <= Integer.MAX_VALUE; i++) {
-                    TimeUnit.SECONDS.sleep(50);
+                    TimeUnit.SECONDS.sleep(30);
 
                     DataRegionMetrics m = ignite.dataRegionMetrics("Default_Region");
 

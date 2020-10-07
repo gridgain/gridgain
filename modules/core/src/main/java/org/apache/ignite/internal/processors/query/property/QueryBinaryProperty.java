@@ -24,9 +24,13 @@ import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.binary.BinaryObjectExImpl;
-import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
+import org.apache.ignite.internal.binary.nextgen.TupleCacheObject;
 import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
+import org.apache.ignite.internal.storage.Column;
+import org.apache.ignite.internal.storage.Columns;
+import org.apache.ignite.internal.storage.NativeType;
+import org.apache.ignite.internal.storage.testing.HeapValueTuple;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
@@ -72,14 +76,21 @@ public class QueryBinaryProperty implements GridQueryProperty {
     /** */
     private final int scale;
 
-    private int bikeOrdinal = -1;
+    private Columns cols;
 
-    public void setBikeOrdinal(int bikeOrdinal) {
-        this.bikeOrdinal = bikeOrdinal;
+    private NativeType nativeType;
+
+    private int colIdx;
+
+    public void setTupleOrdinal(Columns cols, String fieldName) {
+        this.cols = cols;
+
+        colIdx = cols.columnIndex(fieldName);
+        nativeType = cols.column(colIdx).type();
     }
 
-    @Override public int getBikeOrdinal() {
-        return bikeOrdinal;
+    @Override public int getColumnIndex() {
+        return colIdx;
     }
 
     /**
@@ -112,11 +123,19 @@ public class QueryBinaryProperty implements GridQueryProperty {
     }
 
     @Override public int intValue(Object key, Object val) {
-        return ((BikeCacheObject)val).tuple().attrInt(bikeOrdinal);
+        HeapValueTuple tup = ((TupleCacheObject)val).tuple();
+
+        return nativeType == NativeType.VARLONG ?
+            (int)tup.varlongValue(cols, colIdx) :
+            tup.intValue(cols, colIdx);
     }
 
     @Override public long longValue(Object key, Object val) {
-        return ((BikeCacheObject)val).tuple().attrLong(bikeOrdinal);
+        HeapValueTuple tup = ((TupleCacheObject)val).tuple();
+
+        return nativeType == NativeType.VARLONG ?
+            tup.varlongValue(cols, colIdx) :
+            tup.longValue(cols, colIdx);
     }
 
     /** {@inheritDoc} */
@@ -136,11 +155,12 @@ public class QueryBinaryProperty implements GridQueryProperty {
         else
             obj = isKeyProp ? key : val;
 
-//        if (bikeFormat) {
-            if (obj.getClass() == BikeCacheObject.class) {
-                BikeCacheObject obj0 = (BikeCacheObject)obj;
+            if (obj.getClass() == TupleCacheObject.class) {
+                TupleCacheObject obj0 = (TupleCacheObject)obj;
 
-                return obj0.tuple().attr(bikeOrdinal, type, intType);
+                HeapValueTuple tup = obj0.tuple();
+
+                return tup.objectValue(cols, colIdx);
             }
             else if (obj instanceof BinaryObjectBuilder) {
                 BinaryObjectBuilder obj0 = (BinaryObjectBuilder)obj;

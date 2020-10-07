@@ -23,35 +23,36 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectAdapter;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
+import org.apache.ignite.internal.storage.testing.HeapValueTuple;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
-public class BikeCacheObject implements CacheObject {
+public class TupleCacheObject implements CacheObject {
     private static final long serialVersionUID = 0L;
 
-    private final BikeTuple bike;
+    private final HeapValueTuple tup;
     private final int binTypeId;
 
-    public BikeCacheObject(BikeTuple bike, int binTypeId) {
-        this.bike = bike;
+    public TupleCacheObject(HeapValueTuple tup, int binTypeId) {
+        this.tup = tup;
         this.binTypeId = binTypeId;
     }
 
-    public BikeTuple tuple() {
-        return bike;
+    public HeapValueTuple tuple() {
+        return tup;
     }
 
     @Override public <T> @Nullable T value(CacheObjectValueContext ctx, boolean cpy) {
         return (T)this;
     }
 
-    @Override public byte[] valueBytes(CacheObjectValueContext ctx) throws IgniteCheckedException {
-        return bike.data();
+    @Override public byte[] valueBytes(CacheObjectValueContext ctx) {
+        return tup.data();
     }
 
-    @Override public int valueBytesLength(CacheObjectContext ctx) throws IgniteCheckedException {
-        return CacheObjectAdapter.objectPutSize(bike.data().length);
+    @Override public int valueBytesLength(CacheObjectContext ctx) {
+        return CacheObjectAdapter.objectPutSize(tup.data().length);
     }
 
     @Override public boolean putValue(ByteBuffer buf) throws IgniteCheckedException {
@@ -59,7 +60,7 @@ public class BikeCacheObject implements CacheObject {
     }
 
     @Override public int putValue(long addr) throws IgniteCheckedException {
-        byte[] data = bike.data();
+        byte[] data = tup.data();
 
         return CacheObjectAdapter.putValue(addr, CacheObject.TYPE_BIKE, data, 0, data.length);
     }

@@ -25,8 +25,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.binary.nextgen.BikeBuilder;
-import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
-import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
+import org.apache.ignite.internal.binary.nextgen.TupleCacheObject;
 import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -39,6 +38,8 @@ import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.property.QueryBinaryProperty;
+import org.apache.ignite.internal.storage.Columns;
+import org.apache.ignite.internal.storage.testing.HeapValueTuple;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.result.SearchRow;
 import org.gridgain.internal.h2.value.Value;
@@ -127,14 +128,15 @@ public class GridH2RowDescriptor {
 
         props = new GridQueryProperty[fields.length];
 
-        int bikeOrd = 0;
+        Columns cols = tableDescriptor().cache().offheap().initializeConverterSchema(type.valueTypeName());
+
         for (int i = 0; i < fields.length; i++) {
             GridQueryProperty p = type.property(fields[i]);
 
             assert p != null : fields[i];
 
             if (p instanceof QueryBinaryProperty && isNotPartOfKeyHack(p))
-                ((QueryBinaryProperty)p).setBikeOrdinal(bikeOrd++);
+                ((QueryBinaryProperty)p).setTupleOrdinal(cols, fields[i]);
 
             props[i] = p;
         }
@@ -146,10 +148,6 @@ public class GridH2RowDescriptor {
 
         valAliasColId = (type.valueFieldName() != null) ?
             QueryUtils.DEFAULT_COLUMNS_COUNT + fieldsList.indexOf(type.valueFieldAlias()) : COL_NOT_EXISTS;
-
-        // t0d0 figure out what is the proper mapping strategy
-        BikeConverterRegistry.registerConverter(type.typeId(), this::binaryToBike);
-//        BikeConverterRegistry.registerBackConverter(type.typeId(), this::bikeToBinary);
     }
 
     private boolean isNotPartOfKeyHack(GridQueryProperty prop) {
@@ -258,11 +256,11 @@ public class GridH2RowDescriptor {
     public Value columnValue(Object key, Object val, int col,
         CacheObjectValueContext coCtx) {
         try {
-            assert val instanceof BikeCacheObject;
+//            assert val instanceof TupleCacheObject;
 
             GridQueryProperty p = props[col];
 
-            if (p.getBikeOrdinal() != -1) {
+            if (p.getColumnIndex() != -1) {
                 switch (fieldType(col)) {
                     case Value.INT:
                         return ValueInt.get(p.intValue(key, val));
@@ -270,6 +268,7 @@ public class GridH2RowDescriptor {
                         return ValueLong.get(p.longValue(key, val));
                 }
             }
+
             Object res = p.value(key, val);
 
             return res == null ? ValueNull.INSTANCE : H2Utils.wrap(coCtx, res, fieldType(col));
@@ -321,15 +320,16 @@ public class GridH2RowDescriptor {
         }
     }
 
-    private BinaryObjectImpl bikeToBinary(BikeTuple bike) {
-        BinaryObjectBuilder builder = context().kernalContext().cacheObjects().binary().builder(type.valueTypeName());
-        for (GridQueryProperty prop : props) {
-            int bikeOrdinal = prop.getBikeOrdinal();
-            if (bikeOrdinal != -1)
-                builder.setField(prop.name(), bike.attr(bikeOrdinal, prop.type(), -1));
-        }
-        return (BinaryObjectImpl)builder.build();
-    }
+//    private BinaryObjectImpl bikeToBinary(HeapValueTuple tup) {
+//        BinaryObjectBuilder builder = context().kernalContext().cacheObjects().binary().builder(type.valueTypeName());
+//        for (GridQueryProperty prop : props) {
+//            int colIdx = prop.getColumnIndex();
+//
+//            if (colIdx != -1)
+//                builder.setField(prop.name(), tup.objectValue(cols, colIdx));
+//        }
+//        return (BinaryObjectImpl)builder.build();
+//    }
 
     /**
      * Determine whether a column corresponds to a property of key or to one of value.

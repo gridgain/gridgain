@@ -17,6 +17,7 @@
 
 package org.apache.ignite.internal.storage.testing;
 
+import java.math.BigDecimal;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -27,11 +28,75 @@ import org.apache.ignite.internal.binary.BinaryPrimitives;
 import org.apache.ignite.internal.storage.Column;
 import org.apache.ignite.internal.storage.Columns;
 import org.apache.ignite.internal.storage.NativeType;
+import org.apache.ignite.internal.storage.Tuple;
+import org.apache.ignite.internal.storage.TupleAssembler;
 
 /**
  *
  */
 public class ValueTupleAssembler {
+    public static final long[] VARLONG_BOUNDARIES = {
+        0xFFFFFFFFFFFFFFFFL >>> (64 - 7),
+        0xFFFFFFFFFFFFFFFFL >>> (64 - 14),
+        0xFFFFFFFFFFFFFFFFL >>> (64 - 21),
+        0xFFFFFFFFFFFFFFFFL >>> (64 - 28),
+        0xFFFFFFFFFFFFFFFFL >>> (64 - 35),
+        0xFFFFFFFFFFFFFFFFL >>> (64 - 42),
+        0xFFFFFFFFFFFFFFFFL >>> (64 - 49),
+        0xFFFFFFFFFFFFFFFFL >>> (64 - 56),
+        0xFFFFFFFFFFFFFFFFL >>> (64 - 63)
+    };
+
+    public static int varlongSize(long val) {
+        if (val < 0)
+            return 10;
+
+        int idx = 0;
+
+        while (val > VARLONG_BOUNDARIES[idx])
+            idx++;
+
+        return idx + 1;
+    }
+
+    /**
+     * This implementation is not tolerant to malformed char sequences.
+     */
+    public static int utf8EncodedLength(CharSequence sequence) {
+        int cnt = 0;
+
+        for (int i = 0, len = sequence.length(); i < len; i++) {
+            char ch = sequence.charAt(i);
+
+            if (ch <= 0x7F)
+                cnt++;
+            else if (ch <= 0x7FF)
+                cnt += 2;
+            else if (Character.isHighSurrogate(ch)) {
+                cnt += 4;
+                ++i;
+            }
+            else
+                cnt += 3;
+        }
+
+        return cnt;
+    }
+
+    public static int varsizeTableSize(int nonNullVarsizeCols) {
+        return nonNullVarsizeCols * 2;
+    }
+
+    public static int tupleChunkSize(Columns cols, int nonNullVarsizeCols, int nonNullVarsizeSize) {
+        int size = Tuple.TOTAL_LEN_FIELD_SIZE + Tuple.VARSIZE_TABLE_LEN_FIELD_SIZE +
+            TupleAssembler.varsizeTableSize(nonNullVarsizeCols) + cols.nullMapSize();
+
+        for (int i = 0; i < cols.numberOfFixsizeColumns(); i++)
+            size += cols.column(i).type().size();
+
+        return size + nonNullVarsizeSize;
+    }
+
     /** */
     private final Columns cols;
 
@@ -51,13 +116,6 @@ public class ValueTupleAssembler {
 
     private CharsetEncoder stringEncoder;
 
-    /** */
-    private int keyHash;
-
-    public static int varsizeTableSize(int nonNullVarsizeCols) {
-        return nonNullVarsizeCols * 2;
-    }
-
     public ValueTupleAssembler(
         Columns cols,
         int size,
@@ -68,6 +126,10 @@ public class ValueTupleAssembler {
         arr = new byte[size];
 
         initOffsets(nonNullVarsizeCols);
+    }
+
+    public static int bigDecimalSize(BigDecimal val) {
+        return 4 + val.unscaledValue().bitLength() / 8 + 1;
     }
 
     public void appendNull() {
@@ -90,6 +152,14 @@ public class ValueTupleAssembler {
         shiftColumn(NativeType.INTEGER.size(), false);
     }
 
+    public void appendShort(short val) {
+        checkType(NativeType.SHORT);
+
+        BinaryPrimitives.writeShort(arr, curOff, val);
+
+        shiftColumn(NativeType.SHORT.size(), false);
+    }
+
     public void appendLong(long val) {
         checkType(NativeType.LONG);
 
@@ -103,6 +173,8 @@ public class ValueTupleAssembler {
 
         int size = BinaryPrimitives.writeVarlong(arr, curOff, val);
         writeOffset(curVarsizeTblEntry, curOff);
+
+        assert size == varlongSize(val);
 
         shiftColumn(size, true);
     }
@@ -126,7 +198,26 @@ public class ValueTupleAssembler {
 
         writeOffset(curVarsizeTblEntry, curOff);
 
+        assert wrapper.position() - curOff == utf8EncodedLength(val);
+
         shiftColumn(wrapper.position() - curOff, true);
+    }
+
+    public void appendBigDecimal(BigDecimal val) {
+        checkType(NativeType.BIGDECIMAL);
+
+        byte[] intBytes = val.unscaledValue().toByteArray();
+
+        BinaryPrimitives.writeInt(arr, curOff, val.scale());
+
+        System.arraycopy(intBytes, 0, arr, curOff + 4, intBytes.length);
+
+        writeOffset(curVarsizeTblEntry, curOff);
+
+        assert intBytes.length + 4 == bigDecimalSize(val) : "Failed [bl=" + intBytes.length +
+            ", bds=" + bigDecimalSize(val) + ", bd=" + val;
+
+        shiftColumn(intBytes.length + 4, true);
     }
 
     private CharsetEncoder encoder() {

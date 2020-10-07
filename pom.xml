@@ -43,6 +43,7 @@
     <modules>
         <module>modules/apache-license-gen</module>
         <module>modules/tools</module>
+        <module>modules/experiment-data-loader</module>
         <module>modules/core</module>
         <module>modules/compress</module>
         <module>modules/dev-utils</module>

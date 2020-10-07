@@ -55,6 +55,11 @@ public class HeapValueTuple extends ValueTuple {
     }
 
     /** {@inheritDoc} */
+    @Override protected void readBytes(byte[] out, int off) {
+        System.arraycopy(arr, off, out, 0, out.length);
+    }
+
+    /** {@inheritDoc} */
     @Override protected int readShort(int off) {
         return BinaryPrimitives.readShort(arr, off) & 0xFFFF;
     }
@@ -64,4 +69,7 @@ public class HeapValueTuple extends ValueTuple {
         return arr[off] & 0xFF;
     }
 
+    public byte[] data() {
+        return arr;
+    }
 }

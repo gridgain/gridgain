@@ -17,10 +17,16 @@
 
 package org.apache.ignite.internal.storage;
 
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  *
  */
 public class NativeType implements Comparable<NativeType> {
+    public static final NativeType SHORT = new NativeType("short", 2);
     public static final NativeType INTEGER = new NativeType("integer", 4);
     public static final NativeType LONG = new NativeType("long", 8);
     public static final NativeType DATE = new NativeType("date", 3);
@@ -29,11 +35,36 @@ public class NativeType implements Comparable<NativeType> {
     public static final NativeType INSTANT = new NativeType("instant", 8);
     public static final NativeType UUID = new NativeType("uuid", 16);
     public static final NativeType STRING = new NativeType("string");
+    public static final NativeType BIGDECIMAL = new NativeType("bigdecimal");
     public static final NativeType VARLONG = new NativeType("varlong");
 
     private final int size;
 
     private final String desc;
+
+    private static final Map<Class<?>, NativeType> predefinedMapping;
+
+    static {
+        predefinedMapping = Collections.unmodifiableMap(new HashMap<Class<?>, NativeType>() {{
+            put(short.class, SHORT);
+            put(Short.class, SHORT);
+            put(int.class, INTEGER);
+            put(Integer.class, INTEGER);
+            put(long.class, LONG);
+            put(Long.class, LONG);
+            put(String.class, STRING);
+            put(BigDecimal.class, BIGDECIMAL);
+        }});
+    }
+
+    public static NativeType mapType(Class<?> fldCls) {
+        NativeType type = predefinedMapping.get(fldCls);
+
+        if (type == null)
+            throw new IllegalArgumentException("Field class is not supported: " + fldCls);
+
+        return type;
+    }
 
     private NativeType(String desc) {
         this(desc, -1);

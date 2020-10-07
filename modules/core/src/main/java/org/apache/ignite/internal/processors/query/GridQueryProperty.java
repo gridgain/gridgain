@@ -99,7 +99,7 @@ public interface GridQueryProperty {
         return 0;
     }
 
-    default int getBikeOrdinal() {
+    default int getColumnIndex() {
         return -1;
     }
 }
