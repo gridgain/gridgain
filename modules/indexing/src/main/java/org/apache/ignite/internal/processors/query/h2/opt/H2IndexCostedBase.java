@@ -790,8 +790,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     else if (isNotNullFilter(ses, column, filter)) {
                         if (colStats != null)
                             rowsCost = Math.min(5 + Math.max(rowsCost * (100 - colStats.nulls()) / 100, 1), rowsCost - (i > 0 ? 1 : 0));
-                    }
-                    break;
+                    } else
+                        break;
                 }
             }
             return rowsCost;
@@ -1218,7 +1218,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 // columns (the more columns we have in index - the higher cost).
                 // This is faster because a smaller index will fit into fewer data
                 // blocks.
-                rc = rowsCost + sortingCost + columns.length;
+                rc = rowsCost + sortingCost + 20;
             }
 
             return rc;
