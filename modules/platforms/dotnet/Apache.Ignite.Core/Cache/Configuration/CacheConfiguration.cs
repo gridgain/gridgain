@@ -463,7 +463,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
                         NodeFilter.GetType().Name, typeof(AttributeNodeFilter).Name));
                 }
 
-                ((AttributeNodeFilter) NodeFilter).Write(writer);
+                attributeNodeFilter.Write(writer);
             }
             else
             {
@@ -973,9 +973,9 @@ namespace Apache.Ignite.Core.Cache.Configuration
         public PlatformCacheConfiguration PlatformCacheConfiguration { get; set; }
 
         /// <summary>
-        /// Cluster node filter.
-        /// Only predefined implementations are supported now: 
-        /// <see cref="AttributeNodeFilter"/>.
+        /// Gets or sets the cluster node filter. Cache will be started only on nodes that match the filter.
+        /// <para />
+        /// Only predefined implementations are supported: <see cref="AttributeNodeFilter"/>.
         /// </summary>
         public IClusterNodeFilter NodeFilter { get; set; }
     }

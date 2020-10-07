@@ -25,11 +25,10 @@ namespace Apache.Ignite.Core.Cluster
 
     /// <summary>
     /// Attribute node filter.
-    ///
-    /// The filter will evaluate to true if a node has provided attribute set to
-    /// corresponding values.
-    ///
-    /// You can set user attribute using <see cref="IgniteConfiguration.UserAttributes"/> property. 
+    /// <para />
+    /// The filter will evaluate to true if a node has all specified attributes with corresponding values.
+    /// <para />
+    /// You can set node attributes using <see cref="IgniteConfiguration.UserAttributes"/> property. 
     /// </summary>
     public sealed class AttributeNodeFilter : IClusterNodeFilter
     {
