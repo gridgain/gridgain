@@ -158,8 +158,6 @@ public:
         try
         {
             {
-                std::cout << "Loading data to the server" << std::endl;
-
                 boost::shared_ptr<Benchmark> loadBench = factory.Construct();
 
                 loadBench->SetUp();

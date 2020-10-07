@@ -29,6 +29,9 @@
 #include <sstream>
 #include <exception>
 
+/**
+ * The Person struct.
+ */
 struct Person
 {
     SQLINTEGER id;
@@ -47,12 +50,16 @@ std::ostream& operator<<(std::ostream& os, const Person& val)
     return os;
 }
 
+/**
+ * ODBC SQL Benchmark.
+ *
+ * It's implemented to match native SQL benchmark as best as possible using ODBC.
+ */
 class OdbcSqlBenchmark : public benchmark::OdbcBenchmark
 {
 public:
     OdbcSqlBenchmark(boost::shared_ptr<const ConfigType> cfg) :
-        OdbcBenchmark(cfg),
-        loadLock(false)
+        OdbcBenchmark(cfg)
     {
         // No-op.
     }
@@ -62,28 +69,20 @@ public:
         // No-op.
     }
 
-    /**
-     * Try lock cache for data load.
-     * @return @c true if locked successfully and @c false if already locked.
-     */
-    bool TryLockDataLoad()
+    bool IsDataLoaded()
     {
         try
         {
-            if (config->cacheName == "PUBLIC")
-            {
-                odbc_utils::ExecuteNoFetch(dbc, "CREATE TABLE PUBLIC.BenchLock (id int primary key)");
-            }
-            else
-            {
-                std::stringstream query;
-                int32_t lKey = config->cacheRangeBegin - 1;
+            int64_t expectedRows = config->cacheRangeEnd - config->cacheRangeBegin;
 
-                query << "INSERT INTO " << fullTableName << " (_key, id) VALUES (" << lKey << ", " << lKey << ')';
+            SQLHSTMT stmt = odbc_utils::Execute(dbc, "SELECT COUNT(*) FROM " + fullTableName);
 
-                odbc_utils::ExecuteNoFetch(dbc, query.str());
-            }
-            return true;
+            odbc_utils::NextRow(stmt);
+            int64_t rowsActual = odbc_utils::GetSigleColumn<int64_t>(stmt, 1);
+
+            SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+
+            return expectedRows == rowsActual;
         }
         catch (...)
         {
@@ -91,42 +90,27 @@ public:
         }
     }
 
-    /**
-     * Unlock cache data load.
-     */
-    void UnlockDataLoad()
-    {
-        try
-        {
-            if (config->cacheName == "PUBLIC")
-            {
-                odbc_utils::ExecuteNoFetch(dbc, "DROP TABLE PUBLIC.BenchLock (id int primary key)");
-            }
-            else
-            {
-                std::stringstream query;
-                int32_t lKey = config->cacheRangeBegin - 1;
-
-                query << "DELETE FROM " << fullTableName << " WHERE _key=" << lKey;
-
-                odbc_utils::ExecuteNoFetch(dbc, query.str());
-            }
-        }
-        catch (...)
-        {
-            // No-op.
-        }
-    }
-
     virtual void LoadData()
     {
-        loadLock = TryLockDataLoad();
-
-        if (!loadLock)
+        if (IsDataLoaded())
             return;
+
+        odbc_utils::OdbcLock loadLock(dbc, "load_lock");
+
+        bool locked = loadLock.TimedLock(20);
+
+        if (!locked)
+            throw std::runtime_error("It takes too long to load data. Possible data corruption. Try restarting cluster.");
+
+        if (IsDataLoaded())
+            return;
+
+        std::cout << "Loading data to the server" << std::endl;
 
         if (config->cacheName == "PUBLIC")
         {
+            std::cout << "Schema is 'PUBLIC'. Creating table and indices..." << std::endl;
+
             odbc_utils::ExecuteNoFetch(dbc, "DROP TABLE IF EXISTS PUBLIC.Person");
             odbc_utils::ExecuteNoFetch(dbc, "CREATE TABLE PUBLIC.Person ("
                                             "   id int PRIMARY KEY, "
@@ -150,7 +134,7 @@ public:
             odbc_utils::ExecuteNoFetch(dbc, "CREATE INDEX ON PUBLIC.Person (id, salary)");
         }
 
-        std::cout << "Cleaning table" << std::endl;
+        std::cout << "Cleaning table..." << std::endl;
         odbc_utils::ExecuteNoFetch(dbc, "DELETE FROM " + fullTableName);
 
         std::cout << "Filling table..." << std::endl;
@@ -187,9 +171,6 @@ public:
 
     virtual void CleanUp()
     {
-        if (loadLock)
-            UnlockDataLoad();
-
         OdbcBenchmark::CleanUp();
     }
 
@@ -266,9 +247,6 @@ private:
 
     /** Array for fetched values. */
     std::vector<Person> persons;
-
-    /** Lock. */
-    bool loadLock;
 };
 
 class OdbcSqlBenchmarkFactory : public benchmark::BenchmarkFactory<OdbcSqlBenchmark>

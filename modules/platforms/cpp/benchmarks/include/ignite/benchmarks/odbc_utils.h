@@ -26,6 +26,9 @@
 #include <string>
 #include <sstream>
 
+#include <boost/chrono.hpp>
+#include <boost/thread.hpp>
+
 namespace odbc_utils
 {
 
@@ -120,32 +123,9 @@ void CheckOdbcOperation(SQLRETURN ret, SQLSMALLINT handleType, SQLHANDLE handle,
 }
 
 /**
- * Fetch cache data using ODBC interface.
+ * Execute SQL query using ODBC interface.
  */
-void ExecuteAndFetch(SQLHDBC dbc, const std::string& query)
-{
-    SQLHSTMT stmt;
-
-    // Allocate a statement handle
-    SQLAllocHandle(SQL_HANDLE_STMT, dbc, &stmt);
-
-    std::vector<SQLCHAR> buf(query.begin(), query.end());
-
-    SQLRETURN ret = SQLExecDirect(stmt, &buf[0], static_cast<SQLSMALLINT>(buf.size()));
-
-    if (SQL_SUCCEEDED(ret))
-        FetchOdbcResultSet(stmt);
-    else
-        ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to execute query");
-
-    // Releasing statement handle.
-    SQLFreeHandle(SQL_HANDLE_STMT, stmt);
-}
-
-/**
- * Insert data using ODBC interface.
- */
-void ExecuteNoFetch(SQLHDBC dbc, const std::string& query)
+SQLHSTMT Execute(SQLHDBC dbc, const std::string& query)
 {
     SQLHSTMT stmt;
 
@@ -158,9 +138,162 @@ void ExecuteNoFetch(SQLHDBC dbc, const std::string& query)
 
     CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to execute query");
 
+    return stmt;
+}
+
+/**
+ * Fetch cache data using ODBC interface.
+ */
+void ExecuteAndFetch(SQLHDBC dbc, const std::string& query)
+{
+    SQLHSTMT stmt = Execute(dbc, query);
+
+    FetchOdbcResultSet(stmt);
+
     // Releasing statement handle.
     SQLFreeHandle(SQL_HANDLE_STMT, stmt);
 }
+
+/**
+ * Insert data using ODBC interface.
+ */
+void ExecuteNoFetch(SQLHDBC dbc, const std::string& query)
+{
+    SQLHSTMT stmt = Execute(dbc, query);
+
+    // Releasing statement handle.
+    SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+}
+
+/**
+ * Get next row.
+ *
+ * @param stmt Statement.
+ */
+void NextRow(SQLHSTMT stmt)
+{
+    SQLRETURN ret = SQLFetch(stmt);
+
+    CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to get next row");
+}
+
+/**
+ * Get single field of the current row.
+ *
+ * @param stmt Statement.
+ * @param idx Column index.
+ * @param resType Result type.
+ */
+template<typename T>
+T GetSigleColumn(SQLHSTMT stmt, int32_t idx, int resType = SQL_C_SBIGINT)
+{
+    T val;
+
+    SQLRETURN ret = SQLGetData(stmt, idx, resType, &val, 0, 0);
+    CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to get field");
+
+    return val;
+}
+
+/**
+ * Utility OdbcLock class.
+ *
+ * Based on atomicity of table creation.
+ */
+class OdbcLock
+{
+public:
+    OdbcLock(SQLHDBC dbc, const std::string& lockName) :
+        locked(false),
+        dbc(dbc),
+        lockName(lockName)
+    {
+        // No-op.
+    }
+
+    /**
+     *  Try get a lock for
+     *
+     * @return true if locked.
+     */
+    bool TryLock()
+    {
+        if (locked)
+            return true;
+
+        try
+        {
+            odbc_utils::ExecuteNoFetch(dbc, "CREATE TABLE PUBLIC." + lockName + " (id int primary key, field1 int)");
+
+            locked = true;
+        }
+        catch (std::exception&)
+        {
+            locked = false;
+        }
+
+        return locked;
+    }
+
+    /**
+     * Timed lock.
+     * @param secs Timeout in seconds.
+     * @return @c true if successfully locked within timeout.
+     */
+    bool TimedLock(int64_t secs)
+    {
+        using namespace boost;
+        chrono::steady_clock::time_point begin = chrono::steady_clock::now();
+        chrono::steady_clock::time_point now = begin;
+
+        while (chrono::duration_cast<chrono::seconds>(now - begin).count() < secs)
+        {
+            TryLock();
+
+            if (locked)
+                return true;
+
+            this_thread::sleep_for(chrono::milliseconds(500));
+        }
+
+        return locked;
+    }
+
+    /**
+     * Unlock.
+     */
+    void Unlock()
+    {
+        if (!locked)
+            return;
+
+        try
+        {
+            odbc_utils::ExecuteNoFetch(dbc, "DROP TABLE PUBLIC.BenchLock");
+        }
+        catch (std::exception&)
+        {
+            // No-op.
+        }
+
+        locked = false;
+    }
+
+    ~OdbcLock()
+    {
+        Unlock();
+    }
+
+private:
+    /** Lock flag. */
+    bool locked;
+
+    /** Connection. */
+    SQLHDBC dbc;
+
+    /** Lock name. */
+    std::string lockName;
+};
 
 } // namespace odbc_utils
 
