@@ -97,7 +97,7 @@ public:
 
         odbc_utils::OdbcLock loadLock(dbc, "load_lock");
 
-        bool locked = loadLock.TimedLock(20);
+        bool locked = loadLock.TimedLock(60);
 
         if (!locked)
             throw std::runtime_error("It takes too long to load data. Possible data corruption. Try restarting cluster.");

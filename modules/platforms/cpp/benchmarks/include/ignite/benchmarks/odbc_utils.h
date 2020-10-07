@@ -254,6 +254,7 @@ public:
                 return true;
 
             this_thread::sleep_for(chrono::milliseconds(500));
+            now = chrono::steady_clock::now();
         }
 
         return locked;
@@ -269,7 +270,7 @@ public:
 
         try
         {
-            odbc_utils::ExecuteNoFetch(dbc, "DROP TABLE PUBLIC.BenchLock");
+            odbc_utils::ExecuteNoFetch(dbc, "DROP TABLE PUBLIC." + lockName);
         }
         catch (std::exception&)
         {
