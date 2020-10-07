@@ -485,7 +485,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
             Key key = ks.getKey(masterKeyName, keyStorePwd);
 
-            assertParameter(key != null, "No such master key found [masterKeyName="+ masterKeyName + ']');
+            assertParameter(key != null, "No such master key found [masterKeyName=" + masterKeyName + ']');
 
             masterKey = new KeystoreEncryptionKey(key, null);
 
