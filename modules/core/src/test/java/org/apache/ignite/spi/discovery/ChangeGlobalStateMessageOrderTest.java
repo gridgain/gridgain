@@ -16,31 +16,29 @@
 
 package org.apache.ignite.spi.discovery;
 
-import org.apache.ignite.cache.PartitionLossPolicy;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.managers.eventstorage.HighPriorityListener;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
-import static org.apache.ignite.testframework.LogListener.matches;
 
-/** */
+/**
+ * Test check that disco-event-worker proccessed ChangeGlobalStateMessage before
+ * disco-notifier-worker start processing of ChangeGlobalStateFinishMessage
+ */
 public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
-    /** */
-    LogListener logLsnr;
-
     /** */
     @Test
     public void testChangeGlobalStateMessageOrder() throws Exception {
@@ -48,28 +46,28 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
 
         IgniteEx client = startClientGrid("Client1");
 
-        DiscoveryEventListener myLsnr = new MyListener();
+        CountDownLatch latch = new CountDownLatch(1);
 
-        client.context().event().addDiscoveryEventListener(myLsnr, EVT_DISCOVERY_CUSTOM_EVT);
+        DiscoveryEventListener testEvtLsnr = new TestEventListener(client, latch);
+
+        client.context().event().addDiscoveryEventListener(testEvtLsnr, EVT_DISCOVERY_CUSTOM_EVT);
 
         GridTestUtils.runAsync(() -> client.cluster().state(ClusterState.ACTIVE));
 
-        doSleep(10000);
+        latch.await(20, TimeUnit.SECONDS);
 
-        assertFalse(logLsnr.check());
-    }
+        assertTrue(client.cluster().state() == ClusterState.ACTIVE);
 
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        stopAllGrids();
+        doSleep(2000);
 
-        super.afterTestsStopped();
-    }
+        //assert that cluster state changing works
+        client.cluster().state(ClusterState.INACTIVE);
 
-    /** */
-    private CacheConfiguration<Object, Object> getCacheConfig(String cacheName) {
-        return new CacheConfiguration<>(cacheName)
-            .setPartitionLossPolicy(PartitionLossPolicy.READ_WRITE_SAFE);
+        assertTrue(client.cluster().state() == ClusterState.INACTIVE);
+
+        client.cluster().state(ClusterState.ACTIVE);
+
+        assertTrue(client.cluster().state() == ClusterState.ACTIVE);
     }
 
     /** */
@@ -78,28 +76,46 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
 
         cfg.setActiveOnStart(false);
 
-        if (igniteInstanceName.contains("Client1")) {
-            System.out.println("!rty");
-
-            logLsnr = matches("AssertionError: DiscoveryDataClusterState").build();
-
-            ListeningTestLogger log = new ListeningTestLogger(cfg.getGridLogger());
-
-            log.registerAllListeners(logLsnr);
-
-            cfg.setGridLogger(log);
-        }
-
         return cfg;
     }
 
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        super.afterTest();
+    }
+
     /** */
-    private static class MyListener implements HighPriorityListener, DiscoveryEventListener {
+    private static class TestEventListener implements HighPriorityListener, DiscoveryEventListener {
+        /** */
+        IgniteEx client;
+
+        /** */
+        CountDownLatch latch;
+
+        /** */
+        public TestEventListener(IgniteEx client, CountDownLatch latch) {
+            this.client = client;
+            this.latch = latch;
+        }
+
         /** */
         @Override public void onEvent(DiscoveryEvent evt, DiscoCache cache) {
-            if (evt.type() == EVT_DISCOVERY_CUSTOM_EVT &&
-                (((DiscoveryCustomEvent)evt).customMessage() instanceof ChangeGlobalStateMessage))
-                doSleep(5000);
+            if (latch.getCount() > 0 && ((DiscoveryCustomEvent)evt).customMessage() instanceof ChangeGlobalStateMessage) {
+                try {
+                    assert GridTestUtils.waitForCondition(() -> client.context().state().clusterState().transition(), 10000)
+                        : "Cluster state change is not in progress";
+
+                    doSleep(2000);
+                }
+                catch (IgniteInterruptedCheckedException e) {
+                    throw new RuntimeException(e);
+                }
+                finally {
+                    latch.countDown();
+                }
+            }
         }
 
         /** */
