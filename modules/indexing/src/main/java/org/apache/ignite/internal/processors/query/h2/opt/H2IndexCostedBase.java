@@ -86,7 +86,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
             costFuncType = CostFunctionType.LAST;
         }
-
+        //costFuncType = CostFunctionType.COMPATIBLE_8_7_28;
         switch (costFuncType) {
             case COMPATIBLE_8_7_12:
                 constFunc = this::getCostRangeIndex_8_7_12;
@@ -768,8 +768,6 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
                         rowsCost = Math.min(5 + rowsCost * percent / 100, rowsCost - (i > 0 ? 1 : 0));
 
-                        //rowsCost = Math.min(5 + rowsCost / 3, rowsCost - (i > 0 ? 1 : 0));
-
                         break;
                     }
                     else if (isByteFlag(mask, IndexCondition.END)) {
@@ -778,8 +776,6 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         int percent = estimatePercent(colStats, min, max);
 
                         rowsCost = Math.min(5 + rowsCost * percent / 100, rowsCost - (i > 0 ? 1 : 0));
-
-                        //rowsCost = Math.min(rowsCost / 3, rowsCost - (i > 0 ? 1 : 0));
 
                         break;
                     }
@@ -923,9 +919,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     if (expr != null && expr.isConstant()) {
                         Value curVal = cond.getCurrentValue(ses);
 
-                        if (curVal != null && curVal.getValueType() == Value.NULL) {
+                        if (curVal != null && curVal.getValueType() == Value.NULL)
                             return true;
-                        }
                     }
                 }
             }
@@ -952,23 +947,21 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * @return
          */
         private int estimatePercent(ColumnStatistics colStat, Value min, Value max) {
-            if (colStat == null || colStat.min() == null || colStat.max() == null) {
+            if (colStat == null || colStat.min() == null || colStat.max() == null)
                 // Fall back to previous behaviour without statistics, even without min/max testing
                 return estimatePercentFallback(min, max);
-            }
+
             BigDecimal minValue = (min == null) ? null : getComparableValue(min);
             BigDecimal maxValue = (max == null) ? null : getComparableValue(max);
 
-            if (minValue == null && maxValue == null) {
+            if (minValue == null && maxValue == null)
                 return estimatePercentFallback(min, max);
-            }
 
             BigDecimal minStat = getComparableValue(colStat.min());
             BigDecimal maxStat = getComparableValue(colStat.max());
 
-            if (minStat == null || maxStat == null) {
+            if (minStat == null || maxStat == null)
                 return estimatePercentFallback(min, max);
-            }
 
             BigDecimal start = (minValue == null) ? minStat : minValue;
             BigDecimal end = (maxValue == null) ? maxStat : maxValue;
@@ -984,9 +977,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 // TBD - corrupted stats
                 return estimatePercentFallback(min, max);
 
-            if (total.signum() == 0) {
+            if (total.signum() == 0)
                 return (minStat.equals(min)) ? 100 : 0;
-            }
 
             int result = actual.multiply(BigDecimal.valueOf(100)).divide(total, MATH_CONTEXT).intValue();
             return result > 100 ? 100 : result;
@@ -1120,12 +1112,11 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     coveringCount++;
                 }
 
-                if (sortOrderMatches) {
+                if (sortOrderMatches)
                     // "coveringCount" makes sure that when we have two
                     // or more covering indexes, we choose the one
                     // that covers more.
                     sortingCost = 100 - coveringCount;
-                }
             }
             return sortingCost;
         }
@@ -1205,24 +1196,19 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
             long rc;
 
-            // As far as Ignite never read from scan index - just block it for now
-            needsToReadFromScanIndex = false;
-
             if (isScanIndex)
                 rc = rowsCost + sortingCost + 20;
             else if (needsToReadFromScanIndex)
                 rc = rowsCost + rowsCost + sortingCost + 20;
-            else {
+            else
                 // The (20-x) calculation makes sure that when we pick a covering
                 // index, we pick the covering index that has the smallest number of
                 // columns (the more columns we have in index - the higher cost).
                 // This is faster because a smaller index will fit into fewer data
                 // blocks.
-                rc = rowsCost + sortingCost + 20;
-            }
+                rc = rowsCost + sortingCost + columns.length;
 
             return rc;
         }
-
     }
 }
