@@ -76,6 +76,7 @@ import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
+import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MASTER_KEY_NAME_TO_CHANGE_BEFORE_STARTUP;
@@ -380,6 +381,9 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
         if (res != null)
             return res;
+
+        if (ctx.config().getEncryptionSpi() instanceof NoopEncryptionSpi)
+            return null;
 
         if (isMasterKeyChangeInProgress()) {
             // Prevents new nodes join to avoid inconsistency of the master key.
