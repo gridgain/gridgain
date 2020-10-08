@@ -1731,7 +1731,7 @@ public class Checkpointer extends GridWorker {
         // Shared refernce for tracking exception during write pages.
         AtomicReference<Throwable> writePagesError = new AtomicReference<>();
 
-        for (int stripeIdx = 0; stripeIdx < exec.stripes(); stripeIdx++) {
+        for (int stripeIdx = 0; stripeIdx < exec.stripesCount(); stripeIdx++) {
             exec.execute(stripeIdx, () -> {
                 PageStoreWriter pageStoreWriter = (fullPageId, buf, tag) -> {
                     assert tag != PageMemoryImpl.TRY_AGAIN_TAG : "Lock is held by other thread for page " + fullPageId;

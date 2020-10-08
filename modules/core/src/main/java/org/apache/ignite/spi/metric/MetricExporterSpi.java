@@ -16,9 +16,7 @@
 
 package org.apache.ignite.spi.metric;
 
-import java.util.function.Consumer;
 import java.util.function.Predicate;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.spi.IgniteSpi;
 import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
 
@@ -30,6 +28,7 @@ import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
  * So after start SPI should respond to some incoming request.
  * HTTP servlet or JMX bean are good examples of expected implementations.
  *
+ * @see ReadOnlyMetricManager
  * @see ReadOnlyMetricRegistry
  * @see Metric
  * @see BooleanMetric
@@ -44,12 +43,9 @@ public interface MetricExporterSpi extends IgniteSpi {
      * Sets metrics registry that SPI should export.
      * This method called before {@link #spiStart(String)}.
      *
-     * So all {@link MetricRegistry} that will be created by Ignite internal components can be obtained by
-     * listeners passed to {@link ReadOnlyMetricRegistry#addMetricRegistryCreationListener(Consumer)}.
-     *
      * @param registry Metric registry.
      */
-    public void setMetricRegistry(ReadOnlyMetricRegistry registry);
+    public void setMetricRegistry(ReadOnlyMetricManager registry);
 
     /**
      * Sets export filter.
@@ -57,5 +53,5 @@ public interface MetricExporterSpi extends IgniteSpi {
      *
      * @param filter Filter.
      */
-    public void setExportFilter(Predicate<MetricRegistry> filter);
+    public void setExportFilter(Predicate<ReadOnlyMetricRegistry> filter);
 }

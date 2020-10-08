@@ -409,6 +409,11 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
         return hnds;
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean ignoreHandle() {
+        return handles().ignoreHandle();
+    }
+
     /**
      * Recreating field value from a handle.
      *
@@ -2002,8 +2007,8 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
                 BinaryMetadata meta = type != null ? type.metadata() : null;
 
                 if (type == null || meta == null)
-                    throw new BinaryObjectException("Cannot find metadata for object with compact footer: " +
-                        typeId);
+                    throw new BinaryObjectException("Cannot find metadata for object with compact footer: [typeId=" +
+                        typeId + ", schemaId=" + schemaId + ']');
 
                 Collection<BinarySchema> existingSchemas = meta.schemas();
 

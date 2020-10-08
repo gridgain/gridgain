@@ -47,6 +47,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteJdbcDriver.CFG_URL_PREFIX;
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 
 /**
  * Tests for query originator.
@@ -324,7 +325,7 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
                 fail("Timeout. Cannot find query with: " + sqlMatch);
 
             List<List<?>> res = node.context().query().querySqlFields(
-                new SqlFieldsQuery("SELECT sql, initiator_id FROM ignite.LOCAL_SQL_RUNNING_QUERIES"), false).getAll();
+                new SqlFieldsQuery("SELECT sql, initiator_id FROM " + sysSchemaName() + ".SQL_QUERIES"), false).getAll();
 
             for (List<?> row : res) {
                 if (((String)row.get(0)).toUpperCase().contains(sqlMatch.toUpperCase()))
@@ -344,7 +345,7 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
 
         while (true) {
             List<List<?>> res = node.context().query().querySqlFields(
-                new SqlFieldsQuery("SELECT * FROM ignite.LOCAL_SQL_RUNNING_QUERIES"), false).getAll();
+                new SqlFieldsQuery("SELECT * FROM ignite.SQL_QUERIES"), false).getAll();
 
             if (res.size() == expectedQryCount + 1)
                 return;
