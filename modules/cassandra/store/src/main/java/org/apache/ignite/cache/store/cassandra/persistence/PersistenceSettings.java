@@ -539,7 +539,7 @@ public abstract class PersistenceSettings<F extends PojoField> implements Serial
      */
     protected List<F> enrichFields(List<F> src) {
         if (src != null) {
-            List<F> enriched = new ArrayList<>(src.size());
+            List<F> enriched = new ArrayList<>();
 
             for (F sourceField : src)
                 enriched.add(createPojoField(sourceField, getJavaClass()));
@@ -547,6 +547,6 @@ public abstract class PersistenceSettings<F extends PojoField> implements Serial
             return enriched;
         }
         else
-            return null;
+            return new ArrayList<>();
     }
 }
