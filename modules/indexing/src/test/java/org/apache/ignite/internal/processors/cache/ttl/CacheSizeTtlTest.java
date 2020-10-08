@@ -49,9 +49,6 @@ public class CacheSizeTtlTest extends GridCommonAbstractTest {
     /** Entry expiry duration. */
     private static final Duration ENTRY_EXPIRY_DURATION = new Duration(SECONDS, 1);
 
-    /** Wait condition duration. */
-    private static final long WAIT_COND_DURATION = 60_000L;
-
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
@@ -73,8 +70,8 @@ public class CacheSizeTtlTest extends GridCommonAbstractTest {
                 .forEach(i -> dataStreamer.addData(1, LocalDateTime.now()));
         }
 
-        GridTestUtils.waitForCondition(() -> client.cache(CACHE_NAME).size(CachePeekMode.PRIMARY) == 0,
-            WAIT_COND_DURATION);
+        assertTrue(GridTestUtils.waitForCondition(() -> client.cache(CACHE_NAME).size(CachePeekMode.PRIMARY) == 0,
+            getTestTimeout()));
     }
 
     /**
@@ -89,8 +86,8 @@ public class CacheSizeTtlTest extends GridCommonAbstractTest {
         multithreaded(() -> IntStream.range(0, 20_000)
             .forEach(i -> client.cache(CACHE_NAME).put(1, LocalDateTime.now())), 8);
 
-        GridTestUtils.waitForCondition(() -> client.cache(CACHE_NAME).size(CachePeekMode.PRIMARY) == 0,
-            WAIT_COND_DURATION);
+        assertTrue(GridTestUtils.waitForCondition(() -> client.cache(CACHE_NAME).size(CachePeekMode.PRIMARY) == 0,
+            getTestTimeout()));
     }
 
     private static Ignite startIgniteServer() {
