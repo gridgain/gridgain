@@ -615,6 +615,19 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     @Override public void onStateFinishMessage(ChangeGlobalStateFinishMessage msg) {
         DiscoveryDataClusterState discoClusterState = globalState;
 
+        if (ctx.clientNode()) {
+            try {
+                IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
+                    .affinityReadyFuture(discoClusterState.transitionTopologyVersion());
+//                log.warning("!waitStart" + discoClusterState.transitionTopologyVersion() + future.getClass().getName() + future.isDone());
+                future.get();
+//                log.warning("!waitEnd" + future.isDone());
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException("Failed to wait for handling disconnect event.", e);
+            }
+        }
+
         if (msg.requestId().equals(discoClusterState.transitionRequestId())) {
             if (log.isInfoEnabled())
                 log.info("Received state change finish message: " + msg.state());
