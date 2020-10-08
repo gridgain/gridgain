@@ -1616,11 +1616,13 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
     @Override public void onDeferredDelete(GridCacheEntryEx entry, GridCacheVersion ver) {
         assert entry.isDht();
 
-        GridDhtLocalPartition part = topology().localPartition(entry.partition(), AffinityTopologyVersion.NONE,
-            false);
+        assert false : "Should not be called";
 
-        if (part != null)
-            part.onDeferredDelete(entry.context().cacheId(), entry.key(), ver);
+//        GridDhtLocalPartition part = topology().localPartition(entry.partition(), AffinityTopologyVersion.NONE,
+//            false);
+//
+//        if (part != null)
+//            part.onDeferredDelete(entry.context().cacheId(), entry.key(), ver);
     }
 
     /**

@@ -563,21 +563,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
         putFut.get();
 
-        Object val = near.cache(DEFAULT_CACHE_NAME).get(part);
-
-        System.out.println();
-
-
-//        int pk = 0;
-//        cache.put(pk, 0);
-//
-//        //validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
-//
-//        doSleep(1500);
-//
-//        assertNull(cache.get(pk));
-//
-//        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        assertNull(near.cache(DEFAULT_CACHE_NAME).get(part));
     }
 
     @Test

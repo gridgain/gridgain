@@ -25,6 +25,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 
 /**
+ * TODO remove.
  * Task to periodically clean partition deffered delete queue.
  *
  * @see GridDhtLocalPartition#cleanupRemoveQueue().
@@ -73,39 +74,41 @@ public class PartitionDefferedDeleteQueueCleanupTask implements GridTimeoutObjec
      * {@inheritDoc}
      */
     @Override public void onTimeout() {
-        cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
-            @Override public void run() {
-                try {
-                    for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
-                        if (!grp.isLocal() && grp.affinityNode()) {
-                            GridDhtPartitionTopology top = null;
+        assert false;
 
-                            try {
-                                top = grp.topology();
-                            } catch (IllegalStateException ignore) {
-                                // Cache stopped.
-                            }
-
-                            if (top != null) {
-                                for (GridDhtLocalPartition part : top.currentLocalPartitions())
-                                    part.cleanupRemoveQueue();
-                            }
-
-                            if (cctx.kernalContext().isStopping())
-                                return;
-                        }
-                    }
-                }
-                catch (Exception e) {
-                    U.error(log, "Failed to cleanup removed cache items: " + e, e);
-                }
-
-                if (cctx.kernalContext().isStopping())
-                    return;
-
-                // Re-schedule task after finish.
-                cctx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(cctx, timeout));
-            }
-        }, true);
+//        cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
+//            @Override public void run() {
+//                try {
+//                    for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
+//                        if (!grp.isLocal() && grp.affinityNode()) {
+//                            GridDhtPartitionTopology top = null;
+//
+//                            try {
+//                                top = grp.topology();
+//                            } catch (IllegalStateException ignore) {
+//                                // Cache stopped.
+//                            }
+//
+//                            if (top != null) {
+//                                for (GridDhtLocalPartition part : top.currentLocalPartitions())
+//                                    part.cleanupRemoveQueue();
+//                            }
+//
+//                            if (cctx.kernalContext().isStopping())
+//                                return;
+//                        }
+//                    }
+//                }
+//                catch (Exception e) {
+//                    U.error(log, "Failed to cleanup removed cache items: " + e, e);
+//                }
+//
+//                if (cctx.kernalContext().isStopping())
+//                    return;
+//
+//                // Re-schedule task after finish.
+//                cctx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(cctx, timeout));
+//            }
+//        }, true);
     }
 }

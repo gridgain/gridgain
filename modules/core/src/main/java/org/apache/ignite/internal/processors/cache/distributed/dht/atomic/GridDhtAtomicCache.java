@@ -3417,6 +3417,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     null,
                                     req.transformOperation());
 
+                                assert !ctx.deferredDelete();
 //                                if (updRes.removeVersion() != null)
 //                                    ctx.onDeferredDelete(entry, updRes.removeVersion());
 

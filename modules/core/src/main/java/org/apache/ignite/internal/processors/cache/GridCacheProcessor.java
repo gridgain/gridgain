@@ -660,9 +660,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             cacheStartedLatch.countDown();
         }
 
-        if (!ctx.clientNode())
-            sharedCtx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(
-                sharedCtx, Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000)));
+//        if (!ctx.clientNode())
+//            sharedCtx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(
+//                sharedCtx, Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000)));
 
         // Notify shared managers.
         for (GridCacheSharedManager mgr : sharedCtx.managers())

@@ -2826,7 +2826,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     log.error("Unable to destroy cache data store on partition eviction [id=" + part.id() + "]", e);
                 }
 
-                part.clearDeferredDeletes();
+                //part.clearDeferredDeletes();
 
                 List<GridDhtLocalPartition> parts = localPartitions();
 

@@ -104,7 +104,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     static volatile Integer partWhereTestCheckpointEnforced;
 
     /** Maximum size for {@link #rmvQueue}. */
-    private final int rmvQueueMaxSize;
+    //private final int rmvQueueMaxSize;
 
     /** Removed items TTL. */
     private final long rmvdEntryTtl;
@@ -147,8 +147,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     private final CacheMapHolder singleCacheEntryMap;
 
     /** Remove queue. */
-    @GridToStringExclude
-    private final FastSizeDeque<RemovedEntryHolder> rmvQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
+    //@GridToStringExclude
+    //private final FastSizeDeque<RemovedEntryHolder> rmvQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
 
     /** Group reservations. */
     @GridToStringExclude
@@ -213,7 +213,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         int delQueueSize = grp.systemCache() ? 100 :
             Math.max(MAX_DELETE_QUEUE_SIZE / grp.affinity().partitions(), 20);
 
-        rmvQueueMaxSize = U.ceilPow2(delQueueSize);
+        //rmvQueueMaxSize = U.ceilPow2(delQueueSize);
 
         rmvdEntryTtl = Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000);
 
@@ -404,52 +404,52 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * TODO FIXME Get rid of deferred delete queue https://issues.apache.org/jira/browse/IGNITE-11704
      */
-    void cleanupRemoveQueue() {
-        if (state() == MOVING) {
-            if (rmvQueue.sizex() >= rmvQueueMaxSize) {
-                LT.warn(log, "Deletion queue cleanup for moving partition was delayed until rebalance is finished. " +
-                    "[grpId=" + this.grp.groupId() +
-                    ", partId=" + id() +
-                    ", grpParts=" + this.grp.affinity().partitions() +
-                    ", maxRmvQueueSize=" + rmvQueueMaxSize + ']');
-            }
+//    void cleanupRemoveQueue() {
+//        if (state() == MOVING) {
+//            if (rmvQueue.sizex() >= rmvQueueMaxSize) {
+//                LT.warn(log, "Deletion queue cleanup for moving partition was delayed until rebalance is finished. " +
+//                    "[grpId=" + this.grp.groupId() +
+//                    ", partId=" + id() +
+//                    ", grpParts=" + this.grp.affinity().partitions() +
+//                    ", maxRmvQueueSize=" + rmvQueueMaxSize + ']');
+//            }
+//
+//            return;
+//        }
+//
+//        while (rmvQueue.sizex() >= rmvQueueMaxSize) {
+//            RemovedEntryHolder item = rmvQueue.pollFirst();
+//
+//            if (item != null)
+//                removeVersionedEntry(item.cacheId(), item.key(), item.version());
+//        }
+//
+//        if (!grp.isDrEnabled()) {
+//            RemovedEntryHolder item = rmvQueue.peekFirst();
+//
+//            while (item != null && item.expireTime() < U.currentTimeMillis()) {
+//                item = rmvQueue.pollFirst();
+//
+//                if (item == null)
+//                    break;
+//
+//                removeVersionedEntry(item.cacheId(), item.key(), item.version());
+//
+//                item = rmvQueue.peekFirst();
+//            }
+//        }
+//    }
 
-            return;
-        }
-
-        while (rmvQueue.sizex() >= rmvQueueMaxSize) {
-            RemovedEntryHolder item = rmvQueue.pollFirst();
-
-            if (item != null)
-                removeVersionedEntry(item.cacheId(), item.key(), item.version());
-        }
-
-        if (!grp.isDrEnabled()) {
-            RemovedEntryHolder item = rmvQueue.peekFirst();
-
-            while (item != null && item.expireTime() < U.currentTimeMillis()) {
-                item = rmvQueue.pollFirst();
-
-                if (item == null)
-                    break;
-
-                removeVersionedEntry(item.cacheId(), item.key(), item.version());
-
-                item = rmvQueue.peekFirst();
-            }
-        }
-    }
-
-    /**
-     * @param cacheId cacheId Cache ID.
-     * @param key Removed key.
-     * @param ver Removed version.
-     */
-    public void onDeferredDelete(int cacheId, KeyCacheObject key, GridCacheVersion ver) {
-        cleanupRemoveQueue();
-
-        rmvQueue.add(new RemovedEntryHolder(cacheId, key, ver, rmvdEntryTtl));
-    }
+//    /**
+//     * @param cacheId cacheId Cache ID.
+//     * @param key Removed key.
+//     * @param ver Removed version.
+//     */
+//    public void onDeferredDelete(int cacheId, KeyCacheObject key, GridCacheVersion ver) {
+//        cleanupRemoveQueue();
+//
+//        rmvQueue.add(new RemovedEntryHolder(cacheId, key, ver, rmvdEntryTtl));
+//    }
 
     /**
      * Reserves the partition so it won't be cleared or evicted.
@@ -1224,10 +1224,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * Removes all deferred delete requests from {@code rmvQueue}.
      */
-    public void clearDeferredDeletes() {
-        for (RemovedEntryHolder e : rmvQueue)
-            removeVersionedEntry(e.cacheId(), e.key(), e.version());
-    }
+//    public void clearDeferredDeletes() {
+//        for (RemovedEntryHolder e : rmvQueue)
+//            removeVersionedEntry(e.cacheId(), e.key(), e.version());
+//    }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
@@ -1329,12 +1329,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     public void onCacheStopped(int cacheId) {
         assert grp.sharedGroup() : grp.cacheOrGroupName();
 
-        for (Iterator<RemovedEntryHolder> it = rmvQueue.iterator(); it.hasNext();) {
-            RemovedEntryHolder e = it.next();
-
-            if (e.cacheId() == cacheId)
-                it.remove();
-        }
+//        for (Iterator<RemovedEntryHolder> it = rmvQueue.iterator(); it.hasNext();) {
+//            RemovedEntryHolder e = it.next();
+//
+//            if (e.cacheId() == cacheId)
+//                it.remove();
+//        }
 
         cacheMaps.remove(cacheId);
     }
