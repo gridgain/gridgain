@@ -2565,6 +2565,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param cctx Cache context.
          * @param newRow New row.
          * @param oldRow Old row if available.
+         * @param oldRowExpired Old row expiration flag
          * @throws IgniteCheckedException If failed.
          */
         private void finishUpdate(GridCacheContext cctx, CacheDataRow newRow, @Nullable CacheDataRow oldRow, boolean oldRowExpired)
@@ -3111,6 +3112,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 return oldRow;
             }
 
+            /**
+            * Flag that indicates if oldRow was expired during invoke.
+            * @return {@code true} if old row was expired, {@code false} otherwise.
+            */
             @Override public boolean oldRowExpiredFlag() {
                 return false;
             }
