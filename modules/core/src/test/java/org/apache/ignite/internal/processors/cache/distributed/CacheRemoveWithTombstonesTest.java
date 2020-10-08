@@ -82,6 +82,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -97,6 +98,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
  * TODO wal recovery should bring tombstone entry.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     /** */
     public static final int PARTS = 64;

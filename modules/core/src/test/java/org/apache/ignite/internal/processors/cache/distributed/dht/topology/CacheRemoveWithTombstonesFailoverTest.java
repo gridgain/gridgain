@@ -34,6 +34,7 @@ import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -43,6 +44,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 /**
  * Tests to check failover scenarios over tombstones.
  */
+@Ignore
 public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTest {
 //    /** {@inheritDoc} */
 //    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
