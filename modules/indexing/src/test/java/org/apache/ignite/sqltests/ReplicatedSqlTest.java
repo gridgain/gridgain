@@ -26,7 +26,7 @@ import org.junit.Test;
  */
 public class ReplicatedSqlTest extends BaseSqlTest {
     /** Name of the department table created in partitioned mode. */
-    private String DEP_PART_TAB = "DepartmentPart";
+    static final String DEP_PART_TAB = "DepartmentPart";
 
     /**
      * Create and fill common tables in replicated mode.
@@ -38,9 +38,9 @@ public class ReplicatedSqlTest extends BaseSqlTest {
 
         fillCommonData();
 
-        createDepartmentTable("DepartmentPart", "template=partitioned");
+        createDepartmentTable(DEP_PART_TAB, "template=partitioned");
 
-        fillDepartmentTable("DepartmentPart");
+        fillDepartmentTable(DEP_PART_TAB);
     }
 
     /**
@@ -323,14 +323,6 @@ public class ReplicatedSqlTest extends BaseSqlTest {
     @Test
     public void testInnerJoinPartitionedReplicated() {
         checkInnerJoinDepartmentEmployee(DEP_PART_TAB);
-    }
-
-    /**
-     * Check LEFT JOIN with collocated data of replicated and partitioned tables.
-     */
-    @Test
-    public void testLeftJoinReplicatedPartitioned() {
-        checkLeftJoinEmployeeDepartment(DEP_PART_TAB);
     }
 
     /**

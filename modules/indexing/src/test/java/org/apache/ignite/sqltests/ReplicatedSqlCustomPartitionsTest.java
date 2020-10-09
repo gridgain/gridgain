@@ -20,28 +20,23 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
-
 /**
- * Includes all base sql test plus tests that make sense in replicated mode.
+ * Includes all base sql test plus tests that make sense in replicated mode with a non-default number of partitions..
  */
 public class ReplicatedSqlCustomPartitionsTest extends ReplicatedSqlTest {
-    /** Name of the department table created in partitioned mode. */
-    private String DEP_PART_TAB = "DepartmentPart";
+    private static final int NUM_OF_PARTITIONS = 509;
 
     @Override
     protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(
-                new CacheConfiguration("partitioned11*")
-                    .setAffinity(new RendezvousAffinityFunction(false, 11)),
-                new CacheConfiguration("replicated11*")
+                new CacheConfiguration("partitioned" + NUM_OF_PARTITIONS + "*")
+                    .setAffinity(new RendezvousAffinityFunction(false, NUM_OF_PARTITIONS)),
+                new CacheConfiguration("replicated" + NUM_OF_PARTITIONS + "*")
                     .setCacheMode(CacheMode.REPLICATED)
-                    .setAffinity(new RendezvousAffinityFunction(false, 11))
+                    .setAffinity(new RendezvousAffinityFunction(false, NUM_OF_PARTITIONS))
             );
     }
 
@@ -55,8 +50,17 @@ public class ReplicatedSqlCustomPartitionsTest extends ReplicatedSqlTest {
 
         fillCommonData();
 
-        createDepartmentTable("DepartmentPart", "template=partitioned11");
+        createDepartmentTable(DEP_PART_TAB, "template=partitioned11");
 
-        fillDepartmentTable("DepartmentPart");
+        fillDepartmentTable(DEP_PART_TAB);
+    }
+
+    /**
+     * Check LEFT JOIN with collocated data of replicated and partitioned tables.
+     * This test relies on having the same number of partitions in replicated and partitioned caches
+     */
+    @Test
+    public void testLeftJoinReplicatedPartitioned() {
+        checkLeftJoinEmployeeDepartment(DEP_PART_TAB);
     }
 }
