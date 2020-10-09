@@ -161,17 +161,17 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
     /** {@inheritDoc} */
     @Override public boolean test(Map<Object, Object> ctx) throws Exception {
-        int k = ThreadLocalRandom.current().nextInt(range);
-        int v = ThreadLocalRandom.current().nextInt(range);
-
         switch (testAct) {
             case PUT:
+                int k = ThreadLocalRandom.current().nextInt(range);
+                int v = ThreadLocalRandom.current().nextInt(range);
+
                 ignite().cache(cacheName).put(keyCreator.apply(k), new Value(v));
 
                 break;
 
             case SCAN: {
-                List<List<?>> res = sql("SELECT ID1 FROM TEST WHERE VALINT=?", k).getAll();
+                List<List<?>> res = sql("SELECT ID1 FROM TEST WHERE VALINT=?", range - 1).getAll();
 
                 assert res.size() == 1;
             }
