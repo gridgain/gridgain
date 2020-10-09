@@ -627,10 +627,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                     if (customMsg instanceof ChangeGlobalStateMessage) {
                         ChangeGlobalStateMessage stateChangeMsg = (ChangeGlobalStateMessage)customMsg;
-
-                        if (ctx.clientNode())
-                            changeStatesInProgress.put((stateChangeMsg).requestId(), new CountDownLatch(1));
-
                         incMinorTopVer = ctx.state().onStateChangeMessage(
                             new AffinityTopologyVersion(topVer, minorTopVer),
                             stateChangeMsg,
@@ -639,28 +635,21 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
                         ChangeGlobalStateFinishMessage finishStateChangeMsg = (ChangeGlobalStateFinishMessage)customMsg;
 
-                        if (ctx.clientNode()) {
-                            UUID reqId = finishStateChangeMsg.requestId();
+                        DiscoveryDataClusterState discoClusterState = ctx.state().clusterState();
 
-                            CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
-
-                            if (changeStateLatch != null) {
-                                boolean awaited = true;
-
+                        if (ctx.clientNode() && discoClusterState.transition())
+                            {
                                 try {
-                                    awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
+//                                    log.warning("!startWait_onStateFinishMessage" + discoClusterState.transitionTopologyVersion() + Thread.currentThread().getName());
+                                    ctx.cache().context().exchange()
+                                        .affinityReadyFuture(discoClusterState.transitionTopologyVersion())
+                                        .get();
+//                                    log.warning("!endWait_onStateFinishMessage" + discoClusterState.transitionTopologyVersion());
                                 }
-                                catch (InterruptedException e) {
-                                    Thread.currentThread().interrupt();
+                                catch (IgniteCheckedException e) {
+                                    throw new IgniteException("Failed to wait for ready topology future.", e);
                                 }
-
-                                if (!awaited)
-                                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
-                                        "before ChangeGlobalStateMessage was processed.");
-
-                                changeStatesInProgress.remove(reqId);
                             }
-                        }
 
                         ctx.state().onStateFinishMessage(finishStateChangeMsg);
 
