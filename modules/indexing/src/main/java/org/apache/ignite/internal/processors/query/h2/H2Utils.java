@@ -316,18 +316,14 @@ public class H2Utils {
      * @param desc Row descriptor.
      * @param cols Columns list.
      * @param keyCol Primary key column.
-     * @param affCol Affinity key column.
      * @return The same list back.
      */
     public static List<IndexColumn> treeIndexColumns(GridH2RowDescriptor desc, List<IndexColumn> cols,
-        IndexColumn keyCol, IndexColumn affCol) {
+        IndexColumn keyCol) {
         assert keyCol != null;
 
         if (!containsKeyColumn(desc, cols))
             cols.add(keyCol);
-
-        if (affCol != null && !containsColumn(cols, affCol))
-            cols.add(affCol);
 
         return cols;
     }

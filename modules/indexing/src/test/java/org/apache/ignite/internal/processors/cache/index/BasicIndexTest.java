@@ -292,7 +292,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-<<<<<<< HEAD
      * Checks that fields in primary index have correct order.
      *
      * @throws Exception If failed.
@@ -448,8 +447,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-=======
->>>>>>> GG-30653 fix tests & columns info
      * Tests mixed dynamic and static caches with indexes creation.
      *
      * @throws Exception If failed.

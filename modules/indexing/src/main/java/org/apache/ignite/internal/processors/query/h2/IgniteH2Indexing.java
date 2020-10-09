@@ -436,10 +436,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (tbl == null)
             return;
 
-        if (tbl.table().remove(row)) {
-            if (tbl.luceneIndex() != null)
-                tbl.luceneIndex().remove(row.key());
-        }
+        tbl.table().remove(row);
+
+        if (tbl.luceneIndex() != null)
+            tbl.luceneIndex().remove(row.key());
     }
 
     /** {@inheritDoc} */
