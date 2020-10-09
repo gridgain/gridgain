@@ -32,7 +32,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -50,15 +49,12 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
-import org.gridgain.internal.h2.index.Index;
-import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
@@ -70,7 +66,7 @@ import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCover
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Timed;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGNITE_THROTTLE_INLINE_SIZE_CALCULATION;
-import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
+import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME;
 
 /**
  * A set of basic tests for caches with indexes.
@@ -334,7 +330,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         String plan = cache.query(new SqlFieldsQuery("explain select * from Val where valStr between 0 and ?")
             .setArgs(100)).getAll().get(0).get(0).toString();
 
-        assertTrue(plan, plan.contains(SCAN_INDEX_NAME_SUFFIX));
+        assertTrue(plan, plan.contains(SCAN_INDEX_NAME));
 
         stopAllGrids();
 
@@ -474,7 +470,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             .getAll().get(0).get(0).toString().toUpperCase();
 
         System.out.println("+++ PLAN " + plan);
-        return idxName != null ? (!plan.contains(SCAN_INDEX_NAME_SUFFIX) && plan.contains(idxName.toUpperCase())) : !plan.contains(SCAN_INDEX_NAME_SUFFIX);
+        return idxName != null ? (!plan.contains(SCAN_INDEX_NAME) && plan.contains(idxName.toUpperCase())) : !plan.contains(SCAN_INDEX_NAME);
     }
 
     /** */
@@ -550,7 +546,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     private boolean checkIdxUsage(List<List<?>> res, String idx) {
         String plan = res.get(0).get(0).toString();
 
-        return idx != null ? plan.contains(idx) : !plan.contains(SCAN_INDEX_NAME_SUFFIX);
+        return idx != null ? plan.contains(idx) : !plan.contains(SCAN_INDEX_NAME);
     }
 
     /**
