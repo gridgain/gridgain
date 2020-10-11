@@ -244,7 +244,8 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
             if (!ctx.clientNode()) {
                 DiscoveryDataClusterState clusterState = ctx.state().clusterState();
 
-                boolean isLocLsnr = !clusterState.hasBaselineTopology() ||
+                boolean isLocLsnr = ctx.state().inMemoryClusterWithoutBlt() ||
+                    !clusterState.hasBaselineTopology() ||
                     CU.baselineNode(ctx.cluster().get().localNode(), clusterState);
 
                 // Register query listener and run it for local entries, if data is available locally.

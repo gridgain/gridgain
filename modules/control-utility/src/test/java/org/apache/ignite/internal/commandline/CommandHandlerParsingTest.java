@@ -1100,6 +1100,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.DATA_CENTER_REPLICATION ||
             cmd == CommandList.SET_STATE ||
             cmd == CommandList.METADATA ||
-            cmd == CommandList.WARM_UP;
+            cmd == CommandList.WARM_UP ||
+            cmd == CommandList.PROPERTY;
     }
 }

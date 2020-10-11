@@ -114,7 +114,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testBaselineAutoAdjustDisableBecauseFlagIsSetToFalse() throws Exception {
-        IgniteEx ignite0 = startGrids(1);
+        IgniteEx ignite0 = startGrids(2);
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
@@ -123,15 +123,24 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
         int timeout = 100;
         ignite0.cluster().baselineAutoAdjustTimeout(timeout);
 
-        Collection<BaselineNode> bltNodes = ignite0.cluster().currentBaselineTopology();
+        Set<Object> initBaseline = ignite0.cluster().currentBaselineTopology() == null ? null :
+            ignite0.cluster().currentBaselineTopology().stream()
+                .map(BaselineNode::consistentId)
+                .collect(Collectors.toSet());
 
-        log.info("GG-25084: " + bltNodes);
+        stopGrid(1);
 
-        Set<Object> initBaseline = bltNodes.stream()
-            .map(BaselineNode::consistentId)
-            .collect(Collectors.toSet());
+        Set<Object> nodeLeftBaseline = ignite0.cluster().currentBaselineTopology() == null ? null :
+            ignite0.cluster().currentBaselineTopology().stream()
+                .map(BaselineNode::consistentId)
+                .collect(Collectors.toSet());
 
-        log.error("8.7-master: " + initBaseline);
+        assertEquals(initBaseline, nodeLeftBaseline);
+
+        assertFalse(waitForCondition(
+            () -> isCurrentBaselineFromOneNode(ignite0),
+            timeout * 20
+        ));
     }
 
     /**
@@ -313,9 +322,10 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
      * @return {@code true} if current baseline consist from one node.
      */
     private boolean isCurrentBaselineFromOneNode(Ignite ignite0) {
-        return ignite0.cluster().currentBaselineTopology().stream()
-            .map(BaselineNode::consistentId)
-            .allMatch(((IgniteEx)ignite0).localNode().consistentId()::equals);
+        return ignite0.cluster().currentBaselineTopology() != null &&
+            ignite0.cluster().currentBaselineTopology().stream()
+                .map(BaselineNode::consistentId)
+                .allMatch(((IgniteEx)ignite0).localNode().consistentId()::equals);
     }
 
     /**

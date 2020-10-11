@@ -1194,6 +1194,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         return (firstDiscoEvt.type() == EVT_NODE_LEFT || firstDiscoEvt.type() == EVT_NODE_FAILED) &&
             !firstDiscoEvt.eventNode().isClient() &&
             top != null &&
+            !cctx.kernalContext().state().inMemoryClusterWithoutBlt() &&
             top.consistentIds().contains(firstDiscoEvt.eventNode().consistentId());
     }
 
@@ -1981,7 +1982,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 cctx.exchange().exchangerBlockingSectionBegin();
 
                 try {
-                    locksFut.get(waitTimeout, TimeUnit.MILLISECONDS);
+                    locksFut.get(50, TimeUnit.MILLISECONDS);
 
                     break;
                 }
@@ -2009,6 +2010,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         if (getBoolean(IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT, false))
                             U.dumpThreads(log);
                     }
+
+                    // Sometimes FinishLockFuture is not rechecked causing frozen PME.
+                    // Will recheck every 50 milliseconds.
+                    cctx.mvcc().recheckPendingLocks();
                 }
                 finally {
                     cctx.exchange().exchangerBlockingSectionEnd();
@@ -2569,14 +2574,18 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             span.end();
 
+            if (err == null) {
+                updateDurationHistogram(System.currentTimeMillis() - initTime);
+
+                cctx.exchange().clusterRebalancedMetric().value(rebalanced);
+            }
+
             if (log.isInfoEnabled()) {
                 log.info("Completed partition exchange [localNode=" + cctx.localNodeId() +
                         ", exchange=" + (log.isDebugEnabled() ? this : shortInfo()) + ", topVer=" + topologyVersion() + "]");
 
                 if (err == null) {
                     timeBag.finishGlobalStage("Exchange done");
-
-                    updateDurationHistogram(System.currentTimeMillis() - initTime);
 
                     // Collect all stages timings.
                     List<String> timings = timeBag.stagesTimings();
@@ -3939,7 +3948,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             GridDhtPartitionsFullMessage msg = createPartitionsMessage(true,
                 minVer.compareToIgnoreTimestamp(PARTIAL_COUNTERS_MAP_SINCE) >= 0);
 
-            if (!cctx.affinity().rebalanceRequired())
+            if (!cctx.affinity().rebalanceRequired() && !deactivateCluster())
                 msg.rebalanced(true);
 
             if (exchCtx.mergeExchanges()) {
