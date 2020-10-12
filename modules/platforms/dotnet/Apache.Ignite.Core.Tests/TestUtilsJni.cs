@@ -63,16 +63,11 @@ namespace Apache.Ignite.Core.Tests
             Debug.Assert(arg2 != null);
             Debug.Assert(workDir != null);
 
-            TestContext.Progress.WriteLine(">>> Starting 11...");
-
             var env = Jvm.Get().AttachCurrentThread();
             using (var cls = env.FindClass(ClassPlatformProcessUtils))
             {
-                TestContext.Progress.WriteLine(">>> Starting 12...");
                 var methodId = env.GetStaticMethodId(cls, "startProcess",
                     "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-
-                TestContext.Progress.WriteLine(">>> Starting 13...");
 
                 using (var fileRef = env.NewStringUtf(file))
                 using (var arg1Ref = env.NewStringUtf(arg1))
@@ -80,8 +75,6 @@ namespace Apache.Ignite.Core.Tests
                 using (var workDirRef = env.NewStringUtf(workDir))
                 using (var waitForOutputRef = env.NewStringUtf(waitForOutput))
                 {
-                    TestContext.Progress.WriteLine(">>> Starting 14...");
-
                     var methodArgs = stackalloc long[5];
                     methodArgs[0] = fileRef.Target.ToInt64();
                     methodArgs[1] = arg1Ref.Target.ToInt64();
@@ -89,14 +82,8 @@ namespace Apache.Ignite.Core.Tests
                     methodArgs[3] = workDirRef.Target.ToInt64();
                     methodArgs[4] = waitForOutputRef == null ? 0 : waitForOutputRef.Target.ToInt64();
 
-                    TestContext.Progress.WriteLine(">>> Starting 15...");
-
                     env.CallStaticVoidMethod(cls, methodId, methodArgs);
-
-                    TestContext.Progress.WriteLine(">>> Starting 16...");
                 }
-
-                TestContext.Progress.WriteLine(">>> Starting 17...");
             }
         }
 

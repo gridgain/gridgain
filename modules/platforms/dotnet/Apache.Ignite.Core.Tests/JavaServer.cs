@@ -69,9 +69,7 @@ namespace Apache.Ignite.Core.Tests
             var pomWrapper =
                 ReplaceIgniteVersionInPomFile(groupId, version, Path.Combine(JavaServerSourcePath, "pom.xml"));
 
-            TestContext.Progress.WriteLine(">>> Starting 0...");
             EnsureJvmCreated();
-            TestContext.Progress.WriteLine(">>> Starting 1...");
 
             var time = DateTime.Now;
 
@@ -81,8 +79,6 @@ namespace Apache.Ignite.Core.Tests
                 arg2: string.Format("{0} {1}", MavenPath, MavenCommandExec),
                 workDir: JavaServerSourcePath,
                 waitForOutput: "Ignite node started OK");
-
-            TestContext.Progress.WriteLine(">>> Starting 2...");
 
             // Java can not end process tree on Windows - detect the process manually and use taskkill.
             var serverProc = Os.IsWindows
