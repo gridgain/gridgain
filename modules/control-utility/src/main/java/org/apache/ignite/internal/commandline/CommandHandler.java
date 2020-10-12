@@ -289,7 +289,7 @@ public class CommandHandler {
 
                     logger.info(DELIM);
 
-                    lastOperationRes = command.execute(clientCfg, logger);
+                    lastOperationRes = command.execute(clientCfg, logger, args.verbose());
 
                     break;
                 }
