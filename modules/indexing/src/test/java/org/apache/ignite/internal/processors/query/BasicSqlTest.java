@@ -110,15 +110,13 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testIntervalOperation() throws IgniteInterruptedCheckedException {
-        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS TIMESTAMP)");
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS INT)");
         sql("CREATE INDEX IDX_VAL_TS ON TEST(VAL_TS)");
 
         for (int i = 0; i < 10; ++i) {
             sql("INSERT INTO TEST (ID, VAL_INT, VAL_TS) VALUES " +
-                "(?, ?, TRUNCATE(TIMESTAMP '2015-12-31 23:59:59') - TRUNC(CURRENT_TIMESTAMP))",
+                "(?, ?, DAY_OF_YEAR(TRUNCATE(TIMESTAMP '2015-12-31 23:59:59') - TRUNC(CURRENT_TIMESTAMP)))",
                 i, i);
-
-            U.sleep(10);
         }
 
         System.out.println("+++ " + sql("SELECT * FROM TEST").getAll());
