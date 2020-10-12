@@ -1377,6 +1377,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                             segmentSize.putIfAbsent(fd.idx(), fd.file().length());
                     });
 
+                // If walArchiveDir != walWorkDir, then need to get size of all segments that were not in archive.
+                // For example, absIdx == 8, and there are 0-4 segments in archive, then we need to get sizes of 5-7 segments.
+                // Size of the 8th segment will be set in #resumeLogging.
                 if (archiver0 != null) {
                     for (long i = absIdx - (absIdx % dsCfg.getWalSegments()); i < absIdx; i++)
                         segmentSize.putIfAbsent(i, maxWalSegmentSize);
@@ -1479,8 +1482,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /**
-     * Deletes temp files creates and prepares new.
-     * Creates the first segment if necessary.
+     * Deletes temp files creates and prepares new; Creates the first segment if necessary.
      *
      * @throws StorageException If failed.
      */
@@ -2553,8 +2555,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /**
-     * Validate files depending on {@link DataStorageConfiguration#getWalSegments()}  and create if need.
-     * Check end when exit condition return false or all files are passed.
+     * Validate files depending on {@link DataStorageConfiguration#getWalSegments()}  and create if need. Check end
+     * when exit condition return false or all files are passed.
      *
      * @param startWith Start with.
      * @param create Flag create file.
