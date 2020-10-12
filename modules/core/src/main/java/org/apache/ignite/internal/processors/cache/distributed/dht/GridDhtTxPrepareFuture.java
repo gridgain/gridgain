@@ -510,14 +510,8 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                                     ret.invokeResult(true);
                             }
                         }
-                        else if (retVal) {
-//                            assert keepBinary || tx instanceof GridNearTxLocal || !tx.localResult() :
-//                                "An attempt to deserialize entry in not near node [key=" + txEntry.key() +
-//                                    ", tx=" + tx.getClass().getSimpleName() +
-//                                    ", cache=" + cctx.cacheContext(txEntry.cacheId()).name() + ']';
-
+                        else if (retVal)
                             ret.value(cacheCtx, val, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
-                        }
                     }
 
                     if (hasFilters && !cacheCtx.isAll(cached, txEntry.filters())) {
@@ -2002,10 +1996,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                                         false, null, null, null, false);
 
                                 if (retVal && !invoke) {
-//                                    assert tx instanceof GridNearTxLocal || !tx.localResult() :
-//                                        "An attempt to deserialize entry in not near node [key=" + info.key() +
-//                                            ", tx=" + this.getClass().getSimpleName() + ']';
-
                                     ret.value(
                                         cacheCtx,
                                         info.value(),

@@ -1267,10 +1267,6 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                             }
                         }
                         else {
-//                            assert txEntry.keepBinary() || this instanceof GridNearTxLocal || !localResult() :
-//                                "An attempt to deserialize entry in not near node [key=" + txEntry.key() +
-//                                    ", tx=" + this.getClass().getSimpleName() + ']';
-
                             ret.value(
                                 cacheCtx,
                                 v,

@@ -6092,21 +6092,6 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Gets a name of class by it resource name.
-     *
-     * @param rsrcName Resource name.
-     * @return Class name.
-     */
-    public static String resourceNameToClassName(String rsrcName) {
-        if (!rsrcName.endsWith(".class"))
-            return rsrcName;
-
-        String classWithSuffix = rsrcName.replaceAll("/", ".");
-
-        return classWithSuffix.substring(0, classWithSuffix.length() - ".class".length());
-    }
-
-    /**
      * Gets runtime MBean.
      *
      * @return Runtime MBean.
@@ -7803,8 +7788,9 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Returns Deployment class loader id if method was invoked in the job context or {@code null}
-     * if nothing context found or Deployment is switched off.
+     * Returns Deployment class loader id if method was invoked in the job context
+     * (it may be the context of a cache's operation which was triggered by the distributed job)
+     * or {@code null} if no context was found or Deployment is switched off.
      *
      * @param ctx Kernal context.
      * @return Deployment class loader id or {@code null}.

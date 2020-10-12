@@ -129,13 +129,8 @@ public final class GridDhtTxEnlistFuture extends GridDhtTxAbstractEnlistFuture<G
             if (invokeRes.result() != null || invokeRes.error() != null)
                 res.addEntryProcessResult(cctx, key, null, invokeRes.result(), invokeRes.error(), keepBinary);
         }
-        else if (needRes) {
-//            assert keepBinary || tx instanceof GridNearTxLocal || !tx.localResult() :
-//                "An attempt to deserialize entry in not near node [prevVal=" + txRes.prevValue() +
-//                    ", tx=" + this.getClass().getSimpleName() + ']';
-
+        else if (needRes)
             res.set(cctx, txRes.prevValue(), txRes.success(), keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
-        }
     }
 
     /** {@inheritDoc} */

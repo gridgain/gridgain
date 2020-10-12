@@ -37,7 +37,7 @@ import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 
 /**
- * This closure calculate average salary of person in the defined key range.
+ * This closure calculates average salary of person in the defined key range.
  */
 public class AveragePersonSalaryCallable implements IgniteCallable<Double> {
     /** Ignite instance. */
@@ -111,8 +111,6 @@ public class AveragePersonSalaryCallable implements IgniteCallable<Double> {
         }
 
         return avgSalary;
-
-//        return amount / (to - from);
     }
 
     /**
