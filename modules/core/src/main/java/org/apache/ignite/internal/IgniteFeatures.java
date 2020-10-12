@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -178,7 +179,10 @@ public enum IgniteFeatures {
     SPLITTED_CACHE_CONFIGURATIONS_V2(46),
 
     /** Snapshots upload via sftp. */
-    SNAPSHOT_SFTP_UPLOAD(47);
+    SNAPSHOT_SFTP_UPLOAD(47),
+
+    /** Master key change. See {@link GridEncryptionManager#changeMasterKey(String)}. */
+    MASTER_KEY_CHANGE(48);
 
     /**
      * Unique feature identifier.
