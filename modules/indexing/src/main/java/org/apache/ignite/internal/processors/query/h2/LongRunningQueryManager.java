@@ -36,7 +36,7 @@ public final class LongRunningQueryManager {
      * Default threshold result's row count, when count of fetched rows is bigger than the threshold
      * warning will be printed.
      */
-    private static final long DFLT_FETCHED_SIZE_THRESHOLD = 100_000;
+    private static final long DFLT_FETCHED_SIZE_THRESHOLD = 1_000_000;
 
     /** Message about the long execution of the query. */
     public static final String LONG_QUERY_EXEC_MSG = "Query execution is too long";

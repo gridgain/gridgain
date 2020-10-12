@@ -135,7 +135,7 @@ public class GridH2RowDescriptor {
 
             assert p != null : fields[i];
 
-            if (p instanceof QueryBinaryProperty && isNotPartOfKeyHack(p))
+            if (Boolean.getBoolean("bike.row.format") && p instanceof QueryBinaryProperty && isNotPartOfKeyHack(p))
                 ((QueryBinaryProperty)p).setTupleOrdinal(cols, fields[i]);
 
             props[i] = p;

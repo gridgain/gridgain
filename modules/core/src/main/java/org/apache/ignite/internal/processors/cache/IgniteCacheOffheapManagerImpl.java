@@ -1776,8 +1776,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         private CacheObject tryConvert(CacheObject val) {
-//            if (true)
-//                return val;
+            if (!Boolean.getBoolean("bike.row.format"))
+                return val;
 
             if (!(val instanceof BinaryObject))
                 return val;

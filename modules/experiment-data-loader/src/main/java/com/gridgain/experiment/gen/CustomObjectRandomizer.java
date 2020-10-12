@@ -192,8 +192,8 @@ public class CustomObjectRandomizer {
     private final Random nullRnd = new Random();
 
     private Object randomize(Field field) {
-//        if (nullRnd.nextFloat() < .7)
-//            return null;
+        if (nullRnd.nextFloat() < .7)
+            return null;
 
         Class<?> type = field.getType();
 

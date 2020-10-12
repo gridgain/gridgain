@@ -45,16 +45,30 @@ public class NativeType implements Comparable<NativeType> {
     private static final Map<Class<?>, NativeType> predefinedMapping;
 
     static {
-        predefinedMapping = Collections.unmodifiableMap(new HashMap<Class<?>, NativeType>() {{
-            put(short.class, SHORT);
-            put(Short.class, SHORT);
-            put(int.class, INTEGER);
-            put(Integer.class, INTEGER);
-            put(long.class, LONG);
-            put(Long.class, LONG);
-            put(String.class, STRING);
-            put(BigDecimal.class, BIGDECIMAL);
-        }});
+        if (!Boolean.getBoolean("bike.use.varlong")) {
+            predefinedMapping = Collections.unmodifiableMap(new HashMap<Class<?>, NativeType>() {{
+                put(short.class, SHORT);
+                put(Short.class, SHORT);
+                put(int.class, INTEGER);
+                put(Integer.class, INTEGER);
+                put(long.class, LONG);
+                put(Long.class, LONG);
+                put(String.class, STRING);
+                put(BigDecimal.class, BIGDECIMAL);
+            }});
+        }
+        else {
+            predefinedMapping = Collections.unmodifiableMap(new HashMap<Class<?>, NativeType>() {{
+                put(short.class, SHORT);
+                put(Short.class, SHORT);
+                put(int.class, VARLONG);
+                put(Integer.class, VARLONG);
+                put(long.class, VARLONG);
+                put(Long.class, VARLONG);
+                put(String.class, STRING);
+                put(BigDecimal.class, BIGDECIMAL);
+            }});
+        }
     }
 
     public static NativeType mapType(Class<?> fldCls) {

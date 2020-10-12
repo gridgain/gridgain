@@ -80,7 +80,7 @@ public class QueryBinaryProperty implements GridQueryProperty {
 
     private NativeType nativeType;
 
-    private int colIdx;
+    private int colIdx = -1;
 
     public void setTupleOrdinal(Columns cols, String fieldName) {
         this.cols = cols;
