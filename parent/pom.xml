@@ -133,6 +133,8 @@
         <spring.version>4.3.29.RELEASE</spring.version><!-- don't forget to update spring-data version -->
         <spring.data-2.0.version>2.0.9.RELEASE</spring.data-2.0.version> <!-- don't forget to update spring-5.0 version -->
         <spring-5.0.version>5.0.19.RELEASE</spring-5.0.version><!-- don't forget to update spring-data-2.0 version -->
+        <spring.data-2.2.version>2.2.0.RELEASE</spring.data-2.2.version> <!-- don't forget to update spring-5.2 version -->
+        <spring-5.2.version>5.2.0.RELEASE</spring-5.2.version><!-- don't forget to update spring-data-2.2 version -->
         <spring41.osgi.feature.version>4.1.7.RELEASE_1</spring41.osgi.feature.version>
         <storm.version>1.2.3</storm.version>
         <tomcat.version>9.0.21</tomcat.version>
@@ -539,6 +541,10 @@
                             <group>
                                 <title>SpringData 2.0 integration</title>
                                 <packages>org.apache.ignite.springdata20.repository*</packages>
+                            </group>
+                            <group>
+                                <title>Spring Data 2.2 Integration</title>
+                                <packages>org.apache.ignite.springdata22.repository*</packages>
                             </group>
                             <group>
                                 <title>RocketMQ integration</title>
