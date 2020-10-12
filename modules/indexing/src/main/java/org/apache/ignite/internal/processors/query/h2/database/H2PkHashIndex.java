@@ -20,7 +20,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -55,6 +57,21 @@ import org.gridgain.internal.h2.table.TableFilter;
  *
  */
 public class H2PkHashIndex extends GridH2IndexBase {
+    /** End marker. */
+    private static final GridCursor<? extends CacheDataRow> END = new GridCursor<CacheDataRow>() {
+        @Override public boolean next() throws IgniteCheckedException {
+            return false;
+        }
+
+        @Override public CacheDataRow get() throws IgniteCheckedException {
+            return null;
+        }
+
+        @Override public void close() throws Exception {
+
+        }
+    };
+
     /** */
     private final GridCacheContext cctx;
 
@@ -118,19 +135,56 @@ public class H2PkHashIndex extends GridH2IndexBase {
         try {
             CacheDataRowStore.setSkipVersion(true);
 
-            Collection<GridCursor<? extends CacheDataRow>> cursors = new ArrayList<>();
+            final Iterator<IgniteCacheOffheapManager.CacheDataStore> it = cctx.offheap().cacheDataStores().iterator();
 
-            for (IgniteCacheOffheapManager.CacheDataStore store : cctx.offheap().cacheDataStores()) {
+            final H2PkHashIndexCursor cur = new H2PkHashIndexCursor();
+
+            while (it.hasNext()) {
+                IgniteCacheOffheapManager.CacheDataStore store = it.next();
+
                 int part = store.partId();
 
                 if (segmentForPartition(part) != seg)
                     continue;
 
-                if (filter == null || filter.applyPartition(part))
-                    cursors.add(store.cursor(cctx.cacheId(), lowerObj, upperObj, null, mvccSnapshot));
+                if (filter == null || filter.applyPartition(part)) {
+                    cur.putCursor(store.cursor(cctx.cacheId(), lowerObj, upperObj, null, mvccSnapshot));
+
+                    break;
+                }
             }
 
-            return new H2PkHashIndexCursor(cursors.iterator());
+            final IndexingQueryCacheFilter filter0 = filter;
+            final MvccSnapshot mvccSnapshot0 = mvccSnapshot;
+            final int seg0 = seg;
+
+            cctx.kernalContext().getIndexingExecutorService().submit(() -> {
+                try {
+                    CacheDataRowStore.setSkipVersion(true);
+
+                    while (it.hasNext()) {
+                        IgniteCacheOffheapManager.CacheDataStore store = it.next();
+
+                        int part = store.partId();
+
+                        if (segmentForPartition(part) != seg0)
+                            continue;
+
+                        if (filter0 == null || filter0.applyPartition(part))
+                            cur.putCursor(store.cursor(cctx.cacheId(), lowerObj, upperObj, null, mvccSnapshot0));
+                    }
+                }
+                catch (IgniteCheckedException e) {
+                    throw DbException.convert(e);
+                }
+                finally {
+                    CacheDataRowStore.setSkipVersion(false);
+                    
+                    cur.putCursor(END);
+                }
+            });
+
+            return cur;
         }
         catch (IgniteCheckedException e) {
             throw DbException.convert(e);
@@ -213,16 +267,14 @@ public class H2PkHashIndex extends GridH2IndexBase {
         CacheDataRowStore.setSkipVersion(true);
 
         try {
-            Collection<GridCursor<? extends CacheDataRow>> cursors = new ArrayList<>();
+            H2PkHashIndexCursor pkHashCursor = new H2PkHashIndexCursor();
 
             for (IgniteCacheOffheapManager.CacheDataStore store : cctx.offheap().cacheDataStores()) {
                 int part = store.partId();
 
                 if (partsFilter == null || partsFilter.applyPartition(part))
-                    cursors.add(store.cursor(cctx.cacheId()));
+                    pkHashCursor.putCursor(store.cursor(cctx.cacheId()));
             }
-
-            Cursor pkHashCursor = new H2PkHashIndexCursor(cursors.iterator());
 
             long res = 0;
 
@@ -247,7 +299,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
         private final GridH2RowDescriptor desc;
 
         /** */
-        private final Iterator<GridCursor<? extends CacheDataRow>> iter;
+        private final LinkedBlockingQueue<GridCursor<? extends CacheDataRow>> curQueue = new LinkedBlockingQueue<>();
 
         /** */
         private GridCursor<? extends CacheDataRow> curr;
@@ -256,12 +308,24 @@ public class H2PkHashIndex extends GridH2IndexBase {
         private final long time;
 
         /**
-         * @param iter Cursors iterator.
          */
-        private H2PkHashIndexCursor(Iterator<GridCursor<? extends CacheDataRow>> iter) {
-            assert iter != null;
+        private H2PkHashIndexCursor() {
+            desc = rowDescriptor();
 
-            this.iter = iter;
+            time = U.currentTimeMillis();
+        }
+
+        /**
+         */
+        private H2PkHashIndexCursor(GridCursor<? extends CacheDataRow> cur) {
+            assert cur != null;
+
+            try {
+                curQueue.put(cur);
+            }
+            catch (InterruptedException e) {
+                throw new IgniteException(e);
+            }
 
             desc = rowDescriptor();
 
@@ -302,13 +366,16 @@ public class H2PkHashIndex extends GridH2IndexBase {
                         }
                     }
 
-                    if (!iter.hasNext())
-                        return false;
+                    curr = curQueue.take();
 
-                    curr = iter.next();
+                    if (curr == END)
+                        return false;
                 }
             }
             catch (IgniteCheckedException e) {
+                throw DbException.convert(e);
+            }
+            catch (InterruptedException e) {
                 throw DbException.convert(e);
             }
             finally {
@@ -328,6 +395,18 @@ public class H2PkHashIndex extends GridH2IndexBase {
         /** {@inheritDoc} */
         @Override public boolean previous() {
             throw DbException.getUnsupportedException("previous");
+        }
+
+        /**
+         *
+         */
+        public void putCursor(GridCursor<? extends CacheDataRow> cur) {
+            try {
+                curQueue.put(cur);
+            }
+            catch (InterruptedException e) {
+                throw new IgniteException(e);
+            }
         }
     }
 }
