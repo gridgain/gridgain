@@ -74,17 +74,7 @@ namespace Apache.Ignite.Core.Tests.Client.Compatibility
         [TestFixtureSetUp]
         public void FixtureSetUp()
         {
-            try
-            {
-                TestContext.Progress.WriteLine(">>> Starting...");
-                _server = JavaServer.Start(_groupId, _serverVersion);
-                TestContext.Progress.WriteLine(">>> Started");
-            }
-            catch (Exception e)
-            {
-                TestContext.Progress.WriteLine(">>> Failed to start: " + e);
-                throw;
-            }
+            _server = JavaServer.Start(_groupId, _serverVersion);
         }
 
         /// <summary>
