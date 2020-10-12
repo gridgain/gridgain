@@ -18,13 +18,10 @@ package org.apache.ignite.platform;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.ignite.IgniteException;
 
 /**
  * Platform process utils for tests.
@@ -67,8 +64,8 @@ public class PlatformProcessUtils {
                             if (line.contains(waitForOutput))
                                 return;
                         }
-                    } catch (IOException ioException) {
-                        throw new IgniteException(ioException);
+                    } catch (Exception ignored) {
+                        // No-op.
                     }
                 });
 
@@ -91,8 +88,8 @@ public class PlatformProcessUtils {
                 String line;
                 while ((line = br.readLine()) != null)
                     System.out.println("PlatformProcessUtils >> " + line);
-            } catch (IOException ioException) {
-                throw new IgniteException(ioException);
+            } catch (Exception ignored) {
+                // No-op.
             }
         });
     }
