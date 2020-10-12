@@ -24,6 +24,8 @@ namespace Apache.Ignite.Core.Tests
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
     using Apache.Ignite.Core.Impl.Unmanaged.Jni;
+    using NUnit.Framework;
+
 
     /// <summary>
     /// Starts Java server nodes.
@@ -38,10 +40,10 @@ namespace Apache.Ignite.Core.Tests
 
         /** Apache Ignite artifact group ID. */
         public const string GroupIdIgnite = "org.apache.ignite";
-        
+
         /** GridGain artifact group ID. */
         public const string GroupIdGridGain = "org.gridgain";
-        
+
         /** Maven command to execute the main class. */
         private const string MavenCommandExec = "compile exec:java -D\"exec.mainClass\"=\"Runner\"";
 
@@ -67,7 +69,9 @@ namespace Apache.Ignite.Core.Tests
             var pomWrapper =
                 ReplaceIgniteVersionInPomFile(groupId, version, Path.Combine(JavaServerSourcePath, "pom.xml"));
 
+            TestContext.Progress.WriteLine(">>> Starting 0...");
             EnsureJvmCreated();
+            TestContext.Progress.WriteLine(">>> Starting 1...");
 
             var time = DateTime.Now;
 
@@ -77,6 +81,8 @@ namespace Apache.Ignite.Core.Tests
                 arg2: string.Format("{0} {1}", MavenPath, MavenCommandExec),
                 workDir: JavaServerSourcePath,
                 waitForOutput: "Ignite node started OK");
+
+            TestContext.Progress.WriteLine(">>> Starting 2...");
 
             // Java can not end process tree on Windows - detect the process manually and use taskkill.
             var serverProc = Os.IsWindows
