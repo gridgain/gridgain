@@ -24,8 +24,6 @@ namespace Apache.Ignite.Core.Tests
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
     using Apache.Ignite.Core.Impl.Unmanaged.Jni;
-    using NUnit.Framework;
-
 
     /// <summary>
     /// Starts Java server nodes.

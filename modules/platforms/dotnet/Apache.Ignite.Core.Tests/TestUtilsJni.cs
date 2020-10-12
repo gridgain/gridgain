@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Tests
 {
     using System.Diagnostics;
     using Apache.Ignite.Core.Impl.Unmanaged.Jni;
-    using NUnit.Framework;
 
     /// <summary>
     /// Test utils: JNI calls.
