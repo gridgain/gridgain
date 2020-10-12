@@ -41,13 +41,11 @@ import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.index.Cursor;
-import org.gridgain.internal.h2.index.IndexCondition;
 import org.gridgain.internal.h2.index.IndexType;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.result.Row;
 import org.gridgain.internal.h2.result.SearchRow;
 import org.gridgain.internal.h2.result.SortOrder;
-import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.TableFilter;
 
@@ -174,18 +172,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
     /** {@inheritDoc} */
     @Override public double getCost(Session ses, int[] masks, TableFilter[] filters, int filter,
         SortOrder sortOrder, AllColumnsForPlan allColsSet) {
-        if (masks == null)
-            return Long.MAX_VALUE;
-
-        for (Column column : columns) {
-            int index = column.getColumnId();
-            int mask = masks[index];
-
-            if ((mask & IndexCondition.EQUALITY) != IndexCondition.EQUALITY)
-                return Long.MAX_VALUE;
-        }
-
-        return 2;
+        return Double.MAX_VALUE;
     }
 
     /** {@inheritDoc} */
