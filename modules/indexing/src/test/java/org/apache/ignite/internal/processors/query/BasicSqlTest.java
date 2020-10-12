@@ -19,7 +19,9 @@ package org.apache.ignite.internal.processors.query;
 import java.util.List;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 /**
@@ -102,6 +104,24 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         ).getAll().get(0).get(0);
 
         assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
+    }
+
+    /**
+     */
+    @Test
+    public void testIntervalOperation() throws IgniteInterruptedCheckedException {
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS TIMESTAMP)");
+        sql("CREATE INDEX IDX_VAL_TS ON TEST(VAL_TS)");
+
+        for (int i = 0; i < 10; ++i) {
+            sql("INSERT INTO TEST (ID, VAL_INT, VAL_TS) VALUES " +
+                "(?, ?, TRUNCATE(TIMESTAMP '2015-12-31 23:59:59') - TRUNC(CURRENT_TIMESTAMP))",
+                i, i);
+
+            U.sleep(10);
+        }
+
+        System.out.println("+++ " + sql("SELECT * FROM TEST").getAll());
     }
 
     /**
