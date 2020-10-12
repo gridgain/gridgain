@@ -78,6 +78,8 @@ public class PlatformProcessUtils {
             }
 
             if (!process.isAlive()) {
+                process = null;
+
                 throw new Exception("Process has exited unexpectedly: " + process.exitValue());
             }
         }
