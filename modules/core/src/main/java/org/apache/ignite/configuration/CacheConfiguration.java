@@ -2370,7 +2370,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * @return {@code True} if this cache persistent data is encrypted.
      */
     public boolean isEncryptionEnabled() {
-        return encryptionEnabled;
+        return true;
     }
 
     /**
