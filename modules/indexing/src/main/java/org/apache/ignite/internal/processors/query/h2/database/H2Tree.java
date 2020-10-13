@@ -426,11 +426,10 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             0,
             link,
             partId,
-            null,
+            CacheDataRowAdapter.RowData.FULL_SKIP_VER,
             mvccCrdVer,
             mvccCntr,
-            mvccOpCntr,
-            true
+            mvccOpCntr
         );
 
         return table.rowDescriptor().createRow(row);

@@ -124,14 +124,16 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
      * @param enabled {code true} If enabled.
      */
     public static void setDataPageScanEnabled(boolean enabled) {
-        dataPageScanEnabled.set(enabled);
+        // Temporary No-op.
+        // dataPageScanEnabled.set(enabled);
     }
 
     /**
      * @return {@code true} If data page scan is enabled.
      */
     public static boolean isDataPageScanEnabled() {
-        return dataPageScanEnabled.get();
+        // return dataPageScanEnabled.get();
+        return false;
     }
 
     /**
@@ -235,8 +237,6 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                     long page = pageMem.acquirePage(grpId, pageId);
 
                     try {
-                        boolean skipVer = CacheDataRowStore.getSkipVersion();
-
                         long pageAddr = ((PageMemoryEx)pageMem).readLock(page, pageId, true, false);
 
                         try {
@@ -271,7 +271,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                                         shared,
                                         pageMem,
                                         rowData,
-                                        skipVer
+                                        rowData.skipVersion()
                                     );
 
                                     rows[r++] = row;
