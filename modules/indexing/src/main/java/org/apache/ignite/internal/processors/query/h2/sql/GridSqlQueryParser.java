@@ -2407,51 +2407,38 @@ public class GridSqlQueryParser {
             switch (iop.getOpType()) {
                 case INTERVAL_PLUS_INTERVAL:
                 case DATETIME_PLUS_INTERVAL:
-                    opRes = new GridSqlOperation(
+                    return new GridSqlOperation(
                         GridSqlOperationType.PLUS,
                         parseExpression(iop.getLeft(), calcTypes),
                         parseExpression(iop.getRight(), calcTypes)
                     );
 
-                    break;
-
                 case INTERVAL_MINUS_INTERVAL:
                 case DATETIME_MINUS_INTERVAL:
                 case DATETIME_MINUS_DATETIME:
-                    opRes = new GridSqlOperation(
+                    return new GridSqlOperation(
                         GridSqlOperationType.MINUS,
                         parseExpression(iop.getLeft(), calcTypes),
                         parseExpression(iop.getRight(), calcTypes)
                     );
 
-                    break;
-
                 case INTERVAL_MULTIPLY_NUMERIC:
-                    opRes = new GridSqlOperation(
+                    return new GridSqlOperation(
                         GridSqlOperationType.MULTIPLY,
                         parseExpression(iop.getLeft(), calcTypes),
                         parseExpression(iop.getRight(), calcTypes)
                     );
 
-                    break;
-
                 case INTERVAL_DIVIDE_NUMERIC:
-                    opRes = new GridSqlOperation(
+                    return new GridSqlOperation(
                         GridSqlOperationType.DIVIDE,
                         parseExpression(iop.getLeft(), calcTypes),
                         parseExpression(iop.getRight(), calcTypes)
                     );
 
-
-                    break;
-
                 default:
                     throw DbException.throwInternalError("opType=" + iop.getOpType());
             }
-
-            GridSqlType tt = opRes.resultType();
-
-            return opRes;
         }
 
         throw new IgniteException("Unsupported expression: " + expression + " [type=" +
