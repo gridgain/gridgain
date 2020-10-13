@@ -102,12 +102,12 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
     }
 
     /** */
-    protected char[] keystorePassword() {
+    public static char[] keystorePassword() {
         return KEYSTORE_PASSWORD.toCharArray();
     }
 
     /** */
-    protected String keystorePath() {
+    public static String keystorePath() {
         return KEYSTORE_PATH;
     }
 

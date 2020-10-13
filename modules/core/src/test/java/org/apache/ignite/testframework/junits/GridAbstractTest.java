@@ -78,9 +78,11 @@ import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryEnumCache;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.encryption.AbstractEncryptionTest;
 import org.apache.ignite.internal.managers.systemview.JmxSystemViewExporterSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
@@ -113,6 +115,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
 import org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi;
 import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -1375,6 +1378,19 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
                 for (DataRegionConfiguration region : dsCfg.getDataRegionConfigurations())
                     capDefaultMaxSize(region);
             }
+        }
+
+        KeystoreEncryptionSpi encSpi = new KeystoreEncryptionSpi();
+
+        encSpi.setKeyStorePath(AbstractEncryptionTest.keystorePath());
+
+        encSpi.setKeyStorePassword(AbstractEncryptionTest.keystorePassword());
+
+        cfg.setEncryptionSpi(encSpi);
+
+        for (CacheConfiguration ccfg : cfg.getCacheConfiguration()) {
+            if(GridCacheUtils.isPersistentCache(ccfg, cfg.getDataStorageConfiguration()))
+                ccfg.setEncryptionEnabled(true);
         }
 
         return cfg;
