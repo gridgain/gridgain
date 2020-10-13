@@ -16,14 +16,11 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 /**
