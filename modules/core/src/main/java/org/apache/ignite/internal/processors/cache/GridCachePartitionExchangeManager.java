@@ -3291,6 +3291,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         blockingSectionEnd();
                     }
 
+                    if (Thread.currentThread().getName().contains("Test3"))
+                        log().warning("!ExchangeWorker_body0");
+
                     if (task == null)
                         continue; // Main while loop.
 
@@ -3314,6 +3317,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         break;
 
                     if (task instanceof RebalanceReassignExchangeTask) {
+                        if (Thread.currentThread().getName().contains("Test3"))
+                            log().warning("!nonSet_lastInitializedFut1");
+
                         RebalanceReassignExchangeTask reassignTask = (RebalanceReassignExchangeTask)task;
 
                         exchId = reassignTask.exchangeId();
@@ -3346,6 +3352,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         }
                     }
                     else if (task instanceof ForceRebalanceExchangeTask) {
+                        if (Thread.currentThread().getName().contains("Test3"))
+                            log().warning("!nonSet_lastInitializedFut2");
+
                         forcePreload = true;
 
                         timeout = 0; // Force refresh.
@@ -3358,6 +3367,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         exchFut = (GridDhtPartitionsExchangeFuture)task;
 
                         exchId = exchFut.exchangeId();
+
+                        if (Thread.currentThread().getName().contains("Test3"))
+                            log().warning("!set_lastInitializedFut");
 
                         lastInitializedFut = exchFut;
 

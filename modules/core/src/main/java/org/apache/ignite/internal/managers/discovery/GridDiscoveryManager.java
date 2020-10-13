@@ -639,8 +639,9 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             if (discoClusterState.transitionTopologyVersion().topologyVersion() >= notification.getTopVer()) {
                                 log.warning("!qwer");
                                 IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
-                                    .affinityReadyFuture(discoClusterState.transitionTopologyVersion());
-//                                .affinityReadyFuture(new AffinityTopologyVersion(discoClusterState.transitionTopologyVersion().topologyVersion(), discoClusterState.transitionTopologyVersion().minorTopologyVersion()));
+//                                    .affinityReadyFuture(discoClusterState.transitionTopologyVersion());
+                                    .affinityReadyFuture(finishStateChangeMsg.topVer());
+//                                .affinityReadyFuture(new AffinityTopologyVersion(discoClusterState.transitionTopologyVersion().topologyVersion(), discoClusterState.transitionTopologyVersion().minorTopologyVersion() + 1));
 
 //                            IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
 //                                .lastTopologyFuture();
