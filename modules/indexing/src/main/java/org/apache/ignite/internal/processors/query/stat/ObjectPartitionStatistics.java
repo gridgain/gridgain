@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -67,5 +68,10 @@ public class ObjectPartitionStatistics extends ObjectStatistics {
      */
     public long updCnt() {
         return updCnt;
+    }
+
+
+    public ObjectPartitionStatistics clone() {
+        return new ObjectPartitionStatistics(partId, loc, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
     }
 }

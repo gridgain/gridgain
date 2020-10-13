@@ -27,7 +27,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTIO
 
 /**
  * Tests to check statistics collection by different types and distributions.
- * //TODO run all tests after rebalance.
  */
 public class StatisticCollectionTest extends TableStatisticsAbstractTest {
 
@@ -44,7 +43,7 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
     private static final SimpleDateFormat TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     @Override protected void beforeTestsStarted() throws Exception {
-        Ignite node = startGridsMultiThreaded(1); // TBD 1!!!!!
+        Ignite node = startGridsMultiThreaded(1);
 
         node.getOrCreateCache(DEFAULT_CACHE_NAME);
     }

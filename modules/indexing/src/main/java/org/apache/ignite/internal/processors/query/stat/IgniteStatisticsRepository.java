@@ -54,11 +54,9 @@ public interface IgniteStatisticsRepository {
      * Save specified local partition statistics.
      *
      * @param tbl table.
-     * @param partId partition id.
      * @param statistics statistics to save.
-     * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveLocalPartitionStatistics(QueryTable tbl, int partId, ObjectPartitionStatistics statistics, boolean fullStat);
+    void saveLocalPartitionStatistics(QueryTable tbl, ObjectPartitionStatistics statistics);
 
     /**
      * Get partition statistics.
@@ -87,12 +85,12 @@ public interface IgniteStatisticsRepository {
     void saveLocalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat);
 
     /**
-     * Cache saved local statistics.
+     * Calculate and cache saved local statistics.
      *
      * @param tbl object.
-     * @param statistics local statistics.
+     * @param statistics collection of partitions statistics.
      */
-    void cacheLocalStatistics(QueryTable tbl, ObjectStatistics statistics);
+    void cacheLocalStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> statistics);
 
     /**
      * Get local statistics.
@@ -115,17 +113,9 @@ public interface IgniteStatisticsRepository {
      *
      * @param tbl table.
      * @param statistics statistics to save.
-     * @param fullStat if {@code True} - replace whole statistics, otherwise - try to merge with existing.
+     * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
      */
     void saveGlobalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat);
-
-    /**
-     * Cache saved global statistics.
-     *
-     * @param tbl table.
-     * @param statistics statistics to save.
-     */
-    void cacheGlobalStatistics(QueryTable tbl, ObjectStatistics statistics);
 
     /**
      * Get global statistics by object.

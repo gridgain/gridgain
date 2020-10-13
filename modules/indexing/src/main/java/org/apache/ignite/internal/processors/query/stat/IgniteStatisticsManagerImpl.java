@@ -175,6 +175,17 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
         return tblPartStats;
     }
 
+    public ObjectStatistics aggregateLocalStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> tblPartStats) {
+
+        GridH2Table table = schemaMgr.dataTable(tbl.schema(), tbl.table());
+        if (table == null) {
+            // remove all loaded statistics.
+            log.info("Removing statistics for table " + tbl + " cause table doesn't exists.");
+            statsRepos.clearLocalPartitionsStatistics(tbl);
+        }
+        return aggregateLocalStatistics(table, table.getColumns(), tblPartStats);
+    }
+
     private ObjectStatistics aggregateLocalStatistics(GridH2Table tbl, Column[] selectedColumns,
                                                       Collection<ObjectPartitionStatistics> tblPartStats) {
 

@@ -16,12 +16,13 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
  * All statistics by some object (table or index)
  */
-public class ObjectStatistics {
+public class ObjectStatistics implements Cloneable {
     /** Total number of rows in object. */
     private final long rowsCnt;
 
@@ -33,7 +34,7 @@ public class ObjectStatistics {
         assert colNameToStat != null: "colNameToStat != null";
 
         this.rowsCnt = rowsCnt;
-        this.colNameToStat = Collections.unmodifiableMap(colNameToStat);
+        this.colNameToStat = colNameToStat;
     }
 
     /**
@@ -56,8 +57,16 @@ public class ObjectStatistics {
     /**
      * @return column statistics map.
      */
-    public Map<String, ColumnStatistics> getColumnsStatistics() {
+    public Map<String, ColumnStatistics> columnsStatistics() {
         return colNameToStat;
+    }
+    /**
+     * Clone object.
+     *
+     * @return clone.
+     */
+    public ObjectStatistics clone() {
+        return new ObjectStatistics(rowsCnt, new HashMap<>(colNameToStat));
     }
 }
 
