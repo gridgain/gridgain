@@ -150,7 +150,6 @@ import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.active;
-import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_FAILURE_DETECTION_TIMEOUT;
 import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
 import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_RECONNECTED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
@@ -290,13 +289,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
     /** Local node compatibility consistent ID. */
     private Serializable consistentId;
-
-    /**
-     * Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress
-     * This map is used to ensure that on client nodes the {@link ChangeGlobalStateMessage} is fully processed
-     * in the {@link GridCachePartitionExchangeManager} before the {@link ChangeGlobalStateFinishMessage} is processed.
-     */
-    private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
 
     /** @param ctx Context. */
     public GridDiscoveryManager(GridKernalContext ctx) {
@@ -631,25 +623,38 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             new AffinityTopologyVersion(topVer, minorTopVer),
                             stateChangeMsg,
                             discoCache());
+
+                        if (ctx.clientNode()) {
+//                            changeStatesInProgress.put((stateChangeMsg).requestId(), new CountDownLatch(1));
+                            log.warning("!onDiscovery0_ChangeGlobalStateMessage" + incMinorTopVer);
+                        }
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
                         ChangeGlobalStateFinishMessage finishStateChangeMsg = (ChangeGlobalStateFinishMessage)customMsg;
 
                         DiscoveryDataClusterState discoClusterState = ctx.state().clusterState();
 
-                        if (ctx.clientNode() && discoClusterState.transition())
-                            {
+                        if (ctx.clientNode() && discoClusterState.transition()) {
+
+                            if (discoClusterState.transitionTopologyVersion().topologyVersion() >= notification.getTopVer()) {
+                                log.warning("!qwer");
+                                IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
+                                    .affinityReadyFuture(discoClusterState.transitionTopologyVersion());
+//                                .affinityReadyFuture(new AffinityTopologyVersion(discoClusterState.transitionTopologyVersion().topologyVersion(), discoClusterState.transitionTopologyVersion().minorTopologyVersion()));
+
+//                            IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
+//                                .lastTopologyFuture();
                                 try {
-//                                    log.warning("!startWait_onStateFinishMessage" + discoClusterState.transitionTopologyVersion() + Thread.currentThread().getName());
-                                    ctx.cache().context().exchange()
-                                        .affinityReadyFuture(discoClusterState.transitionTopologyVersion())
-                                        .get();
-//                                    log.warning("!endWait_onStateFinishMessage" + discoClusterState.transitionTopologyVersion());
+                                    log.warning("!startWait_onStateFinishMessage_qdfrg " + discoClusterState.transitionTopologyVersion() + Thread.currentThread().getName());
+//                                    if (future != null)
+                                    future.get();
+                                    log.warning("!endWait_onStateFinishMessage_redsh" + discoClusterState.transitionTopologyVersion());
                                 }
                                 catch (IgniteCheckedException e) {
                                     throw new IgniteException("Failed to wait for ready topology future.", e);
                                 }
                             }
+                        }
 
                         ctx.state().onStateFinishMessage(finishStateChangeMsg);
 
@@ -889,7 +894,9 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     return;
                 }
 
-                if (type == EVT_CLIENT_NODE_DISCONNECTED || type == EVT_NODE_SEGMENTED || !ctx.clientDisconnected())
+                if (type == EVT_CLIENT_NODE_DISCONNECTED || type == EVT_NODE_SEGMENTED || !ctx.clientDisconnected()) {
+                    if (customMsg instanceof ChangeGlobalStateMessage && localNode().isClient())
+                        log.warning("!onDiscovery0_discoWrk.addEvent");
                     discoWrk.addEvent(
                         new NotificationEvent(
                             type,
@@ -900,6 +907,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             notification.getSpanContainer()
                         )
                     );
+                }
 
                 if (stateFinishMsg != null)
                     discoWrk.addEvent(
@@ -2640,14 +2648,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         }
 
         return null;
-    }
-
-    /** */
-    public void setChangeStateMessageWasProcessed(UUID reqId) {
-        CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
-
-        if (changeStateLatch != null)
-            changeStateLatch.countDown();
     }
 
     /** Worker for network segment checks. */
