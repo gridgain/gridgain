@@ -398,24 +398,23 @@ public class CheckpointMarkersStorage {
     }
 
     /**
-     * Writes checkpoint entry buffer {@code entryBuf} to specified checkpoint file with 2-phase protocol.
+     * Prepares checkpoint entry containing WAL pointer to checkpoint record. Writes into given {@code ptrBuf} WAL
+     * pointer content.
      *
      * @param cpTs Checkpoint timestamp.
      * @param cpId Checkpoint id.
      * @param ptr WAL pointer containing record.
      * @param rec Checkpoint WAL record.
      * @param type Checkpoint type.
-     * @return Checkpoint entry which represents current checkpoint by given parameters.
-     * @throws StorageException If failed to write checkpoint entry.
+     * @return Checkpoint entry.
      */
-    public CheckpointEntry writeCheckpointEntry(
+    public CheckpointEntry prepareCheckpointEntry(
         long cpTs,
         UUID cpId,
         WALPointer ptr,
         @Nullable CheckpointRecord rec,
-        CheckpointEntryType type,
-        boolean skipSync
-    ) throws StorageException {
+        CheckpointEntryType type
+    ) {
         CheckpointEntry entry = prepareCheckpointEntry(
             tmpWriteBuf,
             cpTs,
@@ -427,6 +426,43 @@ public class CheckpointMarkersStorage {
 
         if (type == CheckpointEntryType.START)
             cpHistory.addCheckpoint(entry, rec == null ? Collections.emptyMap() : rec.cacheGroupStates());
+
+        return entry;
+    }
+
+    /**
+     * @param cp Prepared checkpoint entry.
+     * @param type Type of checkpoint marker.
+     * @param skipSync {@code true} if file sync should be skip after write.
+     * @throws StorageException if fail.
+     */
+    public void writeCheckpointEntry(
+        CheckpointEntry cp,
+        CheckpointEntryType type,
+        boolean skipSync
+    ) throws StorageException {
+        writeCheckpointEntry(tmpWriteBuf, cp, type, skipSync);
+    }
+
+    /**
+     * Writes checkpoint entry buffer {@code entryBuf} to specified checkpoint file with 2-phase protocol.
+     *
+     * @param cpTs Checkpoint timestamp.
+     * @param cpId Checkpoint id.
+     * @param ptr WAL pointer containing record.
+     * @param rec Checkpoint WAL record.
+     * @param type Checkpoint type.
+     * @return Checkpoint entry.
+     */
+    public CheckpointEntry writeCheckpointEntry(
+        long cpTs,
+        UUID cpId,
+        WALPointer ptr,
+        @Nullable CheckpointRecord rec,
+        CheckpointEntryType type,
+        boolean skipSync
+    ) throws StorageException {
+        CheckpointEntry entry = prepareCheckpointEntry(cpTs, cpId, ptr, rec, type);
 
         writeCheckpointEntry(tmpWriteBuf, entry, type, skipSync);
 

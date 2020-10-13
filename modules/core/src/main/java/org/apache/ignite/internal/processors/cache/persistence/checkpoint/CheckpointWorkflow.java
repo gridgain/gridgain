@@ -240,6 +240,7 @@ public class CheckpointWorkflow {
         int dirtyPagesCount;
 
         boolean hasPartitionsToDestroy;
+        CheckpointEntry checkpointEntry = null;
 
         WALPointer cpPtr = null;
 
@@ -298,6 +299,14 @@ public class CheckpointWorkflow {
                     cpPtr = CheckpointStatus.NULL_PTR;
             }
 
+            checkpointEntry = checkpointMarkersStorage.prepareCheckpointEntry(
+                cpTs,
+                cpRec.checkpointId(),
+                cpPtr,
+                cpRec,
+                CheckpointEntryType.START
+            );
+
             curr.transitTo(PAGE_SNAPSHOT_TAKEN);
         }
         finally {
@@ -329,11 +338,8 @@ public class CheckpointWorkflow {
 
             tracker.onWalCpRecordFsyncEnd();
 
-            CheckpointEntry checkpointEntry = checkpointMarkersStorage.writeCheckpointEntry(
-                cpTs,
-                cpRec.checkpointId(),
-                cpPtr,
-                cpRec,
+            checkpointMarkersStorage.writeCheckpointEntry(
+                checkpointEntry,
                 CheckpointEntryType.START,
                 skipSync
             );
