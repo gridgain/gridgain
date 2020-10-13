@@ -178,6 +178,10 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
         n = startGrid(cfg);
         awaitPartitionMapExchange();
 
+        // To avoid a race between compressor and getting the segment sizes.
+        if (cfg.getDataStorageConfiguration().isWalCompactionEnabled())
+            cfg.getDataStorageConfiguration().setWalCompactionEnabled(false);
+
         checkLocalSegmentSizes(n);
     }
 
