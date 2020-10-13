@@ -3083,6 +3083,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return currHnd.position();
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean isSegmentFileName(@Nullable String name) {
+        return name != null && (WAL_NAME_PATTERN.matcher(name).matches() ||
+            WAL_SEGMENT_FILE_COMPACTED_PATTERN.matcher(name).matches());
+    }
+
     /**
      * Update сurrent log segment handle.
      *

@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.filehandle.FileWriteHandle;
@@ -38,6 +40,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.ZIP_SUFFIX;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor.fileName;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
@@ -120,6 +124,25 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checking whether segment file name is checked correctly.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSegmentFileName() throws Exception {
+        IgniteEx n = startGrid(0);
+
+        IgniteWriteAheadLogManager walMgr = n.context().cache().context().wal();
+
+        Arrays.asList(null, "", "1", "wal", fileName(0) + "1", fileName(1).replace(".wal", ".wa"))
+            .forEach(s -> assertFalse(s, walMgr.isSegmentFileName(s)));
+
+        IntStream.range(0, 10)
+            .mapToObj(FileDescriptor::fileName)
+            .forEach(fn -> assertTrue(fn, walMgr.isSegmentFileName(fn) && walMgr.isSegmentFileName(fn + ZIP_SUFFIX)));
+    }
+
+    /**
      * Checks whether local segment sizes are working correctly for a single node after loading and restarting.
      *
      * @param cfgUpdater Configuration updater.
@@ -190,7 +213,7 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
             int segments = n.configuration().getDataStorageConfiguration().getWalSegments();
 
             for (long i = absIdx - (absIdx % segments); i <= absIdx; i++)
-                expSegmentSize.putIfAbsent(i, new File(walWorkDir, FileDescriptor.fileName(i % segments)).length());
+                expSegmentSize.putIfAbsent(i, new File(walWorkDir, fileName(i % segments)).length());
         }
 
         assertEquals(currHnd.getSegmentId() + 1, expSegmentSize.size());
