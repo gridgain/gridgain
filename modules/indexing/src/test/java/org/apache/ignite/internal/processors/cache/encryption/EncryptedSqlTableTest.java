@@ -62,7 +62,7 @@ public class EncryptedSqlTableTest extends EncryptedCacheRestartTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected String keystorePath() {
+    public static String keystorePath() {
         return IgniteUtils.resolveIgnitePath("modules/indexing/src/test/resources/tde.jks").getAbsolutePath();
     }
 }
