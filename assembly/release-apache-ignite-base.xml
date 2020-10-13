@@ -116,6 +116,12 @@
             <outputDirectory>/platforms/cpp/examples</outputDirectory>
         </fileSet>
 
+        <!-- Move CPP benchmarks. -->
+        <fileSet>
+            <directory>modules/platforms/cpp/benchmarks</directory>
+            <outputDirectory>/platforms/cpp/benchmarks</outputDirectory>
+        </fileSet>
+
         <!-- Move CPP "odbc" module. -->
         <fileSet>
             <directory>modules/platforms/cpp/odbc</directory>
