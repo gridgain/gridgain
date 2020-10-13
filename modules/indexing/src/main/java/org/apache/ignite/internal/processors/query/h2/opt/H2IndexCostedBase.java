@@ -1128,7 +1128,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             if (locTblStats != null)
                 rowCount = locTblStats.rowCount();
 
-            rowCount += Constants.COST_ROW_OFFSET;
+            // Small increment to account statistics outdates.
+            rowCount += 100;
 
             TableFilter tableFilter = (filters == null) ? null : filters[filter];
 

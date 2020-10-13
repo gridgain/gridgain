@@ -170,7 +170,7 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
 
         // TODO implement is not null check when optimizer will able to properly handle such condition
 
-        String sql = String.format("select * from dtypes i1 where col_%s = %s", name, value);
+        String sql = String.format("select * from dtypes i1 where col_%s %s %s", name, comparator, value);
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_" + name}, sql, noHints);
 

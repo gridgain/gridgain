@@ -66,7 +66,8 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
         sql = replaceIndexHintPlaceholders(sql, indexes);
         String actual[] = runLocalExplainIdx(grid, sql);
 
-        assertTrue("got " + Arrays.asList(actual) + " expected " + Arrays.asList(optimal), Arrays.equals(actual, optimal));
+        assertTrue(String.format("got %s, expected %s in query %s", Arrays.asList(actual), Arrays.asList(optimal), sql),
+                Arrays.equals(actual, optimal));
     }
 
     /**
