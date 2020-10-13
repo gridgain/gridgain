@@ -299,13 +299,15 @@ public class CheckpointWorkflow {
                     cpPtr = CheckpointStatus.NULL_PTR;
             }
 
-            checkpointEntry = checkpointMarkersStorage.prepareCheckpointEntry(
-                cpTs,
-                cpRec.checkpointId(),
-                cpPtr,
-                cpRec,
-                CheckpointEntryType.START
-            );
+            if (dirtyPagesCount > 0 || hasPartitionsToDestroy) {
+                checkpointEntry = checkpointMarkersStorage.prepareCheckpointEntry(
+                    cpTs,
+                    cpRec.checkpointId(),
+                    cpPtr,
+                    cpRec,
+                    CheckpointEntryType.START
+                );
+            }
 
             curr.transitTo(PAGE_SNAPSHOT_TAKEN);
         }
