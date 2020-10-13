@@ -96,8 +96,7 @@ public class CacheDataRowStore extends RowStore {
             rowData,
             crdVer,
             mvccCntr,
-            opCntr,
-            SKIP_VER.get()
+            opCntr
         );
 
         return initDataRow(row, cacheId);
@@ -116,8 +115,7 @@ public class CacheDataRowStore extends RowStore {
             hash,
             link,
             partId,
-            rowData,
-            SKIP_VER.get()
+            rowData
         );
 
         return initDataRow(dataRow, cacheId);

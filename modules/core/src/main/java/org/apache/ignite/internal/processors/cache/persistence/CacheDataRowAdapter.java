@@ -918,25 +918,41 @@ public class CacheDataRowAdapter implements CacheDataRow {
      */
     public enum RowData {
         /** */
-        FULL,
+        FULL(false),
 
         /** */
-        KEY_ONLY,
+        KEY_ONLY (true),
 
         /** */
-        NO_KEY,
+        NO_KEY(false),
 
         /** */
-        LINK_ONLY,
+        LINK_ONLY(false),
 
         /** */
-        LINK_WITH_HEADER,
+        LINK_WITH_HEADER(false),
 
         /** Force instant hints actualization for rebalance (to avoid races with vacuum). */
-        FULL_WITH_HINTS,
+        FULL_WITH_HINTS(false),
 
         /** Force instant hints actualization for update operation with history (to avoid races with vacuum). */
-        NO_KEY_WITH_HINTS
+        NO_KEY_WITH_HINTS (false),
+
+        /** */
+        FULL_SKIP_VER(true);
+
+        /** */
+        private final boolean skipVersion;
+
+        /***/
+        private RowData(boolean skipVer) {
+            this.skipVersion = skipVer;
+        }
+
+        /** */
+        public boolean skipVersion() {
+            return skipVersion;
+        }
     }
 
     /** {@inheritDoc} */

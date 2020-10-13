@@ -107,10 +107,9 @@ public class MvccDataRow extends DataRow {
         RowData rowData,
         long crdVer,
         long mvccCntr,
-        int mvccOpCntr,
-        boolean skipVer
+        int mvccOpCntr
     ) {
-        super(grp, hash, link, part, rowData, skipVer);
+        super(grp, hash, link, part, rowData);
 
         assert MvccUtils.mvccVersionIsValid(crdVer, mvccCntr, mvccOpCntr);
 

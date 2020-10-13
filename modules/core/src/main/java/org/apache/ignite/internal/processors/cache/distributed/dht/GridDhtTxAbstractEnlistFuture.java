@@ -735,8 +735,7 @@ public abstract class GridDhtTxAbstractEnlistFuture<T> extends GridCacheFutureAd
                 CacheDataRowAdapter.RowData.NO_KEY_WITH_HINTS,
                 row0.mvccCoordinatorVersion(),
                 row0.mvccCounter(),
-                row0.mvccOperationCounter(),
-                false
+                row0.mvccOperationCounter()
             );
 
             GridCacheMvccEntryInfo entry = new GridCacheMvccEntryInfo();

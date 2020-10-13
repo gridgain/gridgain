@@ -26,7 +26,6 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
@@ -116,7 +115,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
         KeyCacheObject upperObj = upper != null ? cctx.toCacheKeyObject(upper.getValue(0).getObject()) : null;
 
         try {
-            CacheDataRowStore.setSkipVersion(true);
+//            CacheDataRowStore.setSkipVersion(true);
 
             Collection<GridCursor<? extends CacheDataRow>> cursors = new ArrayList<>();
 
@@ -136,7 +135,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
             throw DbException.convert(e);
         }
         finally {
-            CacheDataRowStore.setSkipVersion(false);
+//            CacheDataRowStore.setSkipVersion(false);
         }
     }
 
@@ -199,8 +198,6 @@ public class H2PkHashIndex extends GridH2IndexBase {
 
     /** {@inheritDoc} */
     @Override public long totalRowCount(IndexingQueryCacheFilter partsFilter) {
-        CacheDataRowStore.setSkipVersion(true);
-
         try {
             Collection<GridCursor<? extends CacheDataRow>> cursors = new ArrayList<>();
 
@@ -222,9 +219,6 @@ public class H2PkHashIndex extends GridH2IndexBase {
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
-        }
-        finally {
-            CacheDataRowStore.setSkipVersion(false);
         }
     }
 
@@ -275,7 +269,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
         /** {@inheritDoc} */
         @Override public boolean next() {
             try {
-                CacheDataRowStore.setSkipVersion(true);
+//                CacheDataRowStore.setSkipVersion(true);
 
                 GridQueryTypeDescriptor type = desc.type();
 
@@ -301,7 +295,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
                 throw DbException.convert(e);
             }
             finally {
-                CacheDataRowStore.setSkipVersion(false);
+//                CacheDataRowStore.setSkipVersion(false);
             }
         }
 

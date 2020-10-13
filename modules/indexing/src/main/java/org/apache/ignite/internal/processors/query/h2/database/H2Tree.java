@@ -471,8 +471,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             rowData,
             mvccCrdVer,
             mvccCntr,
-            mvccOpCntr,
-            true
+            mvccOpCntr
         );
 
         return table.rowDescriptor().createRow(row);
