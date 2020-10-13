@@ -638,21 +638,24 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                             if (discoClusterState.transitionTopologyVersion().topologyVersion() >= notification.getTopVer()) {
                                 log.warning("!qwer");
-                                IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
+
+                                if (finishStateChangeMsg.topVer() != null) {
+                                    IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
 //                                    .affinityReadyFuture(discoClusterState.transitionTopologyVersion());
-                                    .affinityReadyFuture(finishStateChangeMsg.topVer());
+                                        .affinityReadyFuture(finishStateChangeMsg.topVer());
 //                                .affinityReadyFuture(new AffinityTopologyVersion(discoClusterState.transitionTopologyVersion().topologyVersion(), discoClusterState.transitionTopologyVersion().minorTopologyVersion() + 1));
 
 //                            IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
 //                                .lastTopologyFuture();
-                                try {
-                                    log.warning("!startWait_onStateFinishMessage_qdfrg " + discoClusterState.transitionTopologyVersion() + Thread.currentThread().getName());
+                                    try {
+                                        log.warning("!startWait_onStateFinishMessage_qdfrg " + discoClusterState.transitionTopologyVersion() + Thread.currentThread().getName());
 //                                    if (future != null)
-                                    future.get();
-                                    log.warning("!endWait_onStateFinishMessage_redsh" + discoClusterState.transitionTopologyVersion());
-                                }
-                                catch (IgniteCheckedException e) {
-                                    throw new IgniteException("Failed to wait for ready topology future.", e);
+                                        future.get();
+                                        log.warning("!endWait_onStateFinishMessage_redsh" + discoClusterState.transitionTopologyVersion());
+                                    }
+                                    catch (IgniteCheckedException e) {
+                                        throw new IgniteException("Failed to wait for ready topology future.", e);
+                                    }
                                 }
                             }
                         }
