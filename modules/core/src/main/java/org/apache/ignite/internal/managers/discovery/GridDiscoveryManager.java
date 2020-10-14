@@ -634,7 +634,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                         DiscoveryDataClusterState discoClusterState = ctx.state().clusterState();
 
-                        if (ctx.clientNode() && discoClusterState.transition()) {
+                        if (ctx.clientNode() && !ctx.isDaemon() && discoClusterState.transition()) {
 
                             if (discoClusterState.transitionTopologyVersion().topologyVersion() >= notification.getTopVer()) {
                                 log.warning("!qwer");
