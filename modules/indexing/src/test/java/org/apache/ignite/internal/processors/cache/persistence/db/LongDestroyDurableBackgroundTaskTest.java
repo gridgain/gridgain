@@ -166,7 +166,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
                         new DataRegionConfiguration()
                             .setPersistenceEnabled(true)
                             .setInitialSize(10 * 1024L * 1024L)
-                            .setMaxSize(50 * 1024L * 1024L)
+                            .setMaxSize(100 * 1024L * 1024L)
                     )
                     .setDataRegionConfigurations(
                         new DataRegionConfiguration()
