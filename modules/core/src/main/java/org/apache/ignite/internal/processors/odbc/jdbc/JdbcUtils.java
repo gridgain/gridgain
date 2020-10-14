@@ -277,8 +277,6 @@ public class JdbcUtils {
         if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
             return t;
 
-        LocalDateTime
-
         Instant i = Instant.ofEpochMilli(t.getTime());
 
         LocalDateTime ldt = LocalDateTime.ofInstant(i, tzFrom.toZoneId());
