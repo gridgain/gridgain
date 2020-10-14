@@ -629,21 +629,23 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                         //for a client node need to wait a new topology version associeted with cluster state changing
                         //to ensure that ChangeGlobalStateMessage has been fully processed
-                        if (ctx.clientNode() && !ctx.isDaemon() && discoClusterState.transition() &&
-                            discoClusterState.transitionTopologyVersion().topologyVersion() >= notification.getTopVer()) {
+                        if (ctx.clientNode() && !ctx.isDaemon() && discoClusterState.transition()) {
                             AffinityTopologyVersion msgTopVer = finishStateChangeMsg.topVer();
 
-                            if (msgTopVer != null) {
-                                IgniteInternalFuture<AffinityTopologyVersion> fut = ctx.cache().context().exchange()
-                                    .affinityReadyFuture(msgTopVer);
+                            long transitionTopVer = discoClusterState.transitionTopologyVersion().topologyVersion();
 
-                                try {
-                                    fut.get();
-                                }
-                                catch (IgniteCheckedException e) {
-                                    throw new IgniteException("Failed to wait for ready topology future: [future=" +
-                                        fut, e);
-                                }
+                            if (msgTopVer != null &&
+                                (transitionTopVer >= topVer || ctx.cache().context().exchange().lastTopologyFuture() != null)) {
+                                    IgniteInternalFuture<AffinityTopologyVersion> fut = ctx.cache().context().exchange()
+                                        .affinityReadyFuture(msgTopVer);
+
+                                    try {
+                                        fut.get();
+                                    }
+                                    catch (IgniteCheckedException e) {
+                                        throw new IgniteException("Failed to wait for ready topology future: [future=" +
+                                            fut, e);
+                                    }
                             }
                         }
 
