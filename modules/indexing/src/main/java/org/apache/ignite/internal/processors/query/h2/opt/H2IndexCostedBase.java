@@ -735,12 +735,14 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                             rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost - (i > 0 ? 1 : 0));
                             continue;
                         }
+                        if (colStats != null && equalNull == Boolean.FALSE)
+                            rowsCost = rowsCost * (100 - colStats.nulls()) / 100;
 
                         int cardinality = getColumnCardinality(colStats, column);
 
                         totalCardinality = 100 - ((100 - totalCardinality) * (100 - cardinality) / 100);
 
-                        long distinctRows = rowCount * totalCardinality / 100;
+                        long distinctRows = Math.round((double)rowCount * totalCardinality / 100);
 
                         if (distinctRows <= 0)
                             distinctRows = 1;
@@ -939,12 +941,12 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         }
 
         /**
-         * Estimate percent of selected rows by specified min/max conditions.
+         * Estimate percent of selected rows by specified min/max conditions (of total rows, with nulls).
          *
-         * @param colStat column statistics to use
-         * @param min
-         * @param max
-         * @return
+         * @param colStat column statistics to use, if exists.
+         * @param min lower border.
+         * @param max higher border.
+         * @return percent of rows, selected with specified conditions (0-100)
          */
         private int estimatePercent(ColumnStatistics colStat, Value min, Value max) {
             if (colStat == null || colStat.min() == null || colStat.max() == null)
@@ -974,13 +976,12 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             BigDecimal total = maxStat.subtract(minStat);
 
             if (total.signum() < 0)
-                // TBD - corrupted stats
                 return estimatePercentFallback(min, max);
 
             if (total.signum() == 0)
                 return (minStat.equals(min)) ? 100 : 0;
 
-            int result = actual.multiply(BigDecimal.valueOf(100)).divide(total, MATH_CONTEXT).intValue();
+            int result = actual.multiply(BigDecimal.valueOf(100 - colStat.nulls())).divide(total, MATH_CONTEXT).intValue();
             return result > 100 ? 100 : result;
         }
 

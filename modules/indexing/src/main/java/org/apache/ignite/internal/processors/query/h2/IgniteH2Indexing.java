@@ -324,7 +324,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     private GridMessageListener qryLsnr;
 
     /** Statistic manager. */
-    private IgniteStatisticsManager statsManager;
+    private IgniteStatisticsManager statsMgr;
     /**
      * @return Kernal context.
      */
@@ -2208,7 +2208,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         schemaMgr = new SchemaManager(ctx, connections());
         schemaMgr.start(ctx.config().getSqlConfiguration().getSqlSchemas());
 
-        statsManager = new IgniteStatisticsManagerImpl(ctx, schemaMgr);
+        statsMgr = new IgniteStatisticsManagerImpl(ctx, schemaMgr);
 
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
@@ -3344,6 +3344,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     @Override
     public IgniteStatisticsManager statsManager() {
-        return statsManager;
+        return statsMgr;
     }
 }

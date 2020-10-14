@@ -467,6 +467,11 @@ public class GridH2Table extends TableBase {
         return cacheInfo.cacheContext() == null;
     }
 
+    /**
+     * Get actual table statistics if exists.
+     *
+     * @return table statistics or {@code null} if there is no statistics available.
+     */
     public ObjectStatistics tableStatistics() {
         GridCacheContext cacheContext = cacheInfo.cacheContext();
         if (cacheContext == null)
@@ -1261,7 +1266,6 @@ public class GridH2Table extends TableBase {
      * Refreshes table stats if they are outdated.
      */
     private void refreshStatsIfNeeded() {
-        // TODO remove?
         TableStatistics stats = tblStats;
 
         long statsTotalRowCnt = stats.totalRowCount();

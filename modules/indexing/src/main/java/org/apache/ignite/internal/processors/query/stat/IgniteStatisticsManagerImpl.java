@@ -29,6 +29,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteStatisticsRepositoryImpl;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
@@ -43,7 +44,6 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
 
     /** Logger. */
-    @LoggerResource
     private IgniteLogger log;
 
     private final GridKernalContext ctx;
@@ -55,6 +55,7 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
         this.ctx = ctx;
         this.schemaMgr = schemaMgr;
 
+        log = ctx.log(IgniteStatisticsManagerImpl.class);
         statsRepos = new IgniteStatisticsRepositoryImpl(ctx);
     }
     public IgniteStatisticsRepository statisticsRepository() {
@@ -102,6 +103,9 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
         if (tbl == null)
             throw new IgniteAuthenticationException(String.format("Can't find table %s.%s", schemaName, objName));
 
+        if (log.isDebugEnabled())
+            log.debug(String.format("Starting statistics collection by %s.%s object", schemaName, objName));
+
         Column[] selectedColumns;
         boolean fullStat;
         if (colNames == null || colNames.length == 0) {
@@ -117,12 +121,15 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
 
         ObjectStatistics tblStats = aggregateLocalStatistics(tbl, selectedColumns, partsStats);
         statsRepos.saveLocalStatistics(tbl.identifier(), tblStats, fullStat);
+        if (log.isDebugEnabled())
+            log.debug(String.format("Statistics collection by %s.%s object is finished.", schemaName, objName));
     }
 
     private Collection<ObjectPartitionStatistics> collectPartitionStatistics(GridH2Table tbl, Column[] selectedColumns)
             throws IgniteCheckedException {
         List<ObjectPartitionStatistics> tblPartStats = new ArrayList<>();
         GridH2RowDescriptor desc = tbl.rowDescriptor();
+        String tblName = tbl.getName();
 
         for (GridDhtLocalPartition locPart : tbl.cacheContext().topology().localPartitions()) {
             final boolean reserved = locPart.reserve();
@@ -144,8 +151,10 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
 
                 for (CacheDataRow row : tbl.cacheContext().offheap().cachePartitionIterator(tbl.cacheId(), locPart.id(),
                         null, true)) {
-                    // TODO: verify that row belongs to the table, possibly its better to use table scan index here
-                    // tbl.getScanIndex(null)...
+                    GridQueryTypeDescriptor typeDesc = ctx.query().typeByValue(tbl.cacheName(),
+                            tbl.cacheContext().cacheObjectContext(), row.key(), row.value(), false);
+                    //if (!tblName.equals(typeDesc.tableName()))
+                    //    continue;
 
                     rowsCnt++;
 
