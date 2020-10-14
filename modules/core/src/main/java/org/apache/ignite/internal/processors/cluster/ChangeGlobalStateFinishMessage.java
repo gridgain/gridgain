@@ -129,7 +129,9 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
         return state != null ? state : (clusterActive ? ACTIVE : INACTIVE);
     }
 
-    /** */
+    /**
+     * @return State change exchange version.
+     */
     public AffinityTopologyVersion topVer() {
         return topVer;
     }
