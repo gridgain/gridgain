@@ -86,7 +86,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
             costFuncType = CostFunctionType.LAST;
         }
-        //costFuncType = CostFunctionType.COMPATIBLE_8_7_28;
+
         switch (costFuncType) {
             case COMPATIBLE_8_7_12:
                 constFunc = this::getCostRangeIndex_8_7_12;
@@ -1129,7 +1129,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 rowCount = locTblStats.rowCount();
 
             // Small increment to account statistics outdates.
-            rowCount += 100;
+            rowCount += 1000;
 
             TableFilter tableFilter = (filters == null) ? null : filters[filter];
 
