@@ -4075,10 +4075,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     ChangeGlobalStateFinishMessage message = new ChangeGlobalStateFinishMessage(
                         req.requestId(),
                         state,
-                        !stateChangeErr
+                        !stateChangeErr,
+                        req.topologyVersion()
                     );
-
-                    message.topVer(req.topologyVersion());
 
                     ChangeGlobalStateFinishMessage stateFinishMsg = message;
 

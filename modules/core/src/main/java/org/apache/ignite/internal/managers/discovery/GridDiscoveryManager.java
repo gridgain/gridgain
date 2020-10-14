@@ -639,7 +639,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             if (discoClusterState.transitionTopologyVersion().topologyVersion() >= notification.getTopVer()) {
                                 log.warning("!qwer");
 
-                                if (finishStateChangeMsg.topVer() != null) {
+//                                if (finishStateChangeMsg.topVer() != null) {
                                     IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
 //                                    .affinityReadyFuture(discoClusterState.transitionTopologyVersion());
                                         .affinityReadyFuture(finishStateChangeMsg.topVer());
@@ -657,7 +657,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                                         throw new IgniteException("Failed to wait for ready topology future.", e);
                                     }
                                 }
-                            }
+//                            }
                         }
 
                         ctx.state().onStateFinishMessage(finishStateChangeMsg);
