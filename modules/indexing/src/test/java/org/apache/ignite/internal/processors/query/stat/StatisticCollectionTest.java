@@ -19,8 +19,10 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION;
@@ -34,6 +36,12 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
             "DECIMAL", "DOUBLE","REAL","TIME","DATE","TIMESTAMP","VARCHAR","CHAR","UUID","BINARY","GEOMETRY"};
 
     /** */
+    private static final String START_DATE = "1970.01.01 12:00:00 UTC";
+
+    /** */
+    private static final long TIMESTART;
+
+    /** */
     private static final SimpleDateFormat TIME_FORMATTER = new SimpleDateFormat("HH:mm:ss");
 
     /** */
@@ -41,6 +49,23 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
 
     /** */
     private static final SimpleDateFormat TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    static {
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        SimpleDateFormat SDF = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss z");
+        SDF.setTimeZone(tz);
+        Calendar cal = Calendar.getInstance();
+        try {
+            cal.setTime(SDF.parse(START_DATE));
+        } catch (ParseException e) {
+            // No-op.
+        }
+        TIMESTART = cal.getTimeInMillis();
+
+        TIME_FORMATTER.setTimeZone(tz);
+        DATE_FORMATTER.setTimeZone(tz);
+        TIMESTAMP_FORMATTER.setTimeZone(tz);
+    }
+
 
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(1);
@@ -64,23 +89,34 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
         for (String type : TYPES) {
             runSql(String.format("CREATE INDEX dtypes_%s ON dtypes(col_%s)", type, type));
         }
-        for (int i = 0; i < SMALL_SIZE; i++) {
+        for (int i = 1; i < SMALL_SIZE; i++) {
             runSql(insert(i));
+        }
+        for (int i = 0; i > -SMALL_SIZE / 2; i--) {
+            runSql(insertNulls(i));
         }
 
         updateStatistics("dtypes");
     }
 
+    private String insertNulls(long counter) {
+        return String.format("INSERT INTO dtypes(id) values (%d)", counter);
+    }
+
     private String insert(long counter) {
         StringBuilder insert = new StringBuilder("INSERT INTO dtypes(id, col_index, col_no_index");
-        for (int i = 0; i < TYPES.length; i++) {
-            insert.append(", col_").append(TYPES[i]);
-        }
-        insert.append(") VALUES (").append(counter).append(", ").append(counter).append(", ").append(counter);
 
-        for (int i = 0; i < TYPES.length; i++) {
+        for (int i = 0; i < TYPES.length; i++)
+            insert.append(", col_").append(TYPES[i]);
+
+        insert.append(") VALUES (")
+                .append(counter).append(", ")
+                .append(counter).append(", ")
+                .append(counter);
+
+        for (int i = 0; i < TYPES.length; i++)
             insert.append(", ").append(getVal(TYPES[i], counter));
-        }
+
         insert.append(")");
         return insert.toString();
     }
@@ -110,17 +146,20 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
 
             case "TIME":
                 Calendar timeCalendar = Calendar.getInstance();
-                timeCalendar.setTimeInMillis(counter * 1000);
+                timeCalendar.setTimeInMillis(TIMESTART);
+                timeCalendar.add(Calendar.SECOND, (int)counter);
                 return "'" + TIME_FORMATTER.format(timeCalendar.getTime()) + "'";
 
             case "DATE":
                 Calendar dateCalendar = Calendar.getInstance();
-                dateCalendar.setTimeInMillis(counter * 91200000);
+                dateCalendar.setTimeInMillis(TIMESTART);
+                dateCalendar.add(Calendar.DATE, (int)counter);
                 return "'" + DATE_FORMATTER.format(dateCalendar.getTime()) + "'";
 
             case "TIMESTAMP":
                 Calendar timestampCalendar = Calendar.getInstance();
-                timestampCalendar.setTimeInMillis(counter * 1000);
+                timestampCalendar.setTimeInMillis(TIMESTART);
+                timestampCalendar.add(Calendar.SECOND, (int)counter);
                 return "'" + TIMESTAMP_FORMATTER.format(timestampCalendar.getTime()) + "'";
 
             case "VARCHAR":
@@ -252,7 +291,9 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
     @Test
     public void compareSelectWithDecimalConditions() {
         doColumnTests("DECIMAL", "=", "1");
-        doColumnTests("DECIMAL", "<", "10");
+        doColumnTests("DECIMAL", "<", "-10");
+        doColumnTests("DECIMAL", "<", "0.2");
+        doColumnTests("DECIMAL", ">=", "0.8");
         doColumnTests("DECIMAL", ">=", "100");
     }
 
@@ -262,18 +303,22 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
     @Test
     public void compareSelectWithDoubleConditions() {
         doColumnTests("DECIMAL", "=", "1");
-        doColumnTests("DECIMAL", "<", "10");
+        doColumnTests("DECIMAL", "<", "-10");
+        doColumnTests("DECIMAL", "<", "0.2");
+        doColumnTests("DECIMAL", ">=", "0.8");
         doColumnTests("DECIMAL", ">=", "100");
     }
 
     /**
      * Test that optimizer will use real column index.
      */
-    @WithSystemProperty(key = IGNITE_INDEX_COST_FUNCTION, value = "COMPATIBLE_8_7_28")
+    //@WithSystemProperty(key = IGNITE_INDEX_COST_FUNCTION, value = "COMPATIBLE_8_7_28")
     @Test
     public void compareSelectWithRealConditions() {
         doColumnTests("REAL", "=", "1");
-        doColumnTests("REAL", "<", "10");
+        doColumnTests("REAL", "<", "-10");
+        doColumnTests("REAL", "<", "0.2");
+        doColumnTests("REAL", ">=", "0.8");
         doColumnTests("REAL", ">=", "100");
     }
 
@@ -283,8 +328,10 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
     @Test
     public void compareSelectWithTimeConditions() {
         doColumnTests("TIME", "=", "'12:00:00'");
-        doColumnTests("TIME", "<", "'12:00:00'");
-        doColumnTests("TIME", ">=", "'12:00:00'");
+        doColumnTests("TIME", "<", "'11:00:02'");
+        doColumnTests("TIME", "<", "'12:00:02'");
+        doColumnTests("TIME", ">=", "'12:01:00'");
+        doColumnTests("TIME", ">=", "'13:00:00'");
     }
 
     /**
@@ -292,9 +339,11 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithDateConditions() {
-        doColumnTests("DATE", "=", "'1970-02-03'");
-        doColumnTests("DATE", "<", "'1970-02-03'");
+        doColumnTests("DATE", "=", "'1970-01-02'");
+        doColumnTests("DATE", "<", "'1969-01-03'");
+        doColumnTests("DATE", "<", "'1970-01-03'");
         doColumnTests("DATE", ">=", "'1970-02-03'");
+        doColumnTests("DATE", ">=", "'1970-09-03'");
     }
 
     /**
@@ -302,9 +351,11 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithTimestampConditions() {
-        doColumnTests("TIMESTAMP", "=", "'1972-02-02 11:59:59'");
-        doColumnTests("TIMESTAMP", "<", "'1972-02-02 11:59:59'");
-        doColumnTests("TIMESTAMP", ">=", "'1972-02-02 11:59:59'");
+        doColumnTests("TIMESTAMP", "=", "'1970-01-01 12:00:59'");
+        doColumnTests("TIMESTAMP", "<", "'1970-01-01 11:00:09'");
+        doColumnTests("TIMESTAMP", "<", "'1970-01-01 12:00:09'");
+        doColumnTests("TIMESTAMP", ">=", "'1970-01-01 12:01:23'");
+        doColumnTests("TIMESTAMP", ">=", "'1970-01-01 12:08:23'");
     }
 
     /**
