@@ -935,11 +935,8 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         else
             checkNoCaches(nodesCnt);
 
-        log.warning("!startnewserver");
         startNodeAndCheckCaches(nodesCnt++, false, DEFAULT_CACHES_COUNT);
-        log.warning("!startnewclient");
         startNodeAndCheckCaches(nodesCnt++, true, DEFAULT_CACHES_COUNT);
-        log.warning("!startednewclient");
 
         if (!ClusterState.active(targetState)) {
             checkNoCaches(nodesCnt);
@@ -962,7 +959,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /** */
     private void startNodeAndCheckCaches(int nodeIdx, boolean client, int cachesCount) throws Exception {
         startGrid(nodeIdx, client);
-        log.warning("!startednewserver");
+
         ClusterState state = grid(0).cluster().state();
 
         if (ClusterState.active(state)) {
@@ -1198,8 +1195,6 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         }
 
         if (!ClusterState.active(targetState)) {
-            log().warning("!qedsuy");
-
             checkNoCaches(nodesCnt);
 
             ignite(0).cluster().state(initialState);
@@ -1217,8 +1212,6 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         startGrid(nodesCnt++, true);
 
         checkCaches(nodesCnt);
-
-        log().warning("!qwsdrf");
     }
 
     /**
@@ -1683,22 +1676,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
             1000
         );
 
-        log().warning("!node_111 " + ((IgniteEx)node)
-            .context()
-            .cache()
-            .context()
-            .exchange()
-            .lastTopologyFuture());
-
-
-
-        ((IgniteEx)node)
-            .context()
-            .cache()
-            .context()
-            .exchange()
-            .lastTopologyFuture()
-            .get();
+        ((IgniteEx)node).context().cache().context().exchange().lastTopologyFuture().get();
 
         ((IgniteEx)node).context().state().publicApiState(true);
 

@@ -3346,7 +3346,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         }
                     }
                     else if (task instanceof ForceRebalanceExchangeTask) {
-
                         forcePreload = true;
 
                         timeout = 0; // Force refresh.
