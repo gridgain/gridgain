@@ -177,6 +177,6 @@ namespace ignite
 
         IGNITE_BINARY_TYPE_END
     }
-};
+}
 
 #endif // _IGNITE_ODBC_TEST_TEST_TYPE

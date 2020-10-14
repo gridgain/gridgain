@@ -157,7 +157,7 @@ namespace ignite
                  * Get column precision.
                  * @return Column precision.
                  */
-                const int32_t GetPrecision() const
+                int32_t GetPrecision() const
                 {
                     return precision;
                 }
@@ -166,7 +166,7 @@ namespace ignite
                  * Get column scale.
                  * @return Column scale.
                  */
-                const int32_t GetScale() const
+                int32_t GetScale() const
                 {
                     return scale;
                 }
