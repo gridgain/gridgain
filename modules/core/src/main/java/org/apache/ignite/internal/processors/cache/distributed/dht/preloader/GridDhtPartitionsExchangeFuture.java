@@ -4072,14 +4072,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 if (!cctx.kernalContext().state().clusterState().localBaselineAutoAdjustment()) {
                     ClusterState state = stateChangeErr ? ClusterState.INACTIVE : req.state();
 
-                    ChangeGlobalStateFinishMessage message = new ChangeGlobalStateFinishMessage(
+                    ChangeGlobalStateFinishMessage stateFinishMsg = new ChangeGlobalStateFinishMessage(
                         req.requestId(),
                         state,
                         !stateChangeErr,
                         req.topologyVersion()
                     );
-
-                    ChangeGlobalStateFinishMessage stateFinishMsg = message;
 
                     cctx.discovery().sendCustomEvent(stateFinishMsg);
                 }

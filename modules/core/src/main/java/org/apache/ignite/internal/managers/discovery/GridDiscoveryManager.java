@@ -617,10 +617,9 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     boolean incMinorTopVer;
 
                     if (customMsg instanceof ChangeGlobalStateMessage) {
-                        ChangeGlobalStateMessage stateChangeMsg = (ChangeGlobalStateMessage)customMsg;
                         incMinorTopVer = ctx.state().onStateChangeMessage(
                             new AffinityTopologyVersion(topVer, minorTopVer),
-                            stateChangeMsg,
+                            (ChangeGlobalStateMessage)customMsg,
                             discoCache());
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
@@ -886,9 +885,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     return;
                 }
 
-                if (type == EVT_CLIENT_NODE_DISCONNECTED || type == EVT_NODE_SEGMENTED || !ctx.clientDisconnected()) {
-                    if (customMsg instanceof ChangeGlobalStateMessage && localNode().isClient())
-                        log.warning("!onDiscovery0_discoWrk.addEvent");
+                if (type == EVT_CLIENT_NODE_DISCONNECTED || type == EVT_NODE_SEGMENTED || !ctx.clientDisconnected())
                     discoWrk.addEvent(
                         new NotificationEvent(
                             type,
@@ -899,7 +896,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             notification.getSpanContainer()
                         )
                     );
-                }
 
                 if (stateFinishMsg != null)
                     discoWrk.addEvent(
