@@ -182,7 +182,10 @@ public enum IgniteFeatures {
     SNAPSHOT_SFTP_UPLOAD(47),
 
     /** Master key change. See {@link GridEncryptionManager#changeMasterKey(String)}. */
-    MASTER_KEY_CHANGE(48);
+    MASTER_KEY_CHANGE(48),
+
+    /** Incremental DR. */
+    INCREMENTAL_DR(49);
 
     /**
      * Unique feature identifier.
