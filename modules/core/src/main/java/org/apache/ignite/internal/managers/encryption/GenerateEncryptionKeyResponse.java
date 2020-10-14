@@ -40,6 +40,9 @@ public class GenerateEncryptionKeyResponse implements Message {
     @GridDirectCollection(byte[].class)
     private Collection<byte[]> encKeys;
 
+    /** Master key digest that encrypted group encryption keys. */
+    private byte[] masterKeyDigest;
+
     /** */
     public GenerateEncryptionKeyResponse() {
     }
@@ -47,10 +50,12 @@ public class GenerateEncryptionKeyResponse implements Message {
     /**
      * @param id Request id.
      * @param encKeys Encryption keys.
+     * @param masterKeyDigest Master key digest.
      */
-    public GenerateEncryptionKeyResponse(IgniteUuid id, Collection<byte[]> encKeys) {
+    public GenerateEncryptionKeyResponse(IgniteUuid id, Collection<byte[]> encKeys, byte[] masterKeyDigest) {
         this.id = id;
         this.encKeys = encKeys;
+        this.masterKeyDigest = masterKeyDigest;
     }
 
     /**
@@ -65,6 +70,11 @@ public class GenerateEncryptionKeyResponse implements Message {
      */
     public Collection<byte[]> encryptionKeys() {
         return encKeys;
+    }
+
+    /** @return Master key digest that encrypted group encryption keys. */
+    public byte[] masterKeyDigest() {
+        return masterKeyDigest;
     }
 
     /** {@inheritDoc} */
@@ -91,6 +101,11 @@ public class GenerateEncryptionKeyResponse implements Message {
 
                 writer.incrementState();
 
+            case 2:
+                if (!writer.writeByteArray("masterKeyDigest", masterKeyDigest))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -120,6 +135,13 @@ public class GenerateEncryptionKeyResponse implements Message {
 
                 reader.incrementState();
 
+            case 2:
+                masterKeyDigest = reader.readByteArray("masterKeyDigest");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GenerateEncryptionKeyResponse.class);
@@ -132,7 +154,7 @@ public class GenerateEncryptionKeyResponse implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 2;
+        return 3;
     }
 
     /** {@inheritDoc} */
