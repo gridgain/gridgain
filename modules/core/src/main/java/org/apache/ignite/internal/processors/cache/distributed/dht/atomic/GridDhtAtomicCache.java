@@ -866,7 +866,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                         if (invokeRes.result() != null)
                             res = CacheInvokeResult.fromResult((T)ctx.unwrapBinaryIfNeeded(invokeRes.result(),
-                                keepBinary, false));
+                                keepBinary, false, null));
                     }
 
                     return res;
@@ -1490,7 +1490,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     row.version(),
                                     0,
                                     0,
-                                    needVer);
+                                    needVer,
+                                    U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())));
 
                                 if (evt) {
                                     ctx.events().readEvent(key,
@@ -1574,7 +1575,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                             ver,
                                             0,
                                             0,
-                                            needVer);
+                                            needVer,
+                                            U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())));
                                     }
                                 }
                                 else
@@ -2069,7 +2071,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
 
         if (retVal == null)
-            retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, true);
+            retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, null, true);
 
         res.returnValue(retVal);
 
@@ -2396,7 +2398,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                             ctx.unwrapBinaryIfNeeded(
                                 updated,
                                 req.keepBinary(),
-                                false));
+                                false,
+                                null));
 
                         if (val == null)
                             continue;
@@ -2725,6 +2728,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         retVal = new GridCacheReturn(ctx,
                             nearNode.isLocal(),
                             req.keepBinary(),
+                            U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())),
                             req.returnValue() ? ret : null,
                             updRes.success());
                     }
