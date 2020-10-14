@@ -82,7 +82,6 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheChangeRequest;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
@@ -623,41 +622,30 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             new AffinityTopologyVersion(topVer, minorTopVer),
                             stateChangeMsg,
                             discoCache());
-
-                        if (ctx.clientNode()) {
-//                            changeStatesInProgress.put((stateChangeMsg).requestId(), new CountDownLatch(1));
-                            log.warning("!onDiscovery0_ChangeGlobalStateMessage" + incMinorTopVer);
-                        }
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
                         ChangeGlobalStateFinishMessage finishStateChangeMsg = (ChangeGlobalStateFinishMessage)customMsg;
 
                         DiscoveryDataClusterState discoClusterState = ctx.state().clusterState();
 
-                        if (ctx.clientNode() && !ctx.isDaemon() && discoClusterState.transition()) {
+                        //for a client node need to wait a new topology version associeted with cluster state changing
+                        //to ensure that ChangeGlobalStateMessage has been fully processed
+                        if (ctx.clientNode() && !ctx.isDaemon() && discoClusterState.transition() &&
+                            discoClusterState.transitionTopologyVersion().topologyVersion() >= notification.getTopVer()) {
+                            AffinityTopologyVersion msgTopVer = finishStateChangeMsg.topVer();
 
-                            if (discoClusterState.transitionTopologyVersion().topologyVersion() >= notification.getTopVer()) {
-                                log.warning("!qwer");
+                            if (msgTopVer != null) {
+                                IgniteInternalFuture<AffinityTopologyVersion> fut = ctx.cache().context().exchange()
+                                    .affinityReadyFuture(msgTopVer);
 
-//                                if (finishStateChangeMsg.topVer() != null) {
-                                    IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
-//                                    .affinityReadyFuture(discoClusterState.transitionTopologyVersion());
-                                        .affinityReadyFuture(finishStateChangeMsg.topVer());
-//                                .affinityReadyFuture(new AffinityTopologyVersion(discoClusterState.transitionTopologyVersion().topologyVersion(), discoClusterState.transitionTopologyVersion().minorTopologyVersion() + 1));
-
-//                            IgniteInternalFuture<AffinityTopologyVersion> future = ctx.cache().context().exchange()
-//                                .lastTopologyFuture();
-                                    try {
-                                        log.warning("!startWait_onStateFinishMessage_qdfrg " + discoClusterState.transitionTopologyVersion() + Thread.currentThread().getName());
-//                                    if (future != null)
-                                        future.get();
-                                        log.warning("!endWait_onStateFinishMessage_redsh" + discoClusterState.transitionTopologyVersion());
-                                    }
-                                    catch (IgniteCheckedException e) {
-                                        throw new IgniteException("Failed to wait for ready topology future.", e);
-                                    }
+                                try {
+                                    fut.get();
                                 }
-//                            }
+                                catch (IgniteCheckedException e) {
+                                    throw new IgniteException("Failed to wait for ready topology future: [future=" +
+                                        fut, e);
+                                }
+                            }
                         }
 
                         ctx.state().onStateFinishMessage(finishStateChangeMsg);

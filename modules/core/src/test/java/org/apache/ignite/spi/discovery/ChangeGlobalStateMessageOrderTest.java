@@ -16,8 +16,6 @@
 
 package org.apache.ignite.spi.discovery;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -44,23 +42,16 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
     public void testChangeGlobalStateMessageOrder() throws Exception {
         startGrid(0);
 
-        IgniteEx client = startClientGrid("Client1");
+        IgniteEx client = startClientGrid(1);
 
-        CountDownLatch latch = new CountDownLatch(1);
-
-        DiscoveryEventListener testEvtLsnr = new TestEventListener(client, latch);
+        DiscoveryEventListener testEvtLsnr = new TestEventListener(client);
 
         client.context().event().addDiscoveryEventListener(testEvtLsnr, EVT_DISCOVERY_CUSTOM_EVT);
 
-        GridTestUtils.runAsync(() -> client.cluster().state(ClusterState.ACTIVE));
-
-        latch.await(20, TimeUnit.SECONDS);
+        client.cluster().state(ClusterState.ACTIVE);
 
         assertTrue(client.cluster().state() == ClusterState.ACTIVE);
 
-        doSleep(2000);
-
-        //assert that cluster state changing works
         client.cluster().state(ClusterState.INACTIVE);
 
         assertTrue(client.cluster().state() == ClusterState.INACTIVE);
@@ -92,17 +83,13 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
         IgniteEx client;
 
         /** */
-        CountDownLatch latch;
-
-        /** */
-        public TestEventListener(IgniteEx client, CountDownLatch latch) {
+        public TestEventListener(IgniteEx client) {
             this.client = client;
-            this.latch = latch;
         }
 
         /** */
         @Override public void onEvent(DiscoveryEvent evt, DiscoCache cache) {
-            if (latch.getCount() > 0 && ((DiscoveryCustomEvent)evt).customMessage() instanceof ChangeGlobalStateMessage) {
+            if (((DiscoveryCustomEvent)evt).customMessage() instanceof ChangeGlobalStateMessage) {
                 try {
                     assert GridTestUtils.waitForCondition(() -> client.context().state().clusterState().transition(), 10000)
                         : "Cluster state change is not in progress";
@@ -111,9 +98,6 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
                 }
                 catch (IgniteInterruptedCheckedException e) {
                     throw new RuntimeException(e);
-                }
-                finally {
-                    latch.countDown();
                 }
             }
         }

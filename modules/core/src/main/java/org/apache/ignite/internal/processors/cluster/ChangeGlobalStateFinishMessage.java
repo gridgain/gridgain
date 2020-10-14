@@ -76,6 +76,7 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
     /**
      * @param reqId State change request ID.
      * @param state New cluster state.
+     * @param topVer State change topology versoin.
      */
     public ChangeGlobalStateFinishMessage(
         UUID reqId,
