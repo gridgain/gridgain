@@ -983,6 +983,7 @@ public abstract class Value extends VersionedValue {
         case SHORT:
         case ENUM:
         case INT:
+            return ValueLong.get(getInt());
         case INTERVAL_YEAR:
         case INTERVAL_MONTH:
         case INTERVAL_DAY:
@@ -996,7 +997,7 @@ public abstract class Value extends VersionedValue {
         case INTERVAL_HOUR_TO_MINUTE:
         case INTERVAL_HOUR_TO_SECOND:
         case INTERVAL_MINUTE_TO_SECOND:
-            return ValueLong.get(getInt());
+            return ValueLong.get(getLong());
         case DECIMAL:
             return ValueLong.get(convertToLong(getBigDecimal(), column));
         case DOUBLE:

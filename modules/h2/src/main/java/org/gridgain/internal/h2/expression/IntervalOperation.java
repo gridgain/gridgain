@@ -78,12 +78,18 @@ public class IntervalOperation extends Expression {
 
     private final IntervalOpType opType;
     private Expression left, right;
+    private TypeInfo forcedType;
     private TypeInfo type;
 
     private static BigInteger nanosFromValue(Value v) {
         long[] a = dateAndTimeFromValue(v);
         return BigInteger.valueOf(absoluteDayFromDateValue(a[0])).multiply(NANOS_PER_DAY_BI)
                 .add(BigInteger.valueOf(a[1]));
+    }
+
+    public IntervalOperation(IntervalOpType opType, Expression left, Expression right, TypeInfo forcedType) {
+        this(opType, left, right);
+        this.forcedType = forcedType;
     }
 
     public IntervalOperation(IntervalOpType opType, Expression left, Expression right) {
@@ -117,7 +123,19 @@ public class IntervalOperation extends Expression {
     public StringBuilder getSQL(StringBuilder builder, boolean alwaysQuote) {
         builder.append('(');
         left.getSQL(builder, alwaysQuote).append(' ').append(getOperationToken()).append(' ');
-        return right.getSQL(builder, alwaysQuote).append(')');
+        right.getSQL(builder, alwaysQuote).append(')');
+        if (forcedType != null) {
+            getForcedTypeSQL(builder.append(' '), forcedType);
+        }
+        return builder;
+    }
+
+    static StringBuilder getForcedTypeSQL(StringBuilder builder, TypeInfo forcedType) {
+        int precision = (int) forcedType.getPrecision();
+        int scale = forcedType.getScale();
+        return IntervalQualifier.valueOf(forcedType.getValueType() - Value.INTERVAL_YEAR).getTypeName(builder,
+                precision == ValueInterval.DEFAULT_PRECISION ? -1 : (int) precision,
+                scale == ValueInterval.DEFAULT_SCALE ? -1 : scale, true);
     }
 
     private char getOperationToken() {
@@ -198,6 +216,7 @@ public class IntervalOperation extends Expression {
     }
 
     private Value getDateTimeWithInterval(Value l, Value r, int lType, int rType) {
+        Value result;
         switch (lType) {
         case Value.TIME: {
             if (DataType.isYearMonthIntervalType(rType)) {
@@ -209,7 +228,7 @@ public class IntervalOperation extends Expression {
             if (n.signum() < 0 || n.compareTo(NANOS_PER_DAY_BI) >= 0) {
                 throw DbException.get(ErrorCode.NUMERIC_VALUE_OUT_OF_RANGE_1, n.toString());
             }
-            return ValueTime.fromNanos(n.longValue());
+            result = ValueTime.fromNanos(n.longValue());
         }
         case Value.DATE:
         case Value.TIMESTAMP:
@@ -219,14 +238,14 @@ public class IntervalOperation extends Expression {
                 if (opType == IntervalOpType.DATETIME_MINUS_INTERVAL) {
                     m = -m;
                 }
-                return DateTimeFunctions.dateadd("MONTH", m, l);
+                result =  DateTimeFunctions.dateadd("MONTH", m, l);
             } else {
                 BigInteger a2 = IntervalUtils.intervalToAbsolute((ValueInterval) r);
                 if (lType == Value.DATE) {
                     BigInteger a1 = BigInteger.valueOf(absoluteDayFromDateValue(((ValueDate) l).getDateValue()));
                     a2 = a2.divide(NANOS_PER_DAY_BI);
                     BigInteger n = opType == IntervalOpType.DATETIME_PLUS_INTERVAL ? a1.add(a2) : a1.subtract(a2);
-                    return ValueDate.fromDateValue(dateValueFromAbsoluteDay(n.longValue()));
+                    result = ValueDate.fromDateValue(dateValueFromAbsoluteDay(n.longValue()));
                 } else {
                     long[] a = dateAndTimeFromValue(l);
                     long absoluteDay = absoluteDayFromDateValue(a[0]);
@@ -246,9 +265,14 @@ public class IntervalOperation extends Expression {
                         timeNanos += NANOS_PER_DAY;
                         absoluteDay--;
                     }
-                    return dateTimeToValue(l, dateValueFromAbsoluteDay(absoluteDay), timeNanos, false);
+                    result = dateTimeToValue(l, dateValueFromAbsoluteDay(absoluteDay), timeNanos, false);
                 }
             }
+            if (forcedType != null) {
+                result = result.convertTo(
+                    forcedType.getValueType()).convertScale(true, forcedType.getScale());
+            }
+            return result;
         }
         throw DbException.throwInternalError("type=" + opType);
     }

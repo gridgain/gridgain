@@ -39,7 +39,7 @@ public class ValueInterval extends Value {
     /**
      * The default scale for intervals with seconds.
      */
-    static final int DEFAULT_SCALE = 6;
+    public static final int DEFAULT_SCALE = 6;
 
     /**
      * The maximum scale for intervals with seconds.
@@ -72,7 +72,7 @@ public class ValueInterval extends Value {
     public static ValueInterval from(IntervalQualifier qualifier, boolean negative, long leading, long remaining) {
         negative = IntervalUtils.validateInterval(qualifier, negative, leading, remaining);
         return (ValueInterval) Value
-                .cache(new ValueInterval(qualifier.ordinal() + INTERVAL_YEAR, negative, leading, remaining));
+            .cache(new ValueInterval(qualifier.ordinal() + INTERVAL_YEAR, negative, leading, remaining));
     }
 
     /**
@@ -90,50 +90,50 @@ public class ValueInterval extends Value {
      */
     public static int getDisplaySize(int type, int precision, int scale) {
         switch (type) {
-        case INTERVAL_YEAR:
-        case INTERVAL_HOUR:
-            // INTERVAL '-11' YEAR
-            // INTERVAL '-11' HOUR
-            return 17 + precision;
-        case INTERVAL_MONTH:
-            // INTERVAL '-11' MONTH
-            return 18 + precision;
-        case INTERVAL_DAY:
-            // INTERVAL '-11' DAY
-            return 16 + precision;
-        case INTERVAL_MINUTE:
-            // INTERVAL '-11' MINUTE
-            return 19 + precision;
-        case INTERVAL_SECOND:
-            // INTERVAL '-11' SECOND
-            // INTERVAL '-11.999999' SECOND
-            return scale > 0 ? 20 + precision + scale : 19 + precision;
-        case INTERVAL_YEAR_TO_MONTH:
-            // INTERVAL '-11-11' YEAR TO MONTH
-            return 29 + precision;
-        case INTERVAL_DAY_TO_HOUR:
-            // INTERVAL '-11 23' DAY TO HOUR
-            return 27 + precision;
-        case INTERVAL_DAY_TO_MINUTE:
-            // INTERVAL '-11 23:59' DAY TO MINUTE
-            return 32 + precision;
-        case INTERVAL_DAY_TO_SECOND:
-            // INTERVAL '-11 23:59.59' DAY TO SECOND
-            // INTERVAL '-11 23:59.59.999999' DAY TO SECOND
-            return scale > 0 ? 36 + precision + scale : 35 + precision;
-        case INTERVAL_HOUR_TO_MINUTE:
-            // INTERVAL '-11:59' HOUR TO MINUTE
-            return 30 + precision;
-        case INTERVAL_HOUR_TO_SECOND:
-            // INTERVAL '-11:59:59' HOUR TO SECOND
-            // INTERVAL '-11:59:59.999999' HOUR TO SECOND
-            return scale > 0 ? 34 + precision + scale : 33 + precision;
-        case INTERVAL_MINUTE_TO_SECOND:
-            // INTERVAL '-11:59' MINUTE TO SECOND
-            // INTERVAL '-11:59.999999' MINUTE TO SECOND
-            return scale > 0 ? 33 + precision + scale : 32 + precision;
-        default:
-            throw DbException.getUnsupportedException(Integer.toString(type));
+            case INTERVAL_YEAR:
+            case INTERVAL_HOUR:
+                // INTERVAL '-11' YEAR
+                // INTERVAL '-11' HOUR
+                return 17 + precision;
+            case INTERVAL_MONTH:
+                // INTERVAL '-11' MONTH
+                return 18 + precision;
+            case INTERVAL_DAY:
+                // INTERVAL '-11' DAY
+                return 16 + precision;
+            case INTERVAL_MINUTE:
+                // INTERVAL '-11' MINUTE
+                return 19 + precision;
+            case INTERVAL_SECOND:
+                // INTERVAL '-11' SECOND
+                // INTERVAL '-11.999999' SECOND
+                return scale > 0 ? 20 + precision + scale : 19 + precision;
+            case INTERVAL_YEAR_TO_MONTH:
+                // INTERVAL '-11-11' YEAR TO MONTH
+                return 29 + precision;
+            case INTERVAL_DAY_TO_HOUR:
+                // INTERVAL '-11 23' DAY TO HOUR
+                return 27 + precision;
+            case INTERVAL_DAY_TO_MINUTE:
+                // INTERVAL '-11 23:59' DAY TO MINUTE
+                return 32 + precision;
+            case INTERVAL_DAY_TO_SECOND:
+                // INTERVAL '-11 23:59.59' DAY TO SECOND
+                // INTERVAL '-11 23:59.59.999999' DAY TO SECOND
+                return scale > 0 ? 36 + precision + scale : 35 + precision;
+            case INTERVAL_HOUR_TO_MINUTE:
+                // INTERVAL '-11:59' HOUR TO MINUTE
+                return 30 + precision;
+            case INTERVAL_HOUR_TO_SECOND:
+                // INTERVAL '-11:59:59' HOUR TO SECOND
+                // INTERVAL '-11:59:59.999999' HOUR TO SECOND
+                return scale > 0 ? 34 + precision + scale : 33 + precision;
+            case INTERVAL_MINUTE_TO_SECOND:
+                // INTERVAL '-11:59' MINUTE TO SECOND
+                // INTERVAL '-11:59.999999' MINUTE TO SECOND
+                return scale > 0 ? 33 + precision + scale : 32 + precision;
+            default:
+                throw DbException.getUnsupportedException(Integer.toString(type));
         }
     }
 
@@ -163,7 +163,7 @@ public class ValueInterval extends Value {
                 precision = 1;
             }
             this.type = type = new TypeInfo(valueType, precision, 0,
-                    getDisplaySize(valueType, MAXIMUM_PRECISION, MAXIMUM_SCALE), null);
+                getDisplaySize(valueType, MAXIMUM_PRECISION, MAXIMUM_SCALE), null);
         }
         return type;
     }
@@ -197,30 +197,30 @@ public class ValueInterval extends Value {
         }
         long l = leading;
         switch (valueType) {
-        case INTERVAL_SECOND:
-            if (r >= NANOS_PER_SECOND) {
-                l++;
-                r -= NANOS_PER_SECOND;
-            }
-            break;
-        case INTERVAL_DAY_TO_SECOND:
-            if (r >= NANOS_PER_DAY) {
-                l++;
-                r -= NANOS_PER_DAY;
-            }
-            break;
-        case INTERVAL_HOUR_TO_SECOND:
-            if (r >= NANOS_PER_HOUR) {
-                l++;
-                r -= NANOS_PER_HOUR;
-            }
-            break;
-        case INTERVAL_MINUTE_TO_SECOND:
-            if (r >= NANOS_PER_MINUTE) {
-                l++;
-                r -= NANOS_PER_MINUTE;
-            }
-            break;
+            case INTERVAL_SECOND:
+                if (r >= NANOS_PER_SECOND) {
+                    l++;
+                    r -= NANOS_PER_SECOND;
+                }
+                break;
+            case INTERVAL_DAY_TO_SECOND:
+                if (r >= NANOS_PER_DAY) {
+                    l++;
+                    r -= NANOS_PER_DAY;
+                }
+                break;
+            case INTERVAL_HOUR_TO_SECOND:
+                if (r >= NANOS_PER_HOUR) {
+                    l++;
+                    r -= NANOS_PER_HOUR;
+                }
+                break;
+            case INTERVAL_MINUTE_TO_SECOND:
+                if (r >= NANOS_PER_MINUTE) {
+                    l++;
+                    r -= NANOS_PER_MINUTE;
+                }
+                break;
         }
         return from(qualifier, negative, l, r);
     }
@@ -228,7 +228,7 @@ public class ValueInterval extends Value {
     @Override
     public String getString() {
         return IntervalUtils.appendInterval(new StringBuilder(), getQualifier(), negative, leading, remaining)
-                .toString();
+            .toString();
     }
 
     @Override
@@ -243,45 +243,45 @@ public class ValueInterval extends Value {
     public BigDecimal getBigDecimal() {
         long multiplier;
         switch (valueType) {
-        case INTERVAL_YEAR:
-        case INTERVAL_MONTH:
-        case INTERVAL_DAY:
-        case INTERVAL_HOUR:
-        case INTERVAL_MINUTE:
-            return BigDecimal.valueOf(negative ? -leading : leading);
-        case INTERVAL_SECOND:
-            multiplier = DateTimeUtils.NANOS_PER_SECOND;
-            break;
-        case INTERVAL_YEAR_TO_MONTH: {
-            multiplier = 12;
-            break;
-        }
-        case INTERVAL_DAY_TO_HOUR:
-            multiplier = 24;
-            break;
-        case INTERVAL_DAY_TO_MINUTE:
-            multiplier = 24 * 60;
-            break;
-        case INTERVAL_DAY_TO_SECOND:
-            multiplier = DateTimeUtils.NANOS_PER_DAY;
-            break;
-        case INTERVAL_HOUR_TO_MINUTE:
-            multiplier = 60;
-            break;
-        case INTERVAL_HOUR_TO_SECOND:
-            multiplier = DateTimeUtils.NANOS_PER_HOUR;
-            break;
-        case INTERVAL_MINUTE_TO_SECOND:
-            multiplier = DateTimeUtils.NANOS_PER_MINUTE;
-            break;
-        default:
-            throw DbException.getUnsupportedException("valueType = " + valueType);
+            case INTERVAL_YEAR:
+            case INTERVAL_MONTH:
+            case INTERVAL_DAY:
+            case INTERVAL_HOUR:
+            case INTERVAL_MINUTE:
+                return BigDecimal.valueOf(negative ? -leading : leading);
+            case INTERVAL_SECOND:
+                multiplier = DateTimeUtils.NANOS_PER_SECOND;
+                break;
+            case INTERVAL_YEAR_TO_MONTH: {
+                multiplier = 12;
+                break;
+            }
+            case INTERVAL_DAY_TO_HOUR:
+                multiplier = 24;
+                break;
+            case INTERVAL_DAY_TO_MINUTE:
+                multiplier = 24 * 60;
+                break;
+            case INTERVAL_DAY_TO_SECOND:
+                multiplier = DateTimeUtils.NANOS_PER_DAY;
+                break;
+            case INTERVAL_HOUR_TO_MINUTE:
+                multiplier = 60;
+                break;
+            case INTERVAL_HOUR_TO_SECOND:
+                multiplier = DateTimeUtils.NANOS_PER_HOUR;
+                break;
+            case INTERVAL_MINUTE_TO_SECOND:
+                multiplier = DateTimeUtils.NANOS_PER_MINUTE;
+                break;
+            default:
+                throw DbException.getUnsupportedException("valueType = " + valueType);
         }
         BigDecimal bd = BigDecimal.valueOf(leading);
         if (remaining != 0L) {
             BigDecimal m = BigDecimal.valueOf(multiplier);
             bd = bd.add(BigDecimal.valueOf(remaining).divide(m, m.precision(), RoundingMode.HALF_DOWN))
-                    .stripTrailingZeros();
+                .stripTrailingZeros();
         }
         return negative ? bd.negate() : bd;
     }
@@ -355,7 +355,7 @@ public class ValueInterval extends Value {
         }
         ValueInterval other = (ValueInterval) obj;
         return valueType == other.valueType && negative == other.negative && leading == other.leading
-                && remaining == other.remaining;
+            && remaining == other.remaining;
     }
 
     @Override
@@ -379,13 +379,13 @@ public class ValueInterval extends Value {
     @Override
     public Value add(Value v) {
         return IntervalUtils.intervalFromAbsolute(getQualifier(),
-                IntervalUtils.intervalToAbsolute(this).add(IntervalUtils.intervalToAbsolute((ValueInterval) v)));
+            IntervalUtils.intervalToAbsolute(this).add(IntervalUtils.intervalToAbsolute((ValueInterval) v)));
     }
 
     @Override
     public Value subtract(Value v) {
         return IntervalUtils.intervalFromAbsolute(getQualifier(),
-                IntervalUtils.intervalToAbsolute(this).subtract(IntervalUtils.intervalToAbsolute((ValueInterval) v)));
+            IntervalUtils.intervalToAbsolute(this).subtract(IntervalUtils.intervalToAbsolute((ValueInterval) v)));
     }
 
     @Override
