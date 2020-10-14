@@ -1388,11 +1388,14 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
         cfg.setEncryptionSpi(encSpi);
 
-        for (CacheConfiguration ccfg : cfg.getCacheConfiguration()) {
-            if(GridCacheUtils.isPersistentCache(ccfg, cfg.getDataStorageConfiguration()))
-                ccfg.setEncryptionEnabled(true);
-        }
+        CacheConfiguration[] cfgs = cfg.getCacheConfiguration();
 
+        if (cfgs != null) {
+            for (CacheConfiguration ccfg : cfg.getCacheConfiguration()) {
+                if (GridCacheUtils.isPersistentCache(ccfg, cfg.getDataStorageConfiguration()))
+                    ccfg.setEncryptionEnabled(true);
+            }
+        }
         return cfg;
     }
 
