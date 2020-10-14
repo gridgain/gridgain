@@ -18,9 +18,14 @@ package org.apache.ignite.internal.processors.metastorage;
 
 import java.io.Serializable;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.IgniteFeatures.METASTORAGE_LONG_KEYS;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 
 /**
  * API for distributed data storage with the ability to write into it.
@@ -32,6 +37,16 @@ public interface DistributedMetaStorage extends ReadableDistributedMetaStorage {
      * Prefix for keys in metastorage used by Ignite internally. No user keys should start with this prefix.
      */
     public static final String IGNITE_INTERNAL_KEY_PREFIX = "ignite.internal.";
+
+    /**
+     * Check that long keys are supported by all nodes in the cluster.
+     *
+     * @param ctx Kernal context.
+     * @return {@code True} if all nodes in the cluster support long keys.
+     */
+    public static boolean longKeysSupported(GridKernalContext ctx) {
+        return allNodesSupport(ctx, METASTORAGE_LONG_KEYS, IgniteDiscoverySpi.SRV_NODES);
+    }
 
     /**
      * Write value into distributed metastorage.
@@ -47,9 +62,19 @@ public interface DistributedMetaStorage extends ReadableDistributedMetaStorage {
      *
      * @param key The key.
      * @param val Value to write. Must not be null.
+     * @return Future with the operation result.
      * @throws IgniteCheckedException In case of marshalling error or some other unexpected exception.
      */
     GridFutureAdapter<?> writeAsync(@NotNull String key, @NotNull Serializable val) throws IgniteCheckedException;
+
+    /**
+     * Remove value from distributed metastorage asynchronously.
+     *
+     * @param key The key.
+     * @return Future with the operation result.
+     * @throws IgniteCheckedException In case of marshalling error or some other unexpected exception.
+     */
+    GridFutureAdapter<?> removeAsync(@NotNull String key) throws IgniteCheckedException;
 
     /**
      * Remove value from distributed metastorage.

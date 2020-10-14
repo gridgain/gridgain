@@ -88,7 +88,7 @@ public class IoStatisticsManager {
         if (statByType.isEmpty())
             throw new IgniteIllegalStateException("IO Statistics manager has been stopped and can'be used");
 
-        IoStatisticsHolder existedStatisitcHolder = statByType.get(type).putIfAbsent(statKey, stat);
+        IoStatisticsHolder existedStatisitcHolder = statByType.get(type).put(statKey, stat);
 
         return (existedStatisitcHolder != null) ? existedStatisitcHolder : stat;
     }

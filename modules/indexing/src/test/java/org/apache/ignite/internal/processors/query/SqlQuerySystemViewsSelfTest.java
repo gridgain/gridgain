@@ -91,7 +91,7 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
     /** */
     private static final String SELECT_RUNNING_QUERIES = "SELECT " + Arrays.stream(RunningQueriesViewField.values())
         .map(Enum::name).collect(Collectors.joining(", ")) + " FROM " +
-        QueryUtils.sysSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES ORDER BY START_TIME";
+        QueryUtils.sysSchemaName() + ".SQL_QUERIES ORDER BY START_TIME";
 
     /**
      * @return System schema name.
@@ -161,7 +161,6 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
      * Test Query history system view.
      */
     @Test
-    @SuppressWarnings({"ThrowableNotThrown"})
     public void testQueryHistoryMetricsModes() {
         IgniteEx ignite = grid(0);
 
@@ -233,7 +232,7 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         String sqlHist = "SELECT " + Arrays.stream(QueriesHistoryViewField.values())
             .map(Enum::name).collect(Collectors.joining(", ")) + " FROM " + systemSchemaName()
-            + ".LOCAL_SQL_QUERY_HISTORY ORDER BY LAST_START_TIME";
+            + ".SQL_QUERIES_HISTORY ORDER BY LAST_START_TIME";
 
         cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();
         cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();
@@ -473,11 +472,11 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
             assertFalse((Boolean)cur.get(1).get(RunningQueriesViewField.LOCAL.pos()));
         }
 
-        String sql = "SELECT * FROM " + systemSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES WHERE DURATION > 100000";
+        String sql = "SELECT * FROM " + systemSchemaName() + ".SQL_QUERIES WHERE DURATION > 100000";
 
         assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
 
-        sql = "SELECT * FROM " + systemSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES WHERE QUERY_ID='UNKNOWN'";
+        sql = "SELECT * FROM " + systemSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='UNKNOWN'";
 
         assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
     }

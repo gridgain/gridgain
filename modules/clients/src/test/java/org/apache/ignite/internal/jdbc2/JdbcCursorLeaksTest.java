@@ -162,7 +162,7 @@ public class JdbcCursorLeaksTest extends AbstractIndexingCommonTest {
 
         while (true) {
             List<List<?>> res = ign.context().query().querySqlFields(
-                new SqlFieldsQuery("SELECT * FROM IGNITE.LOCAL_SQL_RUNNING_QUERIES"), false).getAll();
+                new SqlFieldsQuery("SELECT * FROM IGNITE.SQL_QUERIES"), false).getAll();
 
             if (res.size() == 1)
                 return;

@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.index;
 
-import java.io.File;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.sql.Date;
@@ -49,12 +48,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
-import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
-import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -1426,7 +1422,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             checkAll();
 
-            List<Path> idxPaths = getIndexBinPaths();
+            List<Path> idxPaths = getIndexBinPaths(DEFAULT_CACHE_NAME);
 
             // Shutdown gracefully to ensure there is a checkpoint with index.bin.
             // Otherwise index.bin rebuilding may not work.
@@ -1475,7 +1471,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             checkAll();
 
-            List<Path> idxPaths = getIndexBinPaths();
+            List<Path> idxPaths = getIndexBinPaths(DEFAULT_CACHE_NAME);
 
             // Shutdown gracefully to ensure there is a checkpoint with index.bin.
             // Otherwise index.bin rebuilding may not work.
@@ -1524,7 +1520,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             checkAll();
 
-            List<Path> idxPaths = getIndexBinPaths();
+            List<Path> idxPaths = getIndexBinPaths(DEFAULT_CACHE_NAME);
 
             // Shutdown gracefully to ensure there is a checkpoint with index.bin.
             // Otherwise index.bin rebuilding may not work.
@@ -1859,28 +1855,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             assertTrue(i >= RANGE_START && i < RANGE_END);
         }
-    }
-
-    /**
-     * Must be called when the grid is up.
-     */
-    private List<Path> getIndexBinPaths() {
-        return G.allGrids().stream()
-            .map(grid -> (IgniteEx) grid)
-            .map(grid -> {
-                IgniteInternalCache<Object, Object> cachex = grid.cachex(DEFAULT_CACHE_NAME);
-
-                assertNotNull(cachex);
-
-                FilePageStoreManager pageStoreMgr = (FilePageStoreManager) cachex.context().shared().pageStore();
-
-                assertNotNull(pageStoreMgr);
-
-                File cacheWorkDir = pageStoreMgr.cacheWorkDir(cachex.configuration());
-
-                return cacheWorkDir.toPath().resolve("index.bin");
-            })
-            .collect(Collectors.toList());
     }
 
     /** */

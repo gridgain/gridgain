@@ -34,7 +34,10 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest.BlockingIndexing;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -55,6 +58,9 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
     /** */
     private static final String CACHE_NAME3 = "cache3";
+
+    /** */
+    private static final String GROUP_NAME_2 = "group2";
 
     /** */
     private static final String OBJECT_NAME2 = "MyObject2";
@@ -152,6 +158,8 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        GridQueryProcessor.idxCls = null;
     }
 
     /**
@@ -161,22 +169,23 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
     public void testIndexRebuildCountPartitionsLeft() throws Exception {
         pds = true;
 
-        Ignite ignite = startGrid(0);
+        GridQueryProcessor.idxCls = BlockingIndexing.class;
+
+        IgniteEx ignite = startGrid(0);
 
         ignite.cluster().active(true);
 
-        IgniteCache<Object, Object> cache2 = ignite.cache(CACHE_NAME2);
+        String cacheName2 = "cache2";
+        String cacheName3 = "cache3";
 
-        for (int i = 0; i < 100_000; i++) {
-            Long id = (long)i;
+        IgniteCache<Long, Object> cache2 = ignite.cache(cacheName2);
+        IgniteCache<Long, Object> cache3 = ignite.cache(cacheName3);
 
-            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME2)
-                .setField(KEY_NAME, id)
-                .setField(COLUMN1_NAME, i / 2)
-                .setField(COLUMN2_NAME, "str" + Integer.toHexString(i));
+        cache2.put(1L, 1L);
+        cache3.put(1L, 1L);
 
-            cache2.put(id, o.build());
-        }
+        int parts2 = ignite.cachex(cacheName2).configuration().getAffinity().partitions();
+        int parts3 = ignite.cachex(cacheName3).configuration().getAffinity().partitions();
 
         ignite.cluster().active(false);
 
@@ -191,15 +200,23 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         ignite.cluster().active(true);
 
-        MetricRegistry metrics = cacheGroupMetrics(0, GROUP_NAME).get2();
+        MetricRegistry grpMreg = cacheGroupMetrics(0, GROUP_NAME_2).get2();
 
-        LongMetric indexBuildCountPartitionsLeft = metrics.findMetric("IndexBuildCountPartitionsLeft");
+        LongMetric indexBuildCountPartitionsLeft = grpMreg.findMetric("IndexBuildCountPartitionsLeft");
 
-        assertTrue("Timeout wait start rebuild index",
-            waitForCondition(() -> indexBuildCountPartitionsLeft.value() > 0, 30_000));
+        assertEquals(parts2 + parts3, indexBuildCountPartitionsLeft.value());
 
-        assertTrue("Timeout wait finished rebuild index",
-            GridTestUtils.waitForCondition(() -> indexBuildCountPartitionsLeft.value() == 0, 30_000));
+        ((BlockingIndexing)ignite.context().query().getIndexing()).stopBlock(cacheName2);
+
+        ignite.cache(cacheName2).indexReadyFuture().get(30_000);
+
+        assertEquals(parts3, indexBuildCountPartitionsLeft.value());
+
+        ((BlockingIndexing)ignite.context().query().getIndexing()).stopBlock(cacheName3);
+
+        ignite.cache(cacheName3).indexReadyFuture().get(30_000);
+
+        assertEquals(0, indexBuildCountPartitionsLeft.value());
     }
 
     /**
