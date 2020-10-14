@@ -687,8 +687,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG", "ADDRESS");
 
-
-
         assertTrue(checkIdxAlreadyExistLog(
             qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME"));
 

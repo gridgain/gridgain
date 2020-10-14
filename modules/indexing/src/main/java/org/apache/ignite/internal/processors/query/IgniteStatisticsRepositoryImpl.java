@@ -24,10 +24,7 @@ import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerI
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepository;
 import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatistics;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
-import org.apache.ignite.resources.LoggerResource;
 
-
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -35,7 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepository {
     /** Logger. */
-    @LoggerResource
     private IgniteLogger log;
 
     /** */
@@ -68,6 +64,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             }
             localStats = new ConcurrentHashMap<>();
         }
+        log = ctx.log(IgniteStatisticsRepositoryImpl.class);
     }
 
     @Override public void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> statistics,
@@ -121,7 +118,16 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             if (partsStats != null)
                 partsStats.remove(tbl);
         else
-            throw new UnsupportedOperationException();
+            if (partsStats != null)
+                partsStats.computeIfPresent(tbl, (tblKey, partMap) -> {
+                    partMap.replaceAll((partId, partStat) -> {
+                        ObjectPartitionStatistics partStatNew = substract(partStat, colNames);
+                        return (partStatNew.columnsStatistics().isEmpty()) ? null : partStat;
+
+                    });
+                    partMap.entrySet().removeIf(e -> e.getValue() == null);
+                    return partMap.isEmpty() ? null : partMap;
+                });
     }
 
     @Override public void saveLocalPartitionStatistics(QueryTable tbl, ObjectPartitionStatistics statistics) {
@@ -184,7 +190,11 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             if (localStats != null)
                 localStats.remove(tbl);
         else
-            throw new UnsupportedOperationException();
+            if (localStats != null)
+                localStats.computeIfPresent(tbl, (k,v) -> {
+                   ObjectStatistics locStatNew = substract(v, colNames);
+                   return locStatNew.columnsStatistics().isEmpty() ? null : locStatNew;
+                });
     }
 
     @Override public void saveGlobalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat) {

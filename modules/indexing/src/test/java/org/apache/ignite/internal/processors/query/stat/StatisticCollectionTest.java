@@ -16,7 +16,6 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import java.text.ParseException;
@@ -24,8 +23,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.UUID;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION;
 
 /**
  * Tests to check statistics collection by different types and distributions.
@@ -49,6 +46,7 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
 
     /** */
     private static final SimpleDateFormat TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     static {
         TimeZone tz = TimeZone.getTimeZone("UTC");
         SimpleDateFormat SDF = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss z");
@@ -65,7 +63,6 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
         DATE_FORMATTER.setTimeZone(tz);
         TIMESTAMP_FORMATTER.setTimeZone(tz);
     }
-
 
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(1);

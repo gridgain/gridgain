@@ -35,7 +35,6 @@ import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
-import org.apache.ignite.resources.LoggerResource;
 import org.gridgain.internal.h2.table.Column;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
@@ -153,8 +152,8 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
                         null, true)) {
                     GridQueryTypeDescriptor typeDesc = ctx.query().typeByValue(tbl.cacheName(),
                             tbl.cacheContext().cacheObjectContext(), row.key(), row.value(), false);
-                    //if (!tblName.equals(typeDesc.tableName()))
-                    //    continue;
+                    if (!tblName.equals(typeDesc.tableName()))
+                        continue;
 
                     rowsCnt++;
 
@@ -164,8 +163,6 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
                         colStat.add(row0.getValue(colStat.col().getColumnId()));
 
                 }
-
-                long rowsCnt0 = rowsCnt;
 
                 Map<String, ColumnStatistics> colStats = colStatsCollectors.stream().collect(Collectors.toMap(
                         csc -> csc.col().getName(), csc -> csc.finish()

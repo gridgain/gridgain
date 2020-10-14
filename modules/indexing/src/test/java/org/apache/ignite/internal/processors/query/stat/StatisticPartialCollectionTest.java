@@ -42,7 +42,7 @@ public class StatisticPartialCollectionTest extends TableStatisticsAbstractTest 
 
         for (int i = 0; i < 1000; i++)
             runSql(String.format("insert into tbl_select(id, lo_select, med_select, hi_select) values(%d, %d, %d, %d)",
-                    i, i% 10, i % 100, i % 1000));
+                    i, i % 10, i % 100, i % 1000));
 
         updateStatistics("tbl_select");
     }
