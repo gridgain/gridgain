@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -30,7 +29,6 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.filehandle.FileWriteHandle;
@@ -43,6 +41,7 @@ import org.junit.Test;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.ZIP_SUFFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor.fileName;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.isSegmentFileName;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**
@@ -130,16 +129,12 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSegmentFileName() throws Exception {
-        IgniteEx n = startGrid(0);
-
-        IgniteWriteAheadLogManager walMgr = n.context().cache().context().wal();
-
         Arrays.asList(null, "", "1", "wal", fileName(0) + "1", fileName(1).replace(".wal", ".wa"))
-            .forEach(s -> assertFalse(s, walMgr.isSegmentFileName(s)));
+            .forEach(s -> assertFalse(s, isSegmentFileName(s)));
 
         IntStream.range(0, 10)
             .mapToObj(FileDescriptor::fileName)
-            .forEach(fn -> assertTrue(fn, walMgr.isSegmentFileName(fn) && walMgr.isSegmentFileName(fn + ZIP_SUFFIX)));
+            .forEach(fn -> assertTrue(fn, isSegmentFileName(fn) && isSegmentFileName(fn + ZIP_SUFFIX)));
     }
 
     /**
@@ -175,12 +170,12 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
         if (cfgUpdater != null)
             cfgUpdater.accept(cfg);
 
-        n = startGrid(cfg);
-        awaitPartitionMapExchange();
-
         // To avoid a race between compressor and getting the segment sizes.
         if (cfg.getDataStorageConfiguration().isWalCompactionEnabled())
             cfg.getDataStorageConfiguration().setWalCompactionEnabled(false);
+
+        n = startGrid(cfg);
+        awaitPartitionMapExchange();
 
         checkLocalSegmentSizes(n);
     }
@@ -198,9 +193,7 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
 
         Map<Long, Long> expSegmentSize = new HashMap<>();
 
-        List<File> files = F.asList(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER));
-
-        files
+        F.asList(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER))
             .stream()
             .map(FileDescriptor::new)
             .forEach(fd -> {
@@ -226,13 +219,8 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
         assertEquals(expSegmentSize.size(), segmentSize.size());
 
         expSegmentSize.forEach((idx, size) -> {
-            try {
-                assertEquals(idx.toString(), size, segmentSize.get(idx));
-                assertEquals(idx.toString(), size.longValue(), wal.segmentSize(idx));
-            }
-            catch (Throwable e) {
-                throw new RuntimeException(files.toString(), e);
-            }
+            assertEquals(idx.toString(), size, segmentSize.get(idx));
+            assertEquals(idx.toString(), size.longValue(), wal.segmentSize(idx));
         });
 
         assertEquals(-1, wal.segmentSize(currHnd.getSegmentId() + 1));

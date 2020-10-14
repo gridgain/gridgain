@@ -222,12 +222,4 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @return Last written pointer.
      */
     WALPointer lastWritePointer();
-
-    /**
-     * Check that file name matches segment name.
-     *
-     * @param name File name.
-     * @return {@code True} if file name matches segment name.
-     */
-    boolean isSegmentFileName(@Nullable String name);
 }

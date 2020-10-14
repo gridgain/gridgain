@@ -3083,12 +3083,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return currHnd.position();
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean isSegmentFileName(@Nullable String name) {
-        return name != null && (WAL_NAME_PATTERN.matcher(name).matches() ||
-            WAL_SEGMENT_FILE_COMPACTED_PATTERN.matcher(name).matches());
-    }
-
     /**
      * Update сurrent log segment handle.
      *
@@ -3107,5 +3101,16 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         segmentSize.put(n.getSegmentId(), maxWalSegmentSize);
 
         return res;
+    }
+
+    /**
+     * Check that file name matches segment name.
+     *
+     * @param name File name.
+     * @return {@code True} if file name matches segment name.
+     */
+    public static boolean isSegmentFileName(@Nullable String name) {
+        return name != null && (WAL_NAME_PATTERN.matcher(name).matches() ||
+            WAL_SEGMENT_FILE_COMPACTED_PATTERN.matcher(name).matches());
     }
 }
