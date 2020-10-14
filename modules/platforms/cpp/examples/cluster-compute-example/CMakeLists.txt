@@ -27,4 +27,4 @@ include_directories(../include ${IGNITE_INCLUDE_DIR} ${JNI_INCLUDE_DIRS})
 
 add_executable(${TARGET} src/cluster_compute_example.cpp)
 
-target_link_libraries(${TARGET} ${IGNITE_LIB} ${IGNITE_BINARY_LIB} ${IGNITE_COMMON_LIB} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${TARGET} ${IGNITE_LIB} ${IGNITE_JNI_LIB} ${IGNITE_BINARY_LIB} ${IGNITE_COMMON_LIB} ${CMAKE_THREAD_LIBS_INIT})
