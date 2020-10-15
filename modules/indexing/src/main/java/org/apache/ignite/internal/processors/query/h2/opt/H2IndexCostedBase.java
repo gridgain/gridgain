@@ -847,6 +847,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         }
 
         private Value getStartValue(Session ses, Column column, TableFilter filter) {
+            if (filter == null)
+                return null;
             Value maxValue = null;
             for(IndexCondition cond : filter.getIndexConditions()) {
                 if (!column.equals(cond.getColumn()))
@@ -868,6 +870,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         }
 
         private Value getEndValue(Session ses, Column column, TableFilter filter) {
+            if (filter == null)
+                return null;
             Value minValue = null;
             for(IndexCondition cond : filter.getIndexConditions()) {
                 if (!column.equals(cond.getColumn()))
