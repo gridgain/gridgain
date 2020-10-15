@@ -26,9 +26,9 @@ import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Replication manager class which processes all replication events.
+ * Replication manager class which processes cache replication events.
  */
-public interface GridCacheDrManager extends GridCacheManager {
+public interface GridCacheReplicationManager extends GridCacheManager {
     /**
      * @return Data center ID.
      */
