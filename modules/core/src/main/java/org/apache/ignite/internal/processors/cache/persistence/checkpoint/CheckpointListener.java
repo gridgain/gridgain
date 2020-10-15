@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence;
+package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
 import java.util.concurrent.Executor;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.PartitionAllocationMap;
 import org.jetbrains.annotations.Nullable;
 
 /**
- *
+ * Listener which methods will be called in a corresponded checkpoint life cycle period.
  */
-public interface DbCheckpointListener {
+public interface CheckpointListener {
     /**
      * Context with information about current snapshots.
      */
@@ -72,4 +71,13 @@ public interface DbCheckpointListener {
      * @throws IgniteCheckedException If failed.
      */
     public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException;
+
+    /**
+     * Do some actions after checkpoint end.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    default void afterCheckpointEnd(Context ctx) throws IgniteCheckedException {
+
+    }
 }
