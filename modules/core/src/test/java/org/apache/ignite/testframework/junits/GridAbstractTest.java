@@ -1380,14 +1380,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             }
         }
 
-        KeystoreEncryptionSpi encSpi = new KeystoreEncryptionSpi();
-
-        encSpi.setKeyStorePath(AbstractEncryptionTest.keystorePath());
-
-        encSpi.setKeyStorePassword(AbstractEncryptionTest.keystorePassword());
-
-        cfg.setEncryptionSpi(encSpi);
-
         CacheConfiguration[] cfgs = cfg.getCacheConfiguration();
 
         if (cfgs != null) {
@@ -1785,6 +1777,14 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
         if (cfg.getDiscoverySpi() instanceof TcpDiscoverySpi)
             ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setJoinTimeout(getTestTimeout());
+
+        KeystoreEncryptionSpi encSpi = new KeystoreEncryptionSpi();
+
+        encSpi.setKeyStorePath(AbstractEncryptionTest.keystorePath());
+
+        encSpi.setKeyStorePassword(AbstractEncryptionTest.keystorePassword());
+
+        cfg.setEncryptionSpi(encSpi);
 
         return cfg;
     }
