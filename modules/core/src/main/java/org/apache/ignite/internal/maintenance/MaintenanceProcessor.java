@@ -29,7 +29,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.maintenance.MaintenanceAction;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceTask;
@@ -251,13 +250,13 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
         Optional<String> wrongActionName = actions
             .stream()
             .map(MaintenanceAction::name)
-            .filter(name -> !U.alphanumericUnderscore(name))
+//            .filter(name -> !U.alphanumericUnderscore(name))
             .findFirst();
 
-        if (wrongActionName.isPresent())
-            throw new IgniteException(
-                "All actions' names should contain only alphanumeric and underscore symbols: "
-                    + wrongActionName.get());
+//        if (wrongActionName.isPresent())
+//            throw new IgniteException(
+//                "All actions' names should contain only alphanumeric and underscore symbols: "
+//                    + wrongActionName.get());
 
         workflowCallbacks.put(maintenanceTaskName, cb);
     }

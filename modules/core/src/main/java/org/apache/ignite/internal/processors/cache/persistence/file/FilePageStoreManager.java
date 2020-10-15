@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -406,7 +407,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                         .filter(f -> !f.getName().equals(CACHE_DATA_FILENAME))
                         .count() > 0)
                     {
-                        corruptedCachesDirs.add(cacheDirName(desc.config()));
+                        corruptedCachesDirs.add(dir.getName());
                     }
                 }
             }

@@ -30,6 +30,7 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpiInternalListener;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiContext;
@@ -231,7 +232,12 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
         if (locNode == null)
             return false;
 
-        return allNodesSupports(singleton(locNode), feature);
+        return allNodesSupports(null, singleton(locNode), feature);
+    }
+
+    @Override
+    public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
+        return allNodesSupport(feature);
     }
 
     /** {@inheritDoc} */
