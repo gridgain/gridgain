@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -23,7 +26,10 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public final class IOVersions<V extends PageIO> {
     /** */
-    private final V[] vers;
+    private final PageIO[] vers;
+
+    /** */
+    private final PageIO[] ggVers;
 
     /** */
     private final int type;
@@ -39,10 +45,30 @@ public final class IOVersions<V extends PageIO> {
         assert vers != null;
         assert vers.length > 0;
 
-        this.vers = vers;
         this.type = vers[0].getType();
 
         latest = vers[vers.length - 1];
+
+        List<PageIO> ignVers = new ArrayList<>();
+        List<PageIO> ggVers = new ArrayList<>();
+
+        for (PageIO v : vers) {
+            if ((short)v.getVersion() > 0)
+                ignVers.add(v);
+            else
+                ggVers.add(v);
+        }
+
+        if (ggVers.isEmpty()) {
+            this.vers = vers;
+            this.ggVers = null;
+        }
+        else {
+            this.vers = ignVers.toArray(new PageIO[]{});
+            this.ggVers = ggVers.toArray(new PageIO[]{});
+
+            Arrays.sort(this.ggVers);
+        }
 
         assert checkVersions();
     }
@@ -59,9 +85,19 @@ public final class IOVersions<V extends PageIO> {
      */
     private boolean checkVersions() {
         for (int i = 0; i < vers.length; i++) {
-            V v = vers[i];
+            PageIO v = vers[i];
 
             if (v.getType() != type || v.getVersion() != i + 1)
+                return false;
+        }
+
+        if (ggVers == null)
+            return true;
+
+        for (int i = 0; i < ggVers.length; i++) {
+            PageIO v = ggVers[i];
+
+            if (v.getType() != type || (-(short)v.getVersion()) != i + 1)
                 return false;
         }
 
@@ -80,10 +116,17 @@ public final class IOVersions<V extends PageIO> {
      * @return IO.
      */
     public V forVersion(int ver) {
-        if (ver == 0)
+        assert ver > 0 && ver <= 65535 : ver;
+
+        short v = (short)ver;
+
+        if (v == 0)
             throw new IllegalStateException("Failed to get page IO instance (page content is corrupted)");
 
-        return vers[ver - 1];
+        if (v < 0)
+            return (V)ggVers[-v - 1];
+
+        return (V)vers[v - 1];
     }
 
     /**
