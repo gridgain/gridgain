@@ -156,6 +156,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         println(cfg, "Cache populated. ");
         List<?> row = sql("SELECT * FROM TEST LIMIT 1").getAll().get(0);
 
+        println("    partitions: " + ((IgniteEx)ignite()).cachex("TEST").affinity().partitions());
         println(cfg, "TEST table row: \n" + row);
     }
 
