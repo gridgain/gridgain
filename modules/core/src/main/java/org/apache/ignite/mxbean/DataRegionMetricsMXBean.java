@@ -124,6 +124,26 @@ public interface DataRegionMetricsMXBean extends DataRegionMetrics {
     @MXBeanDescription("Offheap used size in bytes.")
     @Override public long getOffheapUsedSize();
 
+    /** {@inheritDoc} */
+    @MXBeanDescription("Gets memory page size.")
+    @Override public int getPageSize();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Gets total size of pages loaded to the RAM. When persistence is disabled, this metric is equal TotalAllocatedSize.")
+    @Override public long getPhysicalMemorySize();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Gets used checkpoint buffer size in pages.")
+    @Override public long getUsedCheckpointBufferPages();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Gets used checkpoint buffer size in bytes.")
+    @Override public long getUsedCheckpointBufferSize();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Gets checkpoint buffer size in bytes.")
+    @Override public long getCheckpointBufferSize();
+
     /**
      * Enables memory metrics collection on an Apache Ignite node.
      */
