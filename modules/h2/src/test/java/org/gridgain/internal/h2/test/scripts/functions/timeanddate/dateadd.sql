@@ -18,6 +18,9 @@ insert into test values(date '2001-01-01', time '01:00:00', timestamp '2010-01-0
 select ts + t from test;
 >> 2010-01-01 01:00:00
 
+select ts + t + t - t x from test;
+>> 2010-01-01 01:00:00
+
 select ts + t * 0.5 x from test;
 >> 2010-01-01 00:30:00
 
@@ -27,8 +30,17 @@ select ts + 0.5 x from test;
 select ts - 1.5 x from test;
 >> 2009-12-30 12:00:00
 
+select ts + 0.5 * t + t - t x from test;
+>> 2010-01-01 00:30:00
+
 select ts + t / 0.5 x from test;
 >> 2010-01-01 02:00:00
+
+select d + t, t + d - t x from test;
+> T + D               X
+> ------------------- -------------------
+> 2001-01-01 01:00:00 2001-01-01 00:00:00
+> rows: 1
 
 select 1 + d + 1, d - 1, 2 + ts + 2, ts - 2 from test;
 > DATEADD('DAY', 1, DATEADD('DAY', 1, D)) DATEADD('DAY', -1, D) DATEADD('DAY', 2, DATEADD('DAY', 2, TS)) DATEADD('DAY', -2, TS)
@@ -38,6 +50,9 @@ select 1 + d + 1, d - 1, 2 + ts + 2, ts - 2 from test;
 
 select 1 + d + t + 1 from test;
 >> 2001-01-03 01:00:00
+
+select ts - t - 2 from test;
+>> 2009-12-29 23:00:00
 
 drop table test;
 > ok
