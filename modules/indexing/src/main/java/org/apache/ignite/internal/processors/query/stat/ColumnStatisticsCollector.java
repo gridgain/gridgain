@@ -83,7 +83,7 @@ public class ColumnStatisticsCollector {
                 String strValue = value.getString();
                 return strValue.getBytes(StandardCharsets.UTF_8);
             case Value.BOOLEAN:
-                return value.getBoolean() ? new byte[]{1} : new byte[]{0} ;
+                return value.getBoolean() ? new byte[]{1} : new byte[]{0};
             case Value.DECIMAL:
             case Value.DOUBLE:
             case Value.FLOAT:
@@ -182,7 +182,7 @@ public class ColumnStatisticsCollector {
         // Total size in bytes
         long totalSize = 0;
 
-        for(ColumnStatistics partStat : partStats) {
+        for (ColumnStatistics partStat : partStats) {
             HLL partHll = HLL.fromBytes(partStat.raw());
             hll.union(partHll);
 

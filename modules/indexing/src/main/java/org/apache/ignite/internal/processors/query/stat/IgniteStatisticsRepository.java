@@ -131,5 +131,5 @@ public interface IgniteStatisticsRepository {
      * @param tbl table.
      * @param colNames if specified - only statistics by specified columns will be cleared.
      */
-    void clearGlobalStatistics(QueryTable tbl, String ... colNames);
+    void clearGlobalStatistics(QueryTable tbl, String... colNames);
 }

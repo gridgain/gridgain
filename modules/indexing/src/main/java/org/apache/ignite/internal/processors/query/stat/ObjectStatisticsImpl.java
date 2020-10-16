@@ -29,8 +29,10 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     private final Map<String, ColumnStatistics> colNameToStat;
 
     public ObjectStatisticsImpl(long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
-        assert rowsCnt >= 0: "rowsCnt >= 0";
-        assert colNameToStat != null: "colNameToStat != null";
+
+        assert rowsCnt >= 0 : "rowsCnt >= 0";
+
+        assert colNameToStat != null : "colNameToStat != null";
 
         this.rowsCnt = rowsCnt;
         this.colNameToStat = colNameToStat;
@@ -59,12 +61,8 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     public Map<String, ColumnStatistics> columnsStatistics() {
         return colNameToStat;
     }
-    /**
-     * Clone object.
-     *
-     * @return clone.
-     */
-    public ObjectStatisticsImpl clone() {
+
+    @Override public ObjectStatisticsImpl clone() {
         return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat));
     }
 }

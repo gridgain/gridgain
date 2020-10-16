@@ -46,7 +46,9 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     /** Global (for whole cluster) object statistics. */
     private final Map<QueryTable, ObjectStatisticsImpl> globalStats = new ConcurrentHashMap<>();
 
-
+    /**
+     * Constructor.
+     */
     public IgniteStatisticsRepositoryImpl(GridKernalContext ctx) {
         this.ctx = ctx;
 
@@ -103,7 +105,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
-    public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(QueryTable tbl){
+    public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(QueryTable tbl) {
         if (partsStats != null) {
             Map<Integer, ObjectPartitionStatisticsImpl> objectStatisticsMap = partsStats.get(tbl);
 
@@ -133,7 +135,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     @Override public void saveLocalPartitionStatistics(QueryTable tbl, ObjectPartitionStatisticsImpl statistics) {
         if (partsStats != null) {
             partsStats.compute(tbl, (k,v) -> {
-                if(v == null)
+                if (v == null)
                     v = new ConcurrentHashMap<>();
                 ObjectPartitionStatisticsImpl oldPartStat = v.get(statistics.partId());
                 if (oldPartStat == null)
@@ -185,7 +187,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         return localStats == null ? null : localStats.get(tbl);
     }
 
-    @Override public void clearLocalStatistics(QueryTable tbl, String ... colNames) {
+    @Override public void clearLocalStatistics(QueryTable tbl, String... colNames) {
         if (colNames == null || colNames.length == 0)
             if (localStats != null)
                 localStats.remove(tbl);

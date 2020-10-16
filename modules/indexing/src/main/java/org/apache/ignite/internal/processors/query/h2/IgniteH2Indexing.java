@@ -325,6 +325,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Statistic manager. */
     private IgniteStatisticsManager statsMgr;
+
     /**
      * @return Kernal context.
      */
@@ -3342,8 +3343,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         return map;
     }
 
-    @Override
-    public IgniteStatisticsManager statsManager() {
+    @Override public IgniteStatisticsManager statsManager() {
         return statsMgr;
     }
 }

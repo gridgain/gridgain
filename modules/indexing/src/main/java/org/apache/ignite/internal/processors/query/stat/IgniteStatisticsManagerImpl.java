@@ -40,12 +40,13 @@ import org.gridgain.internal.h2.table.Column;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
-public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
+public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
     /** Logger. */
     private IgniteLogger log;
 
     private final GridKernalContext ctx;
+
     private final SchemaManager schemaMgr;
 
     private final IgniteStatisticsRepository statsRepos;
@@ -57,6 +58,7 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
         log = ctx.log(IgniteStatisticsManagerImpl.class);
         statsRepos = new IgniteStatisticsRepositoryImpl(ctx);
     }
+
     public IgniteStatisticsRepository statisticsRepository() {
         return statsRepos;
     }
@@ -79,14 +81,14 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
      * @param colNames names.
      * @return column with specified names.
      */
-    private Column[] filterColumns(Column[] columns, String ... colNames) {
+    private Column[] filterColumns(Column[] columns, String... colNames) {
         if (colNames == null || colNames.length == 0) {
             return columns;
         }
         List<Column> resultList = new ArrayList<>(colNames.length);
 
-        for(String colName : colNames)
-            for(Column col : columns)
+        for (String colName : colNames)
+            for (Column col : columns)
 
                 if (colName.equals(col.getName())) {
                     resultList.add(col);
@@ -96,7 +98,7 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
         return resultList.toArray(new Column[resultList.size()]);
     }
 
-    @Override public void collectObjectStatistics(String schemaName, String objName, String ... colNames)
+    @Override public void collectObjectStatistics(String schemaName, String objName, String... colNames)
             throws IgniteCheckedException {
         GridH2Table tbl = schemaMgr.dataTable(schemaName, objName);
         if (tbl == null)
@@ -168,7 +170,6 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
                         csc -> csc.col().getName(), csc -> csc.finish()
                 ));
 
-
                 tblPartStats.add(new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt, locPart.updateCounter(),
                         colStats));
             }
@@ -197,7 +198,7 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
 
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedColumns.length);
         long rowCnt = 0;
-        for(Column col : selectedColumns)
+        for (Column col : selectedColumns)
             colPartStats.put(col, new ArrayList<>());
 
         QueryTable tblId = tbl.identifier();
@@ -216,12 +217,10 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
         }
 
         Map<String, ColumnStatistics> colStats = new HashMap<>(selectedColumns.length);
-        for(Column col : selectedColumns) {
+        for (Column col : selectedColumns) {
             ColumnStatistics stat = ColumnStatisticsCollector.aggregate(tbl::compareValues, colPartStats.get(col));
             colStats.put(col.getName(), stat);
         }
-
-
 
         ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
 

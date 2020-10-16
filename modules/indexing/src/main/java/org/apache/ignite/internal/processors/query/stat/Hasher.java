@@ -23,12 +23,17 @@ import java.nio.ByteOrder;
  */
 public class Hasher {
     private static final int SEED = 123456;
+
     private static final int CHUNK_SIZE = 16;
+
     private static final long C1 = 0x87c37b91114253d5L;
+
     private static final long C2 = 0x4cf5ad432745937fL;
 
     private long h1;
+
     private long h2;
+
     private int length;
 
     /**

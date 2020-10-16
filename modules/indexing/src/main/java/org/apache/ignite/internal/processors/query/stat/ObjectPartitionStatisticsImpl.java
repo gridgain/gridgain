@@ -70,8 +70,7 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
         return updCnt;
     }
 
-
-    public ObjectPartitionStatisticsImpl clone() {
+    @Override public ObjectPartitionStatisticsImpl clone() {
         return new ObjectPartitionStatisticsImpl(partId, loc, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
     }
 }

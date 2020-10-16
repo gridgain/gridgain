@@ -21,10 +21,11 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.Arrays;
+
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatistics;
-import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
+import org.apache.ignite.internal.processors.query.stat.ObjectStatisticsImpl;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
@@ -46,20 +47,24 @@ import org.jetbrains.annotations.Nullable;
  * Index base.
  */
 public abstract class H2IndexCostedBase extends BaseIndex {
-    /** Const function. */
+    /**
+     * Const function.
+     */
     private final CostFunction constFunc;
 
     private final GridH2Table tbl;
 
     private final CostFunctionLast cfl = new CostFunctionLast();
 
-    /** Logger. */
+    /**
+     * Logger.
+     */
     private final IgniteLogger log;
 
     /**
      * Constructor.
      *
-     * @param tbl Table.
+     * @param tbl  Table.
      * @param name Index name.
      * @param cols Indexed columns.
      * @param type Index type.
@@ -75,14 +80,13 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
         try {
             costFuncType = CostFunctionType.valueOf(
-                IgniteSystemProperties.getString(
-                    IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION,
-                    CostFunctionType.LAST.name()));
-        }
-        catch (IllegalArgumentException e) {
+                    IgniteSystemProperties.getString(
+                            IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION,
+                            CostFunctionType.LAST.name()));
+        } catch (IllegalArgumentException e) {
             LT.warn(log, "Invalid cost function: "
-                + IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION)
-                + ", the LAST cost function is used. Available functions: " + Arrays.toString(CostFunctionType.values()));
+                    + IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION)
+                    + ", the LAST cost function is used. Available functions: " + Arrays.toString(CostFunctionType.values()));
 
             costFuncType = CostFunctionType.LAST;
         }
@@ -114,8 +118,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
      * Re-implement {@link BaseIndex#getCostRangeIndex} to dispatch cost function on new and old versions.
      */
     protected long costRangeIndex(Session ses, int[] masks, long rowCount,
-        TableFilter[] filters, int filter, SortOrder sortOrder,
-        boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+                                  TableFilter[] filters, int filter, SortOrder sortOrder,
+                                  boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
         return constFunc.getCostRangeIndex(ses, masks, rowCount, filters, filter, sortOrder, isScanIndex, allColumnsSet);
     }
 
@@ -157,7 +161,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     }
 
                     totalSelectivity = 100 - ((100 - totalSelectivity) *
-                        (100 - column.getSelectivity()) / 100);
+                            (100 - column.getSelectivity()) / 100);
 
                     long distinctRows = rowCount * totalSelectivity / 100;
 
@@ -165,23 +169,19 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         distinctRows = 1;
 
                     rowsCost = Math.min(5 + Math.max(rowsCost / distinctRows, 1), rowsCost - (i > 0 ? 1 : 0));
-                }
-                else if ((mask & IndexCondition.RANGE) == IndexCondition.RANGE) {
+                } else if ((mask & IndexCondition.RANGE) == IndexCondition.RANGE) {
                     rowsCost = Math.min(5 + rowsCost / 4, rowsCost - (i > 0 ? 1 : 0));
 
                     break;
-                }
-                else if ((mask & IndexCondition.START) == IndexCondition.START) {
+                } else if ((mask & IndexCondition.START) == IndexCondition.START) {
                     rowsCost = Math.min(5 + rowsCost / 3, rowsCost - (i > 0 ? 1 : 0));
 
                     break;
-                }
-                else if ((mask & IndexCondition.END) == IndexCondition.END) {
+                } else if ((mask & IndexCondition.END) == IndexCondition.END) {
                     rowsCost = Math.min(rowsCost / 3, rowsCost - (i > 0 ? 1 : 0));
 
                     break;
-                }
-                else
+                } else
                     break;
             }
         }
@@ -319,12 +319,13 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         return rc;
     }
 
-    /** Re-implement {@link BaseIndex#getCostRangeIndex} to support compatibility with versions
+    /**
+     * Re-implement {@link BaseIndex#getCostRangeIndex} to support compatibility with versions
      * between 8.7.8 and 8.7.12.
      */
     protected final long getCostRangeIndex_8_7_12(Session ses, int[] masks, long rowCount,
-        TableFilter[] filters, int filter, SortOrder sortOrder,
-        boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+                                                  TableFilter[] filters, int filter, SortOrder sortOrder,
+                                                  boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
         rowCount += Constants.COST_ROW_OFFSET;
         int totalSelectivity = 0;
         long rowsCost = rowCount;
@@ -345,7 +346,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     }
 
                     totalSelectivity = 100 - ((100 - totalSelectivity) *
-                        (100 - column.getSelectivity()) / 100);
+                            (100 - column.getSelectivity()) / 100);
 
                     long distinctRows = rowCount * totalSelectivity / 100;
 
@@ -353,26 +354,22 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         distinctRows = 1;
 
                     rowsCost = 2 + Math.max(rowCount / distinctRows, 1);
-                }
-                else if ((mask & IndexCondition.RANGE) == IndexCondition.RANGE) {
+                } else if ((mask & IndexCondition.RANGE) == IndexCondition.RANGE) {
                     rowsCost = 2 + rowsCost / 4;
                     tryAdditional = true;
 
                     break;
-                }
-                else if ((mask & IndexCondition.START) == IndexCondition.START) {
+                } else if ((mask & IndexCondition.START) == IndexCondition.START) {
                     rowsCost = 2 + rowsCost / 3;
                     tryAdditional = true;
 
                     break;
-                }
-                else if ((mask & IndexCondition.END) == IndexCondition.END) {
+                } else if ((mask & IndexCondition.END) == IndexCondition.END) {
                     rowsCost = rowsCost / 3;
                     tryAdditional = true;
 
                     break;
-                }
-                else {
+                } else {
                     if (mask == 0) {
                         // Adjust counter of used columns (i)
                         i--;
@@ -504,8 +501,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
      * Re-implement {@link BaseIndex#getCostRangeIndex} to suppor  compatibility with versions 8.7.6 and older.
      */
     private final long getCostRangeIndex_8_7_6(Session ses, int[] masks, long rowCount,
-        TableFilter[] filters, int filter, SortOrder sortOrder,
-        boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+                                               TableFilter[] filters, int filter, SortOrder sortOrder,
+                                               boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
         // Compatibility with old version without statistics.
         rowCount = 10_000;
 
@@ -527,30 +524,26 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     }
 
                     totalSelectivity = 100 - ((100 - totalSelectivity) *
-                        (100 - column.getSelectivity()) / 100);
+                            (100 - column.getSelectivity()) / 100);
                     long distinctRows = rowCount * totalSelectivity / 100;
 
                     if (distinctRows <= 0)
                         distinctRows = 1;
 
                     rowsCost = 2 + Math.max(rowCount / distinctRows, 1);
-                }
-                else if ((mask & IndexCondition.RANGE) == IndexCondition.RANGE) {
+                } else if ((mask & IndexCondition.RANGE) == IndexCondition.RANGE) {
                     rowsCost = 2 + rowCount / 4;
 
                     break;
-                }
-                else if ((mask & IndexCondition.START) == IndexCondition.START) {
+                } else if ((mask & IndexCondition.START) == IndexCondition.START) {
                     rowsCost = 2 + rowCount / 3;
 
                     break;
-                }
-                else if ((mask & IndexCondition.END) == IndexCondition.END) {
+                } else if ((mask & IndexCondition.END) == IndexCondition.END) {
                     rowsCost = rowCount / 3;
 
                     break;
-                }
-                else
+                } else
                     break;
             }
         }
@@ -672,39 +665,53 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * See more: {@link BaseIndex#getCostRangeIndex}.
          */
         long getCostRangeIndex(Session ses, int[] masks, long rowCount,
-            TableFilter[] filters, int filter, SortOrder sortOrder,
-            boolean isScanIndex, AllColumnsForPlan allColumnsSet);
+                               TableFilter[] filters, int filter, SortOrder sortOrder,
+                               boolean isScanIndex, AllColumnsForPlan allColumnsSet);
     }
 
     /**
      *
      */
     private enum CostFunctionType {
-        /** Last. */
+        /**
+         * Last.
+         */
         LAST,
 
-        /** Compatible with ver. 8.7.28 */
+        /**
+         * Compatible with ver. 8.7.28
+         */
         COMPATIBLE_8_7_28,
 
-        /** Compatible with ver. 8.7.12. */
+        /**
+         * Compatible with ver. 8.7.12.
+         */
         COMPATIBLE_8_7_12,
 
-        /** Compatible with ver. 8.7.6. */
+        /**
+         * Compatible with ver. 8.7.6.
+         */
         COMPATIBLE_8_7_6
     }
 
     private final class CostFunctionLast {
-        /** Math context to use in estimations calculations. */
+        /**
+         * Math context to use in estimations calculations.
+         */
         private final MathContext MATH_CONTEXT = MathContext.DECIMAL64;
 
-        /** Selectivity for closed range queries, in percent */
+        /**
+         * Selectivity for closed range queries, in percent
+         */
         private final int RANGE_CLOSE_SELECTIVITY_LAST = 25;
 
-        /** Selectivity for open range queries, in percent */
+        /**
+         * Selectivity for open range queries, in percent
+         */
         private final int RANGE_OPEN_SELECTIVITY_LAST = 33;
 
         private long getCostRangeIndexRowCost_Last(Session ses, TableFilter filter, int[] masks, long rowCount,
-                                                   ObjectStatistics locTblStats) {
+                                                   ObjectStatisticsImpl locTblStats) {
             int totalCardinality = 0;
 
             long rowsCost = rowCount;
@@ -742,17 +749,16 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
                         totalCardinality = 100 - ((100 - totalCardinality) * (100 - cardinality) / 100);
 
-                        long distinctRows = Math.round((double)rowCount * totalCardinality / 100);
+                        long distinctRows = Math.round((double) rowCount * totalCardinality / 100);
 
                         if (distinctRows <= 0)
                             distinctRows = 1;
 
                         if (colStats != null && equalNull != null)
-                            distinctRows = distinctRows * 100/ (100 - colStats.nulls());
+                            distinctRows = distinctRows * 100 / (100 - colStats.nulls());
 
                         rowsCost = Math.min(5 + Math.max(rowsCost / distinctRows, 1), rowsCost - (i > 0 ? 1 : 0));
-                    }
-                    else if (isByteFlag(mask, IndexCondition.RANGE)) {
+                    } else if (isByteFlag(mask, IndexCondition.RANGE)) {
                         Value min = getStartValue(ses, column, filter);
                         Value max = getEndValue(ses, column, filter);
                         int percent = estimatePercent(colStats, min, max);
@@ -762,8 +768,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         //rowsCost = Math.min(5 + rowsCost / 4, rowsCost - (i > 0 ? 1 : 0));
 
                         break;
-                    }
-                    else if (isByteFlag(mask, IndexCondition.START)) {
+                    } else if (isByteFlag(mask, IndexCondition.START)) {
                         Value min = getStartValue(ses, column, filter);
                         Value max = getEndValue(ses, column, filter);
                         int percent = estimatePercent(colStats, min, max);
@@ -771,8 +776,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         rowsCost = Math.min(5 + rowsCost * percent / 100, rowsCost - (i > 0 ? 1 : 0));
 
                         break;
-                    }
-                    else if (isByteFlag(mask, IndexCondition.END)) {
+                    } else if (isByteFlag(mask, IndexCondition.END)) {
                         Value min = getStartValue(ses, column, filter);
                         Value max = getEndValue(ses, column, filter);
                         int percent = estimatePercent(colStats, min, max);
@@ -780,12 +784,10 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         rowsCost = Math.min(5 + rowsCost * percent / 100, rowsCost - (i > 0 ? 1 : 0));
 
                         break;
-                    }
-                    else if (isNullFilter(ses, column, filter)) {
+                    } else if (isNullFilter(ses, column, filter)) {
                         if (colStats != null)
                             rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost - (i > 0 ? 1 : 0));
-                    }
-                    else if (isNotNullFilter(ses, column, filter)) {
+                    } else if (isNotNullFilter(ses, column, filter)) {
                         if (colStats != null)
                             rowsCost = Math.min(5 + Math.max(rowsCost * (100 - colStats.nulls()) / 100, 1), rowsCost - (i > 0 ? 1 : 0));
                     } else
@@ -799,7 +801,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * Try to get column cardinality from statistics, if there is no such - fall back to H2 column selectivity.
          *
          * @param colStats column statistics.
-         * @param column column.
+         * @param column   column.
          * @return column cardinality in percents.
          */
         private int getColumnCardinality(@Nullable ColumnStatistics colStats, Column column) {
@@ -811,9 +813,9 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          *
          * @param colStats column statistics.
          * @param rowCount total row count in table.
-         * @param nulls if {@code true} - try to estimate only nulls count,
-         *              if @{code false} - try to estimate only non null count,
-         *              if {@code null} - try to estimate total count of values.
+         * @param nulls    if {@code true} - try to estimate only nulls count,
+         *                 if @{code false} - try to estimate only non null count,
+         *                 if {@code null} - try to estimate total count of values.
          * @return column value count.
          */
         private long getColumnSize(@Nullable ColumnStatistics colStats, long rowCount, Boolean nulls) {
@@ -829,7 +831,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
         private Value getEqualValue(Session ses, Column column, TableFilter filter) {
             Value maxValue = null;
-            for(IndexCondition cond : filter.getIndexConditions()) {
+            for (IndexCondition cond : filter.getIndexConditions()) {
                 if (!column.equals(cond.getColumn()))
                     continue;
 
@@ -850,7 +852,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             if (filter == null)
                 return null;
             Value maxValue = null;
-            for(IndexCondition cond : filter.getIndexConditions()) {
+            for (IndexCondition cond : filter.getIndexConditions()) {
                 if (!column.equals(cond.getColumn()))
                     continue;
 
@@ -873,7 +875,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             if (filter == null)
                 return null;
             Value minValue = null;
-            for(IndexCondition cond : filter.getIndexConditions()) {
+            for (IndexCondition cond : filter.getIndexConditions()) {
                 if (!column.equals(cond.getColumn()))
                     continue;
 
@@ -894,7 +896,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Check if specified filter compare specified column to not null.
          *
-         * @param ses session to resolv values
+         * @param ses    session to resolv values
          * @param column column to check
          * @param filter filter
          * @return {@code true} if column value should be null, {@code falce} otherwise (or if it not sure)
@@ -907,7 +909,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Check if specified filter compare specified column to null.
          *
-         * @param ses session to resolv values
+         * @param ses    session to resolv values
          * @param column column to check
          * @param filter filter
          * @return {@code true} if column value should be null, {@code falce} otherwise (or if it not sure)
@@ -915,7 +917,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         private boolean isNullFilter(Session ses, Column column, TableFilter filter) {
             if (filter == null)
                 return false;
-            for(IndexCondition cond : filter.getIndexConditions()) {
+            for (IndexCondition cond : filter.getIndexConditions()) {
                 if (column.equals(cond.getColumn()))
                     continue;
 
@@ -937,7 +939,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * Test if value contains all masks bits.
          *
          * @param value value to test.
-         * @param mask mask to test by.
+         * @param mask  mask to test by.
          * @return {@code true} if value contains all necessary bits, {@code false} otherwise.
          */
         private boolean isByteFlag(int value, int mask) {
@@ -948,8 +950,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * Estimate percent of selected rows by specified min/max conditions (of total rows, with nulls).
          *
          * @param colStat column statistics to use, if exists.
-         * @param min lower border.
-         * @param max higher border.
+         * @param min     lower border.
+         * @param max     higher border.
          * @return percent of rows, selected with specified conditions (0-100)
          */
         private int estimatePercent(ColumnStatistics colStat, Value min, Value max) {
@@ -995,6 +997,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
         /**
          * Convert specified value into comparable type: BigDecimal,
+         *
          * @param value
          * @return
          */
@@ -1063,7 +1066,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             }
         }
 
-        private ColumnStatistics getColumnStatistics(@Nullable ObjectStatistics locTblStats, Column column) {
+        private ColumnStatistics getColumnStatistics(@Nullable ObjectStatisticsImpl locTblStats, Column column) {
             return (locTblStats == null) ? null : locTblStats.columnStatistics(column.getName());
         }
 
@@ -1127,8 +1130,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         }
 
         public long getCostRangeIndex_Last(Session ses, int[] masks, long rowCount, TableFilter[] filters, int filter,
-                             SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
-            ObjectStatistics locTblStats = tbl.tableStatistics();
+                                           SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+            ObjectStatisticsImpl locTblStats = (ObjectStatisticsImpl) tbl.tableStatistics();
 
             if (locTblStats != null)
                 rowCount = locTblStats.rowCount();
@@ -1144,7 +1147,6 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             // it will be cheaper than another index, so adjust the cost
             // accordingly.
             long sortingCost = getCostRangeIndexSortingCost_Last(rowCount, filters, filter, sortOrder, isScanIndex);
-
 
             boolean skipColumnsIntersection = false;
 
