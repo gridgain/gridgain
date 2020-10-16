@@ -69,7 +69,7 @@ public class RendezvousAffinityFunction implements AffinityFunction, Serializabl
     private static final long serialVersionUID = 0L;
 
     /** Default number of partitions. */
-    public static final int DFLT_PARTITION_COUNT = 1024;
+    public static final int DFLT_PARTITION_COUNT = 1;
 
     /** Comparator. */
     private static final Comparator<IgniteBiTuple<Long, ClusterNode>> COMPARATOR = new HashComparator();
