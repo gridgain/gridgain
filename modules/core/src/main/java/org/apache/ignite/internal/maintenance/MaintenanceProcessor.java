@@ -164,6 +164,8 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
                 }
             );
         }
+        else
+            return;
 
         if (!workflowCallbacks.isEmpty())
             proceedWithMaintenance();
