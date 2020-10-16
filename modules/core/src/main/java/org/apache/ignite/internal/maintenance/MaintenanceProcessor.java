@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
@@ -40,6 +41,9 @@ import org.jetbrains.annotations.Nullable;
 public class MaintenanceProcessor extends GridProcessorAdapter implements MaintenanceRegistry {
     /** */
     private static final String IN_MEMORY_MODE_ERR_MSG = "Maintenance Mode is not supported for in-memory clusters";
+
+    /** */
+    private static final Pattern ALPHANUMERIC_UNDERSCORE = Pattern.compile("^[a-zA-Z_0-9]+$");
 
     /**
      * Active {@link MaintenanceTask}s are the ones that were read from disk when node entered Maintenance Mode.
@@ -250,13 +254,13 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
         Optional<String> wrongActionName = actions
             .stream()
             .map(MaintenanceAction::name)
-//            .filter(name -> !U.alphanumericUnderscore(name))
+            .filter(name -> !ALPHANUMERIC_UNDERSCORE.matcher(name).matches())
             .findFirst();
 
-//        if (wrongActionName.isPresent())
-//            throw new IgniteException(
-//                "All actions' names should contain only alphanumeric and underscore symbols: "
-//                    + wrongActionName.get());
+        if (wrongActionName.isPresent())
+            throw new IgniteException(
+                "All actions' names should contain only alphanumeric and underscore symbols: "
+                    + wrongActionName.get());
 
         workflowCallbacks.put(maintenanceTaskName, cb);
     }
