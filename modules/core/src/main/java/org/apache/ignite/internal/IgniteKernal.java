@@ -1176,7 +1176,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             // be able to start receiving messages once discovery completes.
             try {
                 startProcessor(COMPRESSION.createOptional(ctx));
-                startProcessor(new PdsConsistentIdProcessor(ctx));
                 startProcessor(new MvccProcessorImpl(ctx));
                 startProcessor(createComponent(DiscoveryNodeValidationProcessor.class, ctx));
                 startProcessor(new GridAffinityProcessor(ctx));
