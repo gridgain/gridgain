@@ -277,10 +277,10 @@ public class CheckpointWorkflow {
 
             tracker.onListenersExecuteEnd();
 
+            fillCacheGroupState(cpRec);
+
             if (curr.nextSnapshot())
                 snapFut = snapshotMgr.onMarkCheckPointBegin(curr.snapshotOperation(), cpRec, ctx0.partitionStatMap());
-
-            fillCacheGroupState(cpRec);
 
             //There are allowable to replace pages only after checkpoint entry was stored to disk.
             cpPagesHolder = beginAllCheckpoints(dataRegions.get(), curr.futureFor(MARKER_STORED_TO_DISK));
