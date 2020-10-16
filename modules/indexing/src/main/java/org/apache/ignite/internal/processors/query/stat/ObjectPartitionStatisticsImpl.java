@@ -21,7 +21,7 @@ import java.util.Map;
 /**
  * Statistic for some partition of data object.
  */
-public class ObjectPartitionStatistics extends ObjectStatistics {
+public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
     /** Partition id. */
     private final int partId;
 
@@ -40,8 +40,8 @@ public class ObjectPartitionStatistics extends ObjectStatistics {
      * @param updCnt update counter of partition.
      * @param colNameToStat column key to column statistics map.
      */
-    public ObjectPartitionStatistics(int partId, boolean loc, long rowsCnt, long updCnt,
-                                     Map<String, ColumnStatistics> colNameToStat) {
+    public ObjectPartitionStatisticsImpl(int partId, boolean loc, long rowsCnt, long updCnt,
+                                         Map<String, ColumnStatistics> colNameToStat) {
         super(rowsCnt, colNameToStat);
 
         this.partId = partId;
@@ -71,7 +71,7 @@ public class ObjectPartitionStatistics extends ObjectStatistics {
     }
 
 
-    public ObjectPartitionStatistics clone() {
-        return new ObjectPartitionStatistics(partId, loc, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
+    public ObjectPartitionStatisticsImpl clone() {
+        return new ObjectPartitionStatisticsImpl(partId, loc, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
     }
 }

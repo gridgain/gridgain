@@ -115,18 +115,18 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
             selectedColumns = filterColumns(tbl.getColumns(), colNames);
         }
 
-        Collection<ObjectPartitionStatistics> partsStats = collectPartitionStatistics(tbl, selectedColumns);
+        Collection<ObjectPartitionStatisticsImpl> partsStats = collectPartitionStatistics(tbl, selectedColumns);
         statsRepos.saveLocalPartitionsStatistics(tbl.identifier(), partsStats, fullStat);
 
-        ObjectStatistics tblStats = aggregateLocalStatistics(tbl, selectedColumns, partsStats);
+        ObjectStatisticsImpl tblStats = aggregateLocalStatistics(tbl, selectedColumns, partsStats);
         statsRepos.saveLocalStatistics(tbl.identifier(), tblStats, fullStat);
         if (log.isDebugEnabled())
             log.debug(String.format("Statistics collection by %s.%s object is finished.", schemaName, objName));
     }
 
-    private Collection<ObjectPartitionStatistics> collectPartitionStatistics(GridH2Table tbl, Column[] selectedColumns)
+    private Collection<ObjectPartitionStatisticsImpl> collectPartitionStatistics(GridH2Table tbl, Column[] selectedColumns)
             throws IgniteCheckedException {
-        List<ObjectPartitionStatistics> tblPartStats = new ArrayList<>();
+        List<ObjectPartitionStatisticsImpl> tblPartStats = new ArrayList<>();
         GridH2RowDescriptor desc = tbl.rowDescriptor();
         String tblName = tbl.getName();
 
@@ -169,7 +169,7 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
                 ));
 
 
-                tblPartStats.add(new ObjectPartitionStatistics(locPart.id(), true, rowsCnt, locPart.updateCounter(),
+                tblPartStats.add(new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt, locPart.updateCounter(),
                         colStats));
             }
             finally {
@@ -181,7 +181,7 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
         return tblPartStats;
     }
 
-    public ObjectStatistics aggregateLocalStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> tblPartStats) {
+    public ObjectStatisticsImpl aggregateLocalStatistics(QueryTable tbl, Collection<ObjectPartitionStatisticsImpl> tblPartStats) {
 
         GridH2Table table = schemaMgr.dataTable(tbl.schema(), tbl.table());
         if (table == null) {
@@ -192,8 +192,8 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
         return aggregateLocalStatistics(table, table.getColumns(), tblPartStats);
     }
 
-    private ObjectStatistics aggregateLocalStatistics(GridH2Table tbl, Column[] selectedColumns,
-                                                      Collection<ObjectPartitionStatistics> tblPartStats) {
+    private ObjectStatisticsImpl aggregateLocalStatistics(GridH2Table tbl, Column[] selectedColumns,
+                                                          Collection<ObjectPartitionStatisticsImpl> tblPartStats) {
 
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedColumns.length);
         long rowCnt = 0;
@@ -202,7 +202,7 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
 
         QueryTable tblId = tbl.identifier();
 
-        for (ObjectPartitionStatistics partStat : tblPartStats) {
+        for (ObjectPartitionStatisticsImpl partStat : tblPartStats) {
             for (Column col : selectedColumns) {
                 ColumnStatistics colPartStat = partStat.columnStatistics(col.getName());
                 if (colPartStat != null) {
@@ -223,7 +223,7 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
 
 
 
-        ObjectStatistics tblStats = new ObjectStatistics(rowCnt, colStats);
+        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
 
         return tblStats;
     }

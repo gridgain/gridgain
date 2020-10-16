@@ -21,14 +21,14 @@ import java.util.Map;
 /**
  * All statistics by some object (table or index)
  */
-public class ObjectStatistics implements Cloneable {
+public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /** Total number of rows in object. */
     private final long rowsCnt;
 
     /** Map columnKey to its statistic. */
     private final Map<String, ColumnStatistics> colNameToStat;
 
-    public ObjectStatistics(long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
+    public ObjectStatisticsImpl(long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
         assert rowsCnt >= 0: "rowsCnt >= 0";
         assert colNameToStat != null: "colNameToStat != null";
 
@@ -64,8 +64,8 @@ public class ObjectStatistics implements Cloneable {
      *
      * @return clone.
      */
-    public ObjectStatistics clone() {
-        return new ObjectStatistics(rowsCnt, new HashMap<>(colNameToStat));
+    public ObjectStatisticsImpl clone() {
+        return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat));
     }
 }
 
