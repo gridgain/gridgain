@@ -234,8 +234,14 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
         return allNodesSupports(null, singleton(locNode), feature);
     }
 
-    @Override
-    public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
+    /** {@inheritDoc} */
+    @Override public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
+        if (locNode == null)
+            return false;
+
+        if (!nodesPred.apply(locNode))
+            return false;
+
         return allNodesSupport(feature);
     }
 
