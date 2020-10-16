@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-hibernate_5.1</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
