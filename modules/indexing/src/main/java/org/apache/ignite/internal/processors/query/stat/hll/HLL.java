@@ -366,8 +366,7 @@ public class HLL implements Cloneable {
                 if(sparseProbabilisticStorage.size() > sparseThreshold) {
                     initializeStorage(HLLType.FULL);
                     for(final int registerIndex : sparseProbabilisticStorage.keySet()) {
-                        Byte registerValueByte = sparseProbabilisticStorage.get(registerIndex);
-                        final byte registerValue = (registerValueByte == null) ? 0 : registerValueByte;
+                        final byte registerValue = sparseProbabilisticStorage.getOrDefault(registerIndex, (byte)0);
                         probabilisticStorage.setMaxRegister(registerIndex, registerValue);
                     }
                     sparseProbabilisticStorage = null;
@@ -423,8 +422,7 @@ public class HLL implements Cloneable {
         // NOTE:  no +1 as in paper since 0-based indexing
         final int j = (int)(rawValue & mBitsMask);
 
-        Byte currentValueByte = sparseProbabilisticStorage.get(j);
-        final byte currentValue = (currentValueByte == null) ? 0 : currentValueByte;
+        final byte currentValue = sparseProbabilisticStorage.getOrDefault(j, (byte)0);
         if(p_w > currentValue) {
             sparseProbabilisticStorage.put(j, p_w);
         }
@@ -542,8 +540,7 @@ public class HLL implements Cloneable {
         double sum = 0;
         int numberOfZeroes = 0/*"V" in the paper*/;
         for(int j=0; j<m; j++) {
-            Byte registerByte = sparseProbabilisticStorage.get(j);
-            final long register = (registerByte == null) ? 0 : registerByte;
+            final long register = sparseProbabilisticStorage.getOrDefault(j, (byte)0);
 
             sum += 1.0 / (1L << register);
             if(register == 0L) numberOfZeroes++;
@@ -831,7 +828,7 @@ public class HLL implements Cloneable {
             case SPARSE:
                 for(final int registerIndex : other.sparseProbabilisticStorage.keySet()) {
                     final byte registerValue = other.sparseProbabilisticStorage.get(registerIndex);
-                    final byte currentRegisterValue = sparseProbabilisticStorage.get(registerIndex);
+                    final byte currentRegisterValue = sparseProbabilisticStorage.getOrDefault(registerIndex, (byte)0);
                     if(registerValue > currentRegisterValue) {
                         sparseProbabilisticStorage.put(registerIndex, registerValue);
                     }

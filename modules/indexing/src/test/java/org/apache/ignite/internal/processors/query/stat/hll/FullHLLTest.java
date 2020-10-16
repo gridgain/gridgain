@@ -27,6 +27,9 @@ import org.apache.ignite.internal.processors.query.stat.hll.util.LongIterator;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
  * Tests {@link HLL} of type {@link HLLType#FULL}.
  *
@@ -34,7 +37,6 @@ import org.junit.Test;
  * @author timon
  */
 public class FullHLLTest {
-    // TODO union test
     /**
      * Smoke test for {@link HLL#cardinality(int)} and the proper use of the
      * small range correction.
@@ -330,6 +332,67 @@ public class FullHLLTest {
         }
     }
 
+    @Test
+    public void unionTest() {
+        Random r = ThreadLocalRandom.current();
+        HLL hll = new HLL(13/*log2m*/, 5/*registerWidth*/);
+
+        hll.addRaw(r.nextLong());
+    }
+
+    @Test
+    public void homogeneousUnionTest() {
+        getHll(1).union((getHll(1)));
+
+        getHll(1000).union((getHll(1000)));
+
+        getHll(100000).union((getHll(100000)));
+    }
+
+
+    /**
+     * Test empty vs full in different combination unions.
+     */
+    @Test
+    public void emptyUnionTest() {
+        getHll(0).union(getHll(0));
+
+        getHll(1000).union(getHll(0));
+
+        getHll(0).union(getHll(1000));
+    }
+
+    /**
+     * Test HLL with different number of values serialized/deserialized properly.
+     */
+    @Test
+    public void serializationTest() {
+        testSerialization(getHll(0));
+
+        testSerialization(getHll(1));
+
+        testSerialization(getHll(1000));
+
+        testSerialization(getHll(100000));
+    }
+
+    private static void testSerialization(HLL originHll) {
+        byte[] hllBytes = originHll.toBytes();
+        HLL restoredHll = HLL.fromBytes(hllBytes);
+
+        assertElementsEqual(originHll, restoredHll);
+        assertEquals(originHll.cardinality(), restoredHll.cardinality());
+        assertEquals(originHll.getType(), restoredHll.getType());
+    }
+
+    private static HLL getHll(int rows) {
+        Random r = ThreadLocalRandom.current();
+        HLL result = new HLL(13, 5);
+        for (int i = 0; i < rows; i++)
+            result.addRaw(r.nextLong());
+        return result;
+    }
+
     // ************************************************************************
     // Assertion Helpers
     /**
@@ -338,6 +401,9 @@ public class FullHLLTest {
     private static void assertElementsEqual(final HLL hllA, final HLL hllB) {
         final BitVector bitVectorA = GridTestUtils.getFieldValue(hllA, "probabilisticStorage")/*for testing convenience*/;
         final BitVector bitVectorB = GridTestUtils.getFieldValue(hllB, "probabilisticStorage")/*for testing convenience*/;
+
+        if (bitVectorA == null && bitVectorB == null)
+            return;
 
         final LongIterator iterA = bitVectorA.registerIterator();
         final LongIterator iterB = bitVectorB.registerIterator();
