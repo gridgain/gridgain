@@ -16,8 +16,6 @@
 package org.apache.ignite.internal.processors.ru;
 
 import java.io.Serializable;
-import java.util.Set;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.lang.IgniteProductVersion;
 
 /**
@@ -53,11 +51,4 @@ public interface RollingUpgradeStatus extends Serializable {
      * @return Target version.
      */
     public IgniteProductVersion targetVersion();
-
-    /**
-     * Returns a set of features that is supported by all nodes in the cluster.
-     *
-     * @return Feature set supported by all cluster nodes.
-     */
-    public Set<IgniteFeatures> supportedFeatures();
 }
