@@ -84,7 +84,7 @@ public class IndexReaderUtils {
      *
      * @param partId Partition number.
      * @param parent Partition directory.
-     * @return partition absolute pathname string.
+     * @return Partition absolute pathname string.
      */
     public static String partitionFileAbsolutePath(File parent, int partId) {
         String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : format(PART_FILE_TEMPLATE, partId);

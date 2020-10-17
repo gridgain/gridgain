@@ -42,7 +42,7 @@ public interface IgniteIndexReaderFilePageStoreFactory {
      *
      * @param partId Partition ID.
      * @param type Data type, can be {@link PageIdAllocator#FLAG_IDX} or {@link PageIdAllocator#FLAG_DATA}.
-     * @param errors errors while reading partition.
+     * @param errors Errors while reading partition.
      * @return New instance of {@link FilePageStore} or {@code null}.
      * @throws IgniteCheckedException If there are errors when creating {@link FilePageStore}.
      */
@@ -54,7 +54,7 @@ public interface IgniteIndexReaderFilePageStoreFactory {
      *
      * @param partId Partition ID.
      * @param type Data type, can be {@link PageIdAllocator#FLAG_IDX} or {@link PageIdAllocator#FLAG_DATA}.
-     * @param errors errors while reading partition.
+     * @param errors Errors while reading partition.
      * @return New instance of {@link FilePageStore} or {@code null}.
      * @throws IgniteCheckedException If there are errors when creating or initializing {@link FilePageStore}.
      */

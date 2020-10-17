@@ -500,7 +500,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @param travErrCnt Count of errors that can occur during traversal.
      * @param pageListsErrCnt Count of errors that can occur during page lists scan.
      * @param seqErrCnt Count of errors that can occur during sequential scan.
-     * @param idxReadingErr index.bin file reading errors should be present.
      * @param partReadingErr partition file reading errors should be present.
      * @param idxSizeConsistent Index size should be consistent
      */
@@ -1040,7 +1039,9 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         }
     }
 
-    /** */
+    /**
+     * @return Flag indicates partition file reading errors should be present in output.
+     */
     protected boolean isReportIdxAndPartFilesReadingErr() {
         return false;
     }

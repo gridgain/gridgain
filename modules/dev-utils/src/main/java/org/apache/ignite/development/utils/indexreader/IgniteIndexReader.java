@@ -84,6 +84,7 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.GridClosure3;
+import org.apache.ignite.internal.util.lang.GridFunc;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
@@ -240,7 +241,7 @@ public class IgniteIndexReader implements AutoCloseable {
         idxStore = filePageStoreFactory.createFilePageStoreWithEnsure(INDEX_PARTITION, FLAG_IDX, errors);
 
         if (!errors.isEmpty())
-            partStoresErrors.put(INDEX_PARTITION, errors);
+            partStoresErrors.put(INDEX_PARTITION, new ArrayList<>(errors));
 
         if (isNull(idxStore))
             throw new IgniteCheckedException(INDEX_FILE_NAME + " file not found");
@@ -250,12 +251,13 @@ public class IgniteIndexReader implements AutoCloseable {
         partStores = new FilePageStore[partCnt];
 
         for (int i = 0; i < partCnt; i++) {
-            errors = new ArrayList<>();
+            if (!errors.isEmpty())
+                errors.clear();
 
             partStores[i] = filePageStoreFactory.createFilePageStoreWithEnsure(i, FLAG_DATA, errors);
 
             if (!errors.isEmpty())
-                partStoresErrors.put(i, errors);
+                partStoresErrors.put(i, new ArrayList<>(errors));
         }
 
         printFileReadingErrors(partStoresErrors);
@@ -292,12 +294,12 @@ public class IgniteIndexReader implements AutoCloseable {
     private void printErrors(
         String prefix,
         String caption,
-        String alternativeCaption,
+        @Nullable String alternativeCaption,
         String elementFormatPtrn,
         boolean printTrace,
         Map<?, ? extends List<? extends Throwable>> errors
     ) {
-        if (errors.isEmpty()) {
+        if (errors.isEmpty() && alternativeCaption != null) {
             print(prefix + alternativeCaption);
 
             return;
@@ -508,12 +510,12 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Print partitions reading exceptions.
      *
-     * @param partStoresErrors partitions reading exceptions.
+     * @param partStoresErrors Partitions reading exceptions.
      */
     private void printFileReadingErrors(Map<Integer, List<Throwable>> partStoresErrors) {
         List<Throwable> idxPartErrors = partStoresErrors.get(INDEX_PARTITION);
 
-        if (idxPartErrors != null) {
+        if (!GridFunc.isEmpty(idxPartErrors)) {
             printErr("Errors detected while reading " + INDEX_FILE_NAME);
 
             idxPartErrors.forEach(err -> printErr(err.getMessage()));
@@ -522,7 +524,7 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         if (!partStoresErrors.isEmpty()) {
-            printErrors("", "Errors detected while reading partition files:", "",
+            printErrors("", "Errors detected while reading partition files:", null,
                 "Partition id: %s, exceptions: ", false, partStoresErrors);
         }
     }
