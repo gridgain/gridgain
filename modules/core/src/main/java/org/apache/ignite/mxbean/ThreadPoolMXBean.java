@@ -143,7 +143,7 @@ public interface ThreadPoolMXBean {
      *
      * @return Class name of current rejection handler.
      */
-    @MXBeanDescription("Class name of current rejection handler.")
+    @MXBeanDescription("Handler class name for rejection tasks.")
     public String getRejectedExecutionHandlerClass();
 
     /**
