@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockDump;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.SharedPageLockTrackerDump;
 
 import static java.nio.channels.FileChannel.open;
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
@@ -43,14 +43,14 @@ public class ToFileDumpProcessor {
      * @param pageLockDump Dump.
      * @param dir Directory to save.
      */
-    public static String toFileDump(PageLockDump pageLockDump, File dir, String name) throws IgniteCheckedException {
+    public static String toFileDump(SharedPageLockTrackerDump pageLockDump, File dir, String name) throws IgniteCheckedException {
         try {
-           if (!dir.exists())
-               dir.mkdirs();
+            if (!dir.exists())
+                dir.mkdirs();
 
-            File file = new File(dir, PREFIX_NAME + name + "_" + DATE_FMT.format(new Date(pageLockDump.time())));
+            File file = new File(dir, PREFIX_NAME + name + "_" + DATE_FMT.format(new Date(pageLockDump.time)));
 
-            return saveToFile(ToStringDumpProcessor.toStringDump(pageLockDump), file);
+            return saveToFile(ToStringDumpHelper.toStringDump(pageLockDump), file);
         }
         catch (IOException e) {
             throw new IgniteCheckedException(e);

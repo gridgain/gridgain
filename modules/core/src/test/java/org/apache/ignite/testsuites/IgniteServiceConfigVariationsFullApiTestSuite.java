@@ -27,6 +27,7 @@ import org.apache.ignite.testframework.configvariations.ConfigParameter;
 import org.apache.ignite.testframework.configvariations.ConfigVariationsTestSuiteBuilder;
 import org.apache.ignite.testframework.configvariations.Parameters;
 import org.apache.ignite.testframework.junits.DynamicSuite;
+import org.apache.ignite.tools.junit.JUnitTeamcityReporter;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -48,6 +49,8 @@ public class IgniteServiceConfigVariationsFullApiTestSuite {
     /** Activate service grid for test it. */
     @BeforeClass
     public static void init() {
+        JUnitTeamcityReporter.suite = IgniteServiceConfigVariationsFullApiTestSuite.class.getName();
+
         oldSrvcGridProp = System.getProperty(IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
 
         // Enable event-driven service grid implementation unless legacy implementation is directly enforced.

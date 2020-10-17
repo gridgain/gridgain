@@ -39,9 +39,6 @@ import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
-import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
-import org.apache.ignite.transactions.TransactionMixedModeException;
-import org.apache.ignite.transactions.TransactionUnsupportedConcurrencyException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
@@ -51,10 +48,12 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponseSender;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.odbc.odbc.escape.OdbcEscapeUtils;
+import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.SqlClientContext;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -65,7 +64,9 @@ import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
+import org.apache.ignite.transactions.TransactionMixedModeException;
 import org.apache.ignite.transactions.TransactionSerializationException;
+import org.apache.ignite.transactions.TransactionUnsupportedConcurrencyException;
 
 import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.META_COLS;
 import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.META_PARAMS;
@@ -280,7 +281,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
     }
 
     /** {@inheritDoc} */
-    @Override public ClientListenerResponse handleException(Exception e, ClientListenerRequest req) {
+    @Override public ClientListenerResponse handleException(Throwable e, ClientListenerRequest req) {
         return exceptionToResult(e);
     }
 
@@ -338,6 +339,11 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
         // No-op.
     }
 
+    /** {@inheritDoc} */
+    @Override public ClientListenerProtocolVersion protocolVersion() {
+        return ver;
+    }
+
     /**
      * Make query considering handler configuration.
      * @param schema Schema.
@@ -351,8 +357,9 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
         SqlFieldsQueryEx qry = makeQuery(schema, sql);
 
         qry.setArgs(args);
-        qry.setTimeout(timeout, TimeUnit.SECONDS);
         qry.setAutoCommit(autoCommit);
+
+        QueryUtils.withQueryTimeout(qry, timeout, TimeUnit.SECONDS);
 
         return qry;
     }
@@ -1030,7 +1037,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
      * @param e Exception to convert.
      * @return resulting {@link OdbcResponse}.
      */
-    private static OdbcResponse exceptionToResult(Exception e) {
+    private static OdbcResponse exceptionToResult(Throwable e) {
         String msg = OdbcUtils.tryRetrieveH2ErrorMessage(e);
 
         if (e instanceof TransactionSerializationException)

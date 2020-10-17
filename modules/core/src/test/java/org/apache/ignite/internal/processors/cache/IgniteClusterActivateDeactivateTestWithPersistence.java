@@ -48,8 +48,8 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.testframework.GridTestUtils.assertActive;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
@@ -211,9 +211,11 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
 
         Ignite srv = startGrids(srvs);
 
-        srv.cluster().state(activationMode);
+        srv.cluster().state(ACTIVE);
 
         srv.createCaches(Arrays.asList(cacheConfigurations1()));
+
+        srv.cluster().state(activationMode);
 
         Map<Integer, Integer> cacheData = new LinkedHashMap<>();
 
@@ -406,12 +408,14 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
 
         Ignite srv = startGrids(SRVS);
 
-        srv.cluster().state(state);
+        srv.cluster().state(ACTIVE);
 
         CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
 
         srv.createCache(ccfg);
+
+        srv.cluster().state(state);
 
         stopAllGrids();
 

@@ -55,6 +55,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.lang.String.format;
@@ -158,8 +159,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setPersistenceEnabled(true)
-                        .setInitialSize(10 * 1024L * 1024L)
-                        .setMaxSize(50 * 1024L * 1024L)
+                        .setInitialSize(20 * 1024L * 1024L)
+                        .setMaxSize(64 * 1024L * 1024L)
                 )
         ).setCacheConfiguration(
             new CacheConfiguration(DEFAULT_CACHE_NAME)
@@ -680,6 +681,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      *
      * @throws IgniteCheckedException If failed.
      */
+    //TODO: GG-29643: Check issue fixed.
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-30506")
     @Test
     public void testCorrectIdxWithCheckParts() throws IgniteCheckedException {
         checkCorrectIdxWithCheckParts(workDir);
@@ -744,6 +747,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
+    //TODO: GG-29643: Check issue fixed.
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-30506")
     @Test
     public void testCorruptedIdxWithCheckParts() throws Exception {
         checkCorruptedIdxWithCheckParts(asList(workDir));
@@ -810,8 +815,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         try {
             for (File dir : workDirs) {
-                corruptFile(dir, INDEX_PARTITION, 7);
-                corruptFile(dir, 0, 8);
+                corruptFile(dir, INDEX_PARTITION, 5);
+                corruptFile(dir, 0, 10);
             }
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
@@ -845,7 +850,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         try {
             for (File dir : workDirs)
-                corruptFile(dir, 0, 8);
+                corruptFile(dir, 0, 10);
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
 

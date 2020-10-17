@@ -34,23 +34,42 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.systemview.walker.SqlQueryHistoryViewWalker;
+import org.apache.ignite.internal.managers.systemview.walker.SqlQueryViewWalker;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.systemview.view.SqlQueryHistoryView;
+import org.apache.ignite.spi.systemview.view.SqlQueryView;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
 
 /**
  * Keep information about all running queries.
  */
 public class RunningQueryManager {
+    /** */
+    public static final String SQL_QRY_VIEW = metricName("sql", "queries");
+
+    /** */
+    public static final String SQL_QRY_VIEW_DESC = "Running SQL queries.";
+
+    /** */
+    public static final String SQL_QRY_HIST_VIEW = metricName("sql", "queries", "history");
+
+    /** */
+    public static final String SQL_QRY_HIST_VIEW_DESC = "SQL queries history.";
+
     /** Name of the MetricRegistry which metrics measure stats of queries initiated by user. */
     public static final String SQL_USER_QUERIES_REG_NAME = "sql.queries.user";
 
@@ -151,6 +170,16 @@ public class RunningQueryManager {
 
         oomQrsCnt = userMetrics.longMetric("failedByOOM", "Number of queries started on this node failed due to " +
             "out of memory protection. This metric number included in the general 'failed' metric.");
+
+        ctx.systemView().registerView(SQL_QRY_VIEW, SQL_QRY_VIEW_DESC,
+            new SqlQueryViewWalker(),
+            runs.values(),
+            SqlQueryView::new);
+
+        ctx.systemView().registerView(SQL_QRY_HIST_VIEW, SQL_QRY_HIST_VIEW_DESC,
+            new SqlQueryHistoryViewWalker(),
+            qryHistTracker.queryHistory().values(),
+            SqlQueryHistoryView::new);
     }
 
     /**
@@ -166,7 +195,7 @@ public class RunningQueryManager {
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
         @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel,
         String qryInitiatorId) {
-        Long qryId = qryIdGen.incrementAndGet();
+        long qryId = qryIdGen.incrementAndGet();
 
         if (qryInitiatorId == null)
             qryInitiatorId = SqlFieldsQuery.threadedQueryInitiatorId();
@@ -245,58 +274,64 @@ public class RunningQueryManager {
         if (qry == null)
             return;
 
-        if (qry.memoryMetricProvider() instanceof AutoCloseable)
-            U.close((AutoCloseable)qry.memoryMetricProvider(), log);
+        Span qrySpan = qry.span();
 
-        if (log.isDebugEnabled()) {
-            log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
-                "[id=" + qryId + ", tracker=" + qry.memoryMetricProvider() +
-                ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
-        }
+        try {
+            if (failed)
+                qrySpan.addTag(ERROR, failReason::getMessage);
 
-        if (!qryFinishedListeners.isEmpty()) {
-            GridQueryFinishedInfo info = new GridQueryFinishedInfo(
-                qry.id(),
-                locNodeId,
-                qry.query(),
-                qry.queryType(),
-                qry.schemaName(),
-                qry.startTime(),
-                System.currentTimeMillis(),
-                qry.local(),
-                failed,
-                qry.queryInitiatorId()
-            );
+            if (qry.memoryMetricProvider() instanceof AutoCloseable)
+                U.close((AutoCloseable)qry.memoryMetricProvider(), log);
 
-            try {
-                closure.runLocal(
-                    () -> qryFinishedListeners.forEach(lsnr -> {
-                        try {
-                            lsnr.accept(info);
-                        }
-                        catch (Exception ex) {
-                            log.error("Listener fails during handling query finished" +
-                                    " event [qryId=" + qryId + "]", ex);
-                        }
-                    }),
-                    GridIoPolicy.PUBLIC_POOL
+            if (log.isDebugEnabled()) {
+                log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
+                    "[id=" + qryId + ", tracker=" + qry.memoryMetricProvider() +
+                    ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
+            }
+
+            if (!qryFinishedListeners.isEmpty()) {
+                GridQueryFinishedInfo info = new GridQueryFinishedInfo(
+                    qry.id(),
+                    locNodeId,
+                    qry.query(),
+                    qry.queryType(),
+                    qry.schemaName(),
+                    qry.startTime(),
+                    System.currentTimeMillis(),
+                    qry.local(),
+                    failed,
+                    qry.queryInitiatorId()
                 );
+
+                try {
+                    closure.runLocal(
+                        () -> qryFinishedListeners.forEach(lsnr -> {
+                            try {
+                                lsnr.accept(info);
+                            }
+                            catch (Exception ex) {
+                                log.error("Listener fails during handling query finished" +
+                                    " event [qryId=" + qryId + "]", ex);
+                            }
+                        }),
+                        GridIoPolicy.PUBLIC_POOL
+                    );
+                }
+                catch (IgniteCheckedException ex) {
+                    throw new IgniteException(ex.getMessage(), ex);
+                }
             }
-            catch (IgniteCheckedException ex) {
-                throw new IgniteException(ex.getMessage(), ex);
-            }
-        }
 
-        //We need to collect query history and metrics only for SQL queries.
-        if (isSqlQuery(qry)) {
-            qry.runningFuture().onDone();
+            //We need to collect query history and metrics only for SQL queries.
+            if (isSqlQuery(qry)) {
+                qry.runningFuture().onDone();
 
-            qryHistTracker.collectMetrics(qry, failed);
+                qryHistTracker.collectHistory(qry, failed);
 
-            if (!failed)
-                successQrsCnt.increment();
-            else {
-                failedQrsCnt.increment();
+                if (!failed)
+                    successQrsCnt.increment();
+                else {
+                    failedQrsCnt.increment();
 
                 // We measure cancel metric as "number of times user's queries ended up with query cancelled exception",
                 // not "how many user's KILL QUERY command succeeded". These may be not the same if cancel was issued
@@ -305,7 +340,11 @@ public class RunningQueryManager {
                     canceledQrsCnt.increment();
                 else if (QueryUtils.isLocalOrReduceOom(failReason))
                     oomQrsCnt.increment();
+                }
             }
+        }
+        finally {
+            qrySpan.end();
         }
     }
 
@@ -430,8 +469,8 @@ public class RunningQueryManager {
      *
      * @return Queries history statistics aggregated by query text, schema and local flag.
      */
-    public Map<QueryHistoryMetricsKey, QueryHistoryMetrics> queryHistoryMetrics() {
-        return qryHistTracker.queryHistoryMetrics();
+    public Map<QueryHistoryKey, QueryHistory> queryHistoryMetrics() {
+        return qryHistTracker.queryHistory();
     }
 
     /**
@@ -444,7 +483,7 @@ public class RunningQueryManager {
     }
 
     /**
-     * Reset query history metrics.
+     * Reset query history.
      */
     public void resetQueryHistoryMetrics() {
         qryHistTracker = new QueryHistoryTracker(histSz);

@@ -30,16 +30,13 @@ import org.apache.ignite.internal.encryption.EncryptedCacheGroupCreateTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheNodeJoinTest;
 import org.apache.ignite.internal.encryption.EncryptedCachePreconfiguredRestartTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheRestartTest;
+import org.apache.ignite.internal.encryption.EncryptionMXBeanTest;
+import org.apache.ignite.internal.encryption.MasterKeyChangeConsistencyCheckTest;
+import org.apache.ignite.internal.encryption.MasterKeyChangeTest;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointReadLockFailureTest;
 import org.apache.ignite.internal.processors.cache.persistence.SingleNodePersistenceSslTest;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessorTest;
 import org.apache.ignite.marshaller.GridMarshallerMappingConsistencyTest;
-import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
-import org.apache.ignite.util.GridCommandHandlerClusterByClassWithSSLTest;
-import org.apache.ignite.util.GridCommandHandlerRUTest;
-import org.apache.ignite.util.GridCommandHandlerSslTest;
-import org.apache.ignite.util.GridCommandHandlerTest;
-import org.apache.ignite.util.GridCommandHandlerWithSSLTest;
 import org.apache.ignite.util.GridInternalTaskUnusedWalSegmentsTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -58,12 +55,6 @@ import org.junit.runners.Suite;
     CheckpointReadLockFailureTest.class,
     PdsConsistentIdProcessorTest.class,
 
-    GridCommandHandlerTest.class,
-    GridCommandHandlerWithSSLTest.class,
-    GridCommandHandlerClusterByClassTest.class,
-    GridCommandHandlerClusterByClassWithSSLTest.class,
-    GridCommandHandlerSslTest.class,
-    GridCommandHandlerRUTest.class,
     GridInternalTaskUnusedWalSegmentsTest.class,
 
     GridNodeMetricsLogPdsSelfTest.class,
@@ -78,7 +69,12 @@ import org.junit.runners.Suite;
 
     SingleNodePersistenceSslTest.class,
 
-    IgniteClusterIdTagTest.class
+    IgniteClusterIdTagTest.class,
+
+    MasterKeyChangeTest.class,
+    MasterKeyChangeConsistencyCheckTest.class,
+
+    EncryptionMXBeanTest.class
 })
 public class IgniteBasicWithPersistenceTestSuite {
 }

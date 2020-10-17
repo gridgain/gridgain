@@ -19,8 +19,9 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
-import org.h2.engine.Session;
-import org.h2.result.ResultInterface;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.engine.SessionInterface;
+import org.gridgain.internal.h2.result.ResultInterface;
 
 /**
  * Basic class for external result.
@@ -71,7 +72,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
     }
 
     /**
-     * Used for {@link ResultInterface#createShallowCopy(org.h2.engine.SessionInterface)} only.
+     * Used for {@link ResultInterface#createShallowCopy(SessionInterface)} only.
      * @param parent Parent result.
      */
     protected AbstractExternalResult(AbstractExternalResult parent) {

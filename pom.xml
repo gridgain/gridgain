@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>apache-ignite</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
@@ -54,6 +54,7 @@
         <module>modules/spring</module>
         <module>modules/spring-data</module>
         <module>modules/spring-data-2.0</module>
+        <module>modules/spring-data-2.2</module>
         <module>modules/web</module>
         <module>modules/aop</module>
         <module>modules/urideploy</module>
@@ -103,6 +104,7 @@
         <module>modules/hibernate-5.3</module>
         <module>modules/geospatial</module>
         <module>modules/schedule</module>
+        <module>modules/control-utility</module>
     </modules>
 
     <profiles>

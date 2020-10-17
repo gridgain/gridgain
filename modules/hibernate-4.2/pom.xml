@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-hibernate_4.2</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
@@ -69,7 +69,7 @@
         <dependency>
             <groupId>commons-dbcp</groupId>
             <artifactId>commons-dbcp</artifactId>
-            <version>1.4</version>
+            <version>${commons.dbcp.version}</version>
             <scope>test</scope>
         </dependency>
 

@@ -29,7 +29,7 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsAdapter;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsKey;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
-import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
+import org.apache.ignite.internal.processors.query.QueryHistory;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -149,10 +149,10 @@ public class VisorQueryHistoryMetricsCollectorTask extends VisorMultiNodeTask<Vi
             GridQueryIndexing indexing = ignite.context().query().getIndexing();
 
             if (indexing instanceof IgniteH2Indexing) {
-                Collection<QueryHistoryMetrics> metrics = ((IgniteH2Indexing)indexing)
+                Collection<QueryHistory> metrics = ((IgniteH2Indexing)indexing)
                     .runningQueryManager().queryHistoryMetrics().values();
 
-                for (QueryHistoryMetrics m : metrics) {
+                for (QueryHistory m : metrics) {
                     GridCacheQueryDetailMetricsKey key = new GridCacheQueryDetailMetricsKey(SQL_FIELDS, m.query());
 
                     GridCacheQueryDetailMetricsAdapter oldMetrics = aggMetrics.get(key);

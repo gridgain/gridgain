@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -44,6 +45,7 @@ import static org.apache.ignite.configuration.ClientConnectorConfiguration.DFLT_
 /**
  * Abstract thin client affinity awareness test.
  */
+@SuppressWarnings("rawtypes")
 public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommonAbstractTest {
     /** Wait timeout. */
     private static final long WAIT_TIMEOUT = 5_000L;
@@ -129,6 +131,9 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
         super.afterTest();
 
         opsQueue.clear();
+
+        if (client != null)
+            client.close();
     }
 
     /**
@@ -338,6 +343,19 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
                 opsQueue.offer(new T2<>(this, op));
 
             return res;
+        }
+
+        /** {@inheritDoc} */
+        @Override public <T> CompletableFuture<T> serviceAsync(
+                ClientOperation op,
+                Consumer<PayloadOutputChannel> payloadWriter,
+                Function<PayloadInputChannel, T> payloadReader)
+                throws ClientException {
+            // Store all operations except binary type registration in queue to check later.
+            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME && op != ClientOperation.PUT_BINARY_TYPE)
+                opsQueue.offer(new T2<>(this, op));
+
+            return super.serviceAsync(op, payloadWriter, payloadReader);
         }
 
         /** {@inheritDoc} */

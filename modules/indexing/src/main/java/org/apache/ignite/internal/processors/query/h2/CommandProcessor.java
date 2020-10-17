@@ -113,16 +113,16 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.security.SecurityPermission;
-import org.h2.command.Prepared;
-import org.h2.command.ddl.AlterTableAlterColumn;
-import org.h2.command.ddl.CreateIndex;
-import org.h2.command.ddl.CreateTable;
-import org.h2.command.ddl.DropIndex;
-import org.h2.command.ddl.DropTable;
-import org.h2.command.dml.NoOperation;
-import org.h2.table.Column;
-import org.h2.value.DataType;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.command.ddl.AlterTableAlterColumn;
+import org.gridgain.internal.h2.command.ddl.CreateIndex;
+import org.gridgain.internal.h2.command.ddl.CreateTable;
+import org.gridgain.internal.h2.command.ddl.DropIndex;
+import org.gridgain.internal.h2.command.ddl.DropTable;
+import org.gridgain.internal.h2.command.dml.NoOperation;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.DataType;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -1331,7 +1331,7 @@ public class CommandProcessor {
         BulkLoadParser inputParser = BulkLoadParser.createParser(cmd.inputFormat());
 
         BulkLoadProcessor processor = new BulkLoadProcessor(inputParser, dataConverter, outputWriter,
-            idx.runningQueryManager(), qryId);
+            idx.runningQueryManager(), qryId, ctx.tracing());
 
         BulkLoadAckClientParameters params = new BulkLoadAckClientParameters(cmd.localFileName(), cmd.packetSize());
 

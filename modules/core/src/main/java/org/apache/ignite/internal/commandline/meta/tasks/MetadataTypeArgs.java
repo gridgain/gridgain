@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -89,40 +88,13 @@ public class MetadataTypeArgs extends IgniteDataTransferObject {
             typeId = in.readInt();
     }
 
-    /**
-     * @param argIter Command line arguments iterator.
-     * @return Metadata type argument.
-     */
-    public static MetadataTypeArgs parseArguments(CommandArgIterator argIter) {
-        String typeName = null;
-        Integer typeId = null;
-
-        while (argIter.hasNextSubArg() && typeName == null && typeId == null) {
-            String optName = argIter.nextArg("Expecting " + TYPE_NAME + " or " + TYPE_ID);
-
-            switch (optName) {
-                case TYPE_NAME:
-                    typeName = argIter.nextArg("type name");
-
-                    break;
-
-                case TYPE_ID:
-                    typeId = argIter.nextIntArg("typeId");
-
-                    break;
-            }
-        }
-
-        if (typeName == null && typeId == null) {
-            throw new IllegalArgumentException("Type to remove is not specified. " +
-                "Please add one of the options: --typeName <type_name> or --typeId <type_id>");
-        }
-
-        return new MetadataTypeArgs(typeName, typeId);
-    }
-
     /** {@inheritDoc} */
     @Override public String toString() {
-        return typeId != null ? "0x" + Integer.toHexString(typeId).toUpperCase() : typeName;
+        return typeId != null ? printInt(typeId) : typeName;
+    }
+
+    /** */
+    private String printInt(int val) {
+        return "0x" + Integer.toHexString(val).toUpperCase() + " (" + val + ')';
     }
 }

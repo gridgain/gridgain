@@ -30,9 +30,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
     [TestFixture]
     public class ClientClusterGroupTests : ClientTestBase
     {
-        private static readonly string ExpectedErrorMessage =
-            "'name' argument should not be null or empty." + Environment.NewLine + "Parameter name: name";
-
         /// <summary>
         /// Test thin client cluster group returns the same nodes collection as thick one.
         /// </summary>
@@ -168,10 +165,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestClusterGroupForPredicateThrowsExceptionIfItNull()
         {
-            TestDelegate action = () => Client.GetCluster().ForPredicate(null);
-
-            var ex = Assert.Throws<ArgumentNullException>(action);
-            Assert.AreEqual("Value cannot be null." + Environment.NewLine + "Parameter name: p", ex.Message);
+            var ex = Assert.Throws<ArgumentNullException>(() => Client.GetCluster().ForPredicate(null));
+            Assert.AreEqual("p", ex.ParamName);
         }
 
         /// <summary>
@@ -217,10 +212,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestClusterGroupThrownExceptionForNullAttributeName()
         {
-            TestDelegate action = () => Client.GetCluster().ForAttribute(null, null);
-
-            var ex = Assert.Throws<ArgumentException>(action);
-            Assert.AreEqual(ExpectedErrorMessage, ex.Message);
+            var ex = Assert.Throws<ArgumentException>(() => Client.GetCluster().ForAttribute(null, null));
+            Assert.AreEqual("name", ex.ParamName);
         }
 
 
@@ -234,7 +227,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             TestDelegate action = () => Client.GetCluster().ForAttribute(string.Empty, null);
 
             var ex = Assert.Throws<ArgumentException>(action);
-            Assert.AreEqual(ExpectedErrorMessage, ex.Message);
+            Assert.AreEqual("name", ex.ParamName);
         }
 
         /// <summary>

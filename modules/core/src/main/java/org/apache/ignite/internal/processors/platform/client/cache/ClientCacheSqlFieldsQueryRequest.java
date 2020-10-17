@@ -25,7 +25,9 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcStatementType;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCache;
+import org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
@@ -49,8 +51,10 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
      * Ctor.
      *
      * @param reader Reader.
+     * @param protocolCtx Protocol context.
      */
-    public ClientCacheSqlFieldsQueryRequest(BinaryRawReaderEx reader) {
+    public ClientCacheSqlFieldsQueryRequest(BinaryRawReaderEx reader,
+        ClientProtocolContext protocolCtx) {
         super(reader);
 
         // Same request format as in JdbcQueryExecuteRequest.
@@ -81,8 +85,13 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
                 .setReplicatedOnly(replicatedOnly)
                 .setEnforceJoinOrder(enforceJoinOrder)
                 .setCollocated(collocated)
-                .setLazy(lazy)
-                .setTimeout(timeout, TimeUnit.MILLISECONDS);
+                .setLazy(lazy);
+
+        // Zero value of the timeout from the old client is interpreted as a 'default'.
+        // So, old clients cannot disable default timeout by explicit set timeout to 0.
+        // they must use Integer.MAX_VALUE constant.
+        if (protocolCtx.isFeatureSupported(ClientBitmaskFeature.DEFAULT_QRY_TIMEOUT) || timeout > 0)
+            QueryUtils.withQueryTimeout(qry, timeout, TimeUnit.MILLISECONDS);
 
         this.qry = qry;
     }

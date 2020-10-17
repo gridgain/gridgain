@@ -113,14 +113,17 @@ namespace ignite
 
         StdCharOutStream& Dle(StdCharOutStream& ostr)
         {
+#ifdef __APPLE__
+            static const char expansion[] = ".dylib";
+#else
             static const char expansion[] = ".so";
-
+#endif
             ostr.write(expansion, sizeof(expansion) - 1);
 
             return ostr;
         }
 
-        unsigned GetRandSeed()
+        IGNITE_IMPORT_EXPORT unsigned GetRandSeed()
         {
             timespec ts;
 

@@ -230,7 +230,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private IntegerProperty qryTimeout = new IntegerProperty("queryTimeout",
         "Sets the number of seconds the driver will wait for a <code>Statement</code> object to execute." +
             " Zero means there is no limits.",
-        0L, false, 0, Integer.MAX_VALUE);
+        null, false, 0, Integer.MAX_VALUE);
 
     /** JDBC connection timeout. */
     private IntegerProperty connTimeout = new IntegerProperty("connectionTimeout",
@@ -1121,7 +1121,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
          * @return JDBC property info object.
          */
         DriverPropertyInfo getDriverPropertyInfo() {
-            DriverPropertyInfo dpi = new DriverPropertyInfo(name, valueObject());
+            DriverPropertyInfo dpi = new DriverPropertyInfo(PROP_PREFIX + name, valueObject());
 
             dpi.choices = choices();
             dpi.required = required;

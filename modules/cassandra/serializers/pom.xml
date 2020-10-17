@@ -25,12 +25,12 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-cassandra</artifactId>
-        <version>8.7.127-SNAPSHOT</version>
+        <version>8.8.127-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
 
     <artifactId>ignite-cassandra-serializers</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <properties>
@@ -76,6 +76,13 @@
             <groupId>org.objenesis</groupId>
             <artifactId>objenesis</artifactId>
             <version>${objenesis.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
