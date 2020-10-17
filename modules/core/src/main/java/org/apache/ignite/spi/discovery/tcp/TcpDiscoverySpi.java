@@ -310,7 +310,11 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     /** Network timeout. */
     protected long netTimeout = DFLT_NETWORK_TIMEOUT;
 
-    /** Join timeout. */
+    /**
+     * Join timeout, in milliseconds. Time to wait for joining. If node cannot connect to any address from the IP
+     * finder, the node continues to try to join during this timeout. If all addresses still do not respond, an
+     * exception will occur and the node will fail to start. If 0 is specified, it means wait forever.
+     */
     protected long joinTimeout = DFLT_JOIN_TIMEOUT;
 
     /** Thread priority for all threads started by SPI. */
@@ -382,7 +386,10 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     /** Default SO_LINGER to use for socket. Set negative to disable, non-negative to enable, default is {@DFLT_SO_LINGER }. */
     private int soLinger = DFLT_SO_LINGER;
 
-    /** IP finder clean frequency. */
+    /**
+     * Frequency which coordinator clean IP finder and keeps it in the correct state, unregistering addresses of the
+     * nodes that has left the topology.
+     */
     protected long ipFinderCleanFreq = DFLT_IP_FINDER_CLEAN_FREQ;
 
     /** Node authenticator. */
@@ -837,7 +844,8 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     }
 
     /**
-     * Gets IP finder clean frequency.
+     * Gets frequency which coordinator clean IP finder and keeps it in the correct state, unregistering addresses of
+     * the nodes that has left the topology.
      *
      * @return IP finder clean frequency.
      */
@@ -959,7 +967,9 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     }
 
     /**
-     * Gets join timeout.
+     * Get join timeout, in milliseconds. Time to wait for joining. If node cannot connect to any address from the IP
+     * finder, the node continues to try to join during this timeout. If all addresses still do not respond, an
+     * exception will occur and the node will fail to start. If 0 is specified, it means wait forever.
      *
      * @return Join timeout.
      */
