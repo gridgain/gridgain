@@ -315,4 +315,18 @@ public class IntervalOperation extends Expression {
         }
     }
 
+    /** */
+    public IntervalOpType getOpType() {
+        return opType;
+    }
+
+    /** */
+    public Expression getLeft() {
+        return left;
+    }
+
+    /** */
+    public Expression getRight() {
+        return right;
+    }
 }

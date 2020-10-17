@@ -872,6 +872,19 @@ public abstract class Value extends VersionedValue {
         case INT:
             return ValueByte.get(convertToByte(getInt(), column));
         case LONG:
+        case INTERVAL_YEAR:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_HOUR:
+        case INTERVAL_MINUTE:
+        case INTERVAL_SECOND:
+        case INTERVAL_YEAR_TO_MONTH:
+        case INTERVAL_DAY_TO_HOUR:
+        case INTERVAL_DAY_TO_MINUTE:
+        case INTERVAL_DAY_TO_SECOND:
+        case INTERVAL_HOUR_TO_MINUTE:
+        case INTERVAL_HOUR_TO_SECOND:
+        case INTERVAL_MINUTE_TO_SECOND:
             return ValueByte.get(convertToByte(getLong(), column));
         case DECIMAL:
             return ValueByte.get(convertToByte(convertToLong(getBigDecimal(), column), column));
@@ -897,6 +910,19 @@ public abstract class Value extends VersionedValue {
         case INT:
             return ValueShort.get(convertToShort(getInt(), column));
         case LONG:
+        case INTERVAL_YEAR:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_HOUR:
+        case INTERVAL_MINUTE:
+        case INTERVAL_SECOND:
+        case INTERVAL_YEAR_TO_MONTH:
+        case INTERVAL_DAY_TO_HOUR:
+        case INTERVAL_DAY_TO_MINUTE:
+        case INTERVAL_DAY_TO_SECOND:
+        case INTERVAL_HOUR_TO_MINUTE:
+        case INTERVAL_HOUR_TO_SECOND:
+        case INTERVAL_MINUTE_TO_SECOND:
             return ValueShort.get(convertToShort(getLong(), column));
         case DECIMAL:
             return ValueShort.get(convertToShort(convertToLong(getBigDecimal(), column), column));
@@ -921,6 +947,19 @@ public abstract class Value extends VersionedValue {
         case SHORT:
             return ValueInt.get(getInt());
         case LONG:
+        case INTERVAL_YEAR:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_HOUR:
+        case INTERVAL_MINUTE:
+        case INTERVAL_SECOND:
+        case INTERVAL_YEAR_TO_MONTH:
+        case INTERVAL_DAY_TO_HOUR:
+        case INTERVAL_DAY_TO_MINUTE:
+        case INTERVAL_DAY_TO_SECOND:
+        case INTERVAL_HOUR_TO_MINUTE:
+        case INTERVAL_HOUR_TO_SECOND:
+        case INTERVAL_MINUTE_TO_SECOND:
             return ValueInt.get(convertToInt(getLong(), column));
         case DECIMAL:
             return ValueInt.get(convertToInt(convertToLong(getBigDecimal(), column), column));
@@ -945,6 +984,20 @@ public abstract class Value extends VersionedValue {
         case ENUM:
         case INT:
             return ValueLong.get(getInt());
+        case INTERVAL_YEAR:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_HOUR:
+        case INTERVAL_MINUTE:
+        case INTERVAL_SECOND:
+        case INTERVAL_YEAR_TO_MONTH:
+        case INTERVAL_DAY_TO_HOUR:
+        case INTERVAL_DAY_TO_MINUTE:
+        case INTERVAL_DAY_TO_SECOND:
+        case INTERVAL_HOUR_TO_MINUTE:
+        case INTERVAL_HOUR_TO_SECOND:
+        case INTERVAL_MINUTE_TO_SECOND:
+            return ValueLong.get(getLong());
         case DECIMAL:
             return ValueLong.get(convertToLong(getBigDecimal(), column));
         case DOUBLE:
@@ -978,6 +1031,19 @@ public abstract class Value extends VersionedValue {
             return ValueDecimal.get(BigDecimal.valueOf(getLong()));
         case DOUBLE:
         case FLOAT:
+        case INTERVAL_YEAR:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_HOUR:
+        case INTERVAL_MINUTE:
+        case INTERVAL_SECOND:
+        case INTERVAL_YEAR_TO_MONTH:
+        case INTERVAL_DAY_TO_HOUR:
+        case INTERVAL_DAY_TO_MINUTE:
+        case INTERVAL_DAY_TO_SECOND:
+        case INTERVAL_HOUR_TO_MINUTE:
+        case INTERVAL_HOUR_TO_SECOND:
+        case INTERVAL_MINUTE_TO_SECOND:
             return ValueDecimal.get(getBigDecimal());
         case TIMESTAMP_TZ:
             throw getDataConversionError(DECIMAL);
@@ -994,8 +1060,21 @@ public abstract class Value extends VersionedValue {
         case INT:
             return ValueDouble.get(getInt());
         case LONG:
+        case INTERVAL_YEAR:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_HOUR:
+        case INTERVAL_MINUTE:
             return ValueDouble.get(getLong());
         case DECIMAL:
+        case INTERVAL_SECOND:
+        case INTERVAL_YEAR_TO_MONTH:
+        case INTERVAL_DAY_TO_HOUR:
+        case INTERVAL_DAY_TO_MINUTE:
+        case INTERVAL_DAY_TO_SECOND:
+        case INTERVAL_HOUR_TO_MINUTE:
+        case INTERVAL_HOUR_TO_SECOND:
+        case INTERVAL_MINUTE_TO_SECOND:
             return ValueDouble.get(getBigDecimal().doubleValue());
         case FLOAT:
             return ValueDouble.get(getFloat());
@@ -1015,8 +1094,21 @@ public abstract class Value extends VersionedValue {
         case INT:
             return ValueFloat.get(getInt());
         case LONG:
+        case INTERVAL_YEAR:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_HOUR:
+        case INTERVAL_MINUTE:
             return ValueFloat.get(getLong());
         case DECIMAL:
+        case INTERVAL_SECOND:
+        case INTERVAL_YEAR_TO_MONTH:
+        case INTERVAL_DAY_TO_HOUR:
+        case INTERVAL_DAY_TO_MINUTE:
+        case INTERVAL_DAY_TO_SECOND:
+        case INTERVAL_HOUR_TO_MINUTE:
+        case INTERVAL_HOUR_TO_SECOND:
+        case INTERVAL_MINUTE_TO_SECOND:
             ValueDecimal valDecimal = (ValueDecimal) this;
             return ValueFloat.get(valDecimal.getFloatValue());
         case DOUBLE:
