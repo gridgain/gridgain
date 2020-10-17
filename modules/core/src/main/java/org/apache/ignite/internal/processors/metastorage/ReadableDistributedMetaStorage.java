@@ -35,7 +35,7 @@ import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_METASTORAGE;
  */
 public interface ReadableDistributedMetaStorage {
     /**
-     * @return {@code True} if all nodes in the cluster support discributed metastorage feature.
+     * @return {@code True} if all nodes in the cluster support distributed metastorage feature.
      * @see IgniteFeatures#DISTRIBUTED_METASTORAGE
      */
     public static boolean isSupported(GridKernalContext ctx) {
@@ -73,12 +73,12 @@ public interface ReadableDistributedMetaStorage {
      * Add listener on data updates. Updates happens it two cases:
      * <ul>
      *     <li>
-     *         Some node invoked write or remove. Listeners are invoked after update update operation is
+     *         Some node invoked write or remove. Listeners are invoked after update operation is
      *         already completed.
      *     </li>
      *     <li>
      *         Node is just started and not ready for write yet. In this case listeners are invoked for every
-     *         key with new value (retrieved from the clueter) or already existing value if there was no updates
+     *         key with new value (retrieved from the cluster) or already existing value if there were no updates
      *         for given key. This guarantees that all listeners are invoked for all updates in case of failover.
      *     </li>
      * </ul>
