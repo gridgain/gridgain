@@ -338,7 +338,7 @@ namespace ignite
 
         void OdbcTestSuite::GetTestI8ArrayField(int64_t idx, int8_t* val, size_t valLen)
         {
-            for (int j = 0; j < valLen; ++j)
+            for (size_t j = 0; j < valLen; ++j)
                 val[j] = static_cast<int8_t>(idx * valLen + j);
         }
 
@@ -349,7 +349,7 @@ namespace ignite
                 common::FixedSizeArray<int8_t> expected(static_cast<int32_t>(valLen));
                 GetTestI8ArrayField(idx, expected.GetData(), expected.GetSize());
 
-                for (int j = 0; j < valLen; ++j)
+                for (size_t j = 0; j < valLen; ++j)
                 {
                     BOOST_TEST_INFO("Byte index: " << j);
                     BOOST_CHECK_EQUAL(val[j], expected[j]);
