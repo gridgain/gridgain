@@ -339,6 +339,7 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         return null;
     }
 
+    /** {@inheritDoc} */
     @Override public IgniteStatisticsManager statsManager() {
         return null;
     }

@@ -30,7 +30,7 @@ public interface IgniteStatisticsRepository {
      *
      * @param tbl table.
      * @param statistics collection of tables partition statistics.
-     * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
+     * @param fullStat if {@code true} - replace whole statistics, try to merge with existing - otherwise.
      */
     void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatisticsImpl> statistics, boolean fullStat);
 

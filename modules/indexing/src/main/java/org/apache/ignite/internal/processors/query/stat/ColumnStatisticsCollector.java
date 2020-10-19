@@ -34,7 +34,7 @@ public class ColumnStatisticsCollector {
     private final Column col;
 
     /** Hyper Log Log structure */
-    private final HLL hll = new HLL(13/*log2m*/, 5/*registerWidth*/);
+    private final HLL hll = buildHll();
 
     /** Minimum value. */
     private Value min = null;
@@ -102,7 +102,7 @@ public class ColumnStatisticsCollector {
     public void add(Value val) {
         total++;
 
-        if (isNull((val))) {
+        if (isNull(val)) {
             nullsCnt++;
 
             return;
@@ -132,11 +132,9 @@ public class ColumnStatisticsCollector {
     public ColumnStatistics finish() {
         int nulls = nullsPercent(nullsCnt, total);
 
-        int cardinality = 0;
+        int cardinality = cardinalityPercent(nullsCnt, total, hll.cardinality());
 
-        cardinality = cardinalityPercent(nullsCnt, total, hll.cardinality());
-
-        int averageSize = (total - nullsCnt > 0) ? (int) (size / (total - nullsCnt)) : 0;
+        int averageSize = averageSize(size, total, nullsCnt);
 
         return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes());
     }
@@ -154,6 +152,19 @@ public class ColumnStatisticsCollector {
     }
 
     /**
+     * Calculate average record size in bytes.
+     *
+     * @param size total size of all records.
+     * @param total total number of all records.
+     * @param nullsCnt number of nulls record.
+     * @return average size of not null record in byte.
+     */
+    private static int averageSize(long size, long total, long nullsCnt) {
+        long averageSizeLong = (total - nullsCnt > 0) ? (size / (total - nullsCnt)) : 0;
+        return (averageSizeLong > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) averageSizeLong;
+    }
+
+    /**
      * @return get column.
      */
     public Column col() {
@@ -168,7 +179,7 @@ public class ColumnStatisticsCollector {
      * @return column statistics for all partitions.
      */
     public static ColumnStatistics aggregate(Comparator<Value> comp, List<ColumnStatistics> partStats) {
-        HLL hll = new HLL(13/*log2m*/, 5/*registerWidth*/);
+        HLL hll = buildHll();
 
         Value min = null;
         Value max = null;
@@ -197,9 +208,17 @@ public class ColumnStatisticsCollector {
                 max = partStat.max();
         }
 
-        int averageSize = (total - nullsCnt > 0) ? (int)(totalSize / (total - nullsCnt)) : 0;
+        int averageSize = averageSize(totalSize, total, nullsCnt);
 
         return new ColumnStatistics(min, max, nullsPercent(nullsCnt, total),
                 cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes());
+    }
+
+    /**
+     * Get HLL with default params.
+     * @return empty hll structure.
+     */
+    private static HLL buildHll() {
+        return new HLL(13, 5);
     }
 }

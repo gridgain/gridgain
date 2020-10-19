@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * All statistics by some object (table or index)
+ * All statistics by some object (table or index).
  */
 public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /** Total number of rows in object. */

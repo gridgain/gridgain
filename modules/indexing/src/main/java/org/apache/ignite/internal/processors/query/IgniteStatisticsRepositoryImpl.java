@@ -30,6 +30,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Statistics repository implementation.
+ */
 public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepository {
     /** Logger. */
     private IgniteLogger log;
@@ -69,7 +72,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         log = ctx.log(IgniteStatisticsRepositoryImpl.class);
     }
 
-    @Override public void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatisticsImpl> statistics,
+    @Override public void saveLocalPartitionsStatistics(QueryTable tbl,
+                                                        Collection<ObjectPartitionStatisticsImpl> statistics,
                                                         boolean fullStat) {
         if (partsStats != null) {
             Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = new ConcurrentHashMap<>();
