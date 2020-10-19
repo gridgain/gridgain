@@ -13,16 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.internal.commandline.indexreader;
 
 /**
- * Test suite for dev utils.
+ * Callback that will be executed for each page of the tree while traversing, if it's set.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-})
-public class DevUtilsTestSuite {
+interface PageCallback {
+    /** */
+    void cb(PageContent pageContent, long pageId);
 }
