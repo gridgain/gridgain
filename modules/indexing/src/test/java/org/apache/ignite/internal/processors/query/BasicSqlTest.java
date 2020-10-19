@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.util.Date;
 import java.util.List;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -102,6 +103,28 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         ).getAll().get(0).get(0);
 
         assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
+    }
+
+    /**
+     */
+    @Test
+    public void testIntervalOperation() {
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS INT)");
+        sql("CREATE INDEX IDX_VAL_TS ON TEST(VAL_TS)");
+
+        int rows = 10;
+        for (int i = 0; i < rows; ++i) {
+            sql("INSERT INTO TEST (ID, VAL_INT, VAL_TS) VALUES " +
+                    "(?, ?, TRUNCATE(TIMESTAMP '2015-12-31 23:59:59') - CAST(TRUNC(?) AS TIMESTAMP))",
+                i, i, new Date(2015 - 1900, 11, 31 - i, 12, i, i));
+        }
+
+        List<List<?>> res = sql("SELECT ID, VAL_TS FROM TEST").getAll();
+
+        assertEquals(rows, res.size());
+
+        for (List<?> r : res)
+            assertEquals(r.get(0), r.get(1));
     }
 
     /**
