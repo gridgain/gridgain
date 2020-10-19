@@ -277,10 +277,10 @@ public class CheckpointWorkflow {
 
             tracker.onListenersExecuteEnd();
 
-            fillCacheGroupState(cpRec);
-
             if (curr.nextSnapshot())
                 snapFut = snapshotMgr.onMarkCheckPointBegin(curr.snapshotOperation(), cpRec, ctx0.partitionStatMap());
+
+            fillCacheGroupState(cpRec);
 
             //There are allowable to replace pages only after checkpoint entry was stored to disk.
             cpPagesHolder = beginAllCheckpoints(dataRegions.get(), curr.futureFor(MARKER_STORED_TO_DISK));
@@ -627,7 +627,7 @@ public class CheckpointWorkflow {
         // Shared refernce for tracking exception during write pages.
         AtomicReference<Throwable> writePagesError = new AtomicReference<>();
 
-        for (int stripeIdx = 0; stripeIdx < exec.stripes(); stripeIdx++)
+        for (int stripeIdx = 0; stripeIdx < exec.stripesCount(); stripeIdx++)
             exec.execute(
                 stripeIdx,
                 checkpointPagesWriterFactory.buildRecovery(pages, updStores, writePagesError, cpPagesCnt)

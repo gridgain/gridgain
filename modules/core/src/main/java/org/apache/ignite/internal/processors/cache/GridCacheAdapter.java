@@ -104,7 +104,6 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerEntry;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerImpl;
 import org.apache.ignite.internal.processors.dr.IgniteDrDataStreamerCacheUpdater;
-import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryFilter;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.tracing.MTC;
@@ -162,6 +161,7 @@ import static org.apache.ignite.internal.processors.cache.CacheOperationContext.
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_LOAD;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_NO_FAILOVER;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SUBGRID;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET;
@@ -632,8 +632,12 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         // Nulling thread local reference to ensure values will be eventually GCed
         // no matter what references these futures are holding.
         lastFut = null;
+    }
 
-        ctx.kernalContext().metric().remove(MetricUtils.cacheMetricsRegistryName(ctx.name(), isNear()));
+    /** Remove cache metrics. */
+    public void removeMetrics() {
+        if (!ctx.kernalContext().isStopping())
+            ctx.kernalContext().metric().remove(cacheMetricsRegistryName(ctx.name(), isNear()));
     }
 
     /**
@@ -2581,16 +2585,25 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         try (MTC.TraceSurroundings ignored =
                  MTC.support(ctx.kernalContext().tracing().create(CACHE_API_PUT_ALL_ASYNC, MTC.span()))) {
             MTC.span().addTagOrLog("cache", CACHE_API_PUT_ALL_ASYNC,
-                () -> Objects.toString(cacheCfg.getName()));
+                    () -> Objects.toString(cacheCfg.getName()));
             MTC.span().addTagOrLog("keys.count", CACHE_API_PUT_ALL_ASYNC,
-                () -> m == null ? "0" : String.valueOf(m.size()));
+                    () -> m == null ? "0" : String.valueOf(m.size()));
 
             if (F.isEmpty(m))
                 return new GridFinishedFuture<>();
 
+            boolean statsEnabled = ctx.statisticsEnabled();
+
+            long start = statsEnabled ? System.nanoTime() : 0L;
+
             warnIfUnordered(m, BulkOperation.PUT);
 
-            return putAllAsync0(m);
+            IgniteInternalFuture<?> fut = putAllAsync0(m);
+
+            if (statsEnabled)
+                fut.listen(new UpdatePutTimeStatClosure<Boolean>(metrics0(), start));
+
+            return fut;
         }
     }
 

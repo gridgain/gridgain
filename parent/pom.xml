@@ -133,6 +133,8 @@
         <spring.version>4.3.29.RELEASE</spring.version><!-- don't forget to update spring-data version -->
         <spring.data-2.0.version>2.0.9.RELEASE</spring.data-2.0.version> <!-- don't forget to update spring-5.0 version -->
         <spring-5.0.version>5.0.19.RELEASE</spring-5.0.version><!-- don't forget to update spring-data-2.0 version -->
+        <spring.data-2.2.version>2.2.0.RELEASE</spring.data-2.2.version> <!-- don't forget to update spring-5.2 version -->
+        <spring-5.2.version>5.2.0.RELEASE</spring-5.2.version><!-- don't forget to update spring-data-2.2 version -->
         <spring41.osgi.feature.version>4.1.7.RELEASE_1</spring41.osgi.feature.version>
         <storm.version>1.2.3</storm.version>
         <tomcat.version>9.0.21</tomcat.version>
@@ -461,6 +463,14 @@
                                 <packages>org.apache.ignite.spi.metric*</packages>
                             </group>
                             <group>
+                                <title>SPI: System view API</title>
+                                <packages>org.apache.ignite.spi.systemview*</packages>
+                            </group>
+                            <group>
+                                <title>SPI: System views</title>
+                                <packages>org.apache.ignite.spi.systemview.view*</packages>
+                            </group>
+                            <group>
                                 <title>Communication Failure Detection</title>
                                 <packages>org.apache.ignite.failure</packages>
                             </group>
@@ -533,6 +543,10 @@
                                 <packages>org.apache.ignite.springdata20.repository*</packages>
                             </group>
                             <group>
+                                <title>Spring Data 2.2 Integration</title>
+                                <packages>org.apache.ignite.springdata22.repository*</packages>
+                            </group>
+                            <group>
                                 <title>RocketMQ integration</title>
                                 <packages>org.apache.ignite.stream.rocketmq*</packages>
                             </group>
@@ -567,10 +581,6 @@
                             <group>
                                 <title>Control Center</title>
                                 <packages>org.apache.ignite.internal.agent*</packages>
-                            </group>
-                            <group>
-                                <title>System view SPI</title>
-                                <packages>org.apache.ignite.spi.systemview*</packages>
                             </group>
                             <group>
                                 <title>Tracing SPI</title>

@@ -109,8 +109,8 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
     /** Attribute names. */
     private final AttributeNames attributeNames;
 
-    /** Metrics listener. */
-    private final TcpCommunicationMetricsListener metricsLsnr;
+    /** Metrics listener supplier. */
+    private final Supplier<TcpCommunicationMetricsListener> metricsLsnrSupplier;
 
     /** Context initialize latch. */
     private final CountDownLatch ctxInitLatch;
@@ -144,7 +144,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      * @param connectGate Connect gate.
      * @param failureProcessorSupplier Failure processor supplier.
      * @param attributeNames Attribute names.
-     * @param metricsLsnr Metrics listener.
+     * @param metricsLsnrSupplier Metrics listener supplier.
      * @param nioSrvWrapper Nio server wrapper.
      * @param ctxInitLatch Context initialize latch.
      * @param client Client.
@@ -161,7 +161,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         ConnectGateway connectGate,
         Supplier<FailureProcessor> failureProcessorSupplier,
         AttributeNames attributeNames,
-        TcpCommunicationMetricsListener metricsLsnr,
+        Supplier<TcpCommunicationMetricsListener> metricsLsnrSupplier,
         GridNioServerWrapper nioSrvWrapper,
         CountDownLatch ctxInitLatch,
         boolean client,
@@ -178,7 +178,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         this.connectGate = connectGate;
         this.failureProcessorSupplier = failureProcessorSupplier;
         this.attributeNames = attributeNames;
-        this.metricsLsnr = metricsLsnr;
+        this.metricsLsnrSupplier = metricsLsnrSupplier;
         this.nioSrvWrapper = nioSrvWrapper;
         this.ctxInitLatch = ctxInitLatch;
         this.client = client;
@@ -252,7 +252,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         Object consistentId = ses.meta(CONSISTENT_ID_META);
 
         if (consistentId != null)
-            metricsLsnr.onMessageSent(msg, consistentId);
+            metricsLsnrSupplier.get().onMessageSent(msg, consistentId);
     }
 
     /** {@inheritDoc} */
@@ -289,7 +289,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
             assert consistentId != null;
 
             if (msg instanceof RecoveryLastReceivedMessage) {
-                metricsLsnr.onMessageReceived(msg, consistentId);
+                metricsLsnrSupplier.get().onMessageReceived(msg, consistentId);
 
                 GridNioRecoveryDescriptor recovery = ses.outRecoveryDescriptor();
 
@@ -340,7 +340,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 }
             }
 
-            metricsLsnr.onMessageReceived(msg, consistentId);
+            metricsLsnrSupplier.get().onMessageReceived(msg, consistentId);
 
             IgniteRunnable c;
 
