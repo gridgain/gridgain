@@ -112,7 +112,7 @@ namespace ignite
              * @param memPtr Memory pointer.
              * @param proc Processor instance.
              */
-            void OnStartCallback(long long memPtr, jobject proc);
+            void OnStartCallback(int64_t memPtr, jobject proc);
 
             /**
              * Continuous query listener apply callback.
@@ -341,7 +341,7 @@ namespace ignite
              * @param type Operation type.
              * @param val Value.
              */
-            friend long long IGNITE_CALL InLongOutLong(void* target, int type, long long val);
+            friend int64_t IGNITE_CALL InLongOutLong(void* target, int type, int64_t val);
 
         private:
             /** Node configuration. */

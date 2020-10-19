@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
 
     for (int64_t i = 0; i < NumRowsFetched; i++)
     {
-        CHECK_TEST_VALUES(i, i);
+        CHECK_TEST_VALUES(i, static_cast<int>(i));
     }
 
     ret = SQLFetch(stmt);
@@ -256,7 +256,7 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     for (int64_t i = 0; i < NumRowsFetched; i++)
     {
         int64_t testIdx = i + ROW_ARRAY_SIZE;
-        CHECK_TEST_VALUES(i, testIdx);
+        CHECK_TEST_VALUES(i, static_cast<int>(testIdx));
     }
 
     for (int64_t i = NumRowsFetched; i < ROW_ARRAY_SIZE; i++)

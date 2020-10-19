@@ -32,7 +32,7 @@
 #include <boost/make_shared.hpp>
 
 #ifdef _MSC_VER
-#   pragma warning(pop
+#   pragma warning(pop)
 #endif //_MSC_VER
 
 #include <ignite/binary/binary.h>

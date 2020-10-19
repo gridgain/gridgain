@@ -68,7 +68,7 @@ namespace ignite
                 COMPUTE_TASK_LOCAL_JOB_RESULT = 60,
                 COMPUTE_JOB_EXECUTE_LOCAL = 61,
                 COMPUTE_OUT_FUNC_EXECUTE = 74,
-                COMPUTE_ACTION_EXECUTE = 75,
+                COMPUTE_ACTION_EXECUTE = 75
             };
         };
 
@@ -149,7 +149,7 @@ namespace ignite
          * @param type Operation type.
          * @param val Value.
          */
-        long long IGNITE_CALL InLongOutLong(void* target, int type, long long val)
+        int64_t IGNITE_CALL InLongOutLong(void* target, int type, int64_t val)
         {
             int64_t res = 0;
             SharedPointer<IgniteEnvironment>* env = static_cast<SharedPointer<IgniteEnvironment>*>(target);
@@ -163,10 +163,13 @@ namespace ignite
                 {
                     SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
                     SharedPointer<InteropMemory> memCopy(new InteropUnpooledMemory(mem.Get()->Capacity()));
+
                     memCopy.Get()->Length(mem.Get()->Length());
                     memcpy(memCopy.Get()->Data(), mem.Get()->Data(), mem.Get()->Capacity());
+
                     SP_ClusterNodeImpl node = (new impl::cluster::ClusterNodeImpl(memCopy));
                     env->Get()->nodes.Get()->AddNode(node);
+
                     break;
                 }
 
@@ -299,9 +302,11 @@ namespace ignite
          * @param val3 Value3.
          * @param arg Object arg.
          */
-        long long IGNITE_CALL InLongLongLongObjectOutLong(void* target, int type, long long val1, long long val2, 
-            long long val3, void* arg)
+        int64_t IGNITE_CALL InLongLongLongObjectOutLong(void* target, int type, int64_t val1, int64_t val2,
+            int64_t val3, void* arg)
         {
+            IGNITE_UNUSED(val3);
+
             int64_t res = 0;
             SharedPointer<IgniteEnvironment>* env = static_cast<SharedPointer<IgniteEnvironment>*>(target);
 
@@ -715,7 +720,7 @@ namespace ignite
             return registry;
         }
 
-        void IgniteEnvironment::OnStartCallback(long long memPtr, jobject proc)
+        void IgniteEnvironment::OnStartCallback(int64_t memPtr, jobject proc)
         {
             this->proc = jni::JavaGlobalRef(*ctx.Get(), proc);
 
