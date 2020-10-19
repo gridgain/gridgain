@@ -15,6 +15,7 @@
  */
 
 /**
+ * <!-- Package description. -->
  * Contains public interfaces for maintenance mechanism.
  */
 package org.apache.ignite.maintenance;
