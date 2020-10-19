@@ -74,6 +74,7 @@ import org.gridgain.internal.h2.expression.BinaryOperation;
 import org.gridgain.internal.h2.expression.Expression;
 import org.gridgain.internal.h2.expression.ExpressionColumn;
 import org.gridgain.internal.h2.expression.ExpressionList;
+import org.gridgain.internal.h2.expression.IntervalOperation;
 import org.gridgain.internal.h2.expression.Parameter;
 import org.gridgain.internal.h2.expression.Subquery;
 import org.gridgain.internal.h2.expression.UnaryOperation;
@@ -95,6 +96,7 @@ import org.gridgain.internal.h2.expression.function.JavaFunction;
 import org.gridgain.internal.h2.expression.function.TableFunction;
 import org.gridgain.internal.h2.index.ViewIndex;
 import org.gridgain.internal.h2.jdbc.JdbcPreparedStatement;
+import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.schema.Schema;
 import org.gridgain.internal.h2.table.Column;
@@ -2396,6 +2398,47 @@ public class GridSqlQueryParser {
             res.addChild(parseQueryExpression(qry));
 
             return res;
+        }
+
+        if (expression instanceof IntervalOperation) {
+            IntervalOperation iop = (IntervalOperation)expression;
+            GridSqlOperation opRes = null;
+
+            switch (iop.getOpType()) {
+                case INTERVAL_PLUS_INTERVAL:
+                case DATETIME_PLUS_INTERVAL:
+                    return new GridSqlOperation(
+                        GridSqlOperationType.PLUS,
+                        parseExpression(iop.getLeft(), calcTypes),
+                        parseExpression(iop.getRight(), calcTypes)
+                    );
+
+                case INTERVAL_MINUS_INTERVAL:
+                case DATETIME_MINUS_INTERVAL:
+                case DATETIME_MINUS_DATETIME:
+                    return new GridSqlOperation(
+                        GridSqlOperationType.MINUS,
+                        parseExpression(iop.getLeft(), calcTypes),
+                        parseExpression(iop.getRight(), calcTypes)
+                    );
+
+                case INTERVAL_MULTIPLY_NUMERIC:
+                    return new GridSqlOperation(
+                        GridSqlOperationType.MULTIPLY,
+                        parseExpression(iop.getLeft(), calcTypes),
+                        parseExpression(iop.getRight(), calcTypes)
+                    );
+
+                case INTERVAL_DIVIDE_NUMERIC:
+                    return new GridSqlOperation(
+                        GridSqlOperationType.DIVIDE,
+                        parseExpression(iop.getLeft(), calcTypes),
+                        parseExpression(iop.getRight(), calcTypes)
+                    );
+
+                default:
+                    throw DbException.throwInternalError("opType=" + iop.getOpType());
+            }
         }
 
         throw new IgniteException("Unsupported expression: " + expression + " [type=" +

@@ -19,8 +19,6 @@ package org.apache.ignite.internal.visor.ru;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -45,9 +43,6 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
     /** Represents the resulting version. */
     private String targetVer;
 
-    /** Feature set that is supported by nodes. */
-    private Set<String> supportedFeatures;
-
     /**
      * Default constructor, required for serialization.
      */
@@ -62,20 +57,17 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
      * @param forcedModeEnabled {@code true} if forced mode is enabled.
      * @param initVer Initial version.
      * @param targetVer Resulting version.
-     * @param supportedFeatures Feature set that is supported by nodes.
      */
     public VisorRollingUpgradeStatus(
         boolean enabled,
         boolean forcedModeEnabled,
         String initVer,
-        String targetVer,
-        Set<String> supportedFeatures
+        String targetVer
     ) {
         this.enabled = enabled;
         this.forcedModeEnabled = forcedModeEnabled;
         this.initVer = initVer;
         this.targetVer = targetVer;
-        this.supportedFeatures = supportedFeatures;
     }
 
     /**
@@ -88,8 +80,7 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
             status.enabled(),
             status.forcedModeEnabled(),
             status.initialVersion().toString(),
-            (status.targetVersion() != null) ? status.targetVersion().toString() : "",
-            status.supportedFeatures().stream().map(Enum::name).collect(Collectors.toSet()));
+            (status.targetVersion() != null) ? status.targetVersion().toString() : "");
     }
 
     /**
@@ -130,22 +121,12 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
         return targetVer;
     }
 
-    /**
-     * Returns a set of features that is supported by all nodes in the cluster.
-     *
-     * @return Feature set supported by all cluster nodes.
-     */
-    public Set<String> getSupportedFeatures() {
-        return supportedFeatures;
-    }
-
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeBoolean(enabled);
         out.writeBoolean(forcedModeEnabled);
         U.writeString(out, initVer);
         U.writeString(out, targetVer);
-        U.writeCollection(out, supportedFeatures);
     }
 
     /** {@inheritDoc} */
@@ -155,7 +136,6 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
         forcedModeEnabled = in.readBoolean();
         initVer = U.readString(in);
         targetVer = U.readString(in);
-        supportedFeatures = U.readSet(in);
     }
 
     /** {@inheritDoc} */

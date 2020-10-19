@@ -54,6 +54,8 @@ import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQuerySplitter;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlSelect;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlTable;
+import org.apache.ignite.internal.processors.tracing.MTC;
+import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.sql.SqlParseException;
 import org.apache.ignite.internal.sql.SqlParser;
 import org.apache.ignite.internal.sql.SqlStrictParseException;
@@ -77,6 +79,7 @@ import org.gridgain.internal.h2.command.Prepared;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlQuerySplitter.keyColumn;
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_PARSE;
 
 /**
  * Parser module. Splits incoming request into a series of parsed results.
@@ -130,11 +133,13 @@ public class QueryParser {
      * @return Parsing result that contains Parsed leading query and remaining sql script.
      */
     public QueryParserResult parse(String schemaName, SqlFieldsQuery qry, boolean remainingAllowed) {
-        QueryParserResult res = parse0(schemaName, qry, remainingAllowed);
+        try (TraceSurroundings ignored = MTC.support(idx.kernalContext().tracing().create(SQL_QRY_PARSE, MTC.span()))) {
+            QueryParserResult res = parse0(schemaName, qry, remainingAllowed);
 
-        checkQueryType(qry, res.isSelect());
+            checkQueryType(qry, res.isSelect());
 
-        return res;
+            return res;
+        }
     }
 
     /**

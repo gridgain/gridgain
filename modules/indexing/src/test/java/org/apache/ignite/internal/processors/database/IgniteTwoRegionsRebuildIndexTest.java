@@ -45,13 +45,13 @@ public class IgniteTwoRegionsRebuildIndexTest extends GridCommonAbstractTest {
 
         if (!client) {
             DataRegionConfiguration drCfg1 = new DataRegionConfiguration();
-            drCfg1.setMaxSize(16 * 1024 * 1024);
+            drCfg1.setMaxSize(24 * 1024 * 1024);
             drCfg1.setName("nopersistence");
             drCfg1.setInitialSize(drCfg1.getMaxSize());
             drCfg1.setPersistenceEnabled(false);
 
             DataRegionConfiguration drCfg2 = new DataRegionConfiguration();
-            drCfg2.setMaxSize(16 * 1024 * 1024);
+            drCfg2.setMaxSize(24 * 1024 * 1024);
             drCfg2.setName("persistence");
             drCfg2.setInitialSize(drCfg2.getMaxSize());
             drCfg2.setPersistenceEnabled(true);
