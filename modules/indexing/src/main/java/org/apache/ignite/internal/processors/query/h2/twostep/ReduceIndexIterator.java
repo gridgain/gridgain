@@ -25,7 +25,12 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
 import org.gridgain.internal.h2.index.Cursor;
 import org.gridgain.internal.h2.result.Row;
+import org.apache.ignite.internal.processors.tracing.MTC;
+import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_ITER_CLOSE;
 
 /**
  * Iterator that transparently and sequentially traverses a bunch of {@link AbstractReduceIndexAdapter} objects.
@@ -61,6 +66,9 @@ public class ReduceIndexIterator implements Iterator<List<?>>, AutoCloseable {
     /** */
     private MvccQueryTracker mvccTracker;
 
+    /** Tracing processor. */
+    private final Tracing tracing;
+
     /**
      * Constructor.
      *
@@ -69,13 +77,15 @@ public class ReduceIndexIterator implements Iterator<List<?>>, AutoCloseable {
      * @param run Query run.
      * @param qryReqId Query request ID.
      * @param distributedJoins Distributed joins.
+     * @param tracing Tracing processor.
      */
     public ReduceIndexIterator(GridReduceQueryExecutor rdcExec,
         Collection<ClusterNode> nodes,
         ReduceQueryRun run,
         long qryReqId,
         boolean distributedJoins,
-        @Nullable MvccQueryTracker mvccTracker
+        @Nullable MvccQueryTracker mvccTracker,
+        Tracing tracing
     ) {
         this.rdcExec = rdcExec;
         this.nodes = nodes;
@@ -83,6 +93,7 @@ public class ReduceIndexIterator implements Iterator<List<?>>, AutoCloseable {
         this.qryReqId = qryReqId;
         this.distributedJoins = distributedJoins;
         this.mvccTracker = mvccTracker;
+        this.tracing = tracing;
 
         rdcIter = run.reducers().iterator();
 
@@ -113,7 +124,9 @@ public class ReduceIndexIterator implements Iterator<List<?>>, AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public void close() throws Exception {
-        releaseIfNeeded();
+        try (TraceSurroundings ignored = MTC.support(tracing.create(SQL_ITER_CLOSE, MTC.span()))) {
+            releaseIfNeeded();
+        }
     }
 
     /**
