@@ -46,7 +46,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
     /** */
     public static final IOVersions<PagePartitionMetaIO> VERSIONS = new IOVersions<>(
         new PagePartitionMetaIO(1),
-        new PagePartitionMetaIOV2(2)
+        new PagePartitionMetaIOV2(2),
+        new PagePartitionMetaIOV1GG(Short.toUnsignedInt((short)-1)) // Prevent partition usage on old versions after upgrade.
     );
 
     /** {@inheritDoc} */
@@ -234,6 +235,23 @@ public class PagePartitionMetaIO extends PageMetaIO {
     public boolean setGapsLink(long pageAddr, long link) {
         throw new UnsupportedOperationException("Gaps link is not supported by " +
             "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     */
+    public long getUpdateTreeRoot(long pageAddr) {
+        throw new UnsupportedOperationException("Partition update log is not supported by " +
+                "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     * @param listRoot List root.
+     */
+    public void setUpdateTreeRoot(long pageAddr, long listRoot) {
+        throw new UnsupportedOperationException("Partition update log is not supported by " +
+                "this PagePartitionMetaIO version: ver=" + getVersion());
     }
 
     /** {@inheritDoc} */

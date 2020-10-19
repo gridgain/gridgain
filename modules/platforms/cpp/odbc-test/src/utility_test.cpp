@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
+#include <vector>
+
 #include <boost/test/unit_test.hpp>
 
 #include <ignite/impl/binary/binary_writer_impl.h>
 
 #include <ignite/odbc/utility.h>
 #include <ignite/common/utils.h>
+
+#include "network/internal_utils.h"
 
 using namespace ignite::utility;
 
@@ -153,4 +157,53 @@ BOOST_AUTO_TEST_CASE(TestUtilityWriteReadDecimal)
     CheckDecimalWriteRead("-0.34729864879625196");
 }
 
+struct TestAddrinfo;
+
+/**
+ * The TestAddrinfo struct for testing purposes.
+ */
+struct TestAddrinfo
+{
+    int id;
+    TestAddrinfo* ai_next;
+};
+
+/**
+ * Check that Addresses are shuffled randomly.
+ *
+ * 1. Make collection of 5 addresses.
+ * 2. Shuffle it 2 times and get 2 outputs.
+ * 3. Make sure that first collection does not equal out1 and out2.
+ */
+BOOST_AUTO_TEST_CASE(TestUtilityShuffleAddresses)
+{
+    std::vector<TestAddrinfo> addrs(5);
+
+    addrs[0].id = 0;
+    addrs[0].ai_next = &addrs[1];
+
+    addrs[1].id = 1;
+    addrs[1].ai_next = &addrs[2];
+
+    addrs[2].id = 2;
+    addrs[2].ai_next = &addrs[3];
+
+    addrs[3].id = 3;
+    addrs[3].ai_next = &addrs[4];
+
+    addrs[4].id = 4;
+    addrs[4].ai_next = NULL;
+
+    std::vector<TestAddrinfo*> out1 = ignite::network::internal_utils::ShuffleAddresses(&addrs[0]);
+    std::vector<TestAddrinfo*> out2 = ignite::network::internal_utils::ShuffleAddresses(&addrs[0]);
+
+    bool allEq = true;
+    for (size_t i = 0; i < addrs.size(); ++i)
+    {
+        allEq = allEq && (addrs[i].id == out1[i]->id);
+        allEq = allEq && (addrs[i].id == out2[i]->id);
+    }
+
+    BOOST_REQUIRE(!allEq);
+}
 BOOST_AUTO_TEST_SUITE_END()
