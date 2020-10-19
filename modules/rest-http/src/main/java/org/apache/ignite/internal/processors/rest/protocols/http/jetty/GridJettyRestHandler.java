@@ -443,7 +443,7 @@ public class GridJettyRestHandler extends AbstractHandler {
             if (sesTok != null)
                 cmdRes.setSessionToken(U.byteArray2HexString(sesTok));
 
-            res.setStatus(HttpServletResponse.SC_OK);
+            res.setStatus(cmdRes.getSuccessStatus() == GridRestResponse.SC_FORBIDDEN ? HttpServletResponse.SC_FORBIDDEN : HttpServletResponse.SC_OK);
         }
         catch (Throwable e) {
             res.setStatus(HttpServletResponse.SC_OK);

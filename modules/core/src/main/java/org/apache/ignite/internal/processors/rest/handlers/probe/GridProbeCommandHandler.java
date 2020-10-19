@@ -30,7 +30,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
 
 /**
- * Handler for {@link GridRestCommand#VERSION} and {@link GridRestCommand#NAME} command.
+ * Handler for {@link GridRestCommand#PROBE}.
  */
 public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
     /**
@@ -59,16 +59,7 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
                 if (log.isDebugEnabled())
                     log.debug("probe command handler invoked.");
 
-                while (IgnitionEx.grid(ctx.igniteInstanceName()) == null) {
-                    try {
-                        Thread.sleep(1000L);
-                    }
-                    catch (InterruptedException e) {
-                        U.error(log, "", e);
-                    }
-                }
-
-                return new GridFinishedFuture<>(new GridRestResponse("true"));
+                return new GridFinishedFuture<>(IgnitionEx.hasKernalStarted(ctx.igniteInstanceName()) ? new GridRestResponse("grid has started") : new GridRestResponse(GridRestResponse.SC_FORBIDDEN, "grid has not started"));
 
             }
 
@@ -76,4 +67,8 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
 
         return new GridFinishedFuture<>();
     }
+
+
+
+
 }
