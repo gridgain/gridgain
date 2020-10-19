@@ -1615,29 +1615,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      * @return Master key digest.
      * @throws IgniteException if unable to get master key digest.
      */
-    private byte[] masterKeyDigest(String masterKeyName) {
-        byte[] digest;
-
-        masterKeyChangeLock.writeLock().lock();
-
-        try {
-            String curName = getSpi().getMasterKeyName();
-
-            try {
-                getSpi().setMasterKeyName(masterKeyName);
-
-                digest = getSpi().masterKeyDigest();
-            } catch (Exception e) {
-                throw new IgniteException("Unable to set master key locally [masterKeyName=" + masterKeyName + ']', e);
-            } finally {
-                getSpi().setMasterKeyName(curName);
-            }
-        }
-        finally {
-            masterKeyChangeLock.writeLock().unlock();
-        }
-
-        return digest;
+    public byte[] masterKeyDigest(String masterKeyName) {
+        return getSpi().masterKeyDigest(masterKeyName);
     }
 
     /**
