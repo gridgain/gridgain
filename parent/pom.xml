@@ -588,7 +588,7 @@
                             </group>
                             <group>
                                 <title>Maintenance Mode API</title>
-                                <packages>org.apache.ignite.maintenance*</packages>
+                                <packages>org.apache.ignite.maintenance</packages>
                             </group>
                         </groups>
                         <bottom>
