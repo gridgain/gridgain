@@ -672,8 +672,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      *
      * @throws IgniteCheckedException If failed.
      */
-    //TODO: GG-29643: Check issue fixed.
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-30506")
     @Test
     public void testCorrectIdxWithCheckParts() throws IgniteCheckedException {
         checkCorrectIdxWithCheckParts(workDir);
@@ -738,8 +736,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    //TODO: GG-29643: Check issue fixed.
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-30506")
     @Test
     public void testCorruptedIdxWithCheckParts() throws Exception {
         checkCorruptedIdxWithCheckParts(asList(workDir));
