@@ -27,6 +27,7 @@ AM_CPPFLAGS = \
     -I@top_srcdir@/binary/include \
     -I@top_srcdir@/network/include \
     -I@top_srcdir@/network/os/linux/include \
+    -I@top_srcdir@/network/src \
     -I@top_srcdir@/odbc/include \
     -I@top_srcdir@/jni/include \
     -I@top_srcdir@/jni/os/linux/include \

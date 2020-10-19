@@ -962,7 +962,7 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
 
         if (coctx == null)
             throw new CacheInvalidStateException(
-                    "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
+                "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
 
         // Unmarshal transform closure anyway if it exists.
         if (transformClosBytes != null && entryProcessorsCol == null)

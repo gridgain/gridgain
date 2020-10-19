@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.processors.security.ClientReconnectSecurityTest;
 import org.apache.ignite.internal.processors.security.IgniteSecurityProcessorTest;
 import org.apache.ignite.internal.processors.security.InvalidServerTest;
 import org.apache.ignite.internal.processors.security.cache.CacheOperationPermissionCheckTest;
@@ -79,7 +80,8 @@ import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSO
     AttributeSecurityCheckTest.class,
     AdditionalSecurityCheckWithGlobalAuthTest.class,
 
-    InvalidServerTest.class
+    InvalidServerTest.class,
+    ClientReconnectSecurityTest.class
 })
 public class SecurityTestSuite {
     /**

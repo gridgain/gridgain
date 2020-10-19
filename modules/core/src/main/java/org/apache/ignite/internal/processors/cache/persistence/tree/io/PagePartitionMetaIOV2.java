@@ -33,7 +33,7 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     private static final int PART_META_REUSE_LIST_ROOT_OFF = PENDING_TREE_ROOT_OFF + 8;
 
     /** */
-    private static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
+    protected static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
 
     /**
      * @param ver Version.
@@ -48,7 +48,8 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
 
         setPendingTreeRoot(pageAddr, 0L);
         setPartitionMetaStoreReuseListRoot(pageAddr, 0L);
-        setGapsLink(pageAddr, 0);
+        setGapsLink(pageAddr, 0L);
+        setUpdateTreeRoot(pageAddr, 0L);
     }
 
     /** {@inheritDoc} */
@@ -118,20 +119,5 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
         sb.a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr));
         sb.a(",\n\tcntrUpdDataPageId=").a(getGapsLink(pageAddr));
         sb.a("\n]");
-    }
-
-    /**
-     * Upgrade page to PagePartitionMetaIOV2
-     *
-     * @param pageAddr Page address.
-     */
-    public void upgradePage(long pageAddr) {
-        assert PageIO.getType(pageAddr) == getType();
-        assert PageIO.getVersion(pageAddr) < 2;
-
-        PageIO.setVersion(pageAddr, getVersion());
-        setPendingTreeRoot(pageAddr, 0);
-        setPartitionMetaStoreReuseListRoot(pageAddr, 0);
-        setGapsLink(pageAddr, 0);
     }
 }

@@ -32,6 +32,7 @@ import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskSplitAdapter;
+import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -62,6 +63,7 @@ public class GridResourceProcessorSelfTest extends GridCommonAbstractTest {
         ctx = newContext();
 
         ctx.add(new GridResourceProcessor(ctx));
+        ctx.add(new GridInternalSubscriptionProcessor(ctx));
 
         ctx.start();
     }
@@ -430,6 +432,7 @@ public class GridResourceProcessorSelfTest extends GridCommonAbstractTest {
         ctx = newContext();
 
         ctx.add(new GridResourceProcessor(ctx));
+        ctx.add(new GridInternalSubscriptionProcessor(ctx));
 
         ctx.start();
 

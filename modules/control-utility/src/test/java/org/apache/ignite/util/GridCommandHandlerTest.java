@@ -34,6 +34,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
@@ -84,10 +85,12 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.cache.warmup.BlockedWarmUpConfiguration;
+import org.apache.ignite.internal.processors.cache.warmup.BlockedWarmUpStrategy;
+import org.apache.ignite.internal.processors.cache.warmup.WarmUpTestPluginProvider;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.cache.VisorFindAndDeleteGarbageInPersistenceTaskResult;
@@ -137,6 +140,7 @@ import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtili
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -1444,9 +1448,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         primSpi.waitForBlocked(clients.length);
 
         // Unblock only finish messages from clients from 2 to 4.
-        primSpi.stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
-            @Override public boolean apply(T2<ClusterNode, GridIoMessage> objects) {
-                GridIoMessage iom = objects.get2();
+        primSpi.stopBlock(true, blockedMsg -> {
+                GridIoMessage iom = blockedMsg.ioMessage();
 
                 Message m = iom.message();
 
@@ -1458,7 +1461,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
                 return true;
             }
-        });
+        );
 
         // Wait until queue is stable
         for (Ignite ignite : G.allGrids()) {
@@ -1656,7 +1659,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         injectTestSystemOut();
 
-        IgniteInternalFuture fut = GridTestUtils.runAsync(() ->
+        IgniteInternalFuture fut = runAsync(() ->
             assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--dump")));
 
         TestRecordingCommunicationSpi.spi(unstable).waitForBlocked();
@@ -1701,7 +1704,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         injectTestSystemOut();
 
-        IgniteInternalFuture fut = GridTestUtils.runAsync(
+        IgniteInternalFuture fut = runAsync(
             () -> assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--dump"))
         );
 
@@ -2338,6 +2341,60 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true")
     public void testCleaningGarbageAfterCacheDestroyedAndNodeStop_ControlConsoleUtil() throws Exception {
         new IgniteCacheGroupsWithRestartsTest().testFindAndDeleteGarbage(this::executeTaskViaControlConsoleUtil);
+    }
+
+    /**
+     * Verification of successful warm-up stop.
+     * <p/>
+     * Steps:
+     * 1)Starting node with warm-up;
+     * 2)Stop warm-up;
+     * 3)Waiting for a successful stop of warm-up and start of node.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSuccessStopWarmUp() throws Exception {
+        WarmUpTestPluginProvider provider = new WarmUpTestPluginProvider();
+
+        IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(0)).setPluginProviders(provider);
+        cfg.getDataStorageConfiguration().setDefaultWarmUpConfiguration(new BlockedWarmUpConfiguration());
+
+        cfg.getConnectorConfiguration().setHost("localhost");
+
+        IgniteInternalFuture<IgniteEx> fut = runAsync(() -> startGrid(cfg));
+
+        BlockedWarmUpStrategy blockedWarmUpStgy = (BlockedWarmUpStrategy)provider.strats.get(1);
+
+        try {
+            U.await(blockedWarmUpStgy.startLatch, 60, TimeUnit.SECONDS);
+
+            assertEquals(EXIT_CODE_OK, execute("--warm-up", "--stop", "--yes"));
+
+            fut.get(60_000);
+        }
+        catch (Throwable t) {
+            blockedWarmUpStgy.stopLatch.countDown();
+
+            throw t;
+        }
+    }
+
+    /**
+     * Check that command will not be executed because node has already started.
+     * <p/>
+     * Steps:
+     * 1)Starting node;
+     * 2)Attempt to stop warm-up;
+     * 3)Waiting for an error because node has already started.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testFailStopWarmUp() throws Exception {
+        startGrid(0);
+
+        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--warm-up", "--stop", "--yes"));
     }
 
     /**

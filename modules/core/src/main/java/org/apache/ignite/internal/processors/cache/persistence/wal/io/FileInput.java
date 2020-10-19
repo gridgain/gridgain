@@ -25,6 +25,8 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.HEADER_RECORD_SIZE;
+
 /**
  * File input, backed by byte buffer file input.
  * This class allows to read data by chunks from file and then read primitives.
@@ -67,11 +69,18 @@ public interface FileInput extends ByteBufferBackedDataInput {
         /** */
         private FileInput delegate;
 
+        /** */
+        private long calcStartPos = -1;
+
+        /** */
+        private long calcEndPos = -1;
+
         /**
          */
         public Crc32CheckingFileInput(FileInput delegate, boolean skipCheck) {
             this.delegate = delegate;
             this.lastCalcPosition = delegate.buffer().position();
+            this.calcStartPos = HEADER_RECORD_SIZE + lastCalcPosition;
             this.skipCheck = skipCheck;
         }
 
@@ -102,7 +111,7 @@ public interface FileInput extends ByteBufferBackedDataInput {
                 ensure(5);
 
                 throw new IgniteDataIntegrityViolationException(
-                    "val: " + val + " writtenCrc: " + writtenCrc
+                    "val: " + val + ", writtenCrc: " + writtenCrc + ", crcStartPos: " + calcStartPos + ", crcEndPos: " + calcEndPos
                 );
             }
         }
@@ -119,6 +128,8 @@ public interface FileInput extends ByteBufferBackedDataInput {
             buffer().position(lastCalcPosition);
 
             crc.update(delegate.buffer(), oldPos - lastCalcPosition);
+
+            calcEndPos = calcStartPos + (oldPos - lastCalcPosition);
 
             lastCalcPosition = oldPos;
         }

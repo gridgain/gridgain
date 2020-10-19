@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.metric.SystemViewSelfTest;
 import org.apache.ignite.internal.processors.cache.AffinityKeyNameAndValueFieldNameConflictTest;
 import org.apache.ignite.internal.processors.cache.BigEntryQueryTest;
 import org.apache.ignite.internal.processors.cache.BinaryMetadataConcurrentUpdateWithIndexesTest;
@@ -240,6 +241,7 @@ import org.apache.ignite.internal.processors.query.SqlSchemaSelfTest;
 import org.apache.ignite.internal.processors.query.SqlSystemViewsSelfTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildSelfTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildTest;
+import org.apache.ignite.internal.processors.query.h2.GridSubqueryJoinOptimizerSelfTest;
 import org.apache.ignite.internal.processors.query.h2.H2ResultSetIteratorNullifyOnEndSelfTest;
 import org.apache.ignite.internal.processors.query.h2.IgniteSqlBigIntegerKeyTest;
 import org.apache.ignite.internal.processors.query.h2.IgniteSqlQueryMinMaxTest;
@@ -413,6 +415,8 @@ import org.junit.runners.Suite;
     IgniteCacheQueryLargeRecordsOomTest.class,
 
     QueryParserMetricsHolderSelfTest.class,
+
+    GridSubqueryJoinOptimizerSelfTest.class,
 
     // DML.
     IgniteCacheMergeSqlQuerySelfTest.class,
@@ -644,8 +648,8 @@ import org.junit.runners.Suite;
     RowCountTableStatisticsUsageTest.class,
     RowCountTableStatisticsSurvivesNodeRestartTest.class,
 
-    SqlViewExporterSpiTest.class
-
+    SqlViewExporterSpiTest.class,
+    SystemViewSelfTest.class
 })
 public class IgniteBinaryCacheQueryTestSuite {
 }
