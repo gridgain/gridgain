@@ -765,8 +765,6 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
                         rowsCost = Math.min(5 + rowsCost * percent / 100, rowsCost - (i > 0 ? 1 : 0));
 
-                        //rowsCost = Math.min(5 + rowsCost / 4, rowsCost - (i > 0 ? 1 : 0));
-
                         break;
                     } else if (isByteFlag(mask, IndexCondition.START)) {
                         Value min = getStartValue(ses, column, filter);

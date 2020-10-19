@@ -48,7 +48,7 @@ public class StatisticPartialCollectionTest extends TableStatisticsAbstractTest 
     }
 
     /**
-     * Test that partial statisitcs collection work properly:
+     * Test that partial statistics collection work properly:
      * Prepare:
      * 1) create table with three columns with lo, med and hi selectivity
      * 2) collect statistics

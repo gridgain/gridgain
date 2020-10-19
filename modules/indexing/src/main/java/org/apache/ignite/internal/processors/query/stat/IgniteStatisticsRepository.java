@@ -15,8 +15,6 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.internal.processors.cache.query.QueryTable;
-
 import java.util.Collection;
 
 /**
@@ -26,110 +24,110 @@ import java.util.Collection;
 public interface IgniteStatisticsRepository {
 
     /**
-     * Replace all table statistics with specified ones.
+     * Replace all object statistics with specified ones if fillStat is {@code true} or merge it otherwise.
      *
-     * @param tbl table.
+     * @param key object name.
      * @param statistics collection of tables partition statistics.
      * @param fullStat if {@code true} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatisticsImpl> statistics, boolean fullStat);
+    void saveLocalPartitionsStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics, boolean fullStat);
 
     /**
-     * Get local partition statistics by specified table.
+     * Get local partition statistics by specified object.
      *
-     * @param tbl table to get statistics by.
+     * @param key object to get statistics by.
      * @return collection of partitions statistics.
      */
-    Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(QueryTable tbl);
+    Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key);
 
     /**
-     * Clear partition statistics for specified table.
+     * Clear partition statistics for specified object.
      *
-     * @param tbl table to clear statistics by.
+     * @param key object to clear statistics by.
      * @param colNames if specified - only statistics by specified columns will be cleared.
      */
-    void clearLocalPartitionsStatistics(QueryTable tbl, String... colNames);
+    void clearLocalPartitionsStatistics(StatsKey key, String... colNames);
 
     /**
      * Save specified local partition statistics.
      *
-     * @param tbl table.
+     * @param tbl object key.
      * @param statistics statistics to save.
      */
-    void saveLocalPartitionStatistics(QueryTable tbl, ObjectPartitionStatisticsImpl statistics);
+    void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics);
 
     /**
      * Get partition statistics.
      *
-     * @param tbl table.
+     * @param key object key.
      * @param partId partition id.
      * @return object partition statistics or {@code null} if there are no statistics collected for such partition.
      */
-    ObjectPartitionStatisticsImpl getLocalPartitionStatistics(QueryTable tbl, int partId);
+    ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId);
 
     /**
      * Clear partition statistics.
      *
-     * @param tbl table.
+     * @param key object key.
      * @param partId partition id.
      */
-    void clearLocalPartitionStatistics(QueryTable tbl, int partId);
+    void clearLocalPartitionStatistics(StatsKey key, int partId);
 
     /**
      * Save local object statistics.
      *
-     * @param tbl object.
+     * @param key object key.
      * @param statistics statistics to save.
      * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveLocalStatistics(QueryTable tbl, ObjectStatisticsImpl statistics, boolean fullStat);
+    void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat);
 
     /**
      * Calculate and cache saved local statistics.
      *
-     * @param tbl object.
+     * @param key object.
      * @param statistics collection of partitions statistics.
      */
-    void cacheLocalStatistics(QueryTable tbl, Collection<ObjectPartitionStatisticsImpl> statistics);
+    void cacheLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics);
 
     /**
      * Get local statistics.
      *
-     * @param tbl object to load statistics by.
+     * @param key object to load statistics by.
      * @return object local statistics or {@code null} if there are no statistics collected for such object.
      */
-    ObjectStatisticsImpl getLocalStatistics(QueryTable tbl);
+    ObjectStatisticsImpl getLocalStatistics(StatsKey key);
 
     /**
      * Clear local object statistics.
      *
-     * @param tbl object to clear local statistics by.
+     * @param key object to clear local statistics by.
      * @param colNames if specified - only statistics by specified columns will be cleared.
      */
-    void clearLocalStatistics(QueryTable tbl, String... colNames);
+    void clearLocalStatistics(StatsKey key, String... colNames);
 
     /**
      * Save global statistics.
      *
-     * @param tbl table.
+     * @param key object key.
      * @param statistics statistics to save.
      * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveGlobalStatistics(QueryTable tbl, ObjectStatisticsImpl statistics, boolean fullStat);
+    void saveGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat);
 
     /**
      * Get global statistics by object.
      *
-     * @param tbl table.
+     * @param key to get global statistics by.
      * @return object statistics of {@code null} if there are no global statistics for specified object.
      */
-    ObjectStatisticsImpl getGlobalStatistics(QueryTable tbl);
+    ObjectStatisticsImpl getGlobalStatistics(StatsKey key);
 
     /**
      * Clear global statistics by object.
      *
-     * @param tbl table.
+     * @param key object key.
      * @param colNames if specified - only statistics by specified columns will be cleared.
      */
-    void clearGlobalStatistics(QueryTable tbl, String... colNames);
+    void clearGlobalStatistics(StatsKey key, String... colNames);
 }

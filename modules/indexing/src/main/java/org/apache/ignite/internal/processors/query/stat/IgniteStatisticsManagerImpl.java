@@ -64,14 +64,14 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     @Override public ObjectStatistics getLocalStatistics(String schemaName, String objName) {
-        return statsRepos.getLocalStatistics(new QueryTable(schemaName, objName));
+        return statsRepos.getLocalStatistics(new StatsKey(schemaName, objName));
     }
 
     @Override public void clearObjectStatistics(String schemaName, String objName, String... colNames) {
-        QueryTable tbl = new QueryTable(schemaName, objName);
-        statsRepos.clearLocalPartitionsStatistics(tbl, colNames);
-        statsRepos.clearLocalStatistics(tbl, colNames);
-        statsRepos.clearGlobalStatistics(tbl, colNames);
+        StatsKey key = new StatsKey(schemaName, objName);
+        statsRepos.clearLocalPartitionsStatistics(key, colNames);
+        statsRepos.clearLocalStatistics(key, colNames);
+        statsRepos.clearGlobalStatistics(key, colNames);
     }
 
     /**
@@ -118,10 +118,11 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         }
 
         Collection<ObjectPartitionStatisticsImpl> partsStats = collectPartitionStatistics(tbl, selectedColumns);
-        statsRepos.saveLocalPartitionsStatistics(tbl.identifier(), partsStats, fullStat);
+        StatsKey key = new StatsKey(tbl.identifier().schema(), tbl.identifier().table());
+        statsRepos.saveLocalPartitionsStatistics(key, partsStats, fullStat);
 
         ObjectStatisticsImpl tblStats = aggregateLocalStatistics(tbl, selectedColumns, partsStats);
-        statsRepos.saveLocalStatistics(tbl.identifier(), tblStats, fullStat);
+        statsRepos.saveLocalStatistics(key, tblStats, fullStat);
         if (log.isDebugEnabled())
             log.debug(String.format("Statistics collection by %s.%s object is finished.", schemaName, objName));
     }
@@ -182,13 +183,14 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         return tblPartStats;
     }
 
-    public ObjectStatisticsImpl aggregateLocalStatistics(QueryTable tbl, Collection<ObjectPartitionStatisticsImpl> tblPartStats) {
+    public ObjectStatisticsImpl aggregateLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> tblPartStats) {
+        // For now there can be only tables
+        GridH2Table table = schemaMgr.dataTable(key.schema(), key.obj());
 
-        GridH2Table table = schemaMgr.dataTable(tbl.schema(), tbl.table());
         if (table == null) {
             // remove all loaded statistics.
-            log.info("Removing statistics for table " + tbl + " cause table doesn't exists.");
-            statsRepos.clearLocalPartitionsStatistics(tbl);
+            log.info("Removing statistics for object " + key + " cause table doesn't exists.");
+            statsRepos.clearLocalPartitionsStatistics(key);
         }
         return aggregateLocalStatistics(table, table.getColumns(), tblPartStats);
     }

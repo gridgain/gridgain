@@ -18,12 +18,12 @@ package org.apache.ignite.internal.processors.query;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
-import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatistics;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepository;
 import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatisticsImpl;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatisticsImpl;
+import org.apache.ignite.internal.processors.query.stat.StatsKey;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -41,13 +41,13 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     private final GridKernalContext ctx;
 
     /** Table->Partition->Partition Statistics map, populated only on server nodes without persistence enabled.  */
-    private final Map<QueryTable, Map<Integer, ObjectPartitionStatisticsImpl>> partsStats;
+    private final Map<StatsKey, Map<Integer, ObjectPartitionStatisticsImpl>> partsStats;
 
     /** Local (for current node) object statistics. */
-    private final Map<QueryTable, ObjectStatisticsImpl> localStats;
+    private final Map<StatsKey, ObjectStatisticsImpl> localStats;
 
     /** Global (for whole cluster) object statistics. */
-    private final Map<QueryTable, ObjectStatisticsImpl> globalStats = new ConcurrentHashMap<>();
+    private final Map<StatsKey, ObjectStatisticsImpl> globalStats = new ConcurrentHashMap<>();
 
     /**
      * Constructor.
@@ -72,20 +72,19 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         log = ctx.log(IgniteStatisticsRepositoryImpl.class);
     }
 
-    @Override public void saveLocalPartitionsStatistics(QueryTable tbl,
+    @Override public void saveLocalPartitionsStatistics(StatsKey key,
                                                         Collection<ObjectPartitionStatisticsImpl> statistics,
                                                         boolean fullStat) {
         if (partsStats != null) {
             Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = new ConcurrentHashMap<>();
             for (ObjectPartitionStatisticsImpl s : statistics) {
-                if (statisticsMap.put(s.partId(), s) != null) {
+                if (statisticsMap.put(s.partId(), s) != null)
                     log.warning(String.format("Trying to save more than one %s.%s partition statistics for partition %d",
-                            tbl.schema(), tbl.table(), s.partId()));
-                }
+                            key.schema(), key.obj(), s.partId()));
             }
 
-            if (fullStat)
-                partsStats.compute(tbl, (k, v) -> {
+            if (fullStat) {
+                partsStats.compute(key, (k, v) -> {
                     if (v == null)
                         v = statisticsMap;
                     else
@@ -93,9 +92,9 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
                     return v;
                 });
-            else
-                partsStats.compute(tbl, (k, v) -> {
-                    if (v != null)
+            } else {
+                partsStats.compute(key, (k, v) -> {
+                    if (v != null) {
                         for (Map.Entry<Integer, ObjectPartitionStatisticsImpl> partStat : v.entrySet()) {
                             ObjectPartitionStatisticsImpl newStat = statisticsMap.get(partStat.getKey());
                             if (newStat != null) {
@@ -103,15 +102,16 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
                                 statisticsMap.put(partStat.getKey(), combinedStat);
                             }
                         }
+                    }
                     return statisticsMap;
                 });
-
+            }
         }
     }
 
-    public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(QueryTable tbl) {
+    public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key) {
         if (partsStats != null) {
-            Map<Integer, ObjectPartitionStatisticsImpl> objectStatisticsMap = partsStats.get(tbl);
+            Map<Integer, ObjectPartitionStatisticsImpl> objectStatisticsMap = partsStats.get(key);
 
             return (objectStatisticsMap == null) ? null : objectStatisticsMap.values();
         }
@@ -119,13 +119,13 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         return Collections.emptyList();
     }
 
-    @Override public void clearLocalPartitionsStatistics(QueryTable tbl, String... colNames) {
-        if (colNames == null || colNames.length == 0)
+    @Override public void clearLocalPartitionsStatistics(StatsKey key, String... colNames) {
+        if (colNames == null || colNames.length == 0) {
             if (partsStats != null)
-                partsStats.remove(tbl);
-        else
-            if (partsStats != null)
-                partsStats.computeIfPresent(tbl, (tblKey, partMap) -> {
+                partsStats.remove(key);
+        } else {
+            if (partsStats != null) {
+                partsStats.computeIfPresent(key, (tblKey, partMap) -> {
                     partMap.replaceAll((partId, partStat) -> {
                         ObjectPartitionStatisticsImpl partStatNew = substract(partStat, colNames);
                         return (partStatNew.columnsStatistics().isEmpty()) ? null : partStat;
@@ -134,11 +134,13 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
                     partMap.entrySet().removeIf(e -> e.getValue() == null);
                     return partMap.isEmpty() ? null : partMap;
                 });
+            }
+        }
     }
 
-    @Override public void saveLocalPartitionStatistics(QueryTable tbl, ObjectPartitionStatisticsImpl statistics) {
+    @Override public void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics) {
         if (partsStats != null) {
-            partsStats.compute(tbl, (k,v) -> {
+            partsStats.compute(key, (k,v) -> {
                 if (v == null)
                     v = new ConcurrentHashMap<>();
                 ObjectPartitionStatisticsImpl oldPartStat = v.get(statistics.partId());
@@ -153,69 +155,74 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
-    @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(QueryTable tbl, int partId) {
+    @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId) {
         if (partsStats != null) {
-            Map<Integer, ObjectPartitionStatisticsImpl> objectPartStats = partsStats.get(tbl);
+            Map<Integer, ObjectPartitionStatisticsImpl> objectPartStats = partsStats.get(key);
             return objectPartStats == null ? null : objectPartStats.get(partId);
         }
         return null;
     }
 
-    @Override public void clearLocalPartitionStatistics(QueryTable tbl, int partId) {
-        if (partsStats != null)
-            partsStats.computeIfPresent(tbl, (k,v) -> {
+    @Override public void clearLocalPartitionStatistics(StatsKey key, int partId) {
+        if (partsStats != null) {
+            partsStats.computeIfPresent(key, (k, v) -> {
                 v.remove(partId);
                 return v.isEmpty() ? null : v;
             });
+        }
     }
 
-    @Override public void saveLocalStatistics(QueryTable tbl, ObjectStatisticsImpl statistics, boolean fullStat) {
-        if (localStats != null)
+    @Override public void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat) {
+        if (localStats != null) {
             if (fullStat)
-                localStats.put(tbl, statistics);
-            else
-                localStats.compute(tbl, (k,v) -> {
+                localStats.put(key, statistics);
+            else {
+                localStats.compute(key, (k, v) -> {
                     if (v == null)
                         return statistics;
                     return add(v, statistics);
                 });
+            }
+        }
     }
 
-    @Override public void cacheLocalStatistics(QueryTable tbl, Collection<ObjectPartitionStatisticsImpl> statistics) {
+    @Override public void cacheLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics) {
         IgniteStatisticsManagerImpl statManager = (IgniteStatisticsManagerImpl)ctx.query().getIndexing().statsManager();
         if (localStats != null)
-            localStats.put(tbl, statManager.aggregateLocalStatistics(tbl, statistics));
+            localStats.put(key, statManager.aggregateLocalStatistics(key, statistics));
     }
 
-    @Override public ObjectStatisticsImpl getLocalStatistics(QueryTable tbl) {
-        return localStats == null ? null : localStats.get(tbl);
+    @Override public ObjectStatisticsImpl getLocalStatistics(StatsKey key) {
+        return localStats == null ? null : localStats.get(key);
     }
 
-    @Override public void clearLocalStatistics(QueryTable tbl, String... colNames) {
-        if (colNames == null || colNames.length == 0)
+    @Override public void clearLocalStatistics(StatsKey key, String... colNames) {
+        if (colNames == null || colNames.length == 0) {
             if (localStats != null)
-                localStats.remove(tbl);
-        else
-            if (localStats != null)
-                localStats.computeIfPresent(tbl, (k,v) -> {
-                   ObjectStatisticsImpl locStatNew = substract(v, colNames);
-                   return locStatNew.columnsStatistics().isEmpty() ? null : locStatNew;
+                localStats.remove(key);
+        } else {
+            if (localStats != null) {
+                localStats.computeIfPresent(key, (k, v) -> {
+                    ObjectStatisticsImpl locStatNew = substract(v, colNames);
+                    return locStatNew.columnsStatistics().isEmpty() ? null : locStatNew;
                 });
+            }
+        }
     }
 
-    @Override public void saveGlobalStatistics(QueryTable tbl, ObjectStatisticsImpl statistics, boolean fullStat) {
-        globalStats.put(tbl, statistics);
+    @Override public void saveGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat) {
+        globalStats.put(key, statistics);
     }
 
-    public ObjectStatisticsImpl getGlobalStatistics(QueryTable tbl) {
-        return globalStats.get(tbl);
+    public ObjectStatisticsImpl getGlobalStatistics(StatsKey key) {
+        return globalStats.get(key);
     }
 
-    @Override public void clearGlobalStatistics(QueryTable tbl, String... colNames) {
+    @Override public void clearGlobalStatistics(StatsKey key, String... colNames) {
         if (colNames == null || colNames.length == 0)
-            globalStats.remove(tbl);
+            globalStats.remove(key);
         else
-            globalStats.computeIfPresent(tbl, (k, v) -> substract(v, colNames));
+            globalStats.computeIfPresent(key, (k, v) -> substract(v, colNames));
     }
 
     /**
@@ -243,9 +250,9 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      */
     private <T extends ObjectStatisticsImpl> T substract(T base, String[] columns) {
         T result = (T)base.clone();
-        for (String col : columns) {
+        for (String col : columns)
             result.columnsStatistics().remove(col);
-        }
+
         return result;
     }
 }
