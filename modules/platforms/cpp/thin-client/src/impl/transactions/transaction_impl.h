@@ -172,7 +172,7 @@ namespace ignite
                     /** Closed flag. */
                     bool closed;
 
-                    IGNITE_NO_COPY_ASSIGNMENT(TransactionImpl)
+                    IGNITE_NO_COPY_ASSIGNMENT(TransactionImpl);
                 };
             }
         }

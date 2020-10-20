@@ -169,7 +169,7 @@ namespace ignite
                         return;
                     }
 
-                    if (!common::AllOf(value.begin(), value.end(), isdigit))
+                    if (!common::AllDigits(value))
                     {
                         if (diag)
                         {
@@ -273,7 +273,7 @@ namespace ignite
                 }
                 else if (lKey == Key::pageSize)
                 {
-                    if (!common::AllOf(value.begin(), value.end(), isdigit))
+                    if (!common::AllDigits(value))
                     {
                         if (diag)
                         {
@@ -303,7 +303,7 @@ namespace ignite
                     conv << value;
                     conv >> numValue;
 
-                    if (numValue <= 0 || numValue > 0xFFFFFFFFLL)
+                    if (numValue <= 0 || numValue > 0xFFFFFFFFL)
                     {
                         if (diag)
                         {
