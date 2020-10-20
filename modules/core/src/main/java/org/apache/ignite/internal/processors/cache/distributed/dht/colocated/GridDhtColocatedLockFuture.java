@@ -52,6 +52,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockMapping;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockResponse;
@@ -801,19 +802,46 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                     }
                 }
 
-                for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
-                    if (fut.exchangeDone() && fut.topologyVersion().equals(lastChangeVer)) {
-                        Throwable err = fut.validateCache(cctx, recovery, read, null, keys);
+                GridDhtPartitionsExchangeFuture lastFut = cctx.shared().exchange().lastTopologyFuture();
 
-                        if (err != null) {
-                            onDone(err);
+                if (!lastFut.isDone()) {
+                    try {
+                        lastFut.get();
+                    }
+                    catch (IgniteCheckedException e) {
+                        onDone(err);
 
-                            return;
-                        }
-
-                        break;
+                        return;
                     }
                 }
+
+                AffinityTopologyVersion lastTopVer = lastFut.topologyVersion();
+
+                AffinityTopologyVersion latestChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion();
+
+                if (lastTopVer.equals(latestChangeVer)) {
+                    Throwable err = lastFut.validateCache(cctx, recovery, read, null, keys);
+
+                    if (err != null) {
+                        onDone(err);
+
+                        return;
+                    }
+                }
+
+//                for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
+//                    if (fut.exchangeDone() && fut.topologyVersion().equals(lastChangeVer)) {
+//                        Throwable err = fut.validateCache(cctx, recovery, read, null, keys);
+//
+//                        if (err != null) {
+//                            onDone(err);
+//
+//                            return;
+//                        }
+//
+//                        break;
+//                    }
+//                }
 
                 // Continue mapping on the same topology version as it was before.
                 synchronized (this) {

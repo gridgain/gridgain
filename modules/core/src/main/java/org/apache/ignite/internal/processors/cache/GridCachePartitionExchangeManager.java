@@ -1255,6 +1255,10 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
     }
 
+    public AffinityTopologyVersion lastAffinityChangedTopologyVersion() {
+        return lastAffTopVers.lastEntry().getValue();
+    }
+
     /**
      * @param evt Discovery event.
      * @return Affinity topology version.
