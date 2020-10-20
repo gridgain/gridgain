@@ -352,7 +352,7 @@ namespace ignite
                 for (size_t j = 0; j < valLen; ++j)
                 {
                     BOOST_TEST_INFO("Byte index: " << j);
-                    BOOST_CHECK_EQUAL(val[j], expected[j]);
+                    BOOST_CHECK_EQUAL(val[j], expected[(int32_t)j]);
                 }
             }
         }
