@@ -676,7 +676,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
             if (cctx.mvccEnabled())
                 cctx.offheap().mvccRemoveAll(this);
             else
-                cctx.offheap().remove(cctx, key, partition(), locPart);
+                removeValue();
 
             // Give to GC.
             update(null, 0L, 0L, ver, true);

@@ -1033,7 +1033,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         if (cctx.mvccEnabled())
                             cctx.offheap().mvccRemoveAll(this);
                         else
-                            removeValue(nextVer);
+                            removeValue();
 
                         if (cctx.deferredDelete() && !isInternal() && !detached() && !deletedUnlocked())
                             deletedUnlocked(true);
@@ -1983,7 +1983,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (old != null)
                     storeValue(old, expireTime, ver);
                 else
-                    removeValue(ver);
+                    removeValue();
 
                 update(old, expireTime, ttl, ver, true);
             }
@@ -2172,7 +2172,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     // Must persist inside synchronization in non-tx mode.
                     cctx.store().remove(null, key);
 
-                removeValue(ver);
+                removeValue();
 
                 update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
 
@@ -2714,7 +2714,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (cctx.mvccEnabled())
                 cctx.offheap().mvccRemoveAll(this);
             else
-                removeValue(ver); // TODO write ts on cache clear.
+                removeValue(); // TODO write ts on cache clear.
         }
         finally {
             unlockEntry();
@@ -3209,7 +3209,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         if (cctx.mvccEnabled())
                             cctx.offheap().mvccRemoveAll(this);
                         else
-                            removeValue(obsoleteVer);
+                            removeValue();
 
                         return null;
                     }
@@ -4145,7 +4145,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (cctx.mvccEnabled())
             cctx.offheap().mvccRemoveAll(this);
         else
-            removeValue(obsoleteVer);
+            removeValue();
 
         if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
             cctx.events().addEvent(partition(),
@@ -4494,17 +4494,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * Removes value from offheap.
+     * Removes value from offheap without tombstone generation.
      *
-     * @param clearVer Version.
      * @throws IgniteCheckedException If failed.
      */
-    protected void removeValue(GridCacheVersion clearVer) throws IgniteCheckedException {
+    protected void removeValue() throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
         assert !cctx.deferredDelete();
 
         // Removals are possible from RENTING partition on clearing/evicting.
-        cctx.offheap().removeWithTombstone(cctx, key, clearVer, localPartition());
+        cctx.offheap().remove(cctx, key, partition(), localPartition());
     }
 
     /** {@inheritDoc} */
@@ -4674,7 +4673,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         value(null);
 
                         if (evictOffheap)
-                            removeValue(obsoleteVer);
+                            removeValue();
 
                         marked = true;
 
@@ -4727,7 +4726,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                             value(null);
 
                             if (evictOffheap)
-                                removeValue(obsoleteVer);
+                                removeValue();
 
                             marked = true;
 
@@ -4778,7 +4777,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (cctx.mvccEnabled())
                         cctx.offheap().mvccRemoveAll(this);
                     else
-                        removeValue(obsoleteVer);
+                        removeValue();
 
                     return false;
                 }
