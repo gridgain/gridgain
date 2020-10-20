@@ -256,7 +256,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private long[] sizes;
 
     /** Memory metrics to track dirty pages count and page replace rate. */
-    private DataRegionMetricsImpl memMetrics;
+    private final DataRegionMetricsImpl memMetrics;
 
     /**
      * {@code False} if memory was not started or already stopped and is not supposed for any usage.
@@ -289,6 +289,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     ) {
         assert ctx != null;
         assert pageSize > 0;
+        assert memMetrics != null;
 
         log = ctx.logger(PageMemoryImpl.class);
 
@@ -1913,6 +1914,11 @@ public class PageMemoryImpl implements PageMemoryEx {
         return writeThrottle.shouldThrottle();
     }
 
+    /** @return Data region metrics. */
+    public DataRegionMetricsImpl metrics() {
+        return memMetrics;
+    }
+
     /**
      * Get arbitrary page from cp buffer.
      */
@@ -2323,7 +2329,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                     boolean pinned = PageHeader.isAcquired(absPageAddr);
 
-                    final boolean skip = ignored != null && ignored.contains(rndAddr);
+                    final boolean skip = ignored != null && ignored.contains(rndAddr) ||
+                        !isInitialized(absPageAddr) /* // Skip. Page is recently allocated and not initialized yet. */;
 
                     final boolean dirty = isDirty(absPageAddr);
 
@@ -2416,6 +2423,18 @@ public class PageMemoryImpl implements PageMemoryEx {
             catch (IgniteCheckedException ignored) {
                 return false;
             }
+        }
+
+        /**
+         * @param absPageAddr Absolute page address
+         * @return {@code false} if page wasn't initialized yet, {@code true} otherwise.
+         */
+        private boolean isInitialized(long absPageAddr) {
+            long dataAddr = absPageAddr + PAGE_OVERHEAD;
+
+            int type = PageIO.getType(dataAddr);
+
+            return type != 0;
         }
 
         /**

@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.development.utils;
 
-import org.apache.ignite.development.utils.indexreader.IgniteIndexReaderTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -24,10 +23,6 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    IgniteIndexReaderTest.class,
-    IgniteWalConverterTest.class,
-    IgniteWalConverterArgumentsTest.class,
-    IgniteWalConverterSensitiveDataTest.class
 })
 public class DevUtilsTestSuite {
 }

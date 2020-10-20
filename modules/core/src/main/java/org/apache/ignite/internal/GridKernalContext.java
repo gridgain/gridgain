@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
+
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManager;
@@ -32,6 +33,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
@@ -62,7 +64,7 @@ import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeProcessor;
+import org.apache.ignite.internal.processors.ru.RollingUpgrade;
 import org.apache.ignite.internal.processors.schedule.IgniteScheduleProcessorAdapter;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
@@ -79,6 +81,7 @@ import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.worker.WorkersRegistry;
+import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.plugin.PluginNotFoundException;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
@@ -200,6 +203,20 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Monitoring manager.
      */
     public GridMetricManager metric();
+
+    /**
+     * Gets maintenance registry.
+     *
+     * @return Maintenance registry.
+     */
+    public MaintenanceRegistry maintenanceRegistry();
+
+    /**
+     * Gets system view manager.
+     *
+     * @return Monitoring manager.
+     */
+    public GridSystemViewManager systemView();
 
     /**
      * Gets caches processor.
@@ -745,7 +762,7 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      *
      * @return Rolling Upgrade processor.
      */
-    public RollingUpgradeProcessor rollingUpgrade();
+    public RollingUpgrade rollingUpgrade();
 
     /**
      * @return Local continuous tasks processor.

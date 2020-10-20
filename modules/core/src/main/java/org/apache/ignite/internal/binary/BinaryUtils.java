@@ -1861,6 +1861,9 @@ public class BinaryUtils {
                 return null;
 
             case GridBinaryMarshaller.HANDLE: {
+                if (handles.ignoreHandle())
+                    return null;
+
                 int handlePos = start - in.readInt();
 
                 Object obj = handles.getHandle(handlePos);
