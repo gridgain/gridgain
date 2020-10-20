@@ -25,7 +25,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.cache.Cache;
 import javax.cache.configuration.FactoryBuilder;
@@ -41,6 +44,7 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryProcessor;
+import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -55,12 +59,15 @@ import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
 import org.apache.ignite.internal.processors.cache.MapCacheStoreStrategy;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
@@ -69,10 +76,13 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Ign
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -96,6 +106,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 /**
  * TODO add test multicache group, filtered nodes, client nodes.
  * TODO wal recovery should bring tombstone entry.
+ * TODO make atomic/tx variants of tests when applicable.
  */
 @RunWith(Parameterized.class)
 @Ignore
@@ -578,6 +589,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         // Test partition preloading retry in the middle after cancellation.
     }
 
+    // Test removing of non-existent row creates tombstone.
     @Test
     public void testRemoveNonExistentRow() throws Exception {
         IgniteEx crd = startGrid(0);
@@ -595,6 +607,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         validateCache(grpCtx, pk, 0, 0);
     }
 
+    // Test removing of already existing tombstone is no-op.
     @Test
     public void testRemoveExpicitTombstoneRow() throws Exception {
         IgniteEx crd = startGrid(0);
@@ -612,6 +625,25 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         cache.remove(pk);
 
         validateCache(grpCtx, pk, 1, 0);
+    }
+
+    @Test
+    public void testRemoveExpicitTombstoneRowAndReplace() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+
+        // Should create TS.
+        int pk = 0;
+        cache.remove(pk);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        validateCache(grpCtx, pk, 1, 0);
+
+        // Should be no-op.
+        Object prev = cache.getAndPut(pk, 0);
+
+        assertNull(prev);
     }
 
     // TODO test for many keys for each node, various tx types.
@@ -655,6 +687,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     }
 
     // in-place not possible with indexes.
+    // TODO move to indexing
     @Test
     public void testInPlaceUpdateWithIndexes() throws Exception {
         IgniteEx crd = startGrid(0);
@@ -685,7 +718,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testAtomicReorder2() throws Exception {
+    public void testAtomicReorderRemovePut() throws Exception {
         IgniteEx crd = startGrids(2);
         awaitPartitionMapExchange();
 
@@ -734,6 +767,91 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         assertEquals(1, cache.get(pk));
     }
 
+    // Test if updating concurrently with clearing tombstones doesn't produce inconsistency.
+    @Test
+    public void testPutRemoveWithExpirationEagerTTL() throws Exception {
+        IgniteEx crd = startGrids(3);
+        awaitPartitionMapExchange();
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        cacheCfg.setBackups(1);
+        cacheCfg.setEagerTtl(true);
+        //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+        awaitPartitionMapExchange();
+
+        // 1. Find a node having least owning partitions count.
+        int idx0 = 0;
+        int idx1 = 1;
+
+        GridDhtPartitionTopology top0 = grid(idx0).cachex(DEFAULT_CACHE_NAME).context().group().topology();
+        GridDhtPartitionTopology top1 = grid(idx1).cachex(DEFAULT_CACHE_NAME).context().group().topology();
+
+        // Compute the node with less partitions.
+        int idx = idx0;
+
+        if (top0.localPartitions().size() > top1.localPartitions().size())
+            idx = idx1;
+
+        // 2. Put single update to each partition and wait for expiration.
+
+        List<Integer> parts = new ArrayList<>();
+
+        for (int i = 0; i < 64; i++) {
+            Collection<ClusterNode> nodes = grid(0).affinity(DEFAULT_CACHE_NAME).mapKeyToPrimaryAndBackups(i);
+
+            if (nodes.contains(grid(idx0).localNode()) && nodes.contains(grid(idx1).localNode()) && nodes.iterator().next().equals(grid(idx).localNode()))
+                parts.add(i);
+        }
+
+        IgniteCache<Object, Object> cache0 = cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 1000)));
+
+        // Versions must be synchronized on PME.
+        GridCacheVersion last0 = grid(idx0).context().cache().context().versions().last();
+        GridCacheVersion last1 = grid(idx1).context().cache().context().versions().last();
+
+        assertEquals(last0, last1);
+
+        parts.forEach(p -> cache0.put(p, p));
+
+        parts.forEach(new Consumer<Integer>() {
+            @Override public void accept(Integer p) {
+                try {
+                    assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
+                        @Override public boolean apply() {
+                            return grid(idx0).cache(DEFAULT_CACHE_NAME).localPeek(p) == null &&
+                                grid(idx1).cache(DEFAULT_CACHE_NAME).localPeek(p) == null;
+                        }
+                    }, 5_000));
+                } catch (IgniteInterruptedCheckedException e) {
+                    fail(X.getFullStackTrace(e));
+                }
+            }
+        });
+
+//        assertEquals(0, grid(idx0).cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.PRIMARY, CachePeekMode.BACKUP));
+//        assertEquals(0, grid(idx1).cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.PRIMARY, CachePeekMode.BACKUP));
+//
+
+        int pk = -1;
+
+        for (Integer part : parts) {
+            if (grid(0).affinity(DEFAULT_CACHE_NAME).isPrimary(grid(idx).localNode(), part))
+                pk = part;
+        }
+
+
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+
+        GridCacheVersion last01 = grid(idx0).context().cache().context().versions().last();
+        GridCacheVersion last11 = grid(idx1).context().cache().context().versions().last();
+
+        cache.put(pk, -1);
+
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+    }
+
     /**
      * TODO validate cache size, add test for many caches in group.
      *
@@ -752,10 +870,10 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         final LongMetric tombstoneMetric0 = grpCtx.cacheObjectContext().kernalContext().metric().registry(
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
 
-        assertEquals(expTsCnt, dataRows0.size());
-        assertEquals(expDataCnt, dataRows1.size());
-        assertEquals(expDataCnt, grpCtx.topology().localPartition(part).dataStore().cacheSize(CU.cacheId(DEFAULT_CACHE_NAME)));
-        assertEquals(expTsCnt, tombstoneMetric0.value());
+        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expTsCnt, dataRows0.size());
+        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt, dataRows1.size());
+        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt, grpCtx.topology().localPartition(part).dataStore().cacheSize(CU.cacheId(DEFAULT_CACHE_NAME)));
+        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expTsCnt, tombstoneMetric0.value());
     }
 
     /**

@@ -38,6 +38,7 @@ import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CachePeekMode;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -651,7 +652,7 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
     private void createUpdatePutAll(@Nullable TransactionConcurrency txConcurrency) throws Exception {
         Map<Integer, Integer> vals = new HashMap<>();
 
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < RendezvousAffinityFunction.DFLT_PARTITION_COUNT; i++)
             vals.put(i, i);
 
         IgniteCache<Integer, Integer> cache = jcache(0);

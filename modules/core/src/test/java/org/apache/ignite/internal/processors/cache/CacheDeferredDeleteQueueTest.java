@@ -40,6 +40,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 /**
  *
  */
+@Ignore
 public class CacheDeferredDeleteQueueTest extends GridCommonAbstractTest {
     /** */
     private static String ttlProp;

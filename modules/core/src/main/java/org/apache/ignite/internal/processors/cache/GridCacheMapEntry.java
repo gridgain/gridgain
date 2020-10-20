@@ -2338,8 +2338,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             assert updateRes != null : c;
 
-            // We should ignore expired old row. Expired oldRow instance is needed for correct row replacement\deletion only.
-            CacheObject oldVal = c.oldRow != null && !c.oldRowExpiredFlag ? c.oldRow.value() : null;
+            // We should ignore expired old row or tombstone.
+            // Expired oldRow instance is needed for correct row replacement or deletion only.
+            CacheObject oldVal = c.oldRow != null && !c.ignoreOldValue ? c.oldRow.value() : null;
             CacheObject updateVal = null;
             GridCacheVersion updateVer = c.newVer;
 
@@ -6146,7 +6147,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         private CacheDataRow oldRow;
 
         /** OldRow expiration flag. */
-        private boolean oldRowExpiredFlag;
+        private boolean ignoreOldValue;
 
         /** Disable interceptor invocation onAfter* methods flag. */
         private boolean wasIntercepted;
@@ -6233,7 +6234,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             GridCacheContext cctx = entry.context();
 
-            CacheObject oldVal;
+            CacheObject oldVal = null;
             CacheObject storeLoadedVal = null;
 
             this.oldRow = oldRow;
@@ -6241,18 +6242,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (oldRow != null) {
                 oldRow.key(entry.key());
 
+                // Tombstone must be treated as empty value, same as expired row.
+                oldVal = !cctx.offheap().isTombstone(oldRow) && !entry.checkRowExpired(oldRow) ? oldRow.value() : null;
+
                 // unswap TODO need to set oldrow value if expired or ts, or use null ?
-                entry.update(oldRow.value(), oldRow.expireTime(), 0, oldRow.version(), false);
+                entry.update(oldVal, oldRow.expireTime(), 0, oldRow.version(), false);
 
-                if (entry.checkRowExpired(oldRow)) {
-                    oldRowExpiredFlag = true;
-
-                    oldRow = null;
-                }
+                if (oldVal == null)
+                    ignoreOldValue = true;
             }
-
-            // Tombstone must be treated as empty value, same as expired row.
-            oldVal = (oldRow != null && !cctx.offheap().isTombstone(oldRow)) ? oldRow.value() : null;
 
             if (oldVal == null && readThrough) {
                 storeLoadedVal = cctx.toCacheObject(cctx.store().load(null, entry.key));
@@ -6311,6 +6309,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (outOfOrderUpdate)
                         outOfOrderUpdate(conflictCtx);
 
+                    // TODO broken version check due to unsynced versions.
                     return;
                 }
             }
@@ -6632,22 +6631,25 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             updated = cctx.kernalContext().cacheObjects().prepareForCache(updated, cctx);
 
+            // TODO write ts to store ?
             if (writeThrough)
                 // Must persist inside synchronization in non-tx mode.
                 cctx.store().put(null, entry.key, updated, newVer);
 
-            if (entry.val == null) {
-                boolean new0 = entry.isStartVersion();
+            if (cctx.deferredDelete()) {
+                if (entry.val == null) {
+                    boolean new0 = entry.isStartVersion();
 
-                assert entry.deletedUnlocked() || new0 || entry.isInternal() : "Invalid entry [entry=" + entry +
-                    ", locNodeId=" + cctx.localNodeId() + ']';
+                    assert entry.deletedUnlocked() || new0 || entry.isInternal() :
+                        "Invalid entry [entry=" + entry + ", locNodeId=" + cctx.localNodeId() + ']';
 
-                if (!new0 && !entry.isInternal())
-                    entry.deletedUnlocked(false);
-            }
-            else {
-                assert !entry.deletedUnlocked() : "Invalid entry [entry=" + this +
-                    ", locNodeId=" + cctx.localNodeId() + ']';
+                    if (!new0 && !entry.isInternal())
+                        entry.deletedUnlocked(false);
+                }
+                else {
+                    assert !entry.deletedUnlocked() : "Invalid entry [entry=" + this +
+                        ", locNodeId=" + cctx.localNodeId() + ']';
+                }
             }
 
             long updateCntr0 = entry.nextPartitionCounter(topVer, primary, false, updateCntr);

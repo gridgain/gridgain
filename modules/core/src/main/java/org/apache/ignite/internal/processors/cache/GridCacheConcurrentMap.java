@@ -43,6 +43,7 @@ public interface GridCacheConcurrentMap {
      * @param topVer Topology version.
      * @param key Key.
      * @param create Create flag.
+     * @param touch TODO get rid!!!
      * @return Existing or new GridCacheMapEntry. Will return {@code null} if entry is obsolete or absent and create
      * flag is set to {@code false}. Will also return {@code null} if create flag is set to {@code true}, but entry
      * couldn't be created.
