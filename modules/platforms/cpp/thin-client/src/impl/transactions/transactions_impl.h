@@ -118,7 +118,7 @@ namespace ignite
                     /** Data router. */
                     SP_DataRouter router;
 
-                    IGNITE_NO_COPY_ASSIGNMENT(TransactionsImpl)
+                    IGNITE_NO_COPY_ASSIGNMENT(TransactionsImpl);
                 };
             }
         }

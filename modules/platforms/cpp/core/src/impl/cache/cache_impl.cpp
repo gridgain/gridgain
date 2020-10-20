@@ -140,7 +140,7 @@ struct Operation
             SIZE = 48,
 
             /** Operation: SizeLoc(peekModes). */
-            SIZE_LOC = 56,
+            SIZE_LOC = 56
     };
 };
 
@@ -180,7 +180,7 @@ namespace ignite
                 return OutOp(Operation::CONTAINS_KEYS, inOp, err);
             }
 
-            void CacheImpl::LocalPeek(InputOperation& inOp, OutputOperation& outOp, int32_t peekModes, IgniteError& err)
+            void CacheImpl::LocalPeek(InputOperation& inOp, OutputOperation& outOp, IgniteError& err)
             {
                 OutInOpX(Operation::LOCAL_PEEK, inOp, outOp, err);
             }
