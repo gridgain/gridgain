@@ -969,8 +969,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             if (minStat == null || maxStat == null)
                 return estimatePercentFallback(min, max);
 
-            BigDecimal start = (minValue == null) ? minStat : minValue;
-            BigDecimal end = (maxValue == null) ? maxStat : maxValue;
+            BigDecimal start = (minValue == null || minValue.compareTo(minStat) < 0) ? minStat : minValue;
+            BigDecimal end = (maxValue == null || maxValue.compareTo(maxStat) > 0) ? maxStat : maxValue;
 
             BigDecimal actual = end.subtract(start);
 
@@ -1038,7 +1038,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     return new BigDecimal(value.getTimestamp().getTime());
 
                 case Value.BYTES:
-                    return null;
+                    BigInteger bigInteger = new BigInteger(1, value.getBytes());
+                    return new BigDecimal(bigInteger);
 
                 case Value.STRING:
                 case Value.STRING_FIXED:
@@ -1053,7 +1054,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     return null;
 
                 case Value.UUID:
-                    BigInteger bigInt = new BigInteger(value.getBytes());
+                    BigInteger bigInt = new BigInteger(1, value.getBytes());
                     return new BigDecimal(bigInt);
 
                 case Value.GEOMETRY:

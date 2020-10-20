@@ -75,23 +75,22 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
         runSql("DROP TABLE IF EXISTS dtypes");
 
         StringBuilder create = new StringBuilder("CREATE TABLE dtypes (ID INT PRIMARY KEY, col_index int, col_no_index int");
-        for (String type : TYPES) {
+        for (String type : TYPES)
             create.append(", col_").append(type).append(" ").append(type);
-        }
+
         create.append(")");
 
         runSql(create.toString());
 
         runSql("CREATE INDEX dtypes_col_index ON dtypes(col_index)");
-        for (String type : TYPES) {
+        for (String type : TYPES)
             runSql(String.format("CREATE INDEX dtypes_%s ON dtypes(col_%s)", type, type));
-        }
-        for (int i = 1; i < SMALL_SIZE; i++) {
+
+        for (int i = 1; i < SMALL_SIZE; i++)
             runSql(insert(i));
-        }
-        for (int i = 0; i > -SMALL_SIZE / 2; i--) {
+
+        for (int i = 0; i > -SMALL_SIZE / 2; i--)
             runSql(insertNulls(i));
-        }
 
         updateStatistics("dtypes");
     }
@@ -247,9 +246,13 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithIntConditions() {
-        doColumnTests("INT", "=", "1");
+        doColumnTests("INT", "<", "-10");
         doColumnTests("INT", "<", "10");
+        doColumnTests("INT", "<=", "2");
+        doColumnTests("INT", "=", "1");
         doColumnTests("INT", ">=", "100");
+        doColumnTests("INT", ">", "90");
+        doColumnTests("INT", ">", "190");
     }
 
     /**
@@ -257,9 +260,13 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithTinyintConditions() {
-        doColumnTests("TINYINT", "=", "1");
+        doColumnTests("TINYINT", "<", "-10");
         doColumnTests("TINYINT", "<", "10");
+        doColumnTests("TINYINT", "<=", "10");
+        doColumnTests("TINYINT", "=", "1");
         doColumnTests("TINYINT", ">=", "100");
+        doColumnTests("TINYINT", ">", "99");
+        doColumnTests("TINYINT", ">", "110");
     }
 
     /**
@@ -267,9 +274,13 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithSmallintConditions() {
-        doColumnTests("SMALLINT", "=", "1");
+        doColumnTests("SMALLINT", "<", "-10");
         doColumnTests("SMALLINT", "<", "10");
+        doColumnTests("SMALLINT", "<=", "10");
+        doColumnTests("SMALLINT", "=", "1");
         doColumnTests("SMALLINT", ">=", "100");
+        doColumnTests("SMALLINT", ">", "90");
+        doColumnTests("SMALLINT", ">", "190");
     }
 
     /**
@@ -277,9 +288,13 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithBigintConditions() {
-        doColumnTests("BIGINT", "=", "1");
+        doColumnTests("BIGINT", "<", "-10");
         doColumnTests("BIGINT", "<", "10");
+        doColumnTests("BIGINT", "<=", "10");
+        doColumnTests("BIGINT", "=", "1");
         doColumnTests("BIGINT", ">=", "100");
+        doColumnTests("BIGINT", ">", "99");
+        doColumnTests("BIGINT", ">", "199");
     }
 
     /**
@@ -287,9 +302,10 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithDecimalConditions() {
-        doColumnTests("DECIMAL", "=", "1");
         doColumnTests("DECIMAL", "<", "-10");
         doColumnTests("DECIMAL", "<", "0.2");
+        doColumnTests("DECIMAL", "<=", "0.1");
+        doColumnTests("DECIMAL", "=", "1");
         doColumnTests("DECIMAL", ">=", "0.8");
         doColumnTests("DECIMAL", ">=", "100");
     }
@@ -299,23 +315,26 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithDoubleConditions() {
-        doColumnTests("DECIMAL", "=", "1");
-        doColumnTests("DECIMAL", "<", "-10");
-        doColumnTests("DECIMAL", "<", "0.2");
-        doColumnTests("DECIMAL", ">=", "0.8");
-        doColumnTests("DECIMAL", ">=", "100");
+        doColumnTests("DOUBLE", "<", "-10");
+        doColumnTests("DOUBLE", "<", "0.2");
+        doColumnTests("DOUBLE", "<=", "0.2");
+        doColumnTests("DOUBLE", "=", "1");
+        doColumnTests("DOUBLE", ">=", "0.8");
+        doColumnTests("DOUBLE", ">", "0.9");
+        doColumnTests("DOUBLE", ">=", "100");
     }
 
     /**
      * Test that optimizer will use real column index.
      */
-    //@WithSystemProperty(key = IGNITE_INDEX_COST_FUNCTION, value = "COMPATIBLE_8_7_28")
     @Test
     public void compareSelectWithRealConditions() {
-        doColumnTests("REAL", "=", "1");
         doColumnTests("REAL", "<", "-10");
         doColumnTests("REAL", "<", "0.2");
+        doColumnTests("REAL", "<=", "0.22");
+        doColumnTests("REAL", "=", "1");
         doColumnTests("REAL", ">=", "0.8");
+        doColumnTests("REAL", ">", "0.9");
         doColumnTests("REAL", ">=", "100");
     }
 
@@ -324,9 +343,10 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithTimeConditions() {
-        doColumnTests("TIME", "=", "'12:00:00'");
         doColumnTests("TIME", "<", "'11:00:02'");
         doColumnTests("TIME", "<", "'12:00:02'");
+        doColumnTests("TIME", "<=", "'12:00:02'");
+        doColumnTests("TIME", "=", "'12:00:00'");
         doColumnTests("TIME", ">=", "'12:01:00'");
         doColumnTests("TIME", ">=", "'13:00:00'");
     }
@@ -336,10 +356,11 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithDateConditions() {
-        doColumnTests("DATE", "=", "'1970-01-02'");
         doColumnTests("DATE", "<", "'1969-01-03'");
         doColumnTests("DATE", "<", "'1970-01-03'");
-        doColumnTests("DATE", ">=", "'1970-02-03'");
+        doColumnTests("DATE", "<=", "'1970-01-02'");
+        doColumnTests("DATE", "=", "'1970-01-02'");
+        doColumnTests("DATE", ">=", "'1970-03-03'");
         doColumnTests("DATE", ">=", "'1970-09-03'");
     }
 
@@ -348,9 +369,10 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithTimestampConditions() {
-        doColumnTests("TIMESTAMP", "=", "'1970-01-01 12:00:59'");
         doColumnTests("TIMESTAMP", "<", "'1970-01-01 11:00:09'");
         doColumnTests("TIMESTAMP", "<", "'1970-01-01 12:00:09'");
+        doColumnTests("TIMESTAMP", "<=", "'1970-01-01 12:00:02'");
+        doColumnTests("TIMESTAMP", "=", "'1970-01-01 12:00:59'");
         doColumnTests("TIMESTAMP", ">=", "'1970-01-01 12:01:23'");
         doColumnTests("TIMESTAMP", ">=", "'1970-01-01 12:08:23'");
     }
@@ -360,7 +382,14 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithVarcharConditions() {
+        doColumnTests("VARCHAR", "<", "'a'");
+        doColumnTests("VARCHAR", "<", "'varchar2'");
+        doColumnTests("VARCHAR", "<", "'varchar1'");
         doColumnTests("VARCHAR", "=", "'test+string'");
+        doColumnTests("VARCHAR", ">=", "'varchar99'");
+        doColumnTests("VARCHAR", ">", "'varchar99'");
+        doColumnTests("VARCHAR", ">", "'varchar199'");
+        doColumnTests("VARCHAR", ">", "'varchar1'");
     }
 
     /**
@@ -368,9 +397,13 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithCharConditions() {
-        doColumnTests("CHAR", "=", "'A'");
+        doColumnTests("CHAR", "<", "'8'");
         doColumnTests("CHAR", "<", "'B'");
-        doColumnTests("CHAR", ">=", "'Z'");
+        doColumnTests("CHAR", "<=", "'C'");
+        doColumnTests("CHAR", "=", "'D'");
+        doColumnTests("CHAR", ">=", "'W'");
+        doColumnTests("CHAR", ">", "'Z'");
+        doColumnTests("CHAR", ">", "'z'");
     }
 
     /**
@@ -378,9 +411,12 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithUuidConditions() {
-        doColumnTests("UUID", "=", "'c1707d92-f1ad-11ea-adc1-0242ac120002'");
-        doColumnTests("UUID", "<", "'c1707d92-f1ad-11ea-adc1-0242ac120002'");
-        doColumnTests("UUID", ">=", "'c1707d92-f1ad-11ea-adc1-0242ac120002'");
+        doColumnTests("UUID", "<=", "'00000000-0000-0000-0000-000000000003'");
+        doColumnTests("UUID", "<=", "'00000000-0000-0000-0000-000000000001'");
+        doColumnTests("UUID", "=", "'00000000-0000-0000-0000-000000000002'");
+        doColumnTests("UUID", ">=", "'00000000-0000-0000-0000-000000000089'");
+        doColumnTests("UUID", ">=", "'00000000-0000-0000-0000-000000000099'");
+        doColumnTests("UUID", ">", "'c1707d92-f1ad-11ea-adc1-0242ac120002'");
     }
 
     /**
@@ -388,8 +424,11 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithBinaryConditions() {
-        doColumnTests("BINARY", "=", "1242452143213");
-        doColumnTests("BINARY", "<", "1242452143213");
+        doColumnTests("BINARY", "<", "12");
+        doColumnTests("BINARY", "<=", "13");
+        doColumnTests("BINARY", "=", "13");
+        doColumnTests("BINARY", ">=", "85");
+        doColumnTests("BINARY", ">", "95");
         doColumnTests("BINARY", ">=", "1242452143213");
     }
 }
