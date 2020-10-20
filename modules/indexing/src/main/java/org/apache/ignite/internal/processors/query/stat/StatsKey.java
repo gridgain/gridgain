@@ -38,6 +38,7 @@ public class StatsKey {
         return obj;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -46,10 +47,12 @@ public class StatsKey {
                 Objects.equals(obj, statsKey.obj);
     }
 
+    /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(schema, obj);
     }
 
+    /** {@inheritDoc} */
     @Override public String toString() {
         return "StatsKey{" +
                 "schema='" + schema + '\'' +

@@ -39,8 +39,7 @@ public enum StatsType {
      * @param ord Ordinal value.
      * @return Enumerated value or {@code null} if ordinal out of range.
      */
-    @Nullable
-    public static StatsType fromOrdinal(int ord) {
+    @Nullable public static StatsType fromOrdinal(int ord) {
         return ord >= 0 && ord < VALUES.length ? VALUES[ord] : null;
     }
 }

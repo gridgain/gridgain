@@ -25,6 +25,7 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.Collection;
 
+import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
 /**
@@ -43,12 +44,12 @@ public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAb
     public static Collection parameters() {
         return Arrays.asList(new Object[][] {
                 { REPLICATED },
-                // { PARTITIONED }, // TBD!!!
+                { PARTITIONED },
         });
     }
 
     @Override protected void beforeTestsStarted() throws Exception {
-        Ignite node = startGridsMultiThreaded(1); // TBD 1!!!!!
+        Ignite node = startGridsMultiThreaded(2);
 
         node.getOrCreateCache(DEFAULT_CACHE_NAME);
     }
@@ -87,19 +88,14 @@ public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAb
     }
 
     @Test
-    public void selectWithManyCond() {
-        String sql = "SELECT COUNT(*) FROM sized i1 USE INDEX (sized_small) where big like '3%' and small like '3%'";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SIZED_SMALL"}, sql, new String[1][]);
-    }
-
-    @Test
     public void selectNullCond() {
         String sql = "select count(*) from sized i1 where small is null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SIZED_SMALL"}, sql, new String[1][]);
     }
 
+    // TODO create Ignite mirror ticket and set it here
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-31183")
     @Test
-    @Ignore
     public void selectNotNullCond() {
         String sql = "select count(*) from sized i1 where small is not null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SIZED_SMALL"}, sql, new String[1][]);
@@ -120,7 +116,8 @@ public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAb
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SIZED_SMALL_NULLS"}, sql2, new String[1][]);
     }
 
-    @Ignore
+    // TODO create Ignite mirror ticket and set it here
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-31184")
     @Test
     public void selectWithValueSizeCond() {
         String sql = "select * from sized i1 where big = '1' and small = '1'";

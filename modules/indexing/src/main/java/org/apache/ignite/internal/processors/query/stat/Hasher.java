@@ -22,18 +22,25 @@ import java.nio.ByteOrder;
  * Implement Murmur8_128 hash function for byte arrays.
  */
 public class Hasher {
+    /** */
     private static final int SEED = 123456;
 
+    /** */
     private static final int CHUNK_SIZE = 16;
 
+    /** */
     private static final long C1 = 0x87c37b91114253d5L;
 
+    /** */
     private static final long C2 = 0x4cf5ad432745937fL;
 
+    /** */
     private long h1;
 
+    /** */
     private long h2;
 
+    /** */
     private int length;
 
     /**
@@ -69,6 +76,12 @@ public class Hasher {
         return makeHash();
     }
 
+    /**
+     * Mix two long numbers.
+     *
+     * @param k1 the first number.
+     * @param k2 the second number.
+     */
     private void bmix64(long k1, long k2) {
         h1 ^= mixK1(k1);
 
@@ -83,6 +96,11 @@ public class Hasher {
         h2 = h2 * 5 + 0x38495ab5;
     }
 
+    /**
+     * Process byte buffer to calculate hash by.
+     *
+     * @param bb buffer to process.
+     */
     private void process(ByteBuffer bb) {
         long k1 = bb.getLong();
         long k2 = bb.getLong();
@@ -90,10 +108,21 @@ public class Hasher {
         length += CHUNK_SIZE;
     }
 
+    /**
+     * Get int.
+     *
+     * @param val byte value
+     * @return int value
+     */
     private static int toInt(byte val) {
         return val & 0xFF;
     }
 
+    /**
+     * Process remaining bytes from byte buffer.
+     *
+     * @param bb byte buffer to finish processing.
+     */
     private void processRemaining(ByteBuffer bb) {
         long k1 = 0;
         long k2 = 0;
@@ -138,6 +167,11 @@ public class Hasher {
         h2 ^= mixK2(k2);
     }
 
+    /**
+     * Make hash from internal state.
+     *
+     * @return long hash value.
+     */
     private long makeHash() {
         h1 ^= length;
         h2 ^= length;
@@ -154,6 +188,12 @@ public class Hasher {
         return h1;
     }
 
+    /**
+     * Mix long value to prepare internal state for hash generation.
+     *
+     * @param k long value.
+     * @return hashed one.
+     */
     private static long fmix64(long k) {
         k ^= k >>> 33;
         k *= 0xff51afd7ed558ccdL;
@@ -163,6 +203,12 @@ public class Hasher {
         return k;
     }
 
+    /**
+     * Mix value to update internal state h1.
+     *
+     * @param k1 value to mix.
+     * @return new h1 value.
+     */
     private static long mixK1(long k1) {
         k1 *= C1;
         k1 = Long.rotateLeft(k1, 31);
@@ -170,6 +216,12 @@ public class Hasher {
         return k1;
     }
 
+    /**
+     * Mix value to update internal state h2.
+     *
+     * @param k2 value to mix.
+     * @return new h2 value.
+     */
     private static long mixK2(long k2) {
         k2 *= C2;
         k2 = Long.rotateLeft(k2, 33);
