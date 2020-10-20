@@ -85,7 +85,7 @@ namespace ignite
                 return &columnsMeta;
             }
 
-            SqlResult::Type ForeignKeysQuery::FetchNextRow(app::ColumnBindingMap & columnBindings)
+            SqlResult::Type ForeignKeysQuery::FetchNextRow(app::ColumnBindingMap&)
             {
                 if (!executed)
                 {
@@ -97,7 +97,7 @@ namespace ignite
                 return SqlResult::AI_NO_DATA;
             }
 
-            SqlResult::Type ForeignKeysQuery::GetColumn(uint16_t columnIdx, app::ApplicationDataBuffer& buffer)
+            SqlResult::Type ForeignKeysQuery::GetColumn(uint16_t, app::ApplicationDataBuffer&)
             {
                 if (!executed)
                 {

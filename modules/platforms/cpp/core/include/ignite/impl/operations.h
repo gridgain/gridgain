@@ -81,7 +81,7 @@ namespace ignite
             /** Value. */
             const T& val;
 
-            IGNITE_NO_COPY_ASSIGNMENT(In1Operation)
+            IGNITE_NO_COPY_ASSIGNMENT(In1Operation);
         };
 
         /**
@@ -114,7 +114,7 @@ namespace ignite
             /** Second value. */
             const T2& val2;
 
-            IGNITE_NO_COPY_ASSIGNMENT(In2Operation)
+            IGNITE_NO_COPY_ASSIGNMENT(In2Operation);
         };
 
         /**
@@ -152,7 +152,7 @@ namespace ignite
             /** Third value. */
             const T3& val3;
 
-            IGNITE_NO_COPY_ASSIGNMENT(In3Operation)
+            IGNITE_NO_COPY_ASSIGNMENT(In3Operation);
         };
 
         /**
@@ -183,7 +183,7 @@ namespace ignite
             /** Value. */
             const std::set<T>& val;
 
-            IGNITE_NO_COPY_ASSIGNMENT(InSetOperation)
+            IGNITE_NO_COPY_ASSIGNMENT(InSetOperation);
         };
 
         /**
@@ -216,7 +216,7 @@ namespace ignite
             /** Value. */
             const std::map<K, V>& val;
 
-            IGNITE_NO_COPY_ASSIGNMENT(InMapOperation)
+            IGNITE_NO_COPY_ASSIGNMENT(InMapOperation);
         };
 
         /**
@@ -249,7 +249,7 @@ namespace ignite
             /** Peek modes. */
             int32_t peekModes;
 
-            IGNITE_NO_COPY_ASSIGNMENT(InCacheLocalPeekOperation)
+            IGNITE_NO_COPY_ASSIGNMENT(InCacheLocalPeekOperation);
         };
 
         /**
@@ -283,7 +283,7 @@ namespace ignite
             /** Second value. */
             const T2& val2;
 
-            IGNITE_NO_COPY_ASSIGNMENT(InCacheInvokeOperation)
+            IGNITE_NO_COPY_ASSIGNMENT(InCacheInvokeOperation);
         };
 
         /**
@@ -327,7 +327,7 @@ namespace ignite
             /** Sequence end. */
             Iter end;
 
-            IGNITE_NO_COPY_ASSIGNMENT(InIterOperation)
+            IGNITE_NO_COPY_ASSIGNMENT(InIterOperation);
         };
 
         /**
@@ -389,7 +389,7 @@ namespace ignite
             /** Value. */
             T& val;
 
-            IGNITE_NO_COPY_ASSIGNMENT(Out1Operation)
+            IGNITE_NO_COPY_ASSIGNMENT(Out1Operation);
         };
 
         /**
@@ -431,7 +431,7 @@ namespace ignite
             /** Value 2. */
             T2& val2;
 
-            IGNITE_NO_COPY_ASSIGNMENT(Out2Operation)
+            IGNITE_NO_COPY_ASSIGNMENT(Out2Operation);
         };
 
         /**
@@ -487,7 +487,7 @@ namespace ignite
             /** Value 4. */
             T4& val4;
 
-            IGNITE_NO_COPY_ASSIGNMENT(Out4Operation)
+            IGNITE_NO_COPY_ASSIGNMENT(Out4Operation);
         };
 
         /**
@@ -538,7 +538,7 @@ namespace ignite
             /** Value. */
             std::map<T1, T2>& val;
 
-            IGNITE_NO_COPY_ASSIGNMENT(OutMapOperation)
+            IGNITE_NO_COPY_ASSIGNMENT(OutMapOperation);
         };
 
         /**
@@ -580,7 +580,7 @@ namespace ignite
             /** Entries. */
             std::vector<ignite::cache::CacheEntry<K, V> >& res;
 
-            IGNITE_NO_COPY_ASSIGNMENT(OutQueryGetAllOperation)
+            IGNITE_NO_COPY_ASSIGNMENT(OutQueryGetAllOperation);
         };
 
         /**
@@ -621,7 +621,7 @@ namespace ignite
             /** Out iter. */
             Iter iter;
 
-            IGNITE_NO_COPY_ASSIGNMENT(OutQueryGetAllOperationIter)
+            IGNITE_NO_COPY_ASSIGNMENT(OutQueryGetAllOperationIter);
         };
 
         /**
@@ -665,7 +665,7 @@ namespace ignite
             /** Out iter. */
             Iter iter;
 
-            IGNITE_NO_COPY_ASSIGNMENT(OutMapIterOperation)
+            IGNITE_NO_COPY_ASSIGNMENT(OutMapIterOperation);
         };
     }
 }
