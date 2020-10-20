@@ -468,7 +468,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
         long absPtr = seg.acquirePage(pageIdx);
 
-        statHolder.trackLogicalRead(absPtr + PAGE_OVERHEAD);
+//        statHolder.trackLogicalRead(absPtr + PAGE_OVERHEAD);
 
         return absPtr;
     }
