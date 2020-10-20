@@ -474,8 +474,7 @@ namespace ignite
             // No-op.
         }
 
-        void QueryFetchResponse::ReadOnSuccess(impl::binary::BinaryReaderImpl& reader,
-            const ProtocolVersion& ver)
+        void QueryFetchResponse::ReadOnSuccess(impl::binary::BinaryReaderImpl& reader, const ProtocolVersion&)
         {
             queryId = reader.ReadInt64();
 
