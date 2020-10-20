@@ -16,20 +16,18 @@
 
 package org.apache.ignite.internal.processors.nodevalidation;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,18 +39,21 @@ import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeR
  */
 public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter implements DiscoveryNodeValidationProcessor {
     /** Default value for rolling upgrade status. */
-    private static final RollingUpgradeStatus DEFAULT_ROLLING_UPGRADE_STATUS = new IgniteRollingUpgradeStatus(
-        false,
-        false,
-        IgniteProductVersion.fromString(IgniteVersionUtils.VER_STR),
-        null,
-        new HashSet<>(Arrays.asList(IgniteFeatures.values())));
+    private final RollingUpgradeStatus dfltRollingUpgradeStatus;
 
     /**
      * @param ctx Kernal context.
      */
     public OsDiscoveryNodeValidationProcessor(GridKernalContext ctx) {
         super(ctx);
+
+        dfltRollingUpgradeStatus = new IgniteRollingUpgradeStatus(
+            false,
+            false,
+            IgniteProductVersion.fromString(IgniteVersionUtils.VER_STR),
+            null,
+            IgniteFeatures.allFeatures(ctx)
+        );
     }
 
     /** {@inheritDoc} */
@@ -114,6 +115,6 @@ public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter imp
 
     /** {@inheritDoc} */
     @Override public RollingUpgradeStatus getStatus() {
-        return DEFAULT_ROLLING_UPGRADE_STATUS;
+        return dfltRollingUpgradeStatus;
     }
 }
