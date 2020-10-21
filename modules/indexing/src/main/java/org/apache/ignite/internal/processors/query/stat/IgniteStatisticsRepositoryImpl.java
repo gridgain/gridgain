@@ -60,13 +60,9 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             partsStats = null;
             localStats = null;
         } else {
-            if (GridCacheUtils.isPersistenceEnabled(ctx.config())) {
-                // Persistence store
-                partsStats = null;
-            } else {
-                // Cache partitions statistics, no store
-                partsStats = new ConcurrentHashMap<>();
-            }
+            // Persistence store
+            partsStats = GridCacheUtils.isPersistenceEnabled(ctx.config()) ? null : new ConcurrentHashMap<>();
+
             localStats = new ConcurrentHashMap<>();
         }
         log = ctx.log(IgniteStatisticsRepositoryImpl.class);
