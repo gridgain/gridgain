@@ -785,42 +785,13 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                 topVer = tx.topologyVersionSnapshot();
 
             if (topVer != null) {
-                AffinityTopologyVersion lastChangeVer =
-                    cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
-
-                IgniteInternalFuture<AffinityTopologyVersion> affFut =
-                    cctx.shared().exchange().affinityReadyFuture(lastChangeVer);
-
-                if (!affFut.isDone()) {
-                    try {
-                        affFut.get();
-                    }
-                    catch (IgniteCheckedException e) {
-                        onDone(err);
-
-                        return;
-                    }
-                }
-
-                GridDhtPartitionsExchangeFuture lastFut = cctx.shared().exchange().lastTopologyFuture();
-
-                if (!lastFut.isDone()) {
-                    try {
-                        lastFut.get();
-                    }
-                    catch (IgniteCheckedException e) {
-                        onDone(err);
-
-                        return;
-                    }
-                }
-
-                AffinityTopologyVersion lastTopVer = lastFut.topologyVersion();
+                GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
 
                 AffinityTopologyVersion latestChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion();
 
-                if (lastTopVer.equals(latestChangeVer)) {
-                    Throwable err = lastFut.validateCache(cctx, recovery, read, null, keys);
+                if (lastFinishedFut != null &&
+                        (latestChangeVer == null || lastFinishedFut.topologyVersion().compareTo(latestChangeVer) >= 0)) {
+                    Throwable err = lastFinishedFut.validateCache(cctx, recovery, read, null, keys);
 
                     if (err != null) {
                         onDone(err);
@@ -828,20 +799,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                         return;
                     }
                 }
-
-//                for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
-//                    if (fut.exchangeDone() && fut.topologyVersion().equals(lastChangeVer)) {
-//                        Throwable err = fut.validateCache(cctx, recovery, read, null, keys);
-//
-//                        if (err != null) {
-//                            onDone(err);
-//
-//                            return;
-//                        }
-//
-//                        break;
-//                    }
-//                }
 
                 // Continue mapping on the same topology version as it was before.
                 synchronized (this) {
