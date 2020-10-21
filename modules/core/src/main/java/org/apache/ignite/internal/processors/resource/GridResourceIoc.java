@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
-import org.apache.ignite.internal.resources.MetricManagerResource;
 import org.apache.ignite.internal.util.GridLeanIdentitySet;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
@@ -131,7 +130,7 @@ public class GridResourceIoc {
                 break;
 
             if (dep != null) {
-                Set<Class<?>> classes = F.addIfAbsent(taskMap, dep.classLoader(), F.<Class<?>>newCSet());
+                Set<Class<?>> classes = F.addIfAbsent(taskMap, dep.classLoader(), F.newCSet());
 
                 classes.add(cls);
 
@@ -264,7 +263,7 @@ public class GridResourceIoc {
 
             boolean allowImplicitInjection = !GridNoImplicitInjection.class.isAssignableFrom(cls);
 
-            for (Class cls0 = cls; !cls0.equals(Object.class); cls0 = cls0.getSuperclass()) {
+            for (Class<?> cls0 = cls; !cls0.equals(Object.class); cls0 = cls0.getSuperclass()) {
                 for (Field field : cls0.getDeclaredFields()) {
                     Annotation[] fieldAnns = field.getAnnotations();
 
@@ -272,9 +271,7 @@ public class GridResourceIoc {
                         T2<List<GridResourceField>, List<GridResourceMethod>> t2 = annMap.get(ann.annotationType());
 
                         if (t2 == null) {
-                            t2 = new T2<List<GridResourceField>, List<GridResourceMethod>>(
-                                new ArrayList<GridResourceField>(),
-                                new ArrayList<GridResourceMethod>());
+                            t2 = new T2<>(new ArrayList<>(), new ArrayList<>());
 
                             annMap.put(ann.annotationType(), t2);
                         }
@@ -297,9 +294,7 @@ public class GridResourceIoc {
                         T2<List<GridResourceField>, List<GridResourceMethod>> t2 = annMap.get(ann.annotationType());
 
                         if (t2 == null) {
-                            t2 = new T2<List<GridResourceField>, List<GridResourceMethod>>(
-                                new ArrayList<GridResourceField>(),
-                                new ArrayList<GridResourceMethod>());
+                            t2 = new T2<>(new ArrayList<>(), new ArrayList<>());
 
                             annMap.put(ann.annotationType(), t2);
                         }
@@ -510,10 +505,7 @@ public class GridResourceIoc {
         JOB_CONTEXT(JobContextResource.class),
 
         /** */
-        CACHE_STORE_SESSION(CacheStoreSessionResource.class),
-
-        /** */
-        METRIC_MANAGER(MetricManagerResource.class);
+        CACHE_STORE_SESSION(CacheStoreSessionResource.class);
 
         /** */
         public final Class<? extends Annotation> clazz;
@@ -536,8 +528,7 @@ public class GridResourceIoc {
             ResourceAnnotation.SPRING,
             ResourceAnnotation.IGNITE_INSTANCE,
             ResourceAnnotation.LOGGER,
-            ResourceAnnotation.SERVICE,
-            ResourceAnnotation.METRIC_MANAGER
+            ResourceAnnotation.SERVICE
         ),
 
         /** */

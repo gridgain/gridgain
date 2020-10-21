@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,6 +70,7 @@ import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteCountDownLatch;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteEncryption;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLock;
@@ -105,6 +106,7 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
+import org.apache.ignite.internal.maintenance.MaintenanceProcessor;
 import org.apache.ignite.internal.managers.GridManager;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManager;
@@ -118,6 +120,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.managers.tracing.GridTracingManager;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.GridProcessor;
@@ -222,6 +225,7 @@ import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.spi.IgniteSpi;
 import org.apache.ignite.spi.IgniteSpiVersionCheckException;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.discovery.isolated.IsolatedDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
@@ -553,14 +557,24 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /** {@inheritDoc} */
     @Override public boolean isNodeInBaseline() {
-        ClusterNode locNode = localNode();
+        ctx.gateway().readLockAnyway();
 
-        if (locNode.isClient() || locNode.isDaemon())
-            return false;
+        try {
+            if (ctx.gateway().getState() != STARTED)
+                return false;
 
-        DiscoveryDataClusterState clusterState = ctx.state().clusterState();
+            ClusterNode locNode = localNode();
 
-        return clusterState.hasBaselineTopology() && CU.baselineNode(locNode, clusterState);
+            if (locNode.isClient() || locNode.isDaemon())
+                return false;
+
+            DiscoveryDataClusterState clusterState = ctx.state().clusterState();
+
+            return clusterState.hasBaselineTopology() && CU.baselineNode(locNode, clusterState);
+        }
+        finally {
+            ctx.gateway().readUnlock();
+        }
     }
 
     /** {@inheritDoc} */
@@ -1121,6 +1135,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startManager(new GridTracingManager(ctx, true));
             }
             startManager(new GridMetricManager(ctx));
+            startManager(new GridSystemViewManager(ctx));
             startManager(new GridIoManager(ctx));
             startManager(new GridCheckpointManager(ctx));
 
@@ -1130,21 +1145,37 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             startManager(new GridFailoverManager(ctx));
             startManager(new GridCollisionManager(ctx));
             startManager(new GridIndexingManager(ctx));
-            startManager(new GridEncryptionManager(ctx));
 
             ackSecurity();
 
             // Assign discovery manager to context before other processors start so they
             // are able to register custom event listener.
-            final GridManager discoMgr = new GridDiscoveryManager(ctx);
+            GridManager discoMgr = new GridDiscoveryManager(ctx);
 
             ctx.add(discoMgr, false);
+
+            // Start the encryption manager after assigning the discovery manager to context, so it will be
+            // able to register custom event listener.
+            startManager(new GridEncryptionManager(ctx));
+
+            startProcessor(new PdsConsistentIdProcessor(ctx));
+
+            MaintenanceProcessor mntcProcessor = new MaintenanceProcessor(ctx);
+
+            startProcessor(mntcProcessor);
+
+            if (mntcProcessor.isMaintenanceMode()) {
+                ctx.config().setDiscoverySpi(new IsolatedDiscoverySpi());
+
+                discoMgr = new GridDiscoveryManager(ctx);
+
+                ctx.add(discoMgr, false);
+            }
 
             // Start processors before discovery manager, so they will
             // be able to start receiving messages once discovery completes.
             try {
                 startProcessor(COMPRESSION.createOptional(ctx));
-                startProcessor(new PdsConsistentIdProcessor(ctx));
                 startProcessor(new MvccProcessorImpl(ctx));
                 startProcessor(createComponent(DiscoveryNodeValidationProcessor.class, ctx));
                 startProcessor(new GridAffinityProcessor(ctx));
@@ -1197,6 +1228,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 if (ctx.config().getPlatformConfiguration() != null)
                     startProcessor(new PlatformPluginProcessor(ctx));
 
+                mBeansMgr.registerMBeansDuringInitPhase();
+
                 ctx.cluster().initDiagnosticListeners();
 
                 fillNodeAttributes(clusterProc.updateNotifierEnabled());
@@ -1223,6 +1256,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 throw e;
             }
+
+            // All components exept Discovery are started, time to check if maintenance is still needed
+            mntcProcessor.prepareAndExecuteMaintenance();
 
             gw.writeLock();
 
@@ -1327,10 +1363,14 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 p2pExecSvc, mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc,
                 callbackExecSvc, qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs);
 
+            registerMetrics();
+
             // Register MBeans.
-            mBeansMgr.registerAllMBeans(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc, p2pExecSvc,
+            mBeansMgr.registerMBeansAfterNodeStarted(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc, p2pExecSvc,
                 mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc, callbackExecSvc,
                 qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs, ctx.workersRegistry());
+
+            ctx.systemView().registerThreadPools(stripedExecSvc, dataStreamExecSvc);
 
             // Lifecycle bean notifications.
             notifyLifecycleBeans(AFTER_NODE_START);
@@ -1495,7 +1535,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         else if (execSvc instanceof StripedExecutor) {
             StripedExecutor exec = (StripedExecutor) execSvc;
 
-            poolSize = exec.stripes();
+            poolSize = exec.stripesCount();
             poolActiveThreads = exec.activeStripesCount();
             poolQSize = exec.queueSize();
         }
@@ -2800,7 +2840,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     *
+     * Acknowledge the Ignite configuration related to the data storage.
      */
     private void ackMemoryConfiguration() {
         DataStorageConfiguration memCfg = cfg.getDataStorageConfiguration();
@@ -2814,7 +2854,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     *
+     * Acknowledge all caches configurations presented in the IgniteConfiguration.
      */
     private void ackCacheConfiguration() {
         CacheConfiguration[] cacheCfgs = cfg.getCacheConfiguration();
@@ -2858,7 +2898,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     *
+     * Acknowledge configuration related to the peer class loading.
      */
     private void ackP2pConfiguration() {
         assert cfg != null;
@@ -2931,7 +2971,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * @param cfg Grid configuration.
+     * @param cfg Ignite configuration to use.
      * @return Components provided in configuration which can implement {@link LifecycleAware} interface.
      */
     private Iterable<Object> lifecycleAwares(IgniteConfiguration cfg) {
@@ -3074,7 +3114,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /**
      * @param name Cache name.
-     * @return Cache.
+     * @return Ignite internal cache instance related to the given name.
      */
     public <K, V> IgniteInternalCache<K, V> getCache(String name) {
         CU.validateCacheName(name);
@@ -3415,7 +3455,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * @param cache Cache.
+     * @param cache Ignite cache instance to check.
      * @throws IgniteCheckedException If cache without near cache was already started.
      */
     private void checkNearCacheStarted(IgniteCacheProxy<?, ?> cache) throws IgniteCheckedException {
@@ -3481,7 +3521,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /**
      * @param cacheNames Collection of cache names.
      * @param checkThreadTx If {@code true} checks that current thread does not have active transactions.
-     * @return Ignite future.
+     * @return Ignite future which will be completed when cache is destored.
      */
     public IgniteInternalFuture<?> destroyCachesAsync(Collection<String> cacheNames, boolean checkThreadTx) {
         CU.validateCacheNames(cacheNames);
@@ -3572,7 +3612,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * @return Public caches.
+     * @return Collection of public cache instances.
      */
     public Collection<IgniteCacheProxy<?, ?>> caches() {
         guard();
@@ -3808,6 +3848,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteEncryption encryption() {
+        return ctx.encryption();
+    }
+
+    /** {@inheritDoc} */
     @Override public Collection<MemoryMetrics> memoryMetrics() {
         return DataRegionMetricsAdapter.collectionOf(dataRegionMetrics());
     }
@@ -4023,7 +4068,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * <tt>ctx.gateway().readLock()</tt>
+     * The {@code ctx.gateway().readLock()} is used underneath.
      */
     private void guard() {
         assert ctx != null;
@@ -4032,7 +4077,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * <tt>ctx.gateway().readUnlock()</tt>
+     * The {@code ctx.gateway().readUnlock()} is used underneath.
      */
     private void unguard() {
         assert ctx != null;
@@ -4043,7 +4088,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /**
      * Validate operation on cluster. Check current cluster state.
      *
-     * @throws IgniteException if cluster in inActive state
+     * @throws IgniteException If cluster in inActive state.
      */
     private void checkClusterState() throws IgniteException {
         if (!ctx.state().publicApiActiveState(true)) {
@@ -4054,7 +4099,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     *
+     * Method is responsible for handling the {@link EventType#EVT_CLIENT_NODE_DISCONNECTED} event. Notify all the
+     * GridComponents that the such even has been occurred (e.g. if the local client node disconnected from the cluster
+     * components will be notified with a future which will be completed when the client is reconnected).
      */
     public void onDisconnected() {
         Throwable err = null;
@@ -4371,6 +4418,96 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      */
     public IgniteInternalFuture sendIoTest(List<ClusterNode> nodes, byte[] payload, boolean procFromNioThread) {
         return ctx.io().sendIoTest(nodes, payload, procFromNioThread);
+    }
+
+    /**
+     * Registers metrics.
+     */
+    private void registerMetrics() {
+        if (!ctx.metric().enabled())
+            return;
+
+        MetricRegistry reg = ctx.metric().registry(GridMetricManager.IGNITE_METRICS);
+
+        reg.register("fullVersion", this::getFullVersion, String.class, FULL_VER_DESC);
+        reg.register("copyright", this::getCopyright, String.class, COPYRIGHT_DESC);
+
+        reg.register("startTimestampFormatted", this::getStartTimestampFormatted, String.class,
+            START_TIMESTAMP_FORMATTED_DESC);
+
+        reg.register("isRebalanceEnabled", this::isRebalanceEnabled, IS_REBALANCE_ENABLED_DESC);
+        reg.register("uptimeFormatted", this::getUpTimeFormatted, String.class, UPTIME_FORMATTED_DESC);
+        reg.register("startTimestamp", this::getStartTimestamp, START_TIMESTAMP_DESC);
+        reg.register("uptime", this::getUpTime, UPTIME_DESC);
+        reg.register("osInformation", this::getOsInformation, String.class, OS_INFO_DESC);
+        reg.register("jdkInformation", this::getJdkInformation, String.class, JDK_INFO_DESC);
+        reg.register("osUser", this::getOsUser, String.class, OS_USER_DESC);
+        reg.register("vmName", this::getVmName, String.class, VM_NAME_DESC);
+        reg.register("instanceName", this::getInstanceName, String.class, INSTANCE_NAME_DESC);
+
+        reg.register("currentCoordinatorFormatted", this::getCurrentCoordinatorFormatted, String.class,
+            CUR_COORDINATOR_FORMATTED_DESC);
+
+        reg.register("isNodeInBaseline", this::isNodeInBaseline, IS_NODE_BASELINE_DESC);
+        reg.register("longJVMPausesCount", this::getLongJVMPausesCount, LONG_JVM_PAUSES_CNT_DESC);
+
+        reg.register("longJVMPausesTotalDuration", this::getLongJVMPausesTotalDuration,
+            LONG_JVM_PAUSES_TOTAL_DURATION_DESC);
+
+        reg.register("longJVMPauseLastEvents", this::getLongJVMPauseLastEvents, Map.class,
+            LONG_JVM_PAUSE_LAST_EVENTS_DESC);
+
+        reg.register("active", () -> ctx.state().clusterState().active()/*this::active*/, Boolean.class,
+            ACTIVE_DESC);
+
+        reg.register("clusterState", this::clusterState, String.class, CLUSTER_STATE_DESC);
+        reg.register("lastClusterStateChangeTime", this::lastClusterStateChangeTime, LAST_CLUSTER_STATE_CHANGE_TIME_DESC);
+
+        reg.register("userAttributesFormatted", this::getUserAttributesFormatted, List.class,
+            USER_ATTRS_FORMATTED_DESC);
+
+        reg.register("gridLoggerFormatted", this::getGridLoggerFormatted, String.class,
+            GRID_LOG_FORMATTED_DESC);
+
+        reg.register("executorServiceFormatted", this::getExecutorServiceFormatted, String.class,
+            EXECUTOR_SRVC_FORMATTED_DESC);
+
+        reg.register("igniteHome", this::getIgniteHome, String.class, IGNITE_HOME_DESC);
+
+        reg.register("mBeanServerFormatted", this::getMBeanServerFormatted, String.class,
+            MBEAN_SERVER_FORMATTED_DESC);
+
+        reg.register("localNodeId", this::getLocalNodeId, UUID.class, LOC_NODE_ID_DESC);
+
+        reg.register("isPeerClassLoadingEnabled", this::isPeerClassLoadingEnabled, Boolean.class,
+            IS_PEER_CLS_LOADING_ENABLED_DESC);
+
+        reg.register("lifecycleBeansFormatted", this::getLifecycleBeansFormatted, List.class,
+            LIFECYCLE_BEANS_FORMATTED_DESC);
+
+        reg.register("discoverySpiFormatted", this::getDiscoverySpiFormatted, String.class,
+            DISCOVERY_SPI_FORMATTED_DESC);
+
+        reg.register("communicationSpiFormatted", this::getCommunicationSpiFormatted, String.class,
+            COMMUNICATION_SPI_FORMATTED_DESC);
+
+        reg.register("deploymentSpiFormatted", this::getDeploymentSpiFormatted, String.class,
+            DEPLOYMENT_SPI_FORMATTED_DESC);
+
+        reg.register("checkpointSpiFormatted", this::getCheckpointSpiFormatted, String.class,
+            CHECKPOINT_SPI_FORMATTED_DESC);
+
+        reg.register("collisionSpiFormatted", this::getCollisionSpiFormatted, String.class,
+            COLLISION_SPI_FORMATTED_DESC);
+
+        reg.register("eventStorageSpiFormatted", this::getEventStorageSpiFormatted, String.class,
+            EVT_STORAGE_SPI_FORMATTED_DESC);
+
+        reg.register("failoverSpiFormatted", this::getFailoverSpiFormatted, String.class,
+            FAILOVER_SPI_FORMATTED_DESC);
+
+        reg.register("loadBalancingSpiFormatted", this::getLoadBalancingSpiFormatted, String.class,
+            LOAD_BALANCING_SPI_FORMATTED_DESC);
     }
 
     /**

@@ -23,6 +23,7 @@ import java.io.ObjectOutput;
 import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.UUID;
+import org.apache.ignite.internal.util.distributed.DistributedProcess;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
@@ -153,7 +154,10 @@ public enum GridTopic {
     TOPIC_TXDR,
 
     /** */
-    TOPIC_COMM_SYSTEM;
+    TOPIC_COMM_SYSTEM,
+
+    /** Message topic for the distributed process. See {@link DistributedProcess}. */
+    TOPIC_DISTRIBUTED_PROCESS;
 
     /** Enum values. */
     private static final GridTopic[] VALS = values();

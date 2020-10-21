@@ -26,9 +26,9 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
-import org.h2.value.ValueArray;
-import org.h2.value.ValueCollectionBase;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueArray;
+import org.gridgain.internal.h2.value.ValueCollectionBase;
 
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory.fillArray;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory.toMessage;

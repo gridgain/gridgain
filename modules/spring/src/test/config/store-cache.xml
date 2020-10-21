@@ -21,7 +21,7 @@
         http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-    <bean id="simpleDataSource" class="org.h2.jdbcx.JdbcDataSource"/>
+    <bean id="simpleDataSource" class="org.gridgain.internal.h2.jdbcx.JdbcDataSource"/>
 
     <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
         <property name="localHost" value="127.0.0.1"/>

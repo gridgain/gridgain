@@ -39,8 +39,8 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.h2.engine.Session;
-import org.h2.util.CloseWatcher;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.util.CloseWatcher;
 
 import static org.apache.ignite.internal.util.IgniteUtils.awaitQuiet;
 
@@ -184,7 +184,9 @@ public class AbstractIndexingCommonTest extends GridCommonAbstractTest {
          * @param cacheName Cache name.
          */
         public void stopBlock(String cacheName) {
-            latches.computeIfAbsent(cacheName, l -> new CountDownLatch(1)).countDown();
+            CountDownLatch latch = latches.computeIfAbsent(cacheName, l -> new CountDownLatch(1));
+
+            latch.countDown();
         }
     }
 }

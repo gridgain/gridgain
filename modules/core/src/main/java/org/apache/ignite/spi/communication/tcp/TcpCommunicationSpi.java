@@ -40,6 +40,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
@@ -348,6 +349,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     public static final String RECEIVED_MESSAGES_BY_NODE_CONSISTENT_ID_METRIC_DESC =
         "Total number of messages received by current node from the given node";
 
+    /** Client nodes might have port {@code 0} if they have no server socket opened. */
+    public static final Integer DISABLED_CLIENT_PORT = 0;
+
     /** Connect gate. */
     private final ConnectGateway connectGate = new ConnectGateway();
 
@@ -416,21 +420,37 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} */
     @Override public int getSentMessagesCount() {
+        // Listener could be not initialized yet, but discovery thread could try to aggregate metrics.
+        if (metricsLsnr == null)
+            return 0;
+
         return metricsLsnr.sentMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getSentBytesCount() {
+        // Listener could be not initialized yet, but discovery thread clould try to aggregate metrics.
+        if (metricsLsnr == null)
+            return 0;
+
         return metricsLsnr.sentBytesCount();
     }
 
     /** {@inheritDoc} */
     @Override public int getReceivedMessagesCount() {
+        // Listener could be not initialized yet, but discovery thread could try to aggregate metrics.
+        if (metricsLsnr == null)
+            return 0;
+
         return metricsLsnr.receivedMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getReceivedBytesCount() {
+        // Listener could be not initialized yet, but discovery thread could try to aggregate metrics.
+        if (metricsLsnr == null)
+            return 0;
+
         return metricsLsnr.receivedBytesCount();
     }
 
@@ -633,6 +653,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         final Supplier<Ignite> igniteExSupplier = this::ignite;
         final Function<UUID, Boolean> pingNode = (nodeId) -> getSpiContext().pingNode(nodeId);
         final Supplier<FailureProcessor> failureProcessorSupplier = () -> ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().failure() : null;
+        final Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier = () -> metricsLsnr;
         final Supplier<Boolean> isStopped = () -> getSpiContext().isStopping();
 
         cfg.failureDetectionTimeout(ignite.configuration().getFailureDetectionTimeout());
@@ -681,7 +702,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             connectGate,
             failureProcessorSupplier,
             attributeNames,
-            metricsLsnr,
+            metricLsnrSupplier,
             nioSrvWrapper,
             ctxInitLatch,
             client,
@@ -726,7 +747,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             cfg,
             attributeNames,
             log,
-            metricsLsnr,
+            metricLsnrSupplier,
             locNodeSupplier,
             nodeGetter,
             null,
@@ -742,7 +763,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
         nioSrvWrapper.clientPool(clientPool);
 
-        discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricsLsnr);
+        discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricLsnrSupplier);
 
         try {
             shmemSrv = resetShmemServer();
@@ -758,6 +779,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         }
         catch (IgniteCheckedException e) {
             throw new IgniteSpiException("Failed to initialize TCP server: " + cfg.localHost(), e);
+        }
+
+        boolean forceClientToSrvConnections = forceClientToServerConnections() || cfg.localPort() == -1;
+
+        if (cfg.usePairedConnections() && forceClientToSrvConnections) {
+            throw new IgniteSpiException("Node using paired connections " +
+                "is not allowed to start in forced client to server connections mode.");
         }
 
         assert cfg.localHost() != null;
@@ -808,7 +836,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 "potential OOMEs when running cache operations in FULL_ASYNC or PRIMARY_SYNC modes " +
                 "due to message queues growth on sender and receiver sides.");
 
-        registerMBean(igniteInstanceName, new TcpCommunicationSpiMBeanImpl(this, metricsLsnr, cfg, stateProvider), TcpCommunicationSpiMBean.class);
+        registerMBean(
+                igniteInstanceName,
+                new TcpCommunicationSpiMBeanImpl(
+                        this, metricLsnrSupplier, cfg, stateProvider
+                ),
+                TcpCommunicationSpiMBean.class
+        );
 
         if (shmemSrv != null) {
 
@@ -904,7 +938,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} } */
     @Override public void onContextInitialized0(IgniteSpiContext spiCtx) throws IgniteSpiException {
-        spiCtx.registerPort(cfg.boundTcpPort(), IgnitePortProtocol.TCP);
+        if (cfg.boundTcpPort() > 0)
+            spiCtx.registerPort(cfg.boundTcpPort(), IgnitePortProtocol.TCP);
 
         // SPI can start without shmem port.
         if (cfg.boundTcpShmemPort() > 0)
@@ -913,6 +948,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         spiCtx.addLocalEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
         ctxInitLatch.countDown();
+
+        metricsLsnr = new TcpCommunicationMetricsListener(ignite, spiCtx);
     }
 
     /** {@inheritDoc} */
@@ -1117,8 +1154,10 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
             int connIdx;
 
-            if (msg instanceof TcpConnectionIndexAwareMessage) {
-                int msgConnIdx = ((TcpConnectionIndexAwareMessage)msg).connectionIndex();
+            Message connIdxMsg = msg instanceof GridIoMessage ? ((GridIoMessage)msg).message() : msg;
+
+            if (connIdxMsg instanceof TcpConnectionIndexAwareMessage) {
+                int msgConnIdx = ((TcpConnectionIndexAwareMessage)connIdxMsg).connectionIndex();
 
                 connIdx = msgConnIdx == UNDEFINED_CONNECTION_INDEX ? connPlc.connectionIndex() : msgConnIdx;
             }

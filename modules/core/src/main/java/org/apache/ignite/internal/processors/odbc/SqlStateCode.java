@@ -76,7 +76,7 @@ public final class SqlStateCode {
 
     /**
      * Read only mode enabled on cluster. {@link ClusterState#ACTIVE_READ_ONLY}.
-     * Value is equal to {@code org.h2.api.ErrorCode#DATABASE_IS_READ_ONLY} code.
+     * Value is equal to {@code org.gridgain.internal.h2.api.ErrorCode#DATABASE_IS_READ_ONLY} code.
      */
     public static final String CLUSTER_READ_ONLY_MODE_ENABLED = "90097";
 

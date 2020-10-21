@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 import java.util.Map;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
-import org.h2.command.Parser;
+import org.gridgain.internal.h2.command.Parser;
 
 /**
  * CREATE INDEX statement.

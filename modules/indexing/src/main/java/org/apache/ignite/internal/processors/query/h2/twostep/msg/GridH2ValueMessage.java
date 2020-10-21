@@ -23,7 +23,7 @@ import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * Abstract message wrapper for H2 values.
