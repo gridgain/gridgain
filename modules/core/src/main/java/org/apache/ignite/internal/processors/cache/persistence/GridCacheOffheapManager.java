@@ -424,6 +424,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         byte[] updCntrsBytes = store.partUpdateCounter().getBytes();
 
+        // TODO try generify approach for dynamic meta.
         long gapsLink = io.getGapsLink(partMetaPageAddr);
 
         boolean changed = false;

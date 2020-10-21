@@ -436,14 +436,13 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         validateCache(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
     }
 
-    // TODO if eagerttl=true explicit clearing not needed ????
+    // Test an entry deleted by lazy TTL eviction is not producing tombstone.
     @Test
     public void testWithTTLNoNear() throws Exception {
         IgniteEx crd = startGrid(0);
 
         CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
         cacheCfg.setEagerTtl(false);
-        //cacheCfg.setEagerTtl(true);
         cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
@@ -457,9 +456,10 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
         assertNull(cache.get(pk));
 
-        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 0);
     }
 
+    // Test an entry deleted by eager TTL worker is not producing tombstone.
     @Test
     public void testWithTTLNoNear_EagerTTL() throws Exception {
         IgniteEx crd = startGrid(0);
@@ -478,7 +478,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         // Default eager cleanup delay 500ms.
         doSleep(1500);
 
-        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 0);
     }
 
     @Test
@@ -486,11 +486,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         IgniteEx crd = startGrid(0);
 
         CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
-        cacheCfg.setEagerTtl(false);
         cacheCfg.setCacheStoreFactory(new MapCacheStoreStrategy.MapStoreFactory());
-
-        //cacheCfg.setEagerTtl(true);
-        //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
 
         // TODO with invokes, first put optional
 
@@ -507,7 +503,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
     // Test reordering on atomic near cache.
     @Test
-    public void testWithAtomicNearCache() throws Exception {
+    public void testAtomicReorderPutRemoveNearCache() throws Exception {
         IgniteEx crd = startGrids(4);
         awaitPartitionMapExchange();
 
@@ -587,6 +583,26 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     @Test
     public void testPreloadingCancelledUnderLoadPutRemove() {
         // Test partition preloading retry in the middle after cancellation.
+    }
+
+    // Test the removal with expiration produces tombstone.
+    @Test
+    public void testRemoveWithExpiration() throws Exception {
+        IgniteEx g0 = startGrid(0);
+
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(ATOMIC);
+        ccfg.setEagerTtl(true);
+
+        int pk = 0;
+
+        IgniteCache<Object, Object> cache = g0.createCache(ccfg);
+        cache.put(pk, 0);
+        cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))).remove(pk);
+
+        doSleep(1500);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        validateCache(grpCtx, pk, 1, 0);
     }
 
     // Test removing of non-existent row creates tombstone.
