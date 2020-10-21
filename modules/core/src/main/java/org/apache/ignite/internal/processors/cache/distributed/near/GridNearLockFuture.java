@@ -52,6 +52,7 @@ import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCa
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTransactionalCacheAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlock;
@@ -845,28 +846,23 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
             topVer = tx.topologyVersionSnapshot();
 
         if (topVer != null) {
-            for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
-                if (fut.exchangeDone() && fut.topologyVersion().equals(topVer)) {
-                    Throwable err = null;
+            GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
 
-                    // Before cache validation, make sure that this topology future is already completed.
-                    try {
-                        fut.get();
-                    }
-                    catch (IgniteCheckedException e) {
-                        err = fut.error();
-                    }
+            AffinityTopologyVersion latestChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion();
 
-                    err = (err == null) ? fut.validateCache(cctx, recovery, read, null, keys) : err;
+            if (lastFinishedFut != null &&
+                    (latestChangeVer == null || lastFinishedFut.topologyVersion().compareTo(latestChangeVer) >= 0)) {
+                Throwable err = lastFinishedFut.validateCache(cctx, recovery, read, null, keys);
 
-                    if (err != null) {
-                        onDone(err);
+                if (err != null) {
+                    onDone(err);
 
-                        return;
-                    }
-
-                    break;
+                    return;
                 }
+
+                // Continue mapping on the same topology version as it was before.
+                if (this.topVer == null)
+                    this.topVer = topVer;
             }
 
             // Continue mapping on the same topology version as it was before.
