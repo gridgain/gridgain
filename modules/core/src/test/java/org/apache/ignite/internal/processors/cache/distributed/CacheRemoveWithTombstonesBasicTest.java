@@ -247,13 +247,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
 
         // Apply on reverse order on backup.
-        TestRecordingCommunicationSpi.spi(crd).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
-            @Override public boolean apply(T2<ClusterNode, GridIoMessage> pair) {
-                GridIoMessage io = pair.get2();
-                GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
+        TestRecordingCommunicationSpi.spi(crd).stopBlock(true, blockedMsg -> {
+            GridIoMessage io = blockedMsg.ioMessage();
+            GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
 
-                return msg0.value(0) == null;
-            }
+            return msg0.value(0) == null;
         });
 
         op2.get();
@@ -303,13 +301,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
 
         // Apply on reverse order on backup.
-        TestRecordingCommunicationSpi.spi(crd).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
-            @Override public boolean apply(T2<ClusterNode, GridIoMessage> pair) {
-                GridIoMessage io = pair.get2();
-                GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
+        TestRecordingCommunicationSpi.spi(crd).stopBlock(true, blockedMsg -> {
+            GridIoMessage io = blockedMsg.ioMessage();
+            GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
 
-                return msg0.value(0) == null;
-            }
+            return msg0.value(0) == null;
         });
 
         op2.get();
@@ -481,13 +477,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         TestRecordingCommunicationSpi.spi(prim).waitForBlocked(2);
 
         // Apply on reverse order on backup.
-        TestRecordingCommunicationSpi.spi(prim).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
-            @Override public boolean apply(T2<ClusterNode, GridIoMessage> pair) {
-                GridIoMessage io = pair.get2();
-                GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
+        TestRecordingCommunicationSpi.spi(prim).stopBlock(true, blockedMsg -> {
+            GridIoMessage io = blockedMsg.ioMessage();
+            GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
 
-                return msg0.value(0) == null;
-            }
+            return msg0.value(0) == null;
         });
 
         rmvFut.get();
@@ -688,13 +682,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
 
         // Apply on reverse order on backup.
-        TestRecordingCommunicationSpi.spi(crd).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
-            @Override public boolean apply(T2<ClusterNode, GridIoMessage> pair) {
-                GridIoMessage io = pair.get2();
-                GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
+        TestRecordingCommunicationSpi.spi(crd).stopBlock(true, blockedMsg -> {
+            GridIoMessage io = blockedMsg.ioMessage();
+            GridDhtAtomicSingleUpdateRequest msg0 = (GridDhtAtomicSingleUpdateRequest) io.message();
 
-                return msg0.value(0) != null;
-            }
+            return msg0.value(0) != null;
         });
 
         op2.get();
@@ -796,7 +788,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /**
      * TODO validate cache size, add test for many caches in group.
      *
-     * @param grid Grid.
+     * @param grpCtx ctx.
      * @param part Partition.
      * @param expTsCnt Expected timestamp count.
      * @param expDataCnt Expected data count.
