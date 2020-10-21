@@ -270,39 +270,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /**
      *
      */
-    private static class TasksStatistics {
-        /** */
-        private int total;
-
-        /** */
-        private int inProgress;
-
-        /**
-         *
-         */
-        void taskAdded() {
-            total++;
-        }
-
-        /**
-         *
-         */
-        void taskStarted() {
-            inProgress++;
-        }
-
-        /**
-         *
-         */
-        void taskFinished() {
-            total--;
-            inProgress--;
-        }
-    }
-
-    /**
-     *
-     */
     private class GroupEvictionContext implements EvictionContext {
         /** */
         private final CacheGroupContext grp;

@@ -2731,7 +2731,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /**
-         *
+         * TODO check if counter is update for ist.
          */
         private class RemoveWithTombstone implements IgniteCacheOffheapManager.OffheapInvokeClosure {
             /** */

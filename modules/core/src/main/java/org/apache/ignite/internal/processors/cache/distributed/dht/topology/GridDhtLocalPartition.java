@@ -854,7 +854,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @return Next update index.
      */
     public long nextUpdateCounter(int cacheId, AffinityTopologyVersion topVer, boolean primary, boolean init,
-                                  @Nullable Long primaryCntr) {
+        @Nullable Long primaryCntr) {
         long nextCntr;
 
         if (primaryCntr == null) // Primary node.

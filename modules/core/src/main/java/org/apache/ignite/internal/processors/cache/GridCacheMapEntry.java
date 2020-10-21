@@ -2167,7 +2167,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
 
-                // TODO fixme properly log tombstones
                 logUpdate(op, null, ver, CU.EXPIRE_TIME_ETERNAL, 0);
 
                 if (evt) {
@@ -6749,7 +6748,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                     if (!entry.isInternal())
                         entry.deletedUnlocked(true);
-                } else {
+                }
+                else {
                     boolean new0 = entry.isStartVersion();
 
                     assert entry.deletedUnlocked() || new0 || entry.isInternal() : "Invalid entry [entry=" + this +
