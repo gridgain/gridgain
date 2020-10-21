@@ -186,7 +186,7 @@ public enum IgniteFeatures {
     MASTER_KEY_CHANGE(48),
 
     /** Incremental DR. */
-    INCREMENTAL_DR(49);
+    INCREMENTAL_DR(49),
 
     /** Transaction distributed config. */
     TRANSACTION_DISTRIBUTED_PROPERTIES(50);

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.cluster;
 
 import org.apache.ignite.IgniteCheckedException;
@@ -31,47 +47,39 @@ import static org.apache.ignite.internal.processors.configuration.distributed.Di
  * Distributed transaction configuration.
  */
 public class DistributedTransactionConfiguration {
-    /**
-     * Property update message.
-     */
+    /** Property update message. */
     private static final String PROPERTY_UPDATE_MESSAGE =
         "Transactions parameter '%s' was changed from '%s' to '%s'";
 
-    /** */
+    /** Default value of {@link #longOperationsDumpTimeout}. */
     private final long dfltLongOpsDumpTimeout =
         getLong(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, DFLT_LONG_OPERATIONS_DUMP_TIMEOUT);
 
-    /** */
+    /** Default value of {@link #longTransactionTimeDumpThreshold}. */
     private final long dfltLongTransactionTimeDumpThreshold =
         getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
 
-    /**
-     * The coefficient for samples of completed transactions that will be dumped in log.
-     */
+    /** Default value of {@link #transactionTimeDumpSamplesCoefficient}. */
     private final double dfltTransactionTimeDumpSamplesCoefficient =
         getFloat(IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT, 0.0f);
 
-    /**
-     * The limit of samples of completed transactions that will be dumped in log per second, if
-     * {@link #transactionTimeDumpSamplesCoefficient} is above <code>0.0</code>. Must be integer value
-     * greater than <code>0</code>.
-     */
+    /** Default value of {@link #longTransactionTimeDumpSamplesPerSecondLimit}. */
     private final int dfltLongTransactionTimeDumpSamplesPerSecondLimit =
         getInteger(IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT, 5);
 
-    /** Collisions dump interval. */
+    /** Default value of {@link #collisionsDumpInterval}. */
     private final int dfltCollisionsDumpInterval =
         IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, 1000);
+
+    /** Default value of {@link #txOwnerDumpRequestsAllowed}. */
+    private static final boolean dfltTxOwnerDumpRequestsAllowed =
+        IgniteSystemProperties.getBoolean(IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, true);
 
     /**
      * Shows if dump requests from local node to near node are allowed, when long running transaction
      * is found. If allowed, the compute request to near node will be made to get thread dump of transaction
      * owner thread.
      */
-    private static final boolean dfltTxOwnerDumpRequestsAllowed =
-        IgniteSystemProperties.getBoolean(IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, true);
-
-    /** */
     private final DistributedChangeableProperty<Boolean> txOwnerDumpRequestsAllowed =
         detachedBooleanProperty("txOwnerDumpRequestsAllowed");
 
@@ -88,27 +96,33 @@ public class DistributedTransactionConfiguration {
     private final DistributedChangeableProperty<Long> longTransactionTimeDumpThreshold =
         detachedLongProperty("longTransactionTimeDumpThreshold");
 
-    /** */
+    /** The coefficient for samples of completed transactions that will be dumped in log. */
     private final DistributedChangeableProperty<Double> transactionTimeDumpSamplesCoefficient =
         detachedDoubleProperty("transactionTimeDumpSamplesCoefficient");
 
-    /** */
+    /**
+     * The limit of samples of completed transactions that will be dumped in log per second, if
+     * {@link #transactionTimeDumpSamplesCoefficient} is above <code>0.0</code>. Must be integer value
+     * greater than <code>0</code>.
+     */
     private final DistributedChangeableProperty<Integer> longTransactionTimeDumpSamplesPerSecondLimit =
         detachedIntegerProperty("longTransactionTimeDumpSamplesPerSecondLimit");
 
-    /** */
+    /** Collisions dump interval. */
     private final DistributedChangeableProperty<Integer> collisionsDumpInterval =
         detachedIntegerProperty("collisionsDumpInterval");
 
     /**
      * @param ctx Kernal context.
-     * @param log log.
+     * @param log Log.
+     * @param longOperationsDumpTimeoutLsnr Listener of {@link #longOperationsDumpTimeout} change event.
+     * @param collisionsDumpIntervalLsnr Listener of {@link #collisionsDumpInterval} change event.
      */
     public DistributedTransactionConfiguration(
         GridKernalContext ctx,
         IgniteLogger log,
-        DistributePropertyListener<Long> longOperationsDumpTimeoutListener,
-        DistributePropertyListener<Integer> collisionsDumpIntervalListener
+        DistributePropertyListener<Long> longOperationsDumpTimeoutLsnr,
+        DistributePropertyListener<Integer> collisionsDumpIntervalLsnr
     ) {
         ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
@@ -119,8 +133,8 @@ public class DistributedTransactionConfiguration {
                     transactionTimeDumpSamplesCoefficient.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
                     longTransactionTimeDumpSamplesPerSecondLimit.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
                     collisionsDumpInterval.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
-                    longOperationsDumpTimeout.addListener(longOperationsDumpTimeoutListener);
-                    collisionsDumpInterval.addListener(collisionsDumpIntervalListener);
+                    longOperationsDumpTimeout.addListener(longOperationsDumpTimeoutLsnr);
+                    collisionsDumpInterval.addListener(collisionsDumpIntervalLsnr);
 
                     dispatcher.registerProperties(txOwnerDumpRequestsAllowed, longOperationsDumpTimeout,
                             longTransactionTimeDumpThreshold, transactionTimeDumpSamplesCoefficient,
@@ -140,14 +154,20 @@ public class DistributedTransactionConfiguration {
     }
 
     /**
+     * Cluster wide update of {@link #longOperationsDumpTimeout}.
      *
+     * @param timeout New value of {@link #longOperationsDumpTimeout}.
+     * @return Future for {@link #longOperationsDumpTimeout} update operation.
+     * @throws IgniteCheckedException If failed during cluster wide update.
      */
     public GridFutureAdapter<?> updateLongOperationsDumpTimeoutAsync(long timeout) throws IgniteCheckedException {
         return longOperationsDumpTimeout.propagateAsync(timeout);
     }
 
     /**
+     * Local update of {@link #longOperationsDumpTimeout}.
      *
+     * @param timeout New value of {@link #longOperationsDumpTimeout}.
      */
     public void updateLongOperationsDumpTimeoutLocal(long timeout) {
         longOperationsDumpTimeout.localUpdate(timeout);
