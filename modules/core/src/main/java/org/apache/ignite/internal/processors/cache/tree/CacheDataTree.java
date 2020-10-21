@@ -106,7 +106,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
             innerIO(grp),
             leafIO(grp),
             grp.shared().kernalContext().failure(),
-            lockLsnr
+            null
         );
 
         assert rowStore != null;
