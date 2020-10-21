@@ -192,6 +192,9 @@ public class PageEvictionPagesRecyclingAndReusingTest extends PageEvictionAbstra
      * @param cache Cache.
      */
     private void clearTombstones(IgniteCache<Object, Object> cache) throws IgniteCheckedException {
+        if (cache.getConfiguration(CacheConfiguration.class).getCacheMode() == CacheMode.LOCAL)
+            return;
+
         IgniteEx ignite = cache.unwrap(IgniteEx.class);
 
         List<GridDhtLocalPartition> locParts = ignite.cachex(cache.getName()).context().topology().localPartitions();
