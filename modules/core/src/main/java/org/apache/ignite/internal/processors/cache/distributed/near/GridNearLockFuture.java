@@ -862,12 +862,8 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
 
                 // Continue mapping on the same topology version as it was before.
                 if (this.topVer == null)
-                    this.topVer = topVer;
+                    this.topVer = lastFinishedFut.topologyVersion();
             }
-
-            // Continue mapping on the same topology version as it was before.
-            if (this.topVer == null)
-                this.topVer = topVer;
 
             map(keys, false, true);
 
