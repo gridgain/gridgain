@@ -704,7 +704,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         fileHandleManager.resumeLogging();
 
-        currentHandle(restoreWriteHandle(filePtr), null);
+        updateCurrentHandle(restoreWriteHandle(filePtr), null);
 
         // For new handle write serializer version to it.
         if (filePtr == null)
@@ -1292,7 +1292,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             if (next.getSegmentId() - lashCheckpointFileIdx() >= maxSegCountWithoutCheckpoint)
                 cctx.database().forceCheckpoint("too big size of WAL without checkpoint");
 
-            assert currentHandle(next, hnd) : "Concurrent updates on rollover are not allowed";
+            assert updateCurrentHandle(next, hnd) : "Concurrent updates on rollover are not allowed";
 
             if (walAutoArchiveAfterInactivity > 0)
                 lastRecordLoggedMs.set(0);
@@ -3075,7 +3075,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public long segmentSize(long idx) {
-        return segmentSize.getOrDefault(idx, -1L);
+        return segmentSize.getOrDefault(idx, 0L);
     }
 
     /** {@inheritDoc} */
@@ -3084,13 +3084,13 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /**
-     * Update сurrent log segment handle.
+     * Concurrent {@link #currHnd} update.
      *
-     * @param n New log segment handle.
-     * @param c Current log segment handle. If not {@code null}, CAS will be used.
+     * @param n New handle.
+     * @param c Current handle, if not {@code null} CAS will be used.
      * @return {@code True} if updated.
      */
-    private boolean currentHandle(FileWriteHandle n, @Nullable FileWriteHandle c) {
+    private boolean updateCurrentHandle(FileWriteHandle n, @Nullable FileWriteHandle c) {
         boolean res = true;
 
         if (c == null)

@@ -223,6 +223,6 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
             assertEquals(idx.toString(), size.longValue(), wal.segmentSize(idx));
         });
 
-        assertEquals(-1, wal.segmentSize(currHnd.getSegmentId() + 1));
+        assertEquals(0, wal.segmentSize(currHnd.getSegmentId() + 1));
     }
 }
