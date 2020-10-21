@@ -76,6 +76,17 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());
     }
 
+    @Test
+    public void fooBar() throws Exception {
+        IgniteEx client = startGrid("client");
+
+        Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
+
+        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
+
+        tx.commit();
+    }
+
     /**
      * <ol>
      *     <li>Run pessimistic serializable transaction with some label.</li>

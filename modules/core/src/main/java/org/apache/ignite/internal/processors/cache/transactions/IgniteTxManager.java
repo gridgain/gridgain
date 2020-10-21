@@ -1141,7 +1141,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param entries Entries to lock or {@code null} if use default {@link IgniteInternalTx#optimisticLockEntries()}.
      * @throws IgniteCheckedException If preparation failed.
      */
-    public void prepareTx(IgniteInternalTx tx, @Nullable Collection<IgniteTxEntry> entries) throws IgniteCheckedException {
+    public void prepareTx(IgniteInternalTx tx, @Nullable Collection<IgniteTxEntry> entries, IgniteInternalFuture lockFut) throws IgniteCheckedException {
         if (tx.state() == MARKED_ROLLBACK) {
             if (tx.remainingTime() == -1)
                 throw new IgniteTxTimeoutCheckedException("Transaction timed out: " + this);
@@ -1162,7 +1162,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         // Optimistic or remote tx.
         assert tx.optimistic() || !tx.local();
 
-        if (!lockMultiple(tx, entries != null ? entries : tx.optimisticLockEntries())) {
+        if (!lockMultiple(tx, entries != null ? entries : tx.optimisticLockEntries(), lockFut)) {
             tx.setRollbackOnly();
 
             throw new IgniteTxOptimisticCheckedException("Failed to prepare transaction (lock conflict): " + tx);
@@ -1907,7 +1907,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return {@code True} if all keys were locked.
      * @throws IgniteCheckedException If lock has been cancelled.
      */
-    private boolean lockMultiple(IgniteInternalTx tx, Iterable<IgniteTxEntry> entries)
+    private boolean lockMultiple(IgniteInternalTx tx, Iterable<IgniteTxEntry> entries, IgniteInternalFuture lockFut)
         throws IgniteCheckedException {
         assert tx.optimistic() || !tx.local();
 
@@ -1945,7 +1945,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
                     entry1.unswap();
 
-                    if (!entry1.tmLock(tx, timeout, serOrder, serReadVer, read)) {
+                    if (!entry1.tmLock(tx, timeout, serOrder, serReadVer, read, lockFut)) {
                         // Unlock locks locked so far.
                         for (IgniteTxEntry txEntry2 : entries) {
                             if (txEntry2 == txEntry1)

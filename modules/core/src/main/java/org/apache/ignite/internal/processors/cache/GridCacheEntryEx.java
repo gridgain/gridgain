@@ -25,6 +25,7 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorResult;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.eviction.EvictableEntry;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocalAdapter;
@@ -647,7 +648,8 @@ public interface GridCacheEntryEx {
         long timeout,
         @Nullable GridCacheVersion serOrder,
         @Nullable GridCacheVersion serReadVer,
-        boolean read
+        boolean read,
+        IgniteInternalFuture lockFut
     ) throws GridCacheEntryRemovedException, GridDistributedLockCancelledException;
 
     /**

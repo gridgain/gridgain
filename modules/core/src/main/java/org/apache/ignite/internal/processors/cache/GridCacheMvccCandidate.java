@@ -23,16 +23,16 @@ import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -126,6 +126,8 @@ public class GridCacheMvccCandidate implements Externalizable,
 //    // TODO: 28.09.20 Implement properly.
 //    public CountDownLatch latch = new CountDownLatch(1);
 
+    public IgniteInternalFuture lockFut;
+
     /**
      * Empty constructor required by {@link Externalizable}.
      */
@@ -186,6 +188,8 @@ public class GridCacheMvccCandidate implements Externalizable,
         mask(READ, read);
 
         id = IDGEN.incrementAndGet();
+
+        this.lockFut = new GridFutureAdapter();
     }
 
     /**

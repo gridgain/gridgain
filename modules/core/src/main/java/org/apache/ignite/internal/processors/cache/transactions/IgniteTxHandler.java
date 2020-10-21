@@ -91,6 +91,7 @@ import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.CI2;
@@ -1207,6 +1208,8 @@ public class IgniteTxHandler {
 
             GridDhtTxPrepareResponse res;
 
+            IgniteInternalFuture lockFut = null;
+
             try {
                 res = new GridDhtTxPrepareResponse(
                     req.partition(),
@@ -1217,7 +1220,11 @@ public class IgniteTxHandler {
 
                 // Start near transaction first.
                 nearTx = !F.isEmpty(req.nearWrites()) ? startNearRemoteTx(ctx.deploy().globalLoader(), nodeId, req) : null;
-                dhtTx = startRemoteTx(nodeId, req, res);
+
+                if (!req.onePhaseCommit())
+                    lockFut = new GridCompoundFuture();
+
+                dhtTx = startRemoteTx(nodeId, req, res, lockFut);
 
                 // Set evicted keys from near transaction.
                 if (nearTx != null)
@@ -1322,6 +1329,23 @@ public class IgniteTxHandler {
                     });
                 }
                 else
+                    sendReply(nodeId, req, res, dhtTx, nearTx);
+            }
+            else if (req.last()) {
+                if (lockFut != null) {
+                    ((GridCompoundFuture)lockFut).markInitialized();
+
+                    if (lockFut.isDone())
+                        sendReply(nodeId, req, res, dhtTx, nearTx);
+                    else {
+
+                        final GridDhtTxPrepareResponse res0 = res;
+                        final GridDhtTxRemote dhtTx0 = dhtTx;
+                        final GridNearTxRemote nearTx0 = nearTx;
+
+                        lockFut.listen(f -> sendReply(nodeId, req, res0, dhtTx0, nearTx0));
+                    }
+                } else
                     sendReply(nodeId, req, res, dhtTx, nearTx);
             }
             else
@@ -1705,7 +1729,8 @@ public class IgniteTxHandler {
     @Nullable GridDhtTxRemote startRemoteTx(
         UUID nodeId,
         GridDhtTxPrepareRequest req,
-        GridDhtTxPrepareResponse res
+        GridDhtTxPrepareResponse res,
+        IgniteInternalFuture lockFut
     ) throws IgniteCheckedException {
         if (req.queryUpdate() || !F.isEmpty(req.writes())) {
             GridDhtTxRemote tx = ctx.tm().tx(req.version());
@@ -1883,7 +1908,7 @@ public class IgniteTxHandler {
 
                 // Prepare prior to reordering, so the pending locks added
                 // in prepare phase will get properly ordered as well.
-                tx.prepareRemoteTx();
+                tx.prepareRemoteTx(lockFut);
             }
             finally {
                 reservedParts.forEach(GridDhtLocalPartition::release);
@@ -2141,7 +2166,7 @@ public class IgniteTxHandler {
 
             // Prepare prior to reordering, so the pending locks added
             // in prepare phase will get properly ordered as well.
-            tx.prepareRemoteTx();
+            tx.prepareRemoteTx(null);
 
             if (req.last())
                 tx.state(PREPARED);

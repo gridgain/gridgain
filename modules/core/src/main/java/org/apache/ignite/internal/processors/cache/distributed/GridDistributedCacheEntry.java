@@ -21,6 +21,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheLockCandidates;
 import org.apache.ignite.internal.processors.cache.CacheObject;
@@ -32,6 +34,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -188,7 +191,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         GridCacheVersion ver,
         boolean tx,
         boolean implicitSingle,
-        @Nullable GridCacheVersion owned
+        @Nullable GridCacheVersion owned,
+        IgniteInternalFuture lockFut
     ) throws GridDistributedLockCancelledException, GridCacheEntryRemovedException {
         CacheLockCandidates prev;
         CacheLockCandidates owner;
@@ -215,7 +219,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
             boolean emptyBefore = mvcc.isEmpty();
 
-            mvcc.addRemote(
+            GridCacheMvccCandidate candidate = mvcc.addRemote(
                 this,
                 nodeId,
                 otherNodeId,
@@ -225,6 +229,9 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 implicitSingle,
                 /*near-local*/false
             );
+
+            if (!candidate.lockFut.isDone())
+                ((GridCompoundFuture) lockFut).add(candidate.lockFut);
 
             owner = mvcc.allOwners();
 
@@ -622,7 +629,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         long timeout,
         @Nullable GridCacheVersion serOrder,
         GridCacheVersion serReadVer,
-        boolean read
+        boolean read,
+        IgniteInternalFuture lockFut
     ) throws GridCacheEntryRemovedException, GridDistributedLockCancelledException {
         if (tx.local())
             // Null is returned if timeout is negative and there is other lock owner.
@@ -644,7 +652,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 tx.xidVersion(),
                 /*tx*/true,
                 tx.implicitSingle(),
-                tx.ownedVersion(txKey())
+                tx.ownedVersion(txKey()),
+                lockFut
             );
 
             return true;

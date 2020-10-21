@@ -320,7 +320,8 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         long timeout,
         @Nullable GridCacheVersion serOrder,
         GridCacheVersion serReadVer,
-        boolean read
+        boolean read,
+        IgniteInternalFuture lockFut
     ) throws GridCacheEntryRemovedException, GridDistributedLockCancelledException {
         if (tx.local()) {
             GridDhtTxLocalAdapter dhtTx = (GridDhtTxLocalAdapter)tx;
@@ -348,7 +349,8 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
                 tx.xidVersion(),
                 /*tx*/true,
                 tx.implicit(),
-                null);
+                null,
+                lockFut);
 
             return true;
         }

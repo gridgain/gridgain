@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
@@ -66,6 +67,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConflictContext;
 import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridTuple;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -133,6 +135,15 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
     /** Transaction label. */
     @GridToStringInclude
     @Nullable private String txLbl;
+
+    /** Lock future. */
+    private volatile GridFutureAdapter<IgniteInternalTx> lockFuture;
+
+    /** Locks ready flag. */
+    private volatile boolean locksReady;
+
+    /** Locks counter. */
+    private final AtomicInteger lockCntr = new AtomicInteger();
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -351,7 +362,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
     /**
      * @throws IgniteCheckedException If failed.
      */
-    public final void prepareRemoteTx() throws IgniteCheckedException {
+    public final void prepareRemoteTx(IgniteInternalFuture lockFut) throws IgniteCheckedException {
         // If another thread is doing prepare or rollback.
         if (!state(PREPARING)) {
             // In optimistic mode prepare may be called multiple times.
@@ -364,7 +375,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
         }
 
         try {
-            cctx.tm().prepareTx(this, null);
+            cctx.tm().prepareTx(this, null, lockFut);
 
             if (pessimistic() || isSystemInvalidate())
                 state(PREPARED);
@@ -374,6 +385,28 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
             throw e;
         }
+    }
+
+    /**
+     * @return Lock future.
+     */
+    public IgniteInternalFuture<IgniteInternalTx> lockFuture() {
+        GridFutureAdapter<IgniteInternalTx> f = lockFuture;
+
+        if (f != null)
+            return f;
+
+        synchronized (this) {
+            if ((f = lockFuture) != null)
+                return f;
+
+            lockFuture = f = new GridFutureAdapter<>();
+        }
+
+        if (lockCntr.get() == 0 && locksReady)
+            f.onDone(this);
+
+        return f;
     }
 
     /**
@@ -906,7 +939,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
         try {
             systemInvalidate(true);
 
-            prepareRemoteTx();
+            prepareRemoteTx(null);
 
             if (state() == PREPARING) {
                 if (log.isDebugEnabled())

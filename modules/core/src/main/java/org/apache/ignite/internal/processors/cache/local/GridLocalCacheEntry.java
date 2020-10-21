@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.local;
 
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.CacheLockCandidates;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -173,7 +174,8 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
         long timeout,
         @Nullable GridCacheVersion serOrder,
         GridCacheVersion serReadVer,
-        boolean read)
+        boolean read,
+        IgniteInternalFuture lockFut)
         throws GridCacheEntryRemovedException {
         GridCacheMvccCandidate cand = addLocal(
             tx.threadId(),

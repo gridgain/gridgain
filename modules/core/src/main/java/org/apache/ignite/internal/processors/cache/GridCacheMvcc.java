@@ -31,6 +31,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -395,6 +396,8 @@ public final class GridCacheMvcc {
                 rmts = new IgnitePair<>();
 
                 cand.setOwner();
+
+                ((GridFutureAdapter) cand.lockFut).onDone();
 
                 rmts.set1(cand);
             } else {
@@ -1042,6 +1045,7 @@ public final class GridCacheMvcc {
 
             rmts.get1().setOwner();
 
+            ((GridFutureAdapter) rmts.get1().lockFut).onDone();
 //            rmts.get1().latch.countDown();
 
             // TODO: 28.09.20 Critical issue here, release lock on sendingPrepareResponse or send listener notification.
@@ -1287,8 +1291,6 @@ public final class GridCacheMvcc {
 
         if (F.isEmpty(excludeVers))
             return rmts.get2() == null ?  Collections.singletonList(rmts.get1()) :  Arrays.asList(rmts.get1(), rmts.get2());
-
-
 
         List<GridCacheMvccCandidate> cands = new ArrayList<>(rmts.size());
 

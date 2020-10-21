@@ -432,7 +432,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
         checkValid();
 
         try {
-            cctx.tm().prepareTx(this, entries);
+            cctx.tm().prepareTx(this, entries, null);
 
             if (txState().mvccEnabled())
                 calculatePartitionUpdateCounters();

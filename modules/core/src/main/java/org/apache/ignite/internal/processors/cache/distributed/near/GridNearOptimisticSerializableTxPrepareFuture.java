@@ -473,7 +473,7 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
         // Must lock near entries separately.
         if (m.hasNearCacheEntries()) {
             try {
-                cctx.tm().prepareTx(tx, m.nearCacheEntries());
+                cctx.tm().prepareTx(tx, m.nearCacheEntries(), null);
             }
             catch (IgniteCheckedException e) {
                 fut.onResult(e);

@@ -361,6 +361,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                             req.version(),
                             tx != null,
                             tx != null && tx.implicitSingle(),
+                            null,
                             null
                         );
 

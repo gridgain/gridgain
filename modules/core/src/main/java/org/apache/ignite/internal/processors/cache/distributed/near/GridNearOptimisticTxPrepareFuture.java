@@ -532,7 +532,7 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
                 // Must lock near entries separately.
                 if (m.hasNearCacheEntries()) {
                     try {
-                        cctx.tm().prepareTx(tx, m.nearCacheEntries());
+                        cctx.tm().prepareTx(tx, m.nearCacheEntries(), null);
                     }
                     catch (IgniteCheckedException e) {
                         onError(e, false);

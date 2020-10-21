@@ -19,6 +19,8 @@ package org.apache.ignite.loadtests.hashmap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
@@ -88,7 +90,8 @@ public class GridHashMapLoadTest extends GridCommonAbstractTest {
                     long timeout,
                     @Nullable GridCacheVersion serOrder,
                     GridCacheVersion serReadVer,
-                    boolean read) {
+                    boolean read,
+                    IgniteInternalFuture lockFut) {
                     return false;
                 }
 
