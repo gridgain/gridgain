@@ -1791,12 +1791,12 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 if (commLsnr == null)
                     throw new IgniteCheckedException("Trying to send message when grid is not fully started.");
 
-            if (ordered)
-                processOrderedMessage(locNodeId, ioMsg, plc, null);
-            else if (async)
-                processRegularMessage(locNodeId, ioMsg, plc, NOOP);
-            else
-                processRegularMessage0(ioMsg, locNodeId);
+                if (ordered)
+                    processOrderedMessage(locNodeId, ioMsg, plc, null);
+                else if (async)
+                    processRegularMessage(locNodeId, ioMsg, plc, NOOP);
+                else
+                    processRegularMessage0(ioMsg, locNodeId);
 
                 if (ackC != null)
                     ackC.apply(null);

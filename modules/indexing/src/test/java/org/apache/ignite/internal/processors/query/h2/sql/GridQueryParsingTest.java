@@ -666,6 +666,15 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
         assertParseThrows("ALTER TABLE SCH5.\"Person\" ADD (city varchar)", DbException.class, null);
     }
 
+
+    /** */
+    @Test
+    public void testIntervalOperation() throws Exception {
+        // Some comments here
+        checkQuery("insert into Person(date, old, name, parentName, addrId) values " +
+            "(TRUNCATE(TIMESTAMP '2015-12-31 23:59:59') - TRUNC(CURRENT_TIMESTAMP), POWER(3,12), NULL, NULL, NULL)");
+    }
+
     /**
      * @param sql Statement.
      * @param exCls Exception class.

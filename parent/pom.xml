@@ -543,6 +543,10 @@
                                 <packages>org.apache.ignite.springdata20.repository*</packages>
                             </group>
                             <group>
+                                <title>Spring Data 2.2 Integration</title>
+                                <packages>org.apache.ignite.springdata22.repository*</packages>
+                            </group>
+                            <group>
                                 <title>RocketMQ integration</title>
                                 <packages>org.apache.ignite.stream.rocketmq*</packages>
                             </group>
@@ -581,6 +585,10 @@
                             <group>
                                 <title>Tracing SPI</title>
                                 <packages>org.apache.ignite.spi.tracing*</packages>
+                            </group>
+                            <group>
+                                <title>Maintenance Mode API</title>
+                                <packages>org.apache.ignite.maintenance</packages>
                             </group>
                         </groups>
                         <bottom>
