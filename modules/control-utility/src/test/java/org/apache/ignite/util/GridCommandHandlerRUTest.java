@@ -21,7 +21,6 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeResult;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
@@ -32,7 +31,6 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 /**
  * Command handler tests for rolling-upgrade.
  */
-@WithSystemProperty(key = "DISTRIBUTED_ROLLING_UPGRADE_MODE", value = "true")
 public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
     /** */
     private boolean addExtraArguments;
@@ -59,7 +57,7 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        stopAllGrids();
+        stopAllGrids(true);
     }
 
     /**
@@ -76,7 +74,7 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
         CommandHandler hnd = new CommandHandler();
 
         // Should fail with UnsupportedOperationException.
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on"));
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "start", "--yes"));
 
         checkFailedRollingUpgradeChangeModeResult(
             hnd.getLastOperationResult(),
@@ -84,15 +82,7 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
             UnsupportedOperationException.class);
 
         // Should fail with UnsupportedOperationException.
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on", "force"));
-
-        checkFailedRollingUpgradeChangeModeResult(
-            hnd.getLastOperationResult(),
-            "Enabling rolling upgrade should fail",
-            UnsupportedOperationException.class);
-
-        // Should fail with UnsupportedOperationException.
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on", "force", "--yes"));
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "force", "--yes"));
 
         checkFailedRollingUpgradeChangeModeResult(
             hnd.getLastOperationResult(),
@@ -100,7 +90,7 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
             UnsupportedOperationException.class);
 
         // Should fail with IllegalArgumentException.
-        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute(hnd, "--rolling-upgrade", "on", "unknown-parameter"));
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute(hnd, "--rolling-upgrade", "start", "unknown-parameter"));
     }
 
     /**
@@ -115,7 +105,7 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
         CommandHandler hnd = new CommandHandler();
 
         // Apache Ignite does not support rolling upgrade from out of the box.
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on"));
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "start"));
 
         VisorRollingUpgradeChangeModeResult res = hnd.getLastOperationResult();
 
@@ -124,7 +114,7 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
             "The cause of the failure should be UnsupportedOperationException [cause=" + res.getCause() + ']',
             res.getCause().getClassName(), UnsupportedOperationException.class.getName());
 
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "off"));
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "finish"));
 
         res = hnd.getLastOperationResult();
 

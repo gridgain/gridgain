@@ -1225,7 +1225,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
      *
      * @return {@code Future} with {@link VacuumMetrics}.
      */
-    IgniteInternalFuture<VacuumMetrics> runVacuum() {
+    public IgniteInternalFuture<VacuumMetrics> runVacuum() {
         assert !ctx.clientNode();
 
         MvccCoordinator crd0 = currentCoordinator();

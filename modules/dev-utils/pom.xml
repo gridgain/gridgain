@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-dev-utils</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
@@ -115,7 +115,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>org.apache.ignite.development.utils.IgniteWalConverter</mainClass>
+                            <mainClass>org.apache.ignite.internal.commandline.walconverter.IgniteWalConverter</mainClass>
                         </manifest>
                     </archive>
 

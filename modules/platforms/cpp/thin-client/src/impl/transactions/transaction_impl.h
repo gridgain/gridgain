@@ -116,12 +116,7 @@ namespace ignite
                     /**
                      * Sets close flag to tx.
                      */
-                    void Closed();
-
-                    /**
-                     * @return Current transaction.
-                     */
-                    static SP_TransactionImpl GetCurrent();
+                    void SetClosed();
 
                     /**
                      * Starts transaction.
@@ -142,10 +137,10 @@ namespace ignite
                             ignite::common::concurrent::SharedPointer<common::FixedSizeArray<char> > label);
                 protected:
                     /** Checks current thread state. */
-                    static void txThreadCheck(const TransactionImpl& tx);
+                    void ThreadCheck();
 
                     /** Completes tc and clear state from storage. */
-                    static void txThreadEnd(TransactionImpl& tx);
+                    void ThreadEnd();
 
                 private:
                     /** Transactions implementation. */
@@ -153,9 +148,6 @@ namespace ignite
 
                     /** Current transaction Id. */
                     int32_t txId;
-
-                    /** Thread local instance of the transaction. */
-                    static ignite::common::concurrent::ThreadLocalInstance<SP_TransactionImpl> threadTx;
 
                     /** Concurrency. */
                     int concurrency;
@@ -172,7 +164,7 @@ namespace ignite
                     /** Closed flag. */
                     bool closed;
 
-                    IGNITE_NO_COPY_ASSIGNMENT(TransactionImpl)
+                    IGNITE_NO_COPY_ASSIGNMENT(TransactionImpl);
                 };
             }
         }
