@@ -1,50 +1,25 @@
-/*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
- *
- * Licensed under the GridGain Community Edition License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.cache.Cache;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ModifiedExpiryPolicy;
-import javax.cache.expiry.TouchedExpiryPolicy;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryProcessor;
-import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -64,14 +39,10 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
-import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
-import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
 import org.apache.ignite.internal.processors.cache.MapCacheStoreStrategy;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -84,18 +55,12 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -103,43 +68,12 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 
-/**
- * TODO add test multicache group, filtered nodes, client nodes.
- * TODO wal recovery should bring tombstone entry.
- * TODO make atomic/tx variants of tests when applicable.
- */
-@RunWith(Parameterized.class)
-@Ignore
-public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
+/** */
+public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** */
     public static final int PARTS = 64;
 
-    /** Test parameters. */
-    @Parameterized.Parameters(name = "persistenceEnabled={0}, historicalRebalance={1}")
-    public static Collection parameters() {
-        List<Object[]> res = new ArrayList<>();
-
-        res.add(new Object[]{false, false});
-
-//        for (boolean persistenceEnabled : new boolean[] {false, true}) {
-//            for (boolean histRebalance : new boolean[] {false, true}) {
-//                if (!persistenceEnabled && histRebalance)
-//                    continue;
-//
-//                res.add(new Object[]{persistenceEnabled, histRebalance});
-//            }
-//        }
-
-        return res;
-    }
-
-    /** */
-    @Parameterized.Parameter(0)
-    public boolean persistence;
-
-    /** */
-    @Parameterized.Parameter(1)
-    public boolean histRebalance;
+    private boolean persistence;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -156,13 +90,13 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
 
         if (persistence) {
             DataStorageConfiguration dsCfg = new DataStorageConfiguration().setWalSegmentSize(4 * 1024 * 1024)
-                    .setDefaultDataRegionConfiguration(
-                            new DataRegionConfiguration()
-                                .setInitialSize(256L * 1024 * 1024)
-                                .setMaxSize(256L * 1024 * 1024)
-                                .setPersistenceEnabled(true)
-                    )
-                    .setWalMode(WALMode.LOG_ONLY);
+                .setDefaultDataRegionConfiguration(
+                    new DataRegionConfiguration()
+                        .setInitialSize(256L * 1024 * 1024)
+                        .setMaxSize(256L * 1024 * 1024)
+                        .setPersistenceEnabled(true)
+                )
+                .setWalMode(WALMode.LOG_ONLY);
 
             cfg.setDataStorageConfiguration(dsCfg);
         }
@@ -170,27 +104,17 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         return cfg;
     }
 
-    /**
-     *
-     */
-    @Before
-    public void before() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
 
-        if (histRebalance)
-            System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "0");
+        persistence = false;
     }
 
-    /**
-     *
-     */
-    @After
-    public void after() throws Exception {
-        if (histRebalance)
-            System.clearProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD);
-
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -705,6 +629,7 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
     // in-place not possible with indexes.
     // TODO move to indexing
     @Test
+    @Ignore
     public void testInPlaceUpdateWithIndexes() throws Exception {
         IgniteEx crd = startGrid(0);
 
@@ -890,144 +815,6 @@ public class CacheRemoveWithTombstonesTest extends GridCommonAbstractTest {
         assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt, dataRows1.size());
         assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt, grpCtx.topology().localPartition(part).dataStore().cacheSize(CU.cacheId(DEFAULT_CACHE_NAME)));
         assertEquals(grpCtx.cacheOrGroupName() + " " + part, expTsCnt, tombstoneMetric0.value());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRemoveAndRebalanceRaceTx() throws Exception {
-        testRemoveAndRebalanceRace(TRANSACTIONAL, true);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRemoveAndRebalanceRaceAtomic() throws Exception {
-        testRemoveAndRebalanceRace(ATOMIC, false);
-    }
-
-    /**
-     * @throws Exception If failed.
-     * @param expTombstone {@code True} if tombstones should be created.
-     */
-    private void testRemoveAndRebalanceRace(CacheAtomicityMode atomicityMode, boolean expTombstone) throws Exception {
-        IgniteEx ignite0 = startGrid(0);
-
-        if (histRebalance)
-            startGrid(1);
-
-        if (persistence)
-            ignite0.cluster().active(true);
-
-        IgniteCache<Object, Object> cache0 = ignite0.createCache(cacheConfiguration(atomicityMode));
-
-        final int KEYS = histRebalance ? 1024 : 1024 * 256;
-
-        if (histRebalance) {
-            // Preload initial data to have start point for WAL rebalance.
-            try (IgniteDataStreamer<Object, Object> streamer = ignite0.dataStreamer(DEFAULT_CACHE_NAME)) {
-                streamer.allowOverwrite(true);
-
-                for (int i = 0; i < KEYS; i++)
-                    streamer.addData(-i, 0);
-            }
-
-            forceCheckpoint();
-
-            stopGrid(1);
-        }
-
-        // This data will be rebalanced.
-        try (IgniteDataStreamer<Object, Object> streamer = ignite0.dataStreamer(DEFAULT_CACHE_NAME)) {
-            streamer.allowOverwrite(true);
-
-            for (int i = 0; i < KEYS; i++)
-                streamer.addData(i, i);
-        }
-
-        blockRebalance(ignite0);
-
-        IgniteEx ignite1 = GridTestUtils.runAsync(() -> startGrid(1)).get(10, TimeUnit.SECONDS);
-
-        if (persistence) {
-            ignite0.cluster().baselineAutoAdjustEnabled(false);
-
-            ignite0.cluster().setBaselineTopology(2);
-        }
-
-        TestRecordingCommunicationSpi.spi(ignite0).waitForBlocked();
-
-        Set<Integer> keysWithTombstone = new HashSet<>();
-
-        // Do removes while rebalance is in progress.
-        // All keys are removed during historical rebalance.
-        for (int i = 0, step = histRebalance ? 1 : 64; i < KEYS; i += step) {
-            keysWithTombstone.add(i);
-
-            cache0.remove(i);
-        }
-
-        final LongMetric tombstoneMetric0 = ignite0.context().metric().registry(
-            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
-
-        final LongMetric tombstoneMetric1 = ignite1.context().metric().registry(
-            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
-
-        // On first node there should not be tombstones.
-        assertEquals(0, tombstoneMetric0.value());
-
-        if (expTombstone)
-            assertEquals(keysWithTombstone.size(), tombstoneMetric1.value());
-        else
-            assertEquals(0, tombstoneMetric1.value());
-
-        // Update some of removed keys, this should remove tombstones.
-        for (int i = 0; i < KEYS; i += 128) {
-            keysWithTombstone.remove(i);
-
-            cache0.put(i, i);
-        }
-
-        assertTrue("Keys with tombstones should exist", !keysWithTombstone.isEmpty());
-
-        assertEquals(0, tombstoneMetric0.value());
-
-        if (expTombstone)
-            assertEquals(keysWithTombstone.size(), tombstoneMetric1.value());
-        else
-            assertEquals(0, tombstoneMetric1.value());
-
-        TestRecordingCommunicationSpi.spi(ignite0).stopBlock();
-
-        awaitPartitionMapExchange();
-
-        IgniteCache<Integer, Integer> cache1 = ignite(1).cache(DEFAULT_CACHE_NAME);
-
-        for (int i = 0; i < KEYS; i++) {
-            if (keysWithTombstone.contains(i))
-                assertNull(cache1.get(i));
-            else
-                assertEquals((Object)i, cache1.get(i));
-        }
-
-        // Tombstones should be removed after once rebalance is completed.
-        GridTestUtils.waitForCondition(() -> tombstoneMetric1.value() == 0, 30_000);
-
-        assertEquals(0, tombstoneMetric1.value());
-    }
-
-    /**
-     *
-     */
-    private static void blockRebalance(IgniteEx node) {
-        final int grpId = groupIdForCache(node, DEFAULT_CACHE_NAME);
-
-        TestRecordingCommunicationSpi.spi(node).blockMessages((node0, msg) ->
-            (msg instanceof GridDhtPartitionSupplyMessage)
-            && ((GridCacheGroupIdMessage)msg).groupId() == grpId
-        );
     }
 
     /**

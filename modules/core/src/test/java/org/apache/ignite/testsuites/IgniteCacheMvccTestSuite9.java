@@ -26,12 +26,13 @@ import org.apache.ignite.internal.metric.IoStatisticsCacheSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGetCustomCollectionsSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheLoadRebalanceEvictionSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheAtomicPrimarySyncBackPressureTest;
-import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesLoadTest;
-import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesBasicTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesPreloadingLoadTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesPreloadingTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConcurrentRemoveObjectsTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.CacheRemoveWithTombstonesFailoverTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesFailoverTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCachePartitionConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceTest;
@@ -117,8 +118,9 @@ public class IgniteCacheMvccTestSuite9 {
         ignoredTests.add(org.apache.ignite.internal.metric.IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class);
 
         // Tombstones are not created with mvcc.
-        ignoredTests.add(CacheRemoveWithTombstonesTest.class);
-        ignoredTests.add(CacheRemoveWithTombstonesLoadTest.class);
+        ignoredTests.add(CacheRemoveWithTombstonesBasicTest.class);
+        ignoredTests.add(CacheRemoveWithTombstonesPreloadingTest.class);
+        ignoredTests.add(CacheRemoveWithTombstonesPreloadingLoadTest.class);
         ignoredTests.add(CacheRemoveWithTombstonesFailoverTest.class);
 
         return new ArrayList<>(IgniteCacheTestSuite9.suite(ignoredTests));

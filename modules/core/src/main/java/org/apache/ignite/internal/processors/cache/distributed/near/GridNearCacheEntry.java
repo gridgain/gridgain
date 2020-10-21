@@ -463,8 +463,14 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         // No-op: queries are disabled for near cache.
     }
 
+    /** {@inheritDoc}
+     * @param clearVer*/
+    @Override protected void removeValue(GridCacheVersion clearVer) {
+        // No-op.
+    }
+
     /** {@inheritDoc} */
-    @Override protected void removeValue() {
+    @Override protected void removeExpiredValue(GridCacheVersion clearVer) throws IgniteCheckedException {
         // No-op.
     }
 

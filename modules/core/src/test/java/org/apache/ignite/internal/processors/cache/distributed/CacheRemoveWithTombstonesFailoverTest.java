@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
+package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.HashSet;
 import java.util.Set;

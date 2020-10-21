@@ -127,6 +127,15 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         }
     }
 
+    /**
+     * Logical remove.
+     *
+     * @param clearVer Clear version.
+     */
+    @Override protected void removeValue(GridCacheVersion clearVer) throws IgniteCheckedException {
+        cctx.offheap().removeWithTombstone(cctx, key, clearVer, localPartition());
+    }
+
     /** {@inheritDoc} */
     @Override public int memorySize() throws IgniteCheckedException {
         int rdrsOverhead;
@@ -638,7 +647,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
      * Marks entry as obsolete and, if possible or required, removes it
      * from swap storage.
      *
-     * TODO get rid ??
+     * TODO get rid ?? Use .clear
      *
      * @param ver Obsolete version.
      * @return {@code True} if entry was not being used, passed the filter and could be removed.
@@ -676,7 +685,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
             if (cctx.mvccEnabled())
                 cctx.offheap().mvccRemoveAll(this);
             else
-                removeValue();
+                removeExpiredValue(ver);
 
             // Give to GC.
             update(null, 0L, 0L, ver, true);

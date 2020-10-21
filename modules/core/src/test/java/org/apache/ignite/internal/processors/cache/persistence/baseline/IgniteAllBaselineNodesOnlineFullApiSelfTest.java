@@ -15,6 +15,8 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.baseline;
 
+import org.junit.Test;
+
 /**
  * Full API cache tests when all online nodes in the cluster are in BaselineTopology.
  */
@@ -30,5 +32,10 @@ public class IgniteAllBaselineNodesOnlineFullApiSelfTest extends IgniteBaselineA
         grid(0).active(true);
 
         awaitPartitionMapExchange();
+    }
+
+    @Test
+    @Override public void testGetAndRemove() throws Exception {
+        super.testGetAndRemove();
     }
 }

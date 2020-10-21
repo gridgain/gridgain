@@ -62,7 +62,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
  */
 @RunWith(Parameterized.class)
 @Ignore
-public class CacheRemoveWithTombstonesLoadTest extends GridCommonAbstractTest {
+public class CacheRemoveWithTombstonesPreloadingLoadTest extends GridCommonAbstractTest {
     /** Dummy data. */
     private static final byte[] DUMMY_DATA = {};
 
