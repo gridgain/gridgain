@@ -556,18 +556,9 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
         off += len;
 
-        int verLen;
+        int verLen = CacheVersionIO.readSize(addr + off, false);
 
-        if (skipVer) {
-            ver = null;
-
-            verLen = CacheVersionIO.readSize(addr + off, false);
-        }
-        else {
-            ver = CacheVersionIO.read(addr + off, false);
-
-            verLen = CacheVersionIO.size(ver, false);
-        }
+        ver = skipVer ? null : CacheVersionIO.read(addr + off, false);
 
         verReady = true;
 

@@ -223,7 +223,7 @@ namespace ignite
             IGNITE_ODBC_API_CALL(InternalSetAttribute(attr, value, valueLen));
         }
 
-        SqlResult::Type Statement::InternalSetAttribute(int attr, void* value, SQLINTEGER valueLen)
+        SqlResult::Type Statement::InternalSetAttribute(int attr, void* value, SQLINTEGER)
         {
             switch (attr)
             {
@@ -374,7 +374,7 @@ namespace ignite
             IGNITE_ODBC_API_CALL(InternalGetAttribute(attr, buf, bufLen, valueLen));
         }
 
-        SqlResult::Type Statement::InternalGetAttribute(int attr, void* buf, SQLINTEGER bufLen, SQLINTEGER* valueLen)
+        SqlResult::Type Statement::InternalGetAttribute(int attr, void* buf, SQLINTEGER, SQLINTEGER* valueLen)
         {
             if (!buf)
             {
@@ -1041,7 +1041,7 @@ namespace ignite
             }
 
             if (rowsFetched)
-                *rowsFetched = fetched < 0 ? rowArraySize : fetched;
+                *rowsFetched = fetched < 0 ? static_cast<SQLINTEGER>(rowArraySize) : fetched;
 
             if (fetched > 0)
                 return errors == 0 ? SqlResult::AI_SUCCESS : SqlResult::AI_SUCCESS_WITH_INFO;

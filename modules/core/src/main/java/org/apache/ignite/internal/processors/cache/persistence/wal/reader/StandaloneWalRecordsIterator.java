@@ -70,7 +70,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.serial
  * WAL reader iterator, for creation in standalone WAL reader tool Operates over one directory, does not provide start
  * and end boundaries
  */
-class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
+public class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
     /** Record buffer size */
     public static final int DFLT_BUF_SIZE = 2 * 1024 * 1024;
 
@@ -110,7 +110,7 @@ class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
      * instead)
      * @param walFiles Wal files.
      */
-    StandaloneWalRecordsIterator(
+    public StandaloneWalRecordsIterator(
         @NotNull IgniteLogger log,
         @NotNull GridCacheSharedContext sharedCtx,
         @NotNull FileIOFactory ioFactory,

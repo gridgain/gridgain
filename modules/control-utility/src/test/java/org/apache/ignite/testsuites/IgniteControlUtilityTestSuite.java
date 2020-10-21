@@ -19,6 +19,10 @@ package org.apache.ignite.testsuites;
 import org.apache.ignite.events.IgniteControlUtilityBaselineEventsLocalTest;
 import org.apache.ignite.events.IgniteControlUtilityBaselineEventsRemoteTest;
 import org.apache.ignite.internal.commandline.CommandHandlerParsingTest;
+import org.apache.ignite.internal.commandline.indexreader.IgniteIndexReaderTest;
+import org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArgumentsTest;
+import org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterSensitiveDataTest;
+import org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterTest;
 import org.apache.ignite.internal.processors.security.GridCommandHandlerSslWithSecurityTest;
 import org.apache.ignite.util.GridCommandHandlerBrokenIndexTest;
 import org.apache.ignite.util.GridCommandHandlerCheckIndexesInlineSizeTest;
@@ -98,6 +102,11 @@ import org.junit.runners.Suite;
     GridCommandHandlerGetCacheSizeTest.class,
 
     GridCommandHandlerPropertiesTest.class,
+
+    IgniteIndexReaderTest.class,
+    IgniteWalConverterTest.class,
+    IgniteWalConverterArgumentsTest.class,
+    IgniteWalConverterSensitiveDataTest.class
 })
 public class IgniteControlUtilityTestSuite {
 }

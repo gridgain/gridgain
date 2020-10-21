@@ -264,9 +264,9 @@ namespace ignite
 
         void OdbcTestSuite::GetTestDateField(int64_t idx, SQL_DATE_STRUCT& val)
         {
-            val.year = 2017 + idx / 365;
-            val.month = ((idx / 28) % 12) + 1;
-            val.day = (idx % 28) + 1;
+            val.year = static_cast<SQLSMALLINT>(2017 + idx / 365);
+            val.month = static_cast<SQLUSMALLINT>(((idx / 28) % 12) + 1);
+            val.day = static_cast<SQLUSMALLINT>((idx % 28) + 1);
         }
 
         void OdbcTestSuite::CheckTestDateValue(int idx, const SQL_DATE_STRUCT& val)
@@ -338,21 +338,21 @@ namespace ignite
 
         void OdbcTestSuite::GetTestI8ArrayField(int64_t idx, int8_t* val, size_t valLen)
         {
-            for (int j = 0; j < valLen; ++j)
-                val[j] = idx * valLen + j;
+            for (size_t j = 0; j < valLen; ++j)
+                val[j] = static_cast<int8_t>(idx * valLen + j);
         }
 
         void OdbcTestSuite::CheckTestI8ArrayValue(int idx, const int8_t* val, size_t valLen)
         {
             BOOST_TEST_CONTEXT("Test index: " << idx)
             {
-                common::FixedSizeArray<int8_t> expected(valLen);
+                common::FixedSizeArray<int8_t> expected(static_cast<int32_t>(valLen));
                 GetTestI8ArrayField(idx, expected.GetData(), expected.GetSize());
 
-                for (int j = 0; j < valLen; ++j)
+                for (size_t j = 0; j < valLen; ++j)
                 {
                     BOOST_TEST_INFO("Byte index: " << j);
-                    BOOST_CHECK_EQUAL(val[j], expected[j]);
+                    BOOST_CHECK_EQUAL(val[j], expected[(int32_t)j]);
                 }
             }
         }
@@ -476,7 +476,7 @@ namespace ignite
 
             SQLRETURN ret;
 
-            int recordsNum = to - from;
+            int32_t recordsNum = to - from;
 
             ret = SQLPrepare(stmt, merge ? mergeReq : insertReq, SQL_NTS);
 
@@ -607,7 +607,8 @@ namespace ignite
                 BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
             BOOST_TEST_CHECKPOINT("Setting paramset size");
-            ret = SQLSetStmtAttr(stmt, SQL_ATTR_PARAMSET_SIZE, reinterpret_cast<SQLPOINTER>(recordsNum), 0);
+            ret = SQLSetStmtAttr(stmt, SQL_ATTR_PARAMSET_SIZE,
+                 reinterpret_cast<SQLPOINTER>(static_cast<ptrdiff_t>(recordsNum)), 0);
 
             if (!SQL_SUCCEEDED(ret))
                 BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
