@@ -3362,7 +3362,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     ) throws IgniteCheckedException, GridCacheEntryRemovedException {
         ensureFreeSpace();
 
-        boolean deferred = false;
+        //boolean deferred = false;
         boolean obsolete = false;
 
         GridCacheVersion oldVer = null;
@@ -3418,14 +3418,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     long oldExpTime = expireTimeUnlocked();
 
                     if (oldExpTime > 0 && oldExpTime < U.currentTimeMillis()) {
-                        if (onExpired(this.val, null)) {
-                            if (cctx.deferredDelete()) {
-                                deferred = true;
-                                oldVer = this.ver;
-                            }
-                            else if (val == null)
-                                obsolete = true;
-                        }
+                        if (onExpired(this.val, null))
+                            obsolete = true;
                     }
 
                     if (cctx.mvccEnabled()) {
@@ -3448,14 +3442,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         long delta = (oldExpTime == 0 ? 0 : oldExpTime - U.currentTimeMillis());
 
                         if (delta < 0) {
-                            if (onExpired(this.val, null)) {
-                                if (cctx.deferredDelete()) {
-                                    deferred = true;
-                                    oldVer = this.ver;
-                                }
-                                else if (val == null)
-                                    obsolete = true;
-                            }
+                            if (onExpired(this.val, null))
+                                obsolete = true;
                         }
 
                         assert !preload;
@@ -3467,30 +3455,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     // Optimization to access storage only once.
                     UpdateClosure c = storeValue(val, expTime, ver, p, row);
 
-                    // Update if tree is changed or removal is replicated from supplier node and is absent locally.
-                    update = c.operationType() != IgniteTree.OperationType.NOOP ||
-                        preload && val == null && !c.filtered() && c.oldRow() == null;
+                    update = c.operationType() != IgniteTree.OperationType.NOOP;
                 }
             }
 
             if (update) {
                 update(val, expTime, ttl, ver, true);
-
-                boolean skipQryNtf = false;
-
-                if (val == null) {
-                    skipQryNtf = true;
-
-                    if (cctx.deferredDelete() && !deletedUnlocked() && !isInternal()) {
-                        deletedUnlocked(true);
-
-                        oldVer = this.ver;
-
-                        deferred = true;
-                    }
-                }
-                else if (deletedUnlocked())
-                    deletedUnlocked(false);
 
                 long updateCntr = 0;
 
@@ -3528,19 +3498,17 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 drReplicate(drType, val, ver, topVer);
 
-                if (!skipQryNtf) {
-                    cctx.continuousQueries().onEntryUpdated(
-                        key,
-                        val,
-                        null,
-                        this.isInternal() || !this.context().userCache(),
-                        this.partition(),
-                        true,
-                        preload,
-                        updateCntr,
-                        null,
-                        topVer);
-                }
+                cctx.continuousQueries().onEntryUpdated(
+                    key,
+                    val,
+                    null,
+                    this.isInternal() || !this.context().userCache(),
+                    this.partition(),
+                    true,
+                    preload,
+                    updateCntr,
+                    null,
+                    topVer);
 
                 updatePlatformCache(val, topVer);
 
@@ -3568,11 +3536,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 cctx.cache().removeEntry(this);
             }
 
-            if (deferred) {
-                assert oldVer != null;
-
-                cctx.onDeferredDelete(this, oldVer);
-            }
+//            if (deferred) {
+//                assert oldVer != null;
+//
+//                cctx.onDeferredDelete(this, oldVer);
+//            }
         }
     }
 
@@ -6038,12 +6006,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     ver,
                     expireTime,
                     oldRow);
-
-                treeOp = oldRow != null && oldRow.link() == newRow.link() ?
-                    IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;
             }
-            else
-                treeOp = oldRow != null ? IgniteTree.OperationType.REMOVE : IgniteTree.OperationType.NOOP;
+            else {
+                // Create tombstone for preloaded removal.
+                newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(entry.cctx, entry.key(),
+                    TombstoneCacheObject.INSTANCE, ver, 0, oldRow);
+            }
+
+            treeOp = oldRow != null && oldRow.link() == newRow.link() ?
+                IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;
         }
 
         /** {@inheritDoc} */

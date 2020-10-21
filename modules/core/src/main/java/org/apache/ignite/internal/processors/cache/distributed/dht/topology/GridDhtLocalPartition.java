@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -107,7 +106,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     //private final int rmvQueueMaxSize;
 
     /** Removed items TTL. */
-    private final long rmvdEntryTtl;
+    //private final long rmvdEntryTtl;
 
     /** Static logger to avoid re-creation. */
     private static final AtomicReference<IgniteLogger> logRef = new AtomicReference<>();
@@ -215,7 +214,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         //rmvQueueMaxSize = U.ceilPow2(delQueueSize);
 
-        rmvdEntryTtl = Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000);
+        //rmvdEntryTtl = Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000);
 
         try {
             store = grp.offheap().createCacheDataStore(id);
