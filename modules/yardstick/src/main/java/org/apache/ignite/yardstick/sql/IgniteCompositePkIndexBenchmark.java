@@ -21,11 +21,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSemaphore;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -189,18 +191,18 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
             case CACHE_SCAN: {
                 int k = ThreadLocalRandom.current().nextInt(range);
 
-                ScanQuery<Object, Value> qry = new ScanQuery<>();
+                ScanQuery<BinaryObject, BinaryObject> qry = new ScanQuery<>();
 
                 qry.setFilter(new Filter(k));
 
-                IgniteCache<Object, Value> cache = ignite().cache(cacheName);
+                IgniteCache<BinaryObject, BinaryObject> cache = ignite().cache(cacheName).withKeepBinary();
 
-                List<IgniteCache.Entry<Object, Value>> res = cache.query(qry).getAll();
+                List<IgniteCache.Entry<BinaryObject, BinaryObject>> res = cache.query(qry).getAll();
 
                 if (res.size() != 1)
                     throw new Exception("Invalid result size: " + res.size());
 
-                if (res.get(0).getValue().valInt() != k)
+                if ((int)res.get(0).getValue().field("valInt") != k)
                     throw new Exception("Invalid entry found [key=" + k + ", entryKey=" + res.get(0).getKey() + ']');
 
                 return true;
@@ -342,7 +344,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
     /**
      *
      */
-    static class Filter implements IgniteBiPredicate<Object, Value> {
+    static class Filter implements IgniteBiPredicate<BinaryObject, BinaryObject> {
         /** */
         private final int val;
 
@@ -354,8 +356,8 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         }
 
         /** {@inheritDoc} */
-        @Override public boolean apply(Object key, Value val) {
-            return this.val == val.valInt();
+        @Override public boolean apply(BinaryObject key, BinaryObject val) {
+            return this.val == (int)val.field("valInt");
         }
     }
 }
