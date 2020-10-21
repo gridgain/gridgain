@@ -798,12 +798,12 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
                         return;
                     }
-                }
 
-                // Continue mapping on the same topology version as it was before.
-                synchronized (this) {
-                    if (this.topVer == null)
-                        this.topVer = topVer;
+                    // Continue mapping on the same topology version as it was before.
+                    synchronized (this) {
+                        if (this.topVer == null)
+                            this.topVer = lastFinishedFut.topologyVersion();
+                    }
                 }
 
                 cctx.mvcc().addFuture(this);
