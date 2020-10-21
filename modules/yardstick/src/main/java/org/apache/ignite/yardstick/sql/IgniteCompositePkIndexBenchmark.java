@@ -173,7 +173,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
                 ignite().cache(cacheName).put(keyCreator.apply(k), new Value(v));
 
-                break;
+                return true;
             }
 
             case SCAN: {
@@ -182,6 +182,8 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
                 List<List<?>> res = sql("SELECT ID1 FROM TEST WHERE VALINT=?", k).getAll();
 
                 assert res.size() == 1;
+
+                return true;
             }
 
             case CACHE_SCAN: {
@@ -207,10 +209,8 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
             default:
                 assert false : "Invalid action: " + testAct;
 
-                break;
+                return false;
         }
-
-        return true;
     }
 
     /**
