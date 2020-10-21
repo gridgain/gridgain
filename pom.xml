@@ -105,6 +105,7 @@
         <module>modules/geospatial</module>
         <module>modules/schedule</module>
         <module>modules/control-utility</module>
+        <module>modules/cli-demo</module>
     </modules>
 
     <profiles>
