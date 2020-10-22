@@ -185,21 +185,4 @@ public class PageEvictionPagesRecyclingAndReusingTest extends PageEvictionAbstra
 
         System.out.println("### Recycled pages count: " + reuseList.recycledPagesCount());
     }
-
-    /**
-     * Clears tombstones on DHT node.
-     *
-     * @param cache Cache.
-     */
-    private void clearTombstones(IgniteCache<Object, Object> cache) throws IgniteCheckedException {
-        if (cache.getConfiguration(CacheConfiguration.class).getCacheMode() == CacheMode.LOCAL)
-            return;
-
-        IgniteEx ignite = cache.unwrap(IgniteEx.class);
-
-        List<GridDhtLocalPartition> locParts = ignite.cachex(cache.getName()).context().topology().localPartitions();
-
-        for (GridDhtLocalPartition locPart : locParts)
-            locPart.clearTombstonesAsync().get();
-    }
 }

@@ -64,6 +64,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.AffinityFunction;
@@ -2841,5 +2842,22 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 s.addData(key, key);
             }
         }
+    }
+
+    /**
+     * Clears tombstones on a DHT node.
+     *
+     * @param cache Cache.
+     */
+    protected void clearTombstones(IgniteCache<Object, Object> cache) throws IgniteCheckedException {
+        if (cache.getConfiguration(CacheConfiguration.class).getCacheMode() == CacheMode.LOCAL)
+            return;
+
+        IgniteEx ignite = cache.unwrap(IgniteEx.class);
+
+        List<GridDhtLocalPartition> locParts = ignite.cachex(cache.getName()).context().topology().localPartitions();
+
+        for (GridDhtLocalPartition locPart : locParts)
+            locPart.clearTombstonesAsync().get();
     }
 }
