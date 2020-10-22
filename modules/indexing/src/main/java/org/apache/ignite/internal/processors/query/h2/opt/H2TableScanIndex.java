@@ -20,6 +20,7 @@ import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
 import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.TableFilter;
 
@@ -44,6 +45,15 @@ public class H2TableScanIndex extends H2ScanIndex<GridH2IndexBase> {
         super(hashIdx, tbl, "_SCAN_" + hashIdx.getName());
 
         this.tbl = tbl;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected GridH2IndexBase delegate() {
+        Index idx = tbl.getIndexForScan();
+
+        assert idx instanceof GridH2IndexBase : "Invalid index: " + idx;
+
+        return (GridH2IndexBase)idx;
     }
 
     /** {@inheritDoc} */

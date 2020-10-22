@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
@@ -29,17 +27,12 @@ import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.h2.database.H2PkHashClientIndex;
-import org.apache.ignite.internal.processors.query.h2.database.H2PkHashIndex;
-import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneIndex;
-import org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
@@ -75,12 +68,6 @@ public class H2TableDescriptor {
 
     /** */
     private GridH2Table tbl;
-
-    /** */
-    private GridLuceneIndex luceneIdx;
-
-    /** */
-    private H2PkHashIndex pkHashIdx;
 
     /** Flag of table has been created from SQL*/
     private boolean isSql;
@@ -193,55 +180,12 @@ public class H2TableDescriptor {
      * @return Lucene index.
      */
     GridLuceneIndex luceneIndex() {
-        return luceneIdx;
+        return tbl.luceneIdx();
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(H2TableDescriptor.class, this);
-    }
-
-    /**
-     * Create list of indexes. First must be primary key, after that all unique indexes and only then non-unique
-     * indexes. All indexes must be subtypes of {@link H2TreeIndexBase}.
-     *
-     * @param tbl Table to create indexes for.
-     * @return List of indexes.
-     */
-    public ArrayList<Index> createSystemIndexes(GridH2Table tbl) {
-        ArrayList<Index> idxs = new ArrayList<>();
-
-        IndexColumn keyCol = tbl.indexColumn(QueryUtils.KEY_COL, SortOrder.ASCENDING);
-
-        GridH2IndexBase hashIdx = createHashIndex(
-            tbl,
-            Collections.singletonList(keyCol)
-        );
-
-        idxs.add(hashIdx);
-        idxs.add(new H2TableScanIndex(tbl, hashIdx));
-
-        if (type().valueClass() == String.class) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
-        }
-
-        GridQueryIndexDescriptor textIdx = type.textIndex();
-
-        if (textIdx != null) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
-        }
-
-        return idxs;
     }
 
     /**
@@ -374,33 +318,11 @@ public class H2TableDescriptor {
     }
 
     /**
-     * Create hash index.
-     *
-     * @param tbl Table.
-     * @param cols Columns.
-     * @return Index.
-     */
-    private GridH2IndexBase createHashIndex(GridH2Table tbl, List<IndexColumn> cols) {
-        if (cacheInfo.affinityNode()) {
-            assert pkHashIdx == null : pkHashIdx;
-
-            pkHashIdx = new H2PkHashIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols,
-                tbl.rowDescriptor().context().config().getQueryParallelism());
-//            pkHashIdx = new H2PkHashIndexAsync(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols,
-//                tbl.rowDescriptor().context().config().getQueryParallelism());
-
-            return pkHashIdx;
-        }
-        else
-            return new H2PkHashClientIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols);
-    }
-
-    /**
      * Handle drop.
      */
     void onDrop() {
         tbl.destroy();
 
-        U.closeQuiet(luceneIdx);
+        U.closeQuiet(tbl.luceneIdx());
     }
 }

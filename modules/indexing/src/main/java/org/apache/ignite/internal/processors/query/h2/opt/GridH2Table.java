@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
+import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -52,6 +54,8 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.IndexRebuildPartialClosure;
 import org.apache.ignite.internal.processors.query.h2.database.H2IndexType;
+import org.apache.ignite.internal.processors.query.h2.database.H2PkHashClientIndex;
+import org.apache.ignite.internal.processors.query.h2.database.H2PkHashIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
@@ -173,6 +177,12 @@ public class GridH2Table extends TableBase {
     @GridToStringExclude
     private IgniteLogger log;
 
+    /** */
+    private GridLuceneIndex luceneIdx;
+
+    /** */
+    private H2PkHashIndex pkHashIdx;
+
     /**
      * Creates table.
      *
@@ -203,7 +213,7 @@ public class GridH2Table extends TableBase {
         identifierStr = identifier.schema() + "." + identifier.table();
 
         // Indexes must be created in the end when everything is ready.
-        idxs = tblDesc.createSystemIndexes(this);
+        idxs = createSystemIndexes();
 
         assert idxs != null;
 
@@ -225,6 +235,59 @@ public class GridH2Table extends TableBase {
 
             log = ctx.log(getClass());
         }
+    }
+
+    /** */
+    private ArrayList<Index> createSystemIndexes() {
+        ArrayList<Index> idxs = new ArrayList<>();
+
+        IndexColumn keyCol = indexColumn(QueryUtils.KEY_COL, SortOrder.ASCENDING);
+
+        GridH2IndexBase hashIdx = createHashIndex(
+            this,
+            Collections.singletonList(keyCol)
+        );
+
+        idxs.add(new H2TableScanIndex(this, hashIdx));
+        idxs.add(hashIdx);
+
+        if (desc.type().valueClass() == String.class) {
+            try {
+                luceneIdx = new GridLuceneIndex(desc.context().kernalContext(), cacheName(), desc.type());
+            }
+            catch (IgniteCheckedException e1) {
+                throw new IgniteException(e1);
+            }
+        }
+
+        GridQueryIndexDescriptor textIdx = desc.type().textIndex();
+
+        if (textIdx != null) {
+            try {
+                luceneIdx = new GridLuceneIndex(desc.context().kernalContext(), cacheName(), desc.type());
+            }
+            catch (IgniteCheckedException e1) {
+                throw new IgniteException(e1);
+            }
+        }
+
+        return idxs;
+    }
+
+    /** */
+    private GridH2IndexBase createHashIndex(GridH2Table tbl, List<IndexColumn> cols) {
+        if (cacheInfo.affinityNode()) {
+            assert pkHashIdx == null : pkHashIdx;
+
+            pkHashIdx = new H2PkHashIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols,
+                tbl.rowDescriptor().context().config().getQueryParallelism());
+//            pkHashIdx = new H2PkHashIndexAsync(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols,
+//                tbl.rowDescriptor().context().config().getQueryParallelism());
+
+            return pkHashIdx;
+        }
+        else
+            return new H2PkHashClientIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols);
     }
 
     /**
@@ -1564,6 +1627,25 @@ public class GridH2Table extends TableBase {
             if (t instanceof GridH2Table)
                 ((GridH2Table)t).checkVersion(s);
         }
+    }
+
+    /** */
+    public GridH2IndexBase getIndexForScan() {
+//        // Use any H2TreeIndex for scan because it is faster than scan PkHash.
+//        // Scan one tree of index is faster than scan several trees of partitions.
+//        if (rebuildFromHashInProgress == FALSE && idxs.size() > USERS_IDXS_POS) {
+//            for (int i = USERS_IDXS_POS; i < idxs.size(); ++i) {
+//                if (idxs.get(i) instanceof H2TreeIndex)
+//                    return (GridH2IndexBase)idxs.get(i);
+//            }
+//        }
+
+        return pkHashIdx;
+    }
+
+    /** */
+    public GridLuceneIndex luceneIdx() {
+        return luceneIdx;
     }
 
     /**
