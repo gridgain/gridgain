@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.query.h2.database;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -214,9 +213,6 @@ public class H2PkHashIndex extends GridH2IndexBase {
         /** */
         private final GridH2RowDescriptor desc;
 
-//        /** */
-//        private final LinkedBlockingQueue<GridCursor<? extends CacheDataRow>> curQueue = new LinkedBlockingQueue<>();
-
         /** */
         private final Iterator<IgniteCacheOffheapManager.CacheDataStore> itStore;
 
@@ -261,7 +257,6 @@ public class H2PkHashIndex extends GridH2IndexBase {
             desc = rowDescriptor();
 
             time = U.currentTimeMillis();
-
         }
 
         /** {@inheritDoc} */
@@ -344,17 +339,5 @@ public class H2PkHashIndex extends GridH2IndexBase {
         @Override public boolean previous() {
             throw DbException.getUnsupportedException("previous");
         }
-
-//        /**
-//         *
-//         */
-//        public void putCursor(GridCursor<? extends CacheDataRow> cur) {
-//            try {
-//                curQueue.put(cur);
-//            }
-//            catch (InterruptedException e) {
-//                throw new IgniteException(e);
-//            }
-//        }
     }
 }
