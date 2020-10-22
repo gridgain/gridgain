@@ -21,15 +21,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSemaphore;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.yardstick.IgniteAbstractBenchmark;
+import org.apache.ignite.yardstick.cache.IgniteScanQueryBenchmark;
 import org.yardstickframework.BenchmarkConfiguration;
 
 import static org.yardstickframework.BenchmarkUtils.println;
@@ -139,6 +145,8 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
         sql(createTblQry);
 
+        sql("CREATE INDEX IDX_ID1 ON TEST(ID0)");
+
         if (addIndexes) {
             sql("CREATE INDEX IDX_VAL_INT ON TEST(VALINT)");
             sql("CREATE INDEX IDX_VAL_STR ON TEST(VALSTR)");
@@ -156,6 +164,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         println(cfg, "Cache populated. ");
         List<?> row = sql("SELECT * FROM TEST LIMIT 1").getAll().get(0);
 
+        println("    partitions: " + ((IgniteEx)ignite()).cachex("TEST").affinity().partitions());
         println(cfg, "TEST table row: \n" + row);
     }
 
@@ -168,7 +177,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
                 ignite().cache(cacheName).put(keyCreator.apply(k), new Value(v));
 
-                break;
+                return true;
             }
 
             case SCAN: {
@@ -177,15 +186,35 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
                 List<List<?>> res = sql("SELECT ID1 FROM TEST WHERE VALINT=?", k).getAll();
 
                 assert res.size() == 1;
+
+                return true;
+            }
+
+            case CACHE_SCAN: {
+                int k = ThreadLocalRandom.current().nextInt(range);
+
+                ScanQuery<BinaryObject, BinaryObject> qry = new ScanQuery<>();
+
+                qry.setFilter(new Filter(k));
+
+                IgniteCache<BinaryObject, BinaryObject> cache = ignite().cache(cacheName).withKeepBinary();
+
+                List<IgniteCache.Entry<BinaryObject, BinaryObject>> res = cache.query(qry).getAll();
+
+                if (res.size() != 1)
+                    throw new Exception("Invalid result size: " + res.size());
+
+                if ((int)res.get(0).getValue().field("valInt") != k)
+                    throw new Exception("Invalid entry found [key=" + k + ", entryKey=" + res.get(0).getKey() + ']');
+
+                return true;
             }
 
             default:
                 assert false : "Invalid action: " + testAct;
 
-                break;
+                return false;
         }
-
-        return true;
     }
 
     /**
@@ -302,9 +331,35 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         }
     }
 
+    /**
+     *
+     */
+    static class Filter implements IgniteBiPredicate<BinaryObject, BinaryObject> {
+        /** */
+        private final int val;
+
+        /**
+         * @param val Value to find.
+         */
+        public Filter(Integer val) {
+            this.val = val;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean apply(BinaryObject key, BinaryObject val) {
+            return this.val == (int)val.field("valInt");
+        }
+    }
+
     /** */
-    public static enum TestAction {
+    public enum TestAction {
+        /** */
         PUT,
-        SCAN
+
+        /** */
+        SCAN,
+
+        /** */
+        CACHE_SCAN
     }
 }
