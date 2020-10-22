@@ -1814,29 +1814,17 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                             ctx.shared().exchange().affinityReadyFuture(req.topologyVersion());
 
                                         if (affFut.isDone()) {
-                                            assert false : "req topVer: " + req.topologyVersion() +
-                                                    ", lastFinishedFuture topVer: " + ctx.shared().exchange().lastFinishedFuture().topologyVersion() +
-                                                    ", lastAffinityChangedTopologyVersion topVer: " + ctx.shared().exchange().lastAffinityChangedTopologyVersion();
-
-                                            List<GridDhtPartitionsExchangeFuture> futs =
-                                                    ctx.shared().exchange().exchangeFutures();
-
                                             boolean found = false;
 
-                                            for (int i = 0; i < futs.size(); ++i) {
-                                                GridDhtPartitionsExchangeFuture fut = futs.get(i);
+                                            GridDhtPartitionsExchangeFuture lastFinishedFut = ctx.shared().exchange().lastFinishedFuture();
 
-                                                // We have to check fut.exchangeDone() here -
-                                                // otherwise attempt to get topVer will throw error.
-                                                // We won't skip needed future as per affinity ready future is done.
-                                                if (fut.exchangeDone() &&
-                                                        fut.topologyVersion().equals(req.topologyVersion())) {
-                                                    topFut = fut;
+                                            // We have to check fut.exchangeDone() here -
+                                            // otherwise attempt to get topVer will throw error.
+                                            // We won't skip needed future as per affinity ready future is done.
+                                            if (lastFinishedFut != null && lastFinishedFut.exchangeDone()) {
+                                                topFut = lastFinishedFut;
 
-                                                    found = true;
-
-                                                    break;
-                                                }
+                                                found = true;
                                             }
 
                                             assert found : "The requested topology future cannot be found [topVer="
