@@ -16,11 +16,13 @@
 
 namespace Apache.Ignite.Core.Impl
 {
+    using System;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
+    using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
 
     /// <summary>
@@ -29,9 +31,45 @@ namespace Apache.Ignite.Core.Impl
     internal static class MemoryInfo
     {
         /// <summary>
-        /// Gets the total physical memory.
+        /// Gets total physical memory.
         /// </summary>
-        public static ulong GetTotalPhysicalMemory(ulong defaultValue)
+        public static readonly ulong? TotalPhysicalMemory = GetTotalPhysicalMemory();
+
+        /// <summary>
+        /// Gets memory limit (when set by cgroups) or the value of <see cref="TotalPhysicalMemory"/>.
+        /// </summary>
+        public static readonly ulong? MemoryLimit = GetMemoryLimit();
+
+        /// <summary>
+        /// Gets the memory limit.
+        /// <para />
+        /// When memory is limited with cgroups, returns that limit. Otherwise, returns total physical memory.
+        /// </summary>
+        private static ulong? GetMemoryLimit()
+        {
+            if (Os.IsWindows)
+            {
+                return null;
+            }
+
+            var physical = TotalPhysicalMemory;
+
+            if (physical == null)
+            {
+                return null;
+            }
+
+            var limit = CGroup.MemoryLimitInBytes;
+
+            return limit != null && limit < physical
+                ? limit.Value
+                : physical.Value;
+        }
+
+        /// <summary>
+        /// Gets total physical memory.
+        /// </summary>
+        private static ulong? GetTotalPhysicalMemory()
         {
             if (Os.IsWindows)
             {
@@ -40,7 +78,7 @@ namespace Apache.Ignite.Core.Impl
 
             const string memInfo = "/proc/meminfo";
 
-            if (File.Exists(memInfo))
+            try
             {
                 var kbytes = File.ReadAllLines(memInfo).Select(x => Regex.Match(x, @"MemTotal:\s+([0-9]+) kB"))
                     .Where(x => x.Success)
@@ -51,9 +89,14 @@ namespace Apache.Ignite.Core.Impl
                     return ulong.Parse(kbytes) * 1024;
                 }
             }
+            catch (Exception)
+            {
+                // Ignore.
+            }
 
-            return defaultValue;
+            return null;
         }
+
 
         /// <summary>
         /// Native methods.
