@@ -804,6 +804,22 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                         return;
                     }
                 }
+                else {
+                    AffinityTopologyVersion lastChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
+
+                    IgniteInternalFuture<AffinityTopologyVersion> affFut = cctx.shared().exchange().affinityReadyFuture(lastChangeVer);
+
+                    if (!affFut.isDone()) {
+                        try {
+                            affFut.get();
+                        }
+                        catch (IgniteCheckedException e) {
+                            onDone(err);
+
+                            return;
+                        }
+                    }
+                }
 
                 // Continue mapping on the same topology version as it was before.
                 synchronized (this) {

@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTx
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxAbstractEnlistFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocalAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
@@ -211,28 +212,34 @@ public abstract class GridNearTxAbstractEnlistFuture<T> extends GridCacheCompoun
             topVer = tx.topologyVersionSnapshot();
 
         if (topVer != null) {
-            for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
-                if (fut.exchangeDone() && fut.topologyVersion().equals(topVer)) {
-                    Throwable err = null;
+            GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
 
-                    // Before cache validation, make sure that this topology future is already completed.
-                    try {
-                        fut.get();
-                    }
-                    catch (IgniteCheckedException e) {
-                        err = fut.error();
-                    }
+            AffinityTopologyVersion lastFinishedTopVer = lastFinishedFut.topologyVersion();
 
-                    if (err == null)
-                        err = fut.validateCache(cctx, false, false, null, null);
+            AffinityTopologyVersion latestChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion();
 
-                    if (err != null) {
-                        onDone(err);
+            if (lastFinishedFut != null &&
+                    (latestChangeVer == null || lastFinishedTopVer.compareTo(latestChangeVer) >= 0) &&
+                    lastFinishedTopVer.compareTo(topVer) >= 0) {
+                Throwable err = null;
 
-                        return;
-                    }
+                // Before cache validation, make sure that this topology future is already completed.
+                try {
+                    lastFinishedFut.get();
+                }
+                catch (IgniteCheckedException e) {
+                    err = lastFinishedFut.error();
+                }
 
-                    break;
+                topVer = lastFinishedTopVer;
+
+                if (err == null)
+                    err = lastFinishedFut.validateCache(cctx, false, false, null, null);
+
+                if (err != null) {
+                    onDone(err);
+
+                    return;
                 }
             }
 
