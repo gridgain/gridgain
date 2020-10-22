@@ -13,16 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.internal.commandline.indexreader;
 
 /**
- * Test suite for dev utils.
+ * Link that is representing page id with offset and cache id.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-})
-public class DevUtilsTestSuite {
+class CacheAwareLink {
+    /** */
+    public final int cacheId;
+
+    /** */
+    public final long link;
+
+    /** */
+    public CacheAwareLink(int cacheId, long link) {
+        this.cacheId = cacheId;
+        this.link = link;
+    }
 }
