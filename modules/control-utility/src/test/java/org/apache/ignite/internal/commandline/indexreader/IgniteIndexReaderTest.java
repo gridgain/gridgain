@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -55,7 +56,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.lang.String.format;
@@ -621,12 +621,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         OutputStream destStream = new ByteArrayOutputStream();
 
+        Set<String> idxSet = isNull(idxs) ? null : new HashSet<>(asList(idxs));
+
         try (IgniteIndexReader reader = new IgniteIndexReader(
-            PAGE_SIZE,
-            PART_CNT,
-            idxs,
+            isNull(idxSet) ? null : idxSet::contains,
             checkParts,
-            destStream,
+            new PrintStream(destStream),
             createFilePageStoreFactory(dir)
         )) {
             reader.readIdx();
@@ -644,7 +644,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     protected IgniteIndexReaderFilePageStoreFactory createFilePageStoreFactory(
         File dir
     ) throws IgniteCheckedException {
-        return new IgniteIndexReaderFilePageStoreFactoryImpl(dir, PAGE_SIZE, PAGE_STORE_VER);
+        return new IgniteIndexReaderFilePageStoreFactoryImpl(dir, PAGE_SIZE, PART_CNT, PAGE_STORE_VER);
     }
 
     /**
@@ -672,8 +672,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      *
      * @throws IgniteCheckedException If failed.
      */
-    //TODO: GG-29643: Check issue fixed.
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-30506")
     @Test
     public void testCorrectIdxWithCheckParts() throws IgniteCheckedException {
         checkCorrectIdxWithCheckParts(workDir);
@@ -738,8 +736,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    //TODO: GG-29643: Check issue fixed.
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-30506")
     @Test
     public void testCorruptedIdxWithCheckParts() throws Exception {
         checkCorruptedIdxWithCheckParts(asList(workDir));
