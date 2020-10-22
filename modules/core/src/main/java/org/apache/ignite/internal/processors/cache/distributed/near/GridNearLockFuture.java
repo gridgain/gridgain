@@ -848,10 +848,15 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
         if (topVer != null) {
             GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
 
+            AffinityTopologyVersion lastFinishedTopVer = lastFinishedFut.topologyVersion();
+
             AffinityTopologyVersion latestChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion();
 
             if (lastFinishedFut != null &&
-                    (latestChangeVer == null || lastFinishedFut.topologyVersion().compareTo(latestChangeVer) >= 0)) {
+                    (latestChangeVer == null || lastFinishedTopVer.compareTo(latestChangeVer) >= 0) &&
+                    lastFinishedTopVer.compareTo(topVer) >= 0) {
+                topVer = lastFinishedTopVer;
+
                 Throwable err = lastFinishedFut.validateCache(cctx, recovery, read, null, keys);
 
                 if (err != null) {
@@ -859,11 +864,11 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
 
                     return;
                 }
-
-                // Continue mapping on the same topology version as it was before.
-                if (this.topVer == null)
-                    this.topVer = lastFinishedFut.topologyVersion();
             }
+
+            // Continue mapping on the same topology version as it was before.
+            if (this.topVer == null)
+                this.topVer = topVer;
 
             map(keys, false, true);
 
