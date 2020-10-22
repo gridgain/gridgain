@@ -1062,7 +1062,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             private boolean reservePartition(int partId) {
                 GridDhtLocalPartition p = grp.topology().localPartition(partId);
 
-                if (p != null && p.reserve()) {
+                // Avoid clearing partition if it's currently preloading.
+                if (p != null && p.reserve() && grp.topology().moving(partId).isEmpty()) {
                     curPart = p;
 
                     return true;

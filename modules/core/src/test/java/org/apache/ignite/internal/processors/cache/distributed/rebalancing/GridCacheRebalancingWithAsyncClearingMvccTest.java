@@ -16,10 +16,12 @@
 package org.apache.ignite.internal.processors.cache.distributed.rebalancing;
 
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.junit.Ignore;
 
 /**
  *
  */
+@Ignore
 public class GridCacheRebalancingWithAsyncClearingMvccTest extends GridCacheRebalancingWithAsyncClearingTest {
     /** {@inheritDoc} */
     @Override protected CacheAtomicityMode atomicityMode() {
