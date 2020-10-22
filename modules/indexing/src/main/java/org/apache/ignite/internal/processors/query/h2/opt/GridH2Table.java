@@ -39,6 +39,7 @@ import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.query.QueryRetryException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -179,6 +180,9 @@ public class GridH2Table extends TableBase {
 
     /** */
     private GridH2IndexBase pkHashIdx;
+
+    /** */
+    private volatile H2TreeIndex treeIdx4Scan;
 
     /**
      * Creates table.
@@ -1051,6 +1055,9 @@ public class GridH2Table extends TableBase {
 
             Index idx = tmpIdxs.remove(idxName);
 
+            if (treeIdx4Scan == null && idx instanceof H2TreeIndex)
+                treeIdx4Scan = (H2TreeIndex)idx;
+
             assert idx != null;
 
             Index cloneIdx = createDuplicateIndexIfNeeded(idx);
@@ -1139,6 +1146,9 @@ public class GridH2Table extends TableBase {
             Index targetIdx = (h2Idx instanceof GridH2ProxyIndex) ?
                 ((GridH2ProxyIndex)h2Idx).underlyingIndex() : h2Idx;
 
+            if (treeIdx4Scan == targetIdx)
+                treeIdx4Scan = null;
+
             for (int i = USERS_IDXS_POS; i < idxs.size();) {
                 Index idx = idxs.get(i);
 
@@ -1157,6 +1167,10 @@ public class GridH2Table extends TableBase {
                         ((GridH2IndexBase)idx0).destroy(rmIndex);
 
                     continue;
+                }
+                else {
+                    if (idx instanceof H2TreeIndex)
+                        treeIdx4Scan = (H2TreeIndex)idx;
                 }
 
                 i++;
@@ -1582,14 +1596,18 @@ public class GridH2Table extends TableBase {
 
     /** */
     public GridH2IndexBase getIndexForScan() {
-//        // Use any H2TreeIndex for scan because it is faster than scan PkHash.
-//        // Scan one tree of index is faster than scan several trees of partitions.
-//        if (rebuildFromHashInProgress == FALSE && idxs.size() > USERS_IDXS_POS) {
-//            for (int i = USERS_IDXS_POS; i < idxs.size(); ++i) {
-//                if (idxs.get(i) instanceof H2TreeIndex)
-//                    return (GridH2IndexBase)idxs.get(i);
-//            }
-//        }
+        // Use any H2TreeIndex for scan because it is faster than scan PkHash.
+        // Scan one tree of index is faster than scan several trees of partitions.
+        if (rebuildFromHashInProgress == FALSE && treeIdx4Scan != null) {
+            GridCacheAffinityManager aff = cacheInfo.cacheContext().affinity();
+            GridKernalContext ctx = desc.context().kernalContext();
+
+            int priCnt = aff.primaryPartitions(ctx.localNodeId(), desc.context().affinity().affinityTopologyVersion()).size();
+            int backCnt = aff.backupPartitions(ctx.localNodeId(), desc.context().affinity().affinityTopologyVersion()).size();
+
+            if (priCnt >= backCnt)
+                return treeIdx4Scan;
+        }
 
         return pkHashIdx;
     }

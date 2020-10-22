@@ -17,22 +17,15 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 
 /**
  * Basic simple tests for SQL.
@@ -113,7 +106,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         sql("CREATE INDEX IDX_VAL0_VAL1 ON TEST(VAL0, VAL1)");
 
         String plan = null;
-        plan = (String)execute(new SqlFieldsQuery(
+        plan = (String)executeOnSrv(new SqlFieldsQuery(
             "EXPLAIN SELECT VAL0, VAL1, VAL2 FROM TEST " +
             "WHERE VAL0 = 0 " +
             "ORDER BY VAL0, VAL1").setLocal(true)
@@ -121,7 +114,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
 
         assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
 
-        plan = (String)execute(new SqlFieldsQuery(
+        plan = (String)executeOnSrv(new SqlFieldsQuery(
             "EXPLAIN SELECT VAL0, VAL1, VAL2 FROM TEST " +
             "WHERE VAL0 = 0 " +
             "ORDER BY 1, 2").setLocal(true)
@@ -129,7 +122,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
 
         assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
 
-        plan = (String)execute(new SqlFieldsQuery(
+        plan = (String)executeOnSrv(new SqlFieldsQuery(
             "EXPLAIN SELECT VAL0, VAL1, VAL2 FROM TEST " +
                 "WHERE VAL0 = 0 " +
                 "ORDER BY VAL0, VAL1")
@@ -169,11 +162,22 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         for (int i = 0; i < 1000; ++i)
             sql ("INSERT INTO TEST VALUES (?, ?, ?, ?)", i, i, i, i);
 
+        sql("CREATE INDEX IDX_ID0 ON TEST(ID0)");
+        sql("CREATE INDEX IDX_ID1 ON TEST(ID1)");
         List<List<?>> res = sql("SELECT * FROM TEST WHERE VAL0 = 10").getAll();
 
         assertEquals(1, res.size());
-    }
 
+        sql("DROP INDEX IDX_ID0");
+        res = sql("SELECT * FROM TEST WHERE VAL0 = 10").getAll();
+
+        assertEquals(1, res.size());
+
+        sql("DROP INDEX IDX_ID1");
+        res = sql("SELECT * FROM TEST WHERE VAL0 = 10").getAll();
+
+        assertEquals(1, res.size());
+    }
 
     /**
      * @param sql SQL query.
@@ -191,9 +195,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      * @param qry Query.
      * @return Results cursor.
      */
-    private FieldsQueryCursor<List<?>> execute(SqlFieldsQuery qry) {
-        IgniteEx ign = client ? cli : grid(0);
-
-        return ign.context().query().querySqlFields(qry, false);
+    private FieldsQueryCursor<List<?>> executeOnSrv(SqlFieldsQuery qry) {
+        return grid(0).context().query().querySqlFields(qry, false);
     }
 }
