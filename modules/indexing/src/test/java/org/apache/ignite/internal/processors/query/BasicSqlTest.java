@@ -17,19 +17,45 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Basic simple tests for SQL.
  */
+@RunWith(Parameterized.class)
 public class BasicSqlTest extends AbstractIndexingCommonTest {
+    /** */
+    private static IgniteEx cli;
+
+    /** Repair algorithm. */
+    @Parameterized.Parameter(0)
+    public boolean client;
+
+    /**
+     *
+     */
+    @Parameterized.Parameters(name = "client = {0}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>();
+
+        params.add(new Object[] {true});
+        params.add(new Object[] {false});
+
+        return params;
+    }
+
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         stopAllGrids();
@@ -42,6 +68,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         super.beforeTestsStarted();
 
         startGrids(2);
+        cli = startClientGrid(2);
     }
 
     /** {@inheritDoc} */
@@ -210,7 +237,9 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
-        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql)
+        IgniteEx ign = client ? cli : grid(0);
+
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setArgs(args), false);
     }
 
@@ -219,6 +248,8 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> execute(SqlFieldsQuery qry) {
-        return grid(0).context().query().querySqlFields(qry, false);
+        IgniteEx ign = client ? cli : grid(0);
+
+        return ign.context().query().querySqlFields(qry, false);
     }
 }

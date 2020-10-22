@@ -181,7 +181,7 @@ public class GridH2Table extends TableBase {
     private GridLuceneIndex luceneIdx;
 
     /** */
-    private H2PkHashIndex pkHashIdx;
+    private GridH2IndexBase pkHashIdx;
 
     /**
      * Creates table.
@@ -283,11 +283,11 @@ public class GridH2Table extends TableBase {
                 tbl.rowDescriptor().context().config().getQueryParallelism());
 //            pkHashIdx = new H2PkHashIndexAsync(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols,
 //                tbl.rowDescriptor().context().config().getQueryParallelism());
-
-            return pkHashIdx;
         }
         else
-            return new H2PkHashClientIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols);
+            pkHashIdx = new H2PkHashClientIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols);
+
+        return pkHashIdx;
     }
 
     /**
