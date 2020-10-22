@@ -145,6 +145,8 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
         sql(createTblQry);
 
+        sql("CREATE INDEX IDX_ID0 ON TEST(ID0)");
+
         if (addIndexes) {
             sql("CREATE INDEX IDX_VAL_INT ON TEST(VALINT)");
             sql("CREATE INDEX IDX_VAL_STR ON TEST(VALSTR)");
