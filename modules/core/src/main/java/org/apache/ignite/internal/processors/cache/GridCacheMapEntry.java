@@ -2704,7 +2704,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (cctx.mvccEnabled())
                 cctx.offheap().mvccRemoveAll(this);
             else
-                removeValue(ver);
+                removeExpiredValue(ver);
         }
         finally {
             unlockEntry();
@@ -3348,8 +3348,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         boolean preload,
         AffinityTopologyVersion topVer,
         GridDrType drType,
-        boolean fromStore,
-        CacheDataRow row
+        boolean fromStore
     ) throws IgniteCheckedException, GridCacheEntryRemovedException {
         ensureFreeSpace();
 
@@ -3419,7 +3418,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
                     }
                     else
-                        storeValue(val, expTime, ver, null, row);
+                        storeValue(val, expTime, ver, null);
                 }
             }
             else {
@@ -3444,7 +3443,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 }
                 else {
                     // Optimization to access storage only once.
-                    UpdateClosure c = storeValue(val, expTime, ver, p, row);
+                    UpdateClosure c = storeValue(val, expTime, ver, p);
 
                     update = c.operationType() != IgniteTree.OperationType.NOOP;
                 }
@@ -4297,7 +4296,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         long expireTime,
         GridCacheVersion ver
     ) throws IgniteCheckedException {
-        storeValue(val, expireTime, ver, null, null);
+        storeValue(val, expireTime, ver, null);
     }
 
     /**
@@ -4307,7 +4306,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param expireTime Expire time.
      * @param ver New entry version.
      * @param p Optional predicate.
-     * @param row Pre-created data row, associated with this cache entry.
      * @return {@code True} if storage was modified.
      * @throws IgniteCheckedException If update failed.
      */
@@ -4315,13 +4313,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         @Nullable CacheObject val,
         long expireTime,
         GridCacheVersion ver,
-        @Nullable IgniteBiPredicate<CacheObject, GridCacheVersion> p,
-        @Nullable CacheDataRow row
+        @Nullable IgniteBiPredicate<CacheObject, GridCacheVersion> p
     ) throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
         assert localPartition() == null || localPartition().state() != RENTING : localPartition();
 
-        UpdateClosure c = new UpdateClosure(this, val, ver, expireTime, p, row);
+        UpdateClosure c = new UpdateClosure(this, val, ver, expireTime, p);
 
         cctx.offheap().invoke(cctx, key, localPartition(), c);
 
@@ -5978,22 +5975,19 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
          * @param ver New version.
          * @param expireTime New expire time.
          * @param p Optional predicate.
-         * @param newRow New row value.
          */
         private UpdateClosure(
             GridCacheMapEntry entry,
             @Nullable CacheObject val,
             GridCacheVersion ver,
             long expireTime,
-            @Nullable IgniteBiPredicate<CacheObject, GridCacheVersion> p,
-            @Nullable CacheDataRow newRow
+            @Nullable IgniteBiPredicate<CacheObject, GridCacheVersion> p
         ) {
             this.entry = entry;
             this.val = val;
             this.ver = ver;
             this.expireTime = expireTime;
             this.p = p;
-            this.newRow = newRow;
         }
 
         /** {@inheritDoc} */

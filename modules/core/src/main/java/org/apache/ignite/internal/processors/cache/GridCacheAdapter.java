@@ -1294,7 +1294,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         //TODO IGNITE-7952
         MvccUtils.verifyMvccOperationSupport(ctx, "Clear");
 
-        GridCacheVersion obsoleteVer = nextVersion();
+        GridCacheVersion obsoleteVer = ctx.versions().startVersion();
 
         for (KeyCacheObject key : keys) {
             GridCacheEntryEx e = peekEx(key);
@@ -4244,7 +4244,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         ctx.checkSecurity(SecurityPermission.CACHE_REMOVE);
 
-        GridCacheVersion obsoleteVer = nextVersion();
+        GridCacheVersion obsoleteVer = ctx.versions().startVersion();
 
         ctx.shared().database().checkpointReadLock();
 

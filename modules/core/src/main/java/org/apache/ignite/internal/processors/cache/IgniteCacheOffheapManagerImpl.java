@@ -727,7 +727,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param readers {@code True} to clear readers.
      */
     @Override public void clearCache(GridCacheContext cctx, boolean readers) {
-        GridCacheVersion obsoleteVer = null;
+        GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
         try (GridCloseableIterator<CacheDataRow> it = grp.isLocal() ?
             iterator(cctx.cacheId(), cacheDataStores().iterator(), null, null, DATA) :
@@ -739,9 +739,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     KeyCacheObject key = it.next().key();
 
                     try {
-                        if (obsoleteVer == null)
-                            obsoleteVer = cctx.cache().nextVersion();
-
                         GridCacheEntryEx entry = cctx.cache().entryEx(key);
 
                         entry.clear(obsoleteVer, readers);
@@ -1021,6 +1018,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                         if (dataIt.hasNext()) {
                             CacheDataStore ds = dataIt.next();
 
+                            // TODO do not clear moving partition (check nodemap). Update javadoc.
                             if (!reservePartition(ds.partId()))
                                 continue;
 
