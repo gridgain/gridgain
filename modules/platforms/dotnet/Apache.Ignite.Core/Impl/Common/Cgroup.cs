@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Common
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
     using Apache.Ignite.Core.Impl.Unmanaged;
@@ -50,6 +51,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// <summary>
         /// Gets memory limit in bytes.
         /// </summary>
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private static ulong? GetMemoryLimitInBytes()
         {
             if (Os.IsWindows)
