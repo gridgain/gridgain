@@ -1814,34 +1814,33 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                             ctx.shared().exchange().affinityReadyFuture(req.topologyVersion());
 
                                         if (affFut.isDone()) {
-//                                            List<GridDhtPartitionsExchangeFuture> futs =
-//                                                ctx.shared().exchange().exchangeFutures();
+                                            assert false : "req topVer: " + req.topologyVersion() +
+                                                    ", lastFinishedFuture topVer: " + ctx.shared().exchange().lastFinishedFuture().topologyVersion() +
+                                                    ", lastAffinityChangedTopologyVersion topVer: " + ctx.shared().exchange().lastAffinityChangedTopologyVersion();
 
-                                            GridDhtTopologyFuture lastFinishedFut = ctx.shared().exchange().lastFinishedFuture();
+                                            List<GridDhtPartitionsExchangeFuture> futs =
+                                                    ctx.shared().exchange().exchangeFutures();
 
-                                            assert lastFinishedFut.topologyVersion().equals(req.topologyVersion()) :
-                                                    "Topology version of last exchange future and last affinity changed topology version are not equals";
+                                            boolean found = false;
 
-//                                            boolean found = false;
+                                            for (int i = 0; i < futs.size(); ++i) {
+                                                GridDhtPartitionsExchangeFuture fut = futs.get(i);
 
-//                                            for (int i = 0; i < futs.size(); ++i) {
-//                                                GridDhtPartitionsExchangeFuture fut = futs.get(i);
+                                                // We have to check fut.exchangeDone() here -
+                                                // otherwise attempt to get topVer will throw error.
+                                                // We won't skip needed future as per affinity ready future is done.
+                                                if (fut.exchangeDone() &&
+                                                        fut.topologyVersion().equals(req.topologyVersion())) {
+                                                    topFut = fut;
 
-                                            // We have to check fut.exchangeDone() here -
-                                            // otherwise attempt to get topVer will throw error.
-                                            // We won't skip needed future as per affinity ready future is done.
-//                                                if (fut.exchangeDone() &&
-//                                                    fut.topologyVersion().equals(req.topologyVersion())) {
-                                            topFut = lastFinishedFut;
+                                                    found = true;
 
-//                                                    found = true;
+                                                    break;
+                                                }
+                                            }
 
-//                                                    break;
-//                                                }
-//                                            }
-
-//                                            assert found : "The requested topology future cannot be found [topVer="
-//                                                + req.topologyVersion() + ']';
+                                            assert found : "The requested topology future cannot be found [topVer="
+                                                    + req.topologyVersion() + ']';
                                         }
                                         else {
                                             affFut.listen(f -> updateAllAsyncInternal0(
