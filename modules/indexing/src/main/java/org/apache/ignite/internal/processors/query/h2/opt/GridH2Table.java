@@ -1647,18 +1647,10 @@ public class GridH2Table extends TableBase {
     public GridH2IndexBase getIndexForScan() {
         // Use any H2TreeIndex for scan because it is faster than scan PkHash.
         // Scan one tree of index is faster than scan several trees of partitions.
-        if (rebuildFromHashInProgress == FALSE && treeIdx4Scan != null) {
-            GridCacheAffinityManager aff = cacheInfo.cacheContext().affinity();
-            GridKernalContext ctx = desc.context().kernalContext();
-
-            int priCnt = aff.primaryPartitions(ctx.localNodeId(), desc.context().affinity().affinityTopologyVersion()).size();
-            int backCnt = aff.backupPartitions(ctx.localNodeId(), desc.context().affinity().affinityTopologyVersion()).size();
-
-            if (priCnt >= backCnt)
-                return treeIdx4Scan;
-        }
-
-        return pkHashIdx;
+        if (rebuildFromHashInProgress == FALSE && treeIdx4Scan != null)
+            return treeIdx4Scan;
+        else
+            return pkHashIdx;
     }
 
     /** */
