@@ -188,8 +188,6 @@ public class BinaryArrayIdentityResolver extends BinaryAbstractIdentityResolver 
         int i = o1.dataStartOffset();
         int j = o2.dataStartOffset();
 
-        int end = o1.footerStartOffset();
-
         int len1 = o1.footerStartOffset() - i;
         int len2 = o2.footerStartOffset() - j;
 
