@@ -23,11 +23,13 @@ import com.google.common.collect.ImmutableMap;
 import io.opencensus.trace.SpanId;
 import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
@@ -80,11 +82,27 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void fooBar() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
+        GridCompoundFuture cf = new GridCompoundFuture();
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        tx.commit();
+        for (int i = 0; i < 5; i++) {
+            cf.add(GridTestUtils.runAsync(() -> {
+                for (int j = 0; j < 1000; j++) {
+                    Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
+
+                    client.cache(DEFAULT_CACHE_NAME).put(1, 1);
+                    client.cache(DEFAULT_CACHE_NAME).put(2, 2);
+                    client.cache(DEFAULT_CACHE_NAME).put(3, 3);
+
+                    tx.commit();
+                }
+            }));
+        }
+
+        cf.markInitialized();
+
+        cf.get();
+
     }
 
     /**
