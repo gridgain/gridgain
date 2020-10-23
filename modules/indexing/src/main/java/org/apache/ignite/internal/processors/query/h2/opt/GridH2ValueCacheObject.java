@@ -20,10 +20,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.internal.binary.BinaryArrayIdentityResolver;
-import org.apache.ignite.internal.binary.BinaryIdentityResolver;
-import org.apache.ignite.internal.binary.BinaryObjectExImpl;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
@@ -172,9 +168,6 @@ public class GridH2ValueCacheObject extends Value {
         int h2 = v.hashCode();
 
         if (h1 == h2) {
-            if (o1 instanceof BinaryObjectExImpl && o2 instanceof BinaryObjectExImpl)
-                return BinaryArrayIdentityResolver.compare0((BinaryObject)o1, (BinaryObject)o2);
-
             if (o1.equals(o2))
                 return 0;
 

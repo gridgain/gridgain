@@ -123,7 +123,7 @@ public class H2PkHashClientIndex extends GridH2IndexBase {
 
     /** {@inheritDoc} */
     @Override public Cursor findFirstOrLast(Session ses, boolean b) {
-        throw  unsupported();
+        throw unsupported();
     }
 
     /** {@inheritDoc} */
