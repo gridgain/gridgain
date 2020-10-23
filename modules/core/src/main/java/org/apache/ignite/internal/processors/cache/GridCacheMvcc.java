@@ -1041,15 +1041,19 @@ public final class GridCacheMvcc {
 
     private void reassignRemote() {
         if (rmts.get1() == null && rmts.get2() != null) {
-            rmts.swap();
+            swapInPlace(rmts);
 
             rmts.get1().setOwner();
 
             ((GridFutureAdapter) rmts.get1().lockFut).onDone();
-//            rmts.get1().latch.countDown();
-
-            // TODO: 28.09.20 Critical issue here, release lock on sendingPrepareResponse or send listener notification.
         }
+    }
+
+    private void swapInPlace(IgnitePair<GridCacheMvccCandidate> rmts) {
+        GridCacheMvccCandidate tmp = rmts.get1();
+
+        rmts.set1(rmts.get2());
+        rmts.set2(tmp);
     }
 
     /**
