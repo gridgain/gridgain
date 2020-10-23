@@ -5849,20 +5849,21 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     private boolean checkRowExpired(CacheDataRow row) throws IgniteCheckedException {
         assert row != null;
 
+        // TODO move to row ?
         if (!(row.expireTime() > 0 && row.expireTime() <= U.currentTimeMillis()))
             return false;
 
         CacheObject expiredVal = row.value();
 
         // TODO remove.
-        if (cctx.deferredDelete() && !detached() && !isInternal()) {
-            update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
-
-            if (!deletedUnlocked())
-                deletedUnlocked(true);
-        }
-        else
-            markObsolete0(cctx.cache().nextVersion(), true, null);
+//        if (cctx.deferredDelete() && !detached() && !isInternal()) {
+//            update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
+//
+//            if (!deletedUnlocked())
+//                deletedUnlocked(true);
+//        }
+//        else // TODO use start version.
+//            markObsolete0(cctx.cache().nextVersion(), true, null);
 
         if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
             cctx.events().addEvent(partition(),

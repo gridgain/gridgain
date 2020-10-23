@@ -66,6 +66,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.cache.CachePeekMode.ONHEAP;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 
 /** */
@@ -73,6 +74,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** */
     public static final int PARTS = 64;
 
+    /** */
     private boolean persistence;
 
     /** {@inheritDoc} */
@@ -698,6 +700,35 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
 
         assertEquals(1, cache.get(pk));
+    }
+
+    /**
+     * Test the entry explicitely removed after expiration produces no leak on heap map.
+     */
+    // TODO add tx test.
+    @Test
+    public void testNoLeakOnExpiredEntryRemoval() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(ATOMIC);
+        ccfg.setEagerTtl(false);
+
+        IgniteCache<Object, Object> cache = crd.createCache(ccfg);
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+
+        cache.put(0, 0);
+
+        long ttl = 500;
+
+        cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, ttl))).put(0, 1);
+
+        doSleep(ttl + 100);
+
+        cache.remove(0);
+
+        validateCache(grpCtx, 0, 1, 0);
+
+        assertEquals("Cache entry is leaked", 0, cache.localSize(ONHEAP));
     }
 
     // Test if updating concurrently with clearing tombstones doesn't produce inconsistency.
