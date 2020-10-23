@@ -292,7 +292,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         else {
             unwrappedPk = true;
 
-            cols = unwrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
+            cols = wrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
             inlineCols = cols;
 
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
