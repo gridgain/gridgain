@@ -63,6 +63,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateLastSuc
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateNextSnapshotId;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecordV2;
+import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecordV3;
 import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageListMetaResetCountRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PagesListAddPageRecord;
@@ -140,6 +141,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PARTITION_DESTROY;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PARTITION_META_PAGE_UPDATE_COUNTERS;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PARTITION_META_PAGE_UPDATE_COUNTERS_V2;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PARTITION_META_PAGE_UPDATE_COUNTERS_V3;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PART_META_UPDATE_STATE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.RESERVED;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ROLLBACK_TX_RECORD;
@@ -223,6 +225,7 @@ public class RecordUtils {
             put(CONSISTENT_CUT, RecordUtils::buildConsistentCutRecord);
             put(OUT_OF_ORDER_UPDATE, RecordUtils::buildOutOfOrderRecord);
             put(MASTER_KEY_CHANGE_RECORD, RecordUtils::buildMasterKeyChangeRecord);
+            put(PARTITION_META_PAGE_UPDATE_COUNTERS_V3, RecordUtils::buildMetaPageUpdatePartitionDataRecordV3);
         }};
 
     /** **/
@@ -518,6 +521,11 @@ public class RecordUtils {
     /** **/
     public static MetaPageUpdatePartitionDataRecordV2 buildMetaPageUpdatePartitionDataRecordV2() {
         return new MetaPageUpdatePartitionDataRecordV2(1, 1, 1, 1, 1, 1, (byte)1, 1, 1);
+    }
+
+    /** **/
+    public static MetaPageUpdatePartitionDataRecordV3 buildMetaPageUpdatePartitionDataRecordV3() {
+        return new MetaPageUpdatePartitionDataRecordV3(1, 1, 1, 1, 1, 1, (byte)1, 1, 1, 1);
     }
 
     /** **/
