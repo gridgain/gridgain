@@ -285,9 +285,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 upgradeMetaPage(inlineObjSupported);
         }
         else {
-            unwrappedPk = false;
+            unwrappedPk = true;
 
-            cols = wrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
+            cols = unwrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
             inlineCols = cols;
 
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
@@ -379,7 +379,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         row.initFromLink(
             cctx.group(),
-            CacheDataRowAdapter.RowData.FULL_SKIP_VER
+            CacheDataRowAdapter.RowData.FULL,
+            true
         );
 
         return table.rowDescriptor().createRow(row);
@@ -425,10 +426,11 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             0,
             link,
             partId,
-            CacheDataRowAdapter.RowData.FULL_SKIP_VER,
+            null,
             mvccCrdVer,
             mvccCntr,
-            mvccOpCntr
+            mvccOpCntr,
+            true
         );
 
         return table.rowDescriptor().createRow(row);

@@ -25,6 +25,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
+import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
@@ -276,6 +277,8 @@ public class H2PkHashIndex extends GridH2IndexBase {
         /** {@inheritDoc} */
         @Override public boolean next() {
             try {
+                CacheDataRowStore.setSkipVersion(true);
+
                 GridQueryTypeDescriptor type = desc.type();
 
                 for (;;) {
@@ -299,6 +302,9 @@ public class H2PkHashIndex extends GridH2IndexBase {
             catch (IgniteCheckedException e) {
                 throw DbException.convert(e);
             }
+            finally {
+                CacheDataRowStore.setSkipVersion(false);
+            }
         }
 
         /** */
@@ -316,7 +322,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
                             cctx.cacheId(),
                             lowerObj,
                             upperObj,
-                            CacheDataRowAdapter.RowData.FULL_SKIP_VER,
+                            CacheDataRowAdapter.RowData.FULL,
                             mvccSnapshot
                     );
                 }

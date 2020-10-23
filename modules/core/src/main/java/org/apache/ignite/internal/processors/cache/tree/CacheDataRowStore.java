@@ -29,6 +29,23 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
  *
  */
 public class CacheDataRowStore extends RowStore {
+    /** Whether version should be skipped. */
+    private static ThreadLocal<Boolean> SKIP_VER = ThreadLocal.withInitial(() -> false);
+
+    /**
+     * @return Skip version flag.
+     */
+    public static boolean getSkipVersion() {
+        return SKIP_VER.get();
+    }
+
+    /**
+     * @param skipVer Skip version flag.
+     */
+    public static void setSkipVersion(boolean skipVer) {
+        SKIP_VER.set(skipVer);
+    }
+
     /** */
     private final int partId;
 
@@ -62,7 +79,8 @@ public class CacheDataRowStore extends RowStore {
             hash,
             link,
             partId,
-            CacheDataRowAdapter.RowData.KEY_ONLY
+            CacheDataRowAdapter.RowData.KEY_ONLY,
+            SKIP_VER.get()
         );
 
         return initDataRow(dataRow, cacheId);
@@ -87,7 +105,8 @@ public class CacheDataRowStore extends RowStore {
             rowData,
             crdVer,
             mvccCntr,
-            opCntr
+            opCntr,
+            SKIP_VER.get()
         );
 
         return initDataRow(row, cacheId);
@@ -106,7 +125,8 @@ public class CacheDataRowStore extends RowStore {
             hash,
             link,
             partId,
-            rowData
+            rowData,
+            SKIP_VER.get()
         );
 
         return initDataRow(dataRow, cacheId);

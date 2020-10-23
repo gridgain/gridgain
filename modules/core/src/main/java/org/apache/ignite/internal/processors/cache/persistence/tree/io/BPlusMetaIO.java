@@ -63,7 +63,7 @@ public class BPlusMetaIO extends PageIO {
     private static final long FLAG_DECIMAL_SUPPORTED = 8L;
 
     /** */
-    public static final long DEFAULT_FLAGS = FLAG_INLINE_OBJECT_SUPPORTED | FLAG_INLINE_OBJECT_HASH | FLAG_DECIMAL_SUPPORTED;
+    public static final long DEFAULT_FLAGS = FLAG_UNWRAPPED_PK | FLAG_INLINE_OBJECT_SUPPORTED | FLAG_INLINE_OBJECT_HASH | FLAG_DECIMAL_SUPPORTED;
 
     /** */
     private final int refsOff;
