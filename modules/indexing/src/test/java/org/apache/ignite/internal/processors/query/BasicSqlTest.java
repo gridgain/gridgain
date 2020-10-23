@@ -26,6 +26,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -212,14 +213,17 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     /**
      */
     @Test
-    public void testDbg() {
+    public void testDbg() throws Exception {
         sql("CREATE TABLE TEST (ID0 INT, ID1 INT, VAL0 INT, VAL1 INT, PRIMARY KEY(ID0, ID1))");
-
-        for (int i = 0; i < 1000; ++i)
-            sql ("INSERT INTO TEST VALUES (?, ?, ?, ?)", i, i, i, i);
 
         sql("CREATE INDEX IDX_ID0 ON TEST(ID0)");
         sql("CREATE INDEX IDX_ID1 ON TEST(ID1)");
+
+        for (int i = 0; i < 100000; ++i)
+            sql ("INSERT INTO TEST VALUES (?, ?, ?, ?)", 0, i, i, i);
+
+        U.sleep(1000);
+        log.info("+++ SELECT");
         List<List<?>> res = sql("SELECT * FROM TEST WHERE VAL0 = 10").getAll();
         log.info("+++ " + sql("EXPLAIN SELECT * FROM TEST WHERE VAL0 = 10").getAll());
 
