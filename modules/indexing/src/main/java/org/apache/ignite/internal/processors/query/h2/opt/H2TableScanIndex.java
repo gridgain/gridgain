@@ -65,6 +65,6 @@ public class H2TableScanIndex extends H2ScanIndex<GridH2IndexBase> {
 
     /** {@inheritDoc} */
     @Override public String getPlanSQL() {
-        return tbl.getSQL(false) + "." + SCAN_INDEX_NAME;
+        return tbl.getSQL(false) + "." + SCAN_INDEX_NAME + "(" + delegate().getName() + ')';
     }
 }
