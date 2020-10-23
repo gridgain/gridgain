@@ -290,9 +290,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 upgradeMetaPage(inlineObjSupported);
         }
         else {
-            unwrappedPk = false;
+            unwrappedPk = true;
 
-            cols = wrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
+            cols = unwrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
             inlineCols = cols;
 
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,

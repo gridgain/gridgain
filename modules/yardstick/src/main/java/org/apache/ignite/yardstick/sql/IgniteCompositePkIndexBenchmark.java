@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
@@ -35,7 +34,6 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.yardstick.IgniteAbstractBenchmark;
-import org.apache.ignite.yardstick.cache.IgniteScanQueryBenchmark;
 import org.yardstickframework.BenchmarkConfiguration;
 
 import static org.yardstickframework.BenchmarkUtils.println;
@@ -147,7 +145,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
         sql(createTblQry);
 
-        sql("CREATE INDEX IDX_ID1 ON TEST(ID0)");
+        sql("CREATE INDEX IDX_ID1 ON TEST(ID1)");
 
         if (addIndexes) {
             sql("CREATE INDEX IDX_VAL_INT ON TEST(VALINT)");
