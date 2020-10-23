@@ -241,6 +241,8 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                     long page = pageMem.acquirePage(grpId, pageId);
 
                     try {
+                        boolean skipVer = CacheDataRowStore.getSkipVersion();
+
                         long pageAddr = ((PageMemoryEx)pageMem).readLock(page, pageId, true, false);
 
                         try {
@@ -275,7 +277,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                                         shared,
                                         pageMem,
                                         rowData,
-                                        rowData.skipVersion()
+                                        skipVer
                                     );
 
                                     rows[r++] = row;

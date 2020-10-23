@@ -151,7 +151,7 @@ public class H2PkHashIndexAsync extends GridH2IndexBase {
                             cctx.cacheId(),
                             lowerObj,
                             upperObj,
-                            CacheDataRowAdapter.RowData.FULL_SKIP_VER,
+                            null,
                             mvccSnapshot, 0
                         )
                     );
@@ -180,7 +180,7 @@ public class H2PkHashIndexAsync extends GridH2IndexBase {
                                     cctx.cacheId(),
                                     lowerObj,
                                     upperObj,
-                                    CacheDataRowAdapter.RowData.FULL_SKIP_VER,
+                                    null,
                                     mvccSnapshot0, 0
                                 )
                             );
