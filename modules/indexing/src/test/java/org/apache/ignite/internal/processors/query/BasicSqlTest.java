@@ -221,6 +221,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         sql("CREATE INDEX IDX_ID0 ON TEST(ID0)");
         sql("CREATE INDEX IDX_ID1 ON TEST(ID1)");
         List<List<?>> res = sql("SELECT * FROM TEST WHERE VAL0 = 10").getAll();
+        log.info("+++ " + sql("EXPLAIN SELECT * FROM TEST WHERE VAL0 = 10").getAll());
 
         assertEquals(1, res.size());
 
