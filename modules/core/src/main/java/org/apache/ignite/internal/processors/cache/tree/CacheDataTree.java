@@ -270,8 +270,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                                         grp,
                                         shared,
                                         pageMem,
-                                        rowData,
-                                        rowData.skipVersion()
+                                        rowData
                                     );
 
                                     rows[r++] = row;
