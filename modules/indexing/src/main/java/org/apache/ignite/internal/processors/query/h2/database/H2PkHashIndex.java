@@ -231,7 +231,6 @@ public class H2PkHashIndex extends GridH2IndexBase {
         /** */
         private final MvccSnapshot mvccSnapshot;
 
-
         /** */
         private GridCursor<? extends CacheDataRow> curr;
 
