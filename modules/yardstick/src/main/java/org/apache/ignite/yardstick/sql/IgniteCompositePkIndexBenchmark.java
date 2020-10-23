@@ -133,6 +133,8 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         finally {
             sem.release();
         }
+
+        println("PLAN: " + sql("EXPLAIN SELECT ID1 FROM TEST WHERE VALINT=?", 1).getAll());
     }
 
     /**
@@ -166,8 +168,6 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
         println("    partitions: " + ((IgniteEx)ignite()).cachex("TEST").affinity().partitions());
         println(cfg, "TEST table row: \n" + row);
-
-        println("PLAN: " + sql("EXPLAIN SELECT ID1 FROM TEST WHERE VALINT=?", 1));
     }
 
     /** {@inheritDoc} */

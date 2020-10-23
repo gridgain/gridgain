@@ -135,8 +135,6 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     }
 
     /**
-<<<<<<< HEAD
-<<<<<<< HEAD
      */
     @Test
     public void testIntervalOperation() {
@@ -212,9 +210,6 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     }
 
     /**
-=======
->>>>>>> GG-30653 roll back debug
-=======
      */
     @Test
     public void testDbg() {
@@ -241,7 +236,6 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     }
 
     /**
->>>>>>> GG-31006 skipVersion refactoring
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
@@ -258,6 +252,14 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> executeOnSrv(SqlFieldsQuery qry) {
+        return grid(0).context().query().querySqlFields(qry, false);
+    }
+
+    /**
+     * @param qry Query.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> execute(SqlFieldsQuery qry) {
         return grid(0).context().query().querySqlFields(qry, false);
     }
 }
