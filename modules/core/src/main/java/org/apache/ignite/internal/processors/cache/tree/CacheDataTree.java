@@ -128,16 +128,14 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
      * @param enabled {code true} If enabled.
      */
     public static void setDataPageScanEnabled(boolean enabled) {
-        // Temporary No-op.
-        // dataPageScanEnabled.set(enabled);
+        dataPageScanEnabled.set(enabled);
     }
 
     /**
      * @return {@code true} If data page scan is enabled.
      */
     public static boolean isDataPageScanEnabled() {
-        // return dataPageScanEnabled.get();
-        return false;
+        return dataPageScanEnabled.get();
     }
 
     /**

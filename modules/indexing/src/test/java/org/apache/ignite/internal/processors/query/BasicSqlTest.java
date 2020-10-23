@@ -234,6 +234,9 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         res = sql("SELECT * FROM TEST WHERE VAL0 = 10").getAll();
 
         assertEquals(1, res.size());
+
+//        cli.context().query().querySqlFields(new SqlFieldsQuery("DELETE FROM TEST WHERE VAL0 = 10"), false).getAll();
+//        cli.context().query().querySqlFields(new SqlFieldsQuery("SELECT count(*) FROM TEST WHERE VAL0 = 10"), false).getAll();
     }
 
     /**
