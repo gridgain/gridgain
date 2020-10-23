@@ -33,7 +33,7 @@ public abstract class BinaryAbstractIdentityResolver implements BinaryIdentityRe
 
     /** {@inheritDoc} */
     @Override public boolean equals(BinaryObject o1, BinaryObject o2) {
-        return o1 == o2 || (o1 != null && o2 != null && compare0(o1, o2) == 0);
+        return o1 == o2 || (o1 != null && o2 != null && equals0(o1, o2));
     }
 
     /**
@@ -52,13 +52,4 @@ public abstract class BinaryAbstractIdentityResolver implements BinaryIdentityRe
      * @return Result.
      */
     protected abstract boolean equals0(BinaryObject o1, BinaryObject o2);
-
-    /**
-     * Internal equals routine.
-     *
-     * @param o1 First object.
-     * @param o2 Second object.
-     * @return Result.
-     */
-    protected abstract int compare0(BinaryObject o1, BinaryObject o2);
 }

@@ -125,7 +125,7 @@ public class BinaryArrayIdentityResolver extends BinaryAbstractIdentityResolver 
     }
 
     /** {@inheritDoc} */
-    @Override public int compare0(BinaryObject o1, BinaryObject o2) {
+    public static int compare0(BinaryObject o1, BinaryObject o2) {
         if (o1 instanceof BinaryObjectEx && o2 instanceof BinaryObjectEx) {
             BinaryObjectEx ex1 = (BinaryObjectEx)o1;
             BinaryObjectEx ex2 = (BinaryObjectEx)o2;
