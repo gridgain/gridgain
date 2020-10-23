@@ -285,7 +285,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 upgradeMetaPage(inlineObjSupported);
         }
         else {
-            unwrappedPk = true;
+            unwrappedPk = false;
 
             cols = wrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
             inlineCols = cols;
