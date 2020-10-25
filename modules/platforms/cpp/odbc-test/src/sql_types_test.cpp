@@ -303,4 +303,89 @@ BOOST_AUTO_TEST_CASE(TestTimeInsert)
     BOOST_REQUIRE_EQUAL(out.timeField.GetSeconds(), expected.GetSeconds());
 }
 
+BOOST_AUTO_TEST_CASE(TestFetchLiteralDate)
+{
+    SQLCHAR req[] = "select DATE '2020-10-25'";
+    SQLExecDirect(stmt, req, SQL_NTS);
+
+    SQL_DATE_STRUCT res;
+
+    memset(&res, 0, sizeof(res));
+
+    SQLLEN resLen = 0;
+    SQLRETURN ret = SQLBindCol(stmt, 1, SQL_C_DATE, &res, 0, &resLen);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    ret = SQLFetch(stmt);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(res.day, 25);
+    BOOST_CHECK_EQUAL(res.month, 10);
+    BOOST_CHECK_EQUAL(res.year, 2020);
+}
+
+BOOST_AUTO_TEST_CASE(TestFetchFieldDateAsDate)
+{
+    TestType val1;
+    val1.dateField = common::MakeDateGmt(2020, 10, 25);
+
+    testCache.Put(1, val1);
+
+    SQLCHAR req[] = "select CAST (dateField as DATE) from TestType";
+    SQLExecDirect(stmt, req, SQL_NTS);
+
+    SQL_DATE_STRUCT res;
+
+    memset(&res, 0, sizeof(res));
+
+    SQLLEN resLen = 0;
+    SQLRETURN ret = SQLBindCol(stmt, 1, SQL_C_DATE, &res, 0, &resLen);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    ret = SQLFetch(stmt);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(res.day, 25);
+    BOOST_CHECK_EQUAL(res.month, 10);
+    BOOST_CHECK_EQUAL(res.year, 2020);
+}
+
+BOOST_AUTO_TEST_CASE(TestFetchFieldDateAsIs)
+{
+    TestType val1;
+    val1.dateField = common::MakeDateGmt(2020, 10, 25);
+
+    testCache.Put(1, val1);
+
+    SQLCHAR req[] = "select dateField from TestType";
+    SQLExecDirect(stmt, req, SQL_NTS);
+
+    SQL_DATE_STRUCT res;
+
+    memset(&res, 0, sizeof(res));
+
+    SQLLEN resLen = 0;
+    SQLRETURN ret = SQLBindCol(stmt, 1, SQL_C_DATE, &res, 0, &resLen);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    ret = SQLFetch(stmt);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(res.day, 25);
+    BOOST_CHECK_EQUAL(res.month, 10);
+    BOOST_CHECK_EQUAL(res.year, 2020);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
