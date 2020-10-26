@@ -62,13 +62,8 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
                 return new GridFinishedFuture<>(IgnitionEx.hasKernalStarted(ctx.igniteInstanceName()) ? new GridRestResponse("grid has started") : new GridRestResponse(GridRestResponse.SC_FORBIDDEN, "grid has not started"));
 
             }
-
         }
 
         return new GridFinishedFuture<>();
     }
-
-
-
-
 }
