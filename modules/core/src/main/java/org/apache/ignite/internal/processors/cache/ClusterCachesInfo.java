@@ -2622,6 +2622,14 @@ public class ClusterCachesInfo {
         restartingCaches.clear();
     }
 
+    /** */
+    public void patchPkIndexes() {
+        for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : joinDiscoData.caches().values()) {
+            for(QueryEntity qe : cacheInfo.cacheData().queryEntities())
+                ctx.query().getIndexing().patchPkIndexes( qe);
+        }
+    }
+
     /**
      * Holds direct comparator (first system caches) and reverse comparator (first user caches).
      * Use DIRECT comparator for ordering cache start operations.
