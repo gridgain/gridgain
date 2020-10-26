@@ -242,6 +242,22 @@ public abstract class GridNearTxAbstractEnlistFuture<T> extends GridCacheCompoun
                     return;
                 }
             }
+            else {
+                AffinityTopologyVersion lastChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
+
+                IgniteInternalFuture<AffinityTopologyVersion> affFut = cctx.shared().exchange().affinityReadyFuture(lastChangeVer);
+
+                if (!affFut.isDone()) {
+                    try {
+                        affFut.get();
+                    }
+                    catch (IgniteCheckedException e) {
+                        onDone(e);
+
+                        return;
+                    }
+                }
+            }
 
             if (this.topVer == null)
                 this.topVer = topVer;

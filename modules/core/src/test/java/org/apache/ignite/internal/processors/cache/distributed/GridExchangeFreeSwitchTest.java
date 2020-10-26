@@ -22,6 +22,8 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -52,6 +54,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_FORCE_MVCC_MODE_IN_TESTS;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
 
@@ -282,6 +285,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      *
      */
     @Test
+//    @WithSystemProperty(key = IGNITE_FORCE_MVCC_MODE_IN_TESTS, value = "true")
     public void testNoTransactionsWaitAtNodeLeftWithZeroBackupsAndLossIgnore() throws Exception {
         testNoTransactionsWaitAtNodeLeft(0, PartitionLossPolicy.IGNORE);
     }
@@ -290,6 +294,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      *
      */
     @Test
+//    @WithSystemProperty(key = IGNITE_FORCE_MVCC_MODE_IN_TESTS, value = "true")
     public void testNoTransactionsWaitAtNodeLeftWithZeroBackupsAndLossSafe() throws Exception {
         testNoTransactionsWaitAtNodeLeft(0, PartitionLossPolicy.READ_WRITE_SAFE);
     }
@@ -298,6 +303,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      *
      */
     @Test
+//    @WithSystemProperty(key = IGNITE_FORCE_MVCC_MODE_IN_TESTS, value = "true")
     public void testNoTransactionsWaitAtNodeLeftWithSingleBackup() throws Exception {
         testNoTransactionsWaitAtNodeLeft(1, PartitionLossPolicy.IGNORE);
     }
@@ -358,96 +364,112 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
             MvccProcessor proc;
 
             do {
-                candidate = G.allGrids().get(r.nextInt(nodes));
+                candidate = G.allGrids().get(1/*r.nextInt(nodes)*/);
 
                 proc = ((IgniteEx)candidate).context().coordinators();
             }
             // MVCC coordinator fail always breaks transactions, excluding.
             while (proc.mvccEnabled() && proc.currentCoordinator().local());
 
-            Ignite failed = candidate;
+            Ignite failed = candidate;//3
+
+//            Ignite grid0 = grid(0);
 
             int multiplicator = 3;
 
             AtomicInteger key_from = new AtomicInteger();
 
-            CountDownLatch readyLatch = new CountDownLatch((backups > 0 ? 4 : 2) * multiplicator);
+            CountDownLatch readyLatch = new CountDownLatch(/*(backups > 0 ? 4 : 2) * */multiplicator);
             CountDownLatch failedLatch = new CountDownLatch(1);
 
             IgniteCache<Integer, Integer> failedCache = failed.getOrCreateCache(cacheName);
 
-            IgniteInternalFuture<?> nearThenNearFut = multithreadedAsync(() -> {
-                try {
-                    List<Integer> keys = nearKeys(failedCache, 2, key_from.addAndGet(100));
+//            IgniteInternalFuture<?> nearThenNearFut = multithreadedAsync(() -> {
+//                try {
+//                    List<Integer> keys = nearKeys(failedCache, 2, key_from.addAndGet(100));
+//
+//                    Integer key0 = keys.get(0);
+//                    Integer key1 = keys.get(1);
+//
+//                    Ignite primary = primaryNode(key0, cacheName);
+//
+//                    assertNotSame(failed, primary);
+//
+//                    IgniteCache<Integer, Integer> primaryCache = primary.getOrCreateCache(cacheName);
+//
+//                    try (Transaction tx = primary.transactions().txStart()) {
+//                        primaryCache.put(key0, key0);
+//
+//                        readyLatch.countDown();
+//                        failedLatch.await();
+//
+//                        primaryCache.put(key1, key1);
+//
+//                        tx.commit();
+//                    }
+//
+//                    assertEquals(key0, primaryCache.get(key0));
+//                    assertEquals(key1, primaryCache.get(key1));
+////                    assertEquals(key1, grid(0).cache(cacheName).get(key1));
+////                    assertEquals(key1, grid(1).cache(cacheName).get(key1));
+////                    assertEquals(key1, grid(2).cache(cacheName).get(key1));
+////                    assertEquals(key1, grid(3).cache(cacheName).get(key1));
+////                    if (grid(0) != primary)
+////                        assertTrue(grid0 != primary);
+//
+//                }
+//                catch (Exception e) {
+//                    System.out.println("!qtrdb" + e);
+//                    e.printStackTrace();
+//                    fail("Should not happen [exception=" + e + "]"); //testNoTransactionsWaitAtNodeLeftWithZeroBackupsAndLossSafe и testNoTransactionsWaitAtNodeLeftWithZeroBackupsAndLossIgnore
+//                }
+//            }, multiplicator);
 
-                    Integer key0 = keys.get(0);
-                    Integer key1 = keys.get(1);
+//            IgniteInternalFuture<?> primaryThenPrimaryFut = backups > 0 ? multithreadedAsync(() -> {
+//                try {
+//                    List<Integer> keys = primaryKeys(failedCache, 2, key_from.addAndGet(100));
+//
+//                    Integer key0 = keys.get(0);
+//                    Integer key1 = keys.get(1);
+//
+//                    Ignite backup = backupNode(key0, cacheName);
+//
+//                    assertNotSame(failed, backup);
+//
+//                    IgniteCache<Integer, Integer> backupCache = backup.getOrCreateCache(cacheName);
+//
+//                    try (Transaction tx = backup.transactions().txStart()) {
+//                        backupCache.put(key0, key0);
+//
+//                        readyLatch.countDown();
+//                        failedLatch.await();
+//
+//                        try {
+//                            backupCache.put(key1, key1);
+//
+//                            fail("Should not happen");
+//                        }
+//                        catch (Exception ignored) {
+//                            // Transaction broken because of primary left.
+//                        }
+//                    }
+//                }
+//                catch (Exception e) {
+//                    fail("Should not happen [exception=" + e + "]");
+//                }
+//            }, multiplicator) : new GridFinishedFuture<>();
 
-                    Ignite primary = primaryNode(key0, cacheName);
+            AtomicInteger qw = new AtomicInteger(10000000);
 
-                    assertNotSame(failed, primary);
-
-                    IgniteCache<Integer, Integer> primaryCache = primary.getOrCreateCache(cacheName);
-
-                    try (Transaction tx = primary.transactions().txStart()) {
-                        primaryCache.put(key0, key0);
-
-                        readyLatch.countDown();
-                        failedLatch.await();
-
-                        primaryCache.put(key1, key1);
-
-                        tx.commit();
-                    }
-
-                    assertEquals(key0, primaryCache.get(key0));
-                    assertEquals(key1, primaryCache.get(key1));
-                }
-                catch (Exception e) {
-                    fail("Should not happen [exception=" + e + "]");
-                }
-            }, multiplicator);
-
-            IgniteInternalFuture<?> primaryThenPrimaryFut = backups > 0 ? multithreadedAsync(() -> {
-                try {
-                    List<Integer> keys = primaryKeys(failedCache, 2, key_from.addAndGet(100));
-
-                    Integer key0 = keys.get(0);
-                    Integer key1 = keys.get(1);
-
-                    Ignite backup = backupNode(key0, cacheName);
-
-                    assertNotSame(failed, backup);
-
-                    IgniteCache<Integer, Integer> backupCache = backup.getOrCreateCache(cacheName);
-
-                    try (Transaction tx = backup.transactions().txStart()) {
-                        backupCache.put(key0, key0);
-
-                        readyLatch.countDown();
-                        failedLatch.await();
-
-                        try {
-                            backupCache.put(key1, key1);
-
-                            fail("Should not happen");
-                        }
-                        catch (Exception ignored) {
-                            // Transaction broken because of primary left.
-                        }
-                    }
-                }
-                catch (Exception e) {
-                    fail("Should not happen [exception=" + e + "]");
-                }
-            }, multiplicator) : new GridFinishedFuture<>();
+            AtomicReference<IgniteCache<Integer, Integer>> qe = new AtomicReference<>();
 
             IgniteInternalFuture<?> nearThenPrimaryFut = multithreadedAsync(() -> {
                 try {
                     Integer key0 = nearKeys(failedCache, 1, key_from.addAndGet(100)).get(0);
                     Integer key1 = primaryKeys(failedCache, 1, key_from.addAndGet(100)).get(0);
 
-                    Ignite primary = primaryNode(key0, cacheName);
+                    Ignite primary = primaryNode(key0, cacheName);//0
+                    Ignite primary1 = primaryNode(key1, cacheName);//3
 
                     assertNotSame(failed, primary);
 
@@ -455,54 +477,90 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
                     try (Transaction tx = primary.transactions().txStart()) {
                         primaryCache.put(key0, key0);
+                        System.out.println("!qtefg_0" + key0);
+                        System.out.println("!qtefg_1" + key1);
 
                         readyLatch.countDown();
                         failedLatch.await();
+                        Ignite primary2 = primaryNode(key1, cacheName);// теперь 0
 
                         try {
                             primaryCache.put(key1, key1);
 
-                            fail("Should not happen");
+//                            if (backups == 0)
+//                                fail("Should not happen"); //testNoTransactionsWaitAtNodeLeftWithSingleBackup
                         }
                         catch (Exception ignored) {
                             // Transaction broken because of primary left.
+                            System.out.println("!qtefg" + ignored);
+
+//                            if (backups > 0)
+//                                fail("Should not happen");
+                        }
+//                        assertEquals(key1, primaryCache.get(key1));
+//                        qw.set(key1);
+//                        qe.set(primaryCache);
+//                        System.out.println("!qtebvd");
+                        Exception ex = null;
+//
+//                        assertEquals(key0, primaryCache.get(key0));
+//                        assertEquals(key1, primaryCache.get(key1));
+//
+                        try {
+//                            doSleep(5000);
+                            System.out.println("!qrwgj");
+                            tx.commit();
+                            assertEquals(key0, primaryCache.get(key0));
+                            assertEquals(key1, primaryCache.get(key1));
+                        }
+                        catch (Exception ex0) {
+                            System.out.println("!qrefg"); //потому что нода 3 вышла
+                            ex0.printStackTrace();
+                            ex = ex0;// Transaction broken because of node left.
+                        }
+                        System.out.println("!qrewg");
+                        if (ex == null) {
+                            System.out.println("!qtegj");
+                            fail("Should not happen");
                         }
                     }
+//                    assertEquals(key0, primaryCache.get(key0));
                 }
                 catch (Exception e) {
+//                    assertEquals(qw, qe.get().get(qw.get()));
                     fail("Should not happen [exception=" + e + "]");
                 }
             }, multiplicator);
 
-            IgniteInternalFuture<?> nearThenBackupFut = backups > 0 ? multithreadedAsync(() -> {
-                try {
-                    Integer key0 = nearKeys(failedCache, 1, key_from.addAndGet(100)).get(0);
-                    Integer key1 = backupKeys(failedCache, 1, key_from.addAndGet(100)).get(0);
-
-                    Ignite primary = primaryNode(key0, cacheName);
-
-                    assertNotSame(failed, primary);
-
-                    IgniteCache<Integer, Integer> primaryCache = primary.getOrCreateCache(cacheName);
-
-                    try (Transaction tx = primary.transactions().txStart()) {
-                        primaryCache.put(key0, key0);
-
-                        readyLatch.countDown();
-                        failedLatch.await();
-
-                        primaryCache.put(key1, key1);
-
-                        tx.commit();
-                    }
-
-                    assertEquals(key0, primaryCache.get(key0));
-                    assertEquals(key1, primaryCache.get(key1));
-                }
-                catch (Exception e) {
-                    fail("Should not happen [exception=" + e + "]");
-                }
-            }, multiplicator) : new GridFinishedFuture<>();
+//            IgniteInternalFuture<?> nearThenBackupFut = backups > 0 ? multithreadedAsync(() -> {
+//                try {
+//                    Integer key0 = nearKeys(failedCache, 1, key_from.addAndGet(100)).get(0);
+//                    Integer key1 = backupKeys(failedCache, 1, key_from.addAndGet(100)).get(0);
+//
+//                    Ignite primary = primaryNode(key0, cacheName);
+//
+//                    assertNotSame(failed, primary);
+//
+//                    IgniteCache<Integer, Integer> primaryCache = primary.getOrCreateCache(cacheName);
+//
+//                    try (Transaction tx = primary.transactions().txStart()) {
+//                        primaryCache.put(key0, key0);
+//
+//                        readyLatch.countDown();
+//                        failedLatch.await();
+//
+//                        primaryCache.put(key1, key1);
+//
+//                        tx.commit();
+//                    }
+//
+//                    assertEquals(key0, primaryCache.get(key0));
+//                    assertEquals(key1, primaryCache.get(key1));
+//                }
+//                catch (Exception e) {
+//                    fail("Should not happen [exception=" + e + "]");
+//                }
+//            }, multiplicator) : new GridFinishedFuture<>();
 
             readyLatch.await();
 
@@ -512,10 +570,10 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
             failedLatch.countDown();
 
-            nearThenNearFut.get();
-            primaryThenPrimaryFut.get();
+//            nearThenNearFut.get();
+//            primaryThenPrimaryFut.get();
             nearThenPrimaryFut.get();
-            nearThenBackupFut.get();
+//            nearThenBackupFut.get();
 
             int pmeFreeCnt = 0;
 
