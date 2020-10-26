@@ -72,7 +72,7 @@ public class DistributedTransactionConfiguration {
         IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, 1000);
 
     /** Default value of {@link #txOwnerDumpRequestsAllowed}. */
-    private static final boolean dfltTxOwnerDumpRequestsAllowed =
+    private final boolean dfltTxOwnerDumpRequestsAllowed =
         IgniteSystemProperties.getBoolean(IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, true);
 
     /**
@@ -174,112 +174,142 @@ public class DistributedTransactionConfiguration {
     }
 
     /**
-     *
+     * @return Long operations dump timeout.
      */
     public Long longOperationsDumpTimeout() {
         return longOperationsDumpTimeout.getOrDefault(dfltLongOpsDumpTimeout);
     }
 
     /**
-     * @param longTransactionTimeDumpThreshold Value of threshold timeout in milliseconds.
+     * Cluster wide update of {@link #longTransactionTimeDumpThreshold}.
+     *
+     * @param longTransactionTimeDumpThreshold New value of threshold timeout in milliseconds.
+     * @return Future for {@link #longTransactionTimeDumpThreshold} update operation.
+     * @throws IgniteCheckedException If failed during cluster wide update.
      */
     public GridFutureAdapter<?> updateLongTransactionTimeDumpThresholdAsync(long longTransactionTimeDumpThreshold) throws IgniteCheckedException {
         return this.longTransactionTimeDumpThreshold.propagateAsync(longTransactionTimeDumpThreshold);
     }
 
     /**
+     * Local update of {@link #longTransactionTimeDumpThreshold}.
      *
+     * @param longTransactionTimeDumpThreshold New value of {@link #longTransactionTimeDumpThreshold}.
      */
     public void updateLongTransactionTimeDumpThresholdLocal(long longTransactionTimeDumpThreshold) {
         this.longTransactionTimeDumpThreshold.localUpdate(longTransactionTimeDumpThreshold);
     }
 
     /**
-     *
+     * @return Threshold timeout for long transactions.
      */
     public Long longTransactionTimeDumpThreshold() {
         return longTransactionTimeDumpThreshold.getOrDefault(dfltLongTransactionTimeDumpThreshold);
     }
 
     /**
+     * Cluster wide update of {@link #transactionTimeDumpSamplesCoefficient}.
      *
+     * @param transactionTimeDumpSamplesCoefficient New coefficient for samples of completed transactions that will be dumped in log.
+     * @return Future for {@link #transactionTimeDumpSamplesCoefficient} update operation.
+     * @throws IgniteCheckedException If failed during cluster wide update.
      */
-    public GridFutureAdapter<?> updatetransactionTimeDumpSamplesCoefficientAsync(double longTransactionTimeDumpThreshold) throws IgniteCheckedException {
-        return this.transactionTimeDumpSamplesCoefficient.propagateAsync(longTransactionTimeDumpThreshold);
+    public GridFutureAdapter<?> updateTransactionTimeDumpSamplesCoefficientAsync(double transactionTimeDumpSamplesCoefficient) throws IgniteCheckedException {
+        return this.transactionTimeDumpSamplesCoefficient.propagateAsync(transactionTimeDumpSamplesCoefficient);
     }
 
     /**
+     * Local update of {@link #transactionTimeDumpSamplesCoefficient}.
      *
+     * @param transactionTimeDumpSamplesCoefficient New coefficient for samples of completed transactions that will be dumped in log.
      */
-    public void updateTransactionTimeDumpSamplesCoefficientLocal(double longTransactionTimeDumpThreshold) {
-        this.transactionTimeDumpSamplesCoefficient.localUpdate(longTransactionTimeDumpThreshold);
+    public void updateTransactionTimeDumpSamplesCoefficientLocal(double transactionTimeDumpSamplesCoefficient) {
+        this.transactionTimeDumpSamplesCoefficient.localUpdate(transactionTimeDumpSamplesCoefficient);
     }
 
     /**
-     *
+     * @return The coefficient for samples of completed transactions that will be dumped in log.
      */
     public Double transactionTimeDumpSamplesCoefficient() {
         return transactionTimeDumpSamplesCoefficient.getOrDefault(dfltTransactionTimeDumpSamplesCoefficient);
     }
 
     /**
+     * Cluster wide update of {@link #longTransactionTimeDumpSamplesPerSecondLimit}.
      *
+     * @param limit New limit of samples of completed transactions that will be dumped in log per second.
+     * @return Future for {@link #longTransactionTimeDumpSamplesPerSecondLimit} update operation.
+     * @throws IgniteCheckedException If failed during cluster wide update.
      */
     public GridFutureAdapter<?> updateLongTransactionTimeDumpSamplesPerSecondLimitAsync(int limit) throws IgniteCheckedException {
         return this.longTransactionTimeDumpSamplesPerSecondLimit.propagateAsync(limit);
     }
 
     /**
+     * Local update of {@link #longTransactionTimeDumpSamplesPerSecondLimit}.
      *
+     * @param limit New limit of samples of completed transactions that will be dumped in log per second.
      */
     public void updateLongTransactionTimeDumpSamplesPerSecondLimitLocal(int limit) {
         this.longTransactionTimeDumpSamplesPerSecondLimit.localUpdate(limit);
     }
 
     /**
-     *
+     * @return Limit of samples of completed transactions that will be dumped in log per second.
      */
     public Integer longTransactionTimeDumpSamplesPerSecondLimit() {
         return longTransactionTimeDumpSamplesPerSecondLimit.getOrDefault(dfltLongTransactionTimeDumpSamplesPerSecondLimit);
     }
 
     /**
+     * Cluster wide update of {@link #collisionsDumpInterval}.
      *
+     * @param collisionsDumpInterval New collisions dump interval.
+     * @return Future for {@link #collisionsDumpInterval} update operation.
+     * @throws IgniteCheckedException If failed during cluster wide update.
      */
-    public GridFutureAdapter<?> updateCollisionsDumpIntervalAsync(int limit) throws IgniteCheckedException {
-        return this.collisionsDumpInterval.propagateAsync(limit);
+    public GridFutureAdapter<?> updateCollisionsDumpIntervalAsync(int collisionsDumpInterval) throws IgniteCheckedException {
+        return this.collisionsDumpInterval.propagateAsync(collisionsDumpInterval);
     }
 
     /**
+     * Local update of {@link #collisionsDumpInterval}.
      *
+     * @param collisionsDumpInterval New collisions dump interval.
      */
-    public void updateCollisionsDumpIntervalLocal(int limit) {
-        this.collisionsDumpInterval.localUpdate(limit);
+    public void updateCollisionsDumpIntervalLocal(int collisionsDumpInterval) {
+        this.collisionsDumpInterval.localUpdate(collisionsDumpInterval);
     }
 
     /**
-     *
+     * @return Collisions dump interval.
      */
     public Integer collisionsDumpInterval() {
         return collisionsDumpInterval.getOrDefault(dfltCollisionsDumpInterval);
     }
 
     /**
+     * Cluster wide update of {@link #txOwnerDumpRequestsAllowed}.
      *
+     * @param allowed Allowance to dump requests from local node to near node, when long running transaction is found.
+     * @return Future for {@link #txOwnerDumpRequestsAllowed} update operation.
+     * @throws IgniteCheckedException If failed during cluster wide update.
      */
     public GridFutureAdapter<?> updateTxOwnerDumpRequestsAllowedAsync(boolean allowed) throws IgniteCheckedException {
         return this.txOwnerDumpRequestsAllowed.propagateAsync(allowed);
     }
 
     /**
+     * Local update of {@link #txOwnerDumpRequestsAllowed}.
      *
+     * @param allowed Allowance to dump requests from local node to near node, when long running transaction is found.
      */
     public void updateTxOwnerDumpRequestsAllowedLocal(boolean allowed) {
         this.txOwnerDumpRequestsAllowed.localUpdate(allowed);
     }
 
     /**
-     *
+     * @return Allowance to dump requests from local node to near node, when long running transaction is found.
      */
     public Boolean txOwnerDumpRequestsAllowed() {
         return txOwnerDumpRequestsAllowed.getOrDefault(dfltTxOwnerDumpRequestsAllowed);

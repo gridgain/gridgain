@@ -6,7 +6,7 @@ package org.apache.ignite.internal.processors.configuration.distributed;
 public class DistributedDoubleProperty extends DistributedComparableProperty<Double> {
     /** {@inheritDoc} */
     DistributedDoubleProperty(String name) {
-        super(name);
+        super(name, Double::parseDouble);
     }
 
     /**

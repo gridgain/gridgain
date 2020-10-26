@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -92,6 +93,7 @@ import org.apache.ignite.internal.processors.cache.transactions.TxDeadlockDetect
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.util.lang.gridfunc.ReadOnlyCollectionView2X;
+import org.apache.ignite.lang.*;
 import org.apache.ignite.spi.systemview.view.TransactionView;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
@@ -109,10 +111,6 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lang.IgniteOutClosure;
-import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.lang.IgniteReducer;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionState;
@@ -272,8 +270,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /** Key collisions info holder. */
     private volatile KeyCollisionsHolder keyCollisionsInfo;
 
-    /** Distributed config. */
-    private DistributedTransactionConfiguration distrCfg;
+    /** Distributed transaction configuration. */
+    private DistributedTransactionConfiguration distributedTransactionConfiguration;
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -353,7 +351,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         keyCollisionsInfo = new KeyCollisionsHolder();
 
-        distrCfg = new DistributedTransactionConfiguration(cctx.kernalContext(), log,
+        distributedTransactionConfiguration = new DistributedTransactionConfiguration(cctx.kernalContext(), log,
                 (String name, Long oldVal, Long newVal) -> {
                     if (!Objects.equals(oldVal, newVal)) {
                         scheduleDumpTask(
@@ -525,7 +523,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return <code>true</code> if allowed, <code>false</code> otherwise.
      */
     public boolean txOwnerDumpRequestsAllowed() {
-        return distrCfg.txOwnerDumpRequestsAllowed();
+        return distributedTransactionConfiguration.txOwnerDumpRequestsAllowed();
     }
 
     /**
@@ -536,7 +534,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param allowed whether allowed
      */
     public void setTxOwnerDumpRequestsAllowed(boolean allowed) {
-        distrCfg.updateTxOwnerDumpRequestsAllowedLocal(allowed);
+        distributedTransactionConfiguration.updateTxOwnerDumpRequestsAllowedLocal(allowed);
     }
 
     /**
@@ -548,7 +546,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return Threshold timeout in milliseconds.
      */
     public long longTransactionTimeDumpThreshold() {
-        return distrCfg.longTransactionTimeDumpThreshold();
+        return distributedTransactionConfiguration.longTransactionTimeDumpThreshold();
     }
 
     /**
@@ -563,14 +561,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert longTransactionTimeDumpThreshold >= 0
             : "longTransactionTimeDumpThreshold must be greater than or equal to 0.";
 
-        distrCfg.updateLongTransactionTimeDumpThresholdLocal(longTransactionTimeDumpThreshold);
+        distributedTransactionConfiguration.updateLongTransactionTimeDumpThresholdLocal(longTransactionTimeDumpThreshold);
     }
 
     /**
      * The coefficient for samples of completed transactions that will be dumped in log.
      */
     public double transactionTimeDumpSamplesCoefficient() {
-        return distrCfg.transactionTimeDumpSamplesCoefficient();
+        return distributedTransactionConfiguration.transactionTimeDumpSamplesCoefficient();
     }
 
     /**
@@ -580,7 +578,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert transactionTimeDumpSamplesCoefficient >= 0.0 && transactionTimeDumpSamplesCoefficient <= 1.0
             : "transactionTimeDumpSamplesCoefficient value must be between 0.0 and 1.0 inclusively.";
 
-        this.distrCfg.updateTransactionTimeDumpSamplesCoefficientLocal(transactionTimeDumpSamplesCoefficient);
+        this.distributedTransactionConfiguration.updateTransactionTimeDumpSamplesCoefficientLocal(transactionTimeDumpSamplesCoefficient);
     }
 
     /**
@@ -589,7 +587,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * greater than <code>0</code>.
      */
     public int transactionTimeDumpSamplesPerSecondLimit() {
-        return distrCfg.longTransactionTimeDumpSamplesPerSecondLimit();
+        return distributedTransactionConfiguration.longTransactionTimeDumpSamplesPerSecondLimit();
     }
 
     /**
@@ -601,7 +599,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert transactionTimeDumpSamplesPerSecondLimit > 0
             : "transactionTimeDumpSamplesPerSecondLimit must be integer value greater than 0.";
 
-        distrCfg.updateLongTransactionTimeDumpSamplesPerSecondLimitLocal(transactionTimeDumpSamplesPerSecondLimit);
+        distributedTransactionConfiguration.updateLongTransactionTimeDumpSamplesPerSecondLimitLocal(transactionTimeDumpSamplesPerSecondLimit);
     }
 
     /**
@@ -2064,14 +2062,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return Long operations dump timeout.
      */
     public long longOperationsDumpTimeout() {
-        return distrCfg.longOperationsDumpTimeout();
+        return distributedTransactionConfiguration.longOperationsDumpTimeout();
     }
 
     /**
      * @param longOpsDumpTimeout Long operations dump timeout.
      */
     public void longOperationsDumpTimeout(long longOpsDumpTimeout) {
-        distrCfg.updateLongOperationsDumpTimeoutLocal(longOpsDumpTimeout);
+        distributedTransactionConfiguration.updateLongOperationsDumpTimeoutLocal(longOpsDumpTimeout);
 
         scheduleDumpTask(
             IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
@@ -2086,7 +2084,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param timeout Sets tx key collisions analysis interval.
      **/
     void txCollisionsDumpInterval(int timeout) {
-        distrCfg.updateCollisionsDumpIntervalLocal(timeout);
+        distributedTransactionConfiguration.updateCollisionsDumpIntervalLocal(timeout);
 
         scheduleDumpTask(
             IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
@@ -2927,35 +2925,15 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param allowed whether allowed
      */
     public void setTxOwnerDumpRequestsAllowedDistributed(boolean allowed) {
-        try {
-            IgnitePredicate<ClusterNode> nodeFilter =
-                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING);
-
-            GridFutureAdapter<?> fut = null;
-
-            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
-                fut = distrCfg.updateTxOwnerDumpRequestsAllowedAsync(allowed);
-
-                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING);
-            }
-
-            IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
-                    cctx.kernalContext(),
-                    new TxOwnerDumpRequestAllowedSettingClosure(allowed),
-                    true,
-                    nodeFilter
-            );
-
-            if (fut != null) {
-                fut.get();
-            }
-
-            computeFut.get();
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+        distributePropertyCompatibility(TRANSACTION_OWNER_THREAD_DUMP_PROVIDING,
+                new TxOwnerDumpRequestAllowedSettingClosure(allowed),
+                () -> {
+                    try {
+                        return distributedTransactionConfiguration.updateTxOwnerDumpRequestsAllowedAsync(allowed);
+                    } catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+                });
     }
 
     /**
@@ -2970,35 +2948,15 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void longTransactionTimeDumpThresholdDistributed(long threshold) {
         assert threshold >= 0 : "Threshold timeout must be greater than or equal to 0.";
 
-        try {
-            IgnitePredicate<ClusterNode> nodeFilter =
-                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
-
-            GridFutureAdapter<?> fut = null;
-
-            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
-                fut = distrCfg.updateLongTransactionTimeDumpThresholdAsync(threshold);
-
-                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
-            }
-
-            IgniteFuture<Void> computeFuture = broadcastToNodesWithFilterAsync(
-                    cctx.kernalContext(),
-                    new LongRunningTxTimeDumpSettingsClosure(threshold, null, null),
-                    false,
-                    nodeFilter
-            );
-
-            if (fut != null) {
-                fut.get();
-            }
-
-            computeFuture.get();
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+        distributePropertyCompatibility(LRT_SYSTEM_USER_TIME_DUMP_SETTINGS,
+                new LongRunningTxTimeDumpSettingsClosure(threshold, null, null),
+                () -> {
+                    try {
+                        return distributedTransactionConfiguration.updateLongTransactionTimeDumpThresholdAsync(threshold);
+                    } catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+                });
     }
 
     /**
@@ -3010,34 +2968,15 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void transactionTimeDumpSamplesCoefficientDistributed(double coefficient) {
         assert coefficient >= 0.0 && coefficient <= 1.0 : "Percentage value must be between 0.0 and 1.0 inclusively.";
 
-        try {
-            IgnitePredicate<ClusterNode> nodeFilter =
-                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
-            GridFutureAdapter<?> fut = null;
-
-            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
-                fut = distrCfg.updatetransactionTimeDumpSamplesCoefficientAsync(coefficient);
-
-                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
-            }
-
-            IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
-                    cctx.kernalContext(),
-                    new LongRunningTxTimeDumpSettingsClosure(null, coefficient, null),
-                    false,
-                    nodeFilter
-            );
-
-            if (fut != null) {
-                fut.get();
-            }
-
-            computeFut.get();
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+        distributePropertyCompatibility(LRT_SYSTEM_USER_TIME_DUMP_SETTINGS,
+                new LongRunningTxTimeDumpSettingsClosure(null, coefficient, null),
+                () -> {
+                    try {
+                        return distributedTransactionConfiguration.updateTransactionTimeDumpSamplesCoefficientAsync(coefficient);
+                    } catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+                });
     }
 
     /**
@@ -3050,34 +2989,15 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void longTransactionTimeDumpSamplesPerSecondLimit(int limit) {
         assert limit > 0 : "Limit value must be greater than 0.";
 
-        try{
-            IgnitePredicate<ClusterNode> nodeFilter =
-                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
-            GridFutureAdapter<?> fut = null;
-
-            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
-                fut = distrCfg.updateLongTransactionTimeDumpSamplesPerSecondLimitAsync(limit);
-
-                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
-            }
-
-            IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
-                    cctx.kernalContext(),
-                    new LongRunningTxTimeDumpSettingsClosure(null, null, limit),
-                    false,
-                    nodeFilter
-            );
-
-            if (fut != null) {
-                fut.get();
-            }
-
-            computeFut.get();
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+        distributePropertyCompatibility(LRT_SYSTEM_USER_TIME_DUMP_SETTINGS,
+                new LongRunningTxTimeDumpSettingsClosure(null, null, limit),
+                () -> {
+                    try {
+                        return distributedTransactionConfiguration.updateLongTransactionTimeDumpSamplesPerSecondLimitAsync(limit);
+                    } catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+                });
     }
 
     /** {@inheritDoc} */
@@ -3100,34 +3020,15 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param longOpsDumpTimeout Long operations dump timeout.
      */
     public void longOperationsDumpTimeoutDistributed(long longOpsDumpTimeout) {
-        try {
-            IgnitePredicate<ClusterNode> nodeFilter =
-                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT);
-            GridFutureAdapter<?> fut = null;
-
-            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
-                fut = distrCfg.updateLongOperationsDumpTimeoutAsync(longOpsDumpTimeout);
-
-                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT);
-            }
-
-            IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
-                    cctx.kernalContext(),
-                    new LongOperationsDumpSettingsClosure(longOpsDumpTimeout),
-                    false,
-                    nodeFilter
-            );
-
-            if (fut != null) {
-                fut.get();
-            }
-
-            computeFut.get();
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+        distributePropertyCompatibility(DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT,
+                new LongOperationsDumpSettingsClosure(longOpsDumpTimeout),
+                () -> {
+                    try {
+                        return distributedTransactionConfiguration.updateLongOperationsDumpTimeoutAsync(longOpsDumpTimeout);
+                    } catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+                });
     }
 
     /**
@@ -3137,7 +3038,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return Collisions dump interval.
      */
     public int collisionsDumpInterval() {
-        return distrCfg.collisionsDumpInterval();
+        return distributedTransactionConfiguration.collisionsDumpInterval();
     }
 
     /**
@@ -3147,20 +3048,45 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param collisionsDumpInterval New collisions dump interval or negative for disabling.
      */
     public void collisionsDumpIntervalDistributed(int collisionsDumpInterval) {
-        IgnitePredicate<ClusterNode> nodeFilter = node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_TX_COLLISIONS_DUMP);
-        GridFutureAdapter<?> fut = null;
+        distributePropertyCompatibility(DISTRIBUTED_TX_COLLISIONS_DUMP,
+                new TxCollisionsDumpSettingsClosure(collisionsDumpInterval),
+                () -> {
+                    try {
+                        return distributedTransactionConfiguration.updateCollisionsDumpIntervalAsync(collisionsDumpInterval);
+                    } catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+                });
+    }
 
+    /**
+     * Distribute property via cluster in compatibility mode.
+     *
+     * @param feature Property feature.
+     * @param closure Old way setting.
+     * @param supplier Distributed property update.
+     */
+    private void distributePropertyCompatibility(
+            IgniteFeatures feature,
+            IgniteRunnable closure,
+            Supplier<GridFutureAdapter<?>> supplier
+    ) {
         try {
+            IgnitePredicate<ClusterNode> nodeFilter =
+                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, feature);
+
+            GridFutureAdapter<?> fut = null;
+
             if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
-                fut = distrCfg.updateCollisionsDumpIntervalAsync(collisionsDumpInterval);
+                fut = supplier.get();
 
                 nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_TX_COLLISIONS_DUMP);
+                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, feature);
             }
 
             IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
                     cctx.kernalContext(),
-                    new TxCollisionsDumpSettingsClosure(collisionsDumpInterval),
+                    closure,
                     true,
                     nodeFilter
             );
@@ -3170,8 +3096,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             }
 
             computeFut.get();
-        }
-        catch (IgniteCheckedException e) {
+        } catch (IgniteCheckedException e) {
             throw new IgniteException(e);
         }
     }
@@ -3213,8 +3138,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /**
      * @return Distributed configuration.
      */
-    public DistributedTransactionConfiguration getDistrCfg() {
-        return distrCfg;
+    public DistributedTransactionConfiguration getDistributedTransactionConfiguration() {
+        return distributedTransactionConfiguration;
     }
 
     /** Tx key collisions info holder. */

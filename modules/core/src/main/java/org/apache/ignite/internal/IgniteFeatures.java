@@ -188,7 +188,7 @@ public enum IgniteFeatures {
     /** Incremental DR. */
     INCREMENTAL_DR(49),
 
-    /** Transaction distributed config. */
+    /** Transaction distributed configuration. */
     TRANSACTION_DISTRIBUTED_PROPERTIES(50);
 
     /**

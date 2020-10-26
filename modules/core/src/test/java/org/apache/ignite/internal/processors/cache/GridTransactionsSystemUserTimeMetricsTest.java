@@ -16,8 +16,13 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.io.Serializable;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.LongStream;
 import javax.management.AttributeNotFoundException;
@@ -38,7 +43,6 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLock
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccTxSnapshotRequest;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxAdapter;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -222,7 +226,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         cache.put(1, 1);
 
-        waitDistributedPropertiesUpdate(3, () -> applyJmxParameters(1000L, 0.0, 5));
+        applyJmxParameters(1000L, 0.0, 6);
     }
 
     /** */
@@ -240,24 +244,75 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
      * @param coefficient Transaction time dump samples coefficient.
      * @param limit Transaction time dump samples per second limit.
      * @return Transaction MX bean.
-     * @throws Exception If failed.
      */
-    private TransactionsMXBean applyJmxParameters(Long threshold, Double coefficient, Integer limit) throws Exception {
+    private TransactionsMXBean applyJmxParameters(Long threshold, Double coefficient, Integer limit) throws InterruptedException {
         TransactionsMXBean tmMxBean = getMxBean(
-            CLIENT,
-            "Transactions",
-            TransactionsMXBean.class,
-            TransactionsMXBeanImpl.class
+                CLIENT,
+                "Transactions",
+                TransactionsMXBean.class,
+                TransactionsMXBeanImpl.class
         );
 
-        if (threshold != null)
+        return applyJmxParameters(threshold, coefficient, limit, tmMxBean, (IgniteEx) client);
+    }
+
+    /**
+     * Applies JMX parameters to node in runtime. Parameters are spreading through the cluster, so this method
+     * allows to change system/user time tracking without restarting the cluster.
+     *
+     * @param threshold Long transaction time dump threshold.
+     * @param coefficient Transaction time dump samples coefficient.
+     * @param limit Transaction time dump samples per second limit.
+     * @return Transaction MX bean.
+     */
+    private TransactionsMXBean applyJmxParameters(Long threshold, Double coefficient, Integer limit,
+                                                  TransactionsMXBean tmMxBean, IgniteEx ignite
+    ) throws InterruptedException {
+        CountDownLatch thresholdLatch = new CountDownLatch(1);
+        CountDownLatch coefficientLatch = new CountDownLatch(1);
+        CountDownLatch limitLatch = new CountDownLatch(1);
+
+        if (threshold != null) {
+            ignite.context().distributedMetastorage().listen(
+                    (key) -> key.startsWith(DIST_CONF_PREFIX),
+                    (String key, Serializable oldVal, Serializable newVal) -> {
+                        if (key.endsWith("longTransactionTimeDumpThreshold") && (long) newVal == threshold)
+                            thresholdLatch.countDown();
+                    });
+
             tmMxBean.setLongTransactionTimeDumpThreshold(threshold);
+        }
+
+        if (coefficient != null) {
+            ignite.context().distributedMetastorage().listen(
+                    (key) -> key.startsWith(DIST_CONF_PREFIX),
+                    (String key, Serializable oldVal, Serializable newVal) -> {
+                        if (key.endsWith("transactionTimeDumpSamplesCoefficient") && (double) newVal == coefficient)
+                            coefficientLatch.countDown();
+                    });
+
+            tmMxBean.setTransactionTimeDumpSamplesCoefficient(coefficient);
+        }
+
+        if (limit != null) {
+            ignite.context().distributedMetastorage().listen(
+                    (key) -> key.startsWith(DIST_CONF_PREFIX),
+                    (String key, Serializable oldVal, Serializable newVal) -> {
+                        if (key.endsWith("longTransactionTimeDumpSamplesPerSecondLimit") && (int) newVal == limit)
+                            limitLatch.countDown();
+                    });
+
+            tmMxBean.setTransactionTimeDumpSamplesPerSecondLimit(limit);
+        }
+
+        if(threshold != null)
+            thresholdLatch.await(300, TimeUnit.MILLISECONDS);
 
         if (coefficient != null)
-            tmMxBean.setTransactionTimeDumpSamplesCoefficient(coefficient);
+            coefficientLatch.await(300, TimeUnit.MILLISECONDS);
 
         if (limit != null)
-            tmMxBean.setTransactionTimeDumpSamplesPerSecondLimit(limit);
+            limitLatch.await(300, TimeUnit.MILLISECONDS);
 
         return tmMxBean;
     }
@@ -496,7 +551,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
      */
     @Test
     public void testJmxParametersSpreading() throws Exception {
-        startGrid(CLIENT_2);
+        IgniteEx client2 = startGrid(CLIENT_2);
 
         try {
             TransactionsMXBean tmMxBean = getMxBean(
@@ -522,25 +577,15 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
                 long newThreshold = 99999;
                 double newCoefficient = 0.01;
 
-
-                waitDistributedPropertiesUpdate(3, () -> {
-                    tmMxBean.setTransactionTimeDumpSamplesPerSecondLimit(newLimit);
-                    tmMxBean2.setLongTransactionTimeDumpThreshold(newThreshold);
-                    tmMxBean.setTransactionTimeDumpSamplesCoefficient(newCoefficient);
-                    return null;
-                });
+                applyJmxParameters(null, newCoefficient, newLimit);
+                applyJmxParameters(newThreshold, null, null, tmMxBean2, client2);
 
                 assertEquals(newLimit, tmMxBean2.getTransactionTimeDumpSamplesPerSecondLimit());
                 assertEquals(newThreshold, tmMxBean.getLongTransactionTimeDumpThreshold());
                 assertTrue(tmMxBean2.getTransactionTimeDumpSamplesCoefficient() - newCoefficient < 0.0001);
             }
             finally {
-                waitDistributedPropertiesUpdate(3, () -> {
-                    tmMxBean.setTransactionTimeDumpSamplesPerSecondLimit(oldLimit);
-                    tmMxBean.setLongTransactionTimeDumpThreshold(oldThreshold);
-                    tmMxBean.setTransactionTimeDumpSamplesCoefficient(oldCoefficient);
-                    return null;
-                });
+                applyJmxParameters(oldThreshold, oldCoefficient, oldLimit);
             }
         }
         finally {
@@ -573,7 +618,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         listeningTestLog.registerListener(lrtLogLsnr);
 
-        waitDistributedPropertiesUpdate(2, () -> applyJmxParameters(5000L, null, txCnt));
+        applyJmxParameters(5000L, null, txCnt);
 
         doAsyncTransactions(client, txCnt, 5200);
 
@@ -602,7 +647,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         int txCnt = 10;
 
-        waitDistributedPropertiesUpdate(2, () -> applyJmxParameters(null, 1.0, txCnt));
+        applyJmxParameters(null, 1.0, txCnt);
 
         // Wait for a second to reset hit counter.
         doSleep(1000);
@@ -625,7 +670,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     public void testNoSamplingCoefficient() throws Exception {
         logTxDumpLsnr.reset();
 
-        waitDistributedPropertiesUpdate(2, () -> applyJmxParameters(null, 0.0, 10));
+        applyJmxParameters(null, 0.0, 10);
 
         int txCnt = 10;
 
@@ -654,7 +699,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         listeningTestLog.registerListener(transactionDumpsSkippedLsnr);
 
-        waitDistributedPropertiesUpdate(2, () -> applyJmxParameters(null, 1.0, txDumpCnt));
+        applyJmxParameters(null, 1.0, txDumpCnt);
 
         // Wait for a second to reset hit counter.
         doSleep(1000);
@@ -687,7 +732,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         int txCnt = 10;
 
-        waitDistributedPropertiesUpdate(3, () -> applyJmxParameters(0L, 1.0, txCnt));
+        applyJmxParameters(0L, 1.0, txCnt);
 
         // Wait for a second to reset hit counter.
         doSleep(1000);
@@ -713,51 +758,12 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         int txCnt = 10;
 
-        waitDistributedPropertiesUpdate(3, () -> applyJmxParameters(0L, 0.0, 5));
+        applyJmxParameters(0L, 0.0, 5);
 
         for (int i = 0; i < txCnt; i++)
             doInTransaction(client, txCallable);
 
         assertFalse(logTxDumpLsnr.check());
-    }
-
-
-    /**
-     * Update distributed properties and wait propagation.
-     *
-     * @param cnt count of parameters to modify.
-     * @param callable distributed properties updater.
-     * @throws Exception If failed.
-     */
-    private void waitDistributedPropertiesUpdate(int cnt, Callable callable) throws Exception {
-      //  Map<String, CountDownLatch> latchMap = propertyUpdatesLatches(cnt);
-
-        try {
-            callable.call();
-        } catch (Exception e){
-            throw new RuntimeException(e);
-        }
-
-//        for (CountDownLatch latch : latchMap.values()) {
-//            latch.await(200, TimeUnit.MILLISECONDS);
-//        }
-    }
-
-
-    private Map<String, CountDownLatch> propertyUpdatesLatches(int cnt) {
-        Map<String, CountDownLatch> latches = new HashMap<>();
-
-        G.allGrids().stream()
-                .map(grid ->(IgniteEx)grid)
-                .forEach(grid -> {
-                    latches.put(grid.name(), new CountDownLatch(cnt));
-
-                    grid.context().distributedMetastorage().listen(
-                            (key) -> key.startsWith(DIST_CONF_PREFIX),
-                            (String key, Serializable oldVal, Serializable newVal) -> latches.get(grid.name()));
-                });
-
-        return latches;
     }
 
     /**

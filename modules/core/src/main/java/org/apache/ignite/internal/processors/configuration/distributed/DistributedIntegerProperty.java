@@ -6,7 +6,7 @@ package org.apache.ignite.internal.processors.configuration.distributed;
 public class DistributedIntegerProperty extends DistributedComparableProperty<Integer> {
     /** {@inheritDoc} */
     DistributedIntegerProperty(String name) {
-        super(name);
+        super(name, Integer::parseInt);
     }
 
     /**
