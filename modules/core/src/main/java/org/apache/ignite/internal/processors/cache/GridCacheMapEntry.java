@@ -4052,7 +4052,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 return false;
 
             if (onExpired(expiredVal, obsoleteVer)) {
-                if (cctx.deferredDelete()) {
+                if (cctx.deferredDelete()) { // TODO remove.
                     deferred = true;
                     ver0 = ver;
                 }
