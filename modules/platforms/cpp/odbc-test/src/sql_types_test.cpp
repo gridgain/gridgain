@@ -303,17 +303,19 @@ BOOST_AUTO_TEST_CASE(TestTimeInsert)
     BOOST_REQUIRE_EQUAL(out.timeField.GetSeconds(), expected.GetSeconds());
 }
 
-BOOST_AUTO_TEST_CASE(TestFetchLiteralDate)
+void FetchAndCheckDate(SQLHSTMT stmt, const std::string& req, SQLSMALLINT dataType)
 {
-    SQLCHAR req[] = "select DATE '2020-10-25'";
-    SQLExecDirect(stmt, req, SQL_NTS);
+    std::vector<SQLCHAR> req0(req.begin(), req.end());
+    req0.push_back(0);
+
+    SQLExecDirect(stmt, &req0[0], SQL_NTS);
 
     SQL_DATE_STRUCT res;
 
     memset(&res, 0, sizeof(res));
 
     SQLLEN resLen = 0;
-    SQLRETURN ret = SQLBindCol(stmt, 1, SQL_C_TYPE_DATE, &res, 0, &resLen);
+    SQLRETURN ret = SQLBindCol(stmt, 1, dataType, &res, 0, &resLen);
 
     if (!SQL_SUCCEEDED(ret))
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
@@ -328,29 +330,14 @@ BOOST_AUTO_TEST_CASE(TestFetchLiteralDate)
     BOOST_CHECK_EQUAL(res.year, 2020);
 }
 
+BOOST_AUTO_TEST_CASE(TestFetchLiteralDate)
+{
+    FetchAndCheckDate(stmt, "select DATE '2020-10-25'", SQL_C_TYPE_DATE);
+}
+
 BOOST_AUTO_TEST_CASE(TestFetchLiteralDateLegacy)
 {
-    SQLCHAR req[] = "select DATE '2020-10-25'";
-    SQLExecDirect(stmt, req, SQL_NTS);
-
-    SQL_DATE_STRUCT res;
-
-    memset(&res, 0, sizeof(res));
-
-    SQLLEN resLen = 0;
-    SQLRETURN ret = SQLBindCol(stmt, 1, SQL_C_DATE, &res, 0, &resLen);
-
-    if (!SQL_SUCCEEDED(ret))
-        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
-
-    ret = SQLFetch(stmt);
-
-    if (!SQL_SUCCEEDED(ret))
-        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
-
-    BOOST_CHECK_EQUAL(res.day, 25);
-    BOOST_CHECK_EQUAL(res.month, 10);
-    BOOST_CHECK_EQUAL(res.year, 2020);
+    FetchAndCheckDate(stmt, "select DATE '2020-10-25'", SQL_C_DATE);
 }
 
 BOOST_AUTO_TEST_CASE(TestFetchFieldDateAsDate)
@@ -360,27 +347,7 @@ BOOST_AUTO_TEST_CASE(TestFetchFieldDateAsDate)
 
     testCache.Put(1, val1);
 
-    SQLCHAR req[] = "select CAST (dateField as DATE) from TestType";
-    SQLExecDirect(stmt, req, SQL_NTS);
-
-    SQL_DATE_STRUCT res;
-
-    memset(&res, 0, sizeof(res));
-
-    SQLLEN resLen = 0;
-    SQLRETURN ret = SQLBindCol(stmt, 1, SQL_C_TYPE_DATE, &res, 0, &resLen);
-
-    if (!SQL_SUCCEEDED(ret))
-        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
-
-    ret = SQLFetch(stmt);
-
-    if (!SQL_SUCCEEDED(ret))
-        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
-
-    BOOST_CHECK_EQUAL(res.day, 25);
-    BOOST_CHECK_EQUAL(res.month, 10);
-    BOOST_CHECK_EQUAL(res.year, 2020);
+    FetchAndCheckDate(stmt, "select CAST (dateField as DATE) from TestType", SQL_C_TYPE_DATE);
 }
 
 BOOST_AUTO_TEST_CASE(TestFetchFieldDateAsDateLegacy)
@@ -390,27 +357,7 @@ BOOST_AUTO_TEST_CASE(TestFetchFieldDateAsDateLegacy)
 
     testCache.Put(1, val1);
 
-    SQLCHAR req[] = "select CAST (dateField as DATE) from TestType";
-    SQLExecDirect(stmt, req, SQL_NTS);
-
-    SQL_DATE_STRUCT res;
-
-    memset(&res, 0, sizeof(res));
-
-    SQLLEN resLen = 0;
-    SQLRETURN ret = SQLBindCol(stmt, 1, SQL_C_DATE, &res, 0, &resLen);
-
-    if (!SQL_SUCCEEDED(ret))
-        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
-
-    ret = SQLFetch(stmt);
-
-    if (!SQL_SUCCEEDED(ret))
-        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
-
-    BOOST_CHECK_EQUAL(res.day, 25);
-    BOOST_CHECK_EQUAL(res.month, 10);
-    BOOST_CHECK_EQUAL(res.year, 2020);
+    FetchAndCheckDate(stmt, "select CAST (dateField as DATE) from TestType", SQL_C_DATE);
 }
 
 BOOST_AUTO_TEST_CASE(TestFetchFieldDateAsIs)
@@ -420,15 +367,22 @@ BOOST_AUTO_TEST_CASE(TestFetchFieldDateAsIs)
 
     testCache.Put(1, val1);
 
-    SQLCHAR req[] = "select dateField from TestType";
-    SQLExecDirect(stmt, req, SQL_NTS);
+    FetchAndCheckDate(stmt, "select dateField from TestType", SQL_C_TYPE_DATE);
+}
 
-    SQL_DATE_STRUCT res;
+void FetchAndCheckTime(SQLHSTMT stmt, const std::string& req, SQLSMALLINT dataType)
+{
+    std::vector<SQLCHAR> req0(req.begin(), req.end());
+    req0.push_back(0);
+
+    SQLExecDirect(stmt, &req0[0], SQL_NTS);
+
+    SQL_TIME_STRUCT res;
 
     memset(&res, 0, sizeof(res));
 
     SQLLEN resLen = 0;
-    SQLRETURN ret = SQLBindCol(stmt, 1, SQL_C_TYPE_DATE, &res, 0, &resLen);
+    SQLRETURN ret = SQLBindCol(stmt, 1, dataType, &res, 0, &resLen);
 
     if (!SQL_SUCCEEDED(ret))
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
@@ -438,9 +392,39 @@ BOOST_AUTO_TEST_CASE(TestFetchFieldDateAsIs)
     if (!SQL_SUCCEEDED(ret))
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-    BOOST_CHECK_EQUAL(res.day, 25);
-    BOOST_CHECK_EQUAL(res.month, 10);
-    BOOST_CHECK_EQUAL(res.year, 2020);
+    BOOST_CHECK_EQUAL(res.hour,   12);
+    BOOST_CHECK_EQUAL(res.minute, 42);
+    BOOST_CHECK_EQUAL(res.second, 13);
+}
+
+BOOST_AUTO_TEST_CASE(TestFetchLiteralTime)
+{
+    FetchAndCheckTime(stmt, "select TIME '12:42:13'", SQL_C_TYPE_TIME);
+}
+
+BOOST_AUTO_TEST_CASE(TestFetchLiteralTimeLegacy)
+{
+    FetchAndCheckTime(stmt, "select TIME '12:42:13'", SQL_C_TYPE_TIME);
+}
+
+BOOST_AUTO_TEST_CASE(TestFetchFieldTimeAsIs)
+{
+    TestType val1;
+    val1.timeField = common::MakeTimeGmt(12, 42, 13);
+
+    testCache.Put(1, val1);
+
+    FetchAndCheckTime(stmt, "select timeField from TestType", SQL_C_TYPE_TIME);
+}
+
+BOOST_AUTO_TEST_CASE(TestFetchFieldTimeAsIsLegacy)
+{
+    TestType val1;
+    val1.timeField = common::MakeTimeGmt(12, 42, 13);
+
+    testCache.Put(1, val1);
+
+    FetchAndCheckTime(stmt, "select timeField from TestType", SQL_C_TIME);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
