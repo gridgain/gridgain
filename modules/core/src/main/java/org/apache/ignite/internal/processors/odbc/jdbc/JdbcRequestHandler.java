@@ -572,6 +572,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         }
 
         U.close(cliCtx, log);
+
+        log.info("+++ DISCONNECT " + connCtx.clientDescriptor());
     }
 
     /**
