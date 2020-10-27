@@ -514,7 +514,10 @@ public interface GridQueryIndexing {
     }
 
     /** */
-    default void patchPkIndexes(QueryEntity qe) {
+    default void patchPkIndexes(
+        GridCacheContext cctx,
+        QueryEntity qe
+    ) {
         // No-op.
     }
 }

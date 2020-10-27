@@ -5238,7 +5238,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /** */
     public void patchPkIndexes() {
-        cachesInfo.patchPkIndexes();
+        if (!ctx.clientNode())
+            cachesInfo.patchPkIndexes(caches);
     }
 
     /**

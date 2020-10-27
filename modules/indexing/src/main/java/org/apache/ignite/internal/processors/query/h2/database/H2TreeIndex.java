@@ -640,7 +640,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @return RootPage for meta page.
      * @throws IgniteCheckedException If failed.
      */
-    private static RootPage getMetaPage(GridCacheContext<?, ?> cctx, String treeName, int segIdx)
+    public static RootPage getMetaPage(GridCacheContext<?, ?> cctx, String treeName, int segIdx)
         throws IgniteCheckedException {
         return cctx.offheap().rootPageForIndex(cctx.cacheId(), treeName, segIdx);
     }

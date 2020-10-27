@@ -464,7 +464,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Index.
      */
     @SuppressWarnings("ConstantConditions")
-    GridH2IndexBase createSortedIndex(String name, GridH2Table tbl, boolean pk, boolean affinityKey,
+    public GridH2IndexBase createSortedIndex(String name, GridH2Table tbl, boolean pk, boolean affinityKey,
         List<IndexColumn> unwrappedCols, List<IndexColumn> wrappedCols, int inlineSize) {
         try {
             GridCacheContextInfo cacheInfo = tbl.cacheInfo();
@@ -3374,7 +3374,26 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** */
-    @Override public void patchPkIndexes(QueryEntity qe) {
+    @Override public void patchPkIndexes(
+        GridCacheContext cctx,
+        QueryEntity qe
+    ) {
+        cctx.shared().database().checkpointReadLock();
 
+        try {
+            int typeId = ctx.cacheObjects().typeId(qe.findValueType());
+            String treeName = BPlusTree.treeName(typeId + "__key_PK", "H2Tree");
+
+            RootPage p0 = H2TreeIndex.getMetaPage(cctx,  treeName, 0);
+
+            p0.pageId().pageId();
+
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Error on patch old PK", e);
+        }
+        finally {
+            cctx.shared().database().checkpointReadUnlock();
+        }
     }
 }

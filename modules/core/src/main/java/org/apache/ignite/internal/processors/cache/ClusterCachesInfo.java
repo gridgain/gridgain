@@ -2623,10 +2623,13 @@ public class ClusterCachesInfo {
     }
 
     /** */
-    public void patchPkIndexes() {
-        for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : joinDiscoData.caches().values()) {
-            for(QueryEntity qe : cacheInfo.cacheData().queryEntities())
-                ctx.query().getIndexing().patchPkIndexes( qe);
+    public void patchPkIndexes(Map<String, GridCacheAdapter<?, ?>> caches) {
+        for (Map.Entry<String, CacheJoinNodeDiscoveryData.CacheInfo> e : joinDiscoData.caches().entrySet()) {
+            for(QueryEntity qe : e.getValue().cacheData().queryEntities()) {
+                GridCacheAdapter ca = caches.get(e.getKey());
+                if (ca != null)
+                    ctx.query().getIndexing().patchPkIndexes(ca.context(), qe);
+            }
         }
     }
 

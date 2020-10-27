@@ -85,6 +85,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_HASH_IDX_NAME;
+import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME;
 
 /**
@@ -214,7 +215,7 @@ public class GridH2Table extends TableBase {
         identifierStr = identifier.schema() + "." + identifier.table();
 
         // Indexes must be created in the end when everything is ready.
-        idxs = createSystemIndexes();
+        idxs = createSystemIndexes(tblDesc);
 
         assert idxs != null;
 
@@ -238,8 +239,10 @@ public class GridH2Table extends TableBase {
         }
     }
 
-    /** */
-    private ArrayList<Index> createSystemIndexes() {
+    /**
+     * @param tblDesc */
+    private ArrayList<Index> createSystemIndexes(
+        H2TableDescriptor tblDesc) {
         ArrayList<Index> idxs = new ArrayList<>();
 
         IndexColumn keyCol = indexColumn(QueryUtils.KEY_COL, SortOrder.ASCENDING);
