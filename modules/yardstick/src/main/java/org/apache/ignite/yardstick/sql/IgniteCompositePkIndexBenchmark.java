@@ -42,10 +42,12 @@ import static org.yardstickframework.BenchmarkUtils.println;
  * Ignite benchmark for composite PK.
  */
 public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
-    /**
-     * Key class and query to create TEST table.
-     */
+    /** Key class and query to create TEST table. */
     private static final Map<Class<?>, String> setupQrys = new HashMap<>();
+
+    private static final Map<Class<?>, Function<Integer, String>> whereBuilders = new HashMap<>();
+
+    private static final Map<Class<?>, String> idxPk = new HashMap<>();
 
     static {
         setupQrys.put(
@@ -67,6 +69,14 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
                 "PRIMARY KEY (ID0, ID1)) " +
                 "WITH \"CACHE_NAME=TEST,KEY_TYPE=" + TestKeyHugeStringAndInteger.class.getName() + ",VALUE_TYPE=" + Value.class.getName() + "\""
         );
+
+        idxPk.put(TestKey2Integers.class, "CREATE INDEX USER_PK ON TEST (ID0, ID1)");
+        idxPk.put(TestKey8Integers.class, "CREATE INDEX USER_PK ON TEST (ID0, ID1, ID2, ID3, ID4, ID5, ID6, ID7)");
+        idxPk.put(TestKeyHugeStringAndInteger.class, "CREATE INDEX USER_PK ON TEST (ID0, ID1)");
+
+        whereBuilders.put(TestKey2Integers.class, IgniteCompositePkIndexBenchmark::where2Int);
+        whereBuilders.put(TestKey8Integers.class, IgniteCompositePkIndexBenchmark::where8Int);
+        whereBuilders.put(TestKeyHugeStringAndInteger.class, IgniteCompositePkIndexBenchmark::whereHugeStringAndInteger);
     }
 
     /** Cache name. */
@@ -87,6 +97,9 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
     /** */
     private TestAction testAct;
+
+    /** */
+    private Function<Integer, String> whereBuilder;
 
     /** {@inheritDoc} */
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
@@ -110,6 +123,9 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         addIndexes = args.getBooleanParameter("addIndexes", false);
 
         testAct = TestAction.valueOf(args.getStringParameter("action", "PUT").toUpperCase());
+        whereBuilder = whereBuilders.get(keyCls);
+
+        assert whereBuilder != null;
 
         printParameters();
 
@@ -146,6 +162,9 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         sql(createTblQry);
 
         sql("CREATE INDEX IDX_ID1 ON TEST(ID1)");
+
+        if (testAct == TestAction.FIND_ONE)
+            sql(idxPk.get(keyCls));
 
         if (addIndexes) {
             sql("CREATE INDEX IDX_VAL_INT ON TEST(VALINT)");
@@ -210,11 +229,42 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
                 return true;
             }
 
+            case FIND_ONE: {
+                int k = ThreadLocalRandom.current().nextInt(range);
+
+                List<List<?>> res = sql("SELECT ID1 FROM TEST WHERE " + whereBuilder.apply(k)).getAll();
+
+                assert res.size() == 1;
+
+                return true;
+            }
+
             default:
                 assert false : "Invalid action: " + testAct;
 
                 return false;
         }
+    }
+
+    /** */
+    private static  String where2Int(int k) {
+        return "ID0 = 0 AND ID1 = " + k;
+    }
+
+    /** */
+    private static String where8Int(int k) {
+        return "ID0 = 0 AND ID1 = " + (k / 100_000)
+            + "AND ID2=" + (k / 10_000)
+            + "AND ID3=" + (k / 1_000)
+            + "AND ID4=" + (k / 1_000)
+            + "AND ID5=" + (k / 100)
+            + "AND ID6=" + (k / 10)
+            + "AND ID7=" + k;
+    }
+
+    /** */
+    private static String whereHugeStringAndInteger(int k) {
+        return "ID0 = '" + TestKeyHugeStringAndInteger.PREFIX + k + "' AND ID1 = " + k;
     }
 
     /**
@@ -257,7 +307,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
     /** */
     public static class TestKeyHugeStringAndInteger {
         /** Prefix. */
-        private static final String PREFIX = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+        static final String PREFIX = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
@@ -360,6 +410,9 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         SCAN,
 
         /** */
-        CACHE_SCAN
+        CACHE_SCAN,
+
+        /** */
+        FIND_ONE
     }
 }

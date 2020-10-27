@@ -1245,9 +1245,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 ctx.recoveryMode(false);
 
-                if (ctx.query().moduleEnabled())
-                    ctx.cache().patchPkIndexes();
-
                 startTimer.finishGlobalStage("Finish recovery");
             }
             catch (Throwable e) {

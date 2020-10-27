@@ -2622,17 +2622,6 @@ public class ClusterCachesInfo {
         restartingCaches.clear();
     }
 
-    /** */
-    public void patchPkIndexes(Map<String, GridCacheAdapter<?, ?>> caches) {
-        for (Map.Entry<String, CacheJoinNodeDiscoveryData.CacheInfo> e : joinDiscoData.caches().entrySet()) {
-            for(QueryEntity qe : e.getValue().cacheData().queryEntities()) {
-                GridCacheAdapter ca = caches.get(e.getKey());
-                if (ca != null)
-                    ctx.query().getIndexing().patchPkIndexes(ca.context(), qe);
-            }
-        }
-    }
-
     /**
      * Holds direct comparator (first system caches) and reverse comparator (first user caches).
      * Use DIRECT comparator for ordering cache start operations.

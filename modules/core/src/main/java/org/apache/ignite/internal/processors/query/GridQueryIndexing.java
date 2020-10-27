@@ -25,7 +25,6 @@ import java.util.Set;
 import java.util.TimeZone;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -511,13 +510,5 @@ public interface GridQueryIndexing {
      */
     default TimeZone clusterTimezone() {
         return TimeZone.getDefault();
-    }
-
-    /** */
-    default void patchPkIndexes(
-        GridCacheContext cctx,
-        QueryEntity qe
-    ) {
-        // No-op.
     }
 }

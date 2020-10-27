@@ -5236,12 +5236,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }, true, cacheDataStore -> partId == null || cacheDataStore.partId() == partId));
     }
 
-    /** */
-    public void patchPkIndexes() {
-        if (!ctx.clientNode())
-            cachesInfo.patchPkIndexes(caches);
-    }
-
     /**
      * Recovery lifecycle for caches.
      */
