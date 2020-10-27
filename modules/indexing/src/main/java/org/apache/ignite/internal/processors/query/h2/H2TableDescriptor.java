@@ -197,7 +197,7 @@ public class H2TableDescriptor {
      *
      * @return List of key and affinity columns. Key's, if it possible, splitted into simple components.
      */
-    @NotNull private List<IndexColumn> extractKeyColumns(GridH2Table tbl, IndexColumn keyCol, IndexColumn affCol) {
+    @NotNull public List<IndexColumn> extractKeyColumns(GridH2Table tbl, IndexColumn keyCol, IndexColumn affCol) {
         ArrayList<IndexColumn> keyCols;
 
         if (isSql) {

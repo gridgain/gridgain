@@ -484,7 +484,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Index.
      */
     @SuppressWarnings("ConstantConditions")
-    GridH2IndexBase createSortedIndex(String name, GridH2Table tbl, boolean pk, boolean affinityKey,
+    public GridH2IndexBase createSortedIndex(String name, GridH2Table tbl, boolean pk, boolean affinityKey,
         List<IndexColumn> unwrappedCols, List<IndexColumn> wrappedCols, int inlineSize) {
         try {
             GridCacheContextInfo cacheInfo = tbl.cacheInfo();

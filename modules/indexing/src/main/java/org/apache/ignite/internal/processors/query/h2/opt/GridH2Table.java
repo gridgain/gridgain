@@ -217,7 +217,7 @@ public class GridH2Table extends TableBase {
         identifierStr = identifier.schema() + "." + identifier.table();
 
         // Indexes must be created in the end when everything is ready.
-        idxs = createSystemIndexes();
+        idxs = createSystemIndexes(tblDesc);
 
         assert idxs != null;
 
@@ -241,8 +241,10 @@ public class GridH2Table extends TableBase {
         }
     }
 
-    /** */
-    private ArrayList<Index> createSystemIndexes() {
+    /**
+     * @param tblDesc */
+    private ArrayList<Index> createSystemIndexes(
+        H2TableDescriptor tblDesc) {
         ArrayList<Index> idxs = new ArrayList<>();
 
         IndexColumn keyCol = indexColumn(QueryUtils.KEY_COL, SortOrder.ASCENDING);
