@@ -3024,6 +3024,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /**
+         * // TODO rename cursorSkipData
          * @param cur Cursor.
          * @return Cursor skipping non-tombstone entries.
          */
@@ -3235,8 +3236,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             Exception ex = null;
 
+            // TODO try optimize - KEY_ONLY_WITH_TOMBSTONES
             GridCursor<? extends CacheDataRow> cur =
-                cursor(cacheId, null, null, CacheDataRowAdapter.RowData.KEY_ONLY, null, DATA_AND_TOMBSONES);
+                cursor(cacheId, null, null, CacheDataRowAdapter.RowData.FULL_WITH_TOMBSTONES, null, DATA_AND_TOMBSONES);
 
             int rmv = 0;
 
@@ -3260,7 +3262,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     rowStore.removeRow(row.link(), grp.statisticsHolderData());
 
-                    decrementSize(cacheId);
+                    if (!isTombstone(row))
+                        decrementSize(cacheId);
                 }
                 catch (IgniteCheckedException e) {
                     U.error(log, "Fail remove row [link=" + row.link() + "]");
