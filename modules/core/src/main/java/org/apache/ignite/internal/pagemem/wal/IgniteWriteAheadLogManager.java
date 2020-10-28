@@ -152,7 +152,7 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @param high Pointer for which it is safe to clear the log.
      * @return Number of deleted WAL segments.
      */
-    public int truncate(WALPointer low, WALPointer high);
+    public int truncate(@Nullable WALPointer low, @Nullable WALPointer high);
 
     /**
      * Notifies {@code this} about latest checkpoint pointer.

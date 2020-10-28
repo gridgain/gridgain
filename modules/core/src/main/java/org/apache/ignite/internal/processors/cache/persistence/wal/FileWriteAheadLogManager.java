@@ -381,6 +381,15 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      */
     private final Map<Long, Long> segmentSize = new ConcurrentHashMap<>();
 
+    /** WAL archive is unlimited. */
+    private final boolean walArchiveUnlimited;
+
+    /**
+     * Current archive size in bytes, if segment is compressed then its size = file.size + compressedData.size.
+     * This is necessary so that we can decompress it at any time.
+     */
+    private final AtomicLong walArchiveSize = new AtomicLong();
+
     /**
      * @param ctx Kernal context.
      */
@@ -401,6 +410,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         segmentFileInputFactory = new SimpleSegmentFileInputFactory();
         walAutoArchiveAfterInactivity = dsCfg.getWalAutoArchiveAfterInactivity();
 
+        // TODO: 28.10.2020 kirill: может от этого надо будет избавиться!
         allowedThresholdWalArchiveSize = (long)(dsCfg.getMaxWalArchiveSize() * THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE);
 
         evt = ctx.event();
@@ -413,6 +423,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         / dsCfg.getWalSegmentSize());
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
+
+        walArchiveUnlimited = dsCfg.getMaxWalArchiveSize() == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
     }
 
     /**
@@ -1027,17 +1039,18 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public int truncate(WALPointer low, WALPointer high) {
+    @Override public int truncate(@Nullable WALPointer low, @Nullable WALPointer high) {
         if (high == null)
             return 0;
 
         assert high instanceof FileWALPointer : high;
+        assert low == null || low instanceof FileWALPointer : low;
 
-        // File pointer bound: older entries will be deleted from archive
+        // File pointer bound: older entries will be deleted from archive.
         FileWALPointer lowPtr = (FileWALPointer)low;
         FileWALPointer highPtr = (FileWALPointer)high;
 
-        FileDescriptor[] descs = scan(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER));
+        FileDescriptor[] descs = walArchiveFiles();
 
         int deleted = 0;
 
@@ -1063,6 +1076,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     deleted++;
 
                     segmentSize.remove(desc.idx());
+                    walArchiveSize.addAndGet(-desc.fullSize());
                 }
 
                 // Bump up the oldest archive segment index.
@@ -1292,7 +1306,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             if (next.getSegmentId() - lashCheckpointFileIdx() >= maxSegCountWithoutCheckpoint)
                 cctx.database().forceCheckpoint("too big size of WAL without checkpoint");
 
-            assert updateCurrentHandle(next, hnd) : "Concurrent updates on rollover are not allowed";
+            boolean updated = updateCurrentHandle(next, hnd);
+            // Made in separate lines so as not to be influenced by -ea.
+            assert updated : "Concurrent updates on rollover are not allowed";
 
             if (walAutoArchiveAfterInactivity > 0)
                 lastRecordLoggedMs.set(0);
@@ -1368,14 +1384,16 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     segmentAware.setLastArchivedAbsoluteIndex(absIdx - 1);
 
                 // Getting segment sizes.
-                F.asList(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER)).stream()
-                    .map(FileDescriptor::new)
-                    .forEach(fd -> {
-                        if (fd.isCompressed())
-                            segmentSize.put(fd.idx(), fd.file().length());
-                        else
-                            segmentSize.putIfAbsent(fd.idx(), fd.file().length());
-                    });
+                for (File f : walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER)) {
+                    FileDescriptor fd = new FileDescriptor(f);
+
+                    if (fd.isCompressed())
+                        segmentSize.put(fd.idx(), fd.file().length());
+                    else
+                        segmentSize.putIfAbsent(fd.idx(), fd.file().length());
+
+                    walArchiveSize.addAndGet(fd.fullSize());
+                }
 
                 // If walArchiveDir != walWorkDir, then need to get size of all segments that were not in archive.
                 // For example, absIdx == 8, and there are 0-4 segments in archive, then we need to get sizes of 5-7 segments.
@@ -2046,6 +2064,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 }
 
                 segmentSize.put(absIdx, dstFile.length());
+                walArchiveSize.addAndGet(dstFile.length());
             }
             catch (IOException e) {
                 throw new StorageException("Failed to archive WAL segment [" +
@@ -2350,6 +2369,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
 
             segmentSize.put(idx, zip.length());
+            walArchiveSize.addAndGet(new FileDescriptor(zip).fullSize() - raw.length());
         }
 
         /**
@@ -2377,7 +2397,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * Deletes raw WAL segments if they aren't locked and already have compressed copies of themselves.
          */
         private void deleteObsoleteRawSegments() {
-            FileDescriptor[] descs = scan(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER));
+            FileDescriptor[] descs = walArchiveFiles();
 
             Set<Long> indices = new HashSet<>();
             Set<Long> duplicateIndices = new HashSet<>();
@@ -3101,6 +3121,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             res = CURR_HND_UPD.compareAndSet(this, c, n);
 
         segmentSize.put(n.getSegmentId(), maxWalSegmentSize);
+
+        // If there is no archiver, then walArchiveDir == walWorkDir and walArchiveSize will grow only here.
+        if (archiver == null)
+            walArchiveSize.addAndGet(maxWalSegmentSize);
 
         return res;
     }
