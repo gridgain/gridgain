@@ -275,7 +275,7 @@ public class Merge extends CommandWithValues {
             if (idx == null) {
                 throw DbException.get(ErrorCode.CONSTRAINT_NOT_FOUND_1, "PRIMARY KEY");
             }
-            keys = idx.getColumns();
+            keys = new Column[] {idx.getTable().getColumn(0)};
         }
         StringBuilder builder = new StringBuilder("UPDATE ");
         targetTable.getSQL(builder, true).append(" SET ");
