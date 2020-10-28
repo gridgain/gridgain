@@ -769,7 +769,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
                         }
                     }
                 }
-                catch (Exception e)
+                catch (Exception e) {
                     fail("Should not happen [exception=" + e + "]");
                 }
             }, multiplicator);
