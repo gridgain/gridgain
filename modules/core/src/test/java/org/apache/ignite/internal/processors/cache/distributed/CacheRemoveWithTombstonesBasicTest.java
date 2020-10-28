@@ -26,6 +26,7 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -37,11 +38,18 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.pagemem.wal.WALIterator;
+import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
+import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
 import org.apache.ignite.internal.processors.cache.MapCacheStoreStrategy;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -55,6 +63,7 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -729,6 +738,94 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         validateCache(grpCtx, 0, 1, 0);
 
         assertEquals("Cache entry is leaked", 0, cache.localSize(ONHEAP));
+    }
+
+    @Test
+    public void testTombstoneLoggedToWALAsNull() throws Exception {
+        persistence = true;
+
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(TRANSACTIONAL);
+        IgniteCache<Object, Object> cache = crd.createCache(ccfg);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+
+        int key = 0;
+        cache.put(key, 0);
+        cache.remove(key);
+
+        validateCache(grpCtx, key, 1, 0);
+
+        IgniteWriteAheadLogManager walMgr = crd.context().cache().context().wal();
+
+        WALIterator iter = walMgr.replay(null);
+
+        List<DataRecord> tmp = new ArrayList<>();
+
+        while (iter.hasNext()) {
+            IgniteBiTuple<WALPointer, WALRecord> tup = iter.next();
+
+            if (tup.get2() instanceof DataRecord) {
+                DataRecord rec = (DataRecord) tup.get2();
+
+                tmp.add(rec);
+            }
+        }
+
+        assertEquals(2, tmp.size());
+        assertEquals(GridCacheOperation.CREATE, tmp.get(0).writeEntries().get(0).op());
+        assertEquals(GridCacheOperation.DELETE, tmp.get(1).writeEntries().get(0).op());
+    }
+
+    // TODO atomic test.
+    @Test
+    public void testTombstoneLoggedForEachRemove() throws Exception {
+        persistence = true;
+
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(TRANSACTIONAL);
+        IgniteCache<Object, Object> cache = crd.createCache(ccfg);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+
+        int key = 0;
+        assertFalse(cache.remove(key));
+        assertFalse(cache.remove(key));
+        assertFalse(cache.remove(key));
+
+        IgniteWriteAheadLogManager walMgr = crd.context().cache().context().wal();
+
+        WALIterator iter = walMgr.replay(null);
+
+        List<DataRecord> tmp = new ArrayList<>();
+
+        while (iter.hasNext()) {
+            IgniteBiTuple<WALPointer, WALRecord> tup = iter.next();
+
+            if (tup.get2() instanceof DataRecord) {
+                DataRecord rec = (DataRecord) tup.get2();
+
+                tmp.add(rec);
+            }
+        }
+
+        validateCache(grpCtx, key, 1, 0);
+
+        assertEquals(3, tmp.size());
+
+        List<CacheDataRow> dataRows0 = new ArrayList<>();
+        grpCtx.offheap().partitionIterator(key, IgniteCacheOffheapManager.TOMBSTONES).forEach(dataRows0::add);
+
+        assertEquals(tmp.get(2).writeEntries().get(0).writeVersion(), dataRows0.get(0).version());
+    }
+
+    @Test
+    public void testNoopUpdatesAndHistoricalRebalance() {
+        // TODO
     }
 
     // Test if updating concurrently with clearing tombstones doesn't produce inconsistency.

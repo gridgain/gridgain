@@ -32,10 +32,10 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     private static final int PART_META_REUSE_LIST_ROOT_OFF = PENDING_TREE_ROOT_OFF + 8;
 
     /** */
-    protected static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
+    private static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
 
     /** */
-    private static final int TOMBSTONES_COUNT = GAPS_LINK + 8;
+    protected static final int TOMBSTONES_COUNT = GAPS_LINK + 8;
 
     /**
      * @param ver Version.
@@ -52,6 +52,7 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
         setPartitionMetaStoreReuseListRoot(pageAddr, 0L);
         setGapsLink(pageAddr, 0L);
         setUpdateTreeRoot(pageAddr, 0L);
+        setTombstonesCount(pageAddr, 0L);
     }
 
     /** {@inheritDoc} */

@@ -3431,6 +3431,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         long oldExpTime = expireTimeUnlocked();
                         long delta = (oldExpTime == 0 ? 0 : oldExpTime - U.currentTimeMillis());
 
+                        // TODO move epired
                         if (delta < 0) {
                             if (onExpired(this.val, null))
                                 obsolete = true;
@@ -5968,7 +5969,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         private IgniteTree.OperationType treeOp = IgniteTree.OperationType.PUT;
 
         /** */
-        private boolean filtered;
+        //private boolean filtered;
 
         /**
          * @param entry Entry.
@@ -6003,14 +6004,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 GridCacheVersion ver = entry.ver;
 
                 if (oldRow != null) {
-                    if (!entry.checkRowExpired(oldRow) && !entry.context().offheap().isTombstone(oldRow))
+                    if (!entry.checkRowExpired(oldRow))
                         val = oldRow.value();
 
                     ver = oldRow.version();
                 }
 
                 if (!p.apply(val, ver)) {
-                    filtered = true;
+                    //filtered = true;
 
                     treeOp = IgniteTree.OperationType.NOOP;
 
@@ -6055,9 +6056,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         /**
          * @return {@code True} if update was filtered by predicate.
          */
-        protected boolean filtered() {
-            return filtered;
-        }
+//        protected boolean filtered() {
+//            return filtered;
+//        }
     }
 
     /**

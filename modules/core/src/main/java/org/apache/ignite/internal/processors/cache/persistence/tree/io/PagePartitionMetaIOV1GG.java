@@ -27,7 +27,7 @@ import org.apache.ignite.internal.util.GridStringBuilder;
  */
 public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 {
     /** */
-    private static final int UPDATE_LOG_TREE_ROOT_OFF = GAPS_LINK + 8;
+    private static final int UPDATE_LOG_TREE_ROOT_OFF = TOMBSTONES_COUNT + 8;
 
     /**
      * @param ver Version.

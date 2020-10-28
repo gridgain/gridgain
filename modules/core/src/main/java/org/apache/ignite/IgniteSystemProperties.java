@@ -797,7 +797,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
 
     /**
-     * Prefer historical rebalance if there's enough history regardless off all heuristics.
+     * Prefer historical rebalance if there's enough history regardless of all heuristics.
      * This property is intended for integration or performance tests.
      * Default is {@code false}.
      */

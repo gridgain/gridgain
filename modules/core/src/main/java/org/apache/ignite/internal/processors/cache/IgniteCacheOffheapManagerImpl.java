@@ -1745,12 +1745,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 case IN_PLACE:
                     // TODO FIXME assert isTombstone(c.oldRow()) ^ isTombstone(c.newRow()) : "old=" + c.oldRow() + ", new=" + c.newRow();
 
-                    if (isTombstone(c.newRow())) {
+                    if (isTombstone(c.newRow()) && !isTombstone(c.oldRow())) {
                         tombstoneCreated();
 
                         decrementSize(cctx.cacheId());
                     }
-                    else if (isTombstone(c.oldRow())) {
+                    else if (isTombstone(c.oldRow()) && !isTombstone(c.newRow())) {
                         tombstoneRemoved();
 
                         incrementSize(cctx.cacheId());
@@ -1759,6 +1759,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     CacheDataRow oldRow = c.oldRow();
                     CacheDataRow newRow = c.newRow();
 
+                    // TODO in-place update, no need to check both != null, replace with assert.
                     if (isIncrementalDrEnabled(cctx) && oldRow != null && newRow != null) {
                         if (oldRow.version().updateCounter() != 0)
                             removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
@@ -2774,15 +2775,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 this.oldRow = oldRow;
 
-                // An attempt of removal of existing tombstone should be no-op, otherwise ts is lost.
-                if (oldRow != null && isTombstone(oldRow))
-                    operationType = NOOP;
-                else {
-                    newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver, 0, oldRow);
+                // Always write tombstone (overwrite with new version if it existed before)
+                newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver, 0, oldRow);
 
-                    operationType = oldRow != null && oldRow.link() == newRow.link() ?
-                        IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;
-                }
+                operationType = oldRow != null && oldRow.link() == newRow.link() ?
+                    IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;
             }
 
             /** {@inheritDoc} */
@@ -2861,10 +2858,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldTombstone && tombstoneRow == null)
                 tombstoneRemoved();
 
-            if (tombstoneRow != null)
+            if (!oldTombstone && tombstoneRow != null)
                 tombstoneCreated();
 
-            if (oldRow != null) {
+            if (oldRow != null && tombstoneRow == null) {
                 if (isIncrementalDrEnabled(cctx) && oldRow.version().updateCounter() != 0)
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
             }

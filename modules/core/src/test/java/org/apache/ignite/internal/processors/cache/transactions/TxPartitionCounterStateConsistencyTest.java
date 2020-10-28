@@ -57,14 +57,25 @@ import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
+import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2;
+import org.apache.ignite.internal.processors.cache.verify.PartitionKeyV2;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.query.CacheQueryObjectValueContext;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
@@ -276,7 +287,83 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         doRandomUpdates(r, prim, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get();
         fut.get();
 
-        assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
+        IdleVerifyResultV2 res = idleVerify(prim, DEFAULT_CACHE_NAME);
+
+        // TODO prettify.
+        if (!res.hashConflicts().isEmpty()) {
+            Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> first = res.hashConflicts().entrySet().iterator().next();
+
+            int part = first.getKey().partitionId();
+
+            CacheGroupContext grpCtx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+            CacheQueryObjectValueContext fakeCtx0 = new CacheQueryObjectValueContext(grpCtx0.cacheObjectContext().kernalContext());
+            GridDhtLocalPartition locPart0 = grpCtx0.topology().localPartition(part);
+            List<CacheDataRow> dataRows0 = new ArrayList<>();
+            grpCtx0.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(dataRows0::add);
+            dataRows0.forEach(rr -> rr.value().value(fakeCtx0, false));
+
+            long ts0 = dataRows0.stream().filter(rr -> rr.value() == TombstoneCacheObject.INSTANCE).count();
+            long ts00 = locPart0.dataStore().tombstonesCount();
+            long sz0 = locPart0.fullSize();
+
+            CacheGroupContext grpCtx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context().group();
+            CacheQueryObjectValueContext fakeCtx1 = new CacheQueryObjectValueContext(grpCtx1.cacheObjectContext().kernalContext());
+            GridDhtLocalPartition locPart1 = grpCtx1.topology().localPartition(part);
+            List<CacheDataRow> dataRows1 = new ArrayList<>();
+            grpCtx1.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(dataRows1::add);
+            dataRows1.forEach(rr -> rr.value().value(fakeCtx1, false));
+
+            long ts1 = dataRows1.stream().filter(rr -> rr.value() == TombstoneCacheObject.INSTANCE).count();
+            long ts10 = locPart1.dataStore().tombstonesCount();
+            long sz1 = locPart1.fullSize();
+
+            List<CacheDataRow> diff0 = diff(fakeCtx0, dataRows0, fakeCtx1, dataRows1);
+            List<CacheDataRow> diff1 = diff(fakeCtx1, dataRows1, fakeCtx0, dataRows0);
+
+            CacheDataRow testRow = diff0.get(16);
+
+            WALIterator iter0 = walIterator(grid(0));
+
+            log.info("Dump WAL " + grid(0).name());
+            while (iter0.hasNext()) {
+                IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
+
+                if (tup.get2() instanceof DataRecord) {
+                    DataRecord rec = (DataRecord) tup.get2();
+
+                    for (DataEntry entry : rec.writeEntries()) {
+                        if (entry.key().equals(testRow.key())) {
+                            try {
+                                log.info("Rec: " + entry + ", key=" + entry.key() + ", val=" + (entry.value() == null ? "NULL" : entry.value().value(fakeCtx0, false).toString()));
+                            } catch (Throwable e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+            }
+
+            log.info("Dump WAL " + grid(1).name());
+            iter0 = walIterator(grid(1));
+
+            while (iter0.hasNext()) {
+                IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
+
+                if (tup.get2() instanceof DataRecord) {
+                    DataRecord rec = (DataRecord) tup.get2();
+
+                    for (DataEntry entry : rec.writeEntries()) {
+                        if (entry.key().equals(testRow.key())) {
+                            log.info("Rec: " + entry + " ,key=" + entry.key() + ", val=" + (entry.value() == null ? "NULL" : entry.value().value(fakeCtx1, false).toString()));
+                        }
+                    }
+                }
+            }
+
+
+        }
+
+        assertPartitionsSame(res);
     }
 
     /**
@@ -1431,5 +1518,41 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      */
     @Override public String getTestIgniteInstanceName() {
         return "transactions.TxPartitionCounterStateConsistencyTest";
+    }
+
+    /**
+     * @param dataRows0 Data rows 0.
+     * @param dataRows1 Data rows 1.
+     *
+     * @return Diff.
+     */
+    private List<CacheDataRow> diff(CacheQueryObjectValueContext fakeCtx0, List<CacheDataRow> dataRows0, CacheQueryObjectValueContext fakeCtx1, List<CacheDataRow> dataRows1) {
+        List<CacheDataRow> diff = new ArrayList<>();
+
+        for (CacheDataRow r0 : dataRows0) {
+            boolean exists = false;
+
+            GridCacheVersion ver0 = r0.version();
+            KeyCacheObject k0 = r0.key();
+            Object v0 = r0.value().value(fakeCtx0, false);
+
+            for (CacheDataRow r1 : dataRows1) {
+                GridCacheVersion ver1 = r1.version();
+                KeyCacheObject k1 = r1.key();
+                Object v1 = r1.value().value(fakeCtx1, false);
+
+                if (ver0.equals(ver1) && k0.equals(k1) && (v0 != null && v0.equals(v1) || v0 == null && v1 == null )) {
+                    exists = true;
+
+                    break;
+                }
+
+            }
+
+            if (!exists)
+                diff.add(r0);
+        }
+
+        return diff;
     }
 }
