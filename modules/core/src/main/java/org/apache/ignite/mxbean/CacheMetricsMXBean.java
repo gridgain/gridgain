@@ -357,11 +357,11 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
     @Override public long getRebalancedKeys();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("Number estimated to rebalance keys.")
+    @MXBeanDescription("Estimated total number of keys to rabalance.")
     @Override public long getEstimatedRebalancingKeys();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("The number of partitions need to be cleared before actual rebalance start.")
+    @MXBeanDescription("The number of partitions to be cleared before actual rebalance starts.")
     @Override public long getRebalanceClearingPartitionsLeft();
 
     /** {@inheritDoc} */
@@ -369,11 +369,11 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
     @Override public float getEntryProcessorAverageInvocationTime();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("The percentage of invocations on keys, which exist in cache.")
+    @MXBeanDescription("The percentage of invocations on keys which exist in the cache.")
     @Override public float getEntryProcessorHitPercentage();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("The total number of invocations on keys, which exist in cache.")
+    @MXBeanDescription("The total number of invocations on keys which exist in the cache.")
     @Override public long getEntryProcessorHits();
 
     /** {@inheritDoc} */
@@ -389,22 +389,22 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
     @Override public float getEntryProcessorMinInvocationTime();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("The total number of invocations on keys, which don't exist in cache.")
+    @MXBeanDescription("The total number of invocations on keys which don't exist in the cache.")
     @Override public long getEntryProcessorMisses();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("The percentage of invocations on keys, which don't exist in cache.")
+    @MXBeanDescription("The percentage of invocations on keys which don't exist in the cache.")
     @Override public float getEntryProcessorMissPercentage();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("The total number of cache invocations, caused update.")
+    @MXBeanDescription("The total number of cache invocations which caused an update.")
     @Override public long getEntryProcessorPuts();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("The total number of cache invocations, caused no updates.")
+    @MXBeanDescription("The total number of cache invocations which caused no updates.")
     @Override public long getEntryProcessorReadOnlyInvocations();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("The total number of cache invocations, caused removal.")
+    @MXBeanDescription("The total number of cache invocations which caused a removal.")
     @Override public long getEntryProcessorRemovals();
 }
