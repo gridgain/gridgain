@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,10 +58,10 @@ public class CheckpointMarkersStorage {
     public static final Pattern CP_FILE_NAME_PATTERN = Pattern.compile("(\\d+)-(.*)-(START|END)\\.bin");
 
     /** Logger. */
-    protected IgniteLogger log;
+    protected final IgniteLogger log;
 
     /** Checkpoint history. */
-    private CheckpointHistory cpHistory;
+    private final CheckpointHistory cpHistory;
 
     /** File I/O factory for writing checkpoint markers. */
     private final FileIOFactory ioFactory;
@@ -153,12 +154,15 @@ public class CheckpointMarkersStorage {
     }
 
     /**
-     * Logs and clears checkpoint history after checkpoint finish.
+     * Clears checkpoint history after checkpoint finish.
+     *
+     * @param chp Finished checkpoint.
+     * @throws IgniteCheckedException If failed.
      */
     public void onCheckpointFinished(Checkpoint chp) throws IgniteCheckedException {
-        List<CheckpointEntry> removedFromHistory = history().onCheckpointFinished(chp);
+        List<CheckpointEntry> rmvFromHist = history().onCheckpointFinished(chp);
 
-        for (CheckpointEntry cp : removedFromHistory)
+        for (CheckpointEntry cp : rmvFromHist)
             removeCheckpointFiles(cp);
     }
 
@@ -337,21 +341,19 @@ public class CheckpointMarkersStorage {
     }
 
     /**
-     * Removes checkpoint start/end files belongs to given {@code cpEntry}.
+     * Removes checkpoint start/end files from  belongs to given {@code cpEntry}.
      *
      * @param cpEntry Checkpoint entry.
      * @throws IgniteCheckedException If failed to delete.
      */
     private void removeCheckpointFiles(CheckpointEntry cpEntry) throws IgniteCheckedException {
-        Path startFile = new File(cpDir.getAbsolutePath(), checkpointFileName(cpEntry, CheckpointEntryType.START)).toPath();
-        Path endFile = new File(cpDir.getAbsolutePath(), checkpointFileName(cpEntry, CheckpointEntryType.END)).toPath();
-
         try {
-            if (Files.exists(startFile))
-                Files.delete(startFile);
+            for (CheckpointEntryType t : F.asList(CheckpointEntryType.START, CheckpointEntryType.END)) {
+                Path p = new File(cpDir.getAbsolutePath(), checkpointFileName(cpEntry, t)).toPath();
 
-            if (Files.exists(endFile))
-                Files.delete(endFile);
+                if (Files.exists(p))
+                    Files.delete(p);
+            }
         }
         catch (IOException e) {
             throw new StorageException("Failed to delete stale checkpoint files: " + cpEntry, e);

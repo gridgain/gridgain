@@ -555,7 +555,8 @@ public class CheckpointWorkflow {
     /**
      * Do some actions on checkpoint finish(After all pages were written to disk).
      *
-     * @param chp Checkpoint snapshot.
+     * @param chp Finished checkpoint.
+     * @throws IgniteCheckedException If failed.
      */
     public void markCheckpointEnd(Checkpoint chp) throws IgniteCheckedException {
         synchronized (this) {

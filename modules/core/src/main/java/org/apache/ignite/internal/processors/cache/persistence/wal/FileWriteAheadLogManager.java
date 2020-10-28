@@ -1635,6 +1635,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public long maxArchivedSegmentToDelete() {
+        // TODO: 28.10.2020 kirill: скорее всего надо будет удалить
+
         //When maxWalArchiveSize==-1 deleting files is not permit.
         if (dsCfg.getMaxWalArchiveSize() == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE)
             return -1;
