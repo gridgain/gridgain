@@ -307,7 +307,7 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
     public boolean isStatisticsEnabled();
 
     /** {@inheritDoc} */
-    @Override @MXBeanDescription("Checks whether cache management via MBean is Enabled.")
+    @Override @MXBeanDescription("True if cache management via MBean is enabled.")
     public boolean isManagementEnabled();
 
     /** {@inheritDoc} */
