@@ -97,7 +97,7 @@ public class CheckpointHistory {
         this.wal = wal;
         this.checkpointInapplicable = inapplicable;
 
-        walArchiveUnlimited = dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
+        walArchiveUnlimited = dsCfg.getMaxWalArchiveSize() == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
 
         maxCpHistMemSize = IgniteSystemProperties.getInteger(IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE, 100);
 

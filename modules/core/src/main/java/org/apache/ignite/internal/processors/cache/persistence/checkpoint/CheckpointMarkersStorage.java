@@ -341,7 +341,7 @@ public class CheckpointMarkersStorage {
     }
 
     /**
-     * Removes checkpoint start/end files from  belongs to given {@code cpEntry}.
+     * Removes checkpoint start/end files from {@link #cpDir} belongs to given {@code cpEntry}.
      *
      * @param cpEntry Checkpoint entry.
      * @throws IgniteCheckedException If failed to delete.
