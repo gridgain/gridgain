@@ -627,7 +627,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                         DiscoveryDataClusterState discoClusterState = ctx.state().clusterState();
 
-                        //for a client node need to wait a new topology version associeted with cluster state changing
+                        //for a client node need to wait a new topology version associated with cluster state changing
                         //to ensure that ChangeGlobalStateMessage has been fully processed
                         if (ctx.clientNode() && !ctx.isDaemon() && discoClusterState.transition()) {
                             AffinityTopologyVersion msgTopVer = finishStateChangeMsg.topVer();
