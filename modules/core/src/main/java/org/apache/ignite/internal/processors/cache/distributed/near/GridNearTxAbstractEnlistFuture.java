@@ -212,50 +212,28 @@ public abstract class GridNearTxAbstractEnlistFuture<T> extends GridCacheCompoun
             topVer = tx.topologyVersionSnapshot();
 
         if (topVer != null) {
-            GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
+            for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
+                if (fut.exchangeDone() && fut.topologyVersion().equals(topVer)) {
+                    Throwable err = null;
 
-            AffinityTopologyVersion lastFinishedTopVer = lastFinishedFut.topologyVersion();
-
-            AffinityTopologyVersion latestChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion();
-
-            if (lastFinishedFut != null &&
-                    (latestChangeVer == null || lastFinishedTopVer.compareTo(latestChangeVer) >= 0) &&
-                    lastFinishedTopVer.compareTo(topVer) >= 0) {
-                Throwable err = null;
-
-                // Before cache validation, make sure that this topology future is already completed.
-                try {
-                    lastFinishedFut.get();
-                }
-                catch (IgniteCheckedException e) {
-                    err = lastFinishedFut.error();
-                }
-
-                topVer = lastFinishedTopVer;
-
-                if (err == null)
-                    err = lastFinishedFut.validateCache(cctx, false, false, null, null);
-
-                if (err != null) {
-                    onDone(err);
-
-                    return;
-                }
-            }
-            else {
-                AffinityTopologyVersion lastChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
-
-                IgniteInternalFuture<AffinityTopologyVersion> affFut = cctx.shared().exchange().affinityReadyFuture(lastChangeVer);
-
-                if (!affFut.isDone()) {
+                    // Before cache validation, make sure that this topology future is already completed.
                     try {
-                        affFut.get();
+                        fut.get();
                     }
                     catch (IgniteCheckedException e) {
-                        onDone(e);
+                        err = fut.error();
+                    }
+
+                    if (err == null)
+                        err = fut.validateCache(cctx, false, false, null, null);
+
+                    if (err != null) {
+                        onDone(err);
 
                         return;
                     }
+
+                    break;
                 }
             }
 
