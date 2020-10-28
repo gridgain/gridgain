@@ -126,14 +126,14 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
         triggerPluginStartLatch.await();
         log.info("starting rest command url call");
         try {
-            probeRestCommandResponse = exectuteProbeRestRequest();
+            probeRestCommandResponse = executeProbeRestRequest();
             log.info("finished rest command url call");
         } finally {
             triggerRestCmdLatch.countDown(); //make sure the grid shuts down
         }
 
         assertTrue(probeRestCommandResponse.get("error").equals("grid has not started"));
-        assertEquals(GridRestResponse.SC_FORBIDDEN, probeRestCommandResponse.get("successStatus"));
+        assertEquals(GridRestResponse.SERVICE_UNAVAILABLE, probeRestCommandResponse.get("successStatus"));
     }
 
     /**
@@ -147,13 +147,13 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
 
         Map<String, Object> probeRestCommandResponse;
 
-        probeRestCommandResponse = exectuteProbeRestRequest();
+        probeRestCommandResponse = executeProbeRestRequest();
 
         assertTrue(probeRestCommandResponse.get("response").equals("grid has started"));
         assertEquals(0, probeRestCommandResponse.get("successStatus"));
     }
 
-    public static Map<String, Object> exectuteProbeRestRequest() throws IOException {
+    public static Map<String, Object> executeProbeRestRequest() throws IOException {
 
         HttpURLConnection conn = (HttpURLConnection) (new URL("http://localhost:" + JETTY_PORT + "/ignite?cmd=probe").openConnection());
         conn.connect();

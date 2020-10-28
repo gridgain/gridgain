@@ -59,7 +59,7 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
                 if (log.isDebugEnabled())
                     log.debug("probe command handler invoked.");
 
-                return new GridFinishedFuture<>(IgnitionEx.hasKernalStarted(ctx.igniteInstanceName()) ? new GridRestResponse("grid has started") : new GridRestResponse(GridRestResponse.SC_FORBIDDEN, "grid has not started"));
+                return new GridFinishedFuture<>(IgnitionEx.hasKernalStarted(ctx.igniteInstanceName()) ? new GridRestResponse("grid has started") : new GridRestResponse(GridRestResponse.SERVICE_UNAVAILABLE, "grid has not started"));
 
             }
         }
