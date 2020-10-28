@@ -285,7 +285,6 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      *
      */
     @Test
-//    @WithSystemProperty(key = IGNITE_FORCE_MVCC_MODE_IN_TESTS, value = "true")
     public void testNoTransactionsWaitAtNodeLeftWithZeroBackupsAndLossIgnore() throws Exception {
         if (getBoolean(IGNITE_FORCE_MVCC_MODE_IN_TESTS))
             testNoTransactionsWaitAtNodeLeftMVCC(0, PartitionLossPolicy.IGNORE);
@@ -297,7 +296,6 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      *
      */
     @Test
-//    @WithSystemProperty(key = IGNITE_FORCE_MVCC_MODE_IN_TESTS, value = "true")
     public void testNoTransactionsWaitAtNodeLeftWithZeroBackupsAndLossSafe() throws Exception {
         if (getBoolean(IGNITE_FORCE_MVCC_MODE_IN_TESTS))
             testNoTransactionsWaitAtNodeLeftMVCC(0, PartitionLossPolicy.READ_WRITE_SAFE);
@@ -309,7 +307,6 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      *
      */
     @Test
-//    @WithSystemProperty(key = IGNITE_FORCE_MVCC_MODE_IN_TESTS, value = "true")
     public void testNoTransactionsWaitAtNodeLeftWithSingleBackup() throws Exception {
         if (getBoolean(IGNITE_FORCE_MVCC_MODE_IN_TESTS))
             testNoTransactionsWaitAtNodeLeftMVCC(1, PartitionLossPolicy.IGNORE);
@@ -619,8 +616,6 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
             // MVCC coordinator fail always breaks transactions, excluding.
             while (proc.mvccEnabled() && proc.currentCoordinator().local());
 
-            System.out.println("!qfsnrt" + nextInt);
-
             Ignite failed = candidate;
 
             int multiplicator = 3;
@@ -715,7 +710,6 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
                     }
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
                     fail("Should not happen [exception=" + e + "]");
                 }
             }, multiplicator) : new GridFinishedFuture<>();
@@ -742,7 +736,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
                             primaryCache.put(key1, key1);
 
                             if (backups == 0)
-                                fail("Should not happen"); //testNoTransactionsWaitAtNodeLeftWithSingleBackup
+                                fail("Should not happen");
                         }
                         catch (Exception ignored) {
                             // Transaction broken because of primary left.
@@ -758,15 +752,10 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
                             assertEquals(key1, primaryCache.get(key1));
                         }
                         catch (Exception ex0) {
-                            System.out.println("!qrefg"); //потому что нода 3 вышла
-                            ex0.printStackTrace();
-                            ex = ex0;// Transaction broken because of node left.
+                            ex = ex0;
                         }
-                        System.out.println("!qrewg");
-                        if (ex == null) {
-                            System.out.println("!qtegj");
+                        if (ex == null)
                             fail("Should not happen");
-                        }
                     }
                 }
                 catch (Exception e) {
@@ -858,7 +847,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
                 assertEquals(nodes + 1, ignite.cluster().topologyVersion());
 
                 ExchangeContext ctx =
-                    ((IgniteEx)ignite).context().cache().context().exchange().lastFinishedFuture().context();
+                        ((IgniteEx)ignite).context().cache().context().exchange().lastFinishedFuture().context();
 
                 if (ctx.exchangeFreeSwitch())
                     pmeFreeCnt++;
