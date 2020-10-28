@@ -137,6 +137,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAL_ARCH
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_COMPRESSOR_WORKER_THREAD_CNT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_MMAP;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_SERIALIZER_VERSION;
+import static org.apache.ignite.configuration.DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
 import static org.apache.ignite.events.EventType.EVT_WAL_SEGMENT_ARCHIVED;
 import static org.apache.ignite.events.EventType.EVT_WAL_SEGMENT_COMPACTED;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
@@ -381,8 +382,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      */
     private final Map<Long, Long> segmentSize = new ConcurrentHashMap<>();
 
-    /** WAL archive is unlimited. */
-    private final boolean walArchiveUnlimited;
+    /** Max size (in bytes) of WAL archive directory. */
+    private final long maxWalArchiveSize;
 
     /**
      * Current archive size in bytes, if segment is compressed then its size = file.size + compressedData.size.
@@ -424,7 +425,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
 
-        walArchiveUnlimited = dsCfg.getMaxWalArchiveSize() == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
+        maxWalArchiveSize = dsCfg.getMaxWalArchiveSize();
     }
 
     /**
@@ -1616,6 +1617,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         FileArchiver archiver0 = archiver;
 
         if (archiver0 == null) {
+            // TODO: 28.10.2020 kirill: тут есть проблема, что по идее новый wal важнее компактизации, тут надо подумать как быть, как нам гарантировать запись именно сейчас а компактизация подождет.
+            ensureFreeSpaceInWalArchive(maxWalArchiveSize);
+
             segmentAware.setLastArchivedAbsoluteIndex(curIdx);
 
             return new File(walWorkDir, fileName(curIdx + 1));
@@ -1656,7 +1660,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         // TODO: 28.10.2020 kirill: скорее всего надо будет удалить
 
         //When maxWalArchiveSize==-1 deleting files is not permit.
-        if (dsCfg.getMaxWalArchiveSize() == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE)
+        if (dsCfg.getMaxWalArchiveSize() == UNLIMITED_WAL_ARCHIVE)
             return -1;
 
         FileDescriptor[] archivedFiles = walArchiveFiles();
@@ -2042,6 +2046,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                 long offs = switchSegmentRecordOffset.get((int)segIdx);
 
+                // TODO: 28.10.2020 kirill: тут надо также подумать на счет проблемы компактизации
+                ensureFreeSpaceInWalArchive(offs > 0 ? offs : origFile.length());
+
                 if (offs > 0) {
                     switchSegmentRecordOffset.set((int)segIdx, 0);
 
@@ -2325,6 +2332,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * @throws IgniteCheckedException If failed.
          */
         private void compressSegmentToFile(long idx, File raw, File zip) throws IOException, IgniteCheckedException {
+            // TODO: 28.10.2020 kirill: думаю надо тут просить но сколько? наверное 2 * raw.size()
+
             int serializerVer;
 
             try (FileIO fileIO = ioFactory.create(raw)) {
@@ -2369,7 +2378,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
 
             segmentSize.put(idx, zip.length());
-            walArchiveSize.addAndGet(new FileDescriptor(zip).fullSize() - raw.length());
+            walArchiveSize.addAndGet(new FileDescriptor(zip).fullSize());
         }
 
         /**
@@ -2416,10 +2425,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     return;
 
                 if (desc.idx < segmentAware.keepUncompressedIdxFrom() && duplicateIndices.contains(desc.idx)) {
-                    if (desc.file.exists() && !desc.file.delete()) {
-                        U.warn(log, "Failed to remove obsolete WAL segment " +
-                            "(make sure the process has enough rights): " + desc.file.getAbsolutePath() +
-                            ", exists: " + desc.file.exists());
+                    if (desc.file.exists()) {
+                        if (!desc.file.delete()) {
+                            U.warn(log, "Failed to remove obsolete WAL segment " +
+                                "(make sure the process has enough rights): " + desc.file.getAbsolutePath() +
+                                ", exists: " + desc.file.exists());
+                        }
+                        else
+                            walArchiveSize.addAndGet(-desc.fullSize());
                     }
                 }
             }
@@ -3127,6 +3140,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             walArchiveSize.addAndGet(maxWalSegmentSize);
 
         return res;
+    }
+
+    /**
+     * Checking that WAL archive has required space and if it is not, then try to free it.
+     *
+     * @param size Required size in bytes.
+     */
+    private void ensureFreeSpaceInWalArchive(long size) {
+        if (maxWalArchiveSize == UNLIMITED_WAL_ARCHIVE)
+            return;
+
+        while ((maxWalArchiveSize - walArchiveSize.get()) < size) {
+            // TODO: 28.10.2020 kirill: Нужно чистить walArchive и возможно решать проблему конкуретной записи...
+        }
     }
 
     /**
