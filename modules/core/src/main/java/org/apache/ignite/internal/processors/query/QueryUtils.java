@@ -136,7 +136,7 @@ public class QueryUtils {
      */
     public static String sysSchemaName() {
         if (schemaSys == null)
-            schemaSys = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, true) ? "IGNITE" : "SYS";
+            schemaSys = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, false) ? "IGNITE" : "SYS";
 
         return schemaSys;
     }

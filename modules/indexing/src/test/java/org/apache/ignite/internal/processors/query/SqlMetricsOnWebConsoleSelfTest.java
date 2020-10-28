@@ -58,7 +58,7 @@ public class SqlMetricsOnWebConsoleSelfTest extends AbstractIndexingCommonTest {
      * @return System schema name.
      */
     protected String systemSchemaName() {
-        return "IGNITE";
+        return "SYS";
     }
 
     /** {@inheritDoc} */

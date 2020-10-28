@@ -345,7 +345,7 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
 
         while (true) {
             List<List<?>> res = node.context().query().querySqlFields(
-                new SqlFieldsQuery("SELECT * FROM ignite.SQL_QUERIES"), false).getAll();
+                new SqlFieldsQuery("SELECT * FROM " + sysSchemaName() + ".SQL_QUERIES"), false).getAll();
 
             if (res.size() == expectedQryCount + 1)
                 return;

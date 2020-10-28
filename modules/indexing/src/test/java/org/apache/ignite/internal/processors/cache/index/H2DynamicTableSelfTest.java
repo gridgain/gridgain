@@ -70,6 +70,8 @@ import org.gridgain.internal.h2.jdbc.JdbcSQLSyntaxErrorException;
 import org.gridgain.internal.h2.value.DataType;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
+
 /**
  * Tests for CREATE/DROP TABLE.
  */
@@ -830,7 +832,7 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
 
         //only one City table should be created.
         List<List<?>> cityTabs = cache.query(new SqlFieldsQuery(
-            "SELECT SCHEMA_NAME, TABLE_NAME FROM IGNITE.TABLES WHERE TABLE_NAME = 'CITY';")).getAll();
+            "SELECT SCHEMA_NAME, TABLE_NAME FROM " + sysSchemaName() + ".TABLES WHERE TABLE_NAME = 'CITY';")).getAll();
 
         assertEqualsCollections(Collections.singletonList(Arrays.asList("test", "CITY")), cityTabs);
     }
