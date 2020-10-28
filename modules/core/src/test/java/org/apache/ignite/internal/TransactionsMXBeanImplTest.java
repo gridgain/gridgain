@@ -16,9 +16,6 @@
 
 package org.apache.ignite.internal;
 
-import javax.management.MBeanServer;
-import javax.management.MBeanServerInvocationHandler;
-import javax.management.ObjectName;
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
@@ -26,10 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import javax.management.MBeanServer;
+import javax.management.MBeanServerInvocationHandler;
+import javax.management.ObjectName;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.util.typedef.F;
@@ -43,9 +46,14 @@ import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static java.util.Collections.singletonMap;
-import static org.apache.ignite.IgniteSystemProperties.*;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.testframework.LogListener.matches;
 
@@ -70,10 +78,13 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
-
-        //cleanPersistenceDir();
 
         testLog.clearListeners();
 
@@ -86,6 +97,12 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
             .setGridLogger(testLog)
             .setClientMode(clientNode)
+            .setDataStorageConfiguration(
+                new DataStorageConfiguration()
+                    .setDefaultDataRegionConfiguration(
+                        new DataRegionConfiguration()
+                            .setPersistenceEnabled(true)
+                    ))
             .setCacheConfiguration(
                 new CacheConfiguration<>()
                     .setName(DEFAULT_CACHE_NAME)
@@ -103,6 +120,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     @Test
     public void testBasic() throws Exception {
         IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().state(ACTIVE);
 
         TransactionsMXBean bean = txMXBean(0);
 
@@ -172,16 +191,9 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "100")
     public void testChangeLongOperationsDumpTimeoutOnImmutableCluster() throws Exception {
-        Map<IgniteEx, TransactionsMXBean> allNodes = new HashMap<>();
+        Map<IgniteEx, TransactionsMXBean> allNodes = startGridAndActivate(2);
         Map<IgniteEx, TransactionsMXBean> clientNodes = new HashMap<>();
-        Map<IgniteEx, TransactionsMXBean> serverNodes = new HashMap<>();
-
-        for (int i = 0; i < 2; i++) {
-            IgniteEx igniteEx = startGrid(i);
-            TransactionsMXBean transactionsMXBean = txMXBean(i);
-            allNodes.put(igniteEx, transactionsMXBean);
-            serverNodes.put(igniteEx, transactionsMXBean);
-        }
+        Map<IgniteEx, TransactionsMXBean> srvNodes = new HashMap<>(allNodes);
 
         clientNode = true;
 
@@ -193,7 +205,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         }
 
         //check for default value
-        checkLongOperationsDumpTimeoutViaTxMxBean(allNodes, 100L);
+        checkPropertyValueViaTxMxBean(allNodes, 100L, TransactionsMXBean::getLongOperationsDumpTimeout);
 
         //create property update latches for client nodes
         Map<IgniteEx, List<CountDownLatch>> updateLatches = new HashMap<>();
@@ -214,10 +226,10 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         long newTimeout = 200L;
 
         //update value via server node
-        updateLongOperationsDumpTimeoutViaTxMxBean(serverNodes, newTimeout);
+        updatePropertyViaTxMxBean(allNodes, TransactionsMXBean::setLongOperationsDumpTimeout, newTimeout);
 
         //check new value in server nodes
-        checkLongOperationsDumpTimeoutViaTxMxBean(serverNodes, newTimeout);
+        checkPropertyValueViaTxMxBean(srvNodes, newTimeout, TransactionsMXBean::getLongOperationsDumpTimeout);
 
         //check new value in client nodes
         for (List<CountDownLatch> list : updateLatches.values()) {
@@ -228,12 +240,12 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         newTimeout = 300L;
 
         //update value via server node
-        updateLongOperationsDumpTimeoutViaTxMxBean(clientNodes, newTimeout);
+        updatePropertyViaTxMxBean(clientNodes, TransactionsMXBean::setLongOperationsDumpTimeout, newTimeout);
 
         //check new value in server nodes
-        checkLongOperationsDumpTimeoutViaTxMxBean(serverNodes, newTimeout);
+        checkPropertyValueViaTxMxBean(srvNodes, newTimeout, TransactionsMXBean::getLongOperationsDumpTimeout);
 
-        //check new value in client nodes
+        //check new value on client nodes
         for (List<CountDownLatch> list : updateLatches.values()) {
             CountDownLatch countDownLatch = list.get(1);
             countDownLatch.await(100, TimeUnit.MILLISECONDS);
@@ -249,34 +261,28 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "100")
     public void testChangeLongOperationsDumpTimeoutOnMutableCluster() throws Exception {
-        Map<IgniteEx, TransactionsMXBean> node0 = singletonMap(startGrid(0), txMXBean(0));
-        Map<IgniteEx, TransactionsMXBean> node1 = singletonMap(startGrid(1), txMXBean(1));
-
-        Map<IgniteEx, TransactionsMXBean> allNodes = new HashMap<>();
-        allNodes.putAll(node0);
-        allNodes.putAll(node1);
+        Map<IgniteEx, TransactionsMXBean> allNodes = startGridAndActivate(2);
 
         long newTimeout = 200L;
-        updateLongOperationsDumpTimeoutViaTxMxBean(allNodes, newTimeout);
-        checkLongOperationsDumpTimeoutViaTxMxBean(allNodes, newTimeout);
-        allNodes.clear();
 
-        stopGrid(1);
-        node1 = singletonMap(startGrid(1), txMXBean(1));
+        updatePropertyViaTxMxBean(allNodes, TransactionsMXBean::setLongOperationsDumpTimeout, newTimeout);
+
+        checkPropertyValueViaTxMxBean(allNodes, newTimeout, TransactionsMXBean::getLongOperationsDumpTimeout);
+
+        stopAllGrids();
+        allNodes = startGridAndActivate(2);
 
         //check that new value after restart
-        checkLongOperationsDumpTimeoutViaTxMxBean(node0, newTimeout);
-        checkLongOperationsDumpTimeoutViaTxMxBean(node1, newTimeout);
+        checkPropertyValueViaTxMxBean(allNodes, newTimeout, TransactionsMXBean::getLongOperationsDumpTimeout);
 
         newTimeout = 300L;
-        updateLongOperationsDumpTimeoutViaTxMxBean(node0, newTimeout);
 
-        Map<IgniteEx, TransactionsMXBean> node2 = singletonMap(startGrid(2), txMXBean(2));
+        updatePropertyViaTxMxBean(allNodes, TransactionsMXBean::setLongOperationsDumpTimeout, newTimeout);
+
+        allNodes.putAll(singletonMap(startGrid(2), txMXBean(2)));
 
         //check that last value in new node
-        checkLongOperationsDumpTimeoutViaTxMxBean(node0, newTimeout);
-        checkLongOperationsDumpTimeoutViaTxMxBean(node1, newTimeout);
-        checkLongOperationsDumpTimeoutViaTxMxBean(node2, newTimeout);
+        checkPropertyValueViaTxMxBean(allNodes, newTimeout, TransactionsMXBean::getLongOperationsDumpTimeout);
     }
 
     /**
@@ -288,34 +294,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, value = "false")
     public void testChangeTxOwnerDumpRequestsAllowed() throws Exception{
-        Map<IgniteEx, TransactionsMXBean> node0 = singletonMap(startGrid(0), txMXBean(0));
-        Map<IgniteEx, TransactionsMXBean> node1 = singletonMap(startGrid(1), txMXBean(1));
-
-        Map<IgniteEx, TransactionsMXBean> allNodes = new HashMap<>();
-        allNodes.putAll(node0);
-        allNodes.putAll(node1);
-
-        //check for default value
-        checkTxOwnerDumpRequestsAllowedViaTxMxBean(allNodes, false);
-
-        updateTxOwnerDumpRequestsAllowedViaTxMxBean(allNodes, true);
-
-        //check new value
-        checkTxOwnerDumpRequestsAllowedViaTxMxBean(allNodes, true);
-
-        stopGrid(1);
-        node1 = singletonMap(startGrid(1), txMXBean(1));
-
-        //check that new value after restart
-        checkTxOwnerDumpRequestsAllowedViaTxMxBean(node0, true);
-        checkTxOwnerDumpRequestsAllowedViaTxMxBean(node1, true);
-
-        Map<IgniteEx, TransactionsMXBean> node2 = singletonMap(startGrid(2), txMXBean(2));
-
-        //check that last value in new node
-        checkTxOwnerDumpRequestsAllowedViaTxMxBean(node0, true);
-        checkTxOwnerDumpRequestsAllowedViaTxMxBean(node1, true);
-        checkTxOwnerDumpRequestsAllowedViaTxMxBean(node2, true);
+        checkPropertyChangingViaTxMxBean(false, true, TransactionsMXBean::getTxOwnerDumpRequestsAllowed,
+            TransactionsMXBean::setTxOwnerDumpRequestsAllowed);
     }
 
     /**
@@ -326,34 +306,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, value = "0")
     public void testChangeLongTransactionTimeDumpThreshold() throws Exception{
-        Map<IgniteEx, TransactionsMXBean> node0 = singletonMap(startGrid(0), txMXBean(0));
-        Map<IgniteEx, TransactionsMXBean> node1 = singletonMap(startGrid(1), txMXBean(1));
-
-        Map<IgniteEx, TransactionsMXBean> allNodes = new HashMap<>();
-        allNodes.putAll(node0);
-        allNodes.putAll(node1);
-
-        //check for default value
-        checkLongTransactionTimeDumpThresholdViaTxMxBean(allNodes, 0);
-
-        updateLongTransactionTimeDumpThresholdViaTxMxBean(allNodes, 999);
-
-        //check new value
-        checkLongTransactionTimeDumpThresholdViaTxMxBean(allNodes, 999);
-
-        stopGrid(1);
-        node1 = singletonMap(startGrid(1), txMXBean(1));
-
-        //check that new value after restart
-        checkLongTransactionTimeDumpThresholdViaTxMxBean(node0, 999);
-        checkLongTransactionTimeDumpThresholdViaTxMxBean(node1, 999);
-
-        Map<IgniteEx, TransactionsMXBean> node2 = singletonMap(startGrid(2), txMXBean(2));
-
-        //check that last value in new node
-        checkLongTransactionTimeDumpThresholdViaTxMxBean(node0, 999);
-        checkLongTransactionTimeDumpThresholdViaTxMxBean(node1, 999);
-        checkLongTransactionTimeDumpThresholdViaTxMxBean(node2, 999);
+        checkPropertyChangingViaTxMxBean(0L, 999L, TransactionsMXBean::getLongTransactionTimeDumpThreshold,
+            TransactionsMXBean::setLongTransactionTimeDumpThreshold);
     }
 
     /**
@@ -364,35 +318,9 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT, value = "0.0")
-    public void testChangeTransactionTimeDumpSamplesCoefficient() throws Exception{
-        Map<IgniteEx, TransactionsMXBean> node0 = singletonMap(startGrid(0), txMXBean(0));
-        Map<IgniteEx, TransactionsMXBean> node1 = singletonMap(startGrid(1), txMXBean(1));
-
-        Map<IgniteEx, TransactionsMXBean> allNodes = new HashMap<>();
-        allNodes.putAll(node0);
-        allNodes.putAll(node1);
-
-        //check for default value
-        checkTransactionTimeDumpSamplesCoefficientViaTxMxBean(allNodes, 0.0);
-
-        updateTransactionTimeDumpSamplesCoefficientViaTxMxBean(allNodes, 1.0);
-
-        //check new value
-        checkTransactionTimeDumpSamplesCoefficientViaTxMxBean(allNodes, 1.0);
-
-        stopGrid(1);
-        node1 = singletonMap(startGrid(1), txMXBean(1));
-
-        //check that new value after restart
-        checkTransactionTimeDumpSamplesCoefficientViaTxMxBean(node0, 1.0);
-        checkTransactionTimeDumpSamplesCoefficientViaTxMxBean(node1, 1.0);
-
-        Map<IgniteEx, TransactionsMXBean> node2 = singletonMap(startGrid(2), txMXBean(2));
-
-        //check that last value in new node
-        checkTransactionTimeDumpSamplesCoefficientViaTxMxBean(node0, 1.0);
-        checkTransactionTimeDumpSamplesCoefficientViaTxMxBean(node1, 1.0);
-        checkTransactionTimeDumpSamplesCoefficientViaTxMxBean(node2, 1.0);
+    public void testChangeTransactionTimeDumpSamplesCoefficient() throws Exception {
+        checkPropertyChangingViaTxMxBean(0.0, 1.0, TransactionsMXBean::getTransactionTimeDumpSamplesCoefficient,
+            TransactionsMXBean::setTransactionTimeDumpSamplesCoefficient);
     }
 
     /**
@@ -403,185 +331,96 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT, value = "5")
-    public void testChangeLongTransactionTimeDumpSamplesPerSecondLimit() throws Exception{
-        Map<IgniteEx, TransactionsMXBean> node0 = singletonMap(startGrid(0), txMXBean(0));
-        Map<IgniteEx, TransactionsMXBean> node1 = singletonMap(startGrid(1), txMXBean(1));
+    public void testChangeLongTransactionTimeDumpSamplesPerSecondLimit() throws Exception {
+        checkPropertyChangingViaTxMxBean(5, 10, TransactionsMXBean::getTransactionTimeDumpSamplesPerSecondLimit,
+            TransactionsMXBean::setTransactionTimeDumpSamplesPerSecondLimit);
+    }
 
-        Map<IgniteEx, TransactionsMXBean> allNodes = new HashMap<>();
-        allNodes.putAll(node0);
-        allNodes.putAll(node1);
+    /**
+     * Test to verify the correct change of property in an mutable cluster.
+     *
+     * @param defVal Default value.
+     * @param newVal New value.
+     * @param getter Getter of property.
+     * @param setter Setter of property.
+     * @param <T> Type of property.
+     * @throws Exception If failed.
+     */
+    private <T> void checkPropertyChangingViaTxMxBean(T defVal, T newVal, Function<TransactionsMXBean, T> getter,
+        BiConsumer<TransactionsMXBean, T> setter
+    ) throws Exception {
+        Map<IgniteEx, TransactionsMXBean> allNodes = startGridAndActivate(2);
 
         //check for default value
-        checkLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(allNodes, 5);
+        checkPropertyValueViaTxMxBean(allNodes, defVal, getter);
 
-        updateLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(allNodes, 10);
+        updatePropertyViaTxMxBean(allNodes, setter, newVal);
 
         //check new value
-        checkLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(allNodes, 10);
+        checkPropertyValueViaTxMxBean(allNodes, newVal, getter);
 
-        stopGrid(1);
-        node1 = singletonMap(startGrid(1), txMXBean(1));
+        stopAllGrids();
+        allNodes = startGridAndActivate(2);
 
         //check that new value after restart
-        checkLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(node0, 10);
-        checkLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(node1, 10);
+        checkPropertyValueViaTxMxBean(allNodes, newVal, getter);
 
-        Map<IgniteEx, TransactionsMXBean> node2 = singletonMap(startGrid(2), txMXBean(2));
+        allNodes.putAll(singletonMap(startGrid(2), txMXBean(2)));
 
-        //check that last value in new node
-        checkLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(node0, 10);
-        checkLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(node1, 10);
-        checkLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(node2, 10);
+        //check that last value after adding new node
+        checkPropertyValueViaTxMxBean(allNodes, newVal, getter);
     }
 
     /**
-     * Search for the first node and change "Long operations dump timeout." through TransactionsMXBean.
+     * Start grid and activate.
+     *
+     * @param cnt Nodes count.
+     * @return Map with started nodes.
+     * @throws Exception If anything failed.
+     */
+    private Map<IgniteEx, TransactionsMXBean> startGridAndActivate(int cnt) throws Exception {
+        Map<IgniteEx, TransactionsMXBean> nodes = new HashMap<>();
+        IgniteEx ignite = null;
+
+        for (int i = 0; i < cnt; i++){
+            ignite = startGrid(i);
+            nodes.put(ignite, txMXBean(i));
+        }
+
+        if (ignite != null)
+            ignite.cluster().state(ACTIVE);
+
+        return nodes;
+    }
+
+    /**
+     * Search for the first node and change property through TransactionsMXBean.
      *
      * @param nodes Nodes with TransactionsMXBean's.
-     * @param newTimeout New timeout.
+     * @param setter new value setter.
      */
-    private void updateLongOperationsDumpTimeoutViaTxMxBean(
+    private <T> void updatePropertyViaTxMxBean(
         Map<IgniteEx, TransactionsMXBean> nodes,
-        long newTimeout
+        BiConsumer<TransactionsMXBean, T> setter,
+        T val
     ) {
         assertNotNull(nodes);
 
-        nodes.entrySet().stream()
-            .findAny().get().getValue().setLongOperationsDumpTimeout(newTimeout);
+        setter.accept(nodes.entrySet().stream()
+            .findAny().get().getValue(), val);
     }
 
     /**
-     * Search for the first node and change "Allowance to dump requests from local node to near node, when long
-     * running transaction is found." through TransactionsMXBean.
+     * Checking the value of property on nodes through the TransactionsMXBean.
      *
      * @param nodes Nodes with TransactionsMXBean's.
-     * @param allowed New allowance flag.
+     * @param checkedVal Checked value.
      */
-    private void updateTxOwnerDumpRequestsAllowedViaTxMxBean(
-            Map<IgniteEx, TransactionsMXBean> nodes,
-            boolean allowed
-    ) {
+    private static <T> void checkPropertyValueViaTxMxBean(Map<IgniteEx, TransactionsMXBean> nodes, T checkedVal,
+        Function<TransactionsMXBean, T> getter) {
         assertNotNull(nodes);
 
-        nodes.entrySet().stream()
-                .findAny().get().getValue().setTxOwnerDumpRequestsAllowed(allowed);
-    }
-
-    /**
-     * Search for the first node and change "Threshold timeout for long transactions." through TransactionsMXBean.
-     *
-     * @param nodes Nodes with TransactionsMXBean's.
-     * @param threshold New threshold timeout for long transactions.
-     */
-    private void updateLongTransactionTimeDumpThresholdViaTxMxBean(
-            Map<IgniteEx, TransactionsMXBean> nodes,
-            long threshold
-    ) {
-        assertNotNull(nodes);
-
-        nodes.entrySet().stream()
-                .findAny().get().getValue().setLongTransactionTimeDumpThreshold(threshold);
-    }
-
-    /**
-     * Search for the first node and change "The coefficient for samples of completed transactions
-     * that will be dumped in log." through TransactionsMXBean.
-     *
-     * @param nodes Nodes with TransactionsMXBean's.
-     * @param coefficient New coefficient for samples of completed transactions.
-     */
-    private void updateTransactionTimeDumpSamplesCoefficientViaTxMxBean(
-            Map<IgniteEx, TransactionsMXBean> nodes,
-            double coefficient
-    ) {
-        assertNotNull(nodes);
-
-        nodes.entrySet().stream()
-                .findAny().get().getValue().setTransactionTimeDumpSamplesCoefficient(coefficient);
-    }
-
-    /**
-     * Search for the first node and change "Limit of samples of completed transactions
-     * that will be dumped in log per second." through TransactionsMXBean.
-     *
-     * @param nodes Nodes with TransactionsMXBean's.
-     * @param limit New limit of samples of completed transactions that will be dumped in log per second.
-     */
-    private void updateLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(
-            Map<IgniteEx, TransactionsMXBean> nodes,
-            int limit
-    ) {
-        assertNotNull(nodes);
-
-        nodes.entrySet().stream()
-                .findAny().get().getValue().setTransactionTimeDumpSamplesPerSecondLimit(limit);
-    }
-
-    /**
-     * Checking the value of "Long operations dump timeout." on all nodes
-     * through the TransactionsMXBean.
-     *
-     * @param nodes Nodes with TransactionsMXBean's.
-     * @param checkTimeout Checked timeout.
-     */
-    private void checkLongOperationsDumpTimeoutViaTxMxBean(Map<IgniteEx, TransactionsMXBean> nodes, long checkTimeout) {
-        assertNotNull(nodes);
-
-        nodes.forEach((node, txMxBean) -> {
-            log.info("NODE: " + node.name());
-            assertEquals(checkTimeout, txMxBean.getLongOperationsDumpTimeout());
-        });
-    }
-
-    /**
-     * Checking the value of "Allowance to dump requests from local node to near node, when long running transaction
-     * is found." on nodes through the TransactionsMXBean.
-     *
-     * @param nodes Nodes with TransactionsMXBean's.
-     * @param allowed Checked allowance flag.
-     */
-    private void checkTxOwnerDumpRequestsAllowedViaTxMxBean(Map<IgniteEx, TransactionsMXBean> nodes, boolean allowed) {
-        assertNotNull(nodes);
-
-        nodes.forEach((node, txMxBean) -> assertEquals(allowed, txMxBean.getTxOwnerDumpRequestsAllowed()));
-    }
-
-    /**
-     * Checking the value of "Threshold timeout for long transactions." on nodes through the TransactionsMXBean.
-     *
-     * @param nodes Nodes with TransactionsMXBean's.
-     * @param threshold Checked threshold timeout for long transactions.
-     */
-    private void checkLongTransactionTimeDumpThresholdViaTxMxBean(Map<IgniteEx, TransactionsMXBean> nodes, long threshold) {
-        assertNotNull(nodes);
-
-        nodes.forEach((node, txMxBean) -> assertEquals(threshold, txMxBean.getLongTransactionTimeDumpThreshold()));
-    }
-
-    /**
-     * Checking the value of "The coefficient for samples of completed transactions that will be dumped in log."
-     * on nodes through the TransactionsMXBean.
-     *
-     * @param nodes Nodes with TransactionsMXBean's.
-     * @param coefficient Checked coefficient for samples of completed transactions.
-     */
-    private void checkTransactionTimeDumpSamplesCoefficientViaTxMxBean(Map<IgniteEx, TransactionsMXBean> nodes, double coefficient) {
-        assertNotNull(nodes);
-
-        nodes.forEach((node, txMxBean) -> assertEquals(coefficient, txMxBean.getTransactionTimeDumpSamplesCoefficient()));
-    }
-
-    /**
-     * Checking the value of "Limit of samples of completed transactions that will be dumped in log per second."
-     * on nodes through the TransactionsMXBean.
-     *
-     * @param nodes Nodes with TransactionsMXBean's.
-     * @param limit Checked limit of samples of completed transactions that will be dumped in log per second.
-     */
-    private void checkLongTransactionTimeDumpSamplesPerSecondLimitViaTxMxBean(Map<IgniteEx, TransactionsMXBean> nodes, int limit) {
-        assertNotNull(nodes);
-
-        nodes.forEach((node, txMxBean) -> assertEquals(limit, txMxBean.getTransactionTimeDumpSamplesPerSecondLimit()));
+        nodes.forEach((node, txMxBean) -> assertEquals(checkedVal, getter.apply(txMxBean)));
     }
 
     /**
@@ -601,6 +440,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     ) throws Exception {
         IgniteEx ignite = startGrid(0);
         IgniteEx ignite1 = startGrid(1);
+
+        ignite.cluster().state(ACTIVE);
 
         TransactionsMXBean txMXBean = txMXBean(0);
         TransactionsMXBean txMXBean1 = txMXBean(1);
