@@ -857,7 +857,16 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
                     lastFinishedTopVer.compareTo(topVer) >= 0) {
                 topVer = lastFinishedTopVer;
 
-                Throwable err = lastFinishedFut.validateCache(cctx, recovery, read, null, keys);
+                Throwable err = null;
+
+                try {
+                    lastFinishedFut.get();
+                }
+                catch (IgniteCheckedException e) {
+                    err = lastFinishedFut.error();
+                }
+
+                err = (err == null) ? lastFinishedFut.validateCache(cctx, recovery, read, null, keys) : err;
 
                 if (err != null) {
                     onDone(err);
