@@ -374,8 +374,8 @@ public class GridIoMessageFactory implements MessageFactoryProvider {
         factory.register(GridIoSecurityAwareMessage.TYPE_CODE, GridIoSecurityAwareMessage::new);
         factory.register((short)175, TcpInverseConnectionResponseMessage::new);
         factory.register(SingleNodeMessage.TYPE_CODE, SingleNodeMessage::new); // TDE
-        factory.register(TombstoneCacheObject.TYPE_CODE, TombstoneCacheObject::new);
         // [177, 178] - Incremental DR
+        factory.register(TombstoneCacheObject.TYPE_CODE, TombstoneCacheObject::new);
 
         // [-3..119] [124..129] [-23..-28] [-36..-55] - this
         // [120..123] [177, 178] - DR

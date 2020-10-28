@@ -35,6 +35,7 @@ import static org.apache.ignite.cache.CacheMode.REPLICATED;
 /**
  * Sanity tests of deferred delete for different cache configurations.
  */
+@Ignore
 public class CacheDeferredDeleteSanitySelfTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
