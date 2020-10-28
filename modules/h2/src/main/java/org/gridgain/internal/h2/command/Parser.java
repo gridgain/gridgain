@@ -2483,17 +2483,16 @@ public class Parser {
             // make sure aggregate functions will not work here
             Select temp = currentSelect;
             currentSelect = null;
-            boolean hasOffsetOrFetch = false;
+            boolean hasFetch = false;
             // Standard SQL OFFSET / FETCH
             if (readIf(OFFSET)) {
-                hasOffsetOrFetch = true;
                 command.setOffset(readExpression().optimize(session));
                 if (!readIf(ROW)) {
                     readIf("ROWS");
                 }
             }
             if (readIf(FETCH)) {
-                hasOffsetOrFetch = true;
+                hasFetch = true;
                 if (!readIf("FIRST")) {
                     read("NEXT");
                 }
@@ -2517,7 +2516,7 @@ public class Parser {
                 }
             }
             // MySQL-style LIMIT / OFFSET
-            if (!hasOffsetOrFetch && readIf(LIMIT)) {
+            if (!hasFetch && readIf(LIMIT)) {
                 Expression limit = readExpression().optimize(session);
                 command.setLimit(limit);
                 if (readIf(OFFSET)) {
