@@ -174,9 +174,6 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
             case Value.GEOMETRY:
                 return new GridH2Geometry(v);
 
-            case Value.TIMESTAMP_TZ:
-                return new GridH2Timestamp(v);
-
             default:
                 throw new IllegalStateException("Unsupported H2 type: " + v.getType());
         }
