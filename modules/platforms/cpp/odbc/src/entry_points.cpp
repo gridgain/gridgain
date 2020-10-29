@@ -222,7 +222,7 @@ SQLRETURN SQL_API SQLNativeSql(SQLHDBC      conn,
 }
 
 
-#if defined _WIN64 || !defined _WIN32
+#if defined _WIN64
 SQLRETURN SQL_API SQLColAttribute(SQLHSTMT        stmt,
                                   SQLUSMALLINT    columnNum,
                                   SQLUSMALLINT    fieldId,
@@ -240,6 +240,7 @@ SQLRETURN SQL_API SQLColAttribute(SQLHSTMT       stmt,
                                   SQLPOINTER     numericAttr)
 #endif
 {
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     return ignite::SQLColAttribute(stmt, columnNum, fieldId, strAttr, bufferLen, strAttrLen, (SQLLEN*)numericAttr);
 }
 
@@ -464,6 +465,8 @@ SQLRETURN SQL_API SQLColAttributes(SQLHSTMT     stmt,
                                    SQLSMALLINT* strAttrResLen,
                                    SQLLEN*      numAttrBuf)
 {
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     IGNITE_UNUSED(stmt);
     IGNITE_UNUSED(colNum);
     IGNITE_UNUSED(fieldId);

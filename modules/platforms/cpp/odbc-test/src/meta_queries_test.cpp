@@ -163,20 +163,32 @@ BOOST_AUTO_TEST_CASE(TestGetTypeInfoAllTypes)
 
 BOOST_AUTO_TEST_CASE(TestColAttributesColumnLength)
 {
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
+
     SQLCHAR req[] = "select strField from TestType";
+
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
+
     SQLExecDirect(stmt, req, SQL_NTS);
+
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
 
     SQLLEN intVal;
     SQLCHAR strBuf[1024];
     SQLSMALLINT strLen;
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
+
     SQLRETURN ret = SQLColAttribute(stmt, 1, SQL_COLUMN_LENGTH, strBuf, sizeof(strBuf), &strLen, &intVal);
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     if (!SQL_SUCCEEDED(ret))
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     BOOST_CHECK_EQUAL(intVal, 60);
 }
 
@@ -218,34 +230,46 @@ BOOST_AUTO_TEST_CASE(TestColAttributesColumnScale)
 
 BOOST_AUTO_TEST_CASE(TestColAttributesColumnLengthPrepare)
 {
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
+
     StartAdditionalNode("Node2");
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
 
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     InsertTestStrings(1);
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     SQLCHAR req[] = "select strField from TestType";
     SQLPrepare(stmt, req, SQL_NTS);
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     SQLLEN intVal;
     SQLCHAR strBuf[1024];
     SQLSMALLINT strLen;
 
     SQLRETURN ret = SQLColAttribute(stmt, 1, SQL_COLUMN_LENGTH, strBuf, sizeof(strBuf), &strLen, &intVal);
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     if (!SQL_SUCCEEDED(ret))
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     BOOST_CHECK_EQUAL(intVal, 60);
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     ret = SQLExecute(stmt);
     ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     ret = SQLColAttribute(stmt, 1, SQL_COLUMN_LENGTH, strBuf, sizeof(strBuf), &strLen, &intVal);
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     if (!SQL_SUCCEEDED(ret))
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
+    std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
     BOOST_CHECK_EQUAL(intVal, 60);
 }
 

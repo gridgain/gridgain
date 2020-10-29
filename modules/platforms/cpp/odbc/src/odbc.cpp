@@ -660,10 +660,12 @@ namespace ignite
         using odbc::meta::ColumnMetaVector;
         using odbc::meta::ColumnMeta;
 
+        std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
         LOG_MSG("SQLColAttribute called: " << fieldId << " (" << ColumnMeta::AttrIdToString(fieldId) << ")");
 
         Statement *statement = reinterpret_cast<Statement*>(stmt);
 
+        std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
         if (!statement)
             return SQL_INVALID_HANDLE;
 
@@ -679,6 +681,8 @@ namespace ignite
 
             return res;
         }
+
+        std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
 
         statement->GetColumnAttribute(columnNum, fieldId, reinterpret_cast<char*>(strAttr),
             bufferLen, strAttrLen, numericAttr);

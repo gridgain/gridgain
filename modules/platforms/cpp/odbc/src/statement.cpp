@@ -1045,49 +1045,53 @@ namespace ignite
         SqlResult::Type Statement::InternalGetColumnAttribute(uint16_t colIdx, uint16_t attrId, char* strbuf,
             int16_t buflen, int16_t* reslen, SqlLen* numbuf)
         {
+            std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
             const meta::ColumnMetaVector *meta = GetMeta();
 
+            std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
             if (!meta)
                 return SqlResult::AI_ERROR;
 
+            std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
             if (colIdx > meta->size() || colIdx < 1)
             {
+                std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
                 AddStatusRecord(SqlState::SHY000_GENERAL_ERROR,
                     "Column index is out of range.", 0, colIdx);
-
+                std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
                 return SqlResult::AI_ERROR;
             }
-
+            std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
             const meta::ColumnMeta& columnMeta = meta->at(colIdx - 1);
-
+            std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
             bool found = false;
-
+            std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
             if (numbuf)
                 found = columnMeta.GetAttribute(attrId, *numbuf);
-
+            std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
             if (!found)
             {
                 std::string out;
-
+                std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
                 found = columnMeta.GetAttribute(attrId, out);
-
+                std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
                 size_t outSize = out.size();
-
+                std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
                 if (found && strbuf)
                     outSize = utility::CopyStringToBuffer(out, strbuf, buflen);
-
+                std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
                 if (found && reslen)
                     *reslen = static_cast<int16_t>(outSize);
             }
-
+            std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
             if (!found)
             {
                 AddStatusRecord(SqlState::SHYC00_OPTIONAL_FEATURE_NOT_IMPLEMENTED,
                     "Unknown attribute.");
-
+                std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
                 return SqlResult::AI_ERROR;
             }
-
+            std::cout << __FUNCTION__  << ":" << __LINE__ << std::endl;
             return SqlResult::AI_SUCCESS;
         }
 
