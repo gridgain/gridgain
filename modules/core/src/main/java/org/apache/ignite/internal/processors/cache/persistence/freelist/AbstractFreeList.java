@@ -532,12 +532,12 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                     pageId = allocateDataPage(row.partition());
 
                     initIo = row.ioVersions().latest();
+                } else {
+                    assert PageIdUtils.flag(pageId) == FLAG_DATA
+                        : "rowVersions=" + row.ioVersions() + ", pageId=" + PageIdUtils.toDetailString(pageId);
+
+                    pageId = PageIdUtils.changePartitionId(pageId, row.partition());
                 }
-                // TODO: ntolsunov check
-                else if (PageIdUtils.tag(pageId) != PageIdAllocator.FLAG_DATA) // Page is taken from reuse bucket.
-                    pageId = initReusedPage(row, pageId, row.partition(), statHolder);
-                else // Page is taken from free space bucket. For in-memory mode partition must be changed.
-                    pageId = PageIdUtils.changePartitionId(pageId, (row.partition()));
 
                 written = write(pageId, writeRow, initIo, row, written, FAIL_I, statHolder);
 
