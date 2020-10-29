@@ -730,8 +730,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
         try (GridCloseableIterator<CacheDataRow> it = grp.isLocal() ?
-            iterator(cctx.cacheId(), cacheDataStores().iterator(), null, null, DATA) :
-            evictionSafeIterator(cctx.cacheId(), cacheDataStores().iterator(), DATA)) {
+            iterator(cctx.cacheId(), cacheDataStores().iterator(), null, null, DATA_AND_TOMBSONES) :
+            evictionSafeIterator(cctx.cacheId(), cacheDataStores().iterator(), DATA_AND_TOMBSONES)) {
             while (it.hasNext()) {
                 cctx.shared().database().checkpointReadLock();
 
@@ -2861,9 +2861,18 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (!oldTombstone && tombstoneRow != null)
                 tombstoneCreated();
 
-            if (oldRow != null && tombstoneRow == null) {
-                if (isIncrementalDrEnabled(cctx) && oldRow.version().updateCounter() != 0)
+            if (isIncrementalDrEnabled(cctx)) {
+                if (oldRow != null) {
+                    assert oldRow.version().updateCounter() != 0;
+
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                }
+
+                if (tombstoneRow != null) {
+                    assert tombstoneRow.version().updateCounter() != 0;
+
+                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
+                }
             }
         }
 

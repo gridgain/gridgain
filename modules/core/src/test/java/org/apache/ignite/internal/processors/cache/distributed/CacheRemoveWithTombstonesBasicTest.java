@@ -787,6 +787,50 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);
 
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(TRANSACTIONAL);
+        IgniteCache<Object, Object> cache = crd.createCache(ccfg);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+
+        int key = 0;
+        assertFalse(cache.remove(key));
+        assertFalse(cache.remove(key));
+        assertFalse(cache.remove(key));
+
+        IgniteWriteAheadLogManager walMgr = crd.context().cache().context().wal();
+
+        WALIterator iter = walMgr.replay(null);
+
+        List<DataRecord> tmp = new ArrayList<>();
+
+        while (iter.hasNext()) {
+            IgniteBiTuple<WALPointer, WALRecord> tup = iter.next();
+
+            if (tup.get2() instanceof DataRecord) {
+                DataRecord rec = (DataRecord) tup.get2();
+
+                tmp.add(rec);
+            }
+        }
+
+        validateCache(grpCtx, key, 1, 0);
+
+        assertEquals(3, tmp.size());
+
+        List<CacheDataRow> dataRows0 = new ArrayList<>();
+        grpCtx.offheap().partitionIterator(key, IgniteCacheOffheapManager.TOMBSTONES).forEach(dataRows0::add);
+
+        assertEquals(tmp.get(2).writeEntries().get(0).writeVersion(), dataRows0.get(0).version());
+    }
+
+    // TODO atomic test.
+    @Test
+    public void testTombstoneLoggedForEachRemoveAtomic() throws Exception {
+        persistence = true;
+
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
+
         CacheConfiguration<Object, Object> ccfg = cacheConfiguration(ATOMIC);
         IgniteCache<Object, Object> cache = crd.createCache(ccfg);
 

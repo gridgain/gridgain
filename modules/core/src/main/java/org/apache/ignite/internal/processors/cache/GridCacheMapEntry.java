@@ -1732,6 +1732,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return new GridCacheUpdateTxResult(false, logPtr);
             }
 
+            updateCntr0 = nextPartitionCounter(tx, updateCntr);
+
+            newVer.updateCounter(updateCntr0);
+
             removeValue(newVer);
 
             update(null, 0, 0, newVer, true);
@@ -1774,8 +1778,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     }
                 }
             }
-
-            updateCntr0 = nextPartitionCounter(tx, updateCntr);
 
             if (tx != null && cctx.group().persistenceEnabled())
                 logPtr = logTxUpdate(tx, null, 0, updateCntr0, cctx.group().walEnabled());
@@ -6735,6 +6737,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 cctx.store().remove(null, entry.key);
 
             long updateCntr0 = entry.nextPartitionCounter(topVer, primary, false, updateCntr);
+
+            if (newVer.updateCounter() == 0)
+                newVer.updateCounter(updateCntr0);
 
             entry.logUpdate(op, null, newVer, 0, updateCntr0);
 
