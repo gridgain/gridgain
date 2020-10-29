@@ -3357,8 +3357,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         //boolean deferred = false;
         boolean obsolete = false;
 
-        GridCacheVersion oldVer = null;
-
         lockListenerReadLock();
         lockEntry();
 
