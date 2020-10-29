@@ -35,6 +35,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_OWNER_DUMP_REQU
 import static org.apache.ignite.IgniteSystemProperties.getFloat;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_METASTORAGE;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.setDefaultValue;
@@ -142,12 +144,21 @@ public class DistributedTransactionConfiguration {
                 }
 
                 @Override public void onReadyToWrite() {
-                    setDefaultValue(longOperationsDumpTimeout, dfltLongOpsDumpTimeout, log);
-                    setDefaultValue(longTransactionTimeDumpThreshold, dfltLongTransactionTimeDumpThreshold, log);
-                    setDefaultValue(transactionTimeDumpSamplesCoefficient, dfltTransactionTimeDumpSamplesCoefficient, log);
-                    setDefaultValue(longTransactionTimeDumpSamplesPerSecondLimit, dfltLongTransactionTimeDumpSamplesPerSecondLimit, log);
-                    setDefaultValue(collisionsDumpInterval, dfltCollisionsDumpInterval, log);
-                    setDefaultValue(txOwnerDumpRequestsAllowed, dfltTxOwnerDumpRequestsAllowed, log);
+                    if (allNodesSupport(ctx, DISTRIBUTED_METASTORAGE)) {
+                        setDefaultValue(longOperationsDumpTimeout, dfltLongOpsDumpTimeout, log);
+                        setDefaultValue(longTransactionTimeDumpThreshold, dfltLongTransactionTimeDumpThreshold, log);
+                        setDefaultValue(transactionTimeDumpSamplesCoefficient, dfltTransactionTimeDumpSamplesCoefficient, log);
+                        setDefaultValue(longTransactionTimeDumpSamplesPerSecondLimit, dfltLongTransactionTimeDumpSamplesPerSecondLimit, log);
+                        setDefaultValue(collisionsDumpInterval, dfltCollisionsDumpInterval, log);
+                        setDefaultValue(txOwnerDumpRequestsAllowed, dfltTxOwnerDumpRequestsAllowed, log);
+                    } else {
+                        longOperationsDumpTimeout.localUpdate(dfltLongOpsDumpTimeout);
+                        longTransactionTimeDumpThreshold.localUpdate(dfltLongTransactionTimeDumpThreshold);
+                        transactionTimeDumpSamplesCoefficient.localUpdate(dfltTransactionTimeDumpSamplesCoefficient);
+                        longTransactionTimeDumpSamplesPerSecondLimit.localUpdate(dfltLongTransactionTimeDumpSamplesPerSecondLimit);
+                        collisionsDumpInterval.localUpdate(dfltCollisionsDumpInterval);
+                        txOwnerDumpRequestsAllowed.localUpdate(dfltTxOwnerDumpRequestsAllowed);
+                    }
                 }
             }
         );
