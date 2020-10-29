@@ -3396,7 +3396,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     update0 = isStartVer;
 
                 // TODO do we need this change ? looks like not.
-                // Such combination may exist during datastreamer first update. (special case for isolatedupdater ?)
+                // GridCacheAbstractFullApiSelfTest.testRemoveLoad
                 update0 |= (!preload && val0 == null);
 
                 return update0;
@@ -6006,7 +6006,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 GridCacheVersion ver = entry.ver;
 
                 if (oldRow != null) {
-                    if (!entry.checkRowExpired(oldRow))
+                    if (!entry.checkRowExpired(oldRow) && !entry.context().offheap().isTombstone(oldRow))
                         val = oldRow.value();
 
                     ver = oldRow.version();
