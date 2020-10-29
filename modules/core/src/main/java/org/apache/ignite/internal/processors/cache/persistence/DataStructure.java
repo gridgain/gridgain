@@ -65,18 +65,23 @@ public abstract class DataStructure {
     /** */
     protected ReuseList reuseList;
 
+    /** */
+    protected final byte pageFlag;
+
     /**
      * @param cacheGrpId Cache group ID.
      * @param grpName Cache group name.
      * @param pageMem Page memory.
      * @param wal Write ahead log manager.
+     * @param pageFlag Default flag value for allocated pages.
      */
     public DataStructure(
         int cacheGrpId,
         String grpName,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
-        PageLockListener lockLsnr
+        PageLockListener lockLsnr,
+        byte pageFlag
     ) {
         assert pageMem != null;
 
@@ -85,6 +90,7 @@ public abstract class DataStructure {
         this.pageMem = pageMem;
         this.wal = wal;
         this.lockLsnr = lockLsnr == null ? NOOP_LSNR : lockLsnr;
+        this.pageFlag = pageFlag;
     }
 
     /**
@@ -122,15 +128,29 @@ public abstract class DataStructure {
      * @throws IgniteCheckedException If failed.
      */
     protected final long allocatePage(ReuseBag bag, boolean useRecycled) throws IgniteCheckedException {
-        long pageId = bag != null ? bag.pollFreePage() : 0;
+        long pageId = 0;
 
-        if (pageId == 0 && useRecycled && reuseList != null)
-            pageId = reuseList.takeRecycledPage();
+        if (useRecycled && reuseList != null) {
+            pageId = bag != null ? bag.pollFreePage() : 0;
+
+            if (pageId == 0)
+                pageId = reuseList.takeRecycledPage();
+
+            // Recycled. "pollFreePage" result should be reinitialized to move rotatedId to itemId.
+            if (pageId != 0)
+                pageId = reuseList.initRecycledPage(pageId, pageFlag, null);
+        }
 
         if (pageId == 0)
             pageId = allocatePageNoReuse();
 
         assert pageId != 0;
+
+        assert PageIdUtils.flag(pageId) == FLAG_IDX && PageIdUtils.partId(pageId) == INDEX_PARTITION ||
+            PageIdUtils.flag(pageId) != FLAG_IDX && PageIdUtils.partId(pageId) <= MAX_PARTITION_ID :
+            PageIdUtils.toDetailString(pageId);
+
+        assert PageIdUtils.flag(pageId) != FLAG_DATA || PageIdUtils.itemId(pageId) == 0 : PageIdUtils.toDetailString(pageId);
 
         return pageId;
     }
@@ -151,7 +171,7 @@ public abstract class DataStructure {
      */
     protected final long acquirePage(long pageId, IoStatisticsHolder statHolder) throws IgniteCheckedException {
         assert PageIdUtils.flag(pageId) == FLAG_IDX && PageIdUtils.partId(pageId) == INDEX_PARTITION ||
-            PageIdUtils.flag(pageId) == FLAG_DATA && PageIdUtils.partId(pageId) <= MAX_PARTITION_ID :
+            PageIdUtils.flag(pageId) != FLAG_IDX && PageIdUtils.partId(pageId) <= MAX_PARTITION_ID :
             U.hexLong(pageId) + " flag=" + PageIdUtils.flag(pageId) + " part=" + PageIdUtils.partId(pageId);
 
         return pageMem.acquirePage(grpId, pageId, statHolder);
@@ -395,7 +415,7 @@ public abstract class DataStructure {
             int rotatedIdPart = PageIO.getRotatedIdPart(pageAddr);
 
             if (rotatedIdPart != 0) {
-                recycled = PageIdUtils.link(pageId, rotatedIdPart > MAX_ITEMID_NUM ? 1 : rotatedIdPart);
+                recycled = PageIdUtils.link(pageId, rotatedIdPart);
 
                 PageIO.setRotatedIdPart(pageAddr, 0);
 

@@ -179,7 +179,8 @@ public class TxLog implements CheckpointListener {
                     isNew,
                     txLogReuseListLockLsnr,
                     ctx,
-                    null
+                    null,
+                    FLAG_IDX
                 );
 
                 tree = new TxLogTree(

@@ -240,7 +240,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 rootPage,
                 grp.reuseList(),
                 true,
-                lsnr
+                lsnr,
+                FLAG_IDX
             );
         }
     }
@@ -1260,7 +1261,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             rowStore,
             rootPage,
             true,
-            lsnr
+            lsnr,
+            FLAG_IDX
         );
 
         String logTreeName = BPlusTree.treeName(grp.cacheOrGroupName() + "-p-" + p, "CacheData");
