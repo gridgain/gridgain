@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,23 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
-import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
- * IO for partition metadata pages.
- * Add UpdateLogTree (update counter -> row link) for each partition.
+ * GG meta page IO.
+ * This page corresponds to the GridGain IO v1 meta page.
  */
-public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements PagePartitionMetaIOGG {
-
-    /** */
-    private final int updateLogTreeRootOff;
+public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV3 implements PagePartitionMetaIOGG {
+    /** GridGain meta page IO delegate. */
+    private final PagePartitionMetaIOV1GG delegate;
 
     /**
      * @param ver Version.
      */
-    public PagePartitionMetaIOV1GG(int ver) {
-        this(ver, GAPS_LINK + 8);
-    }
-
-    /**
-     * @param ver Version.
-     * @param fieldOffset Offset after which the page fields are written.
-     */
-    public PagePartitionMetaIOV1GG(int ver, int fieldOffset) {
+    public PagePartitionMetaIOV2GG(int ver) {
         super(ver);
 
-        updateLogTreeRootOff = fieldOffset;
+        delegate = new PagePartitionMetaIOV1GG(ver, ENCRYPT_PAGE_MAX_OFF + 4);
     }
 
     /** {@inheritDoc} */
@@ -54,17 +44,17 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements Pa
 
     /** {@inheritDoc} */
     @Override public void initSpecificFields(long pageAddr, long pageId, int pageSize) {
-        setUpdateTreeRoot(pageAddr, 0L);
+        delegate.initSpecificFields(pageAddr, pageId, pageSize);
     }
 
     /** {@inheritDoc} */
     @Override public long getUpdateTreeRoot(long pageAddr) {
-        return PageUtils.getLong(pageAddr, updateLogTreeRootOff);
+        return delegate.getUpdateTreeRoot(pageAddr);
     }
 
     /** {@inheritDoc} */
     @Override public void setUpdateTreeRoot(long pageAddr, long link) {
-        PageUtils.putLong(pageAddr, updateLogTreeRootOff, link);
+        delegate.setUpdateTreeRoot(pageAddr, link);
     }
 
     /** {@inheritDoc} */
@@ -76,25 +66,24 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements Pa
 
     /** {@inheritDoc} */
     @Override public void specificFields(long pageAddr, GridStringBuilder sb) {
-        sb.a(",\n\tupdLogRootPageId=").a(getUpdateTreeRoot(pageAddr));
+        delegate.specificFields(pageAddr, sb);
+
+        sb.a(",\n\tencryptedPageIndex=").a(getEncryptedPageIndex(pageAddr))
+            .a(",\n\tencryptedPageCount=").a(getEncryptedPageCount(pageAddr));
     }
 
     /** {@inheritDoc} */
-    @Override public void upgradePage(long pageAddr) {
+    public void upgradePage(long pageAddr) {
         assert PageIO.getType(pageAddr) == getType();
 
         int from = PageIO.getVersion(pageAddr);
 
-        assert from < 3 : "Unexpected page IO version [ver=" + from + ']';
+        assert from < 4 || from > getVersion() : "Unexpected page IO version [ver=" + from + ']';
 
-        PageIO.setVersion(pageAddr, getVersion());
+        if (from < 3)
+            delegate.upgradePage(pageAddr);
 
-        if (from < 2) {
-            setPendingTreeRoot(pageAddr, 0);
-            setPartitionMetaStoreReuseListRoot(pageAddr, 0);
-            setGapsLink(pageAddr, 0);
-        }
-
-        setUpdateTreeRoot(pageAddr, 0);
+        setEncryptedPageIndex(pageAddr, 0);
+        setEncryptedPageCount(pageAddr, 0);
     }
 }

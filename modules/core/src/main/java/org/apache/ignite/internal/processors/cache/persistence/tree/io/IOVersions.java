@@ -67,7 +67,7 @@ public final class IOVersions<V extends PageIO> {
             this.vers = ignVers.toArray(new PageIO[]{});
             this.ggVers = ggVers.toArray(new PageIO[]{});
 
-            Arrays.sort(this.ggVers);
+//            Arrays.sort(this.ggVers);
         }
 
         assert checkVersions();

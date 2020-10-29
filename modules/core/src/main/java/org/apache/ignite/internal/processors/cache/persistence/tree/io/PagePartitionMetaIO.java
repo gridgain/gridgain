@@ -47,7 +47,10 @@ public class PagePartitionMetaIO extends PageMetaIO {
     public static final IOVersions<PagePartitionMetaIO> VERSIONS = new IOVersions<>(
         new PagePartitionMetaIO(1),
         new PagePartitionMetaIOV2(2),
-        new PagePartitionMetaIOV1GG(Short.toUnsignedInt((short)-1)) // Prevent partition usage on old versions after upgrade.
+        new PagePartitionMetaIOV3(3),
+        // Prevent partition usage on old versions after upgrade.
+        new PagePartitionMetaIOV1GG(Short.toUnsignedInt((short)-1)),
+        new PagePartitionMetaIOV2GG(Short.toUnsignedInt((short)-2))
     );
 
     /** {@inheritDoc} */
@@ -258,13 +261,24 @@ public class PagePartitionMetaIO extends PageMetaIO {
     @Override protected void printPage(long pageAddr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
         super.printPage(pageAddr, pageSize, sb);
 
+        sb.a(",\nPagePartitionMeta[\n");
+
+        printFields(pageAddr, sb);
+
+        sb.a("\n]");
+    }
+
+    /**
+     * @param pageAddr Address.
+     * @param sb String builder.
+     */
+    protected void printFields(long pageAddr, GridStringBuilder sb) {
         byte state = getPartitionState(pageAddr);
 
-        sb.a(",\nPagePartitionMeta[\n\tsize=").a(getSize(pageAddr))
+        sb.a("\tsize=").a(getSize(pageAddr))
             .a(",\n\tupdateCounter=").a(getUpdateCounter(pageAddr))
             .a(",\n\tglobalRemoveId=").a(getGlobalRemoveId(pageAddr))
             .a(",\n\tpartitionState=").a(state).a("(").a(GridDhtPartitionState.fromOrdinal(state)).a(")")
-            .a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr))
-            .a("\n]");
+            .a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr)).toString();
     }
 }
