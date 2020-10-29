@@ -128,6 +128,24 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     */
+    @Test
+    public void testSysdate() {
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT)");
+
+        int rows = 100;
+        for (int i = 0; i < rows; ++i) {
+            sql("INSERT INTO TEST (ID, VAL_INT) VALUES " +
+                    "(?, ?)",
+                i, i);
+        }
+
+        List<List<?>> res = sql("SELECT ID, SYSDATE, SYSDATE() FROM TEST").getAll();
+
+        assertEquals(rows, res.size());
+    }
+
+    /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
