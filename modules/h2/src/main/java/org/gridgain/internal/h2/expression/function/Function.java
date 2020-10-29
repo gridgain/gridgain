@@ -292,7 +292,8 @@ public class Function extends Expression implements FunctionCall {
         // date
         addFunctionNotDeterministic("CURRENT_DATE", CURRENT_DATE, 0, Value.DATE, true);
         addFunctionNotDeterministic("CURDATE", CURRENT_DATE, 0, Value.DATE);
-        addFunctionNotDeterministic("SYSDATE", CURRENT_DATE, 0, Value.DATE, false);
+        addFunctionNotDeterministic("SYSDATE", CURRENT_TIMESTAMP, 0, Value.TIMESTAMP_TZ, false);
+
         addFunctionNotDeterministic("TODAY", CURRENT_DATE, 0, Value.DATE, false);
 
         addFunctionNotDeterministic("CURRENT_TIME", CURRENT_TIME, VAR_ARGS, Value.TIME);
