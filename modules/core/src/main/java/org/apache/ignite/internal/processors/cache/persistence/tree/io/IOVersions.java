@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -66,8 +65,6 @@ public final class IOVersions<V extends PageIO> {
         else {
             this.vers = ignVers.toArray(new PageIO[]{});
             this.ggVers = ggVers.toArray(new PageIO[]{});
-
-//            Arrays.sort(this.ggVers);
         }
 
         assert checkVersions();

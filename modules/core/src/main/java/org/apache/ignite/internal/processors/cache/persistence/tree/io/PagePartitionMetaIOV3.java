@@ -85,8 +85,6 @@ public class PagePartitionMetaIOV3 extends PagePartitionMetaIOV2 {
         if (getEncryptedPageCount(pageAddr) == pagesCnt)
             return false;
 
-        System.err.println("setEncryptedPageCount " + pagesCnt);
-
         PageUtils.putInt(pageAddr, ENCRYPT_PAGE_MAX_OFF, pagesCnt);
 
         return true;

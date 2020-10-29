@@ -96,7 +96,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageMetaI
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionCountersIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOGG;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV2GG;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV3;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseListImpl;
@@ -2214,12 +2213,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 try {
                     long treeRoot, reuseListRoot, pendingTreeRoot, partMetaStoreReuseListRoot, updateLogTreeRoot;
 
-                    PagePartitionMetaIO latestMetaIo = PagePartitionMetaIO.VERSIONS.latest();
+                    PagePartitionMetaIOV3 io = (PagePartitionMetaIOV3)PagePartitionMetaIO.VERSIONS.latest();
 
                     // Initialize new page.
                     if (PageIO.getType(pageAddr) != PageIO.T_PART_META) {
-                        PagePartitionMetaIOV3 io = (PagePartitionMetaIOV3)latestMetaIo;
-
                         io.initNewPage(pageAddr, partMetaId, pageMem.realPageSize(grpId));
 
                         treeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_DATA);
@@ -2248,30 +2245,26 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         allocated = true;
                     }
                     else {
-                        PagePartitionMetaIO io = PageIO.getPageIO(pageAddr);
-
-                        treeRoot = io.getTreeRoot(pageAddr);
-                        reuseListRoot = io.getReuseListRoot(pageAddr);
-
-                        int pageVer = PagePartitionMetaIO.getVersion(pageAddr);
-
-                        if (pageVer != latestMetaIo.getVersion()) {
+                        if (io != PageIO.getPageIO(pageAddr)) {
                             if (log.isDebugEnabled()) {
                                 log.debug("Upgrade partition meta page version: [part=" + partId +
                                     ", grpId=" + grpId +
-                                    ", oldVer=" + pageVer +
-                                    ", newVer=" + latestMetaIo.getVersion() + ']');
+                                    ", oldVer=" + PagePartitionMetaIO.getVersion(pageAddr) +
+                                    ", newVer=" + io.getVersion() + ']');
                             }
 
-                            assert latestMetaIo instanceof PagePartitionMetaIOGG :
-                                "Unexpected page IO version [type=" + latestMetaIo.getClass().getSimpleName() +
-                                    ", expectedVer=" + Short.toUnsignedInt((short)-2) +
-                                    ", latestVer=" + latestMetaIo.getVersion() + ']';
+                            assert io instanceof PagePartitionMetaIOGG :
+                                "Unexpected page IO class [cls=" + io.getClass().getSimpleName() +
+                                    ", type=" + io.getType() +
+                                    ", ver=" + io.getVersion() + ']';
 
-                            ((PagePartitionMetaIOGG)latestMetaIo).upgradePage(pageAddr);
+                            ((PagePartitionMetaIOGG)io).upgradePage(pageAddr);
 
                             pageUpgraded = true;
                         }
+
+                        treeRoot = io.getTreeRoot(pageAddr);
+                        reuseListRoot = io.getReuseListRoot(pageAddr);
 
                         if ((pendingTreeRoot = io.getPendingTreeRoot(pageAddr)) == 0) {
                             pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_DATA);

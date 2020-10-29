@@ -73,7 +73,7 @@ public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV3 implements Pa
     }
 
     /** {@inheritDoc} */
-    public void upgradePage(long pageAddr) {
+    @Override public void upgradePage(long pageAddr) {
         assert PageIO.getType(pageAddr) == getType();
 
         int from = PageIO.getVersion(pageAddr);
