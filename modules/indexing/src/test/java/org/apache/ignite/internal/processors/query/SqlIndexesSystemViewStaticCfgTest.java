@@ -38,6 +38,8 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
+
 /** */
 public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
     /** */
@@ -211,7 +213,7 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
     private void checkIndexes(Predicate<List<List<?>>> checker) throws Exception {
         for (Ignite ign : G.allGrids()) {
             assertTrue(GridTestUtils.waitForCondition(() -> {
-                List<List<?>> indexes = execSql(ign, "SELECT * FROM IGNITE.INDEXES ORDER BY CACHE_NAME, INDEX_NAME");
+                List<List<?>> indexes = execSql(ign, "SELECT * FROM " + sysSchemaName() + ".INDEXES ORDER BY CACHE_NAME, INDEX_NAME");
 
                 return checker.test(indexes);
             }, 1000));

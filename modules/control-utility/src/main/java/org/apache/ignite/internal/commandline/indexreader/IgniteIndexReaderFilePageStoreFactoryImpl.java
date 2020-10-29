@@ -40,15 +40,24 @@ public class IgniteIndexReaderFilePageStoreFactoryImpl implements IgniteIndexRea
     /** Metrics updater. */
     private final LongAdderMetric allocationTracker = new LongAdderMetric("n", "d");
 
+    /** Page size. */
+    private final int pageSize;
+
+    /** Partition count. */
+    private final int partCnt;
+
     /**
      * Constructor.
      *
      * @param dir Directory with data(partitions and index).
      * @param pageSize Page size.
+     * @param partCnt Partition count.
      * @param filePageStoreVer Page store version.
      */
-    public IgniteIndexReaderFilePageStoreFactoryImpl(File dir, int pageSize, int filePageStoreVer) {
+    public IgniteIndexReaderFilePageStoreFactoryImpl(File dir, int pageSize, int partCnt, int filePageStoreVer) {
         this.dir = dir;
+        this.pageSize = pageSize;
+        this.partCnt = partCnt;
 
         storeFactory = new FileVersionCheckingFactory(
             new AsyncFileIOFactory(),
@@ -76,5 +85,15 @@ public class IgniteIndexReaderFilePageStoreFactoryImpl implements IgniteIndexRea
         FilePageStore store = storeFactory.createPageStore(type, null, ver, allocationTracker);
 
         return store.header(type, storeFactory.headerSize(ver));
+    }
+
+    /** {@inheritDoc} */
+    @Override public int pageSize() {
+        return pageSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int partitionCount() {
+        return partCnt;
     }
 }

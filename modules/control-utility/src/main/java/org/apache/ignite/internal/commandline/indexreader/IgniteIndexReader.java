@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -165,14 +166,11 @@ public class IgniteIndexReader implements AutoCloseable {
     /** Partition count. */
     private final int partCnt;
 
-    /** Names of index trees to process. If {@code null}, all are used. */
-    @Nullable private final Set<String> indexes;
+    /** Index name filter, if {@code null} then is not used. */
+    @Nullable private final Predicate<String> idxFilter;
 
     /** Output strean. */
     private final PrintStream outStream;
-
-    /** Error output stream. */
-    private final PrintStream outErrStream;
 
     /** Page store of {@link FilePageStoreManager#INDEX_FILE_NAME}. */
     @Nullable private final FilePageStore idxStore;
@@ -198,28 +196,23 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Constructor.
      *
-     * @param pageSize Page size.
-     * @param partCnt Partition count.
-     * @param indexes Names of index trees to process. If {@code null}, all are used.
+     * @param idxFilter Index name filter, if {@code null} then is not used.
      * @param checkParts Check cache data tree in partition files and it's consistency with indexes.
-     * @param outputStream Stream for print report.
+     * @param outStream {@link PrintStream} for print report, if {@code null} then will be used {@link System#out}.
      * @throws IgniteCheckedException If failed.
      */
     public IgniteIndexReader(
-        int pageSize,
-        int partCnt,
-        @Nullable String[] indexes,
+        @Nullable Predicate<String> idxFilter,
         boolean checkParts,
-        @Nullable OutputStream outputStream,
+        @Nullable PrintStream outStream,
         IgniteIndexReaderFilePageStoreFactory filePageStoreFactory
     ) throws IgniteCheckedException {
-        this.pageSize = pageSize;
-        this.partCnt = partCnt;
+        pageSize = filePageStoreFactory.pageSize();
+        partCnt = filePageStoreFactory.partitionCount();
         this.checkParts = checkParts;
-        this.indexes = isNull(indexes) ? null : new HashSet<>(asList(indexes));
+        this.idxFilter = idxFilter;
 
-        outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
-        outErrStream = outStream;
+        this.outStream = isNull(outStream) ? System.out : outStream;
 
         Map<Integer, List<Throwable>> partStoresErrors = new HashMap<>();
         List<Throwable> errors = new ArrayList<>();
@@ -256,7 +249,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private void printErr(String s) {
-        outErrStream.println(ERROR_PREFIX + s);
+        outStream.println(ERROR_PREFIX + s);
     }
 
     /** */
@@ -275,10 +268,10 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         if (caption != null)
-            outErrStream.println(prefix + ERROR_PREFIX + caption);
+            outStream.println(prefix + ERROR_PREFIX + caption);
 
         errors.forEach((k, v) -> {
-            outErrStream.println(prefix + ERROR_PREFIX + format(elementFormatPtrn, k.toString()));
+            outStream.println(prefix + ERROR_PREFIX + format(elementFormatPtrn, k.toString()));
 
             v.forEach(e -> {
                 if (printTrace)
@@ -303,7 +296,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         e.printStackTrace(new PrintStream(os));
 
-        outErrStream.println(os.toString());
+        outStream.println(os.toString());
     }
 
     /** */
@@ -403,7 +396,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 pageClasses.compute(io.getClass(), (k, v) -> v == null ? 1 : v + 1);
 
                 if (!(io instanceof PageMetaIO || io instanceof PagesListMetaIO)) {
-                    if (indexes == null) {
+                    if (idxFilter == null) {
                         if ((io instanceof BPlusMetaIO || io instanceof BPlusInnerIO)
                                 && !pageIds.contains(pageId)
                                 && pageListsInfo.get() != null
@@ -450,7 +443,7 @@ public class IgniteIndexReader implements AutoCloseable {
         print("Total pages encountered during sequential scan: " + pageClasses.values().stream().mapToLong(a -> a).sum());
         print("Total errors occurred during sequential scan: " + errors.size());
 
-        if (indexes != null)
+        if (idxFilter != null)
             print("Orphan pages were not reported due to --indexes filter.");
 
         print("Note that some pages can be occupied by meta info, tracking info, etc., so total page count can differ " +
@@ -904,7 +897,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
             IndexStorageImpl.IndexItem idxItem = (IndexStorageImpl.IndexItem)item;
 
-            if (indexes != null && !indexes.contains(idxItem.nameString()))
+            if (nonNull(idxFilter) && !idxFilter.test(idxItem.nameString()))
                 return;
 
             TreeTraversalInfo treeTraversalInfo =
@@ -1324,15 +1317,17 @@ public class IgniteIndexReader implements AutoCloseable {
         IgniteIndexReaderFilePageStoreFactory filePageStoreFactory = new IgniteIndexReaderFilePageStoreFactoryImpl(
             new File(dir),
             pageSize,
+            p.get(PART_CNT.arg()),
             p.get(PAGE_STORE_VER.arg())
         );
 
+        String[] idxArr = p.get(INDEXES.arg());
+        Set<String> idxSet = isNull(idxArr) ? null : new HashSet<>(asList(idxArr));
+
         try (IgniteIndexReader reader = new IgniteIndexReader(
-            pageSize,
-            p.get(PART_CNT.arg()),
-            p.get(INDEXES.arg()),
+            isNull(idxSet) ? null : idxSet::contains,
             p.get(CHECK_PARTS.arg()),
-            destStream,
+            isNull(destStream) ? null : new PrintStream(destFile),
             filePageStoreFactory
         )) {
             reader.readIdx();
