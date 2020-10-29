@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
+import org.apache.ignite.internal.managers.encryption.GroupKey;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionKey;
@@ -70,7 +71,11 @@ public class EncryptedCacheGroupCreateTest extends AbstractEncryptionTest {
 
         GridEncryptionManager encMgr = encrypted2.context().kernalContext().encryption();
 
-        KeystoreEncryptionKey key2 = (KeystoreEncryptionKey)encMgr.groupKey(CU.cacheGroupId(ENCRYPTED_CACHE, ENCRYPTED_GROUP));
+        GroupKey grpKey2 = encMgr.groupKey(CU.cacheGroupId(ENCRYPTED_CACHE, ENCRYPTED_GROUP));
+
+        assertNotNull(grpKey2);
+
+        KeystoreEncryptionKey key2 = (KeystoreEncryptionKey)grpKey2.key();
 
         assertNotNull(key2);
         assertNotNull(key2.key());
@@ -107,8 +112,11 @@ public class EncryptedCacheGroupCreateTest extends AbstractEncryptionTest {
 
         assertNotNull(enc);
 
-        KeystoreEncryptionKey key =
-            (KeystoreEncryptionKey)grid.context().encryption().groupKey(CU.cacheGroupId(cacheName, grpName));
+        GroupKey grpKey = grid.context().encryption().groupKey(CU.cacheGroupId(cacheName, grpName));
+
+        assertNotNull(grpKey);
+
+        KeystoreEncryptionKey key = (KeystoreEncryptionKey)grpKey.key();
 
         assertNotNull(key);
         assertNotNull(key.key());

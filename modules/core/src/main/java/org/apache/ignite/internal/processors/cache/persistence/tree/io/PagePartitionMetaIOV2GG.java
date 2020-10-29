@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,41 +16,39 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
-import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
- * IO for partition metadata pages.
- * Add UpdateLogTree (update counter -> row link) for each partition.
+ * GG meta page IO.
+ * This page corresponds to the GridGain IO v1 meta page.
  */
-public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements PagePartitionMetaIOGG {
+public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV3 implements PagePartitionMetaIOGG {
     /**
      * Registered version.
      * This parameter depends of that the version registered in {@see VERSIONS}.
      */
-    private static final int REGISTERED_VERSION = Short.toUnsignedInt((short)-1);
+    private static final int REGISTERED_VERSION = Short.toUnsignedInt((short)-2);
 
-    /** Default field offset. */
-    public static final int DFT_OFFSET = GAPS_LINK + 8;
-
-    /** Filed offset. */
-    private final int updateLogTreeRootOff;
+    /** GridGain meta page IO delegate. */
+    private final PagePartitionMetaIOV1GG delegate;
 
     /**
      * Default constructor.
      */
-    public PagePartitionMetaIOV1GG() {
-        this(REGISTERED_VERSION, DFT_OFFSET);
+    public PagePartitionMetaIOV2GG() {
+        this(REGISTERED_VERSION, ENCRYPT_PAGE_MAX_OFF + 4);
     }
 
     /**
+     * It will need when IO extends in future.
+     *
      * @param ver Version.
      * @param fieldOffset Offset after which the page fields are written.
      */
-    public PagePartitionMetaIOV1GG(int ver, int fieldOffset) {
+    public PagePartitionMetaIOV2GG(int ver, int fieldOffset) {
         super(ver);
 
-        updateLogTreeRootOff = fieldOffset;
+        delegate = new PagePartitionMetaIOV1GG(ver, fieldOffset);
     }
 
     /** {@inheritDoc} */
@@ -58,17 +56,17 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements Pa
         if (REGISTERED_VERSION == getVersion())
             super.initNewPage(pageAddr, pageId, pageSize);
 
-        setUpdateTreeRoot(pageAddr, 0L);
+        delegate.initNewPage(pageAddr, pageId, pageSize);
     }
 
     /** {@inheritDoc} */
     @Override public long getUpdateTreeRoot(long pageAddr) {
-        return PageUtils.getLong(pageAddr, updateLogTreeRootOff);
+        return delegate.getUpdateTreeRoot(pageAddr);
     }
 
     /** {@inheritDoc} */
     @Override public void setUpdateTreeRoot(long pageAddr, long link) {
-        PageUtils.putLong(pageAddr, updateLogTreeRootOff, link);
+        delegate.setUpdateTreeRoot(pageAddr, link);
     }
 
     /** {@inheritDoc} */
@@ -76,7 +74,7 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements Pa
         if (REGISTERED_VERSION == getVersion())
             super.printFields(pageAddr, sb);
 
-        sb.a(",\n\tupdLogRootPageId=").a(getUpdateTreeRoot(pageAddr));
+        delegate.printFields(pageAddr, sb);
     }
 
     /** {@inheritDoc} */
@@ -85,24 +83,11 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements Pa
 
         int from = PageIO.getVersion(pageAddr);
 
-        if (from == REGISTERED_VERSION) {
-            int shift = updateLogTreeRootOff - DFT_OFFSET;
+        delegate.upgradePage(pageAddr);
 
-            assert shift >= 0 : "Negative shift unexpected: " + shift;
-
-            if (shift > 0)
-                setUpdateTreeRoot(pageAddr, getUpdateTreeRoot(pageAddr - shift));
+        if (from < 3) {
+            setEncryptedPageIndex(pageAddr, 0);
+            setEncryptedPageCount(pageAddr, 0);
         }
-
-        PageIO.setVersion(pageAddr, getVersion());
-
-        if (from < 2) {
-            setPendingTreeRoot(pageAddr, 0);
-            setPartitionMetaStoreReuseListRoot(pageAddr, 0);
-            setGapsLink(pageAddr, 0);
-        }
-
-        if (from < getVersion())
-            setUpdateTreeRoot(pageAddr, 0);
     }
 }
