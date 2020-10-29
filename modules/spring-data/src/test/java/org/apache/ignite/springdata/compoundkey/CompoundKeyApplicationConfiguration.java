@@ -33,6 +33,6 @@ public class CompoundKeyApplicationConfiguration {
      * */
     @Bean
     public Ignite igniteInstance() {
-        return Ignition.start("/home/kazakov/Documents/apache/ignite/examples/config/example-ignite.xml");
+        return Ignition.start();
     }
 }
