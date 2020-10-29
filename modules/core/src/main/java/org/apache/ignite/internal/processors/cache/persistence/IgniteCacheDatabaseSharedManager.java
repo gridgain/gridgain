@@ -1566,7 +1566,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                             ((MvccDataEntry)dataEntry).mvccVer());
                     }
                     else
-                        cacheCtx.offheap().remove(cacheCtx, dataEntry.key(), partId, locPart);
+                        cacheCtx.offheap().removeWithTombstone(cacheCtx, dataEntry.key(), dataEntry.writeVersion(), locPart);
 
                     if (dataEntry.partitionCounter() != 0)
                         cacheCtx.offheap().onPartitionInitialCounterUpdated(partId, dataEntry.partitionCounter() - 1, 1);

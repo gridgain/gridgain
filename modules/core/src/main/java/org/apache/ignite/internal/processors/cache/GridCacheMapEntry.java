@@ -6743,7 +6743,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             entry.logUpdate(op, null, newVer, 0, updateCntr0);
 
-            if (cctx.deferredDelete()) {
+            if (cctx.deferredDelete()) { // TODO remove
                 if (oldVal != null) {
                     assert !entry.deletedUnlocked();
 
@@ -6765,11 +6765,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             // TODO javadoc for tx and atomic update closures (only logical removal).
             // TODO test: if initial entry value was {@code null} and it was read from store.
-            treeOp = cctx.isNear() ?
-                IgniteTree.OperationType.NOOP : // Avoid offheap tree update for near cache.
+            treeOp = cctx.isNear() ? IgniteTree.OperationType.NOOP : // Avoid offheap tree update for near cache.
                 IgniteTree.OperationType.PUT; // Always write tombstone, overwrite with new version if existed before.
 
-            if (treeOp != IgniteTree.OperationType.NOOP) { // If oldRow is tombstone do nothing.
+            if (treeOp != IgniteTree.OperationType.NOOP) {
                 GridDhtLocalPartition part = entry.localPartition();
 
                 newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer, 0, oldRow);

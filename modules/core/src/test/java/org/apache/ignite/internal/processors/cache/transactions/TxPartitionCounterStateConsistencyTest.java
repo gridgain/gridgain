@@ -343,21 +343,34 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             CacheDataRow testRow = diff0.isEmpty() ? diff1.get(0) : diff0.get(0);
 
-            WALIterator iter0 = walIterator(g0);
+            for (CacheDataRow cacheDataRow : dataRows0) {
+                if (cacheDataRow.key().equals(testRow.key())) {
+                    log.info("Checking [name=" + g0.name() + ", testRow=" + cacheDataRow + ']');
 
-            log.info("Dump WAL " + g0.name());
-            while (iter0.hasNext()) {
-                IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
+                    break;
+                }
+            }
 
-                if (tup.get2() instanceof DataRecord) {
-                    DataRecord rec = (DataRecord) tup.get2();
+            for (CacheDataRow cacheDataRow : dataRows1) {
+                if (cacheDataRow.key().equals(testRow.key())) {
+                    log.info("Checking [name=" + g1.name() + ", testRow=" + cacheDataRow + ']');
 
-                    for (DataEntry entry : rec.writeEntries()) {
-                        if (entry.key().equals(testRow.key())) {
-                            try {
-                                log.info("Rec: " + entry + ", key=" + entry.key() + ", val=" + (entry.value() == null ? "NULL" : entry.value().value(fakeCtx0, false).toString()));
-                            } catch (Throwable e) {
-                                e.printStackTrace();
+                    break;
+                }
+            }
+
+            try (WALIterator iter0 = walIterator(g0)) {
+                log.info("Dump WAL " + g0.name());
+                while (iter0.hasNext()) {
+                    IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
+
+                    if (tup.get2() instanceof DataRecord) {
+                        DataRecord rec = (DataRecord) tup.get2();
+
+                        for (DataEntry entry : rec.writeEntries()) {
+                            if (entry.key().equals(testRow.key())) {
+                                log.info("Rec: " + entry + ", key=" + entry.key() + ", val=" +
+                                    (entry.value() == null ? "NULL" : entry.value().value(fakeCtx0, false).toString()));
                             }
                         }
                     }
@@ -365,23 +378,22 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
 
             log.info("Dump WAL " + g1.name());
-            iter0 = walIterator(g1);
+            try (WALIterator iter0 = walIterator(g1)) {
+                while (iter0.hasNext()) {
+                    IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
 
-            while (iter0.hasNext()) {
-                IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
+                    if (tup.get2() instanceof DataRecord) {
+                        DataRecord rec = (DataRecord) tup.get2();
 
-                if (tup.get2() instanceof DataRecord) {
-                    DataRecord rec = (DataRecord) tup.get2();
-
-                    for (DataEntry entry : rec.writeEntries()) {
-                        if (entry.key().equals(testRow.key())) {
-                            log.info("Rec: " + entry + " ,key=" + entry.key() + ", val=" + (entry.value() == null ? "NULL" : entry.value().value(fakeCtx1, false).toString()));
+                        for (DataEntry entry : rec.writeEntries()) {
+                            if (entry.key().equals(testRow.key())) {
+                                log.info("Rec: " + entry + ", key=" + entry.key() + ", val=" +
+                                    (entry.value() == null ? "NULL" : entry.value().value(fakeCtx1, false).toString()));
+                            }
                         }
                     }
                 }
             }
-
-
         }
 
         assertPartitionsSame(res);
