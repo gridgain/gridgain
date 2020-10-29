@@ -293,9 +293,30 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         if (!res.hashConflicts().isEmpty()) {
             Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> first = res.hashConflicts().entrySet().iterator().next();
 
+            List<PartitionHashRecordV2> list = first.getValue();
+
+            IgniteEx g0 = null;
+            IgniteEx g1 = null;
+
+            // Find first hash diff TODO FIXME remove outer
+            outer: for (int i = 0; i < list.size(); i++) {
+                PartitionHashRecordV2 r0 = list.get(i);
+
+                for (int j = i; j < list.size(); j++) {
+                    PartitionHashRecordV2 r1 = list.get(j);
+
+                    if (r0.partitionHash() != r1.partitionHash()) {
+                        g0 = (IgniteEx) G.allGrids().stream().filter(g -> g.configuration().getConsistentId().equals(r0.consistentId())).findFirst().get();
+                        g1 = (IgniteEx) G.allGrids().stream().filter(g -> g.configuration().getConsistentId().equals(r1.consistentId())).findFirst().get();
+
+                        break outer;
+                    }
+                }
+            }
+
             int part = first.getKey().partitionId();
 
-            CacheGroupContext grpCtx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+            CacheGroupContext grpCtx0 = g0.cachex(DEFAULT_CACHE_NAME).context().group();
             CacheQueryObjectValueContext fakeCtx0 = new CacheQueryObjectValueContext(grpCtx0.cacheObjectContext().kernalContext());
             GridDhtLocalPartition locPart0 = grpCtx0.topology().localPartition(part);
             List<CacheDataRow> dataRows0 = new ArrayList<>();
@@ -306,7 +327,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             long ts00 = locPart0.dataStore().tombstonesCount();
             long sz0 = locPart0.fullSize();
 
-            CacheGroupContext grpCtx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context().group();
+            CacheGroupContext grpCtx1 = g1.cachex(DEFAULT_CACHE_NAME).context().group();
             CacheQueryObjectValueContext fakeCtx1 = new CacheQueryObjectValueContext(grpCtx1.cacheObjectContext().kernalContext());
             GridDhtLocalPartition locPart1 = grpCtx1.topology().localPartition(part);
             List<CacheDataRow> dataRows1 = new ArrayList<>();
@@ -320,11 +341,11 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             List<CacheDataRow> diff0 = diff(fakeCtx0, dataRows0, fakeCtx1, dataRows1);
             List<CacheDataRow> diff1 = diff(fakeCtx1, dataRows1, fakeCtx0, dataRows0);
 
-            CacheDataRow testRow = diff0.get(16);
+            CacheDataRow testRow = diff0.isEmpty() ? diff1.get(0) : diff0.get(0);
 
-            WALIterator iter0 = walIterator(grid(0));
+            WALIterator iter0 = walIterator(g0);
 
-            log.info("Dump WAL " + grid(0).name());
+            log.info("Dump WAL " + g0.name());
             while (iter0.hasNext()) {
                 IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
 
@@ -343,8 +364,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 }
             }
 
-            log.info("Dump WAL " + grid(1).name());
-            iter0 = walIterator(grid(1));
+            log.info("Dump WAL " + g1.name());
+            iter0 = walIterator(g1);
 
             while (iter0.hasNext()) {
                 IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();

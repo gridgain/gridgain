@@ -6760,9 +6760,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             // TODO javadoc for tx and atomic update closures (only logical removal).
             // TODO test: if initial entry value was {@code null} and it was read from store.
-            treeOp = cctx.isNear() || oldRow != null && cctx.offheap().isTombstone(oldRow) ?
-                IgniteTree.OperationType.NOOP : // Prevent removal of existing ts.
-                IgniteTree.OperationType.PUT; // Always write tombstone.
+            treeOp = cctx.isNear() ?
+                IgniteTree.OperationType.NOOP : // Avoid offheap tree update for near cache.
+                IgniteTree.OperationType.PUT; // Always write tombstone, overwrite with new version if existed before.
 
             if (treeOp != IgniteTree.OperationType.NOOP) { // If oldRow is tombstone do nothing.
                 GridDhtLocalPartition part = entry.localPartition();

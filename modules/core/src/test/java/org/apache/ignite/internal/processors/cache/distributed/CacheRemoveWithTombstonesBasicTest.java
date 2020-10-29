@@ -787,7 +787,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(TRANSACTIONAL);
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(ATOMIC);
         IgniteCache<Object, Object> cache = crd.createCache(ccfg);
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
