@@ -40,6 +40,7 @@ public class Merge extends CommandWithValues {
     private Column[] keys;
     private Query query;
     private Prepared update;
+    private boolean explicitKeys;
 
     public Merge(Session session) {
         super(session);
@@ -62,6 +63,7 @@ public class Merge extends CommandWithValues {
     }
 
     public void setKeys(Column[] keys) {
+        explicitKeys = true;
         this.keys = keys;
     }
 
@@ -317,6 +319,7 @@ public class Merge extends CommandWithValues {
         setTargetTable(targetTableFilter.getTable());
     }
 
-
-
+    public boolean isExplicitKeys() {
+        return explicitKeys;
+    }
 }
