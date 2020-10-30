@@ -272,8 +272,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /** Failure processor */
     private final FailureProcessor failureProcessor;
 
-    /** */
-    private IgniteConfiguration igCfg;
+    /** Grid configuration. */
+    private final IgniteConfiguration igCfg;
 
     /** Persistence metrics tracker. */
     private DataStorageMetricsImpl metrics;
@@ -380,16 +380,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      * For segments from {@link #walWorkDir} and {@link #walArchiveDir}.
      * If there is a raw and compressed segment, compressed size is getting.
      */
-    private final Map<Long, Long> segmentSize = new ConcurrentHashMap<>();
+    private final Map<Long, Long> segmentSizes = new ConcurrentHashMap<>();
 
-    /** Max size (in bytes) of WAL archive directory. */
-    private final long maxWalArchiveSize;
-
-    /**
-     * Current archive size in bytes, if segment is compressed then its size = file.size + compressedData.size.
-     * This is necessary so that we can decompress it at any time.
-     */
-    private final AtomicLong walArchiveSize = new AtomicLong();
+    /** Holder of WAL archive size information. */
+    private final WalArchiveSize walArchiveSize;
 
     /**
      * @param ctx Kernal context.
@@ -425,7 +419,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
 
-        maxWalArchiveSize = dsCfg.getMaxWalArchiveSize();
+        walArchiveSize = new WalArchiveSize(dsCfg);
     }
 
     /**
@@ -498,8 +492,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             if (isArchiverEnabled())
                 archiver = new FileArchiver(segmentAware, log);
-            else
-                archiver = null;
 
             segmentRouter = new SegmentRouter(walWorkDir, walArchiveDir, segmentAware, dsCfg);
 
@@ -1076,8 +1068,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 else {
                     deleted++;
 
-                    segmentSize.remove(desc.idx());
-                    walArchiveSize.addAndGet(-desc.fullSize());
+                    segmentSizes.remove(desc.idx());
+                    walArchiveSize.remove(desc.idx());
                 }
 
                 // Bump up the oldest archive segment index.
@@ -1288,6 +1280,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
 
             FileWriteHandle next;
+            // TODO: 29.10.2020 kirill: а что если просто тут взять lock? не будет ли он конфликтовать с FileArchiver?
+            // TODO: 29.10.2020 хотя тут можно брать хитрый lock, мол если inf - не берем, если архивер есть, то он возьмет иначе мы возьмем
+            // TODO: 29.10.2020 но вот конечно не хочется конкурировать с компрессором
             try {
                 next = initNextWriteHandle(cur);
             }
@@ -1389,11 +1384,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     FileDescriptor fd = new FileDescriptor(f);
 
                     if (fd.isCompressed())
-                        segmentSize.put(fd.idx(), fd.file().length());
+                        segmentSizes.put(fd.idx(), fd.file().length());
                     else
-                        segmentSize.putIfAbsent(fd.idx(), fd.file().length());
-
-                    walArchiveSize.addAndGet(fd.fullSize());
+                        segmentSizes.putIfAbsent(fd.idx(), fd.file().length());
                 }
 
                 // If walArchiveDir != walWorkDir, then need to get size of all segments that were not in archive.
@@ -1401,7 +1394,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 // Size of the 8th segment will be set in #resumeLogging.
                 if (archiver0 != null) {
                     for (long i = absIdx - (absIdx % dsCfg.getWalSegments()); i < absIdx; i++)
-                        segmentSize.putIfAbsent(i, maxWalSegmentSize);
+                        segmentSizes.putIfAbsent(i, maxWalSegmentSize);
                 }
 
                 return hnd;
@@ -1506,20 +1499,22 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      * @throws StorageException If failed.
      */
     private void checkOrPrepareFiles() throws StorageException {
-        // Clean temp files.
-        {
-            File[] tmpFiles = walWorkDir.listFiles(WAL_SEGMENT_TEMP_FILE_FILTER);
+        // At the beginning, we delete all temporary files.
+        Set<File> tmpFiles = new HashSet<>();
 
-            if (!F.isEmpty(tmpFiles)) {
-                for (File tmp : tmpFiles) {
-                    if (!tmp.delete()) {
-                        throw new StorageException("Failed to delete previously created temp file " +
-                            "(make sure Ignite process has enough rights): " + tmp.getAbsolutePath());
-                    }
-                }
+        for (File walDir : new HashSet<>(F.asList(walWorkDir, walArchiveDir))) {
+            tmpFiles.addAll(F.asList(walDir.listFiles(WAL_SEGMENT_TEMP_FILE_FILTER)));
+            tmpFiles.addAll(F.asList(walDir.listFiles(WAL_SEGMENT_TEMP_FILE_COMPACTED_FILTER)));
+        }
+
+        for (File tmpFile : tmpFiles) {
+            if (tmpFile.exists() && !tmpFile.delete()) {
+                throw new StorageException("Failed to delete previously created temp file " +
+                    "(make sure Ignite process has enough rights): " + tmpFile.getAbsolutePath());
             }
         }
 
+        // Checking correctness of walWorkDir.
         File[] allFiles = walWorkDir.listFiles(WAL_SEGMENT_FILE_FILTER);
 
         if (isArchiverEnabled() && !F.isEmpty(allFiles) && allFiles.length > dsCfg.getWalSegments()) {
@@ -1528,13 +1523,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
 
         // Allocate the first segment synchronously. All other segments will be allocated by archiver in background.
-        if (F.isEmpty(allFiles)) {
-            File first = new File(walWorkDir, fileName(0));
-
-            createFile(first);
-        }
+        if (F.isEmpty(allFiles))
+            createFile(new File(walWorkDir, fileName(0)));
         else if (isArchiverEnabled())
             checkFiles(0, false, null, null);
+
+        // Counting and checking size of archive.
+        F.asList(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER)).stream()
+            .map(FileDescriptor::new).forEach(fd -> walArchiveSize.add(fd.idx(), fd.file().length()));
+
+        if (walArchiveSize.exceedMaxArchiveSize()) {
+            throw new StorageException("Exceeding maximum WAL archive size [" +
+                "cur=" + U.humanReadableByteCount(walArchiveSize.currentSize()) +
+                ", max=" + U.humanReadableByteCount(walArchiveSize.maxSize()) + ']');
+        }
     }
 
     /**
@@ -1617,8 +1619,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         FileArchiver archiver0 = archiver;
 
         if (archiver0 == null) {
-            // TODO: 28.10.2020 kirill: тут есть проблема, что по идее новый wal важнее компактизации, тут надо подумать как быть, как нам гарантировать запись именно сейчас а компактизация подождет.
-            ensureFreeSpaceInWalArchive(maxWalArchiveSize);
+            // TODO: 28.10.2020 kirill: проблема - след. строка будет вызывать компактизацию, которой тоже нажно место и он сможет ее скушать, надо об этом подумать!
+            // TODO: 30.10.2020 kirill: вот тут надо будет сделать что-то
 
             segmentAware.setLastArchivedAbsoluteIndex(curIdx);
 
@@ -2047,7 +2049,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 long offs = switchSegmentRecordOffset.get((int)segIdx);
 
                 // TODO: 28.10.2020 kirill: тут надо также подумать на счет проблемы компактизации
-                ensureFreeSpaceInWalArchive(offs > 0 ? offs : origFile.length());
+                // TODO: 30.10.2020 kirill: вот тут надо что-то сделать
 
                 if (offs > 0) {
                     switchSegmentRecordOffset.set((int)segIdx, 0);
@@ -2070,8 +2072,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     }
                 }
 
-                segmentSize.put(absIdx, dstFile.length());
-                walArchiveSize.addAndGet(dstFile.length());
+                segmentSizes.put(absIdx, dstFile.length());
+                walArchiveSize.add(absIdx, dstFile.length());
             }
             catch (IOException e) {
                 throw new StorageException("Failed to archive WAL segment [" +
@@ -2152,15 +2154,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         /** */
         private void init() {
-            File[] toDel = walArchiveDir.listFiles(WAL_SEGMENT_TEMP_FILE_COMPACTED_FILTER);
-
-            for (File f : toDel) {
-                if (isCancelled())
-                    return;
-
-                f.delete();
-            }
-
             for (int i = 1; i < calculateThreadCount(); i++) {
                 FileCompressorWorker worker = new FileCompressorWorker(i, log);
 
@@ -2377,8 +2370,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 zos.write(heapBuf.array());
             }
 
-            segmentSize.put(idx, zip.length());
-            walArchiveSize.addAndGet(new FileDescriptor(zip).fullSize());
+            segmentSizes.put(idx, zip.length());
+            walArchiveSize.add(idx, new FileDescriptor(zip).fullSize());
         }
 
         /**
@@ -3110,7 +3103,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public long segmentSize(long idx) {
-        return segmentSize.getOrDefault(idx, 0L);
+        return segmentSizes.getOrDefault(idx, 0L);
     }
 
     /** {@inheritDoc} */
@@ -3133,27 +3126,13 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         else
             res = CURR_HND_UPD.compareAndSet(this, c, n);
 
-        segmentSize.put(n.getSegmentId(), maxWalSegmentSize);
+        segmentSizes.put(n.getSegmentId(), maxWalSegmentSize);
 
         // If there is no archiver, then walArchiveDir == walWorkDir and walArchiveSize will grow only here.
         if (archiver == null)
             walArchiveSize.addAndGet(maxWalSegmentSize);
 
         return res;
-    }
-
-    /**
-     * Checking that WAL archive has required space and if it is not, then try to free it.
-     *
-     * @param size Required size in bytes.
-     */
-    private void ensureFreeSpaceInWalArchive(long size) {
-        if (maxWalArchiveSize == UNLIMITED_WAL_ARCHIVE)
-            return;
-
-        while ((maxWalArchiveSize - walArchiveSize.get()) < size) {
-            // TODO: 28.10.2020 kirill: Нужно чистить walArchive и возможно решать проблему конкуретной записи...
-        }
     }
 
     /**
