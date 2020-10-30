@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -528,6 +529,9 @@ public class OffheapReadWriteLock {
      * @param tag Tag.
      */
     private boolean checkTag(long state, int tag) {
+        if (tag == PageIdAllocator.FLAG_DATA || tag == PageIdAllocator.FLAG_AUX)
+            return tag(state) == PageIdAllocator.FLAG_DATA || tag(state) == PageIdAllocator.FLAG_AUX;
+
         // If passed in tag is negative, lock regardless of the state.
         return tag < 0 || tag(state) == tag;
     }
