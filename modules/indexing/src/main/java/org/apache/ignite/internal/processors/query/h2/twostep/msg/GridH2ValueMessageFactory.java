@@ -26,6 +26,7 @@ import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
 import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueInterval;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -173,6 +174,21 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
 
             case Value.GEOMETRY:
                 return new GridH2Geometry(v);
+
+            case Value.INTERVAL_YEAR:
+            case Value.INTERVAL_MONTH:
+            case Value.INTERVAL_DAY:
+            case Value.INTERVAL_HOUR:
+            case Value.INTERVAL_MINUTE:
+            case Value.INTERVAL_SECOND:
+            case Value.INTERVAL_YEAR_TO_MONTH:
+            case Value.INTERVAL_DAY_TO_HOUR:
+            case Value.INTERVAL_DAY_TO_MINUTE:
+            case Value.INTERVAL_DAY_TO_SECOND:
+            case Value.INTERVAL_HOUR_TO_MINUTE:
+            case Value.INTERVAL_HOUR_TO_SECOND:
+            case Value.INTERVAL_MINUTE_TO_SECOND:
+                return new GridH2Long(v.convertTo(Value.LONG));
 
             default:
                 throw new IllegalStateException("Unsupported H2 type: " + v.getType());
