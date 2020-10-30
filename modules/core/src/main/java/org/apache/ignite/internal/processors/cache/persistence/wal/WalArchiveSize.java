@@ -69,12 +69,13 @@ public class WalArchiveSize {
     }
 
     /**
-     * Check that current archive size does not exceed maximum.
+     * Checking that there is necessary space in WAL archive.
      *
-     * @return {@code True} if current archive size is greater than maximum.
+     * @param v Necessary place in bytes.
+     * @return {@code True} if there is necessary space.
      */
-    public boolean exceedMaxArchiveSize() {
-        return maxSize != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE && currSize.get() > maxSize;
+    public boolean ensureFreeSpace(long v) {
+        return unlimited() || (maxSize - currSize.get() >= v);
     }
 
     /**
@@ -93,5 +94,14 @@ public class WalArchiveSize {
      */
     public long maxSize() {
         return maxSize;
+    }
+
+    /**
+     * Return {@code true} if archive is unlimited.
+     *
+     * @return {@code True} if archive is unlimited.
+     */
+    private boolean unlimited() {
+        return maxSize == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
     }
 }

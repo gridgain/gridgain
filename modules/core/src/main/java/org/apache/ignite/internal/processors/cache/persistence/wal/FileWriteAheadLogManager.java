@@ -1280,9 +1280,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
 
             FileWriteHandle next;
-            // TODO: 29.10.2020 kirill: а что если просто тут взять lock? не будет ли он конфликтовать с FileArchiver?
-            // TODO: 29.10.2020 хотя тут можно брать хитрый lock, мол если inf - не берем, если архивер есть, то он возьмет иначе мы возьмем
-            // TODO: 29.10.2020 но вот конечно не хочется конкурировать с компрессором
+            // TODO: 30.10.2020 kirill: тут надо подумать на счет расчета размера.
             try {
                 next = initNextWriteHandle(cur);
             }
@@ -1302,9 +1300,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             if (next.getSegmentId() - lashCheckpointFileIdx() >= maxSegCountWithoutCheckpoint)
                 cctx.database().forceCheckpoint("too big size of WAL without checkpoint");
 
-            boolean updated = updateCurrentHandle(next, hnd);
-            // Made in separate lines so as not to be influenced by -ea.
-            assert updated : "Concurrent updates on rollover are not allowed";
+            assert updateCurrentHandle(next, hnd) : "Concurrent updates on rollover are not allowed";
 
             if (walAutoArchiveAfterInactivity > 0)
                 lastRecordLoggedMs.set(0);
@@ -1380,14 +1376,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     segmentAware.setLastArchivedAbsoluteIndex(absIdx - 1);
 
                 // Getting segment sizes.
-                for (File f : walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER)) {
-                    FileDescriptor fd = new FileDescriptor(f);
-
-                    if (fd.isCompressed())
-                        segmentSizes.put(fd.idx(), fd.file().length());
-                    else
-                        segmentSizes.putIfAbsent(fd.idx(), fd.file().length());
-                }
+                F.asList(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER)).stream()
+                    .map(FileDescriptor::new)
+                    .forEach(fd -> {
+                        if (fd.isCompressed())
+                            segmentSizes.put(fd.idx(), fd.file().length());
+                        else
+                            segmentSizes.putIfAbsent(fd.idx(), fd.file().length());
+                    });
 
                 // If walArchiveDir != walWorkDir, then need to get size of all segments that were not in archive.
                 // For example, absIdx == 8, and there are 0-4 segments in archive, then we need to get sizes of 5-7 segments.
@@ -1532,7 +1528,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         F.asList(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER)).stream()
             .map(FileDescriptor::new).forEach(fd -> walArchiveSize.add(fd.idx(), fd.file().length()));
 
-        if (walArchiveSize.exceedMaxArchiveSize()) {
+        if (walArchiveSize.ensureFreeSpace(0)) {
             throw new StorageException("Exceeding maximum WAL archive size [" +
                 "cur=" + U.humanReadableByteCount(walArchiveSize.currentSize()) +
                 ", max=" + U.humanReadableByteCount(walArchiveSize.maxSize()) + ']');
@@ -1619,9 +1615,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         FileArchiver archiver0 = archiver;
 
         if (archiver0 == null) {
-            // TODO: 28.10.2020 kirill: проблема - след. строка будет вызывать компактизацию, которой тоже нажно место и он сможет ее скушать, надо об этом подумать!
-            // TODO: 30.10.2020 kirill: вот тут надо будет сделать что-то
-
+            // TODO: 30.10.2020 kirill: вот тут надо с размерами подумать
             segmentAware.setLastArchivedAbsoluteIndex(curIdx);
 
             return new File(walWorkDir, fileName(curIdx + 1));
@@ -1787,6 +1781,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * Example: minimum(0, 1, 10, 11, 20, 21, 22) should be 20
          *
          * @return The absolute indices of min and max archived files.
+         * @throws IgniteCheckedException If failed.
          */
         private IgniteBiTuple<Long, Long> scanMinMaxArchiveIndices() throws IgniteCheckedException {
             TreeMap<Long, FileDescriptor> archiveIndices = new TreeMap<>();
@@ -1840,7 +1835,16 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 FileDescriptor last = workIndices.lastEntry().getValue();
 
                 if (first.idx() != last.idx()) {
-                    archiveSegment(first.idx());
+                    // Checking is needed because cpMgr is started later.
+                    if (!walArchiveSize.ensureFreeSpace(first.file().length())) {
+                        throw new StorageException("Exceeding maximum WAL archive size [" +
+                            "cur=" + U.humanReadableByteCount(walArchiveSize.currentSize()) +
+                            ", max=" + U.humanReadableByteCount(walArchiveSize.maxSize()) +
+                            ", segmentIdx=" + first.idx() +
+                            ", segmentSize=" + U.humanReadableByteCount(first.file().length()) + ']');
+                    }
+                    else
+                        archiveSegment(first.idx());
 
                     // Use copied segment as min archived segment.
                     return F.t(first.idx(), first.idx());
@@ -2048,9 +2052,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                 long offs = switchSegmentRecordOffset.get((int)segIdx);
 
-                // TODO: 28.10.2020 kirill: тут надо также подумать на счет проблемы компактизации
-                // TODO: 30.10.2020 kirill: вот тут надо что-то сделать
-
+                // TODO: 30.10.2020 kirill: вот тут нужно делать проверку, но повнимательнее
                 if (offs > 0) {
                     switchSegmentRecordOffset.set((int)segIdx, 0);
 
@@ -2371,7 +2373,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
 
             segmentSizes.put(idx, zip.length());
-            walArchiveSize.add(idx, new FileDescriptor(zip).fullSize());
+            walArchiveSize.add(idx, zip.length());
         }
 
         /**
@@ -2425,7 +2427,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                                 ", exists: " + desc.file.exists());
                         }
                         else
-                            walArchiveSize.addAndGet(-desc.fullSize());
+                            walArchiveSize.add(desc.idx(), -desc.file().length());
                     }
                 }
             }
@@ -2437,13 +2439,13 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      */
     private class FileDecompressor extends GridWorker {
         /** Decompression futures. */
-        private Map<Long, GridFutureAdapter<Void>> decompressionFutures = new HashMap<>();
+        private final Map<Long, GridFutureAdapter<Void>> decompressionFutures = new HashMap<>();
 
         /** Segments queue. */
         private final PriorityBlockingQueue<Long> segmentsQueue = new PriorityBlockingQueue<>();
 
         /** Byte array for draining data. */
-        private byte[] arr = new byte[BUF_SIZE];
+        private final byte[] arr = new byte[BUF_SIZE];
 
         /**
          * @param log Logger.
@@ -2479,6 +2481,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         File zip = new File(walArchiveDir, segmentFileName + ZIP_SUFFIX);
                         File unzipTmp = new File(walArchiveDir, segmentFileName + TMP_SUFFIX);
                         File unzip = new File(walArchiveDir, segmentFileName);
+
+                        // TODO: 30.10.2020 kirill: тут надо будет запросить нужный нам размер!
+                        // TODO: 30.10.2020 kirill: вот тут надо будет подумать на счет временных файлов!
+                        // TODO: 30.10.2020 krill: вот тут еще надо будет добавдять размер сырых данных! 
 
                         try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zip)));
                              FileIO io = ioFactory.create(unzipTmp)) {
@@ -3130,7 +3136,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         // If there is no archiver, then walArchiveDir == walWorkDir and walArchiveSize will grow only here.
         if (archiver == null)
-            walArchiveSize.addAndGet(maxWalSegmentSize);
+            walArchiveSize.add(n.getSegmentId(), maxWalSegmentSize);
 
         return res;
     }
