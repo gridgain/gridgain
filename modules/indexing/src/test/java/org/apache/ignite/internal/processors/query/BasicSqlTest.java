@@ -16,8 +16,10 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
@@ -131,16 +133,20 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testSysdate() {
-        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT)");
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS TIMESTAMP)");
 
         int rows = 100;
         for (int i = 0; i < rows; ++i) {
-            sql("INSERT INTO TEST (ID, VAL_INT) VALUES " +
-                    "(?, ?)",
-                i, i);
+            sql("INSERT INTO TEST VALUES " +
+                    "(?, ?, ?)",
+                i, i, new Timestamp(ThreadLocalRandom.current().nextLong()));
         }
 
         List<List<?>> res = sql("SELECT ID, SYSDATE, SYSDATE() FROM TEST").getAll();
+
+        assertEquals(rows, res.size());
+
+        res = sql("SELECT VAL_TS - SYSDATE() FROM TEST").getAll();
 
         assertEquals(rows, res.size());
     }
