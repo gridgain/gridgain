@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
@@ -205,7 +206,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
 
             assert sql.contains(idxPlaceHolder);
 
-            if (idx != null && idx.length > 0) {
+            if (!F.isEmpty(idx)) {
                 String idxStr = "USE INDEX (" + String.join(",", idx) + ")";
                 sql = sql.replaceAll(idxPlaceHolder, idxStr);
             } else

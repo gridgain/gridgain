@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
@@ -30,11 +29,11 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
-import org.apache.ignite.internal.processors.query.IgniteStatisticsRepositoryImpl;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.apache.ignite.internal.util.typedef.F;
 import org.gridgain.internal.h2.table.Column;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
@@ -82,9 +81,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @return column with specified names.
      */
     private Column[] filterColumns(Column[] columns, String... colNames) {
-        if (colNames == null || colNames.length == 0) {
+        if (F.isEmpty(colNames))
             return columns;
-        }
+
         List<Column> resultList = new ArrayList<>(colNames.length);
 
         for (String colName : colNames)
@@ -102,14 +101,14 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             throws IgniteCheckedException {
         GridH2Table tbl = schemaMgr.dataTable(schemaName, objName);
         if (tbl == null)
-            throw new IgniteAuthenticationException(String.format("Can't find table %s.%s", schemaName, objName));
+            throw new IllegalArgumentException(String.format("Can't find table %s.%s", schemaName, objName));
 
         if (log.isDebugEnabled())
             log.debug(String.format("Starting statistics collection by %s.%s object", schemaName, objName));
 
         Column[] selectedColumns;
         boolean fullStat;
-        if (colNames == null || colNames.length == 0) {
+        if (F.isEmpty(colNames)) {
             fullStat = true;
             selectedColumns = tbl.getColumns();
         } else {
@@ -171,8 +170,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                         csc -> csc.col().getName(), csc -> csc.finish()
                 ));
 
-                tblPartStats.add(new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt, locPart.updateCounter(),
-                        colStats));
+                tblPartStats.add(new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt,
+                        locPart.updateCounter(), colStats));
             }
             finally {
                 if (reserved)
@@ -228,5 +227,4 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         return tblStats;
     }
-
 }

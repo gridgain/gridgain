@@ -13,17 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query;
+package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
-import org.apache.ignite.internal.processors.query.stat.ColumnStatistics;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepository;
-import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatisticsImpl;
-import org.apache.ignite.internal.processors.query.stat.ObjectStatisticsImpl;
-import org.apache.ignite.internal.processors.query.stat.StatsKey;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -40,7 +34,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     /** */
     private final GridKernalContext ctx;
 
-    /** Table->Partition->Partition Statistics map, populated only on server nodes without persistence enabled.  */
+    /** Table->Partition->Partition Statistics map, populated only on server nodes without persistence enabled. */
     private final Map<StatsKey, Map<Integer, ObjectPartitionStatisticsImpl>> partsStats;
 
     /** Local (for current node) object statistics. */
