@@ -867,6 +867,28 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(tmp.get(2).writeEntries().get(0).writeVersion(), dataRows0.get(0).version());
     }
 
+//    @Test
+//    public void testUnswapTombstone() throws Exception {
+//        IgniteEx crd = startGrid(0);
+//        crd.cluster().state(ClusterState.ACTIVE);
+//
+//        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(ATOMIC);
+//        IgniteCache<Object, Object> cache = crd.createCache(ccfg);
+//        GridCacheContext<Object, Object> ctx = grid(0).cachex(DEFAULT_CACHE_NAME).context();
+//        CacheGroupContext grpCtx = ctx.group();
+//
+//        int key = 0;
+//        cache.remove(key);
+//        validateCache(grpCtx, key, 1, 0);
+//
+//        assertNull(cache.get(key));
+//
+//        GridCacheEntryEx entryEx = ctx.cache().entryEx(key);
+//        entryEx.unswap();
+//
+//        assertTrue(entryEx.toString(), entryEx.version().order() != 0);
+//    }
+
     @Test
     public void testNoopUpdatesAndHistoricalRebalance() {
         // TODO
