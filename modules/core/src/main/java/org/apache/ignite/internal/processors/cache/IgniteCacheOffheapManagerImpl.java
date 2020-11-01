@@ -656,6 +656,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         CacheDataRow row = dataStore != null ? dataStore.find(cctx, key) : null;
 
+        // TODO call seems expensive, get rid.
+        if (isTombstone(row))
+            row = null;
+
         assert row == null || row.value() != null : row;
 
         return row;
@@ -2921,11 +2925,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 row = clo.row();
             }
-            else {
+            else
                 row = dataTree.findOne(new SearchRow(cacheId, key), CacheDataRowAdapter.RowData.NO_KEY);
-
-                row = checkTombstone(row);
-            }
 
             afterRowFound(row, key);
 

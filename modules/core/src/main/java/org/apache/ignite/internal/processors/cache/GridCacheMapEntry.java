@@ -565,6 +565,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (read != null) {
                     CacheObject val = read.value();
 
+                    // TODO FIXME remove.
+                    if (cctx.offheap().isTombstone(read))
+                        val = null;
+
                     update(val, read.expireTime(), 0, read.version(), false);
 
                     // TODO use checkExpired ??/
