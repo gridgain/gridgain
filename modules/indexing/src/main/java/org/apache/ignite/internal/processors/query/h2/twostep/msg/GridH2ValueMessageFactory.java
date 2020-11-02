@@ -26,7 +26,6 @@ import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
 import org.gridgain.internal.h2.value.Value;
-import org.gridgain.internal.h2.value.ValueInterval;
 import org.jetbrains.annotations.Nullable;
 
 /**
