@@ -142,13 +142,23 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
                 i, i, new Timestamp(ThreadLocalRandom.current().nextLong()));
         }
 
-        List<List<?>> res = sql("SELECT ID, SYSDATE, SYSDATE() FROM TEST").getAll();
+        List<List<?>> res0 = sql("SELECT ID, SYSDATE, SYSDATE() FROM TEST").getAll();
 
-        assertEquals(rows, res.size());
+        assertEquals(rows, res0.size());
 
-        res = sql("SELECT VAL_TS - SYSDATE() FROM TEST").getAll();
+        List<List<?>> res1 = sql("SELECT VAL_TS - SYSDATE() FROM TEST").getAll();
 
-        assertEquals(rows, res.size());
+        assertEquals(rows, res1.size());
+
+        res1.forEach(r -> assertTrue("Invalid result type: " +
+            r.get(0) + ",\n at results: " + res1, r.get(0) instanceof Long));
+
+        List<List<?>> res2 = execute(new SqlFieldsQuery("SELECT VAL_TS - SYSDATE() FROM TEST").setLocal(true)).getAll();
+
+        assertTrue(!res2.isEmpty());
+
+        res2.forEach(r -> assertTrue("Invalid result type: " +
+            r.get(0) + ",\n at results: " + res2, r.get(0) instanceof Long));
     }
 
     /**
