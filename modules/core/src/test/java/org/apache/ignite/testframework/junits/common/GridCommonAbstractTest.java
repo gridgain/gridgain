@@ -2849,7 +2849,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      *
      * @param cache Cache.
      */
-    protected void clearTombstones(IgniteCache<Object, Object> cache) throws IgniteCheckedException {
+    protected void clearTombstones(IgniteCache<?, ?> cache) throws IgniteCheckedException {
         if (cache.getConfiguration(CacheConfiguration.class).getCacheMode() == CacheMode.LOCAL)
             return;
 
