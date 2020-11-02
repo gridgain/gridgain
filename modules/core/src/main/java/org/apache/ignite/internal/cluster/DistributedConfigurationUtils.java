@@ -56,8 +56,6 @@ public final class DistributedConfigurationUtils {
             catch (IgniteCheckedException e) {
                 log.error("Cannot initiate setting default value of '" + property.getName() + '\'', e);
             }
-        } else {
-            log.info("PROPERTY: " + property.getName() + "IS NOT NULL, value: " + property.get());
         }
     }
 

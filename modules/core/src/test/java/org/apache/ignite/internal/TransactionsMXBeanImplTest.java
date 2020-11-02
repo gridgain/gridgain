@@ -235,6 +235,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         //check new value in client nodes
         for (List<CountDownLatch> list : updateLatches.values()) {
             CountDownLatch countDownLatch = list.get(0);
+
             countDownLatch.await(100, TimeUnit.MILLISECONDS);
         }
 
@@ -249,6 +250,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         //check new value on client nodes
         for (List<CountDownLatch> list : updateLatches.values()) {
             CountDownLatch countDownLatch = list.get(1);
+
             countDownLatch.await(100, TimeUnit.MILLISECONDS);
         }
     }
@@ -271,6 +273,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         checkPropertyValueViaTxMxBean(allNodes, newTimeout, TransactionsMXBean::getLongOperationsDumpTimeout);
 
         stopAllGrids();
+
         allNodes = startGridAndActivate(2);
 
         //check that new value after restart
@@ -294,7 +297,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, value = "false")
-    public void testChangeTxOwnerDumpRequestsAllowed() throws Exception{
+    public void testChangeTxOwnerDumpRequestsAllowed() throws Exception {
         checkPropertyChangingViaTxMxBean(false, true, TransactionsMXBean::getTxOwnerDumpRequestsAllowed,
             TransactionsMXBean::setTxOwnerDumpRequestsAllowed);
     }
@@ -306,7 +309,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, value = "0")
-    public void testChangeLongTransactionTimeDumpThreshold() throws Exception{
+    public void testChangeLongTransactionTimeDumpThreshold() throws Exception {
         checkPropertyChangingViaTxMxBean(0L, 999L, TransactionsMXBean::getLongTransactionTimeDumpThreshold,
             TransactionsMXBean::setLongTransactionTimeDumpThreshold);
     }
@@ -373,6 +376,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         checkPropertyValueViaTxMxBean(allNodes, newVal, getter);
 
         stopAllGrids();
+
         allNodes = startGridAndActivate(2);
 
         //check that new value after restart
@@ -395,8 +399,9 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         Map<IgniteEx, TransactionsMXBean> nodes = new HashMap<>();
         IgniteEx ignite = null;
 
-        for (int i = 0; i < cnt; i++){
+        for (int i = 0; i < cnt; i++) {
             ignite = startGrid(i);
+
             nodes.put(ignite, txMXBean(i));
         }
 

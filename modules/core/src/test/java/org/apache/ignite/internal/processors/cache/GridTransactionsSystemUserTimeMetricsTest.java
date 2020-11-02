@@ -244,6 +244,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
      * @param coefficient Transaction time dump samples coefficient.
      * @param limit Transaction time dump samples per second limit.
      * @return Transaction MX bean.
+     * @throws InterruptedException If the current thread is interrupted while waiting.
      */
     private TransactionsMXBean applyJmxParameters(Long threshold, Double coefficient, Integer limit) throws InterruptedException {
         TransactionsMXBean tmMxBean = getMxBean(
@@ -263,7 +264,10 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
      * @param threshold Long transaction time dump threshold.
      * @param coefficient Transaction time dump samples coefficient.
      * @param limit Transaction time dump samples per second limit.
+     * @param tmMxBean Instance {@link TransactionsMXBean}.
+     * @param ignite Node.
      * @return Transaction MX bean.
+     * @throws InterruptedException If the current thread is interrupted while waiting.
      */
     private TransactionsMXBean applyJmxParameters(Long threshold, Double coefficient, Integer limit,
                                                   TransactionsMXBean tmMxBean, IgniteEx ignite
@@ -305,7 +309,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
             tmMxBean.setTransactionTimeDumpSamplesPerSecondLimit(limit);
         }
 
-        if(threshold != null)
+        if (threshold != null)
             thresholdLatch.await(300, TimeUnit.MILLISECONDS);
 
         if (coefficient != null)
