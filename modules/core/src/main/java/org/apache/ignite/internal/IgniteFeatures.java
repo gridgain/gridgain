@@ -186,7 +186,10 @@ public enum IgniteFeatures {
     MASTER_KEY_CHANGE(48),
 
     /** Incremental DR. */
-    INCREMENTAL_DR(49);
+    INCREMENTAL_DR(49),
+
+    /** Point-in-time distributed property. */
+    POINT_IN_TIME_DISTRIBUTED_PROPERTY(50);
 
     /**
      * Unique feature identifier.
