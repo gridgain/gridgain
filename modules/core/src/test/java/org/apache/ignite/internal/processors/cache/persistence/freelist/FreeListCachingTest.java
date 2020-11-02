@@ -163,8 +163,8 @@ public class FreeListCachingTest extends GridCommonAbstractTest {
                 if (!list.isReuseBucket(i)) {
                     notReuseSize += bucketsSize.get(i);
 
-                    assertNull("Expected null bucket [partId=" + cacheData.partId() + ", i=" + i + ", bucket=" +
-                        bucket + ']', bucket);
+                    assertTrue("Expected empty bucket [partId=" + cacheData.partId() + ", i=" + i + ", bucket=" +
+                        bucket + ']', bucket == null || bucket[0].empty);
 
                     PagesList.PagesCache pagesCache = list.getBucketCache(i, false);
 
