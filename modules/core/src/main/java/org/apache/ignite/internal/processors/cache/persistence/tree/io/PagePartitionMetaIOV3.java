@@ -94,7 +94,7 @@ public class PagePartitionMetaIOV3 extends PagePartitionMetaIOV2 {
     @Override protected void printFields(long pageAddr, GridStringBuilder sb) {
         super.printFields(pageAddr, sb);
 
-        sb.a(",\n\tencryptedPageIndex=").a(getEncryptedPageIndex(pageAddr));
-        sb.a(",\n\tencryptedPageCount=").a(getEncryptedPageCount(pageAddr));
+        sb.a(",\n\tencryptedPageIndex=").a(getEncryptedPageIndex(pageAddr))
+            .a(",\n\tencryptedPageCount=").a(getEncryptedPageCount(pageAddr));
     }
 }

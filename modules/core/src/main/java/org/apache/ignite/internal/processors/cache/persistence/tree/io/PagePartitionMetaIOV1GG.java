@@ -24,15 +24,23 @@ import org.apache.ignite.internal.util.GridStringBuilder;
  * Add UpdateLogTree (update counter -> row link) for each partition.
  */
 public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements PagePartitionMetaIOGG {
+    /**
+     * Registered version.
+     * This parameter depends of that the version registered in {@see VERSIONS}.
+     */
+    private static final int REGISTERED_VERSION = Short.toUnsignedInt((short)-1);
 
-    /** */
+    /** Default field offset. */
+    public static final int DFT_OFFSET = GAPS_LINK + 8;
+
+    /** Filed offset. */
     private final int updateLogTreeRootOff;
 
     /**
-     * @param ver Version.
+     * Default constructor.
      */
-    public PagePartitionMetaIOV1GG(int ver) {
-        this(ver, GAPS_LINK + 8);
+    public PagePartitionMetaIOV1GG() {
+        this(REGISTERED_VERSION, DFT_OFFSET);
     }
 
     /**
@@ -47,13 +55,9 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements Pa
 
     /** {@inheritDoc} */
     @Override public void initNewPage(long pageAddr, long pageId, int pageSize) {
-        super.initNewPage(pageAddr, pageId, pageSize);
+        if (REGISTERED_VERSION == getVersion())
+            super.initNewPage(pageAddr, pageId, pageSize);
 
-        initSpecificFields(pageAddr, pageId, pageSize);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void initSpecificFields(long pageAddr, long pageId, int pageSize) {
         setUpdateTreeRoot(pageAddr, 0L);
     }
 
@@ -69,13 +73,9 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements Pa
 
     /** {@inheritDoc} */
     @Override protected void printFields(long pageAddr, GridStringBuilder sb) {
-        super.printFields(pageAddr, sb);
+        if (REGISTERED_VERSION == getVersion())
+            super.printFields(pageAddr, sb);
 
-        specificFields(pageAddr, sb);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void specificFields(long pageAddr, GridStringBuilder sb) {
         sb.a(",\n\tupdLogRootPageId=").a(getUpdateTreeRoot(pageAddr));
     }
 
@@ -85,7 +85,14 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements Pa
 
         int from = PageIO.getVersion(pageAddr);
 
-        assert from < 3 : "Unexpected page IO version [ver=" + from + ']';
+        if (from == REGISTERED_VERSION) {
+            int shift = updateLogTreeRootOff - DFT_OFFSET;
+
+            assert shift >= 0 : "Negative shift unexpected: " + shift;
+
+            if (shift > 0)
+                setUpdateTreeRoot(pageAddr, getUpdateTreeRoot(pageAddr - shift));
+        }
 
         PageIO.setVersion(pageAddr, getVersion());
 
@@ -95,6 +102,7 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements Pa
             setGapsLink(pageAddr, 0);
         }
 
-        setUpdateTreeRoot(pageAddr, 0);
+        if (from < getVersion())
+            setUpdateTreeRoot(pageAddr, 0);
     }
 }

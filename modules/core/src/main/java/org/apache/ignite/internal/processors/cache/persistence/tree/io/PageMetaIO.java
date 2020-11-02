@@ -247,7 +247,8 @@ public class PageMetaIO extends PageIO {
 
     /** {@inheritDoc} */
     @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
-        sb.a("PageMeta[\n\ttreeRoot=").a(getReuseListRoot(addr))
+        sb.a("PageMeta[\n\ttreeRoot=").a(getTreeRoot(addr))
+            .a(",\n\treuseListRoot=").a(getReuseListRoot(addr))
             .a(",\n\tlastSuccessfulFullSnapshotId=").a(getLastSuccessfulFullSnapshotId(addr))
             .a(",\n\tlastSuccessfulSnapshotId=").a(getLastSuccessfulSnapshotId(addr))
             .a(",\n\tnextSnapshotTag=").a(getNextSnapshotTag(addr))

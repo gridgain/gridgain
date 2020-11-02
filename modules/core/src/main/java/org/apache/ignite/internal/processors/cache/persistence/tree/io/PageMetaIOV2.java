@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
 import org.apache.ignite.internal.pagemem.PageUtils;
+import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
  * IO for index partition metadata page.
@@ -87,6 +88,21 @@ public class PageMetaIOV2 extends PageMetaIO {
 
         setEncryptedPageCount(pageAddr, 0);
         setEncryptedPageIndex(pageAddr, 0);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) {
+        sb.a("PageMeta[\n\ttreeRoot=").a(getTreeRoot(addr))
+            .a(",\n\treuseListRoot=").a(getReuseListRoot(addr))
+            .a(",\n\tlastSuccessfulFullSnapshotId=").a(getLastSuccessfulFullSnapshotId(addr))
+            .a(",\n\tlastSuccessfulSnapshotId=").a(getLastSuccessfulSnapshotId(addr))
+            .a(",\n\tnextSnapshotTag=").a(getNextSnapshotTag(addr))
+            .a(",\n\tlastSuccessfulSnapshotTag=").a(getLastSuccessfulSnapshotTag(addr))
+            .a(",\n\tlastAllocatedPageCount=").a(getLastAllocatedPageCount(addr))
+            .a(",\n\tcandidatePageCount=").a(getCandidatePageCount(addr))
+            .a(",\n\tencryptedPageCount=").a(getEncryptedPageCount(addr))
+            .a(",\n\tencryptedPageIndex=").a(getEncryptedPageIndex(addr))
+            .a("\n]");
     }
 
     /**

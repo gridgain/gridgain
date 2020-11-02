@@ -49,8 +49,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
         new PagePartitionMetaIOV2(2),
         new PagePartitionMetaIOV3(3),
         // Prevent partition usage on old versions after upgrade.
-        new PagePartitionMetaIOV1GG(Short.toUnsignedInt((short)-1)),
-        new PagePartitionMetaIOV2GG(Short.toUnsignedInt((short)-2))
+        new PagePartitionMetaIOV1GG(),
+        new PagePartitionMetaIOV2GG()
     );
 
     /** {@inheritDoc} */

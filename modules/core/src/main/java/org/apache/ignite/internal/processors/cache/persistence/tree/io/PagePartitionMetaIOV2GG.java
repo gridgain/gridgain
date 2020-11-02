@@ -23,28 +23,40 @@ import org.apache.ignite.internal.util.GridStringBuilder;
  * This page corresponds to the GridGain IO v1 meta page.
  */
 public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV3 implements PagePartitionMetaIOGG {
+    /**
+     * Registered version.
+     * This parameter depends of that the version registered in {@see VERSIONS}.
+     */
+    private static final int REGISTERED_VERSION = Short.toUnsignedInt((short)-2);
+
     /** GridGain meta page IO delegate. */
     private final PagePartitionMetaIOV1GG delegate;
 
     /**
-     * @param ver Version.
+     * Default constructor.
      */
-    public PagePartitionMetaIOV2GG(int ver) {
+    public PagePartitionMetaIOV2GG() {
+        this(REGISTERED_VERSION, ENCRYPT_PAGE_MAX_OFF + 4);
+    }
+
+    /**
+     * It will need when IO extends in future.
+     *
+     * @param ver Version.
+     * @param fieldOffset Offset after which the page fields are written.
+     */
+    public PagePartitionMetaIOV2GG(int ver, int fieldOffset) {
         super(ver);
 
-        delegate = new PagePartitionMetaIOV1GG(ver, ENCRYPT_PAGE_MAX_OFF + 4);
+        delegate = new PagePartitionMetaIOV1GG(ver, fieldOffset);
     }
 
     /** {@inheritDoc} */
     @Override public void initNewPage(long pageAddr, long pageId, int pageSize) {
-        super.initNewPage(pageAddr, pageId, pageSize);
+        if (REGISTERED_VERSION == getVersion())
+            super.initNewPage(pageAddr, pageId, pageSize);
 
-        initSpecificFields(pageAddr, pageId, pageSize);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void initSpecificFields(long pageAddr, long pageId, int pageSize) {
-        delegate.initSpecificFields(pageAddr, pageId, pageSize);
+        delegate.initNewPage(pageAddr, pageId, pageSize);
     }
 
     /** {@inheritDoc} */
@@ -59,17 +71,10 @@ public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV3 implements Pa
 
     /** {@inheritDoc} */
     @Override protected void printFields(long pageAddr, GridStringBuilder sb) {
-        super.printFields(pageAddr, sb);
+        if (REGISTERED_VERSION == getVersion())
+            super.printFields(pageAddr, sb);
 
-        specificFields(pageAddr, sb);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void specificFields(long pageAddr, GridStringBuilder sb) {
-        delegate.specificFields(pageAddr, sb);
-
-        sb.a(",\n\tencryptedPageIndex=").a(getEncryptedPageIndex(pageAddr))
-            .a(",\n\tencryptedPageCount=").a(getEncryptedPageCount(pageAddr));
+        delegate.printFields(pageAddr, sb);
     }
 
     /** {@inheritDoc} */
@@ -78,12 +83,11 @@ public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV3 implements Pa
 
         int from = PageIO.getVersion(pageAddr);
 
-        assert from < 4 || from > getVersion() : "Unexpected page IO version [ver=" + from + ']';
+        delegate.upgradePage(pageAddr);
 
-        if (from < 3)
-            delegate.upgradePage(pageAddr);
-
-        setEncryptedPageIndex(pageAddr, 0);
-        setEncryptedPageCount(pageAddr, 0);
+        if (from < 3) {
+            setEncryptedPageIndex(pageAddr, 0);
+            setEncryptedPageCount(pageAddr, 0);
+        }
     }
 }

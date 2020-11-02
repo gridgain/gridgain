@@ -1076,7 +1076,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 long metastoreRoot, reuseListRoot;
 
                 if (PageIO.getType(pageAddr) != PageIO.T_META) {
-                    PageMetaIOV2 pageIO = (PageMetaIOV2)PageMetaIOV2.VERSIONS.latest();
+                    PageMetaIOV2 pageIO = (PageMetaIOV2)PageMetaIO.VERSIONS.latest();
 
                     pageIO.initNewPage(pageAddr, metaId, pageMem.realPageSize(grpId));
 
@@ -1118,9 +1118,16 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     if (encrPageCnt > 0) {
                         ctx.kernalContext().encryption().setEncryptionState(grp, PageIdAllocator.INDEX_PARTITION,
                             pageIO.getEncryptedPageIndex(pageAddr), encrPageCnt);
+
+                        markDirty = true;
                     }
 
                     assert reuseListRoot != 0L;
+
+                    if (markDirty && isWalDeltaRecordNeeded(pageMem, grpId, metaId, metaPage, wal, null)) {
+                        wal.log(new PageSnapshot(new FullPageId(PageIdAllocator.INDEX_PARTITION, grpId), pageAddr,
+                            pageMem.pageSize(), pageMem.realPageSize(grpId)));
+                    }
                 }
 
                 return new Metas(
@@ -2237,11 +2244,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         io.setPartitionMetaStoreReuseListRoot(pageAddr, partMetaStoreReuseListRoot);
                         io.setUpdateTreeRoot(pageAddr, updateLogTreeRoot);
 
-                        if (isWalDeltaRecordNeeded(pageMem, grpId, partMetaId, partMetaPage, wal, null)) {
-                            wal.log(new PageSnapshot(new FullPageId(partMetaId, grpId), pageAddr,
-                                pageMem.pageSize(), pageMem.realPageSize(grpId)));
-                        }
-
                         allocated = true;
                     }
                     else {
@@ -2254,9 +2256,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             }
 
                             assert io instanceof PagePartitionMetaIOGG :
-                                "Unexpected page IO class [cls=" + io.getClass().getSimpleName() +
-                                    ", type=" + io.getType() +
-                                    ", ver=" + io.getVersion() + ']';
+                                "Unexpected page IO class [type=" + io.getType() + '(' + io.getClass().getSimpleName() +
+                                    "), ver=" + io.getVersion() + ']';
 
                             ((PagePartitionMetaIOGG)io).upgradePage(pageAddr);
 
@@ -2290,12 +2291,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             updateLogTreeRootAllocated = true;
                         }
 
-                        if (pageUpgraded &&
-                                isWalDeltaRecordNeeded(pageMem, grpId, partMetaId, partMetaPage, wal, null)) {
-                            wal.log(new PageSnapshot(new FullPageId(partMetaId, grpId), pageAddr,
-                                    pageMem.pageSize(), pageMem.realPageSize(grpId)));
-                        }
-
                         if (PageIdUtils.flag(treeRoot) != PageMemory.FLAG_DATA)
                             throw new StorageException("Wrong tree root page id flag: treeRoot="
                                     + U.hexLong(treeRoot) + ", part=" + partId + ", grpId=" + grpId);
@@ -2317,6 +2312,12 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 + U.hexLong(updateLogTreeRoot) + ", part=" + partId + ", grpId=" + grpId);
                     }
 
+                    if ((allocated || pageUpgraded || pendingTreeAllocated || partMetastoreReuseListAllocated || updateLogTreeRootAllocated) &&
+                        isWalDeltaRecordNeeded(pageMem, grpId, partMetaId, partMetaPage, wal, null)) {
+                        wal.log(new PageSnapshot(new FullPageId(partMetaId, grpId), pageAddr,
+                            pageMem.pageSize(), pageMem.realPageSize(grpId)));
+                    }
+
                     return new Metas(
                         new RootPage(new FullPageId(treeRoot, grpId), allocated),
                         new RootPage(new FullPageId(reuseListRoot, grpId), allocated),
@@ -2326,7 +2327,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 }
                 finally {
                     pageMem.writeUnlock(grpId, partMetaId, partMetaPage, null,
-                        allocated || pendingTreeAllocated || partMetastoreReuseListAllocated || updateLogTreeRootAllocated);
+                        allocated || pageUpgraded || pendingTreeAllocated || partMetastoreReuseListAllocated || updateLogTreeRootAllocated);
                 }
             }
             finally {
