@@ -3540,6 +3540,41 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /**
      * Send {@code GenerateEncryptionKeyRequest} and execute {@code after} closure if succeed.
      *
+     * @param after Closure to execute after encryption keys would be generated.
+     */
+    private IgniteInternalFuture<Boolean> receiveEncryptionKeysAndStartCacheAfter(Map<Integer, byte[]> keys,
+        GridPlainClosure2<Collection<byte[]>, byte[], IgniteInternalFuture<Boolean>> after) {
+
+        GridFutureAdapter<Boolean> res = new GridFutureAdapter<>();
+
+        try {
+            Collection<byte[]> grpKeys = keys.values();
+
+            byte[] masterKeyDigest = context().kernalContext().config().getEncryptionSpi().masterKeyDigest();
+
+            IgniteInternalFuture<Boolean> dynStartCacheFut = after.apply(grpKeys, masterKeyDigest);
+
+            dynStartCacheFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
+                @Override public void apply(IgniteInternalFuture<Boolean> fut) {
+                    try {
+                        res.onDone(fut.get(), fut.error());
+                    }
+                    catch (IgniteCheckedException e) {
+                        res.onDone(false, e);
+                    }
+                }
+            });
+        }
+        catch (Exception e) {
+            res.onDone(false, e);
+        }
+
+        return res;
+    }
+
+    /**
+     * Send {@code GenerateEncryptionKeyRequest} and execute {@code after} closure if succeed.
+     *
      * @param keyCnt Count of keys to generate.
      * @param after Closure to execute after encryption keys would be generated.
      */
@@ -3625,6 +3660,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             failIfExists,
             checkThreadTx,
             disabledAfterStart,
+            null,
             null);
     }
 
@@ -3643,7 +3679,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean failIfExists,
         boolean checkThreadTx,
         boolean disabledAfterStart,
-        IgniteUuid restartId
+        IgniteUuid restartId,
+        Map<Integer, byte[]> keys
     ) {
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(() -> {
@@ -3677,8 +3714,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     restartId,
                     disabledAfterStart,
                     ccfg.queryEntities(),
-                    ccfg.config().isEncryptionEnabled() ? grpKeysIter.next() : null,
-                    ccfg.config().isEncryptionEnabled() ? masterKeyDigest : null);
+                    ccfg.config().isEncryptionEnabled() && keys == null ? grpKeysIter.next() : null,
+                    ccfg.config().isEncryptionEnabled() && keys == null  ? masterKeyDigest : null);
 
                 if (req != null) {
                     if (req.clientStartOnly()) {
@@ -3724,6 +3761,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (ccfg.config().isEncryptionEnabled())
                 encGrpCnt++;
         }
+
+        if (keys != null)
+            return receiveEncryptionKeysAndStartCacheAfter(keys, startCacheClsr);
 
         return generateEncryptionKeysAndStartCacheAfter(encGrpCnt, startCacheClsr);
     }
