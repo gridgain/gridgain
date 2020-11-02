@@ -3121,7 +3121,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             checkObsolete();
 
             if (!serReadVer.equals(ver)) {
-                boolean empty = isStartVersion() || deletedUnlocked();
+                boolean empty = isStartVersion() || val == null;
 
                 if (serReadVer.equals(IgniteTxEntry.SER_READ_EMPTY_ENTRY_VER))
                     return empty;
