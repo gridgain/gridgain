@@ -1482,6 +1482,11 @@ public class IgnitionEx {
         return dependencyResolver.get();
     }
 
+    public static boolean hasKernalStarted(String name) {
+        IgniteNamedInstance grid = name != null ? grids.get(name) : dfltGrid;
+        return grid != null && grid.hasStartLatchCompleted();
+    }
+
     /**
      * Start context encapsulates all starting parameters.
      */
@@ -3202,6 +3207,13 @@ public class IgnitionEx {
                 this.cnt = cnt;
             }
         }
+
+        /**
+         *
+         * @return whether the startLatch has been counted down, thereby indicating that the kernal has full started.
+         */
+        public boolean hasStartLatchCompleted() { return startLatch.getCount() == 0; }
+
     }
 
     /**
