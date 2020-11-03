@@ -220,6 +220,8 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         forceCheckpoint();
 
+        enableCheckpoints(G.allGrids(), false);
+
         failFileIO.set(true);
 
         awaitEncryption(G.allGrids(), grpId, MAX_AWAIT_MILLIS);
@@ -228,6 +230,8 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         updateFut.cancel();
 
         assertThrowsAnyCause(log, () -> {
+            enableCheckpoints(G.allGrids(), true);
+
             forceCheckpoint();
 
             return null;
