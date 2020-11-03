@@ -256,7 +256,7 @@ public class ReliableChannelTest {
     public void testFailOnInitIfDefaultChannelFailed() {
         ClientConfiguration ccfg = new ClientConfiguration()
             .setAddresses(dfltAddrs)
-            .setPartitionAwarenessEnabled(true);
+            .setAffinityAwarenessEnabled(true);
 
         ReliableChannel rc = new ReliableChannel(cfg -> new TestFailureClientChannel(), ccfg, null);
 

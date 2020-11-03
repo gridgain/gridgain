@@ -35,7 +35,7 @@ import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor
 /**
  * Test partition awareness of thin client on changed topology.
  */
-public class ThinClientPartitionAwarenessDiscoveryTest extends ThinClientAbstractPartitionAwarenessTest {
+public class ThinClientPartitionAwarenessDiscoveryTest extends ThinClientAbstractAffinityAwarenessTest {
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
@@ -153,7 +153,7 @@ public class ThinClientPartitionAwarenessDiscoveryTest extends ThinClientAbstrac
 
         return new ClientConfiguration()
             .setAddressesFinder(addrFinder)
-            .setPartitionAwarenessEnabled(true);
+            .setAffinityAwarenessEnabled(true);
     }
 
     /**
