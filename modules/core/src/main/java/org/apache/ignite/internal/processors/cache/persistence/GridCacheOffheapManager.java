@@ -1884,7 +1884,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert grp.shared().database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_DATA);
+                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
                         }
                     };
 
@@ -2123,13 +2123,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         reuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
                         pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
                         partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
-                        updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_DATA);
+                        updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
 
                         assert PageIdUtils.flag(treeRoot) == PageMemory.FLAG_AUX;
                         assert PageIdUtils.flag(reuseListRoot) == PageMemory.FLAG_AUX;
                         assert PageIdUtils.flag(pendingTreeRoot) == PageMemory.FLAG_AUX;
                         assert PageIdUtils.flag(partMetaStoreReuseListRoot) == PageMemory.FLAG_AUX;
-                        assert PageIdUtils.flag(updateLogTreeRoot) == PageMemory.FLAG_DATA;
+                        assert PageIdUtils.flag(updateLogTreeRoot) == PageMemory.FLAG_AUX;
 
                         io.setTreeRoot(pageAddr, treeRoot);
                         io.setReuseListRoot(pageAddr, reuseListRoot);
@@ -2169,7 +2169,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         }
 
                         if ((pendingTreeRoot = io.getPendingTreeRoot(pageAddr)) == 0) {
-                            pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_DATA);
+                            pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
 
                             io.setPendingTreeRoot(pageAddr, pendingTreeRoot);
 
@@ -2177,7 +2177,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         }
 
                         if ((partMetaStoreReuseListRoot = io.getPartitionMetaStoreReuseListRoot(pageAddr)) == 0) {
-                            partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_DATA);
+                            partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
 
                             io.setPartitionMetaStoreReuseListRoot(pageAddr, partMetaStoreReuseListRoot);
 
@@ -2185,7 +2185,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         }
 
                         if ((updateLogTreeRoot = io.getUpdateTreeRoot(pageAddr)) == 0) {
-                            updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_DATA);
+                            updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
 
                             io.setUpdateTreeRoot(pageAddr, updateLogTreeRoot);
 
@@ -2218,7 +2218,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             throw new StorageException("Wrong partition meta store list root page id flag: partMetaStoreReuseListRoot="
                                 + U.hexLong(partMetaStoreReuseListRoot) + ", part=" + partId + ", grpId=" + grpId);
 
-                        if (PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_DATA)
+                        if (PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_AUX
+                            && PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_DATA)
                             throw new StorageException("Wrong partition update log root page id flag: updateLogTreeRoot="
                                 + U.hexLong(updateLogTreeRoot) + ", part=" + partId + ", grpId=" + grpId);
                     }
