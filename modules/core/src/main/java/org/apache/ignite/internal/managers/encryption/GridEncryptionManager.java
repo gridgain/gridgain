@@ -49,7 +49,6 @@ import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.MasterKeyChangeRecord;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
-import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
@@ -59,7 +58,6 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
-import org.apache.ignite.internal.util.lang.GridPlainClosure;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -120,8 +118,6 @@ import static org.apache.ignite.internal.util.distributed.DistributedProcess.Dis
  *     </ul>
  *     </li>
  * </ul>
- *
- * @see GridCacheProcessor#generateEncryptionKeysAndStartCacheAfter(int, GridPlainClosure)
  *
  * <p>Master key change process:</p>
  * <ol>
@@ -1039,7 +1035,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
             if (masterKeyName.equals(getMasterKeyName()))
                 throw new IgniteException("Master key change was rejected. New name equal to the current.");
 
-            byte[] digest = masterKeyDigest(masterKeyName);
+            byte[] digest = tryChangeMasterKey(masterKeyName);
 
             if (!Arrays.equals(req.digest, digest)) {
                 return new GridFinishedFuture<>(new IgniteException("Master key change was rejected. Master " +
@@ -1202,8 +1198,40 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      * @return Master key digest.
      * @throws IgniteException if unable to get master key digest.
      */
-    public byte[] masterKeyDigest(String masterKeyName) {
+    private byte[] masterKeyDigest(String masterKeyName) {
         return getSpi().masterKeyDigest(masterKeyName);
+    }
+
+    /**
+     * Tries change master key and returns it digest.
+     * As if it was be installed as a default.
+     *
+     * @param masterKeyName Master key name.
+     * @return Master key digest.
+     */
+    private byte[] tryChangeMasterKey(String masterKeyName) {
+        byte[] digest;
+
+        masterKeyChangeLock.writeLock().lock();
+
+        try {
+            String curName = getSpi().getMasterKeyName();
+
+            try {
+                getSpi().setMasterKeyName(masterKeyName);
+
+                digest = getSpi().masterKeyDigest();
+            } catch (Exception e) {
+                throw new IgniteException("Unable to set master key locally [masterKeyName=" + masterKeyName + ']', e);
+            } finally {
+                getSpi().setMasterKeyName(curName);
+            }
+        }
+        finally {
+            masterKeyChangeLock.writeLock().unlock();
+        }
+
+        return digest;
     }
 
     /**

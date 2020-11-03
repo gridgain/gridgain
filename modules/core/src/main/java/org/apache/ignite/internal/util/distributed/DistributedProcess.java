@@ -152,7 +152,7 @@ public class DistributedProcess<I extends Serializable, R extends Serializable> 
                 return;
             }
 
-            finish.apply(p.id,msg.result(), msg.error());
+            finish.apply(p.id, msg.result(), msg.error());
 
             processes.remove(msg.processId());
         });
