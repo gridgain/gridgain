@@ -78,8 +78,8 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.GridClosure3;
-import org.apache.ignite.internal.util.lang.GridFunc;
 import org.apache.ignite.internal.util.lang.IgnitePair;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -477,7 +477,7 @@ public class IgniteIndexReader implements AutoCloseable {
     private void printFileReadingErrors(Map<Integer, List<Throwable>> partStoresErrors) {
         List<Throwable> idxPartErrors = partStoresErrors.get(INDEX_PARTITION);
 
-        if (!GridFunc.isEmpty(idxPartErrors)) {
+        if (!F.isEmpty(idxPartErrors)) {
             printErr("Errors detected while reading " + INDEX_FILE_NAME);
 
             idxPartErrors.forEach(err -> printErr(err.getMessage()));
