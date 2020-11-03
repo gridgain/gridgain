@@ -200,7 +200,9 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
 
         for (int i = 2; i < 4; i++) {
             IgniteEx igniteEx = startGrid(i);
+
             TransactionsMXBean transactionsMXBean = txMXBean(i);
+
             allNodes.put(igniteEx, transactionsMXBean);
             clientNodes.put(igniteEx, transactionsMXBean);
         }
@@ -213,16 +215,15 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
 
         clientNodes.keySet().forEach(ignite -> updateLatches.put(ignite, F.asList(new CountDownLatch(1), new CountDownLatch(1))));
 
-        clientNodes.forEach((igniteEx, bean) -> {
-            igniteEx.context().distributedMetastorage().listen(
-                    (key) -> key.startsWith(DIST_CONF_PREFIX),
-                    (String key, Serializable oldVal, Serializable newVal) -> {
-                        if ((long) newVal == 200)
-                            updateLatches.get(igniteEx).get(0).countDown();
-                        if ((long) newVal == 300)
-                            updateLatches.get(igniteEx).get(1).countDown();
-                    });
-        });
+        clientNodes.forEach((igniteEx, bean) -> igniteEx.context().distributedMetastorage().listen(
+            (key) -> key.startsWith(DIST_CONF_PREFIX),
+            (String key, Serializable oldVal, Serializable newVal) -> {
+                if ((long) newVal == 200)
+                    updateLatches.get(igniteEx).get(0).countDown();
+                if ((long) newVal == 300)
+                    updateLatches.get(igniteEx).get(1).countDown();
+            }
+        ));
 
         long newTimeout = 200L;
 

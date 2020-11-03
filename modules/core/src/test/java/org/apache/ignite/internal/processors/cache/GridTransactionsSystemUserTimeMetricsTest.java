@@ -248,10 +248,10 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
      */
     private TransactionsMXBean applyJmxParameters(Long threshold, Double coefficient, Integer limit) throws InterruptedException {
         TransactionsMXBean tmMxBean = getMxBean(
-                CLIENT,
-                "Transactions",
-                TransactionsMXBean.class,
-                TransactionsMXBeanImpl.class
+            CLIENT,
+            "Transactions",
+            TransactionsMXBean.class,
+            TransactionsMXBeanImpl.class
         );
 
         return applyJmxParameters(threshold, coefficient, limit, tmMxBean, (IgniteEx) client);
