@@ -257,7 +257,7 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
                     row[c] = valCacheObj.getObject(true);
                 }
                 else if (DataType.isIntervalType(val.getValueType()))
-                    row[c] = val.convertTo(Value.LONG).getLong();
+                    row[c] = val.getLong();
                 else
                     row[c] = val.getObject();
             }
