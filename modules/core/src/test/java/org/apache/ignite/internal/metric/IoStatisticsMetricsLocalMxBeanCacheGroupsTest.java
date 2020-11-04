@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.IgniteMXBean;
 import org.apache.ignite.spi.metric.LongMetric;
+import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -186,6 +187,11 @@ public class IoStatisticsMetricsLocalMxBeanCacheGroupsTest extends GridCommonAbs
                 ignite.cluster().active(false);
                 ignite.cluster().active(true);
 
+                pk = ignite.context().metric()
+                        .registry(metricName(HASH_INDEX.metricGroupName(), CACHE_GROUP_NAME, HASH_PK_IDX_NAME));
+                grp = ignite.context().metric()
+                        .registry(metricName(CACHE_GROUP.metricGroupName(), CACHE_GROUP_NAME));
+
                 resetAllIoMetrics(ignite);
 
                 assertEquals(0, pk.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
@@ -256,7 +262,7 @@ public class IoStatisticsMetricsLocalMxBeanCacheGroupsTest extends GridCommonAbs
         GridMetricManager mmgr = ignite.context().metric();
 
         StreamSupport.stream(mmgr.spliterator(), false)
-            .map(MetricRegistry::name)
+            .map(ReadOnlyMetricRegistry::name)
             .filter(name -> {
                 for (IoStatisticsType type : IoStatisticsType.values()) {
                     if (name.startsWith(type.metricGroupName()))

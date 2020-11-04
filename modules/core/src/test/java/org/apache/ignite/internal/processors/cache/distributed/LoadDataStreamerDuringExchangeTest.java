@@ -152,7 +152,7 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
         spi0.waitForBlocked(DataStreamerRequest.class, getTestIgniteInstanceName(1));
 
         spi0.stopBlock(true, (msg) -> {
-            if (msg.getValue().message() instanceof GridDhtPartitionsFullMessage)
+            if (msg.ioMessage().message() instanceof GridDhtPartitionsFullMessage)
                 return true;
 
             return false;
@@ -242,7 +242,7 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
         spi0.waitForBlocked(DataStreamerRequest.class, getTestIgniteInstanceName(1));
 
         spi0.stopBlock(true, (msg) -> {
-            if (msg.getValue().message() instanceof GridDhtPartitionsFullMessage)
+            if (msg.ioMessage().message() instanceof GridDhtPartitionsFullMessage)
                 return true;
 
             return false;

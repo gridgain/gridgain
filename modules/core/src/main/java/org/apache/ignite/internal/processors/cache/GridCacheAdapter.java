@@ -16,11 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import javax.cache.Cache;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.EntryProcessorResult;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.InvalidObjectException;
@@ -48,6 +43,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.cache.Cache;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.EntryProcessorResult;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -104,7 +104,6 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerEntry;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerImpl;
 import org.apache.ignite.internal.processors.dr.IgniteDrDataStreamerCacheUpdater;
-import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryFilter;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.tracing.MTC;
@@ -162,6 +161,7 @@ import static org.apache.ignite.internal.processors.cache.CacheOperationContext.
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_LOAD;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_NO_FAILOVER;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SUBGRID;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET;
@@ -632,8 +632,12 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         // Nulling thread local reference to ensure values will be eventually GCed
         // no matter what references these futures are holding.
         lastFut = null;
+    }
 
-        ctx.kernalContext().metric().remove(MetricUtils.cacheMetricsRegistryName(ctx.name(), isNear()));
+    /** Remove cache metrics. */
+    public void removeMetrics() {
+        if (!ctx.kernalContext().isStopping())
+            ctx.kernalContext().metric().remove(cacheMetricsRegistryName(ctx.name(), isNear()));
     }
 
     /**
@@ -910,7 +914,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             }
         }
 
-        Object val = ctx.unwrapBinaryIfNeeded(cacheVal, ctx.keepBinary(), false);
+        Object val = ctx.unwrapBinaryIfNeeded(cacheVal, ctx.keepBinary(), false, null);
 
         return (V)val;
     }
@@ -1427,7 +1431,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             V val = get(key, !keepBinary, false);
 
             if (ctx.config().getInterceptor() != null) {
-                key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key, true, false) : key;
+                key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key, true, false, null) : key;
 
                 val = (V)ctx.config().getInterceptor().onGet(key, val);
             }
@@ -1456,13 +1460,13 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             = (EntryGetResult)get(key, !keepBinary, true);
 
         CacheEntry<K, V> val = t != null ? new CacheEntryImplEx<>(
-            keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key, true, false) : key,
+            keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key, true, false, null) : key,
             (V)t.value(),
             t.version())
             : null;
 
         if (ctx.config().getInterceptor() != null) {
-            key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key, true, false) : key;
+            key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key, true, false, null) : key;
 
             V val0 = (V)ctx.config().getInterceptor().onGet(key, t != null ? val.getValue() : null);
 
@@ -1518,7 +1522,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             if (ctx.config().getInterceptor() != null)
                 fut = fut.chain(new CX1<IgniteInternalFuture<V>, V>() {
                     @Override public V applyx(IgniteInternalFuture<V> f) throws IgniteCheckedException {
-                        K key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key0, true, false) : key0;
+                        K key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key0, true, false, null) : key0;
 
                         return (V)ctx.config().getInterceptor().onGet(key, f.get());
                     }
@@ -1573,7 +1577,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                     throws IgniteCheckedException {
                     EntryGetResult t = f.get();
 
-                    K key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key0, true, false) : key0;
+                    K key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key0, true, false, null) : key0;
 
                     CacheEntry val = t != null ? new CacheEntryImplEx<>(
                         key,
@@ -2581,16 +2585,25 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         try (MTC.TraceSurroundings ignored =
                  MTC.support(ctx.kernalContext().tracing().create(CACHE_API_PUT_ALL_ASYNC, MTC.span()))) {
             MTC.span().addTagOrLog("cache", CACHE_API_PUT_ALL_ASYNC,
-                () -> Objects.toString(cacheCfg.getName()));
+                    () -> Objects.toString(cacheCfg.getName()));
             MTC.span().addTagOrLog("keys.count", CACHE_API_PUT_ALL_ASYNC,
-                () -> m == null ? "0" : String.valueOf(m.size()));
+                    () -> m == null ? "0" : String.valueOf(m.size()));
 
             if (F.isEmpty(m))
                 return new GridFinishedFuture<>();
 
+            boolean statsEnabled = ctx.statisticsEnabled();
+
+            long start = statsEnabled ? System.nanoTime() : 0L;
+
             warnIfUnordered(m, BulkOperation.PUT);
 
-            return putAllAsync0(m);
+            IgniteInternalFuture<?> fut = putAllAsync0(m);
+
+            if (statsEnabled)
+                fut.listen(new UpdatePutTimeStatClosure<Boolean>(metrics0(), start));
+
+            return fut;
         }
     }
 
@@ -2652,7 +2665,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 V ret = fut.get().value();
 
                 if (ctx.config().getInterceptor() != null) {
-                    K key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key0, true, false) : key0;
+                    K key = keepBinary ? (K)ctx.unwrapBinaryIfNeeded(key0, true, false, null) : key0;
 
                     return (V)ctx.config().getInterceptor().onBeforeRemove(new CacheEntryImpl(key, ret)).get2();
                 }
@@ -4550,8 +4563,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         KeyCacheObject key = entry.key();
 
-        Object key0 = ctx.unwrapBinaryIfNeeded(key, !deserializeBinary, true);
-        Object val0 = ctx.unwrapBinaryIfNeeded(val, !deserializeBinary, true);
+        Object key0 = ctx.unwrapBinaryIfNeeded(key, !deserializeBinary, true, null);
+        Object val0 = ctx.unwrapBinaryIfNeeded(val, !deserializeBinary, true, null);
 
         return new CacheEntryImpl<>((K)key0, (V)val0, entry.version());
     }
@@ -6414,7 +6427,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         @Override public K next() {
             current = internalIterator.next();
 
-            return (K)ctx.unwrapBinaryIfNeeded(current.key(), keepBinary, true);
+            return (K)ctx.unwrapBinaryIfNeeded(current.key(), keepBinary, true, null);
         }
 
         /** {@inheritDoc} */
