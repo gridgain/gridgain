@@ -633,7 +633,8 @@ public class GridCacheContext<K, V> implements Externalizable {
     public void cache(GridCacheAdapter<K, V> cache) {
         this.cache = cache;
 
-        deferredDel = false;
+        // TODO remove deferredDel.
+        deferredDel = cache.isNear() && cache.configuration().getAtomicityMode() == ATOMIC;
     }
 
     /**
