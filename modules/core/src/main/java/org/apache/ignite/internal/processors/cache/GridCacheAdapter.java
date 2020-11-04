@@ -4382,6 +4382,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     }
 
     /**
+     * TODO remove.
      * @param entry Entry.
      * @param ver Version.
      */

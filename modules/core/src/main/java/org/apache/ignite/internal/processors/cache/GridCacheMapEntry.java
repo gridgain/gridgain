@@ -3377,31 +3377,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             boolean update;
 
-            IgniteBiPredicate<CacheObject, GridCacheVersion> p = (val0, ver0) -> {
-                boolean update0;
+            IgniteBiPredicate<CacheObject, GridCacheVersion> p = (oldVal, oldVer) -> {
+                GridCacheVersion testVer = oldVer != null ? oldVer : this.ver;
 
-                GridCacheVersion currVer = ver0 != null ? ver0 : this.ver;
-
-                boolean isStartVer = cctx.shared().versions().isStartVersion(currVer);
-
-                if (cctx.group().persistenceEnabled()) {
-                    if (!isStartVer) {
-                        if (cctx.atomic())
-                            update0 = ATOMIC_VER_COMPARATOR.compare(currVer, ver) < 0;
-                        else
-                            update0 = currVer.compareTo(ver) < 0;
-                    }
-                    else
-                        update0 = true;
-                }
-                else
-                    update0 = isStartVer;
-
-                // TODO do we need this change ? looks like not.
-                // GridCacheAbstractFullApiSelfTest.testRemoveLoad
-                update0 |= (!preload && val0 == null);
-
-                return update0;
+                return preload ? cctx.shared().versions().isStartVersion(testVer) || testVer.compareTo(ver) < 0 : oldVal != null;
             };
 
             if (unswapped) {
@@ -6636,7 +6615,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (entry.val == null) {
                     boolean new0 = entry.isStartVersion();
 
-                    assert entry.deletedUnlocked() || new0 || entry.isInternal() :
+                    assert entry.val == null || new0 || entry.isInternal() :
                         "Invalid entry [entry=" + entry + ", locNodeId=" + cctx.localNodeId() + ']';
 
                     if (!new0 && !entry.isInternal())
