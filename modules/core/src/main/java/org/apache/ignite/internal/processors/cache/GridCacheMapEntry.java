@@ -3380,7 +3380,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             IgniteBiPredicate<CacheObject, GridCacheVersion> p = (oldVal, oldVer) -> {
                 GridCacheVersion testVer = oldVer != null ? oldVer : this.ver;
 
-                return preload ? cctx.shared().versions().isStartVersion(testVer) || testVer.compareTo(ver) < 0 : oldVal != null;
+                return preload ? cctx.shared().versions().isStartVersion(testVer) || testVer.compareTo(ver) < 0 : oldVal == null;
             };
 
             if (unswapped) {
