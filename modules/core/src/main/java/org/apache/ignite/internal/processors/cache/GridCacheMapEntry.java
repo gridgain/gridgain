@@ -5840,12 +5840,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         CacheObject expiredVal = row.value();
 
         // TODO remove.
-//        if (cctx.deferredDelete() && !detached() && !isInternal()) {
-//            update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
-//
-//            if (!deletedUnlocked())
-//                deletedUnlocked(true);
-//        }
+        if (cctx.deferredDelete() && !detached() && !isInternal()) {
+            update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
+
+            if (!deletedUnlocked())
+                deletedUnlocked(true);
+        }
 //        else // TODO use start version.
 //            markObsolete0(cctx.cache().nextVersion(), true, null);
 
