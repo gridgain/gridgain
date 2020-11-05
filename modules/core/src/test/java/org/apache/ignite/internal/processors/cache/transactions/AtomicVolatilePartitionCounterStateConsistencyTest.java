@@ -20,7 +20,6 @@ import java.util.Collection;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.junit.Ignore;
-import org.junit.Test;
 
 /** */
 public class AtomicVolatilePartitionCounterStateConsistencyTest extends AtomicPartitionCounterStateConsistencyTest {
@@ -55,11 +54,5 @@ public class AtomicVolatilePartitionCounterStateConsistencyTest extends AtomicPa
     /** {@inheritDoc} */
     @Override protected void forceCheckpoint(Collection<Ignite> nodes) throws IgniteCheckedException {
         // No-op.
-    }
-
-    // TODO possible flaky
-    @Test
-    @Override public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
-        super.testPartitionConsistencyWithBackupRestart_ChangeBLT(); // TODO
     }
 }
