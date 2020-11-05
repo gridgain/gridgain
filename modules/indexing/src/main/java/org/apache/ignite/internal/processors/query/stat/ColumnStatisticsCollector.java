@@ -25,6 +25,8 @@ import org.apache.ignite.internal.processors.query.stat.hll.HLL;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.value.Value;
 
+import static org.apache.ignite.internal.processors.query.h2.H2Utils.isNullValue;
+
 /**
  * Collector to compute statistic by single column.
  */
@@ -99,10 +101,15 @@ public class ColumnStatisticsCollector {
         }
     }
 
+    /**
+     * Add value to statistics.
+     *
+     * @param val value to add.
+     */
     public void add(Value val) {
         total++;
 
-        if (isNull(val)) {
+        if (isNullValue(val)) {
             nullsCnt++;
 
             return;
@@ -120,10 +127,6 @@ public class ColumnStatisticsCollector {
             max = val;
     }
 
-    private boolean isNull(Value v) {
-        return v == null || v.getType().getValueType() == Value.NULL;
-    }
-
     /**
      * Get total column statistics.
      *
@@ -139,12 +142,27 @@ public class ColumnStatisticsCollector {
         return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes());
     }
 
+    /**
+     * Count percent of null values.
+     *
+     * @param nullsCnt total number of nulls.
+     * @param totalRows total number of rows.
+     * @return percent of null values.
+     */
     private static int nullsPercent(long nullsCnt, long totalRows) {
         if (totalRows > 0)
             return (int)(100 * nullsCnt / totalRows);
         return 0;
     }
 
+    /**
+     * Count cardinality percent.
+     *
+     * @param nullsCnt total number of nulls.
+     * @param totalRows total number of rows.
+     * @param cardinality total cardinality (number of different values).
+     * @return percent of different non null values.
+     */
     private static int cardinalityPercent(long nullsCnt, long totalRows, long cardinality) {
         if (totalRows - nullsCnt > 0)
             return (int)(100 * cardinality / (totalRows - nullsCnt));

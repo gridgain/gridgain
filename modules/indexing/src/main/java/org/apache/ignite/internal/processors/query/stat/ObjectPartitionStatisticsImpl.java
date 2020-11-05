@@ -25,7 +25,7 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
     /** Partition id. */
     private final int partId;
 
-    /** Partition update counter at the moment when */
+    /** Partition update counter at the moment when statistics collected. */
     private final long updCnt;
 
     /** Local flag. */

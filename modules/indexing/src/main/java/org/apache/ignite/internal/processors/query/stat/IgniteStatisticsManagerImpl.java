@@ -16,10 +16,13 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
@@ -39,6 +42,9 @@ import org.gridgain.internal.h2.table.Column;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
+/**
+ * Statistics manager implementation.
+ */
 public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
     /** Logger. */
@@ -84,15 +90,12 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         if (F.isEmpty(colNames))
             return columns;
 
+        Set<String> colNamesSet = new HashSet(Arrays.asList(colNames));
         List<Column> resultList = new ArrayList<>(colNames.length);
 
-        for (String colName : colNames)
-            for (Column col : columns)
-
-                if (colName.equals(col.getName())) {
-                    resultList.add(col);
-                    break;
-                }
+        for (Column col : columns)
+            if (colNamesSet.contains(col.getName()))
+                resultList.add(col);
 
         return resultList.toArray(new Column[resultList.size()]);
     }
