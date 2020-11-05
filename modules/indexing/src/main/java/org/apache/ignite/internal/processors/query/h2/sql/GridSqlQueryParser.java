@@ -873,7 +873,7 @@ public class GridSqlQueryParser {
 
         res.columns(cols);
 
-        if (!F.isEmpty(MERGE_KEYS.get(merge))) {
+        if (merge.isExplicitKeys()) {
             log.warning("The search row by explicit KEY isn't supported. The primary key is always used to search row " +
                 "[sql=" + merge.getSQL() + ']');
         }
