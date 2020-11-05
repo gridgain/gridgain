@@ -237,6 +237,10 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             createAndFillTable(cache, TableInfo.generate(i), insert);
 
+        // TODO FIXME if tombstones are present false positive report can happen, because tombstones not indexed,
+        // but present on data pages.
+        clearTombstones(cache);
+
         forceCheckpoint(node);
     }
 
