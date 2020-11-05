@@ -16,33 +16,98 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointManager;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Class for working with WAL archive size,
- * prevents exceeding {@link DataStorageConfiguration#getMaxWalArchiveSize() maxWalArchiveSize}.
+ * Class for working with WAL archive size.
+ * If archive is not unlimited, then it makes sure that maximum archive size is not exceeded.
+ * If there is insufficient space, archive is cleaned.
+ * Reserved segments or those required for recovery will not be affected by cleanup.
  */
 public class WalArchiveSize {
+    /** Logger. */
+    private final IgniteLogger log;
+
     /** Maximum WAL archive size in bytes. */
     private final long maxSize;
 
     /** Сurrent size of WAL archive in bytes. */
     private final AtomicLong currSize = new AtomicLong();
 
+    /** WAL manger instance. */
+    @Nullable private final IgniteWriteAheadLogManager walMgr;
+
+    /** Checkpoint manager instance. */
+    @Nullable private final CheckpointManager cpMgr;
+
     /** Mapping: absolute segment index -> segment size in bytes. */
-    // TODO: 30.10.2020 kirill: может нам не надо будет следить за мапой если мы безлимитны!
-    private final Map<Long, Long> sizes = new ConcurrentHashMap<>();
+    @Nullable private final NavigableMap<Long, Long> sizes;
+
+    /** Number of segments that can be deleted now. */
+    private int availableToClear;
+
+    /** Absolute segment index penultimate checkpoint. */
+    private long cpIdx;
+
+    /** Smallest absolute index of reserved segment, {@code -1} if not present. */
+    private volatile long reservedIdx = -1;
 
     /**
      * Constructor.
      *
-     * @param dsCfg Data storage configuration.
+     * @param ctx Kernal context.
      */
-    public WalArchiveSize(DataStorageConfiguration dsCfg) {
-        maxSize = dsCfg.getMaxWalArchiveSize();
+    public WalArchiveSize(GridKernalContext ctx) {
+        assert !ctx.clientNode();
+
+        log = ctx.log(getClass());
+
+        maxSize = ctx.config().getDataStorageConfiguration().getMaxWalArchiveSize();
+
+        if (!unlimited()) {
+            walMgr = ctx.cache().context().wal();
+            cpMgr = ((GridCacheDatabaseSharedManager)ctx.cache().context().database()).checkpointManager();
+
+            sizes = new TreeMap<>();
+
+            // Adding a callback on change border for recovery.
+            cpMgr.checkpointHistory().addObserverRecoverySegmentBorder((low, hight) -> {
+                synchronized (this) {
+                    cpIdx = low;
+
+                    updateAvailableToClear();
+                }
+            });
+
+            // Adding callback on changes minimum reserved segment.
+            FileWriteAheadLogManager walMgr0 = (FileWriteAheadLogManager)walMgr;
+
+            if (walMgr0.isArchiverEnabled()) {
+                walMgr0.addMinReservedSegmentObserver(absSegIdx -> {
+                    synchronized (this) {
+                        reservedIdx = absSegIdx == null ? -1 : absSegIdx;
+
+                        updateAvailableToClear();
+                    }
+                });
+            }
+        }
+        else {
+            sizes = null;
+            walMgr = null;
+            cpMgr = null;
+        }
     }
 
     /**
@@ -52,30 +117,98 @@ public class WalArchiveSize {
      * @param size Segment size in bytes.
      */
     public void add(long idx, long size) {
-        sizes.merge(idx, size, Long::sum);
         currSize.addAndGet(size);
+
+        if (!unlimited()) {
+            synchronized (this) {
+                int segmentCnt = sizes.size();
+
+                if (sizes.merge(idx, size, Long::sum) == 0)
+                    sizes.remove(idx);
+
+                if (segmentCnt != sizes.size())
+                    updateAvailableToClear();
+            }
+        }
     }
 
     /**
-     * Removing segment.
+     * Reserving space in WAL archive. If it is not unlimited, then if there is not enough space,
+     * it will try to clear it until there's enough space. If cleanup is not possible now,
+     * it will wait for checkpoint to finish or segments to be released.
+     *
+     * Concurrent reservation of space in archive if it is not unlimited.
+     * Will continue until space is freed either by ending a checkpoint or releasing a segment.
      *
      * @param idx Absolut segment index.
+     * @param size Required space in bytes.
+     * @throws IgniteCheckedException If failed.
      */
-    public void remove(long idx) {
-        Long size = sizes.remove(idx);
+    public void reserveSpaceWithClear(long idx, long size) throws IgniteCheckedException {
+        if (!unlimited()) {
+            synchronized (this) {
+                try {
+                    while (maxSize - currSize.get() < size) {
+                        if (availableToClear == 0)
+                            wait();
+                        else {
+                            FileWALPointer low = new FileWALPointer(sizes.firstKey(), 0, 0);
+                            FileWALPointer high = new FileWALPointer(minIdx(), 0, 0);
 
-        if (size != null)
-            currSize.addAndGet(-size);
+                            cpMgr.removeCheckpointsUntil(high);
+                            int rmvSegments = walMgr.truncate(low, high);
+
+                            if (log.isInfoEnabled()) {
+                                log.info("Clearning WAL archive [low=" + low + ", high=" + high +
+                                    ", removedSegments=" + rmvSegments + ", availableToClear=" + availableToClear +
+                                    ']');
+                            }
+
+                            if (rmvSegments == 0)
+                                wait();
+                        }
+                    }
+
+                    add(idx, size);
+                    notifyAll();
+                }
+                catch (InterruptedException e) {
+                    throw new IgniteInterruptedCheckedException(e);
+                }
+            }
+        }
+        else
+            add(idx, size);
     }
 
     /**
-     * Checking that there is necessary space in WAL archive.
+     * Getting number of segments that can be deleted in archive.
      *
-     * @param v Necessary place in bytes.
-     * @return {@code True} if there is necessary space.
+     * @return Number of segments that can be deleted in archive,
+     *      {@code -1} if there is space in it and it is not necessary to clean it.
      */
-    public boolean ensureFreeSpace(long v) {
-        return unlimited() || (maxSize - currSize.get() >= v);
+    public int countToClearInArchive() {
+        return unlimited() || (maxSize - currentSize() > 0) ? -1 : availableToClear;
+    }
+
+    /**
+     * Recalculation of number of segments that can be deleted now.
+     */
+    private void updateAvailableToClear() {
+        assert !unlimited();
+
+        availableToClear = sizes.headMap(minIdx(), false).size();
+
+        notifyAll();
+    }
+
+    /**
+     * Return index to which it is safe to clear archive.
+     *
+     * @return Index to which it is safe to clear archive.
+     */
+    private long minIdx() {
+        return reservedIdx == -1 ? cpIdx : Math.min(cpIdx, reservedIdx);
     }
 
     /**
@@ -83,7 +216,7 @@ public class WalArchiveSize {
      *
      * @return Сurrent size of WAL archive in bytes.
      */
-    public long currentSize() {
+    private long currentSize() {
         return currSize.get();
     }
 
@@ -92,12 +225,12 @@ public class WalArchiveSize {
      *
      * @return Maximum WAL archive size in bytes.
      */
-    public long maxSize() {
+    private long maxSize() {
         return maxSize;
     }
 
     /**
-     * Return {@code true} if archive is unlimited.
+     * Checking that archive is unlimited.
      *
      * @return {@code True} if archive is unlimited.
      */

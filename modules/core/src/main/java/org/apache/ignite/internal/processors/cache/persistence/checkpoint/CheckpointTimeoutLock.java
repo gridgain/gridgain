@@ -26,6 +26,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
@@ -54,6 +55,9 @@ public class CheckpointTimeoutLock {
     /** Service for triggering the checkpoint. */
     private final Checkpointer checkpointer;
 
+    /** Write ahead log manager. */
+    private final IgniteWriteAheadLogManager wal;
+
     /** Timeout for checkpoint read lock acquisition in milliseconds. */
     private volatile long checkpointReadLockTimeout;
 
@@ -67,6 +71,7 @@ public class CheckpointTimeoutLock {
      * @param lock Checkpoint read-write lock.
      * @param checkpointer Checkpointer.
      * @param checkpointReadLockTimeout Checkpoint lock timeout.
+     * @param wal Write ahead log manager.
      */
     CheckpointTimeoutLock(
         Function<Class<?>, IgniteLogger> logger,
@@ -74,7 +79,8 @@ public class CheckpointTimeoutLock {
         Supplier<Collection<DataRegion>> regions,
         CheckpointReadWriteLock lock,
         Checkpointer checkpointer,
-        long checkpointReadLockTimeout
+        long checkpointReadLockTimeout,
+        IgniteWriteAheadLogManager wal
     ) {
         this.log = logger.apply(getClass());
         failureProcessor = processor;
@@ -82,6 +88,7 @@ public class CheckpointTimeoutLock {
         checkpointReadWriteLock = lock;
         this.checkpointer = checkpointer;
         this.checkpointReadLockTimeout = checkpointReadLockTimeout;
+        this.wal = wal;
     }
 
     /**
@@ -127,7 +134,8 @@ public class CheckpointTimeoutLock {
                         throw new IgniteException(new NodeStoppingException("Failed to perform cache update: node is stopping."));
                     }
 
-                    if (checkpointReadWriteLock.getReadHoldCount() > 1 || safeToUpdatePageMemories() || checkpointer.runner() == null)
+                    if (checkpointReadWriteLock.getReadHoldCount() > 1 || safeToUpdatePageMemories()
+                        || checkpointer.runner() == null || safeToCleanWalArchive())
                         break;
                     else {
                         //If the checkpoint is triggered outside of the lock,
@@ -186,6 +194,15 @@ public class CheckpointTimeoutLock {
         }
 
         return true;
+    }
+
+    /**
+     * @return {@code True} if WAL archive can be safe cleaned up.
+     */
+    private boolean safeToCleanWalArchive() {
+        int cntToClean = wal.countToClearInArchive();
+
+        return cntToClean == -1 || cntToClean >= 2;
     }
 
     /**

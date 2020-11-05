@@ -251,7 +251,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private FilePageStoreManager storeMgr;
 
     /** */
-    CheckpointManager checkpointManager;
+    @Nullable CheckpointManager checkpointManager;
 
     /** Database configuration. */
     private final DataStorageConfiguration persistenceCfg;
@@ -3055,6 +3055,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         finally {
             checkpointReadUnlock();
         }
+    }
+
+    /**
+     * Return checkpoint manager instance.
+     *
+     * @return Checkpoint manager instance.
+     */
+    @Nullable public CheckpointManager checkpointManager() {
+        return checkpointManager;
     }
 
     /**

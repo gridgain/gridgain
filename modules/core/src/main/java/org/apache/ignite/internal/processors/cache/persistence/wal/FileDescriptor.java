@@ -18,10 +18,6 @@ package org.apache.ignite.internal.processors.cache.persistence.wal;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Enumeration;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
@@ -153,30 +149,5 @@ public class FileDescriptor implements Comparable<FileDescriptor>, AbstractWalRe
         FileIO fileIO = isCompressed() ? new UnzipFileIO(file()) : fileIOFactory.create(file(), READ);
 
         return new SegmentIO(idx, fileIO);
-    }
-
-    /**
-     * Calculate full size of segment in bytes, if it is compressed then size of compressed data will be added.
-     *
-     * @return Full segment size in bytes.
-     */
-    public long fullSize() {
-        long size = file.length();
-
-        if (isCompressed()) {
-            try (ZipFile zipFile = new ZipFile(file)) {
-                Enumeration<? extends ZipEntry> entries = zipFile.entries();
-
-                if (!entries.hasMoreElements())
-                    throw new IOException("Failed to read entry from compressed file: " + file);
-
-                size += entries.nextElement().getSize();
-            }
-            catch (IOException e) {
-                throw new IgniteException(e);
-            }
-        }
-
-        return size;
     }
 }

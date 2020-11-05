@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Function;
 import org.apache.ignite.IgniteCheckedException;
@@ -43,6 +44,7 @@ import org.apache.ignite.internal.util.lang.IgniteThrowableBiPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -79,6 +81,9 @@ public class CheckpointHistory {
 
     /** It is available or not to reserve checkpoint(deletion protection). */
     private final boolean reservationDisabled;
+
+    /** Observers to notify on changing segment boundaries for recovery. */
+    private final Collection<IgniteBiInClosure<Long, Long>> recoveryBorderObservers = new ConcurrentLinkedQueue<>();
 
     /**
      * Constructor.
@@ -119,6 +124,8 @@ public class CheckpointHistory {
                 U.warn(log, "Failed to process checkpoint, happened at " + U.format(timestamp) + '.', e);
             }
         }
+
+        onRecoveryBorderChanged();
     }
 
     /**
@@ -353,21 +360,21 @@ public class CheckpointHistory {
     }
 
     /**
-     * Remove checkpoint from history.
+     * Remove checkpoint from history
      *
-     * @param chp Checkpoint to be removed.
-     * @return Whether checkpoint was removed from history.
+     * @param checkpoint Checkpoint to be removed
+     * @return Whether checkpoint was removed from history
      */
-    private boolean removeCheckpoint(CheckpointEntry chp) {
-        if (wal.reserved(chp.checkpointMark())) {
-            U.warn(log, "Could not clear historyMap due to WAL reservation on cp: " + chp +
+    private boolean removeCheckpoint(CheckpointEntry checkpoint) {
+        if (wal.reserved(checkpoint.checkpointMark())) {
+            U.warn(log, "Could not clear historyMap due to WAL reservation on cp: " + checkpoint +
                 ", history map size is " + histMap.size());
 
             return false;
         }
 
         synchronized (earliestCp) {
-            CheckpointEntry deleted = histMap.remove(chp.timestamp());
+            CheckpointEntry deleted = histMap.remove(checkpoint.timestamp());
 
             CheckpointEntry newOldest = firstCheckpoint();
 
@@ -389,41 +396,10 @@ public class CheckpointHistory {
     public List<CheckpointEntry> onCheckpointFinished(Checkpoint chp) {
         chp.walSegsCoveredRange(calculateWalSegmentsCovered());
 
-        // TODO: 28.10.2020 kirill: не забудь добавить чистку histMap перед чисткой сегментов!
+        onRecoveryBorderChanged();
 
         // If archive is not unlimited, then we will clean history when cleaning archive.
         return removeCheckpoints(walArchiveUnlimited ? (histMap.size() - maxCpHistMemSize) : 0);
-    }
-
-    /**
-     * Calculate count of checkpoints to delete by maximum allowed archive size.
-     *
-     * @return Checkpoint count to be deleted.
-     */
-    private int checkpointCountUntilDeleteByArchiveSize() {
-        // TODO: 28.10.2020 kirill: скорее всего надо будет удалить
-
-        long absFileIdxToDel = wal.maxArchivedSegmentToDelete();
-
-        if (absFileIdxToDel < 0)
-            return 0;
-
-        long fileUntilDel = absFileIdxToDel + 1;
-
-        long checkpointFileIdx = absFileIdx(lastCheckpoint());
-
-        int countToRemove = 0;
-
-        for (CheckpointEntry cpEntry : histMap.values()) {
-            long currFileIdx = absFileIdx(cpEntry);
-
-            if (checkpointFileIdx <= currFileIdx || fileUntilDel <= currFileIdx)
-                return countToRemove;
-
-            countToRemove++;
-        }
-
-        return histMap.size() - 1;
     }
 
     /**
@@ -792,5 +768,25 @@ public class CheckpointHistory {
     void clear() {
         histMap.clear();
         earliestCp.clear();
+        recoveryBorderObservers.clear();
+    }
+
+    /**
+     * Adding an observer for changing boundaries of segments for recovery.
+     *
+     * @param observer Observer.
+     */
+    public void addObserverRecoverySegmentBorder(IgniteBiInClosure<Long, Long> observer) {
+        recoveryBorderObservers.add(observer);
+    }
+
+    /**
+     * Callback when changing segment boundary for recovery.
+     */
+    private void onRecoveryBorderChanged() {
+        IgniteBiTuple<Long, Long> recoverySegments = calculateWalSegmentsCovered();
+
+        for (IgniteBiInClosure observer : recoveryBorderObservers)
+            observer.apply(recoverySegments.get1(), recoverySegments.get2());
     }
 }

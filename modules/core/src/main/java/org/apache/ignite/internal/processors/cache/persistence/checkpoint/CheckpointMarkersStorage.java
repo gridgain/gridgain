@@ -154,15 +154,12 @@ public class CheckpointMarkersStorage {
     }
 
     /**
-     * Clears checkpoint history after checkpoint finish.
-     *
-     * @param chp Finished checkpoint.
-     * @throws IgniteCheckedException If failed.
+     * Logs and clears checkpoint history after checkpoint finish.
      */
     public void onCheckpointFinished(Checkpoint chp) throws IgniteCheckedException {
-        List<CheckpointEntry> rmvFromHist = history().onCheckpointFinished(chp);
+        List<CheckpointEntry> removedFromHistory = history().onCheckpointFinished(chp);
 
-        for (CheckpointEntry cp : rmvFromHist)
+        for (CheckpointEntry cp : removedFromHistory)
             removeCheckpointFiles(cp);
     }
 

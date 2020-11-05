@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 
@@ -274,5 +275,14 @@ public class SegmentAware {
         segmentCompressStorage.interrupt();
 
         segmentCurrStateStorage.forceInterrupt();
+    }
+
+    /**
+     * Add an observer to notify when minimum reserved segment changes.
+     *
+     * @param observer Observer.
+     */
+    public void addMinReservedSegmentObserver(Consumer<Long> observer) {
+        reservationStorage.addObserver(observer);
     }
 }

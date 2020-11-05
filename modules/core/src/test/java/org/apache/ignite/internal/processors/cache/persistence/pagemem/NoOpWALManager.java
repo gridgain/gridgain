@@ -179,11 +179,6 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
-    @Override public long maxArchivedSegmentToDelete() {
-        return -1;
-    }
-
-    /** {@inheritDoc} */
     @Override public long segmentSize(long idx) {
         return -1;
     }
@@ -191,5 +186,10 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     /** {@inheritDoc} */
     @Override public WALPointer lastWritePointer() {
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int countToClearInArchive() {
+        return 0;
     }
 }

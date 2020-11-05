@@ -208,7 +208,8 @@ public class CheckpointManager {
             dataRegions,
             lock,
             checkpointer,
-            checkpointReadLockTimeout
+            checkpointReadLockTimeout,
+            wal
         );
     }
 
