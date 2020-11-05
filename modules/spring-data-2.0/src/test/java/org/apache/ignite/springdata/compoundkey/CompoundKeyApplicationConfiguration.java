@@ -14,8 +14,25 @@
  * limitations under the License.
  */
 
+package org.apache.ignite.springdata.compoundkey;
+
+import org.apache.ignite.Ignite;
+import org.apache.ignite.Ignition;
+import org.apache.ignite.springdata20.repository.config.EnableIgniteRepositories;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
 /**
- * <!-- Package description. -->
- * Contains utility port scanner.
- */
-package org.apache.ignite.internal.util.portscanner;
+ * Spring application configuration
+ * */
+@Configuration
+@EnableIgniteRepositories
+public class CompoundKeyApplicationConfiguration {
+    /**
+     * Ignite instance bean
+     * */
+    @Bean
+    public Ignite igniteInstance() {
+        return Ignition.start();
+    }
+}

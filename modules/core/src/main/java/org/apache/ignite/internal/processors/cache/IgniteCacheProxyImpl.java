@@ -1919,7 +1919,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
     @Override public boolean isClosed() {
         GridCacheContext<K, V> ctx = getContextSafe();
 
-        return ctx.kernalContext().cache().context().closed(ctx);
+        return isProxyClosed() || ctx.kernalContext().cache().context().closed(ctx);
     }
 
     /** {@inheritDoc} */
