@@ -118,9 +118,4 @@ public class DataRow extends CacheDataRowAdapter {
     @Override public void link(long link) {
         this.link = link;
     }
-
-    /** {@inheritDoc} */
-    @Override public void cacheId(int cacheId) {
-        this.cacheId = cacheId;
-    }
 }
