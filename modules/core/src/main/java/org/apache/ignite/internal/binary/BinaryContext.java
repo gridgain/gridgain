@@ -1163,9 +1163,8 @@ public class BinaryContext {
      *
      * @param typeId Type ID.
      * @param clsName Class Name.
-     * @param failIfUnregistered If {@code true} then throw {@link UnregisteredBinaryTypeException} with {@link
-     * org.apache.ignite.internal.processors.marshaller.MappingExchangeResult} future instead of synchronously awaiting
-     * for its completion.
+     * @param failIfUnregistered If {@code true} then throw {@link UnregisteredBinaryTypeException} with
+     *      {@link MappingExchangeResult} future instead of synchronously awaiting for its completion.
      * @param onlyLocReg Whether to register only on the current node.
      * @param platformId Platform ID (see {@link org.apache.ignite.internal.MarshallerPlatformIds}).
      * @return {@code True} if the mapping was registered successfully.
