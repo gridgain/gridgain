@@ -57,8 +57,23 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
                     " VALUES(%d,%d, %d, 1, null)", i, i, i + 200);
             runSql(sql);
         }
-        runSql("INSERT INTO digital_distribution(id, col_a, col_b, col_c) VALUES(101, null, 101, null)");
-        updateStatistics("digital_distribution");
+        runSql("INSERT INTO digital_distribution(id, col_a, col_b, col_c) VALUES(101, null, 301, null)");
+
+        runSql("DROP TABLE IF EXISTS empty_distribution");
+
+        runSql("CREATE TABLE empty_distribution (ID INT PRIMARY KEY, col_a int) " +
+                "WITH \"TEMPLATE=" + cacheMode + "\"");
+
+        runSql("CREATE INDEX empty_distribution_col_a ON empty_distribution(col_a)");
+
+        runSql("DROP TABLE IF EXISTS empty_distribution_no_stat");
+
+        runSql("CREATE TABLE empty_distribution_no_stat (ID INT PRIMARY KEY, col_a int) " +
+                "WITH \"TEMPLATE=" + cacheMode + "\"");
+
+        runSql("CREATE INDEX empty_distribution_no_stat_col_a ON empty_distribution_no_stat(col_a)");
+
+        updateStatistics("digital_distribution", "empty_distribution");
     }
 
     /**
@@ -111,4 +126,35 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
         String sql = "select count(*) from digital_distribution i1 where col_d <= 1000";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql, new String[1][]);
     }
+
+    @Test public void selectFromEmptyNoStatTable() {
+        String sql = "select count(*) from empty_distribution_no_stat i1 where col_a <= 1000";
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql, new String[1][]);
+    }
+
+    @Test public void selectNullFromEmptyNoStatTable() {
+        String sql = "select count(*) from empty_distribution_no_stat i1 where col_a is null";
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql, new String[1][]);
+    }
+
+    @Test public void selectNotNullFromEmptyNoStatTable() {
+        String sql = "select count(*) from empty_distribution_no_stat i1 where col_a is not null";
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, sql, new String[1][]);
+    }
+
+    @Test public void selectFromEmptyTable() {
+        String sql = "select count(*) from empty_distribution i1 where col_a <= 1000";
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql, new String[1][]);
+    }
+
+    @Test public void selectNullFromEmptyTable() {
+        String sql = "select count(*) from empty_distribution i1 where col_a is null";
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql, new String[1][]);
+    }
+
+    @Test public void selectNotNullFromEmptyTable() {
+        String sql = "select count(*) from empty_distribution i1 where col_a is not null";
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, sql, new String[1][]);
+    }
+
 }

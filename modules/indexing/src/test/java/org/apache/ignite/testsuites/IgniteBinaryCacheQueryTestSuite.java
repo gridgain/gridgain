@@ -264,6 +264,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.InOperationExtract
 import org.apache.ignite.internal.processors.query.h2.twostep.JoinPartitionPruningSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.MvccDmlPartitionPruningSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.SqlDataTypeConversionTest;
+import org.apache.ignite.internal.processors.query.stat.BasicValueDistributionTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticCollectionTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticPartialCollectionTest;
 import org.apache.ignite.internal.processors.query.stat.ValueDistributionTableStatisticsUsageTest;
@@ -652,6 +653,7 @@ import org.junit.runners.Suite;
     RowCountTableStatisticsSurvivesNodeRestartTest.class,
     StatisticCollectionTest.class,
     StatisticPartialCollectionTest.class,
+    BasicValueDistributionTableStatisticsUsageTest.class,
     ValueDistributionTableStatisticsUsageTest.class,
 
     SqlViewExporterSpiTest.class,
