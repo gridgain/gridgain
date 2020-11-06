@@ -30,7 +30,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
@@ -50,12 +49,21 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Logger. */
     private IgniteLogger log;
 
+    /** Kernal context. */
     private final GridKernalContext ctx;
 
+    /** Schema manager. */
     private final SchemaManager schemaMgr;
 
+    /** Statistics repository. */
     private final IgniteStatisticsRepository statsRepos;
 
+    /**
+     * Constructor.
+     *
+     * @param ctx kernal context.
+     * @param schemaMgr schema manager.
+     */
     public IgniteStatisticsManagerImpl(GridKernalContext ctx, SchemaManager schemaMgr) {
         this.ctx = ctx;
         this.schemaMgr = schemaMgr;
@@ -64,14 +72,19 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         statsRepos = new IgniteStatisticsRepositoryImpl(ctx);
     }
 
+    /**
+     * @return statistics repository.
+     */
     public IgniteStatisticsRepository statisticsRepository() {
         return statsRepos;
     }
 
+    /** {@inheritDoc} */
     @Override public ObjectStatistics getLocalStatistics(String schemaName, String objName) {
         return statsRepos.getLocalStatistics(new StatsKey(schemaName, objName));
     }
 
+    /** {@inheritDoc} */
     @Override public void clearObjectStatistics(String schemaName, String objName, String... colNames) {
         StatsKey key = new StatsKey(schemaName, objName);
         statsRepos.clearLocalPartitionsStatistics(key, colNames);
@@ -100,6 +113,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         return resultList.toArray(new Column[resultList.size()]);
     }
 
+    /** {@inheritDoc} */
     @Override public void collectObjectStatistics(String schemaName, String objName, String... colNames)
             throws IgniteCheckedException {
         GridH2Table tbl = schemaMgr.dataTable(schemaName, objName);
@@ -129,6 +143,14 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             log.debug(String.format("Statistics collection by %s.%s object is finished.", schemaName, objName));
     }
 
+    /**
+     * Collect partition level statistics.
+     *
+     * @param tbl table to collect statistics by.
+     * @param selectedColumns columns to collect statistics by.
+     * @return collection of partition level statistics by local primary partitions.
+     * @throws IgniteCheckedException in case of error.
+     */
     private Collection<ObjectPartitionStatisticsImpl> collectPartitionStatistics(GridH2Table tbl, Column[] selectedColumns)
             throws IgniteCheckedException {
         List<ObjectPartitionStatisticsImpl> tblPartStats = new ArrayList<>();
@@ -185,6 +207,13 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         return tblPartStats;
     }
 
+    /**
+     * Aggregate specified partition level statistics to local level statistics.
+     *
+     * @param key aggregation key.
+     * @param tblPartStats collection of all local partition level statistics by specified key.
+     * @return local level aggregated statistics.
+     */
     public ObjectStatisticsImpl aggregateLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> tblPartStats) {
         // For now there can be only tables
         GridH2Table table = schemaMgr.dataTable(key.schema(), key.obj());
@@ -197,15 +226,23 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         return aggregateLocalStatistics(table, table.getColumns(), tblPartStats);
     }
 
-    private ObjectStatisticsImpl aggregateLocalStatistics(GridH2Table tbl, Column[] selectedColumns,
-                                                          Collection<ObjectPartitionStatisticsImpl> tblPartStats) {
-
+    /**
+     * Aggregate partition level statistics to local level one.
+     *
+     * @param tbl table to aggregate statistics by.
+     * @param selectedColumns columns to aggregate statistics by.
+     * @param tblPartStats collection of partition level statistics.
+     * @return local level statistics.
+     */
+    private ObjectStatisticsImpl aggregateLocalStatistics(
+            GridH2Table tbl,
+            Column[] selectedColumns,
+            Collection<ObjectPartitionStatisticsImpl> tblPartStats
+    ) {
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedColumns.length);
         long rowCnt = 0;
         for (Column col : selectedColumns)
             colPartStats.put(col, new ArrayList<>());
-
-        QueryTable tblId = tbl.identifier();
 
         for (ObjectPartitionStatisticsImpl partStat : tblPartStats) {
             for (Column col : selectedColumns) {

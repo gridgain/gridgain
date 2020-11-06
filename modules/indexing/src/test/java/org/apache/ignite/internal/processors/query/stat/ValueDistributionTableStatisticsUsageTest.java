@@ -48,6 +48,7 @@ public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAb
         });
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(2);
 
@@ -107,6 +108,11 @@ public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAb
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SIZED_SMALL"}, sql, new String[1][]);
     }
 
+    /**
+     * Check that nulls percent take into account by planner:
+     * 1) select with only one clause and test that appropriate index will be chosen.
+     * 2) select with two "equal to constant" clause and test that column with nulls will be chosen.
+     */
     @Test
     public void selectWithValueNullsDistributionCond() {
         String sql = "select * from sized i1 where small = '1'";

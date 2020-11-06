@@ -5,7 +5,6 @@ import org.apache.ignite.cache.CacheMode;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -33,6 +32,7 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
         });
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(2);
 
@@ -50,7 +50,6 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
         runSql("CREATE INDEX digital_distribution_col_b ON digital_distribution(col_b)");
         runSql("CREATE INDEX digital_distribution_col_c ON digital_distribution(col_c)");
         runSql("CREATE INDEX digital_distribution_col_d ON digital_distribution(col_d)");
-
 
         for (int i = 0; i < 100; i++) {
             String sql = String.format("INSERT INTO digital_distribution(id, col_a, col_b, col_c, col_d)" +
@@ -102,59 +101,91 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_B"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "higher" clause from column with all the same values.
+     */
     @Test public void selectHigherFromSingleValue() {
         String sql = "select count(*) from digital_distribution i1 where col_c > 1";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_C"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "lower" clause from column with all the same values.
+     */
     @Test public void selectLowerToSingleValue() {
         String sql = "select count(*) from digital_distribution i1 where col_c > 1";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_C"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "is null" clause from column with only null values.
+     */
     @Test public void selectNullFromNull() {
         String sql = "select count(*) from digital_distribution i1 where col_d is null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "greater" clause from column with only null values.
+     */
     @Test public void selectGreaterFromNull() {
         String sql = "select count(*) from digital_distribution i1 where col_d > 0";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "is null" clause from empty table.
+     */
     @Test public void selectLessOrEqualFromNull() {
         String sql = "select count(*) from digital_distribution i1 where col_d <= 1000";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "less or equal" clause from empty table without statistcs.
+     */
     @Test public void selectFromEmptyNoStatTable() {
         String sql = "select count(*) from empty_distribution_no_stat i1 where col_a <= 1000";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "is null" clause from empty table without statistics.
+     */
     @Test public void selectNullFromEmptyNoStatTable() {
         String sql = "select count(*) from empty_distribution_no_stat i1 where col_a is null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "is not null" clause from empty table without statistics.
+     */
     @Test public void selectNotNullFromEmptyNoStatTable() {
         String sql = "select count(*) from empty_distribution_no_stat i1 where col_a is not null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "less or equal" clause from empty table.
+     */
     @Test public void selectFromEmptyTable() {
         String sql = "select count(*) from empty_distribution i1 where col_a <= 1000";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "is null" clause from empty table.
+     */
     @Test public void selectNullFromEmptyTable() {
         String sql = "select count(*) from empty_distribution i1 where col_a is null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "is not null" clause from empty table.
+     */
     @Test public void selectNotNullFromEmptyTable() {
         String sql = "select count(*) from empty_distribution i1 where col_a is not null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, sql, new String[1][]);
     }
-
 }

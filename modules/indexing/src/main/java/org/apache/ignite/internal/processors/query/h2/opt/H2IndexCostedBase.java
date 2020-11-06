@@ -977,6 +977,13 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             return result > 100 ? 100 : result;
         }
 
+        /**
+         * Fallback percent estimation.
+         *
+         * @param min min border.
+         * @param max max border.
+         * @return percent estimation of returning rows.
+         */
         private int estimatePercentFallback(Value min, Value max) {
             return (min == null || max == null) ? RANGE_OPEN_SELECTIVITY : RANGE_CLOSE_SELECTIVITY;
         }
@@ -984,8 +991,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Convert specified value into comparable type: BigDecimal,
          *
-         * @param value
-         * @return
+         * @param value value to convert to comparable form.
+         * @return comparable form of value.
          */
         private BigDecimal getComparableValue(Value value) {
             switch (value.getValueType()) {
@@ -1047,10 +1054,27 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             }
         }
 
+        /**
+         * Get column statistics.
+         *
+         * @param locTblStats whole table statistics, can be {@code null}.
+         * @param column column to get statistics by.
+         * @return column statistics or {@code null}.
+         */
         private ColumnStatistics getColumnStatistics(@Nullable ObjectStatisticsImpl locTblStats, Column column) {
             return (locTblStats == null) ? null : locTblStats.columnStatistics(column.getName());
         }
 
+        /**
+         * Estimate sorting cost.
+         *
+         * @param rowCount total rows count
+         * @param filters filters array
+         * @param filter column filter index
+         * @param sortOrder sort order
+         * @param isScanIndex is current index is a scan index.
+         * @return sorting cost.
+         */
         private long sortingCost(long rowCount, TableFilter[] filters, int filter,
                                  SortOrder sortOrder, boolean isScanIndex) {
             if (sortOrder == null)
@@ -1110,6 +1134,19 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             return sortingCost;
         }
 
+        /**
+         * Get cost range.
+         *
+         * @param ses session.
+         * @param masks condition masks.
+         * @param rowCount total row count.
+         * @param filters filters array.
+         * @param filter filter array index.
+         * @param sortOrder sort order.
+         * @param isScanIndex if index is a scan index.
+         * @param allColumnsSet all columns to select.
+         * @return cost.
+         */
         public long getCostRangeIndex(Session ses, int[] masks, long rowCount, TableFilter[] filters, int filter,
                                       SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
             ObjectStatisticsImpl locTblStats = (ObjectStatisticsImpl) tbl.tableStatistics();

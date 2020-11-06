@@ -24,6 +24,7 @@ import org.junit.Test;
  */
 public class StatisticPartialCollectionTest extends TableStatisticsAbstractTest {
 
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(1);
 

@@ -64,6 +64,7 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
         TIMESTAMP_FORMATTER.setTimeZone(tz);
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(1);
 
@@ -95,6 +96,12 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
         updateStatistics("dtypes");
     }
 
+    /**
+     * Generate insert SQL command by counter value.
+     *
+     * @param counter counter value to generate by.
+     * @return insert into dtypes command.
+     */
     private String insertNulls(long counter) {
         return String.format("INSERT INTO dtypes(id) values (%d)", counter);
     }
