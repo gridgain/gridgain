@@ -49,7 +49,6 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -409,7 +408,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
 
-        walArchiveSize = new WalArchiveSize(ctx);
+        walArchiveSize = new WalArchiveSize(ctx::log, ctx.config().getDataStorageConfiguration(), this);
     }
 
     /**
@@ -509,6 +508,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     checkCompressionLevelBounds(dsCfg.getWalPageCompressionLevel(), pageCompression) :
                     getDefaultCompressionLevel(pageCompression);
             }
+
+            walArchiveSize.onStartWalManager(segmentAware, archiver != null);
+            dbMgr.createCheckpointManagerCallback(walArchiveSize::onStartcheckpointManager);
         }
     }
 
@@ -988,7 +990,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public void release(WALPointer start) {
-        assert start != null && start instanceof FileWALPointer : "Invalid start pointer: " + start;
+        assert start instanceof FileWALPointer : "Invalid start pointer: " + start;
 
         if (mode == WALMode.NONE)
             return;
@@ -3148,15 +3150,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     public static boolean isSegmentFileName(@Nullable String name) {
         return name != null && (WAL_NAME_PATTERN.matcher(name).matches() ||
             WAL_SEGMENT_FILE_COMPACTED_PATTERN.matcher(name).matches());
-    }
-
-    /**
-     * Add an observer to notify when the minimum reserved segment changes.
-     *
-     * @param observer Observer.
-     */
-    public void addMinReservedSegmentObserver(Consumer<Long> observer) {
-        segmentAware.addMinReservedSegmentObserver(observer);
     }
 
     /**

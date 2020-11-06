@@ -20,14 +20,14 @@ import java.util.Collection;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointManager;
+import org.apache.ignite.internal.processors.cache.persistence.wal.aware.SegmentAware;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,14 +47,14 @@ public class WalArchiveSize {
     /** Сurrent size of WAL archive in bytes. */
     private final AtomicLong currSize = new AtomicLong();
 
-    /** WAL manger instance. */
-    @Nullable private final IgniteWriteAheadLogManager walMgr;
-
-    /** Checkpoint manager instance. */
-    @Nullable private final CheckpointManager cpMgr;
-
     /** Mapping: absolute segment index -> segment size in bytes. */
     @Nullable private final NavigableMap<Long, Long> sizes;
+
+    /** WAL manger instance. */
+    private final IgniteWriteAheadLogManager walMgr;
+
+    /** Checkpoint manager instance. */
+    @Nullable private volatile CheckpointManager cpMgr;
 
     /** Number of segments that can be deleted now. */
     private volatile int availableToClear;
@@ -68,48 +68,58 @@ public class WalArchiveSize {
     /**
      * Constructor.
      *
-     * @param ctx Kernal context.
+     * @param logFun Function for getting a logger.
+     * @param dsCfg Data storage configuration.
+     * @param walMgr WAL manger instance.
      */
-    public WalArchiveSize(GridKernalContext ctx) {
-        assert !ctx.clientNode();
+    public WalArchiveSize(
+        Function<Class<?>, IgniteLogger> logFun,
+        DataStorageConfiguration dsCfg,
+        IgniteWriteAheadLogManager walMgr
+    ) {
+        log = logFun.apply(getClass());
 
-        log = ctx.log(getClass());
+        maxSize = dsCfg.getMaxWalArchiveSize();
 
-        maxSize = ctx.config().getDataStorageConfiguration().getMaxWalArchiveSize();
+        this.walMgr = walMgr;
 
-        if (!unlimited()) {
-            walMgr = ctx.cache().context().wal();
-            cpMgr = ((GridCacheDatabaseSharedManager)ctx.cache().context().database()).checkpointManager();
+        sizes = !unlimited() ? new TreeMap<>() : null;
+    }
 
-            sizes = new TreeMap<>();
-
-            // Adding a callback on change border for recovery.
-            cpMgr.checkpointHistory().addObserver(cpEntry -> {
+    /**
+     * Callback at start of WAL manager.
+     *
+     * @param segmentAware Holder of actual information of latest manipulation on WAL segments.
+     * @param availableArchive Archive available.
+     */
+    public void onStartWalManager(SegmentAware segmentAware, boolean availableArchive) {
+        if (availableArchive) {
+            segmentAware.addMinReservedSegmentObserver(absSegIdx -> {
                 synchronized (this) {
-                    cpIdx = ((FileWALPointer)cpEntry.checkpointMark()).index();
+                    reservedIdx = absSegIdx == null ? -1 : absSegIdx;
 
                     updateAvailableToClear();
                 }
             });
+        }
+    }
 
-            // Adding callback on changes minimum reserved segment.
-            FileWriteAheadLogManager walMgr0 = (FileWriteAheadLogManager)walMgr;
+    /**
+     * Callback at start of checkpoint manager.
+     *
+     * @param cpMgr Checkpoint manager.
+     */
+    public void onStartcheckpointManager(CheckpointManager cpMgr) {
+        this.cpMgr = cpMgr;
 
-            if (walMgr0.isArchiverEnabled()) {
-                walMgr0.addMinReservedSegmentObserver(absSegIdx -> {
-                    synchronized (this) {
-                        reservedIdx = absSegIdx == null ? -1 : absSegIdx;
+        // Adding a callback on change border for recovery.
+        cpMgr.checkpointHistory().addObserver(cpEntry -> {
+            synchronized (this) {
+                cpIdx = ((FileWALPointer)cpEntry.checkpointMark()).index();
 
-                        updateAvailableToClear();
-                    }
-                });
+                updateAvailableToClear();
             }
-        }
-        else {
-            sizes = null;
-            walMgr = null;
-            cpMgr = null;
-        }
+        });
     }
 
     /**
@@ -157,7 +167,11 @@ public class WalArchiveSize {
                             FileWALPointer low = new FileWALPointer(sizes.firstKey(), 0, 0);
                             FileWALPointer high = new FileWALPointer(minIdx(), 0, 0);
 
-                            cpMgr.removeCheckpointsUntil(high);
+                            CheckpointManager cpMgr = this.cpMgr;
+
+                            if (cpMgr != null)
+                                cpMgr.removeCheckpointsUntil(high);
+
                             int rmvSegments = walMgr.truncate(low, high);
 
                             if (log.isInfoEnabled()) {
