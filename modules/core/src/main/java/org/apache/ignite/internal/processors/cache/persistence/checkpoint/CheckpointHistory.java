@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -44,7 +45,6 @@ import org.apache.ignite.internal.util.lang.IgniteThrowableBiPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -82,8 +82,8 @@ public class CheckpointHistory {
     /** It is available or not to reserve checkpoint(deletion protection). */
     private final boolean reservationDisabled;
 
-    /** Observers to notify on changing segment boundaries for recovery. */
-    private final Collection<IgniteBiInClosure<Long, Long>> recoveryBorderObservers = new ConcurrentLinkedQueue<>();
+    /** Observers to notify on checkpoint finish. */
+    private final Collection<Consumer<CheckpointEntry>> observers = new ConcurrentLinkedQueue<>();
 
     /**
      * Constructor.
@@ -124,8 +124,6 @@ public class CheckpointHistory {
                 U.warn(log, "Failed to process checkpoint, happened at " + U.format(timestamp) + '.', e);
             }
         }
-
-        onRecoveryBorderChanged();
     }
 
     /**
@@ -396,7 +394,10 @@ public class CheckpointHistory {
     public List<CheckpointEntry> onCheckpointFinished(Checkpoint chp) {
         chp.walSegsCoveredRange(calculateWalSegmentsCovered());
 
-        onRecoveryBorderChanged();
+        CheckpointEntry lastCheckpoint = lastCheckpoint();
+
+        for (Consumer<CheckpointEntry> observer : observers)
+            observer.accept(lastCheckpoint);
 
         // If archive is not unlimited, then we will clean history when cleaning archive.
         return removeCheckpoints(walArchiveUnlimited ? (histMap.size() - maxCpHistMemSize) : 0);
@@ -768,25 +769,15 @@ public class CheckpointHistory {
     void clear() {
         histMap.clear();
         earliestCp.clear();
-        recoveryBorderObservers.clear();
+        observers.clear();
     }
 
     /**
-     * Adding an observer for changing boundaries of segments for recovery.
+     * Adding an observer to notify when a checkpoint is finished.
      *
      * @param observer Observer.
      */
-    public void addObserverRecoverySegmentBorder(IgniteBiInClosure<Long, Long> observer) {
-        recoveryBorderObservers.add(observer);
-    }
-
-    /**
-     * Callback when changing segment boundary for recovery.
-     */
-    private void onRecoveryBorderChanged() {
-        IgniteBiTuple<Long, Long> recoverySegments = calculateWalSegmentsCovered();
-
-        for (IgniteBiInClosure observer : recoveryBorderObservers)
-            observer.apply(recoverySegments.get1(), recoverySegments.get2());
+    public void addObserver(Consumer<CheckpointEntry> observer) {
+        observers.add(observer);
     }
 }

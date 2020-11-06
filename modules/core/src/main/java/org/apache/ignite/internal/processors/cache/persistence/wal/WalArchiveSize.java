@@ -59,7 +59,7 @@ public class WalArchiveSize {
     /** Number of segments that can be deleted now. */
     private volatile int availableToClear;
 
-    /** Absolute segment index penultimate checkpoint. */
+    /** Absolute segment index last checkpoint. */
     private long cpIdx;
 
     /** Smallest absolute index of reserved segment, {@code -1} if not present. */
@@ -84,9 +84,9 @@ public class WalArchiveSize {
             sizes = new TreeMap<>();
 
             // Adding a callback on change border for recovery.
-            cpMgr.checkpointHistory().addObserverRecoverySegmentBorder((low, hight) -> {
+            cpMgr.checkpointHistory().addObserver(cpEntry -> {
                 synchronized (this) {
-                    cpIdx = low;
+                    cpIdx = ((FileWALPointer)cpEntry.checkpointMark()).index();
 
                     updateAvailableToClear();
                 }
