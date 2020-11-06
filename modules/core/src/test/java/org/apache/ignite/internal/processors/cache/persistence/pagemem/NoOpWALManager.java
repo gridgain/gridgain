@@ -189,7 +189,12 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
-    @Override public int countToClearInArchive() {
+    @Override public int availableDeleteArchiveSegments() {
         return 0;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareAndCheckArchive() throws IgniteCheckedException {
+        // No-op.
     }
 }

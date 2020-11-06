@@ -224,5 +224,12 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @return Number of segments that can be deleted in archive,
      *      {@code -1} if there is space in it and it is not necessary to clean it.
      */
-    int countToClearInArchive();
+    int availableDeleteArchiveSegments();
+
+    /**
+     * Preparing the archive and checking that it does not exceed the maximum size.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    void prepareAndCheckArchive() throws IgniteCheckedException;
 }

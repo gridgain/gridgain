@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal;
 
+import java.util.Collection;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,6 +28,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointManager;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -55,13 +57,13 @@ public class WalArchiveSize {
     @Nullable private final NavigableMap<Long, Long> sizes;
 
     /** Number of segments that can be deleted now. */
-    private int availableToClear;
+    private volatile int availableToClear;
 
     /** Absolute segment index penultimate checkpoint. */
     private long cpIdx;
 
     /** Smallest absolute index of reserved segment, {@code -1} if not present. */
-    private volatile long reservedIdx = -1;
+    private long reservedIdx = -1;
 
     /**
      * Constructor.
@@ -148,7 +150,7 @@ public class WalArchiveSize {
         if (!unlimited()) {
             synchronized (this) {
                 try {
-                    while (maxSize - currSize.get() < size) {
+                    while (maxSize - currentSize() < size) {
                         if (availableToClear == 0)
                             wait();
                         else {
@@ -187,14 +189,76 @@ public class WalArchiveSize {
      * @return Number of segments that can be deleted in archive,
      *      {@code -1} if there is space in it and it is not necessary to clean it.
      */
-    public int countToClearInArchive() {
+    public int availableDeleteArchiveSegments() {
         return unlimited() || (maxSize - currentSize() > 0) ? -1 : availableToClear;
+    }
+
+    /**
+     * Check that the segments in the archive do not exceed the maximum.
+     * If there is not enough space, then an attempt is made to clean.
+     * Segment data will be reloaded.
+     *
+     * @param segments Segments data: id and size.
+     * @return {@code True} if archive is valid.
+     * @throws IgniteCheckedException If failed.
+     */
+    public boolean prepareAndCheck(Collection<IgniteBiTuple<Long, Long>> segments) throws IgniteCheckedException {
+        currSize.set(segments.stream().mapToLong(IgniteBiTuple::get2).sum());
+
+        if (!unlimited()) {
+            synchronized (this) {
+                sizes.clear();
+
+                segments.forEach(t -> sizes.merge(t.get1(), t.get2(), Long::sum));
+
+                updateAvailableToClear();
+
+                if (maxSize - currentSize() < 0) {
+                    if (availableToClear == 0)
+                        return false;
+
+                    FileWALPointer low = new FileWALPointer(sizes.firstKey(), 0, 0);
+                    FileWALPointer high = new FileWALPointer(minIdx(), 0, 0);
+
+                    cpMgr.removeCheckpointsUntil(high);
+                    int rmvSegments = walMgr.truncate(low, high);
+
+                    if (log.isInfoEnabled()) {
+                        log.info("Clearning WAL archive on prepare stage [low=" + low + ", high=" + high +
+                            ", removedSegments=" + rmvSegments + ", availableToClear=" + availableToClear + ']');
+                    }
+
+                    if (rmvSegments == 0 || maxSize - currentSize() < 0)
+                        return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Return current size of WAL archive in bytes.
+     *
+     * @return Сurrent size of WAL archive in bytes.
+     */
+    public long currentSize() {
+        return currSize.get();
+    }
+
+    /**
+     * Return maximum WAL archive size in bytes.
+     *
+     * @return Maximum WAL archive size in bytes.
+     */
+    public long maxSize() {
+        return maxSize;
     }
 
     /**
      * Recalculation of number of segments that can be deleted now.
      */
-    private void updateAvailableToClear() {
+    private synchronized void updateAvailableToClear() {
         assert !unlimited();
 
         availableToClear = sizes.headMap(minIdx(), false).size();
@@ -209,24 +273,6 @@ public class WalArchiveSize {
      */
     private long minIdx() {
         return reservedIdx == -1 ? cpIdx : Math.min(cpIdx, reservedIdx);
-    }
-
-    /**
-     * Return current size of WAL archive in bytes.
-     *
-     * @return Сurrent size of WAL archive in bytes.
-     */
-    private long currentSize() {
-        return currSize.get();
-    }
-
-    /**
-     * Return maximum WAL archive size in bytes.
-     *
-     * @return Maximum WAL archive size in bytes.
-     */
-    private long maxSize() {
-        return maxSize;
     }
 
     /**

@@ -200,7 +200,7 @@ public class CheckpointTimeoutLock {
      * @return {@code True} if WAL archive can be safe cleaned up.
      */
     private boolean safeToCleanWalArchive() {
-        int cntToClean = wal.countToClearInArchive();
+        int cntToClean = wal.availableDeleteArchiveSegments();
 
         return cntToClean == -1 || cntToClean >= 2;
     }

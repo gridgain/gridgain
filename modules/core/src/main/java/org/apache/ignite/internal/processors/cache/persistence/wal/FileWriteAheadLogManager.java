@@ -52,7 +52,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -134,6 +134,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_COMPRESSOR_WORKER_THREAD_CNT;
@@ -688,8 +689,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         assert currHnd == null;
         assert lastPtr == null || lastPtr instanceof FileWALPointer;
-
-        // TODO: 05.11.2020 kirill: кажется тут можно заполнить архив и сделвть проверку!
 
         startArchiverAndCompressor();
 
@@ -2963,7 +2962,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             if (files == null)
                 return Collections.emptyList();
 
-            return Arrays.stream(files).map(File::getName).sorted().collect(Collectors.toList());
+            return Arrays.stream(files).map(File::getName).sorted().collect(toList());
         }
 
         /** {@inheritDoc} */
@@ -3104,8 +3103,19 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public int countToClearInArchive() {
-        return walArchiveSize.countToClearInArchive();
+    @Override public int availableDeleteArchiveSegments() {
+        return walArchiveSize.availableDeleteArchiveSegments();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareAndCheckArchive() throws IgniteCheckedException {
+        List<IgniteBiTuple<Long, Long>> segments = Stream.of(walArchiveFiles())
+            .map(fd -> new IgniteBiTuple<>(fd.idx(), fd.file().length())).collect(toList());
+
+        if (!walArchiveSize.prepareAndCheck(segments)) {
+            throw new IgniteCheckedException("Maximum archive size exceeded [max=" + walArchiveSize.maxSize() +
+                ", curr=" + walArchiveSize.currentSize() + ']');
+        }
     }
 
     /**

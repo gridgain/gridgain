@@ -1682,6 +1682,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             walTail = tailPointer(logicalState);
 
             cctx.wal().onDeActivate(kctx);
+
+            cctx.wal().prepareAndCheckArchive();
         }
         catch (IgniteCheckedException e) {
             releaseFileLock();
