@@ -137,8 +137,8 @@ import static org.apache.ignite.internal.util.distributed.DistributedProcess.Dis
  * @see #prepareMKChangeProc
  * @see #performMKChangeProc
  */
-public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> implements MetastorageLifecycleListener,
-    IgniteChangeGlobalStateSupport, IgniteEncryption {
+public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> implements EncryptionCacheKeyProvider,
+    MetastorageLifecycleListener, IgniteChangeGlobalStateSupport, IgniteEncryption {
     /**
      * Cache encryption introduced in this Ignite version.
      */
@@ -627,24 +627,13 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         }
     }
 
-    /**
-     * Returns group encryption key.
-     *
-     * @param grpId Cache group ID.
-     * @return Group encryption key with identifier, that was set for writing.
-     */
-    @Nullable public GroupKey groupKey(int grpId) {
+    /** {@inheritDoc} */
+    @Override @Nullable public GroupKey groupKey(int grpId) {
         return grpKeys.getActiveKey(grpId);
     }
 
-    /**
-     * Returns group encryption key with specified identifier.
-     *
-     * @param grpId Cache group ID.
-     * @param keyId Encryption key ID.
-     * @return Group encryption key.
-     */
-    @Nullable public GroupKey groupKey(int grpId, int keyId) {
+    /** {@inheritDoc} */
+    @Override @Nullable public GroupKey groupKey(int grpId, int keyId) {
         return grpKeys.getKey(grpId, keyId);
     }
 
