@@ -115,7 +115,7 @@ public class CacheGroupContext {
     /** */
     private final boolean storeCacheId;
 
-    /** We modify content under lock, by making defencive copy, field always contains unmodifiable list. */
+    /** We modify content under lock, by making defensive copy, field always contains unmodifiable list. */
     private volatile List<GridCacheContext> caches = Collections.unmodifiableList(new ArrayList<>());
 
     /** List of caches with registered CQ listeners. */
@@ -266,8 +266,8 @@ public class CacheGroupContext {
                 HASH_INDEX,
                 cacheOrGroupName(),
                 HASH_PK_IDX_NAME,
-                mmgr,
-                statHolderData
+                statHolderData,
+                mmgr
             );
 
             ctx.kernalContext().ioStats().onCacheGroupRegistered(
@@ -783,6 +783,13 @@ public class CacheGroupContext {
      * @return Group name if it is specified, otherwise cache name.
      */
     public String cacheOrGroupName() {
+        return cacheOrGroupName(ccfg);
+    }
+
+    /**
+     * @return Group name if it is specified, otherwise cache name.
+     */
+    public static String cacheOrGroupName(CacheConfiguration<?, ?> ccfg) {
         return ccfg.getGroupName() != null ? ccfg.getGroupName() : ccfg.getName();
     }
 
@@ -841,8 +848,6 @@ public class CacheGroupContext {
 
         IgniteCheckedException err =
             new IgniteCheckedException("Failed to wait for topology update, cache (or node) is stopping.");
-
-        ctx.evict().onCacheGroupStopped(this);
 
         aff.cancelFutures(err);
 
@@ -1101,9 +1106,9 @@ public class CacheGroupContext {
         }
 
         try {
-            offheapMgr = persistenceEnabled
+            offheapMgr = ctx.kernalContext().resource().resolve(persistenceEnabled
                 ? new GridCacheOffheapManager()
-                : new IgniteCacheOffheapManagerImpl();
+                : new IgniteCacheOffheapManagerImpl());
         }
         catch (Exception e) {
             throw new IgniteCheckedException("Failed to initialize offheap manager", e);
@@ -1115,6 +1120,8 @@ public class CacheGroupContext {
             initializeIO();
 
             ctx.affinity().onCacheGroupCreated(this);
+
+            ctx.evict().onCacheGroupStarted(this);
         }
     }
 
@@ -1319,5 +1326,16 @@ public class CacheGroupContext {
      */
     public CacheGroupMetricsImpl metrics() {
         return metrics;
+    }
+
+    /**
+     * Removes statistics metrics registries.
+     */
+    public void removeIOStatistic() {
+        if (statHolderData != IoStatisticsHolderNoOp.INSTANCE)
+            ctx.kernalContext().metric().remove(statHolderData.metricRegistryName());
+
+        if (statHolderIdx != IoStatisticsHolderNoOp.INSTANCE)
+            ctx.kernalContext().metric().remove(statHolderIdx.metricRegistryName());
     }
 }

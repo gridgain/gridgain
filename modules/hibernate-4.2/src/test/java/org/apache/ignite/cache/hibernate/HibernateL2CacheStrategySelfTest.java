@@ -75,7 +75,7 @@ public class HibernateL2CacheStrategySelfTest extends GridCommonAbstractTest {
     private static final String QUERY_CACHE = "org.hibernate.cache.internal.StandardQueryCache";
 
     /** */
-    private static final String CONNECTION_URL = "jdbc:h2:mem:example;DB_CLOSE_DELAY=-1";
+    private static final String CONNECTION_URL = "jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1";
 
     /** */
     private SessionFactory sesFactory1;

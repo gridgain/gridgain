@@ -620,11 +620,8 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
     private ClusterGroup projection(boolean loc) {
         GridCacheContext<K, V> ctx = getContextSafe();
 
-        if (loc || ctx.isLocal() || ctx.isReplicatedAffinityNode())
+        if (loc || ctx.isLocal())
             return ctx.kernalContext().grid().cluster().forLocal();
-
-        if (ctx.isReplicated())
-            return ctx.kernalContext().grid().cluster().forDataNodes(cacheName).forRandom();
 
         return null;
     }
@@ -1922,7 +1919,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
     @Override public boolean isClosed() {
         GridCacheContext<K, V> ctx = getContextSafe();
 
-        return ctx.kernalContext().cache().context().closed(ctx);
+        return isProxyClosed() || ctx.kernalContext().cache().context().closed(ctx);
     }
 
     /** {@inheritDoc} */

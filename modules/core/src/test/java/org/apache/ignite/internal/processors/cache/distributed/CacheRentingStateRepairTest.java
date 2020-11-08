@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -183,16 +184,20 @@ public class CacheRentingStateRepairTest extends GridCommonAbstractTest {
 
             final GridDhtLocalPartition finalPart = part;
 
-            CountDownLatch clearLatch = new CountDownLatch(1);
+            CountDownLatch evictLatch = new CountDownLatch(1);
 
-            part.onClearFinished(fut -> {
-                assertEquals(GridDhtPartitionState.EVICTED, finalPart.state());
+            part.rent().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
+                @Override public void apply(IgniteInternalFuture<?> fut) {
+                    assertEquals(GridDhtPartitionState.EVICTED, finalPart.state());
 
-                clearLatch.countDown();
+                    evictLatch.countDown();
+                }
             });
 
             assertTrue("Failed to wait for partition eviction after restart",
-                clearLatch.await(5_000, TimeUnit.MILLISECONDS));
+                evictLatch.await(5_000, TimeUnit.MILLISECONDS));
+
+            awaitPartitionMapExchange(true, true, null);
         }
         finally {
             stopAllGrids();
@@ -270,7 +275,7 @@ public class CacheRentingStateRepairTest extends GridCommonAbstractTest {
 
             part.release();
 
-            part.rent(false).get();
+            part.rent().get();
 
             CountDownLatch l1 = new CountDownLatch(1);
             CountDownLatch l2 = new CountDownLatch(1);

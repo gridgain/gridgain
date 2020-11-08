@@ -59,6 +59,7 @@ import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DISABLED_CLIENT_PORT;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.OUT_OF_RESOURCES_TCP_MSG;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.handshakeTimeoutException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.nodeAddresses;
@@ -84,7 +85,7 @@ public class ConnectionClientPool {
     private final IgniteLogger log;
 
     /** Statistics. */
-    private final TcpCommunicationMetricsListener metricsLsnr;
+    private final Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier;
 
     /** Local node supplier. */
     private final Supplier<ClusterNode> locNodeSupplier;
@@ -124,7 +125,7 @@ public class ConnectionClientPool {
      * @param cfg Config.
      * @param attrs Attributes.
      * @param log Logger.
-     * @param metricsLsnr Metrics listener.
+     * @param metricLsnrSupplier Metrics listener supplier.
      * @param locNodeSupplier Local node supplier.
      * @param nodeGetter Node getter.
      * @param msgFormatterSupplier Message formatter supplier.
@@ -139,7 +140,7 @@ public class ConnectionClientPool {
         TcpCommunicationConfiguration cfg,
         AttributeNames attrs,
         IgniteLogger log,
-        TcpCommunicationMetricsListener metricsLsnr,
+        Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier,
         Supplier<ClusterNode> locNodeSupplier,
         Function<UUID, ClusterNode> nodeGetter,
         Supplier<MessageFormatter> msgFormatterSupplier,
@@ -153,7 +154,7 @@ public class ConnectionClientPool {
         this.cfg = cfg;
         this.attrs = attrs;
         this.log = log;
-        this.metricsLsnr = metricsLsnr;
+        this.metricLsnrSupplier = metricLsnrSupplier;
         this.locNodeSupplier = locNodeSupplier;
         this.nodeGetter = nodeGetter;
         this.msgFormatterSupplier = msgFormatterSupplier;
@@ -190,6 +191,13 @@ public class ConnectionClientPool {
     public GridCommunicationClient reserveClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
         assert node != null;
         assert (connIdx >= 0 && connIdx < cfg.connectionsPerNode()) || !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection())) : connIdx;
+
+        if (locNodeSupplier.get().isClient()) {
+            if (node.isClient()) {
+                if (DISABLED_CLIENT_PORT.equals(node.attribute(attrs.port())))
+                    throw new IgniteSpiException("Cannot send message to the client node with no server socket opened.");
+            }
+        }
 
         UUID nodeId = node.id();
 
@@ -507,7 +515,7 @@ public class ConnectionClientPool {
             try {
                 client = new GridShmemCommunicationClient(
                     connIdx,
-                    metricsLsnr.metricRegistry(),
+                    metricLsnrSupplier.get().metricRegistry(),
                     port,
                     timeoutHelper.nextTimeoutChunk(cfg.connectionTimeout()),
                     log,

@@ -25,19 +25,18 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-cassandra</artifactId>
-        <version>8.7.127-SNAPSHOT</version>
+        <version>8.8.127-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
 
     <artifactId>ignite-cassandra-store</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <properties>
         <commons-beanutils.version>1.9.4</commons-beanutils.version>
         <cassandra-driver.version>3.2.0</cassandra-driver.version>
         <cassandra-all.version>3.11.3</cassandra-all.version>
-        <netty.version>4.1.42.Final</netty.version>
         <metrics-core.version>3.0.2</metrics-core.version>
     </properties>
 

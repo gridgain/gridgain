@@ -34,6 +34,8 @@ import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.JmxSystemViewExporterSpi;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
@@ -42,20 +44,22 @@ import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgressImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgressImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.plugin.PluginProvider;
@@ -275,16 +279,19 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
         int pagesForStartThrottling = 10;
 
+        //Number of pages which were poll from checkpoint buffer for throttling.
+        AtomicInteger cpBufferPollPages = new AtomicInteger();
+
         // Create a 1 mb page memory.
         PageMemoryImpl memory = createPageMemory(
             1,
             plc,
             pageStoreMgr,
             pageStoreMgr,
-            new IgniteInClosure<FullPageId>() {
-                @Override public void apply(FullPageId fullPageId) {
-                    assertTrue(allocated.contains(fullPageId));
-                }
+            (IgniteInClosure<FullPageId>)fullPageId -> {
+                //First increment then get because pageStoreMgr.storedPages always contains at least one page
+                // which was written before throttling.
+                assertEquals(cpBufferPollPages.incrementAndGet(), pageStoreMgr.storedPages.size());
             }
         );
 
@@ -302,10 +309,16 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
         GridMultiCollectionWrapper<FullPageId> markedPages = memory.beginCheckpoint(new GridFinishedFuture());
 
-        for (int i = 0; i < 10 + (memory.checkpointBufferPagesSize() * 2 / 3); i++)
+        for (int i = 0; i < pagesForStartThrottling + (memory.checkpointBufferPagesSize() * 2 / 3); i++)
             writePage(memory, allocated.get(i), (byte)1);
 
         doCheckpoint(markedPages, memory, pageStoreMgr);
+
+        //There is 'pagesForStartThrottling - 1' because we should write pagesForStartThrottling pages
+        // from checkpoint buffer before throttling will be disabled but at least one page always would be written
+        // outside of throttling and in our case we certainly know that this page is also contained in checkpoint buffer
+        // (because all of our pages are in checkpoint buffer).
+        assertEquals(pagesForStartThrottling - 1, cpBufferPollPages.get());
     }
 
     /**
@@ -510,6 +523,12 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         }
 
         memory.finishCheckpoint();
+
+        LongAdderMetric totalThrottlingTime = U.field(memory.metrics(), "totalThrottlingTime");
+
+        assertNotNull(totalThrottlingTime);
+
+        assertTrue(totalThrottlingTime.value() > 0);
     }
 
     /**
@@ -576,6 +595,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         igniteCfg.setEncryptionSpi(new NoopEncryptionSpi());
         igniteCfg.setEventStorageSpi(new NoopEventStorageSpi());
         igniteCfg.setMetricExporterSpi(new NoopMetricExporterSpi());
+        igniteCfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
 
         GridTestKernalContext kernalCtx = new GridTestKernalContext(new GridTestLog4jLogger(), igniteCfg);
 
@@ -584,6 +604,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         kernalCtx.add(new GridEncryptionManager(kernalCtx));
         kernalCtx.add(new GridEventStorageManager(kernalCtx));
         kernalCtx.add(new GridMetricManager(kernalCtx));
+        kernalCtx.add(new GridSystemViewManager(kernalCtx));
 
         FailureProcessor failureProc = new FailureProcessor(kernalCtx);
 
@@ -672,6 +693,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             }
         };
 
+        mem.metrics().enableMetrics();
+
         mem.start();
 
         return mem;
@@ -682,7 +705,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
      */
     private static class TestPageStoreManager extends NoOpPageStoreManager implements PageStoreWriter {
         /** */
-        private Map<FullPageId, byte[]> storedPages = new HashMap<>();
+        public Map<FullPageId, byte[]> storedPages = new HashMap<>();
 
         /** {@inheritDoc} */
         @Override public void read(int grpId, long pageId, ByteBuffer pageBuf) throws IgniteCheckedException {

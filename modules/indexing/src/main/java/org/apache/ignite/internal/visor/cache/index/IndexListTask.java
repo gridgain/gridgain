@@ -31,8 +31,8 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
-import org.h2.index.Index;
-import org.h2.table.Column;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.Nullable;
 
 /**

@@ -38,7 +38,6 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -90,7 +89,6 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-28593")
     public void testWithPersistence() throws Exception {
         persistenceEnabled = true;
 
@@ -122,7 +120,12 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
             if (msg instanceof GridDhtPartitionsSingleMessage) {
                 GridDhtPartitionsSingleMessage sm = (GridDhtPartitionsSingleMessage)msg;
 
-                return sm.exchangeId() == null && !sm.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).hasMovingPartitions();
+                if (sm.exchangeId() == null) {
+                    GridDhtPartitionMap map = sm.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME));
+
+                    // Partition states message for a group is send as soon as group rebalancing has finished.
+                    return map != null && !map.hasMovingPartitions();
+                }
             }
 
             return false;
@@ -149,7 +152,7 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
         spi0.waitForBlocked(DataStreamerRequest.class, getTestIgniteInstanceName(1));
 
         spi0.stopBlock(true, (msg) -> {
-            if (msg.getValue().message() instanceof GridDhtPartitionsFullMessage)
+            if (msg.ioMessage().message() instanceof GridDhtPartitionsFullMessage)
                 return true;
 
             return false;
@@ -239,7 +242,7 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
         spi0.waitForBlocked(DataStreamerRequest.class, getTestIgniteInstanceName(1));
 
         spi0.stopBlock(true, (msg) -> {
-            if (msg.getValue().message() instanceof GridDhtPartitionsFullMessage)
+            if (msg.ioMessage().message() instanceof GridDhtPartitionsFullMessage)
                 return true;
 
             return false;

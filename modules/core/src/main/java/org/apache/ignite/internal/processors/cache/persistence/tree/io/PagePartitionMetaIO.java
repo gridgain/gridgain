@@ -46,7 +46,11 @@ public class PagePartitionMetaIO extends PageMetaIO {
     /** */
     public static final IOVersions<PagePartitionMetaIO> VERSIONS = new IOVersions<>(
         new PagePartitionMetaIO(1),
-        new PagePartitionMetaIOV2(2)
+        new PagePartitionMetaIOV2(2),
+        new PagePartitionMetaIOV3(3),
+        // Prevent partition usage on old versions after upgrade.
+        new PagePartitionMetaIOV1GG(),
+        new PagePartitionMetaIOV2GG()
     );
 
     /** {@inheritDoc} */
@@ -236,17 +240,45 @@ public class PagePartitionMetaIO extends PageMetaIO {
             "this PagePartitionMetaIO version: ver=" + getVersion());
     }
 
+    /**
+     * @param pageAddr Page address.
+     */
+    public long getUpdateTreeRoot(long pageAddr) {
+        throw new UnsupportedOperationException("Partition update log is not supported by " +
+                "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     * @param listRoot List root.
+     */
+    public void setUpdateTreeRoot(long pageAddr, long listRoot) {
+        throw new UnsupportedOperationException("Partition update log is not supported by " +
+                "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
     /** {@inheritDoc} */
     @Override protected void printPage(long pageAddr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
         super.printPage(pageAddr, pageSize, sb);
 
+        sb.a(",\nPagePartitionMeta[\n");
+
+        printFields(pageAddr, sb);
+
+        sb.a("\n]");
+    }
+
+    /**
+     * @param pageAddr Address.
+     * @param sb String builder.
+     */
+    protected void printFields(long pageAddr, GridStringBuilder sb) {
         byte state = getPartitionState(pageAddr);
 
-        sb.a(",\nPagePartitionMeta[\n\tsize=").a(getSize(pageAddr))
+        sb.a("\tsize=").a(getSize(pageAddr))
             .a(",\n\tupdateCounter=").a(getUpdateCounter(pageAddr))
             .a(",\n\tglobalRemoveId=").a(getGlobalRemoveId(pageAddr))
             .a(",\n\tpartitionState=").a(state).a("(").a(GridDhtPartitionState.fromOrdinal(state)).a(")")
-            .a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr))
-            .a("\n]");
+            .a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr)).toString();
     }
 }

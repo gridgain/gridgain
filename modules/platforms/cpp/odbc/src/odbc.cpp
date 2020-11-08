@@ -254,6 +254,8 @@ namespace ignite
                                SQLSMALLINT* outConnectionStringLen,
                                SQLUSMALLINT driverCompletion)
     {
+        IGNITE_UNUSED(driverCompletion);
+
         using odbc::Connection;
         using odbc::diagnostic::DiagnosticRecordStorage;
         using utility::SqlStringToString;
@@ -300,6 +302,11 @@ namespace ignite
                          SQLCHAR*       auth,
                          SQLSMALLINT    authLen)
     {
+        IGNITE_UNUSED(userName);
+        IGNITE_UNUSED(userNameLen);
+        IGNITE_UNUSED(auth);
+        IGNITE_UNUSED(authLen);
+
         using odbc::Connection;
         using odbc::config::Configuration;
         using utility::SqlStringToString;
@@ -623,6 +630,8 @@ namespace ignite
                            SQLINTEGER   outQueryBufferLen,
                            SQLINTEGER*  outQueryLen)
     {
+        IGNITE_UNUSED(conn);
+
         using namespace utility;
 
         LOG_MSG("SQLNativeSql called");

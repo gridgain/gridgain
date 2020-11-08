@@ -530,6 +530,26 @@ public class BinaryContext {
         boolean registerMeta,
         boolean failIfUnregistered
     ) throws BinaryObjectException {
+        return registerClass(cls, registerMeta, failIfUnregistered, false);
+    }
+
+    /**
+     * Attempts registration of the provided class. If the type is already registered, then an existing descriptor is
+     * returned.
+     *
+     * @param cls Class to register.
+     * @param registerMeta If {@code true}, then metadata will be registered along with the class descriptor.
+     * @param failIfUnregistered Throw exception if class isn't registered.
+     * @param onlyLocReg {@code true} if descriptor need to register only locally when registration is required at all.
+     * @return Class descriptor.
+     * @throws BinaryObjectException In case of error.
+     */
+    @NotNull public BinaryClassDescriptor registerClass(
+        Class<?> cls,
+        boolean registerMeta,
+        boolean failIfUnregistered,
+        boolean onlyLocReg
+    ) throws BinaryObjectException {
         assert cls != null;
 
         BinaryClassDescriptor desc = descriptorForClass(cls);
@@ -538,7 +558,7 @@ public class BinaryContext {
             if (failIfUnregistered)
                 throw new UnregisteredClassException(cls);
             else
-                desc = registerDescriptor(desc, registerMeta);
+                desc = registerDescriptor(desc, registerMeta, onlyLocReg);
         }
 
         return desc;
@@ -637,9 +657,25 @@ public class BinaryContext {
         Class cls;
 
         try {
-            cls = marshCtx.getClass(typeId, ldr);
+            if (GridBinaryMarshaller.USE_CACHE.get()) {
+                cls = marshCtx.getClass(typeId, ldr);
 
-            desc = descByCls.get(cls);
+                desc = descByCls.get(cls);
+            }
+            else {
+                String clsName = marshCtx.getClassName(JAVA_ID, typeId);
+
+                if (clsName == null)
+                    throw new ClassNotFoundException("Unknown type ID: " + typeId);
+
+                cls = U.forName(clsName, ldr, null);
+
+                desc = descByCls.get(cls);
+
+                if (desc == null)
+                    return createNoneCacheClassDescriptor(cls);
+            }
+
         }
         catch (ClassNotFoundException e) {
             // Class might have been loaded by default class loader.
@@ -667,26 +703,64 @@ public class BinaryContext {
     }
 
     /**
+     * Creates descriptor without registration.
+     *
+     * @param cls Class.
+     * @return Binary class descriptor.
+     */
+    @NotNull private BinaryClassDescriptor createNoneCacheClassDescriptor(Class cls) {
+        String clsName = cls.getName();
+
+        BinaryInternalMapper mapper = userTypeMapper(clsName);
+
+        int typeId = mapper.typeId(clsName);
+
+        String typeName = mapper.typeName(clsName);
+
+        BinarySerializer serializer = serializerForClass(cls);
+
+        String affFieldName = affinityFieldName(cls);
+
+        return new BinaryClassDescriptor(this,
+            cls,
+            true,
+            typeId,
+            typeName,
+            affFieldName,
+            mapper,
+            serializer,
+            true,
+            true,
+            false
+        );
+    }
+
+    /**
      * Attempts registration of the provided {@link BinaryClassDescriptor} in the cluster.
      *
      * @param desc Class descriptor to register.
      * @param registerMeta If {@code true}, then metadata will be registered along with the class descriptor.
+     * @param onlyLocReg {@code true} if descriptor need to register only locally when registration is required at all.
      * @return Registered class descriptor.
      */
     @NotNull public BinaryClassDescriptor registerDescriptor(
         BinaryClassDescriptor desc,
-        boolean registerMeta
+        boolean registerMeta,
+        boolean onlyLocReg
     ) {
         if (desc.userType())
-            return registerUserClassDescriptor(desc, registerMeta);
+            return registerUserClassDescriptor(desc, registerMeta, onlyLocReg);
         else {
             BinaryClassDescriptor regDesc = desc.makeRegistered();
 
-            BinaryClassDescriptor old = descByCls.putIfAbsent(desc.describedClass(), regDesc);
+            if (GridBinaryMarshaller.USE_CACHE.get()) {
+                BinaryClassDescriptor old = descByCls.putIfAbsent(desc.describedClass(), regDesc);
 
-            return old != null
-                ? old
-                : regDesc;
+                if (old != null)
+                    return old;
+            }
+
+            return regDesc;
         }
     }
 
@@ -696,11 +770,13 @@ public class BinaryContext {
      *
      * @param desc Class descriptor to register.
      * @param registerMeta If {@code true}, then metadata will be registered along with the class descriptor.
+     * @param onlyLocReg {@code true} if descriptor need to register only locally.
      * @return Class descriptor.
      */
     @NotNull private BinaryClassDescriptor registerUserClassDescriptor(
         BinaryClassDescriptor desc,
-        boolean registerMeta
+        boolean registerMeta,
+        boolean onlyLocReg
     ) {
         assert desc.userType() : "The descriptor doesn't correspond to a user class.";
 
@@ -708,13 +784,17 @@ public class BinaryContext {
 
         int typeId = desc.typeId();
 
-        boolean registered = registerUserClassName(typeId, cls.getName(), false);
+        boolean registered = registerUserClassName(typeId, cls.getName(), false, onlyLocReg);
 
         if (registered) {
             BinaryClassDescriptor regDesc = desc.makeRegistered();
 
-            if (registerMeta)
-                metaHnd.addMeta(typeId, regDesc.metadata().wrap(this), false);
+            if (registerMeta) {
+                if (onlyLocReg)
+                    metaHnd.addMetaLocally(typeId, regDesc.metadata().wrap(this), false);
+                else
+                    metaHnd.addMeta(typeId, regDesc.metadata().wrap(this), false);
+            }
 
             descByCls.put(cls, regDesc);
 
@@ -1073,15 +1153,18 @@ public class BinaryContext {
      * @param clsName Class Name.
      * @param failIfUnregistered If {@code true} then throw {@link UnregisteredBinaryTypeException} with
      *      {@link MappingExchangeResult} future instead of synchronously awaiting for its completion.
+     * @param onlyLocReg Whether to register only on the current node.
      * @return {@code True} if the mapping was registered successfully.
      */
-    public boolean registerUserClassName(int typeId, String clsName, boolean failIfUnregistered) {
+    public boolean registerUserClassName(int typeId, String clsName, boolean failIfUnregistered, boolean onlyLocReg) {
         IgniteCheckedException e = null;
 
         boolean res = false;
 
         try {
-            res = marshCtx.registerClassName(JAVA_ID, typeId, clsName, failIfUnregistered);
+            res = onlyLocReg
+                    ? marshCtx.registerClassNameLocally(JAVA_ID, typeId, clsName)
+                    : marshCtx.registerClassName(JAVA_ID, typeId, clsName, failIfUnregistered);
         }
         catch (DuplicateTypeIdException dupEx) {
             // Ignore if trying to register mapped type name of the already registered class name and vise versa

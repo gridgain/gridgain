@@ -34,9 +34,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.AffinityKey;
@@ -47,7 +47,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.processors.query.QueryEntityEx;
-import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -59,9 +58,11 @@ import static java.sql.Types.DECIMAL;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static org.apache.ignite.IgniteJdbcDriver.CFG_URL_PREFIX;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 
 /**
  * Metadata tests.
@@ -314,48 +315,64 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
         }
     }
 
-
     /**
      * @throws Exception If failed.
      */
     @Test
     public void testGetAllView() throws Exception {
-        List<String> expViews = Arrays.asList(
+        Set<String> expViews = new HashSet<>(Arrays.asList(
             "BASELINE_NODES",
             "CACHES",
             "CACHE_GROUPS",
             "INDEXES",
             "LOCAL_CACHE_GROUPS_IO",
-            "LOCAL_SQL_QUERY_HISTORY",
-            "LOCAL_SQL_RUNNING_QUERIES",
+            "SQL_QUERIES_HISTORY",
+            "SQL_QUERIES",
+            "SCAN_QUERIES",
             "NODES",
             "NODE_ATTRIBUTES",
             "NODE_METRICS",
             "SCHEMAS",
-            "TABLES"
-        );
+            "TABLES",
+            "TASKS",
+            "JOBS",
+            "CLIENT_CONNECTIONS",
+            "TRANSACTIONS",
+            "VIEWS",
+            "TABLE_COLUMNS",
+            "VIEW_COLUMNS",
+            "CONTINUOUS_QUERIES",
+            "STRIPED_THREADPOOL_QUEUE",
+            "DATASTREAM_THREADPOOL_QUEUE",
+            "CACHE_GROUP_PAGE_LISTS",
+            "METRICS"
+        ));
+
+        if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED))
+            expViews.add("SERVICES");
+
+        Set<String> actViews = new HashSet<>();
 
         try (Connection conn = DriverManager.getConnection(BASE_URL)) {
             DatabaseMetaData meta = conn.getMetaData();
 
             ResultSet rs = meta.getTables(null, null, "%", new String[]{"VIEW"});
 
-            for (String viewName : expViews) {
-                assertTrue(rs.next());
-
+            while (rs.next()) {
                 assertEquals("VIEW", rs.getString("TABLE_TYPE"));
 
                 assertEquals(JdbcUtils.CATALOG_NAME, rs.getString("TABLE_CAT"));
 
-                assertEquals(QueryUtils.sysSchemaName(), rs.getString("TABLE_SCHEM"));
+                assertEquals(sysSchemaName(), rs.getString("TABLE_SCHEM"));
 
-                assertEquals(viewName, rs.getString("TABLE_NAME"));
+                actViews.add(rs.getString("TABLE_NAME"));
             }
 
             assertFalse(rs.next());
+
+            assertEquals(expViews, actViews);
         }
     }
-
 
     /**
      * @throws Exception If failed.
@@ -431,6 +448,21 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             assertIsEmpty(meta.getSuperTables(invalidCat, "%", "%"));
             assertIsEmpty(meta.getSchemas(invalidCat, null));
             assertIsEmpty(meta.getPseudoColumns(invalidCat, null, "%", ""));
+        }
+    }
+
+    /**
+     * Check JDBC support flags.
+     */
+    @Test
+    public void testCheckSupports() throws SQLException {
+        try (Connection conn = DriverManager.getConnection(BASE_URL)) {
+            DatabaseMetaData meta = conn.getMetaData();
+
+            assertTrue(meta.supportsANSI92EntryLevelSQL());
+            assertTrue(meta.supportsAlterTableWithAddColumn());
+            assertTrue(meta.supportsAlterTableWithDropColumn());
+            assertTrue(meta.nullPlusNonNullIsNull());
         }
     }
 
@@ -712,7 +744,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
         try (Connection conn = DriverManager.getConnection(BASE_URL)) {
             ResultSet rs = conn.getMetaData().getSchemas();
 
-            Set<String> expectedSchemas = new HashSet<>(Arrays.asList("pers", "org", "metaTest", "dep", "PUBLIC", "IGNITE", "PREDEFINED_CLIENT_SCHEMA"));
+            Set<String> expSchemas = new HashSet<>(Arrays.asList("pers", "org", "metaTest", "dep", "PUBLIC", sysSchemaName(), "PREDEFINED_CLIENT_SCHEMA"));
 
             Set<String> schemas = new HashSet<>();
 
@@ -723,7 +755,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
                     JdbcUtils.CATALOG_NAME, rs.getString(2));
             }
 
-            assertEquals(expectedSchemas, schemas);
+            assertEquals(expSchemas, schemas);
         }
     }
 

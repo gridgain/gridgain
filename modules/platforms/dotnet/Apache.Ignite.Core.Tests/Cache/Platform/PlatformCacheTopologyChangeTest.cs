@@ -25,7 +25,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Communication.Tcp;
-    using Apache.Ignite.Core.Impl.Unmanaged.Jni;
     using Apache.Ignite.Core.Lifecycle;
     using NUnit.Framework;
 
@@ -540,12 +539,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             _ignite[idx] = null;
         }
 
-        private static void ResumeThreads(string gridName)
-        {
-            CallStringMethod(gridName, "org/apache/ignite/platform/PlatformThreadUtils", "resume",
-                "(Ljava/lang/String;)V");
-        }
-
         private static void PerformClientReconnect(IIgnite client)
         {
             var disconnectedEvt = new ManualResetEventSlim(false);
@@ -561,9 +554,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             };
 
             var gridName = string.Format("%{0}%", client.Name);
-            SuspendJavaThreads(gridName);
+            TestUtilsJni.SuspendThreads(gridName);
             Thread.Sleep(9000);
-            ResumeThreads(gridName);
+            TestUtilsJni.ResumeThreads(gridName);
 
             Assert.Catch(() => client.CreateCache<int, int>("_fail").Put(1, 1));
 
@@ -575,28 +568,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
 
             Assert.IsTrue(reconnected);
             Assert.IsFalse(reconnectEventArgs.HasClusterRestarted);
-        }
-
-        private static void SuspendJavaThreads(string gridName)
-        {
-            CallStringMethod(gridName, "org/apache/ignite/platform/PlatformThreadUtils", "suspend",
-                "(Ljava/lang/String;)V");
-        }
-
-        private static unsafe void CallStringMethod(string gridName, string className, string methodName, string methodSig)
-        {
-            var env = Jvm.Get().AttachCurrentThread();
-            using (var cls = env.FindClass(className))
-            {
-                var methodId = env.GetStaticMethodId(cls, methodName, methodSig);
-                using (var gridNameRef = env.NewStringUtf(gridName))
-                {
-                    var args = stackalloc long[1];
-                    args[0] = gridNameRef.Target.ToInt64();
-
-                    env.CallStaticVoidMethod(cls, methodId, args);
-                }
-            }
         }
 
         /// <summary>

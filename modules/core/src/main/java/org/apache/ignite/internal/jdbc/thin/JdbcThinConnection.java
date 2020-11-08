@@ -234,7 +234,7 @@ public class JdbcThinConnection implements Connection {
     private int netTimeout;
 
     /** Query timeout. */
-    private int qryTimeout;
+    private final @Nullable Integer qryTimeout;
 
     /** Background periodical maintenance: query timeouts and reconnection handler. */
     private final ScheduledExecutorService maintenanceExecutor;
@@ -367,7 +367,7 @@ public class JdbcThinConnection implements Connection {
                 streamState = new StreamState((SqlSetStreamingCommand)cmd, cliIo);
 
                 sendRequest(new JdbcQueryExecuteRequest(JdbcStatementType.ANY_STATEMENT_TYPE,
-                    schema, 1, 1, autoCommit, sql, null), stmt, cliIo);
+                    schema, 1, 1, autoCommit, stmt.explicitTimeout, sql, null), stmt, cliIo);
 
                 streamState.start();
             }
@@ -409,7 +409,8 @@ public class JdbcThinConnection implements Connection {
 
         JdbcThinStatement stmt = new JdbcThinStatement(this, resSetHoldability, schema);
 
-        stmt.setQueryTimeout(qryTimeout);
+        if (qryTimeout != null)
+            stmt.setQueryTimeout(qryTimeout);
 
         synchronized (stmtsMux) {
             stmts.add(stmt);
@@ -2315,6 +2316,12 @@ public class JdbcThinConnection implements Connection {
             }
 
             cache.addMeta(typeId, meta, failIfUnregistered); // merge
+        }
+
+        /** {@inheritDoc} */
+        @Override public void addMetaLocally(int typeId, BinaryType meta,
+                                             boolean failIfUnregistered) throws BinaryObjectException {
+            throw new UnsupportedOperationException("Can't register metadata locally for thin client.");
         }
 
         /** {@inheritDoc} */

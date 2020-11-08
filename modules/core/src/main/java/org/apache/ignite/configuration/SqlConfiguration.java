@@ -16,6 +16,7 @@
 
 package org.apache.ignite.configuration;
 
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -37,6 +38,9 @@ public class SqlConfiguration {
     /** Default value for SQL offloading flag. */
     public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
 
+    /** Default query timeout. */
+    public static final long DFLT_QRY_TIMEOUT = 0;
+
     /** */
     private long longQryWarnTimeout = DFLT_LONG_QRY_WARN_TIMEOUT;
 
@@ -54,6 +58,9 @@ public class SqlConfiguration {
 
     /** Offloading enabled flag - whether to start offloading where quota is exceeded or throw an exception. */
     private boolean sqlOffloadingEnabled = DFLT_SQL_QUERY_OFFLOADING_ENABLED;
+
+    /** Default query timeout. */
+    private long dfltQryTimeout = DFLT_QRY_TIMEOUT;
 
     /**
      * Number of SQL query history elements to keep in memory. If not provided, then default value {@link
@@ -258,6 +265,40 @@ public class SqlConfiguration {
      */
     public SqlConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
         this.sqlOffloadingEnabled = offloadingEnabled;
+
+        return this;
+    }
+
+    /**
+     * Defines the default query timeout.
+     *
+     * Defaults to {@link #DFLT_QRY_TIMEOUT}.
+     * {@code 0} means there is no timeout (this
+     * is a default value)
+     *
+     * @return Default query timeout.
+     * @deprecated Since 8.7.26. Please use distributed default query timeout.
+     */
+    @Deprecated
+    public long getDefaultQueryTimeout() {
+        return dfltQryTimeout;
+    }
+
+    /**
+     * Sets timeout in milliseconds for default query timeout.
+     * {@code 0} means there is no timeout (this
+     * is a default value)
+     *
+     * @param dfltQryTimeout Timeout in milliseconds.
+     * @return {@code this} for chaining.
+     * @deprecated Since 8.7.26. Please use distributed default query timeout.
+     */
+    @Deprecated
+    public SqlConfiguration setDefaultQueryTimeout(long dfltQryTimeout) {
+        A.ensure(dfltQryTimeout >= 0 && dfltQryTimeout <= Integer.MAX_VALUE,
+            "default query timeout value should be not negative Integer.");
+
+        this.dfltQryTimeout = dfltQryTimeout;
 
         return this;
     }

@@ -288,7 +288,7 @@ struct Func3 : ComputeFunc<void>
 
 std::string Func3::res;
 
-void EmptyDeleter(IgniteEnvironment* p)
+void EmptyDeleter(IgniteEnvironment*)
 {
     // No-op.
 }

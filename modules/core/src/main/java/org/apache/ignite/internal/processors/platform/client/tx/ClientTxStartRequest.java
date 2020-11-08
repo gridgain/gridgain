@@ -74,8 +74,7 @@ public class ClientTxStartRequest extends ClientRequest {
                 true,
                 null,
                 0,
-                lb,
-                false
+                lb
             );
         }
         finally {

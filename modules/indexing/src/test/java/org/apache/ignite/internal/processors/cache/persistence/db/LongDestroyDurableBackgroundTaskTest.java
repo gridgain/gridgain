@@ -48,8 +48,8 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
@@ -78,7 +78,7 @@ import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThread;
-import org.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -166,7 +166,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
                         new DataRegionConfiguration()
                             .setPersistenceEnabled(true)
                             .setInitialSize(10 * 1024L * 1024L)
-                            .setMaxSize(50 * 1024L * 1024L)
+                            .setMaxSize(100 * 1024L * 1024L)
                     )
                     .setDataRegionConfigurations(
                         new DataRegionConfiguration()
@@ -641,6 +641,47 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
     }
 
     /**
+     * Tests that index is correctly deleted when corresponding SQL table is deleted.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRemoveIndexesOnTableDrop() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        query(cache, "create table t1 (id integer primary key, p integer, f integer) with \"BACKUPS=1, CACHE_GROUP=grp_test_table\"");
+
+        query(cache, "create table t2 (id integer primary key, p integer, f integer) with \"BACKUPS=1, CACHE_GROUP=grp_test_table\"");
+
+        query(cache, "create index t2_idx on t2 (p)");
+
+        for (int i = 0; i < 5_000; i++)
+            query(cache, "insert into t2 (id, p, f) values (?, ?, ?)", i, i, i);
+
+        forceCheckpoint();
+
+        CountDownLatch inxDeleteInAsyncTaskLatch = new CountDownLatch(1);
+
+        LogListener lsnr = new CallbackExecutorLogListener(
+            ".*?Execution of durable background task completed: DROP_SQL_INDEX-PUBLIC.T2_IDX-.*",
+            () -> inxDeleteInAsyncTaskLatch.countDown()
+        );
+
+        testLog.registerListener(lsnr);
+
+        ignite.destroyCache("SQL_PUBLIC_T2");
+
+        awaitLatch(
+            inxDeleteInAsyncTaskLatch,
+            "Failed to await for index deletion in async task (either index failed to delete in 1 minute or async task not started)"
+        );
+    }
+
+    /**
      * Tests that task removed from metastorage in beginning of next checkpoint.
      *
      * @throws Exception If failed.
@@ -774,7 +815,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
     /**
      *
      */
-    private class DurableBackgroundTaskTestListener implements DbCheckpointListener {
+    private class DurableBackgroundTaskTestListener implements CheckpointListener {
         /**
          * Prefix for metastorage keys for durable background tasks.
          */

@@ -50,11 +50,11 @@ import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.h2.command.Prepared;
-import org.h2.engine.Session;
-import org.h2.message.DbException;
-import org.h2.table.Column;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -664,6 +664,15 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
 
         // No such schema.
         assertParseThrows("ALTER TABLE SCH5.\"Person\" ADD (city varchar)", DbException.class, null);
+    }
+
+
+    /** */
+    @Test
+    public void testIntervalOperation() throws Exception {
+        // Some comments here
+        checkQuery("insert into Person(date, old, name, parentName, addrId) values " +
+            "(TRUNCATE(TIMESTAMP '2015-12-31 23:59:59') - TRUNC(CURRENT_TIMESTAMP), POWER(3,12), NULL, NULL, NULL)");
     }
 
     /**

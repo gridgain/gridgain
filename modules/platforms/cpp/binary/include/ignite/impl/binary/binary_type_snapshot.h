@@ -47,7 +47,7 @@ namespace ignite
                  * @param typeName Type name.
                  * @param typeId Type ID.
                  */
-                BinaryTypeSnapshot(std::string typeName, int32_t typeId);
+                IGNITE_IMPORT_EXPORT BinaryTypeSnapshot(std::string typeName, int32_t typeId);
 
                 /**
                  * Copy constructor.
@@ -114,7 +114,7 @@ namespace ignite
                  * @param fieldName Field name.
                  * @param fieldTypeId Field type ID.
                  */
-                void AddField(int32_t fieldId, const std::string& fieldName, int32_t fieldTypeId);
+                IGNITE_IMPORT_EXPORT void AddField(int32_t fieldId, const std::string& fieldName, int32_t fieldTypeId);
 
                 /**
                  * Copy fields from another snapshot.

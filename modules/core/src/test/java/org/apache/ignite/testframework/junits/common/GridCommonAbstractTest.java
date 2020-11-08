@@ -45,6 +45,7 @@ import javax.cache.CacheException;
 import javax.cache.integration.CompletionListener;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.net.ssl.HostnameVerifier;
@@ -117,6 +118,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2;
 import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
 import org.apache.ignite.internal.processors.cache.verify.PartitionKeyV2;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
@@ -692,7 +694,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param printPartState If {@code true} will print partition state if evictions not happened.
      * @throws InterruptedException If interrupted.
      */
-    @SuppressWarnings("BusyWait")
     protected void awaitPartitionMapExchange(
         boolean waitEvicts,
         boolean waitNode2PartUpdate,
@@ -2390,7 +2391,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
-     * Load data into single partition.
+     * Load data into a single partition.
      *
      * @param p Partition.
      * @param cacheName Cache name.
@@ -2616,22 +2617,47 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param <T> Type parameter for bean class.
      * @param <I> Type parameter for bean implementation class.
      * @return MX bean.
-     * @throws Exception If failed.
      */
     protected <T, I> T getMxBean(
         String igniteInstanceName,
         String grp,
         Class<T> cls,
         Class<I> implCls
-    ) throws Exception {
-        ObjectName mbeanName = U.makeMBeanName(igniteInstanceName, grp, implCls.getSimpleName());
+    ) {
+        return getMxBean(igniteInstanceName, grp, implCls.getSimpleName(), cls);
+    }
+
+    /**
+     * Returns MX bean by specified name and group name.
+     *
+     * @param igniteInstanceName Ignite instance name.
+     * @param grp Name of the group.
+     * @param name Name of the bean.
+     * @param cls Bean class.
+     * @param <T> Type parameter for bean class.
+     * @return MX bean.
+     */
+    public static <T> T getMxBean(
+        String igniteInstanceName,
+        String grp,
+        String name,
+        Class<T> cls
+    ) {
+        ObjectName mbeanName = null;
+
+        try {
+            mbeanName = U.makeMBeanName(igniteInstanceName, grp, name);
+        }
+        catch (MalformedObjectNameException e) {
+            fail("Failed to register MBean.");
+        }
 
         MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
 
         if (!mbeanSrv.isRegistered(mbeanName))
             fail("MBean is not registered: " + mbeanName.getCanonicalName());
 
-        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, cls, true);
+        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, cls, false);
     }
 
     /**
@@ -2685,7 +2711,16 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             if (sysMetricsPackages.stream().anyMatch(clsName::startsWith))
                 continue;
 
-            Class c = Class.forName(clsName);
+            Class c;
+
+            try {
+                c = Class.forName(clsName);
+            }
+            catch (ClassNotFoundException e) {
+                log.warning("Failed to load class: " + clsName);
+
+                continue;
+            }
 
             for (Class interf : c.getInterfaces()) {
                 for (Method m : interf.getMethods()) {
@@ -2764,6 +2799,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @throws IgniteCheckedException If failed.
      */
     protected void enableCheckpoints(Collection<Ignite> nodes, boolean enable) throws IgniteCheckedException {
+        GridCompoundFuture<Void, Void> fut = new GridCompoundFuture<>();
+
         for (Ignite node : nodes) {
             assert !node.cluster().localNode().isClient();
 
@@ -2774,8 +2811,12 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
             GridCacheDatabaseSharedManager dbMgr0 = (GridCacheDatabaseSharedManager) dbMgr;
 
-            dbMgr0.enableCheckpoints(enable).get();
+            fut.add(dbMgr0.enableCheckpoints(enable));
         }
+
+        fut.markInitialized();
+
+        fut.get();
     }
 
     /**

@@ -42,72 +42,74 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.command.Command;
-import org.h2.command.CommandContainer;
-import org.h2.command.CommandInterface;
-import org.h2.command.Prepared;
-import org.h2.command.ddl.AlterTableAddConstraint;
-import org.h2.command.ddl.AlterTableAlterColumn;
-import org.h2.command.ddl.CommandWithColumns;
-import org.h2.command.ddl.CreateIndex;
-import org.h2.command.ddl.CreateTable;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.command.ddl.DefineCommand;
-import org.h2.command.ddl.DropIndex;
-import org.h2.command.ddl.DropTable;
-import org.h2.command.ddl.SchemaCommand;
-import org.h2.command.dml.CommandWithValues;
-import org.h2.command.dml.Delete;
-import org.h2.command.dml.Explain;
-import org.h2.command.dml.Insert;
-import org.h2.command.dml.Merge;
-import org.h2.command.dml.Query;
-import org.h2.command.dml.Select;
-import org.h2.command.dml.SelectOrderBy;
-import org.h2.command.dml.SelectUnion;
-import org.h2.command.dml.Update;
-import org.h2.engine.Constants;
-import org.h2.engine.FunctionAlias;
-import org.h2.engine.UserAggregate;
-import org.h2.expression.Alias;
-import org.h2.expression.BinaryOperation;
-import org.h2.expression.Expression;
-import org.h2.expression.ExpressionColumn;
-import org.h2.expression.ExpressionList;
-import org.h2.expression.Parameter;
-import org.h2.expression.Subquery;
-import org.h2.expression.UnaryOperation;
-import org.h2.expression.ValueExpression;
-import org.h2.expression.aggregate.AbstractAggregate;
-import org.h2.expression.aggregate.Aggregate;
-import org.h2.expression.aggregate.AggregateType;
-import org.h2.expression.aggregate.JavaAggregate;
-import org.h2.expression.condition.CompareLike;
-import org.h2.expression.condition.Comparison;
-import org.h2.expression.condition.ConditionAndOr;
-import org.h2.expression.condition.ConditionExists;
-import org.h2.expression.condition.ConditionIn;
-import org.h2.expression.condition.ConditionInConstantSet;
-import org.h2.expression.condition.ConditionInSelect;
-import org.h2.expression.condition.ConditionNot;
-import org.h2.expression.function.Function;
-import org.h2.expression.function.JavaFunction;
-import org.h2.expression.function.TableFunction;
-import org.h2.index.ViewIndex;
-import org.h2.jdbc.JdbcPreparedStatement;
-import org.h2.result.SortOrder;
-import org.h2.schema.Schema;
-import org.h2.table.Column;
-import org.h2.table.FunctionTable;
-import org.h2.table.IndexColumn;
-import org.h2.table.MetaTable;
-import org.h2.table.RangeTable;
-import org.h2.table.Table;
-import org.h2.table.TableBase;
-import org.h2.table.TableFilter;
-import org.h2.table.TableView;
-import org.h2.value.DataType;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.command.Command;
+import org.gridgain.internal.h2.command.CommandContainer;
+import org.gridgain.internal.h2.command.CommandInterface;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.command.ddl.AlterTableAddConstraint;
+import org.gridgain.internal.h2.command.ddl.AlterTableAlterColumn;
+import org.gridgain.internal.h2.command.ddl.CommandWithColumns;
+import org.gridgain.internal.h2.command.ddl.CreateIndex;
+import org.gridgain.internal.h2.command.ddl.CreateTable;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.command.ddl.DefineCommand;
+import org.gridgain.internal.h2.command.ddl.DropIndex;
+import org.gridgain.internal.h2.command.ddl.DropTable;
+import org.gridgain.internal.h2.command.ddl.SchemaCommand;
+import org.gridgain.internal.h2.command.dml.CommandWithValues;
+import org.gridgain.internal.h2.command.dml.Delete;
+import org.gridgain.internal.h2.command.dml.Explain;
+import org.gridgain.internal.h2.command.dml.Insert;
+import org.gridgain.internal.h2.command.dml.Merge;
+import org.gridgain.internal.h2.command.dml.Query;
+import org.gridgain.internal.h2.command.dml.Select;
+import org.gridgain.internal.h2.command.dml.SelectOrderBy;
+import org.gridgain.internal.h2.command.dml.SelectUnion;
+import org.gridgain.internal.h2.command.dml.Update;
+import org.gridgain.internal.h2.engine.Constants;
+import org.gridgain.internal.h2.engine.FunctionAlias;
+import org.gridgain.internal.h2.engine.UserAggregate;
+import org.gridgain.internal.h2.expression.Alias;
+import org.gridgain.internal.h2.expression.BinaryOperation;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.expression.ExpressionColumn;
+import org.gridgain.internal.h2.expression.ExpressionList;
+import org.gridgain.internal.h2.expression.IntervalOperation;
+import org.gridgain.internal.h2.expression.Parameter;
+import org.gridgain.internal.h2.expression.Subquery;
+import org.gridgain.internal.h2.expression.UnaryOperation;
+import org.gridgain.internal.h2.expression.ValueExpression;
+import org.gridgain.internal.h2.expression.aggregate.AbstractAggregate;
+import org.gridgain.internal.h2.expression.aggregate.Aggregate;
+import org.gridgain.internal.h2.expression.aggregate.AggregateType;
+import org.gridgain.internal.h2.expression.aggregate.JavaAggregate;
+import org.gridgain.internal.h2.expression.condition.CompareLike;
+import org.gridgain.internal.h2.expression.condition.Comparison;
+import org.gridgain.internal.h2.expression.condition.ConditionAndOr;
+import org.gridgain.internal.h2.expression.condition.ConditionExists;
+import org.gridgain.internal.h2.expression.condition.ConditionIn;
+import org.gridgain.internal.h2.expression.condition.ConditionInConstantSet;
+import org.gridgain.internal.h2.expression.condition.ConditionInSelect;
+import org.gridgain.internal.h2.expression.condition.ConditionNot;
+import org.gridgain.internal.h2.expression.function.Function;
+import org.gridgain.internal.h2.expression.function.JavaFunction;
+import org.gridgain.internal.h2.expression.function.TableFunction;
+import org.gridgain.internal.h2.index.ViewIndex;
+import org.gridgain.internal.h2.jdbc.JdbcPreparedStatement;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.schema.Schema;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.FunctionTable;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.MetaTable;
+import org.gridgain.internal.h2.table.RangeTable;
+import org.gridgain.internal.h2.table.Table;
+import org.gridgain.internal.h2.table.TableBase;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.table.TableView;
+import org.gridgain.internal.h2.value.DataType;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -415,7 +417,7 @@ public class GridSqlQueryParser {
     /** */
     private static final Getter<Column, Expression> COLUMN_CHECK_CONSTRAINT = getter(Column.class, "checkConstraint");
 
-    /** Class for private class: 'org.h2.command.CommandList'. */
+    /** Class for private class: 'org.gridgain.internal.h2.command.CommandList'. */
     private static final Class<? extends Command> CLS_COMMAND_LIST;
 
     /** */
@@ -425,7 +427,7 @@ public class GridSqlQueryParser {
     private static final Getter<Command, String> REMAINING;
 
     /** */
-    public static final String ORG_H2_COMMAND_COMMAND_LIST = "org.h2.command.CommandList";
+    public static final String ORG_H2_COMMAND_COMMAND_LIST = "org.gridgain.internal.h2.command.CommandList";
 
     static {
         try {
@@ -871,7 +873,7 @@ public class GridSqlQueryParser {
 
         res.columns(cols);
 
-        if (!F.isEmpty(MERGE_KEYS.get(merge))) {
+        if (merge.isExplicitKeys()) {
             log.warning("The search row by explicit KEY isn't supported. The primary key is always used to search row " +
                 "[sql=" + merge.getSQL() + ']');
         }
@@ -2396,6 +2398,47 @@ public class GridSqlQueryParser {
             res.addChild(parseQueryExpression(qry));
 
             return res;
+        }
+
+        if (expression instanceof IntervalOperation) {
+            IntervalOperation iop = (IntervalOperation)expression;
+            GridSqlOperation opRes = null;
+
+            switch (iop.getOpType()) {
+                case INTERVAL_PLUS_INTERVAL:
+                case DATETIME_PLUS_INTERVAL:
+                    return new GridSqlOperation(
+                        GridSqlOperationType.PLUS,
+                        parseExpression(iop.getLeft(), calcTypes),
+                        parseExpression(iop.getRight(), calcTypes)
+                    );
+
+                case INTERVAL_MINUS_INTERVAL:
+                case DATETIME_MINUS_INTERVAL:
+                case DATETIME_MINUS_DATETIME:
+                    return new GridSqlOperation(
+                        GridSqlOperationType.MINUS,
+                        parseExpression(iop.getLeft(), calcTypes),
+                        parseExpression(iop.getRight(), calcTypes)
+                    );
+
+                case INTERVAL_MULTIPLY_NUMERIC:
+                    return new GridSqlOperation(
+                        GridSqlOperationType.MULTIPLY,
+                        parseExpression(iop.getLeft(), calcTypes),
+                        parseExpression(iop.getRight(), calcTypes)
+                    );
+
+                case INTERVAL_DIVIDE_NUMERIC:
+                    return new GridSqlOperation(
+                        GridSqlOperationType.DIVIDE,
+                        parseExpression(iop.getLeft(), calcTypes),
+                        parseExpression(iop.getRight(), calcTypes)
+                    );
+
+                default:
+                    throw DbException.throwInternalError("opType=" + iop.getOpType());
+            }
         }
 
         throw new IgniteException("Unsupported expression: " + expression + " [type=" +
