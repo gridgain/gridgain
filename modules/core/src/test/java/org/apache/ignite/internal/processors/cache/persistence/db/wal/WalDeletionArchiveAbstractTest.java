@@ -140,8 +140,6 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
 
         GridCacheDatabaseSharedManager dbMgr = gridDatabase(ignite);
 
-        long allowedThresholdWalArchiveSize = maxWalArchiveSize / 2;
-
         IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(cacheConfiguration());
 
         //when: put to cache more than 2 MB
@@ -160,7 +158,7 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
             .reduce(0L, Long::sum);
 
         assertTrue(files.length >= 1);
-        assertTrue(totalSize <= allowedThresholdWalArchiveSize);
+        assertTrue(totalSize <= maxWalArchiveSize);
         assertFalse(Stream.of(files).anyMatch(desc -> desc.file().getName().endsWith("00001.wal")));
 
         CheckpointHistory hist = dbMgr.checkpointHistory();

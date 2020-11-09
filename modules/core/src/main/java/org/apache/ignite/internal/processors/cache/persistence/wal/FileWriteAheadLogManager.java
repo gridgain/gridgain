@@ -2448,6 +2448,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         if (isCancelled())
                             break;
 
+                        if (segmentToDecompress == -1)
+                            continue;
+
                         String segmentFileName = fileName(segmentToDecompress);
 
                         File zip = new File(walArchiveDir, segmentFileName + ZIP_SUFFIX);

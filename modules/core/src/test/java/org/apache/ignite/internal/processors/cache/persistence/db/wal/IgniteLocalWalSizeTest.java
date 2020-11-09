@@ -215,7 +215,7 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
 
         assertEquals(currHnd.getSegmentId() + 1, expSegmentSize.size());
 
-        Map<Long, Long> segmentSize = getFieldValue(wal, "segmentSize");
+        Map<Long, Long> segmentSize = getFieldValue(wal, "segmentSizes");
         assertEquals(expSegmentSize.size(), segmentSize.size());
 
         expSegmentSize.forEach((idx, size) -> {
