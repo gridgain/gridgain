@@ -93,7 +93,7 @@ public class WalArchiveSize {
      * @param availableArchive Archive available.
      */
     public void onStartWalManager(SegmentAware segmentAware, boolean availableArchive) {
-        if (availableArchive) {
+        if (!unlimited() && availableArchive) {
             segmentAware.addMinReservedSegmentObserver(absSegIdx -> {
                 synchronized (this) {
                     reservedIdx = absSegIdx == null ? -1 : absSegIdx;
@@ -110,16 +110,18 @@ public class WalArchiveSize {
      * @param cpMgr Checkpoint manager.
      */
     public void onStartcheckpointManager(CheckpointManager cpMgr) {
-        this.cpMgr = cpMgr;
+        if (!unlimited()) {
+            this.cpMgr = cpMgr;
 
-        // Adding a callback on change border for recovery.
-        cpMgr.checkpointHistory().addObserver(cpEntry -> {
-            synchronized (this) {
-                cpIdx = ((FileWALPointer)cpEntry.checkpointMark()).index();
+            // Adding a callback on change border for recovery.
+            cpMgr.checkpointHistory().addObserver(cpEntry -> {
+                synchronized (this) {
+                    cpIdx = ((FileWALPointer)cpEntry.checkpointMark()).index();
 
-                updateAvailableToClear();
-            }
-        });
+                    updateAvailableToClear();
+                }
+            });
+        }
     }
 
     /**

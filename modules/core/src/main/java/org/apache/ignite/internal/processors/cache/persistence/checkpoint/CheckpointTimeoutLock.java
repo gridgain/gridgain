@@ -134,8 +134,8 @@ public class CheckpointTimeoutLock {
                         throw new IgniteException(new NodeStoppingException("Failed to perform cache update: node is stopping."));
                     }
 
-                    if (checkpointReadWriteLock.getReadHoldCount() > 1 || safeToUpdatePageMemories()
-                        || checkpointer.runner() == null || safeToCleanWalArchive())
+                    if (checkpointReadWriteLock.getReadHoldCount() > 1 ||
+                        (safeToUpdatePageMemories() && safeToCleanWalArchive()) || checkpointer.runner() == null)
                         break;
                     else {
                         //If the checkpoint is triggered outside of the lock,
