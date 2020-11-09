@@ -528,6 +528,8 @@ public class CommandHandler {
 
         clientCfg.setPingTimeout(args.pingTimeout());
 
+        clientCfg.setConnectTimeout(args.connectionTimeout());
+
         clientCfg.setServers(Collections.singletonList(args.host() + ":" + args.port()));
 
         if (!F.isEmpty(userName))
