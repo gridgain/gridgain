@@ -11077,15 +11077,16 @@ public abstract class IgniteUtils {
         long adjustedWalArchiveSize = maxCpBufSize * 256;
 
         if (adjustedWalArchiveSize > dsCfg.getMaxWalArchiveSize()) {
-            if (log != null)
+            if (log != null) {
                 U.quietAndInfo(log, "Automatically adjusted max WAL archive size to " +
                     U.readableSize(adjustedWalArchiveSize, false) +
                     " (to override, use DataStorageConfiguration.setMaxWalArhiveSize)");
+            }
 
-            return adjustedWalArchiveSize;
+            return dsCfg.getMaxWalArchiveSize();
         }
 
-        return dsCfg.getMaxWalArchiveSize();
+        return adjustedWalArchiveSize;
     }
 
     /**
