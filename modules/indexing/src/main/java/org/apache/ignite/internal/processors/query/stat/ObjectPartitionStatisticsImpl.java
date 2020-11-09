@@ -34,14 +34,19 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
     /**
      * Constructor.
      *
-     * @param partId partition id.
-     * @param loc local flag.
-     * @param rowsCnt total count of rows in partition.
-     * @param updCnt update counter of partition.
-     * @param colNameToStat column key to column statistics map.
+     * @param partId Partition id.
+     * @param loc Local flag.
+     * @param rowsCnt Total count of rows in partition.
+     * @param updCnt Update counter of partition.
+     * @param colNameToStat Column key to column statistics map.
      */
-    public ObjectPartitionStatisticsImpl(int partId, boolean loc, long rowsCnt, long updCnt,
-                                         Map<String, ColumnStatistics> colNameToStat) {
+    public ObjectPartitionStatisticsImpl(
+            int partId,
+            boolean loc,
+            long rowsCnt,
+            long updCnt,
+            Map<String, ColumnStatistics> colNameToStat
+    ) {
         super(rowsCnt, colNameToStat);
 
         this.partId = partId;
@@ -50,26 +55,27 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
     }
 
     /**
-     * @return partition id.
+     * @return Partition id.
      */
     public int partId() {
         return partId;
     }
 
     /**
-     * @return is local flag.
+     * @return Is local flag.
      */
     public boolean local() {
         return loc;
     }
 
     /**
-     * @return partition update counter.
+     * @return Partition update counter.
      */
     public long updCnt() {
         return updCnt;
     }
 
+    /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl clone() {
         return new ObjectPartitionStatisticsImpl(partId, loc, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
     }

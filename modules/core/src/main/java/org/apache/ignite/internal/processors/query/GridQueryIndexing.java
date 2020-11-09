@@ -516,7 +516,7 @@ public interface GridQueryIndexing {
     /**
      * Get statistics manager.
      *
-     * @return statistics manager.
+     * @return Statistics manager.
      */
     IgniteStatisticsManager statsManager();
 }

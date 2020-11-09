@@ -28,6 +28,12 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /** Map columnKey to its statistic. */
     private final Map<String, ColumnStatistics> colNameToStat;
 
+    /**
+     * Constructor.
+     *
+     * @param rowsCnt Total rows count.
+     * @param colNameToStat Column names to statistics map.
+     */
     public ObjectStatisticsImpl(long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
 
         assert rowsCnt >= 0 : "rowsCnt >= 0";
@@ -39,7 +45,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     }
 
     /**
-     * @return object rows count.
+     * @return Object rows count.
      */
     public long rowCount() {
         return rowsCnt;
@@ -48,20 +54,21 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /**
      * Get column statistics.
      *
-     * @param colName column name.
-     * @return column statistics or {@code null} if there are no statistics for specified column.
+     * @param colName Column name.
+     * @return Column statistics or {@code null} if there are no statistics for specified column.
      */
     public ColumnStatistics columnStatistics(String colName) {
         return colNameToStat.get(colName);
     }
 
     /**
-     * @return column statistics map.
+     * @return Column statistics map.
      */
     public Map<String, ColumnStatistics> columnsStatistics() {
         return colNameToStat;
     }
 
+    /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl clone() {
         return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat));
     }

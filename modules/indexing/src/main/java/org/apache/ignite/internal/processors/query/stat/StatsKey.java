@@ -6,7 +6,6 @@ import java.util.Objects;
  * Statistics key.
  */
 public class StatsKey {
-
     /** Object schema. */
     private String schema;
 
@@ -16,8 +15,8 @@ public class StatsKey {
     /**
      * Constructor.
      *
-     * @param schema object schema.
-     * @param obj object name.
+     * @param schema Object schema.
+     * @param obj Object name.
      */
     public StatsKey(String schema, String obj) {
         this.schema = schema;
@@ -25,14 +24,14 @@ public class StatsKey {
     }
 
     /**
-     * @return schema name.
+     * @return Schema name.
      */
     public String schema() {
         return schema;
     }
 
     /**
-     * @return object name.
+     * @return Object name.
      */
     public String obj() {
         return obj;

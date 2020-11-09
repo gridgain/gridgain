@@ -23,7 +23,6 @@ import org.junit.Test;
  * Partial statistics collection (by set of columns) tests.
  */
 public class StatisticPartialCollectionTest extends TableStatisticsAbstractTest {
-
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(1);
@@ -50,9 +49,11 @@ public class StatisticPartialCollectionTest extends TableStatisticsAbstractTest 
 
     /**
      * Test that partial statistics collection work properly:
+     *
      * Prepare:
      * 1) create table with three columns with lo, med and hi selectivity
      * 2) collect statistics
+     *
      * Test:
      * 1) select with equals clauses by lo and med selectivity columns and test that med_idx used
      * 2) update data in lo selectivity so it will have hi selectivity

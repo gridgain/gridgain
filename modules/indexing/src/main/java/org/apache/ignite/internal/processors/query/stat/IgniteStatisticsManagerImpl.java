@@ -45,7 +45,6 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  * Statistics manager implementation.
  */
 public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
-
     /** Logger. */
     private IgniteLogger log;
 
@@ -61,8 +60,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Constructor.
      *
-     * @param ctx kernal context.
-     * @param schemaMgr schema manager.
+     * @param ctx Kernal context.
+     * @param schemaMgr Schema manager.
      */
     public IgniteStatisticsManagerImpl(GridKernalContext ctx, SchemaManager schemaMgr) {
         this.ctx = ctx;
@@ -73,7 +72,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /**
-     * @return statistics repository.
+     * @return Statistics repository.
      */
     public IgniteStatisticsRepository statisticsRepository() {
         return statsRepos;
@@ -95,9 +94,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Filter columns by specified names.
      *
-     * @param columns columns to filter.
-     * @param colNames names.
-     * @return column with specified names.
+     * @param columns Columns to filter.
+     * @param colNames Column names.
+     * @return Column with specified names.
      */
     private Column[] filterColumns(Column[] columns, String... colNames) {
         if (F.isEmpty(colNames))
@@ -146,9 +145,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Collect partition level statistics.
      *
-     * @param tbl table to collect statistics by.
-     * @param selectedColumns columns to collect statistics by.
-     * @return collection of partition level statistics by local primary partitions.
+     * @param tbl Table to collect statistics by.
+     * @param selectedColumns Columns to collect statistics by.
+     * @return Collection of partition level statistics by local primary partitions.
      * @throws IgniteCheckedException in case of error.
      */
     private Collection<ObjectPartitionStatisticsImpl> collectPartitionStatistics(GridH2Table tbl, Column[] selectedColumns)
@@ -210,9 +209,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Aggregate specified partition level statistics to local level statistics.
      *
-     * @param key aggregation key.
-     * @param tblPartStats collection of all local partition level statistics by specified key.
-     * @return local level aggregated statistics.
+     * @param key Aggregation key.
+     * @param tblPartStats Collection of all local partition level statistics by specified key.
+     * @return Local level aggregated statistics.
      */
     public ObjectStatisticsImpl aggregateLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> tblPartStats) {
         // For now there can be only tables

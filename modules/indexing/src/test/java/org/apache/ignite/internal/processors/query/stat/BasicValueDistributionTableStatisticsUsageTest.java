@@ -16,7 +16,6 @@ import static org.apache.ignite.cache.CacheMode.REPLICATED;
  */
 @RunWith(Parameterized.class)
 public class BasicValueDistributionTableStatisticsUsageTest extends TableStatisticsAbstractTest {
-
     /** */
     @Parameterized.Parameter(0)
     public CacheMode cacheMode;
@@ -81,7 +80,8 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectOverhightBorder() {
         String sql = "select count(*) from digital_distribution i1 where col_a > 200 and col_b > 200";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_A"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_A"}, sql,
+                new String[1][]);
     }
 
     /**
@@ -90,15 +90,17 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectOverlowBorder() {
         String sql = "select count(*) from digital_distribution i1 where col_a < 200 and col_b < 200";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_B"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_B"}, sql,
+                new String[1][]);
     }
 
     /**
-     * Select with two is null condition and check that will be used index by column without nulls
+     * Select with two is null condition and check that will be used index by column without nulls.
      */
     @Test public void selectNull() {
         String sql = "select count(*) from digital_distribution i1 where col_a is null and col_b is null";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_B"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_B"}, sql,
+                new String[1][]);
     }
 
     /**
@@ -106,7 +108,8 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectHigherFromSingleValue() {
         String sql = "select count(*) from digital_distribution i1 where col_c > 1";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_C"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_C"}, sql,
+                new String[1][]);
     }
 
     /**
@@ -114,7 +117,8 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectLowerToSingleValue() {
         String sql = "select count(*) from digital_distribution i1 where col_c > 1";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_C"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_C"}, sql,
+                new String[1][]);
     }
 
     /**
@@ -122,7 +126,8 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectNullFromNull() {
         String sql = "select count(*) from digital_distribution i1 where col_d is null";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql,
+                new String[1][]);
     }
 
     /**
@@ -130,7 +135,8 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectGreaterFromNull() {
         String sql = "select count(*) from digital_distribution i1 where col_d > 0";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql,
+                new String[1][]);
     }
 
     /**
@@ -138,15 +144,17 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectLessOrEqualFromNull() {
         String sql = "select count(*) from digital_distribution i1 where col_d <= 1000";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql,
+                new String[1][]);
     }
 
     /**
-     * Select with "less or equal" clause from empty table without statistcs.
+     * Select with "less or equal" clause from empty table without statistics.
      */
     @Test public void selectFromEmptyNoStatTable() {
         String sql = "select count(*) from empty_distribution_no_stat i1 where col_a <= 1000";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql,
+                new String[1][]);
     }
 
     /**
@@ -154,7 +162,8 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectNullFromEmptyNoStatTable() {
         String sql = "select count(*) from empty_distribution_no_stat i1 where col_a is null";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql,
+                new String[1][]);
     }
 
     /**
@@ -170,7 +179,8 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectFromEmptyTable() {
         String sql = "select count(*) from empty_distribution i1 where col_a <= 1000";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql,
+                new String[1][]);
     }
 
     /**
@@ -178,7 +188,8 @@ public class BasicValueDistributionTableStatisticsUsageTest extends TableStatist
      */
     @Test public void selectNullFromEmptyTable() {
         String sql = "select count(*) from empty_distribution i1 where col_a is null";
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql, new String[1][]);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql,
+                new String[1][]);
     }
 
     /**

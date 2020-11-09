@@ -526,7 +526,7 @@ public class H2Utils {
     /**
      * Test if specified value is null.
      *
-     * @param v value to test.
+     * @param v Value to test.
      * @return {@code true} if value is null, {@code false} - otherwise.
      */
     public static boolean isNullValue(Value v) {

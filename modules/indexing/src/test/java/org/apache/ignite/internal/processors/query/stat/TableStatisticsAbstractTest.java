@@ -35,13 +35,13 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
  * Base test for table statistics.
  */
 public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest {
-    /** */
+    /** Big table size. */
     static final int BIG_SIZE = 1000;
 
-    /** */
+    /** Medium table size. */
     static final int MED_SIZE = 500;
 
-    /** */
+    /** Small table size. */
     static final int SMALL_SIZE = 100;
 
     static {
@@ -51,10 +51,10 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
     /**
      * Compare different index used for the given query.
      *
-     * @param grid qrid to run queries on.
-     * @param optimal array of optimal indexes
-     * @param sql Query with placeholders to hint indexes (i1, i2, ...)
-     * @param indexes arrays of indexes to put into placeholders.
+     * @param grid Grid to run queries on.
+     * @param optimal Array of optimal indexes.
+     * @param sql Query with placeholders to hint indexes (i1, i2, ...).
+     * @param indexes Arrays of indexes to put into placeholders.
      */
     protected void checkOptimalPlanChosenForDifferentIndexes(Ignite grid, String[] optimal, String sql, String[][] indexes) {
         int size = -1;
@@ -74,8 +74,8 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
     /**
      * Compares different orders of joins for the given query.
      *
-     * @param grid qrid to run queries on.
-     * @param sql Query.
+     * @param grid Grid to run queries on.
+     * @param sql Query text with placeholder (t0, t1, ...) instead of table names.
      * @param tbls Table names.
      */
     protected void checkOptimalPlanChosenForDifferentJoinOrders(Ignite grid, String sql, String... tbls) {
@@ -123,9 +123,9 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
     /**
      * Run specified query with EXPLAIN and return array of used indexes.
      *
-     * @param grid grid where query should be executed.
-     * @param sql query to explain.
-     * @return array of selected indexes.
+     * @param grid Grid where query should be executed.
+     * @param sql Query to explain.
+     * @return Qrray of selected indexes.
      */
     protected String[] runLocalExplainIdx(Ignite grid, String sql) {
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("EXPLAIN " + sql).setLocal(true))
@@ -134,7 +134,6 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
 
         // Extract scan count from EXPLAIN ANALYZE with regex: return all numbers after "scanCount: ".
         Matcher m = Pattern.compile(".*\\/\\*.+?\\.(\\w+):.*\\R*.*\\R*.*\\R*.*\\R*\\*\\/.*").matcher(explainRes);
-        //".*\\/\\*.+?\\.(\\w+).*\\/.*").matcher(explainRes);
         List<String> result = new ArrayList<>();
         while (m.find()) {
             result.add(m.group(1).trim());
@@ -166,7 +165,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
      * Extracts actual scanned rows count from EXPLAIN ANALYZE result.
      *
      * @param res EXPLAIN ANALYZE result.
-     * @return actual scanned rows count.
+     * @return Actual scanned rows count.
      */
     private int extractScanCountFromExplain(List<List<?>> res) {
         String explainRes = (String)res.get(0).get(0);
@@ -192,9 +191,9 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
     /**
      * Replaces index hint placeholder like "i1", "i2" with specified index names in the ISQL query.
      *
-     * @param sql
-     * @param idxs
-     * @return
+     * @param sql SQL to replace index placeholders.
+     * @param idxs index names array.
+     * @return SQL with actual index names.
      */
     private static String replaceIndexHintPlaceholders(String sql, String[][] idxs) {
         assert !sql.contains("i0");
@@ -247,8 +246,8 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
     /**
      * Update statistics on specified objects in PUBLIC schema.
      *
-     * @param table table where to update statistics, just to require al least one name.
-     * @param tables tables where to update statistics.
+     * @param table Table where to update statistics, just to require al least one name.
+     * @param tables Tables where to update statistics.
      */
     protected void updateStatistics(String table, String... tables) {
         List<String> allTbls = new ArrayList<>();

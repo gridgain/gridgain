@@ -470,7 +470,7 @@ public class GridH2Table extends TableBase {
     /**
      * Get actual table statistics if exists.
      *
-     * @return table statistics or {@code null} if there is no statistics available.
+     * @return Table statistics or {@code null} if there is no statistics available.
      */
     public ObjectStatistics tableStatistics() {
         GridCacheContext cacheContext = cacheInfo.cacheContext();

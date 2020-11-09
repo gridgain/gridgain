@@ -32,7 +32,7 @@ import static org.apache.ignite.internal.processors.query.h2.H2Utils.isNullValue
  */
 public class ColumnStatisticsCollector {
 
-    /** */
+    /** Column. */
     private final Column col;
 
     /** Hyper Log Log structure */
@@ -44,14 +44,11 @@ public class ColumnStatisticsCollector {
     /** Maximum value. */
     private Value max = null;
 
-    /** Total vals in column. */
+    /** Total values in column. */
     private long total = 0;
 
     /** Total size of all non nulls values (in bytes).*/
     private long size = 0;
-
-    /** Temporary byte buffer just to avoid unnecessary object creation. */
-    private ByteBuffer bb;
 
     /** Column value comparator. */
     private final Comparator<Value> comp;
@@ -65,8 +62,8 @@ public class ColumnStatisticsCollector {
     /**
      * Constructor.
      *
-     * @param col column to collect statistics by.
-     * @param comp column values comparator.
+     * @param col Column to collect statistics by.
+     * @param comp Column values comparator.
      */
     public ColumnStatisticsCollector(Column col, Comparator<Value> comp) {
         this.col = col;
@@ -76,8 +73,8 @@ public class ColumnStatisticsCollector {
     /**
      * Try to fix unexpected behaviour of base Value class.
      *
-     * @param value value to convert
-     * @return byte array
+     * @param value Value to convert.
+     * @return Byte array.
      */
     private byte[] getBytes(Value value) {
         switch (value.getValueType()) {
@@ -104,7 +101,7 @@ public class ColumnStatisticsCollector {
     /**
      * Add value to statistics.
      *
-     * @param val value to add.
+     * @param val Value to add to statistics.
      */
     public void add(Value val) {
         total++;
@@ -130,7 +127,7 @@ public class ColumnStatisticsCollector {
     /**
      * Get total column statistics.
      *
-     * @return aggregated column statistics.
+     * @return Aggregated column statistics.
      */
     public ColumnStatistics finish() {
         int nulls = nullsPercent(nullsCnt, total);
@@ -145,9 +142,9 @@ public class ColumnStatisticsCollector {
     /**
      * Count percent of null values.
      *
-     * @param nullsCnt total number of nulls.
-     * @param totalRows total number of rows.
-     * @return percent of null values.
+     * @param nullsCnt Total number of nulls.
+     * @param totalRows Total number of rows.
+     * @return Percent of null values.
      */
     private static int nullsPercent(long nullsCnt, long totalRows) {
         if (totalRows > 0)
@@ -158,10 +155,10 @@ public class ColumnStatisticsCollector {
     /**
      * Count cardinality percent.
      *
-     * @param nullsCnt total number of nulls.
-     * @param totalRows total number of rows.
-     * @param cardinality total cardinality (number of different values).
-     * @return percent of different non null values.
+     * @param nullsCnt Total number of nulls.
+     * @param totalRows Total number of rows.
+     * @param cardinality Total cardinality (number of different values).
+     * @return Percent of different non null values.
      */
     private static int cardinalityPercent(long nullsCnt, long totalRows, long cardinality) {
         if (totalRows - nullsCnt > 0)
@@ -172,10 +169,10 @@ public class ColumnStatisticsCollector {
     /**
      * Calculate average record size in bytes.
      *
-     * @param size total size of all records.
-     * @param total total number of all records.
-     * @param nullsCnt number of nulls record.
-     * @return average size of not null record in byte.
+     * @param size Total size of all records.
+     * @param total Total number of all records.
+     * @param nullsCnt Number of nulls record.
+     * @return Average size of not null record in byte.
      */
     private static int averageSize(long size, long total, long nullsCnt) {
         long averageSizeLong = (total - nullsCnt > 0) ? (size / (total - nullsCnt)) : 0;
@@ -192,9 +189,9 @@ public class ColumnStatisticsCollector {
     /**
      * Aggregate specified (partition or local) column statistics into (local or global) single one.
      *
-     * @param comp value comparator.
-     * @param partStats column statistics by partitions.
-     * @return column statistics for all partitions.
+     * @param comp Value comparator.
+     * @param partStats Column statistics by partitions.
+     * @return Column statistics for all partitions.
      */
     public static ColumnStatistics aggregate(Comparator<Value> comp, List<ColumnStatistics> partStats) {
         HLL hll = buildHll();
@@ -234,7 +231,8 @@ public class ColumnStatisticsCollector {
 
     /**
      * Get HLL with default params.
-     * @return empty hll structure.
+     *
+     * @return Empty hll structure.
      */
     private static HLL buildHll() {
         return new HLL(13, 5);

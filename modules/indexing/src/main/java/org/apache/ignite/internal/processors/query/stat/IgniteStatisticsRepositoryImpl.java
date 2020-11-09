@@ -31,7 +31,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     /** Logger. */
     private IgniteLogger log;
 
-    /** */
+    /** Kernal context. */
     private final GridKernalContext ctx;
 
     /** Table->Partition->Partition Statistics map, populated only on server nodes without persistence enabled. */
@@ -45,6 +45,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
     /**
      * Constructor.
+     *
+     * @param ctx Kernal context.
      */
     public IgniteStatisticsRepositoryImpl(GridKernalContext ctx) {
         this.ctx = ctx;
@@ -62,6 +64,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         log = ctx.log(IgniteStatisticsRepositoryImpl.class);
     }
 
+    /** {@inheritDoc} */
     @Override public void saveLocalPartitionsStatistics(StatsKey key,
                                                         Collection<ObjectPartitionStatisticsImpl> statistics,
                                                         boolean fullStat) {
@@ -99,6 +102,12 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
+    /**
+     * Get local partition statistics.
+     *
+     * @param key Object to get statistics by.
+     * @return Collection of local partitions statistics.
+     */
     public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key) {
         if (partsStats != null) {
             Map<Integer, ObjectPartitionStatisticsImpl> objectStatisticsMap = partsStats.get(key);
@@ -109,6 +118,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         return Collections.emptyList();
     }
 
+    /** {@inheritDoc} */
     @Override public void clearLocalPartitionsStatistics(StatsKey key, String... colNames) {
         if (colNames == null || colNames.length == 0) {
             if (partsStats != null)
@@ -128,6 +138,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
+    /** {@inheritDoc} */
     @Override public void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics) {
         if (partsStats != null) {
             partsStats.compute(key, (k,v) -> {
@@ -145,6 +156,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
+    /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId) {
         if (partsStats != null) {
             Map<Integer, ObjectPartitionStatisticsImpl> objectPartStats = partsStats.get(key);
@@ -153,6 +165,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         return null;
     }
 
+    /** {@inheritDoc} */
     @Override public void clearLocalPartitionStatistics(StatsKey key, int partId) {
         if (partsStats != null) {
             partsStats.computeIfPresent(key, (k, v) -> {
@@ -162,6 +175,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
+    /** {@inheritDoc} */
     @Override public void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat) {
         if (localStats != null) {
             if (fullStat)
@@ -176,16 +190,19 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
+    /** {@inheritDoc} */
     @Override public void cacheLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics) {
         IgniteStatisticsManagerImpl statManager = (IgniteStatisticsManagerImpl)ctx.query().getIndexing().statsManager();
         if (localStats != null)
             localStats.put(key, statManager.aggregateLocalStatistics(key, statistics));
     }
 
+    /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl getLocalStatistics(StatsKey key) {
         return localStats == null ? null : localStats.get(key);
     }
 
+    /** {@inheritDoc} */
     @Override public void clearLocalStatistics(StatsKey key, String... colNames) {
         if (colNames == null || colNames.length == 0) {
             if (localStats != null)
@@ -200,14 +217,22 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
     }
 
+    /** {@inheritDoc} */
     @Override public void saveGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat) {
         globalStats.put(key, statistics);
     }
 
+    /**
+     * Get global statistics by key.
+     *
+     * @param key Object key to get global statistics by.
+     * @return Object global statistics or {@code null} if there are no global statistics.
+     */
     public ObjectStatisticsImpl getGlobalStatistics(StatsKey key) {
         return globalStats.get(key);
     }
 
+    /** {@inheritDoc} */
     @Override public void clearGlobalStatistics(StatsKey key, String... colNames) {
         if (colNames == null || colNames.length == 0)
             globalStats.remove(key);
@@ -218,10 +243,10 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     /**
      * Add new statistics into base one (with overlapping of existing data).
      *
-     * @param base old statistics.
-     * @param add updated statistics.
-     * @param <T> statistics type (partition or object one)
-     * @return combined statistics.
+     * @param base Old statistics.
+     * @param add Updated statistics.
+     * @param <T> Statistics type (partition or object one)
+     * @return Combined statistics.
      */
     private <T extends ObjectStatisticsImpl> T add(T base, T add) {
         T result = (T)add.clone();
@@ -235,8 +260,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      * Remove specified columns from clone of base ObjectStatistics object.
      *
      * @param base ObjectStatistics to remove columns from.
-     * @param columns columns to remove.
-     * @return cloned object without specified columns statistics.
+     * @param columns Columns to remove.
+     * @return Cloned object without specified columns statistics.
      */
     private <T extends ObjectStatisticsImpl> T substract(T base, String[] columns) {
         T result = (T)base.clone();

@@ -525,17 +525,17 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /**
      * Check that specified index is used in query plan with specified where clause tables.
      *
-     * @param qryProc query processor to run queries on.
-     * @param idxName index name to test.
-     * @param tblName table to query.
-     * @param reqFlds fields to add into where clause.
+     * @param qryProc Query processor to run queries on.
+     * @param idxName Index name to test.
+     * @param tblName Table to query.
+     * @param reqFlds Fields to add into where clause.
      */
     private void checkIdxIsUsed(GridQueryProcessor qryProc, String idxName, String tblName, String... reqFlds) {
        checkIdxUsage(qryProc, idxName, null, tblName, reqFlds);
     }
 
     /**
-     * Chack that specified index is used in query plan with specified where clause tables.
+     * Check that specified index is used in query plan with specified where clause tables.
      *
      * @param qryProc query processor to run queries on.
      * @param idxName index name to test.

@@ -64,9 +64,8 @@ public class FullHLLTest {
         // all but one register set
         {
             final HLL hll = new HLL(log2m, regwidth, 128/*explicitThreshold, arbitrary, unused*/, 256/*sparseThreshold, arbitrary, unused*/, HLLType.FULL);
-            for(int i=0; i<(m - 1); i++) {
+            for(int i=0; i<(m - 1); i++)
                 hll.addRaw(ProbabilisticTestUtil.constructHLLValue(log2m, i/*ix*/, 1/*val*/));
-            }
 
             // Trivially true that small correction conditions hold: all but
             // one register set implies a zero exists, and estimator trivially
@@ -96,19 +95,18 @@ public class FullHLLTest {
         // all registers at 'medium' value
         {
             final int registerValue = 7/*chosen to ensure neither correction kicks in*/;
-            for(int i=0; i<m; i++) {
+            for (int i = 0; i < m; i++)
                 hll.addRaw(ProbabilisticTestUtil.constructHLLValue(log2m, i, registerValue));
-            }
 
             final long cardinality = hll.cardinality();
 
 
             // Simplified estimator when all registers take same value: alpha / (m/2^val)
-            final double estimator = HLLUtil.alphaMSquared(m)/((double)m/Math.pow(2, registerValue));
+            final double estimator = HLLUtil.alphaMSquared(m) / ((double)m / Math.pow(2, registerValue));
 
             // Assert conditions for uncorrected range
             assertTrue(estimator <= Math.pow(2, l)/30);
-            assertTrue(estimator > (5 * m /(double)2));
+            assertTrue(estimator > (5 * m / (double)2));
 
             final long expected = (long)Math.ceil(estimator);
             assertEquals(cardinality, expected);
@@ -131,9 +129,8 @@ public class FullHLLTest {
 
         {
             final int registerValue = 31/*chosen to ensure large correction kicks in*/;
-            for(int i=0; i<m; i++) {
+            for (int i = 0; i < m; i++)
                 hll.addRaw(ProbabilisticTestUtil.constructHLLValue(log2m, i, registerValue));
-            }
 
             final long cardinality = hll.cardinality();
 
@@ -257,13 +254,12 @@ public class FullHLLTest {
 
         final HLL hll = new HLL(log2m, regwidth, 128/*explicitThreshold, arbitrary, unused*/, 256/*sparseThreshold, arbitrary, unused*/, HLLType.FULL);
         final BitVector bitVector = GridTestUtils.getFieldValue(hll, "probabilisticStorage")/*for testing convenience*/;
-        for(int i=0; i<m; i++)
+        for (int i = 0; i < m; i++)
             bitVector.setRegister(i, i);
 
         hll.clear();
-        for(int i=0; i<m; i++){
+        for (int i = 0; i < m; i++)
             assertEquals(bitVector.getRegister(i), 0L/*default value of register*/);
-        }
     }
 
     // ========================================================================
@@ -297,8 +293,8 @@ public class FullHLLTest {
         {// Should work on a partially filled element
             final HLL hll = new HLL(log2m, regwidth, 128/*explicitThreshold, arbitrary, unused*/, 256/*sparseThreshold, arbitrary, unused*/, HLLType.FULL);
 
-            for(int i=0; i<3; i++) {
-                final long rawValue = ProbabilisticTestUtil.constructHLLValue(log2m, i, (i+9));
+            for (int i = 0; i < 3; i++) {
+                final long rawValue = ProbabilisticTestUtil.constructHLLValue(log2m, i, (i + 9));
                 hll.addRaw(rawValue);
             }
 
@@ -315,7 +311,7 @@ public class FullHLLTest {
         {// Should work on a full set
             final HLL hll = new HLL(log2m, regwidth, 128/*explicitThreshold, arbitrary, unused*/, 256/*sparseThreshold, arbitrary, unused*/, HLLType.FULL);
 
-            for(int i=0; i<(1 << log2m)/*aka 2^log2m*/; i++) {
+            for (int i = 0; i < (1 << log2m)/*aka 2^log2m*/; i++) {
                 final long rawValue = ProbabilisticTestUtil.constructHLLValue(log2m, i, (i % 9) + 1);
                 hll.addRaw(rawValue);
             }
@@ -408,9 +404,9 @@ public class FullHLLTest {
         final LongIterator iterA = bitVectorA.registerIterator();
         final LongIterator iterB = bitVectorB.registerIterator();
 
-        for(;iterA.hasNext() && iterB.hasNext();) {
+        for (;iterA.hasNext() && iterB.hasNext();)
             assertEquals(iterA.next(), iterB.next());
-        }
+
         assertFalse(iterA.hasNext());
         assertFalse(iterB.hasNext());
     }

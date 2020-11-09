@@ -88,6 +88,9 @@ public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAb
         updateStatistics("sized");
     }
 
+    /**
+     * Select with only one clause with "is null" condition and check that right index will be selected.
+     */
     @Test
     public void selectNullCond() {
         String sql = "select count(*) from sized i1 where small is null";
@@ -102,6 +105,9 @@ public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAb
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SIZED_SMALL"}, sql, new String[1][]);
     }
 
+    /**
+     * Select with "is null" clause from two columns and check that index by the column with less nulls chosen.
+     */
     @Test
     public void selectWithNullsDistributionCond() {
         String sql = "select * from sized i1 where small is null and small_nulls is null";

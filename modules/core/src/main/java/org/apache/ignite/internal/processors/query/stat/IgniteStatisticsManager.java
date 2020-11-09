@@ -24,28 +24,28 @@ public interface IgniteStatisticsManager {
     /**
      * Collect object statistics.
      *
-     * @param schemaName schema name.
-     * @param objName object to collect statistics by.
-     * @param colNames columns to collect statistics by.
-     * @throws IgniteCheckedException  in case of errors.
+     * @param schemaName Schema name.
+     * @param objName Object to collect statistics by.
+     * @param colNames Columns to collect statistics by.
+     * @throws IgniteCheckedException  Throws in case of errors.
      */
     void collectObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
 
     /**
      * Get local statistics by object.
      *
-     * @param schemaName schema name.
-     * @param objName object to collect statistics by.
-     * @return object statistics or {@code null} if there are no available statistics by specified object.
+     * @param schemaName Schema name.
+     * @param objName Object to collect statistics by.
+     * @return Object statistics or {@code null} if there are no available statistics by specified object.
      */
     ObjectStatistics getLocalStatistics(String schemaName, String objName);
 
     /**
      * Clear object statistics.
      *
-     * @param schemaName schema name.
-     * @param objName object to collect statistics by.
-     * @param colNames columns to remove statistics by.
+     * @param schemaName Schema name.
+     * @param objName Object to collect statistics by.
+     * @param colNames Columns to remove statistics by.
      */
     void clearObjectStatistics(String schemaName, String objName, String... colNames);
 }

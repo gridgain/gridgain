@@ -26,6 +26,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+/**
+ * Unit tests for Hasher.
+ */
 public class HasherSelfTest extends GridCommonAbstractTest {
 
     /**

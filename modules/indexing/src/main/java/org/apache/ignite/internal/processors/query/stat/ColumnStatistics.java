@@ -35,24 +35,25 @@ public class ColumnStatistics {
      * are the same. */
     private final int cardinality;
 
-    /** Total number of vals in column. */
+    /** Total number of values in column. */
     private final long total;
 
     /** Average size in bytes, for variable size only. */
     private final int size;
 
+    /** Raw data. */
     private final byte[] raw;
 
     /**
      * Constructor.
      *
-     * @param min min value in column or {@code null}.
-     * @param max max value in column or {@code null}.
-     * @param nulls percent of null values in column.
-     * @param cardinality percent of unique value in column.
-     * @param total total number of values in column.
-     * @param size average size in bytes, for variable size only.
-     * @param raw raw data to aggregate statistics.
+     * @param min Min value in column or {@code null}.
+     * @param max Max value in column or {@code null}.
+     * @param nulls Percent of null values in column.
+     * @param cardinality Percent of unique value in column.
+     * @param total Total number of values in column.
+     * @param size Average size in bytes, for variable size only.
+     * @param raw Raw data to aggregate statistics.
      */
     public ColumnStatistics(Value min, Value max, int nulls, int cardinality, long total, int size, byte[] raw) {
         this.min = min;
@@ -65,49 +66,49 @@ public class ColumnStatistics {
     }
 
     /**
-     * @return min value in column.
+     * @return Min value in column.
      */
     public Value min() {
         return min;
     }
 
     /**
-     * @return max value in column.
+     * @return Max value in column.
      */
     public Value max() {
         return max;
     }
 
     /**
-     * @return percent of null values.
+     * @return Percent of null values.
      */
     public int nulls() {
         return nulls;
     }
 
     /**
-     * @return percent of unique not null values.
+     * @return Percent of unique not null values.
      */
     public int cardinality() {
         return cardinality;
     }
 
     /**
-     * @return total number of values in column.
+     * @return Total number of values in column.
      */
     public long total() {
         return total;
     }
 
     /**
-     * @return average size in bytes, for variable size only.
+     * @return Average size in bytes, for variable size only.
      */
     public int size() {
         return size;
     }
 
     /**
-     * @return raw value needed to aggregate statistics.
+     * @return Raw value needed to aggregate statistics.
      */
     public byte[] raw() {
         return raw;

@@ -730,14 +730,14 @@ public abstract class Table extends SchemaObjectBase {
     /**
      * Get the best plan for the given search mask.
      *
-     * @param session the session
-     * @param masks per-column comparison bit masks, null means 'always false',
-     *              see constants in IndexCondition
-     * @param filters all joined table filters
-     * @param filter the current table filter index
-     * @param sortOrder the sort order
-     * @param allColumnsSet the set of all columns
-     * @return the plan item
+     * @param session Session.
+     * @param masks Per-column comparison bit masks, null means 'always false',
+     *              see constants in IndexCondition.
+     * @param filters All joined table filters.
+     * @param filter Current table filter index.
+     * @param sortOrder Sort order.
+     * @param allColumnsSet Set of all columns.
+     * @return Plan item.
      */
     public PlanItem getBestPlanItem(Session session, int[] masks,
             TableFilter[] filters, int filter, SortOrder sortOrder,

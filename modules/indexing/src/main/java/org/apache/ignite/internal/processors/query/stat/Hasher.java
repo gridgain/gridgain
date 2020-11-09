@@ -46,8 +46,8 @@ public class Hasher {
     /**
      * Calculate hash by specified byte array.
      *
-     * @param arr array to calculate hash by.
-     * @return hash value.
+     * @param arr Array to calculate hash by.
+     * @return Hash value.
      */
     public long fastHash(byte[] arr) {
         return fastHash(arr, 0, arr.length);
@@ -56,10 +56,10 @@ public class Hasher {
     /**
      * Calculate hash by specified part of byte array.
      *
-     * @param arr array to calculate hash by.
-     * @param off offset.
-     * @param len length.
-     * @return hash value.
+     * @param arr Array to calculate hash by.
+     * @param off Offset.
+     * @param len Length.
+     * @return Hash value.
      */
     public long fastHash(byte[] arr, int off, int len) {
         h1 = SEED;
@@ -79,8 +79,8 @@ public class Hasher {
     /**
      * Mix two long numbers.
      *
-     * @param k1 the first number.
-     * @param k2 the second number.
+     * @param k1 The first number.
+     * @param k2 The second number.
      */
     private void bmix64(long k1, long k2) {
         h1 ^= mixK1(k1);
@@ -99,7 +99,7 @@ public class Hasher {
     /**
      * Process byte buffer to calculate hash by.
      *
-     * @param bb buffer to process.
+     * @param bb Buffer to process.
      */
     private void process(ByteBuffer bb) {
         long k1 = bb.getLong();
@@ -111,8 +111,8 @@ public class Hasher {
     /**
      * Get int.
      *
-     * @param val byte value
-     * @return int value
+     * @param val Byte value
+     * @return Integer value
      */
     private static int toInt(byte val) {
         return val & 0xFF;
@@ -121,7 +121,7 @@ public class Hasher {
     /**
      * Process remaining bytes from byte buffer.
      *
-     * @param bb byte buffer to finish processing.
+     * @param bb Byte buffer to finish processing.
      */
     private void processRemaining(ByteBuffer bb) {
         long k1 = 0;
@@ -170,7 +170,7 @@ public class Hasher {
     /**
      * Make hash from internal state.
      *
-     * @return long hash value.
+     * @return Long hash value.
      */
     private long makeHash() {
         h1 ^= length;
@@ -191,8 +191,8 @@ public class Hasher {
     /**
      * Mix long value to prepare internal state for hash generation.
      *
-     * @param k long value.
-     * @return hashed one.
+     * @param k Long value.
+     * @return Hashed one.
      */
     private static long fmix64(long k) {
         k ^= k >>> 33;
@@ -206,8 +206,8 @@ public class Hasher {
     /**
      * Mix value to update internal state h1.
      *
-     * @param k1 value to mix.
-     * @return new h1 value.
+     * @param k1 Value to mix.
+     * @return New h1 value.
      */
     private static long mixK1(long k1) {
         k1 *= C1;
@@ -219,8 +219,8 @@ public class Hasher {
     /**
      * Mix value to update internal state h2.
      *
-     * @param k2 value to mix.
-     * @return new h2 value.
+     * @param k2 Value to mix.
+     * @return New h2 value.
      */
     private static long mixK2(long k2) {
         k2 *= C2;

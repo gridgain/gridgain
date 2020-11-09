@@ -158,7 +158,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     }
 
                     totalSelectivity = 100 - ((100 - totalSelectivity) *
-                            (100 - column.getSelectivity()) / 100);
+                        (100 - column.getSelectivity()) / 100);
 
                     long distinctRows = rowCount * totalSelectivity / 100;
 
@@ -351,22 +351,26 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         distinctRows = 1;
 
                     rowsCost = 2 + Math.max(rowCount / distinctRows, 1);
-                } else if ((mask & IndexCondition.RANGE) == IndexCondition.RANGE) {
+                }
+                else if ((mask & IndexCondition.RANGE) == IndexCondition.RANGE) {
                     rowsCost = 2 + rowsCost / 4;
                     tryAdditional = true;
 
                     break;
-                } else if ((mask & IndexCondition.START) == IndexCondition.START) {
+                }
+                else if ((mask & IndexCondition.START) == IndexCondition.START) {
                     rowsCost = 2 + rowsCost / 3;
                     tryAdditional = true;
 
                     break;
-                } else if ((mask & IndexCondition.END) == IndexCondition.END) {
+                }
+                else if ((mask & IndexCondition.END) == IndexCondition.END) {
                     rowsCost = rowsCost / 3;
                     tryAdditional = true;
 
                     break;
-                } else {
+                }
+                else {
                     if (mask == 0) {
                         // Adjust counter of used columns (i)
                         i--;
@@ -701,15 +705,25 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         private final MathContext MATH_CONTEXT = MathContext.DECIMAL64;
 
         /**
-         * Selectivity for closed range queries, in percent
+         * Selectivity for closed range queries, in percent.
          */
         private final int RANGE_CLOSE_SELECTIVITY = 25;
 
         /**
-         * Selectivity for open range queries, in percent
+         * Selectivity for open range queries, in percent.
          */
         private final int RANGE_OPEN_SELECTIVITY = 33;
 
+        /**
+         * Row cost calculation.
+         *
+         * @param ses Session.
+         * @param filter Table filter.
+         * @param masks Masks array.
+         * @param rowCount Total rows count.
+         * @param locTblStats Local table statistics.
+         * @return Row cost.
+         */
         private long rowCost(Session ses, TableFilter filter, int[] masks, long rowCount,
                              ObjectStatisticsImpl locTblStats) {
             int totalCardinality = 0;
@@ -733,13 +747,13 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                             break;
                         }
                         // Estimate by is null
-
                         Value equalValue = getEqualValue(ses, column, filter);
                         Boolean equalNull = (equalValue == null) ? null : equalValue.getValueType() == Value.NULL;
                         rowCount = getColumnSize(colStats, rowCount, equalNull);
 
                         if (colStats != null && equalNull == Boolean.TRUE) {
-                            rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost - (i > 0 ? 1 : 0));
+                            rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost -
+                                    (i > 0 ? 1 : 0));
                             continue;
                         }
                         if (colStats != null && equalNull == Boolean.FALSE)
@@ -755,7 +769,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                             distinctRows = 1;
 
                         rowsCost = Math.min(5 + Math.max(rowsCost / distinctRows, 1), rowsCost - (i > 0 ? 1 : 0));
-                    } else if (isByteFlag(mask, IndexCondition.RANGE)
+                    }
+                    else if (isByteFlag(mask, IndexCondition.RANGE)
                             || isByteFlag(mask, IndexCondition.START)
                             || isByteFlag(mask, IndexCondition.END)) {
                         Value min = getStartValue(ses, column, filter);
@@ -765,13 +780,18 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         rowsCost = Math.min(5 + rowsCost * percent / 100, rowsCost - (i > 0 ? 1 : 0));
 
                         break;
-                    } else if (isNullFilter(ses, column, filter)) {
+                    }
+                    else if (isNullFilter(ses, column, filter)) {
                         if (colStats != null)
-                            rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost - (i > 0 ? 1 : 0));
-                    } else if (isNotNullFilter(ses, column, filter)) {
+                            rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost -
+                                    (i > 0 ? 1 : 0));
+                    }
+                    else if (isNotNullFilter(ses, column, filter)) {
                         if (colStats != null)
-                            rowsCost = Math.min(5 + Math.max(rowsCost * (100 - colStats.nulls()) / 100, 1), rowsCost - (i > 0 ? 1 : 0));
-                    } else
+                            rowsCost = Math.min(5 + Math.max(rowsCost * (100 - colStats.nulls()) / 100, 1), rowsCost -
+                                    (i > 0 ? 1 : 0));
+                    }
+                    else
                         break;
                 }
             }
@@ -781,9 +801,9 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Try to get column cardinality from statistics, if there is no such - fall back to H2 column selectivity.
          *
-         * @param colStats column statistics.
-         * @param column   column.
-         * @return column cardinality in percents.
+         * @param colStats Column statistics.
+         * @param column Column.
+         * @return Column cardinality in percents.
          */
         private int getColumnCardinality(@Nullable ColumnStatistics colStats, Column column) {
             return (colStats == null) ? column.getSelectivity() : colStats.cardinality();
@@ -792,12 +812,12 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Get total number of values in column.
          *
-         * @param colStats column statistics.
-         * @param rowCount total row count in table.
-         * @param nulls    if {@code true} - try to estimate only nulls count,
-         *                 if {@code false} - try to estimate only non null count,
-         *                 if {@code null} - try to estimate total count of values.
-         * @return column value count.
+         * @param colStats Column statistics.
+         * @param rowCount Total row count in table.
+         * @param nulls if {@code true} - try to estimate only nulls count,
+         *              if {@code false} - try to estimate only non null count,
+         *              if {@code null} - try to estimate total count of values.
+         * @return Column value count.
          */
         private long getColumnSize(@Nullable ColumnStatistics colStats, long rowCount, Boolean nulls) {
             if (colStats == null)
@@ -810,6 +830,14 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 return colStats.total() * (100 - colStats.nulls()) / 100;
         }
 
+        /**
+         * Get constant value if there are clause with equal condition for specified column.
+         *
+         * @param ses Session.
+         * @param column Column to get value by.
+         * @param filter Table filter.
+         * @return "Equal" value or {@code null} if there are no equal clause with constant expression.
+         */
         private Value getEqualValue(Session ses, Column column, TableFilter filter) {
             Value maxValue = null;
             for (IndexCondition cond : filter.getIndexConditions()) {
@@ -829,6 +857,14 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             return maxValue;
         }
 
+        /**
+         * Get "start" value - constant for "bigger" or "bigger or equals" clause.
+         *
+         * @param ses Session.
+         * @param column Column to get value by.
+         * @param filter Table filter.
+         * @return "Start" value or {@code null} if there are no such clause with constant expression.
+         */
         private Value getStartValue(Session ses, Column column, TableFilter filter) {
             if (filter == null)
                 return null;
@@ -852,6 +888,14 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             return maxValue;
         }
 
+        /**
+         * Get "end" value - constant for "smaller" or "smaller or equal" clause.
+         *
+         * @param ses Session.
+         * @param column Column to get value by.
+         * @param filter Table filter.
+         * @return "End" value of {@code null} if there are no such clause with constant expression.
+         */
         private Value getEndValue(Session ses, Column column, TableFilter filter) {
             if (filter == null)
                 return null;
@@ -877,10 +921,10 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Check if specified filter compare specified column to not null.
          *
-         * @param ses    session to resolv values
-         * @param column column to check
-         * @param filter filter
-         * @return {@code true} if column value should be null, {@code falce} otherwise (or if it not sure)
+         * @param ses Session to resolve values.
+         * @param column Column to check.
+         * @param filter Table filter.
+         * @return {@code true} if column value should be null, {@code falce} otherwise (or if it not sure).
          */
         private boolean isNotNullFilter(Session ses, Column column, TableFilter filter) {
             // TODO: check not null expression (TableFilter contains only fullCondition without getter to check it)
@@ -890,10 +934,10 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Check if specified filter compare specified column to null.
          *
-         * @param ses    session to resolv values
-         * @param column column to check
-         * @param filter filter
-         * @return {@code true} if column value should be null, {@code falce} otherwise (or if it not sure)
+         * @param ses Session to resolve values.
+         * @param column Column to check.
+         * @param filter Table filter.
+         * @return {@code true} if column value should be null, {@code falce} otherwise (or if it not sure).
          */
         private boolean isNullFilter(Session ses, Column column, TableFilter filter) {
             if (filter == null)
@@ -919,8 +963,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Test if value contains all masks bits.
          *
-         * @param value value to test.
-         * @param mask  mask to test by.
+         * @param value Value to test.
+         * @param mask Mask to test by.
          * @return {@code true} if value contains all necessary bits, {@code false} otherwise.
          */
         private boolean isByteFlag(int value, int mask) {
@@ -930,10 +974,10 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Estimate percent of selected rows by specified min/max conditions (of total rows, with nulls).
          *
-         * @param colStat column statistics to use, if exists.
-         * @param min     lower border.
-         * @param max     higher border.
-         * @return percent of total rows, selected with specified conditions (0-100)
+         * @param colStat Column statistics to use, if exists.
+         * @param min The lower border.
+         * @param max The higher border.
+         * @return Percent of total rows, selected with specified conditions (0-100).
          */
         private int estimatePercent(ColumnStatistics colStat, Value min, Value max) {
             if (colStat == null || colStat.min() == null || colStat.max() == null)
@@ -980,9 +1024,9 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Fallback percent estimation.
          *
-         * @param min min border.
-         * @param max max border.
-         * @return percent estimation of returning rows.
+         * @param min Min border.
+         * @param max Max border.
+         * @return Percent estimation of returning rows.
          */
         private int estimatePercentFallback(Value min, Value max) {
             return (min == null || max == null) ? RANGE_OPEN_SELECTIVITY : RANGE_CLOSE_SELECTIVITY;
@@ -991,8 +1035,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Convert specified value into comparable type: BigDecimal,
          *
-         * @param value value to convert to comparable form.
-         * @return comparable form of value.
+         * @param value Value to convert to comparable form.
+         * @return Comparable form of value.
          */
         private BigDecimal getComparableValue(Value value) {
             switch (value.getValueType()) {
@@ -1057,9 +1101,9 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Get column statistics.
          *
-         * @param locTblStats whole table statistics, can be {@code null}.
-         * @param column column to get statistics by.
-         * @return column statistics or {@code null}.
+         * @param locTblStats Whole table statistics, can be {@code null}.
+         * @param column Column to get statistics by.
+         * @return Column statistics or {@code null}.
          */
         private ColumnStatistics getColumnStatistics(@Nullable ObjectStatisticsImpl locTblStats, Column column) {
             return (locTblStats == null) ? null : locTblStats.columnStatistics(column.getName());
@@ -1068,15 +1112,20 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Estimate sorting cost.
          *
-         * @param rowCount total rows count
-         * @param filters filters array
-         * @param filter column filter index
-         * @param sortOrder sort order
-         * @param isScanIndex is current index is a scan index.
-         * @return sorting cost.
+         * @param rowCount Total rows count.
+         * @param filters Filters array.
+         * @param filter Column filter index.
+         * @param sortOrder Sort order.
+         * @param isScanIndex Flag if current index is a scan index.
+         * @return Sorting cost.
          */
-        private long sortingCost(long rowCount, TableFilter[] filters, int filter,
-                                 SortOrder sortOrder, boolean isScanIndex) {
+        private long sortingCost(
+                long rowCount,
+                TableFilter[] filters,
+                int filter,
+                SortOrder sortOrder,
+                boolean isScanIndex
+        ) {
             if (sortOrder == null)
                 return 0;
 
@@ -1137,15 +1186,15 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Get cost range.
          *
-         * @param ses session.
-         * @param masks condition masks.
-         * @param rowCount total row count.
-         * @param filters filters array.
-         * @param filter filter array index.
-         * @param sortOrder sort order.
-         * @param isScanIndex if index is a scan index.
-         * @param allColumnsSet all columns to select.
-         * @return cost.
+         * @param ses Session.
+         * @param masks Condition masks.
+         * @param rowCount Total row count.
+         * @param filters Filters array.
+         * @param filter Filter array index.
+         * @param sortOrder Sort order.
+         * @param isScanIndex Flag if current index is a scan index.
+         * @param allColumnsSet All columns to select.
+         * @return The cost.
          */
         public long getCostRangeIndex(Session ses, int[] masks, long rowCount, TableFilter[] filters, int filter,
                                       SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {

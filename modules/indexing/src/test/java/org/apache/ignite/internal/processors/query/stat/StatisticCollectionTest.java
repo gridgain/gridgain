@@ -28,23 +28,23 @@ import java.util.UUID;
  * Tests to check statistics collection by different types and distributions.
  */
 public class StatisticCollectionTest extends TableStatisticsAbstractTest {
-
+    /** Types to test. */
     private static final String TYPES[] = new String[]{"BOOLEAN", "INT", "TINYINT", "SMALLINT","BIGINT",
             "DECIMAL", "DOUBLE","REAL","TIME","DATE","TIMESTAMP","VARCHAR","CHAR","UUID","BINARY","GEOMETRY"};
 
-    /** */
+    /** Start date. */
     private static final String START_DATE = "1970.01.01 12:00:00 UTC";
 
-    /** */
+    /** Start time. */
     private static final long TIMESTART;
 
-    /** */
+    /** Time format. */
     private static final SimpleDateFormat TIME_FORMATTER = new SimpleDateFormat("HH:mm:ss");
 
-    /** */
+    /** Date format. */
     private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
 
-    /** */
+    /** Timestam format. */
     private static final SimpleDateFormat TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     static {
@@ -99,13 +99,19 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
     /**
      * Generate insert SQL command by counter value.
      *
-     * @param counter counter value to generate by.
-     * @return insert into dtypes command.
+     * @param counter Counter value to generate by.
+     * @return Insert into dtypes command.
      */
     private String insertNulls(long counter) {
         return String.format("INSERT INTO dtypes(id) values (%d)", counter);
     }
 
+    /**
+     * Build insert SQL command for single row by counter.
+     *
+     * @param counter Counter.
+     * @return Insert SQL.
+     */
     private String insert(long counter) {
         StringBuilder insert = new StringBuilder("INSERT INTO dtypes(id, col_index, col_no_index");
 
@@ -124,6 +130,13 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
         return insert.toString();
     }
 
+    /**
+     * Generate unique value by type and counter.
+     *
+     * @param type Type.
+     * @param counter Counter.
+     * @return Generated value.
+     */
     private String getVal(String type, long counter) {
 
         switch (type) {
@@ -188,9 +201,9 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
     /**
      * Run set of tests to select from specified column specified value.
      *
-     * @param name type name
-     * @param comparator >, <, =, is...
-     * @param value value
+     * @param name Type name.
+     * @param comparator Comparator: >, <, =, is...
+     * @param value Value.
      */
     private void doColumnTests(String name, String comparator, String value) {
         String[][] noHints = new String[1][];
