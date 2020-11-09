@@ -1051,6 +1051,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             long lastArchived = archivedAbsIdx >= 0 ? archivedAbsIdx : lastArchivedIndex();
 
+            long fileSize = desc.file().length();
+
             // We need to leave at least one archived segment to correctly determine the archive index.
             if (desc.idx < highPtr.index() && desc.idx < lastArchived) {
                 if (!desc.file.delete()) {
@@ -1061,7 +1063,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     deleted++;
 
                     segmentSizes.remove(desc.idx());
-                    walArchiveSize.add(desc.idx, -desc.file().length());
+                    walArchiveSize.add(desc.idx(), -fileSize);
                 }
 
                 // Bump up the oldest archive segment index.
@@ -2379,13 +2381,15 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                 if (desc.idx < segmentAware.keepUncompressedIdxFrom() && duplicateIndices.contains(desc.idx)) {
                     if (desc.file.exists()) {
+                        long fileSize = desc.file().length();
+
                         if (!desc.file.delete()) {
                             U.warn(log, "Failed to remove obsolete WAL segment " +
                                 "(make sure the process has enough rights): " + desc.file.getAbsolutePath() +
                                 ", exists: " + desc.file.exists());
                         }
                         else
-                            walArchiveSize.add(desc.idx(), -desc.file().length());
+                            walArchiveSize.add(desc.idx(), -fileSize);
                     }
                 }
             }

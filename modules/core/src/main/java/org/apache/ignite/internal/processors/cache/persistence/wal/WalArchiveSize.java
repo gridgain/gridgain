@@ -175,7 +175,7 @@ public class WalArchiveSize {
                             int rmvSegments = walMgr.truncate(low, high);
 
                             if (log.isInfoEnabled()) {
-                                log.info("Clearning WAL archive [low=" + low + ", high=" + high +
+                                log.info("Clearning WAL archive [low=" + low.index() + ", high=" + high.index() +
                                     ", removedSegments=" + rmvSegments + ", availableToClear=" + availableToClear +
                                     ']');
                             }
