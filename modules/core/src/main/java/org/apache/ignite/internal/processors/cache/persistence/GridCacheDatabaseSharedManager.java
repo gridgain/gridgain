@@ -53,7 +53,6 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.DataStorageMetrics;
 import org.apache.ignite.IgniteCheckedException;
@@ -88,11 +87,12 @@ import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
-import org.apache.ignite.internal.pagemem.wal.record.MasterKeyChangeRecord;
+import org.apache.ignite.internal.pagemem.wal.record.MasterKeyChangeRecordV2;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
+import org.apache.ignite.internal.pagemem.wal.record.ReencryptionStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WalRecordCacheGroupAware;
@@ -174,6 +174,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.partId;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CHECKPOINT_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MASTER_KEY_CHANGE_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MASTER_KEY_CHANGE_RECORD_V2;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.METASTORE_DATA_RECORD;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.fromOrdinal;
@@ -1304,6 +1305,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             Collection<Integer> grpIds = destroyed.computeIfAbsent(pageMem, k -> new HashSet<>());
 
             grpIds.add(tup.get1().groupId());
+
+            if (gctx.config().isEncryptionEnabled())
+                cctx.kernalContext().encryption().onCacheGroupStop(gctx.groupId());
 
             pageMem.onCacheGroupDestroyed(tup.get1().groupId());
 
@@ -2545,6 +2549,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     case MVCC_DATA_RECORD:
                     case DATA_RECORD:
                     case ENCRYPTED_DATA_RECORD:
+                    case ENCRYPTED_DATA_RECORD_V2:
                         DataRecord dataRec = (DataRecord)rec;
 
                         for (DataEntry dataEntry : dataRec.writeEntries()) {
@@ -2625,8 +2630,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                         break;
 
-                    case MASTER_KEY_CHANGE_RECORD:
-                        cctx.kernalContext().encryption().applyKeys((MasterKeyChangeRecord)rec);
+                    case MASTER_KEY_CHANGE_RECORD_V2:
+                        cctx.kernalContext().encryption().applyKeys((MasterKeyChangeRecordV2)rec);
+
+                        break;
+
+                    case REENCRYPTION_START_RECORD:
+                        cctx.kernalContext().encryption().applyReencryptionStartRecord((ReencryptionStartRecord)rec);
 
                         break;
 
@@ -3266,7 +3276,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @return WAL records predicate that passes only Metastorage and encryption data records.
      */
     private IgniteBiPredicate<WALRecord.RecordType, WALPointer> onlyMetastorageAndEncryptionRecords() {
-        return (type, ptr) -> type == METASTORE_DATA_RECORD || type == MASTER_KEY_CHANGE_RECORD;
+        return (type, ptr) -> type == METASTORE_DATA_RECORD ||
+            type == MASTER_KEY_CHANGE_RECORD || type == MASTER_KEY_CHANGE_RECORD_V2;
     }
 
     /**
