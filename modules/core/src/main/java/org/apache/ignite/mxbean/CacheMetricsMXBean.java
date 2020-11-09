@@ -357,7 +357,7 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
     @Override public long getRebalancedKeys();
 
     /** {@inheritDoc} */
-    @MXBeanDescription("Estimated total number of keys to rabalance.")
+    @MXBeanDescription("Estimated total number of keys to rebalance.")
     @Override public long getEstimatedRebalancingKeys();
 
     /** {@inheritDoc} */
