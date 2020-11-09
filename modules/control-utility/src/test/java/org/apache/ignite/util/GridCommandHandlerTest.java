@@ -359,7 +359,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String port = ig1.localNode().attribute(IgniteNodeAttributes.ATTR_REST_TCP_PORT).toString();
 
-        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--persistence", "clean", "caches",
+        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--persistence", "clean", "caches",
             nonExistingCacheName,
             "--host", "localhost", "--port", port));
 
@@ -586,7 +586,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String port = ig1.localNode().attribute(IgniteNodeAttributes.ATTR_REST_TCP_PORT).toString();
 
-        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--persistence", "backup", "caches",
+        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--persistence", "backup", "caches",
             nonExistingCacheName,
             "--host", "localhost", "--port", port));
 
