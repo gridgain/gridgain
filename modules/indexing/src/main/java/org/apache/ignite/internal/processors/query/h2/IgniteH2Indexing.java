@@ -141,6 +141,8 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.SqlStatisticsManager;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.SqlStatisticsManagerImpl;
 import org.apache.ignite.internal.processors.query.h2.sql.GridFirstValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridLastValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
@@ -332,6 +334,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Query message listener. */
     private GridMessageListener qryLsnr;
+
+    private volatile SqlStatisticsManagerImpl statsManager;
 
     /**
      * @return Kernal context.
@@ -2235,6 +2239,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         longRunningQryMgr = new LongRunningQueryManager(ctx);
 
+        statsManager = new SqlStatisticsManagerImpl(ctx);
+        statsManager.start();
+
         parser = new QueryParser(this, connections());
 
         schemaMgr = new SchemaManager(ctx, connections());
@@ -2282,6 +2289,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         distrCfg = new DistributedSqlConfiguration(ctx, log);
 
         distrCfg.listenDisabledFunctions(new FunctionsManager<>());
+    }
+
+    public SqlStatisticsManager statsManager() {
+        return statsManager;
     }
 
     /** {@inheritDoc} */
@@ -3292,6 +3303,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (commit)
                 cctx.tm().resetContext();
         }
+    }
+
+    public void collectObjectStatistics(String schemaName, String tblName, String ... colNames) throws IgniteCheckedException {
+        GridH2Table tbl = schemaMgr.dataTable(schemaName, tblName);
+
+        if (tbl == null)
+            return;
+
+        statsManager.collectObjectStatistics(tbl, colNames);
     }
 
     /** {@inheritDoc} */

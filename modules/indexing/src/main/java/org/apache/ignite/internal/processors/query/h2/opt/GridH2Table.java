@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.query.h2.database.H2IndexType;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.ObjectStatistics;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -163,9 +164,6 @@ public class GridH2Table extends TableBase {
     /** Table version. The version is changed when exclusive lock is acquired (DDL operation is started). */
     private final AtomicLong ver = new AtomicLong();
 
-    /** Table statistics. */
-    private volatile TableStatistics tblStats;
-
     /** Logger. */
     @GridToStringExclude
     private IgniteLogger log;
@@ -235,9 +233,6 @@ public class GridH2Table extends TableBase {
             size.add(totalTblSize);
         }
 
-        // Init stats with the default values.
-        tblStats = new TableStatistics(10_000, 10_000);
-
         if (desc != null && desc.context() != null) {
             GridKernalContext ctx = desc.context().kernalContext();
 
@@ -248,7 +243,6 @@ public class GridH2Table extends TableBase {
     /**
      * @return Information about all indexes related to the table.
      */
-    @SuppressWarnings("ZeroLengthArrayAllocation")
     public List<IndexInformation> indexesInformation() {
         List<IndexInformation> res = new ArrayList<>();
 
@@ -463,6 +457,17 @@ public class GridH2Table extends TableBase {
      */
     public boolean isCacheLazy() {
         return cacheInfo.cacheContext() == null;
+    }
+
+    public ObjectStatistics tableStatistics() {
+        // TODO get without typecast
+        try {
+            IgniteH2Indexing indexing = (IgniteH2Indexing) cacheInfo.cacheContext().kernalContext().query().getIndexing();
+            return indexing.statsManager().getLocalStatistics(identifier);
+        } catch (NullPointerException e) {
+            // TODO remove try/catch
+            return null;
+        }
     }
 
     /**
@@ -1228,12 +1233,11 @@ public class GridH2Table extends TableBase {
 
     /** {@inheritDoc} */
     @Override public long getRowCountApproximation(Session ses) {
-        if (!localQuery(H2Utils.context(ses)))
+        ObjectStatistics tblStats = tableStatistics();
+        if (!localQuery(H2Utils.context(ses)) || tblStats == null)
             return 10_000; // Fallback to the previous behaviour.
 
-        refreshStatsIfNeeded();
-
-        return tblStats.primaryRowCount();
+        return tblStats.rowCount();
     }
 
     /**
@@ -1245,27 +1249,6 @@ public class GridH2Table extends TableBase {
         assert qctx != null;
 
         return qctx.local();
-    }
-
-    /**
-     * Refreshes table stats if they are outdated.
-     */
-    private void refreshStatsIfNeeded() {
-        TableStatistics stats = tblStats;
-
-        long statsTotalRowCnt = stats.totalRowCount();
-        long curTotalRowCnt = size.sum();
-
-        // Update stats if total table size changed significantly since the last stats update.
-        if (needRefreshStats(statsTotalRowCnt, curTotalRowCnt) && cacheInfo.affinityNode()) {
-            long primaryRowCnt = cacheSize(CachePeekMode.PRIMARY);
-            long totalRowCnt = cacheSize(CachePeekMode.PRIMARY, CachePeekMode.BACKUP);
-
-            size.reset();
-            size.add(totalRowCnt);
-
-            tblStats = new TableStatistics(totalRowCnt, primaryRowCnt);
-        }
     }
 
     /**

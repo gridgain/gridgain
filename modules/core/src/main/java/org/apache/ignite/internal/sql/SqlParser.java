@@ -19,6 +19,7 @@ package org.apache.ignite.internal.sql;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.sql.command.SqlAlterTableCommand;
 import org.apache.ignite.internal.sql.command.SqlAlterUserCommand;
+import org.apache.ignite.internal.sql.command.SqlAnalyzeCommand;
 import org.apache.ignite.internal.sql.command.SqlBeginTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
 import org.apache.ignite.internal.sql.command.SqlCommand;
@@ -33,6 +34,7 @@ import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.sql.SqlKeyword.ALTER;
+import static org.apache.ignite.internal.sql.SqlKeyword.ANALYZE;
 import static org.apache.ignite.internal.sql.SqlKeyword.BEGIN;
 import static org.apache.ignite.internal.sql.SqlKeyword.COMMIT;
 import static org.apache.ignite.internal.sql.SqlKeyword.COPY;
@@ -190,6 +192,11 @@ public class SqlParser {
 
                             break;
 
+                        case ANALYZE:
+                            cmd = processAnalyze();
+
+                            break;
+
                         case HELP:
                             cmd = processHelp();
 
@@ -292,6 +299,23 @@ public class SqlParser {
         }
 
         throw errorUnexpectedToken(lex, QUERY);
+    }
+
+    /**
+     * Process ANALYZE keyword.
+     *
+     * @return Command.
+     */
+    private SqlCommand processAnalyze() {
+        if(lex.shift() && lex.tokenType() == SqlLexerTokenType.DEFAULT) {
+            switch (lex.token()) {
+                case TABLE:
+                case INDEX:
+                    return new SqlAnalyzeCommand().parse(lex);
+            }
+        }
+
+        throw errorUnexpectedToken(lex, TABLE, INDEX);
     }
 
     /**

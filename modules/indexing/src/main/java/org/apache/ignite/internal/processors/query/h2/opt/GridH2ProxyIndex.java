@@ -100,7 +100,7 @@ public class GridH2ProxyIndex extends H2IndexCostedBase {
         SortOrder sortOrder, AllColumnsForPlan allColumnsSet) {
         long rowCnt = getRowCountApproximation(ses);
 
-        double baseCost = costRangeIndex(masks, rowCnt, filters, filter, sortOrder, false, allColumnsSet);
+        double baseCost = costRangeIndex(ses, masks, rowCnt, filters, filter, sortOrder, false, allColumnsSet);
 
         int mul = ((GridH2IndexBase)idx).getDistributedMultiplier(ses, filters, filter);
 
