@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.io.Serializable;
+import javax.cache.Cache;
+import javax.cache.CacheException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,13 +36,12 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.cache.Cache;
-import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.binary.Binarylizable;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -61,22 +62,29 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
+import org.apache.ignite.internal.processors.cache.DynamicCacheChangeRequest;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
+import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
+import org.apache.ignite.internal.processors.platform.PlatformContext;
+import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.internal.processors.query.property.QueryBinaryProperty;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
@@ -136,6 +144,7 @@ import static org.apache.ignite.internal.processors.query.schema.SchemaOperation
 /**
  * Indexing processor.
  */
+@SuppressWarnings("rawtypes")
 public class GridQueryProcessor extends GridProcessorAdapter {
     /** */
     private static final String INLINE_SIZES_DISCO_BAG_KEY = "inline_sizes";
@@ -263,7 +272,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         if (cacheConfiguration != null && cacheConfiguration.length > 0) {
             boolean hasConfiguredIndexes = Arrays.stream(cacheConfiguration).anyMatch(QueryUtils::isEnabled);
-            
+
             if (hasConfiguredIndexes && idx == null)
                 log.warning("Indexed types for caches are configured but ignite-indexing is missing from classpath " +
                         "and no GridQueryIndexing is set up.");
@@ -333,6 +342,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @throws IgniteCheckedException If failed.
      */
     public void onCacheKernalStart() throws IgniteCheckedException {
+        registerMetadataForRegisteredCaches();
+
         synchronized (stateMux) {
             exchangeReady = true;
 
@@ -1132,6 +1143,105 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public void skipFieldLookup(boolean skipFieldLookup) {
         this.skipFieldLookup = skipFieldLookup;
+    }
+
+    /**
+     * Register metadata locally for already registered caches.
+     */
+    private void registerMetadataForRegisteredCaches() {
+        for (DynamicCacheDescriptor cacheDescriptor : ctx.cache().cacheDescriptors().values())
+            registerBinaryMetadata(cacheDescriptor.cacheConfiguration(), cacheDescriptor.schema());
+    }
+
+    /**
+     * Handle of cache change request.
+     *
+     * @param batch Dynamic cache change batch request.
+     */
+    public void onCacheChangeRequested(DynamicCacheChangeBatch batch) {
+        for (DynamicCacheChangeRequest req : batch.requests()) {
+            if (!req.start())
+                continue;
+
+            try {
+                registerBinaryMetadata(req.startCacheConfiguration(), req.schema());
+            }
+            catch (BinaryObjectException e) {
+                ctx.cache().completeCacheStartFuture(req, false, e);
+            }
+        }
+    }
+
+    /**
+     * Register binary metadata locally.
+     *
+     * @param ccfg Cache configuration.
+     * @param schema Schema for which register metadata is required.
+     * @throws BinaryObjectException if register was failed.
+     */
+    private void registerBinaryMetadata(CacheConfiguration ccfg, QuerySchema schema) throws BinaryObjectException {
+        if (schema != null) {
+            Collection<QueryEntity> qryEntities = schema.entities();
+
+            if (!F.isEmpty(qryEntities)) {
+                boolean binaryEnabled = ctx.cacheObjects().isBinaryEnabled(ccfg);
+
+                if (binaryEnabled) {
+                    for (QueryEntity qryEntity : qryEntities) {
+                        registerTypeLocally(qryEntity.findKeyType());
+                        registerTypeLocally(qryEntity.findValueType());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Register class metadata locally if it didn't do it earlier.
+     *
+     * @param clsName Class name for which the metadata should be registered.
+     * @throws BinaryObjectException if register was failed.
+     */
+    private void registerTypeLocally(String clsName) throws BinaryObjectException {
+        if (clsName == null)
+            return;
+
+        IgniteCacheObjectProcessor cacheObjProc = ctx.cacheObjects();
+
+        if (cacheObjProc instanceof CacheObjectBinaryProcessorImpl) {
+            CacheObjectBinaryProcessorImpl binProc = (CacheObjectBinaryProcessorImpl) cacheObjProc;
+
+            Class<?> cls = U.box(U.classForName(clsName, null, true));
+
+            if (cls != null)
+                binProc.binaryContext().registerClass(cls, true, false, true);
+            else
+                registerPlatformTypeLocally(clsName, binProc);
+        }
+    }
+
+    /**
+     * Registers platform type locally.
+     *
+     * @param clsName Class name.
+     * @param binProc Binary processor.
+     */
+    private void registerPlatformTypeLocally(String clsName, CacheObjectBinaryProcessorImpl binProc) {
+        PlatformProcessor platformProc = ctx.platform();
+
+        assert platformProc != null : "Platform processor must be initialized";
+
+        if (!platformProc.hasContext())
+            return;
+
+        PlatformContext platformCtx = platformProc.context();
+        BinaryMetadata meta = platformCtx.getBinaryType(clsName);
+
+        if (meta != null)
+            binProc.binaryContext().registerClassLocally(
+                    meta.wrap(binProc.binaryContext()),
+                    false,
+                    platformCtx.getMarshallerPlatformId());
     }
 
     /**

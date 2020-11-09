@@ -187,7 +187,7 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
                 // Metadata is registered for OBJECT and BINARY during actual writing.
                 boolean registerMeta = !(desc.isObject() || desc.isBinary());
 
-                desc = ctx.registerDescriptor(desc, registerMeta);
+                desc = ctx.registerDescriptor(desc, registerMeta, false);
             }
         }
 
