@@ -36,6 +36,7 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.PRELOADER_FORCE_CLEAR;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
 /**
@@ -45,6 +46,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  * Such a scenario can leave a partition in RENTING state until the next exchange. It's actually acceptable behavior.
  */
 @WithSystemProperty(key = "IGNITE_PRELOAD_RESEND_TIMEOUT", value = "0")
+@WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
 public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -104,7 +106,7 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
 
         loadDataToPartition(evictingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, delta, cnt, 3);
 
-        // Removal required for triggering full rebalancing.
+        // Removal required for triggering full rebalancing to satisfy heuristic.
         List<Integer> clearKeys = partitionKeys(grid(0).cache(DEFAULT_CACHE_NAME), evictingPart, rmv, cnt);
 
         for (Integer clearKey : clearKeys)

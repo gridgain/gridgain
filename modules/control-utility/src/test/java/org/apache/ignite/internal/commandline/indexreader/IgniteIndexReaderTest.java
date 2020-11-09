@@ -156,6 +156,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         return super.getConfiguration(igniteInstanceName).setDataStorageConfiguration(
             new DataStorageConfiguration()
                 .setPageSize(PAGE_SIZE)
+                .setWalSegmentSize(4 * 1024 * 1024)
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setPersistenceEnabled(true)
@@ -165,7 +166,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         ).setCacheConfiguration(
             new CacheConfiguration(DEFAULT_CACHE_NAME)
                 .setGroupName(CACHE_GROUP_NAME)
-                .setAffinity(new RendezvousAffinityFunction(false))
                 .setSqlSchema(QueryUtils.DFLT_SCHEMA),
             new CacheConfiguration(EMPTY_CACHE_NAME)
                 .setGroupName(EMPTY_CACHE_GROUP_NAME),
@@ -236,10 +236,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             createAndFillTable(cache, TableInfo.generate(i), insert);
-
-        // TODO FIXME if tombstones are present false positive report can happen, because tombstones not indexed,
-        // but present on data pages.
-        clearTombstones(cache);
 
         forceCheckpoint(node);
     }

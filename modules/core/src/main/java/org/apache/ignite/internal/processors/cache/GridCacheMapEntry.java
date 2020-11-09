@@ -2816,7 +2816,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public boolean markObsoleteVersion(GridCacheVersion ver) {
-        assert cctx.deferredDelete();
+        //assert cctx.deferredDelete();
 
         boolean marked;
 

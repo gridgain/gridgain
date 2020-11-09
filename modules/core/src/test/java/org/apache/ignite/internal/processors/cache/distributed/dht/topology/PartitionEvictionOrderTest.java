@@ -31,6 +31,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -42,6 +43,7 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.PRELOADER_FORCE_CLEAR;
 
 /**
  * Tests that {@link CacheRebalanceMode#SYNC} caches are evicted at first.
@@ -81,11 +83,11 @@ public class PartitionEvictionOrderTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Tests that {@link CacheRebalanceMode#SYNC} caches are evicted at first.
+     * Tests that {@link CacheRebalanceMode#SYNC} caches are cleared before full rebalancing at first.
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_EVICTION_PERMITS, value = "1")
     @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "500_000")
+    @WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
     public void testSyncCachesEvictedAtFirst() throws Exception {
         IgniteEx node0 = startGrid(0);
 
@@ -120,7 +122,7 @@ public class PartitionEvictionOrderTest extends GridCommonAbstractTest {
                 utilCache1.put(i, i + 1);
             }
             catch (IgniteCheckedException e) {
-                e.printStackTrace();
+                log.error("Failed to update a cache", e);
             }
         }
 

@@ -376,10 +376,20 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_OFFHEAP_SAFE_RELEASE = "IGNITE_OFFHEAP_SAFE_RELEASE";
 
-    /** Maximum size for atomic cache queue delete history (default is 200 000 entries per partition). */
+    /**
+     * Maximum size for atomic cache queue delete history (default is 200 000 entries per partition).
+     *
+     * @deprecated No longer used.
+     */
+    @Deprecated
     public static final String IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE = "IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE";
 
-    /** Ttl of removed cache entries (ms). TODO remove, not used */
+    /**
+     * Ttl of removed cache entries (ms).
+     *
+     * @deprecated No longer used.
+     */
+    @Deprecated
     public static final String IGNITE_CACHE_REMOVED_ENTRIES_TTL = "IGNITE_CACHE_REMOVED_ENTRIES_TTL";
 
     /**

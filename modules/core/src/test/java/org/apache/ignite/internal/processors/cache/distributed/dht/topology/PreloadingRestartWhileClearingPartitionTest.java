@@ -38,12 +38,16 @@ import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.PRELOADER_FORCE_CLEAR;
 
 /**
  * Tests if a rebalancing was cancelled and restarted during partition pre-clearing caused by full rebalancing.
  */
+@WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
 public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstractTest {
     /**
      * {@inheritDoc}

@@ -24,10 +24,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
@@ -49,18 +51,16 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.dr.GridCacheDrInfo;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalEx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.GridCircularBuffer;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.CI2;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_READ;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
@@ -73,6 +73,10 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
  * Near cache for atomic cache.
  */
 public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
+    /** Max remove history depth for resolving put-remove reordering issues. */
+    private static final int ATOMIC_NEAR_CACHE_RMV_HISTORY_SIZE =
+        IgniteSystemProperties.getInteger("ATOMIC_NEAR_CACHE_RMV_HISTORY_SIZE", 1024);
+
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -80,7 +84,7 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
     private GridDhtCacheAdapter<K, V> dht;
 
     /** Remove queue. */
-    private GridCircularBuffer<T2<KeyCacheObject, GridCacheVersion>> rmvQueue;
+    private FastSizeDeque<T2<KeyCacheObject, GridCacheVersion>> rmvQueue;
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -95,10 +99,9 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
     public GridNearAtomicCache(GridCacheContext<K, V> ctx) {
         super(ctx);
 
-        int size = CU.isSystemCache(ctx.name()) ? 100 :
-            Integer.getInteger(IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, 1_000_000);
+        assert !CU.isSystemCache(ctx.name()) : ctx;
 
-        rmvQueue = new GridCircularBuffer<>(U.ceilPow2(size / 10));
+        rmvQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
     }
 
     /** {@inheritDoc} */
@@ -609,17 +612,13 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
     @Override public void onDeferredDelete(GridCacheEntryEx entry, GridCacheVersion ver) {
         assert entry.isNear();
 
-        try {
-            T2<KeyCacheObject, GridCacheVersion> evicted = rmvQueue.add(new T2<>(entry.key(), ver));
+        rmvQueue.add(new T2<>(entry.key(), ver));
+
+        while (rmvQueue.sizex() > ATOMIC_NEAR_CACHE_RMV_HISTORY_SIZE) {
+            T2<KeyCacheObject, GridCacheVersion> evicted = rmvQueue.pollFirst();
 
             if (evicted != null)
                 removeVersionedEntry(evicted.get1(), evicted.get2());
-        }
-        catch (InterruptedException ignore) {
-            if (log.isDebugEnabled())
-                log.debug("Failed to enqueue deleted entry [key=" + entry.key() + ", ver=" + ver + ']');
-
-            Thread.currentThread().interrupt();
         }
     }
 }

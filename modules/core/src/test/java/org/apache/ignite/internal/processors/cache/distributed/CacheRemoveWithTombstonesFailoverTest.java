@@ -42,7 +42,7 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 
 /**
- * Tests to check failover scenarios over tombstones.
+ * Tests to check failover scenarios over tombstones. TODO
  */
 @Ignore
 public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTest {

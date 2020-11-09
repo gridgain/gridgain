@@ -38,6 +38,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -1238,7 +1239,7 @@ public class GridDhtPartitionDemander {
         /** Rebalancing last cancelled time. */
         private final AtomicLong lastCancelledTime;
 
-        /** Next future in chain. */
+        /** Next future in the chain. */
         @GridToStringExclude
         private final RebalanceFuture next;
 
@@ -1422,7 +1423,7 @@ public class GridDhtPartitionDemander {
                     // Make sure partitions scheduled for full rebalancing are cleared first.
                     // Clearing attempt is also required for in-memory caches because some partitions can be switched
                     // from RENTING to MOVING state in the middle of clearing.
-                    if (grp.mvccEnabled()) {
+                    if (grp.mvccEnabled() || assignments.forceClear()) {
                         final int fullSetSize = d.partitions().fullSet().size();
 
                         AtomicInteger waitCnt = new AtomicInteger(fullSetSize);

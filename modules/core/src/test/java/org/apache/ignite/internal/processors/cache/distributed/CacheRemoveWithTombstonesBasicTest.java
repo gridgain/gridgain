@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.AbstractMap;
@@ -45,8 +61,10 @@ import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMap;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
+import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
@@ -56,20 +74,25 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDh
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtomicCache;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+import org.apache.ignite.internal.util.GridCircularBuffer;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.util.deque.FastSizeDeque;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -506,6 +529,75 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertNull(near.cache(DEFAULT_CACHE_NAME).get(part));
     }
 
+    /**
+     * Tests if removed values are cleared if rmv queue is overflowed for atomic cache.
+     * TODO add test with near eviction ?
+     * @throws Exception
+     */
+    @Test
+    @WithSystemProperty(key = "ATOMIC_NEAR_CACHE_RMV_HISTORY_SIZE", value = "100")
+    public void testTombstonesExpirationOnRmvQueueOverflow() throws Exception {
+        IgniteEx crd = startGrids(4);
+        awaitPartitionMapExchange();
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        cacheCfg.setNearConfiguration(new NearCacheConfiguration<>());
+        //cacheCfg.setEagerTtl(true);
+        //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+        awaitPartitionMapExchange();
+
+        int part = 0;
+        Collection<ClusterNode> nodes = crd.affinity(DEFAULT_CACHE_NAME).mapPartitionToPrimaryAndBackups(part);
+
+        ClusterNode nearNode = null;
+
+        for (Ignite grid : G.allGrids()) {
+            if (!nodes.contains(grid.cluster().localNode())) {
+                nearNode = grid.cluster().localNode();
+
+                break;
+            }
+        }
+
+        IgniteEx near = (IgniteEx) grid(nearNode);
+
+        int keysCnt = 100;
+
+        List<Integer> nearKeys = partitionKeys(cache, part, 100, 0);
+
+        for (Integer nearKey : nearKeys)
+            near.cache(DEFAULT_CACHE_NAME).put(nearKey, nearKey);
+
+        GridNearAtomicCache<Object, Object> nearCache =
+            (GridNearAtomicCache<Object, Object>) near.cachex(DEFAULT_CACHE_NAME).context().near();
+
+        GridCacheConcurrentMap map = nearCache.map();
+
+        assertEquals(keysCnt, nearKeys.size());
+        assertEquals(keysCnt, map.internalSize());
+        assertEquals(keysCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        for (Integer nearKey : nearKeys)
+            cache.remove(nearKey);
+
+        // Expecting entries are not removed from map.
+        assertEquals(keysCnt, map.internalSize());
+        assertEquals(keysCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        // Expecting values are deleted.
+        Iterable<GridCacheMapEntry> entries = map.entries(CU.cacheId(DEFAULT_CACHE_NAME));
+
+        for (GridCacheMapEntry entry : entries)
+            assertFalse(entry.hasValue());
+
+        // Expecting rmv queue to be full.
+        FastSizeDeque q = U.field(nearCache, "rmvQueue");
+
+        assertEquals(keysCnt, q.size());
+    }
+
     @Test
     public void testRemoveOnSupplierAppliedOnDemander() {
         // TODO
@@ -783,7 +875,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
     // TODO atomic test.
     @Test
-    public void testTombstoneLoggedForEachRemove() throws Exception {
+    public void testTombstoneLoggedForEachRemoveTx() throws Exception {
         persistence = true;
 
         IgniteEx crd = startGrid(0);
