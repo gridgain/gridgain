@@ -409,6 +409,10 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
 
         future.get();
 
+        // TODO: 10.11.2020 del
+        if (log.isInfoEnabled())
+            log.info(String.format("kirill w1=%s, w2=%s", workDir, U.defaultWorkDirectory()));
+
         //should started iteration from work directory but finish from archive directory.
         File workSeg0 = U.resolveWorkDirectory(workDir, WORK_SUB_DIR + "/0000000000000000.wal", false);
         File archiveSeg0 = U.resolveWorkDirectory(workDir, ARCHIVE_SUB_DIR + "/0000000000000000.wal", false);
@@ -450,6 +454,16 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
                 );
 
                 cfg.setEventStorageSpi(new NoopEventStorageSpi());
+
+                // TODO: 10.11.2020 del
+                if (log.isInfoEnabled()) {
+                    try {
+                        log.info("kirill=" + cfg + ", a=" + pdsFolderResolver().resolveFolders().folderName());
+                    }
+                    catch (IgniteCheckedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
 
                 return cfg;
             }
