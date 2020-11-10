@@ -30,6 +30,9 @@ class SegmentReservationStorage extends SegmentObservable {
      */
     private final NavigableMap<Long, Integer> reserved = new TreeMap<>();
 
+    /** Minimum reserved segment, {@code -1} if none. */
+    private volatile long minReservedIdx = -1;
+
     /**
      * @param absIdx Index for reservation.
      */
@@ -43,8 +46,10 @@ class SegmentReservationStorage extends SegmentObservable {
      * @param absIdx Index for check reservation.
      * @return {@code True} if index is reserved.
      */
-    synchronized boolean reserved(long absIdx) {
-        return reserved.floorKey(absIdx) != null;
+    boolean reserved(long absIdx) {
+        long minIdx = minReservedIdx;
+
+        return minIdx != -1 && absIdx >= minIdx;
     }
 
     /**
@@ -77,7 +82,10 @@ class SegmentReservationStorage extends SegmentObservable {
         Long oldMinIdx = oldMin == null ? null : oldMin.getKey();
         Long newMinIdx = newMin == null ? null : newMin.getKey();
 
-        if (!Objects.equals(oldMinIdx, newMinIdx))
+        if (!Objects.equals(oldMinIdx, newMinIdx)) {
+            minReservedIdx = newMinIdx == null ? -1 : newMinIdx;
+
             notifyObservers(newMinIdx);
+        }
     }
 }
