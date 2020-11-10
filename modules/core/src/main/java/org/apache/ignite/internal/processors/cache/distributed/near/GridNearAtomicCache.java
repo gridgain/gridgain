@@ -292,7 +292,7 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
                     entry = null;
                 }
                 finally {
-                    if (entry != null)
+                    if (entry != null && entry.hasValue()) // Prevent eviction of empty value from local map.
                         entry.touch();
                 }
             }

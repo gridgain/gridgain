@@ -6611,20 +6611,20 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 // Must persist inside synchronization in non-tx mode.
                 cctx.store().put(null, entry.key, updated, newVer);
 
-            if (cctx.deferredDelete()) {
+            if (entry.isNear()) {
                 if (entry.val == null) {
                     boolean new0 = entry.isStartVersion();
 
-                    assert entry.val == null || new0 || entry.isInternal() :
-                        "Invalid entry [entry=" + entry + ", locNodeId=" + cctx.localNodeId() + ']';
+//                    assert entry.val == null || new0 || entry.isInternal() :
+//                        "Invalid entry [entry=" + entry + ", locNodeId=" + cctx.localNodeId() + ']';
 
                     if (!new0 && !entry.isInternal())
-                        entry.deletedUnlocked(false);
+                        cctx.incrementPublicSize(entry);
                 }
-                else {
-                    assert !entry.deletedUnlocked() : "Invalid entry [entry=" + this +
-                        ", locNodeId=" + cctx.localNodeId() + ']';
-                }
+//                else {
+//                    assert !entry.deletedUnlocked() : "Invalid entry [entry=" + this +
+//                        ", locNodeId=" + cctx.localNodeId() + ']';
+//                }
             }
 
             long updateCntr0 = entry.nextPartitionCounter(topVer, primary, false, updateCntr);
@@ -6724,23 +6724,33 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             entry.logUpdate(op, null, newVer, 0, updateCntr0);
 
-            if (cctx.deferredDelete()) { // TODO remove
-                if (oldVal != null) {
-                    assert !entry.deletedUnlocked();
+            if (entry.isNear()) {
+                if (oldVal != null && !entry.isInternal()) {
+                    //assert !entry.deletedUnlocked();
 
-                    if (!entry.isInternal())
-                        entry.deletedUnlocked(true);
+//                    if (!entry.isInternal())
+//                        entry.deletedUnlocked(true);
+
+                    cctx.decrementPublicSize(entry);
                 }
                 else {
-                    boolean new0 = entry.isStartVersion();
+                    boolean new0 = entry.isStartVersion(); // TODO can ever be here ? replace with assert.
 
-                    assert entry.deletedUnlocked() || new0 || entry.isInternal() : "Invalid entry [entry=" + this +
-                        ", locNodeId=" + cctx.localNodeId() + ']';
+//                    assert entry.deletedUnlocked() || new0 || entry.isInternal() : "Invalid entry [entry=" + this +
+//                        ", locNodeId=" + cctx.localNodeId() + ']';
 
-                    if (new0) {
-                        if (!entry.isInternal())
-                            entry.deletedUnlocked(true);
+//                    if (new0) {
+//                        if (!entry.isInternal())
+//                            entry.deletedUnlocked(true);
+//                    }
+
+                    if (new0 && !entry.isInternal()) { // TODO cannot have internal entries on near atomic.
+                        cctx.decrementPublicSize(entry);
+
+//                        if (!entry.isInternal())
+//                            entry.deletedUnlocked(true);
                     }
+
                 }
             }
 

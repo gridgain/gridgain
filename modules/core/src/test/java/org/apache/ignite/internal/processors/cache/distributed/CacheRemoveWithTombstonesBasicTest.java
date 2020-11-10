@@ -528,6 +528,14 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         putFut.get();
 
         assertNull(near.cache(DEFAULT_CACHE_NAME).get(part));
+
+        // Check local map.
+        GridNearAtomicCache<Object, Object> nearCache =
+            (GridNearAtomicCache<Object, Object>) near.cachex(DEFAULT_CACHE_NAME).context().near();
+
+        GridCacheConcurrentMap map = nearCache.map();
+
+        assertEquals(1, map.internalSize());
     }
 
     /**
@@ -587,14 +595,32 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         // Expecting entries are not removed from map.
         assertEquals(rmvCnt, near.cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.ALL));
-        assertEquals(rmvCnt, map.internalSize());
+        assertEquals(keysCnt, map.internalSize());
+        assertEquals(rmvCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        for (int i = 0; i < rmvCnt; i++)
+            nearCache.put(nearKeys.get(i), nearKeys.get(i));
+
+        assertEquals(keysCnt, nearKeys.size());
+        assertEquals(keysCnt, map.internalSize());
+        assertEquals(keysCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        for (int i = 0; i < rmvCnt; i++)
+            cache.remove(nearKeys.get(i));
+
+        assertEquals(rmvCnt, near.cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.ALL));
+        assertEquals(keysCnt, map.internalSize());
         assertEquals(rmvCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
 
         // Expecting values are deleted.
         Iterable<GridCacheMapEntry> entries = map.entries(CU.cacheId(DEFAULT_CACHE_NAME));
 
-        for (GridCacheMapEntry entry : entries)
-            assertFalse(entry.hasValue());
+        int cnt = 0;
+
+        for (GridCacheMapEntry ignored : entries)
+            cnt++;
+
+        assertEquals(keysCnt, cnt);
 
         // Expecting rmv queue to be full.
         FastSizeDeque q = U.field(nearCache, "rmvQueue");
@@ -604,7 +630,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
     /**
      * Tests if removed values are cleared if rmv queue is overflowed for atomic cache.
-     * TODO remove copy paste.
+     * TODO add test with near eviction ?
      * @throws Exception
      */
     @Test
@@ -652,7 +678,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(keysCnt, map.internalSize());
         assertEquals(keysCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
 
-        // Remove on near side.
         cache = near.cache(DEFAULT_CACHE_NAME);
 
         int rmvCnt = 100;
@@ -661,15 +686,33 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             cache.remove(nearKeys.get(i));
 
         // Expecting entries are not removed from map.
-        assertEquals(rmvCnt, cache.localSize(CachePeekMode.ALL));
-        assertEquals(rmvCnt, map.internalSize());
+        assertEquals(rmvCnt, near.cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.ALL));
+        assertEquals(keysCnt, map.internalSize());
+        assertEquals(rmvCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        for (int i = 0; i < rmvCnt; i++)
+            nearCache.put(nearKeys.get(i), nearKeys.get(i));
+
+        assertEquals(keysCnt, nearKeys.size());
+        assertEquals(keysCnt, map.internalSize());
+        assertEquals(keysCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        for (int i = 0; i < rmvCnt; i++)
+            cache.remove(nearKeys.get(i));
+
+        assertEquals(rmvCnt, near.cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.ALL));
+        assertEquals(keysCnt, map.internalSize());
         assertEquals(rmvCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
 
         // Expecting values are deleted.
         Iterable<GridCacheMapEntry> entries = map.entries(CU.cacheId(DEFAULT_CACHE_NAME));
 
-        for (GridCacheMapEntry entry : entries)
-            assertFalse(entry.hasValue());
+        int cnt = 0;
+
+        for (GridCacheMapEntry ignored : entries)
+            cnt++;
+
+        assertEquals(keysCnt, cnt);
 
         // Expecting rmv queue to be full.
         FastSizeDeque q = U.field(nearCache, "rmvQueue");

@@ -718,7 +718,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @param e Entry.
      */
     public void incrementPublicSize(GridCacheMapEntry e) {
-        assert deferredDelete();
+        //assert deferredDelete();
         assert e != null;
         assert !e.isInternal() : e;
 
@@ -729,7 +729,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @param e Entry.
      */
     public void decrementPublicSize(GridCacheMapEntry e) {
-        assert deferredDelete();
+        //assert deferredDelete();
         assert e != null;
         assert !e.isInternal() : e;
 
