@@ -416,15 +416,6 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
         File startFile = new File(startedSegmentPath.get());
         File endFile = new File(finishedSegmentPath.get());
 
-        // TODO: 10.11.2020 del
-        if (log.isInfoEnabled()) {
-            log.info(String.format("kirill w1=%s, w2=%s", workDir, U.defaultWorkDirectory()));
-
-            for (File file : new File[]{workSeg0, archiveSeg0, startFile,endFile}) {
-                log.info(String.format("kirill a1=%s, a2=%s", file.getAbsoluteFile(), file.exists()));
-            }
-        }
-
         assertEquals(workSeg0.getAbsolutePath(), startFile.getAbsolutePath());
         assertEquals(archiveSeg0.getAbsolutePath(), endFile.getAbsolutePath());
 
@@ -462,16 +453,6 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
                 );
 
                 cfg.setEventStorageSpi(new NoopEventStorageSpi());
-
-                // TODO: 10.11.2020 del
-                if (log.isInfoEnabled()) {
-                    try {
-                        log.info("kirill=" + cfg + ", a=" + pdsFolderResolver().resolveFolders().folderName());
-                    }
-                    catch (IgniteCheckedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
 
                 return cfg;
             }
