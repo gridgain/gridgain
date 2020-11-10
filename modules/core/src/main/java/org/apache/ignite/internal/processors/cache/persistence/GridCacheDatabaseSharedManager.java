@@ -317,7 +317,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Lock for releasing history for preloading. */
     private ReentrantLock releaseHistForPreloadingLock = new ReentrantLock();
 
-    /** Callback when creating a checpoint manager. */
+    /** Callback on checpoint manager creation.*/
     @Nullable private Consumer<CheckpointManager> onCreateCpMgrCb;
 
     /**
@@ -3076,7 +3076,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
-     * Set a callback when creating a checkpoint manager.
+     * Set a сallback on checpoint manager creation.
      *
      * @param cb Callback.
      */

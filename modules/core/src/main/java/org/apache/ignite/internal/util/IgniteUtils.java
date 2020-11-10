@@ -11037,34 +11037,24 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Calculates maximum WAL archive size based on maximum checkpoint buffer size, if the default value of
-     * {@link DataStorageConfiguration#getMaxWalArchiveSize()} is not overridden.
+     * Calculates maximum WAL archive size based on maximum checkpoint buffer size,
+     * if the value of {@link DataStorageConfiguration#getMaxWalArchiveSize()} is
+     * {@link DataStorageConfiguration#UNLIMITED_WAL_ARCHIVE}.
      *
-     * @return User-set max WAL archive size of triple size of the maximum checkpoint buffer.
+     * @param dsCfg Data storage configuration.
+     * @return Max size(in bytes) of WAL archive.
      */
-    public static long adjustedWalHistorySize(DataStorageConfiguration dsCfg, @Nullable IgniteLogger log) {
-        if (dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE &&
-            dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE)
+    public static long adjustedWalHistorySize(DataStorageConfiguration dsCfg) {
+        if (dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE)
             return dsCfg.getMaxWalArchiveSize();
+
+        List<DataRegionConfiguration> regCfgs = new ArrayList<>(F.asList(dsCfg.getDataRegionConfigurations()));
+        regCfgs.add(dsCfg.getDefaultDataRegionConfiguration());
 
         // Find out the maximum checkpoint buffer size.
         long maxCpBufSize = 0;
 
-        if (dsCfg.getDataRegionConfigurations() != null) {
-            for (DataRegionConfiguration regCfg : dsCfg.getDataRegionConfigurations()) {
-                long cpBufSize = checkpointBufferSize(regCfg);
-
-                if (cpBufSize > regCfg.getMaxSize())
-                    cpBufSize = regCfg.getMaxSize();
-
-                if (cpBufSize > maxCpBufSize)
-                    maxCpBufSize = cpBufSize;
-            }
-        }
-
-        {
-            DataRegionConfiguration regCfg = dsCfg.getDefaultDataRegionConfiguration();
-
+        for (DataRegionConfiguration regCfg : dsCfg.getDataRegionConfigurations()) {
             long cpBufSize = checkpointBufferSize(regCfg);
 
             if (cpBufSize > regCfg.getMaxSize())
@@ -11074,19 +11064,7 @@ public abstract class IgniteUtils {
                 maxCpBufSize = cpBufSize;
         }
 
-        long adjustedWalArchiveSize = maxCpBufSize * 256;
-
-        if (adjustedWalArchiveSize > dsCfg.getMaxWalArchiveSize()) {
-            if (log != null) {
-                U.quietAndInfo(log, "Automatically adjusted max WAL archive size to " +
-                    U.readableSize(adjustedWalArchiveSize, false) +
-                    " (to override, use DataStorageConfiguration.setMaxWalArhiveSize)");
-            }
-
-            return dsCfg.getMaxWalArchiveSize();
-        }
-
-        return adjustedWalArchiveSize;
+        return maxCpBufSize * 256;
     }
 
     /**

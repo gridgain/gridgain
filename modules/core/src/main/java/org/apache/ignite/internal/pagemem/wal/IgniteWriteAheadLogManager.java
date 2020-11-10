@@ -224,15 +224,15 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
     WALPointer lastWritePointer();
 
     /**
-     * Getting number of segments that can be deleted in archive.
+     * Getting number of segments that can be deleted when maximum archive size is reached,
+     * or {@code -1} if cleaning is not needed yet.
      *
-     * @return Number of segments that can be deleted in archive,
-     *      {@code -1} if there is space in it and it is not necessary to clean it.
+     * @return Number of segments that can be deleted from archive, or {@code -1} if cleaning is not needed yet.
      */
     int availableDeleteArchiveSegments();
 
     /**
-     * Preparing the archive and checking that it does not exceed the maximum size.
+     * Preparing and checking the archive.
      *
      * @throws IgniteCheckedException If failed.
      */

@@ -197,7 +197,9 @@ public class CheckpointTimeoutLock {
     }
 
     /**
-     * @return {@code True} if WAL archive can be safe cleaned up.
+     * Heuristic: Checking that WAL archive is either not full, or can safely delete 2 segments from it.
+     *
+     * @return {@code True} if WAL archive is either not full, or can be safe cleaned up.
      */
     private boolean safeToCleanWalArchive() {
         int cntToClean = wal.availableDeleteArchiveSegments();

@@ -87,7 +87,7 @@ public class WalArchiveSize {
     }
 
     /**
-     * Callback at start of WAL manager.
+     * Callback on start of WAL manager.
      *
      * @param segmentAware Holder of actual information of latest manipulation on WAL segments.
      * @param availableArchive Archive available.
@@ -105,7 +105,7 @@ public class WalArchiveSize {
     }
 
     /**
-     * Callback at start of checkpoint manager.
+     * Callback on start of checkpoint manager.
      *
      * @param cpMgr Checkpoint manager.
      */
@@ -113,7 +113,6 @@ public class WalArchiveSize {
         if (!unlimited()) {
             this.cpMgr = cpMgr;
 
-            // Adding a callback on change border for recovery.
             cpMgr.checkpointHistory().addObserver(cpEntry -> {
                 synchronized (this) {
                     cpIdx = ((FileWALPointer)cpEntry.checkpointMark()).index();
