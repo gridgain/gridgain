@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.near;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.junit.Test;
@@ -34,6 +35,15 @@ public class GridCacheNearAtomicMetricsSelfTest extends GridCacheNearMetricsSelf
         ccfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
 
         return ccfg;
+    }
+
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setFailureDetectionTimeout(100000L);
+        cfg.setClientFailureDetectionTimeout(100000L);
+
+        return cfg;
     }
 
     /**
