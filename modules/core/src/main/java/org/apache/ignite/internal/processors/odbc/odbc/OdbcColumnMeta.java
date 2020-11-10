@@ -34,19 +34,19 @@ public class OdbcColumnMeta {
     private final String tableName;
 
     /** Column name. */
-    public final String columnName;
+    private final String columnName;
 
     /** Data type. */
     private final Class<?> dataType;
 
     /** Precision. */
-    public final int precision;
+    private final int precision;
 
     /** Scale. */
-    public final int scale;
+    private final int scale;
 
-    /** Nullability. */
-    public final int nullability;
+    /** Nullability. See {@link java.sql.ResultSetMetaData#isNullable(int)} for more info. */
+    private final int nullability;
 
     /**
      * @param schemaName Cache name.
