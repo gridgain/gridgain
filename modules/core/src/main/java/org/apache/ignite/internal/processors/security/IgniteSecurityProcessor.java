@@ -16,7 +16,10 @@
 
 package org.apache.ignite.internal.processors.security;
 
+import java.io.Serializable;
+import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,7 +40,9 @@ import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.plugin.security.SecurityPermission;
+import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.plugin.security.SecuritySubject;
+import org.apache.ignite.plugin.security.SecuritySubjectType;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
@@ -100,7 +105,12 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     @Override public OperationSecurityContext withContext(SecurityContext secCtx) {
         assert secCtx != null;
 
-        secPrc.touch(secCtx);
+        try {
+            secPrc.touch(secCtx);
+        }
+        catch (SecurityException e) {
+            log.warning("Failed to check security context [subj=" + secCtx.subject().id() + ", err=" + e + ']');
+        }
 
         SecurityContext old = curSecCtx.get();
 
@@ -118,10 +128,103 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
             uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
             : secPrc.securityContext(subjId);
 
-        if (res == null)
-            throw new IllegalStateException("Failed to find security context for subject with given ID : " + subjId);
+        if (res == null) {
+            //throw new IllegalStateException("Failed to find security context for subject with given ID : " + subjId);
+            log.warning("Failed to find security context for subject with given ID : " + subjId + ". Switched to allow nothing");
+
+            res = new AllowNothingSecurityContext(subjId, node!= null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT);
+        }
 
         return withContext(res);
+    }
+
+    private static class AllowNothingSecurityContext implements SecurityContext, Serializable {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        SecuritySubject secSubj;
+
+        AllowNothingSecurityContext(UUID subjId, SecuritySubjectType subjType) {
+            secSubj = new AllowNothingSecuritySubject(subjId, subjType);
+        }
+
+        @Override public SecuritySubject subject() {
+            return secSubj;
+        }
+
+        @Override public boolean taskOperationAllowed(String taskClsName, SecurityPermission perm) {
+            return false;
+        }
+
+        @Override public boolean cacheOperationAllowed(String cacheName, SecurityPermission perm) {
+            return false;
+        }
+
+        @Override public boolean serviceOperationAllowed(String srvcName, SecurityPermission perm) {
+            return false;
+        }
+
+        @Override public boolean systemOperationAllowed(SecurityPermission perm) {
+            return false;
+        }
+    }
+
+    private static class AllowNothingSecuritySubject implements SecuritySubject {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        UUID subjectId;
+        SecuritySubjectType subjType;
+
+        AllowNothingSecuritySubject(UUID subjId, SecuritySubjectType subjType) {
+            this.subjectId = subjId;
+            this.subjType = subjType;
+        }
+
+        @Override public UUID id() {
+            return subjectId;
+        }
+
+        @Override public SecuritySubjectType type() {
+            return subjType;
+        }
+
+        @Override public Object login() {
+            return "";
+        }
+
+        @Override public InetSocketAddress address() {
+            return null;
+        }
+
+        @Override public SecurityPermissionSet permissions() {
+            return new AllowNothingSecurityPermissionSet();
+        }
+    }
+
+    private static class AllowNothingSecurityPermissionSet implements SecurityPermissionSet {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        @Override public boolean defaultAllowAll() {
+            return false;
+        }
+
+        @Override public Map<String, Collection<SecurityPermission>> taskPermissions() {
+            return Collections.emptyMap();
+        }
+
+        @Override public Map<String, Collection<SecurityPermission>> cachePermissions() {
+            return Collections.emptyMap();
+        }
+
+        @Override public Map<String, Collection<SecurityPermission>> servicePermissions() {
+            return Collections.emptyMap();
+        }
+
+        @Override public Collection<SecurityPermission> systemPermissions() {
+            return Collections.emptyList();
+        }
     }
 
     /** {@inheritDoc} */
