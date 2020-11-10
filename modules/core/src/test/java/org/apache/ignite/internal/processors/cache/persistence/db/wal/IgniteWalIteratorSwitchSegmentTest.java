@@ -103,8 +103,8 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
     @Override protected void cleanPersistenceDir() throws Exception {
         super.cleanPersistenceDir();
 
-        U.resolveWorkDirectory(U.defaultWorkDirectory(), WORK_SUB_DIR, true);
-        U.resolveWorkDirectory(U.defaultWorkDirectory(), ARCHIVE_SUB_DIR, true);
+        U.delete(new File(U.defaultWorkDirectory() + WORK_SUB_DIR));
+        U.delete(new File(U.defaultWorkDirectory() + ARCHIVE_SUB_DIR));
     }
 
     /**
@@ -409,16 +409,24 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
 
         future.get();
 
+        //should started iteration from work directory but finish from archive directory.
+        File workSeg0 = new File(workDir + WORK_SUB_DIR + "/0000000000000000.wal");
+        File archiveSeg0 = new File(workDir + ARCHIVE_SUB_DIR + "/0000000000000000.wal");
+
+        File startFile = new File(startedSegmentPath.get());
+        File endFile = new File(finishedSegmentPath.get());
+
         // TODO: 10.11.2020 del
-        if (log.isInfoEnabled())
+        if (log.isInfoEnabled()) {
             log.info(String.format("kirill w1=%s, w2=%s", workDir, U.defaultWorkDirectory()));
 
-        //should started iteration from work directory but finish from archive directory.
-        File workSeg0 = U.resolveWorkDirectory(workDir, WORK_SUB_DIR + "/0000000000000000.wal", false);
-        File archiveSeg0 = U.resolveWorkDirectory(workDir, ARCHIVE_SUB_DIR + "/0000000000000000.wal", false);
+            for (File file : new File[]{workSeg0, archiveSeg0, startFile,endFile}) {
+                log.info(String.format("kirill a1=%s, a2=%s", file.getAbsoluteFile(), file.exists()));
+            }
+        }
 
-        assertEquals(workSeg0.getAbsolutePath(), new File(startedSegmentPath.get()).getAbsolutePath());
-        assertEquals(archiveSeg0.getAbsolutePath(), new File(finishedSegmentPath.get()).getAbsolutePath());
+        assertEquals(workSeg0.getAbsolutePath(), startFile.getAbsolutePath());
+        assertEquals(archiveSeg0.getAbsolutePath(), endFile.getAbsolutePath());
 
         Assert.assertEquals("Not all records read during iteration.", expectedRecords, actualRecords.get());
     }
