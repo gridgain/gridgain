@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import java.io.File;
 import java.nio.channels.Channel;
-import java.nio.file.Paths;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -90,14 +89,22 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        U.delete(Paths.get(U.defaultWorkDirectory()));
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        U.delete(Paths.get(U.defaultWorkDirectory()));
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void cleanPersistenceDir() throws Exception {
+        super.cleanPersistenceDir();
+
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), WORK_SUB_DIR, false));
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), ARCHIVE_SUB_DIR, false));
     }
 
     /**
@@ -171,7 +178,7 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
                 checkInvariantSwitchSegment(serVer);
             }
             finally {
-                U.delete(Paths.get(U.defaultWorkDirectory()));
+                cleanPersistenceDir();
             }
         }
     }
@@ -188,7 +195,7 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
                 checkSwitchReadingSegmentDuringIteration(serVer);
             }
             finally {
-                U.delete(Paths.get(U.defaultWorkDirectory()));
+                cleanPersistenceDir();
             }
         }
     }
@@ -403,8 +410,11 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
         future.get();
 
         //should started iteration from work directory but finish from archive directory.
-        assertEquals(workDir + WORK_SUB_DIR + "/0000000000000000.wal", startedSegmentPath.get());
-        assertEquals(workDir + ARCHIVE_SUB_DIR + "/0000000000000000.wal", finishedSegmentPath.get());
+        File workSeg0 = U.resolveWorkDirectory(workDir, WORK_SUB_DIR + "/0000000000000000.wal", false);
+        File archiveSeg0 = U.resolveWorkDirectory(workDir, ARCHIVE_SUB_DIR + "/0000000000000000.wal", false);
+
+        assertEquals(workSeg0.getPath(), startedSegmentPath.get());
+        assertEquals(archiveSeg0.getPath(), finishedSegmentPath.get());
 
         Assert.assertEquals("Not all records read during iteration.", expectedRecords, actualRecords.get());
     }
@@ -436,6 +446,7 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
                         .setWalPath(workDir + WORK_SUB_DIR)
                         .setWalArchivePath(workDir + ARCHIVE_SUB_DIR)
                         .setFileIOFactory(new RandomAccessFileIOFactory())
+                        .setMaxWalArchiveSize(DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE * 10)
                 );
 
                 cfg.setEventStorageSpi(new NoopEventStorageSpi());
