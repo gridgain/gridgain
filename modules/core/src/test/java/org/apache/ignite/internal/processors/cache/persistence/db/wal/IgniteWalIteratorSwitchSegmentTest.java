@@ -413,8 +413,8 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
         File workSeg0 = U.resolveWorkDirectory(workDir, WORK_SUB_DIR + "/0000000000000000.wal", false);
         File archiveSeg0 = U.resolveWorkDirectory(workDir, ARCHIVE_SUB_DIR + "/0000000000000000.wal", false);
 
-        assertEquals(workSeg0, new File(startedSegmentPath.get()));
-        assertEquals(archiveSeg0, new File(finishedSegmentPath.get()));
+        assertEquals(workSeg0.getAbsolutePath(), new File(startedSegmentPath.get()).getAbsolutePath());
+        assertEquals(archiveSeg0.getAbsolutePath(), new File(finishedSegmentPath.get()).getAbsolutePath());
 
         Assert.assertEquals("Not all records read during iteration.", expectedRecords, actualRecords.get());
     }
