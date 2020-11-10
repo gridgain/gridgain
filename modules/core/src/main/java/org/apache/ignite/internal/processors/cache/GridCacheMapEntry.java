@@ -3669,7 +3669,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     readerArgs.topologyVersion());
             }
             catch (GridCacheEntryRemovedException e) {
-                assert false : this;
+               // No-op.
             }
         }
     }

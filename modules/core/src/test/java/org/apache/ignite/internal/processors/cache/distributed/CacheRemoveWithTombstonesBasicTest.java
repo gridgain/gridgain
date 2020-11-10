@@ -598,6 +598,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(keysCnt, q.size());
     }
 
+//    @Test
+//    public void testAddReaderOnExpiredDhtEntry() {
+//
+//    }
+
     @Test
     public void testRemoveOnSupplierAppliedOnDemander() {
         // TODO
