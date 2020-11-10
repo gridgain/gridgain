@@ -103,8 +103,8 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
     @Override protected void cleanPersistenceDir() throws Exception {
         super.cleanPersistenceDir();
 
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), WORK_SUB_DIR, false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), ARCHIVE_SUB_DIR, false));
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), WORK_SUB_DIR, true);
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), ARCHIVE_SUB_DIR, true);
     }
 
     /**
@@ -413,8 +413,8 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
         File workSeg0 = U.resolveWorkDirectory(workDir, WORK_SUB_DIR + "/0000000000000000.wal", false);
         File archiveSeg0 = U.resolveWorkDirectory(workDir, ARCHIVE_SUB_DIR + "/0000000000000000.wal", false);
 
-        assertEquals(workSeg0.getPath(), startedSegmentPath.get());
-        assertEquals(archiveSeg0.getPath(), finishedSegmentPath.get());
+        assertEquals(workSeg0, new File(startedSegmentPath.get()));
+        assertEquals(archiveSeg0, new File(finishedSegmentPath.get()));
 
         Assert.assertEquals("Not all records read during iteration.", expectedRecords, actualRecords.get());
     }
