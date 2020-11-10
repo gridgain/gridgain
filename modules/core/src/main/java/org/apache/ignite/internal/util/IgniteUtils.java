@@ -10037,6 +10037,16 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * @param ctx Kernal context.
+     * @return Whether current node is oldest.
+     */
+    public static boolean isCurrentNodeOldest(GridKernalContext ctx) {
+        ClusterNode oldest = ctx.grid().cluster().forServers().forOldest().node();
+
+        return F.eq(ctx.localNodeId(), oldest.id());
+    }
+
+    /**
      * @param ptr Address.
      * @param size Size.
      * @return Bytes.
