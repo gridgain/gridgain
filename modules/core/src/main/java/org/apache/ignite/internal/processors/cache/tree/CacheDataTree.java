@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
@@ -461,38 +462,42 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                     if (grp.storeCacheIdInDataPage())
                         addr += 4; // Skip cache id.
 
-                    final int len = PageUtils.getInt(addr, 0);
+                    byte type = PageUtils.getByte(addr, 4);
 
-                    int lenCmp = Integer.compare(len, bytes.length);
+                    if (type != CacheObject.TYPE_BINARY_COMPRESSED) {
+                        final int len = PageUtils.getInt(addr, 0);
 
-                    if (lenCmp != 0)
-                        return lenCmp;
+                        int lenCmp = Integer.compare(len, bytes.length);
 
-                    addr += 5; // Skip length and type byte.
+                        if (lenCmp != 0)
+                            return lenCmp;
 
-                    final int words = len / 8;
+                        addr += 5; // Skip length and type byte.
 
-                    for (int i = 0; i < words; i++) {
-                        int off = i * 8;
+                        final int words = len / 8;
 
-                        long b1 = PageUtils.getLong(addr, off);
-                        long b2 = GridUnsafe.getLong(bytes, GridUnsafe.BYTE_ARR_OFF + off);
+                        for (int i = 0; i < words; i++) {
+                            int off = i * 8;
 
-                        int cmp = Long.compare(b1, b2);
+                            long b1 = PageUtils.getLong(addr, off);
+                            long b2 = GridUnsafe.getLong(bytes, GridUnsafe.BYTE_ARR_OFF + off);
 
-                        if (cmp != 0)
-                            return cmp;
+                            int cmp = Long.compare(b1, b2);
+
+                            if (cmp != 0)
+                                return cmp;
+                        }
+
+                        for (int i = words * 8; i < len; i++) {
+                            byte b1 = PageUtils.getByte(addr, i);
+                            byte b2 = bytes[i];
+
+                            if (b1 != b2)
+                                return b1 > b2 ? 1 : -1;
+                        }
+
+                        return 0;
                     }
-
-                    for (int i = words * 8; i < len; i++) {
-                        byte b1 = PageUtils.getByte(addr, i);
-                        byte b2 = bytes[i];
-
-                        if (b1 != b2)
-                            return b1 > b2 ? 1 : -1;
-                    }
-
-                    return 0;
                 }
             }
             finally {
