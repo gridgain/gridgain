@@ -21,31 +21,31 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 
 /**
- * Message sent by coordinator when some operation handling is over. All receiving
- * nodes should discard this and all preceding messages in local buffers.
+ * Message sent by coordinator when some operation handling is over. All receiving nodes should discard this and all
+ * preceding messages in local buffers.
  */
 public class TcpDiscoveryDiscardMessage extends TcpDiscoveryAbstractMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** ID of the message to discard (this and all preceding). */
+    /** ID of the message to marked as discard (this and all preceding). */
     private final IgniteUuid msgId;
 
-    /** True if this is discard ID for custom event message. */
-    private final boolean customMsgDiscard;
+    /** ID of the message to removed (this and all preceding). */
+    private final IgniteUuid msgRemovedId;
 
     /**
      * Constructor.
      *
      * @param creatorNodeId Creator node ID.
-     * @param msgId Message ID.
-     * @param customMsgDiscard Flag indicating whether the ID to discard is for a custom message or not.
+     * @param msgId ID of the message to marked as discard (this and all preceding).
+     * @param msgRemovedId ID of the message to removed (this and all preceding).
      */
-    public TcpDiscoveryDiscardMessage(UUID creatorNodeId, IgniteUuid msgId, boolean customMsgDiscard) {
+    public TcpDiscoveryDiscardMessage(UUID creatorNodeId, IgniteUuid msgId, IgniteUuid msgRemovedId) {
         super(creatorNodeId);
 
         this.msgId = msgId;
-        this.customMsgDiscard = customMsgDiscard;
+        this.msgRemovedId = msgRemovedId;
     }
 
     /**
@@ -58,12 +58,12 @@ public class TcpDiscoveryDiscardMessage extends TcpDiscoveryAbstractMessage {
     }
 
     /**
-     * Flag indicating whether the ID to discard is for a custom message or not.
+     * ID of the message to removed (this and all preceding).
      *
-     * @return Custom message flag.
+     * @return Message ID.
      */
-    public boolean customMessageDiscard() {
-        return customMsgDiscard;
+    public IgniteUuid msgRemovedId() {
+        return msgRemovedId;
     }
 
     /** {@inheritDoc} */

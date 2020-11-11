@@ -111,9 +111,11 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryCustomEventMessage;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
@@ -2615,5 +2617,27 @@ public final class GridTestUtils {
      */
     public static void suppressException(RunnableX runnableX) {
         runnableX.run();
+    }
+
+    /**
+     * Unmarshall custom discovery message.
+     *
+     * @param msg Wrapped message to unmarshall.
+     * @return Unmarshalled custom discovery message.
+     */
+    public static DiscoveryCustomMessage unmarshallDiscovery(TcpDiscoveryCustomEventMessage msg) {
+        DiscoverySpiCustomMessage msgObj;
+
+        try {
+            msgObj = msg.message(new JdkMarshaller(), GridTestUtils.class.getClassLoader());
+        }
+        catch (Throwable t) {
+            throw new IgniteException("Failed to unmarshal discovery custom message: " + msg, t);
+        }
+
+        if (msgObj instanceof CustomMessageWrapper)
+            return ((CustomMessageWrapper)msgObj).delegate();
+
+        return null;
     }
 }
