@@ -3632,12 +3632,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     // Detach value before index update.
                     val = cctx.kernalContext().cacheObjects().prepareForCache(val, cctx);
 
-                    if (val != null) {
+                    if (val != null)
                         storeValue(val, expTime, newVer);
-
-                        if (deletedUnlocked())
-                            deletedUnlocked(false);
-                    }
 
                     // Version does not change for load ops.
                     update(val, expTime, ttl, newVer, true);
