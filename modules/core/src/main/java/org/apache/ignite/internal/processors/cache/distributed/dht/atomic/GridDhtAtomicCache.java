@@ -3070,49 +3070,15 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         // Entries to skip eviction manager notification for.
         // Enqueue entries while holding locks.
-        Collection<KeyCacheObject> skip = null;
-
         int size = locked.size();
 
-        try {
-            for (int i = 0; i < size; i++) {
-                GridCacheMapEntry entry = locked.get(i);
-                if (entry != null && entry.deleted()) {
-                    if (skip == null)
-                        skip = U.newHashSet(locked.size());
-
-                    skip.add(entry.key());
-                }
-            }
-        }
-        finally {
-            // At least RuntimeException can be thrown by the code above when GridCacheContext is cleaned and there is
-            // an attempt to use cleaned resources.
-            // That's why releasing locks in the finally block..
-            for (int i = 0; i < size; i++) {
-                GridCacheMapEntry entry = locked.get(i);
-                if (entry != null)
-                    entry.unlockEntry();
-            }
-        }
-
-        // Try evict partitions.
-        for (int i = 0; i < size; i++) {
-            GridDhtCacheEntry entry = locked.get(i);
-            if (entry != null)
-                entry.onUnlock();
-        }
-
-        if (skip != null && skip.size() == size)
-            // Optimization.
-            return;
-
-        // Must touch all entries since update may have deleted entries.
-        // Eviction manager will remove empty entries.
         for (int i = 0; i < size; i++) {
             GridCacheMapEntry entry = locked.get(i);
-            if (entry != null && (skip == null || !skip.contains(entry.key())))
+            if (entry != null) {
+                entry.unlockEntry();
+                entry.onUnlock();
                 entry.touch();
+            }
         }
     }
 

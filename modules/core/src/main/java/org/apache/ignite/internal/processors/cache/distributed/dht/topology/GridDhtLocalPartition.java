@@ -1153,9 +1153,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                     assert cached != null : "Expecting the reservation " + this;
 
-                    if (cached.deleted())
-                        continue;
-
                     // TODO assert instanceof GridDhtCacheEntry
                     // TODO make 100% sure clearing of moving part clears only stale data.
                     if (cached instanceof GridDhtCacheEntry && ((GridDhtCacheEntry) cached).clearInternal(clearVer, extras)) {
