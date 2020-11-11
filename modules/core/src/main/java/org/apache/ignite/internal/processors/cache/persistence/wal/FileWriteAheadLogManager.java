@@ -1068,6 +1068,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 // Bump up the oldest archive segment index.
                 if (segmentAware.lastTruncatedArchiveIdx() < desc.idx)
                     segmentAware.lastTruncatedArchiveIdx(desc.idx);
+
+                cctx.kernalContext().encryption().onWalSegmentRemoved(desc.idx);
             }
         }
 
@@ -1091,6 +1093,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     @Override public void notchLastCheckpointPtr(WALPointer ptr) {
         if (compressor != null)
             segmentAware.keepUncompressedIdxFrom(((FileWALPointer)ptr).index());
+    }
+
+    /** {@inheritDoc} */
+    @Override public long currentSegment() {
+        return segmentAware.curAbsWalIdx();
     }
 
     /** {@inheritDoc} */
@@ -1292,7 +1299,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             if (next.getSegmentId() - lashCheckpointFileIdx() >= maxSegCountWithoutCheckpoint)
                 cctx.database().forceCheckpoint("too big size of WAL without checkpoint");
 
-            assert updateCurrentHandle(next, hnd) : "Concurrent updates on rollover are not allowed";
+            boolean updated = updateCurrentHandle(next, hnd);
+            
+            assert updated : "Concurrent updates on rollover are not allowed";
 
             if (walAutoArchiveAfterInactivity > 0)
                 lastRecordLoggedMs.set(0);

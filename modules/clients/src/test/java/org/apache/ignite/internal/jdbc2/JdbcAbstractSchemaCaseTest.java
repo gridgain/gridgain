@@ -33,6 +33,8 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
+
 /**
  * Base (for v2 and thin drivers) test for the case (in)sensitivity of schema name.
  */
@@ -201,7 +203,7 @@ public abstract class JdbcAbstractSchemaCaseTest extends GridCommonAbstractTest 
             ArrayList<String> schemasWithTab = new ArrayList<>();
 
             try (ResultSet tabs = stmt.executeQuery(
-                "SELECT SCHEMA_NAME, TABLE_NAME FROM IGNITE.TABLES " +
+                "SELECT SCHEMA_NAME, TABLE_NAME FROM " + sysSchemaName() + ".TABLES " +
                     "WHERE TABLE_NAME = 'TAB' ORDER BY SCHEMA_NAME;")) {
                 while (tabs.next())
                     schemasWithTab.add(tabs.getString("SCHEMA_NAME"));
