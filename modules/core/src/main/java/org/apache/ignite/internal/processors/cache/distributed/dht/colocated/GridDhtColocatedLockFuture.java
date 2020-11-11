@@ -52,7 +52,6 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockMapping;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockResponse;
@@ -785,39 +784,20 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                 topVer = tx.topologyVersionSnapshot();
 
             if (topVer != null) {
-                GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
+                AffinityTopologyVersion lastChangeVer =
+                    cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
 
-                AffinityTopologyVersion lastFinishedTopVer = lastFinishedFut.topologyVersion();
+                IgniteInternalFuture<AffinityTopologyVersion> affFut =
+                    cctx.shared().exchange().affinityReadyFuture(lastChangeVer);
 
-                AffinityTopologyVersion latestChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion();
-
-                if (lastFinishedFut != null &&
-                        (latestChangeVer == null || lastFinishedTopVer.compareTo(latestChangeVer) >= 0) &&
-                        lastFinishedTopVer.compareTo(topVer) >= 0) {
-                    topVer = lastFinishedTopVer;
-
-                    Throwable err = lastFinishedFut.validateCache(cctx, recovery, read, null, keys);
-
-                    if (err != null) {
+                if (!affFut.isDone()) {
+                    try {
+                        affFut.get();
+                    }
+                    catch (IgniteCheckedException e) {
                         onDone(err);
 
                         return;
-                    }
-                }
-                else {
-                    AffinityTopologyVersion lastChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
-
-                    IgniteInternalFuture<AffinityTopologyVersion> affFut = cctx.shared().exchange().affinityReadyFuture(lastChangeVer);
-
-                    if (!affFut.isDone()) {
-                        try {
-                            affFut.get();
-                        }
-                        catch (IgniteCheckedException e) {
-                            onDone(err);
-
-                            return;
-                        }
                     }
                 }
 

@@ -1814,21 +1814,29 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                             ctx.shared().exchange().affinityReadyFuture(req.topologyVersion());
 
                                         if (affFut.isDone()) {
+                                            List<GridDhtPartitionsExchangeFuture> futs =
+                                                ctx.shared().exchange().exchangeFutures();
+
                                             boolean found = false;
 
-                                            GridDhtPartitionsExchangeFuture lastFinishedFut = ctx.shared().exchange().lastFinishedFuture();
+                                            for (int i = 0; i < futs.size(); ++i) {
+                                                GridDhtPartitionsExchangeFuture fut = futs.get(i);
 
-                                            // We have to check fut.exchangeDone() here -
-                                            // otherwise attempt to get topVer will throw error.
-                                            // We won't skip needed future as per affinity ready future is done.
-                                            if (lastFinishedFut != null && lastFinishedFut.exchangeDone()) {
-                                                topFut = lastFinishedFut;
+                                                // We have to check fut.exchangeDone() here -
+                                                // otherwise attempt to get topVer will throw error.
+                                                // We won't skip needed future as per affinity ready future is done.
+                                                if (fut.exchangeDone() &&
+                                                    fut.topologyVersion().equals(req.topologyVersion())) {
+                                                    topFut = fut;
 
-                                                found = true;
+                                                    found = true;
+
+                                                    break;
+                                                }
                                             }
 
                                             assert found : "The requested topology future cannot be found [topVer="
-                                                    + req.topologyVersion() + ']';
+                                                + req.topologyVersion() + ']';
                                         }
                                         else {
                                             affFut.listen(f -> updateAllAsyncInternal0(

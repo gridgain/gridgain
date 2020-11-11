@@ -51,6 +51,7 @@ import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLo
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedUnlockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -1129,6 +1130,15 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                             tx.syncMode(FULL_SYNC);
 
                         tx = ctx.tm().onCreated(null, tx);
+
+                        GridDhtPartitionsExchangeFuture lastFinishedFut = ctx.shared().exchange().lastFinishedFuture();
+
+                        CacheOperationContext opCtx = ctx.operationContextPerCall();
+
+                        Throwable err = lastFinishedFut.validateCache(ctx, opCtx != null && opCtx.recovery(), req.txRead(), null, keys);
+
+                        if (err != null)
+                            return new GridDhtFinishedFuture<>(err);
 
                         if (tx == null || !tx.init()) {
                             String msg = "Failed to acquire lock (transaction has been completed): " +

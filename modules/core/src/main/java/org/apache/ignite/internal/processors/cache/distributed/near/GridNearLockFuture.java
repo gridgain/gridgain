@@ -52,7 +52,6 @@ import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCa
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTransactionalCacheAdapter;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlock;
@@ -846,32 +845,27 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
             topVer = tx.topologyVersionSnapshot();
 
         if (topVer != null) {
-            GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
+            for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
+                if (fut.exchangeDone() && fut.topologyVersion().equals(topVer)) {
+                    Throwable err = null;
 
-            AffinityTopologyVersion lastFinishedTopVer = lastFinishedFut.topologyVersion();
+                    // Before cache validation, make sure that this topology future is already completed.
+                    try {
+                        fut.get();
+                    }
+                    catch (IgniteCheckedException e) {
+                        err = fut.error();
+                    }
 
-            AffinityTopologyVersion latestChangeVer = cctx.shared().exchange().lastAffinityChangedTopologyVersion();
+                    err = (err == null) ? fut.validateCache(cctx, recovery, read, null, keys) : err;
 
-            if (lastFinishedFut != null &&
-                    (latestChangeVer == null || lastFinishedTopVer.compareTo(latestChangeVer) >= 0) &&
-                    lastFinishedTopVer.compareTo(topVer) >= 0) {
-                topVer = lastFinishedTopVer;
+                    if (err != null) {
+                        onDone(err);
 
-                Throwable err = null;
+                        return;
+                    }
 
-                try {
-                    lastFinishedFut.get();
-                }
-                catch (IgniteCheckedException e) {
-                    err = lastFinishedFut.error();
-                }
-
-                err = (err == null) ? lastFinishedFut.validateCache(cctx, recovery, read, null, keys) : err;
-
-                if (err != null) {
-                    onDone(err);
-
-                    return;
+                    break;
                 }
             }
 
