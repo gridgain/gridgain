@@ -478,7 +478,8 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                 GridCacheVersion ver = null;
 
                 if (readNoEntry) {
-                    KeyCacheObject key0 = (KeyCacheObject)cctx.cacheObjects().prepareForCache(key, cctx);
+                    KeyCacheObject key0 = (key == null ? null :
+                        key.prepareForCache(cctx.cacheObjectContext(), cctx.cacheObjectContext().compressKeys()));
 
                     CacheDataRow row = cctx.mvccEnabled() ?
                         cctx.offheap().mvccRead(cctx, key0, mvccSnapshot()) :

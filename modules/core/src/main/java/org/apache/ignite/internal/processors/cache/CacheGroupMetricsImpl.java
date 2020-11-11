@@ -48,11 +48,11 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.metric.LongMetric;
 
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
-import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
  * Cache group metrics.
@@ -559,6 +559,6 @@ public class CacheGroupMetricsImpl {
 
     /** @return Metric group name. */
     private String metricGroupName() {
-        return metricName(CACHE_GROUP_METRICS_PREFIX, ctx.cacheOrGroupName());
+        return MetricUtils.cacheGroupMetricsRegistryName(ctx.cacheOrGroupName());
     }
 }
