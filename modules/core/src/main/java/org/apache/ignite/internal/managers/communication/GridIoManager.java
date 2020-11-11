@@ -1859,9 +1859,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         if (ctx.security().enabled() &&
             !(msg instanceof GridDhtPartitionsAbstractMessage) && !(msg instanceof GridJobExecuteResponse)) {
             // We don't need enabled v1 to enable v2.
-            boolean v2 = allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR_V2);
+            boolean v2 = allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR_V2);
 
-            if (v2 || allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR)) {
+            if (v2 || allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR)) {
                 SecurityContext secCtx = ctx.security().securityContext();
                 UUID subjId = secCtx.subject().id();
 

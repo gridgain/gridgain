@@ -2430,6 +2430,9 @@ public class ClusterCachesInfo {
 
         CU.validateCacheGroupsAttributesMismatch(log, cfg, startCfg, "encryptionEnabled", "Encrypted",
             cfg.isEncryptionEnabled(), startCfg.isEncryptionEnabled(), true);
+
+        CU.validateCacheGroupsAttributesMismatch(log, cfg, startCfg, "entryCompressionConfiguration", "Entry compression",
+            cfg.getEntryCompressionConfiguration(), startCfg.getEntryCompressionConfiguration(), true);
     }
 
     /**
