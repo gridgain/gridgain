@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Stream;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -31,6 +31,10 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_ARCHIVE_PATH;
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_PATH;
+
 /**
  * Class for testing the maximum archive size.
  */
@@ -41,7 +45,8 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     /** Wal compaction enabled flag. */
     private boolean walCompactionEnabled;
 
-
+    /** Wal archive enabled flag. */
+    private boolean walArchiveEnabled = true;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -66,6 +71,7 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
+            .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME))
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
@@ -73,7 +79,8 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
                     .setWalSegments(10)
                     .setMaxWalArchiveSize(5 * U.MB)
                     .setWalCompactionEnabled(walCompactionEnabled)
-            ).setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
+                    .setWalArchivePath(walArchiveEnabled ? DFLT_WAL_ARCHIVE_PATH : DFLT_WAL_PATH)
+            );
     }
 
     /** {@inheritDoc} */
@@ -95,11 +102,21 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
         return n;
     }
 
+    /**
+     * Check that WAL archive will not be exceeded if only archiving will work.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testArchiverOnly() throws Exception {
         checkNotExceedMaxWalArchiveSize();
     }
 
+    /**
+     * Check that WAL archive will not be exceeded if archiving and compaction works.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testArchiverWithCompaction() throws Exception {
         walCompactionEnabled = true;
@@ -108,7 +125,34 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Check that WAL archive will not be exceeded if only rollOver will work.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void rollOverOnly() throws Exception {
+        walArchiveEnabled = false;
+
+        checkNotExceedMaxWalArchiveSize();
+    }
+
+    /**
+     * Check that WAL archive will not be exceeded if rollOver and compaction works.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void rollOverWithCompaction() throws Exception {
+        walArchiveEnabled = false;
+        walCompactionEnabled = true;
+
+        checkNotExceedMaxWalArchiveSize();
+    }
+
+    /**
      * Checking that max WAL archive size is not exceeded.
+     *
+     * @throws Exception If failed.
      */
     private void checkNotExceedMaxWalArchiveSize() throws Exception {
         IgniteEx n = startGrid(0);
@@ -182,10 +226,9 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
                 if (size > max) {
                     exceed = true;
 
-                    if (log.isInfoEnabled()) {
-                        log.info("Excess [max=" + U.humanReadableByteCount(max) +
-                            ", curr=" + U.humanReadableByteCount(size) + "files=" + Arrays.toString(files) + ']');
-                    }
+                    log.error("Excess [max=" + U.humanReadableByteCount(max) +
+                        ", curr=" + U.humanReadableByteCount(size) +
+                        ", files=" + Stream.of(files).map(File::getName).collect(toList()) + ']');
                 }
             }
         }

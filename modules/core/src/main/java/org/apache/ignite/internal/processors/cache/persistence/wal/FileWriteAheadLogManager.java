@@ -633,6 +633,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         segmentAware.interrupt();
 
+        if (isStopping())
+            walArchiveSize.shutdown();
+
         try {
             if (archiver != null)
                 archiver.shutdown();
@@ -1882,6 +1885,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                     try {
                         res = archiveSegment(toArchive);
+
+                        if (res == null)
+                            continue;
                     }
                     finally {
                         blockingSectionEnd();
@@ -1984,9 +1990,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * Moves WAL segment from work folder to archive folder. Temp file is used to do movement.
          *
          * @param absIdx Absolute index to archive.
+         * @return Result of segment archiving, or {@code null} if {@link #isCancelled()}.
          * @throws IgniteCheckedException If failed.
          */
-        public SegmentArchiveResult archiveSegment(long absIdx) throws IgniteCheckedException {
+        @Nullable public SegmentArchiveResult archiveSegment(long absIdx) throws IgniteCheckedException {
             long segIdx = absIdx % dsCfg.getWalSegments();
 
             File origFile = new File(walWorkDir, fileName(segIdx));
@@ -2004,6 +2011,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 deleteTmpFileFromArchive(absIdx, segmentSize, this::tmpFileName);
 
                 walArchiveSize.reserveSpaceWithClear(absIdx, segmentSize);
+
+                if (isCancelled())
+                    return null;
 
                 if (log.isInfoEnabled()) {
                     log.info("Starting to copy WAL segment [absIdx=" + absIdx + ", segIdx=" + segIdx +
@@ -2215,11 +2225,42 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         /**
          * Pessimistically tries to reserve segment for compression in order to avoid concurrent truncation.
          * Waits if there's no segment to archive right now.
+         *
+         * @return Segment id or {@code -1} if none.
+         * @throws IgniteCheckedException If failed.
          */
-        private long tryReserveNextSegmentOrWait() throws IgniteInterruptedCheckedException {
+        private long tryReserveNextSegmentOrWait() throws IgniteCheckedException {
             long segmentToCompress = segmentAware.waitNextSegmentToCompress();
 
-            boolean reserved = reserve(new FileWALPointer(segmentToCompress, 0, 0));
+            boolean reserved = false;
+
+            File raw = new File(fileName(segmentToCompress));
+
+            long rawSize = raw.length();
+
+            if (rawSize > 0) {
+                try {
+                    walArchiveSize.reserveSpaceWithClear(segmentToCompress, rawSize);
+
+                    if (isCancelled())
+                        return -1;
+
+                    if (reserve(new FileWALPointer(segmentToCompress, 0, 0)))
+                        reserved = true;
+                    else
+                        walArchiveSize.add(segmentToCompress, -rawSize);
+                }
+                catch (IgniteCheckedException e) {
+                    walArchiveSize.add(segmentToCompress, -rawSize);
+
+                    throw e;
+                }
+            }
+
+            if (log.isInfoEnabled()) {
+                log.info("Compression of a segment in WAL archive [status=" + (reserved ? "start" : "cancel") +
+                    ", segment=" + raw.getName() + ']');
+            }
 
             if (reserved)
                 return segmentToCompress;
@@ -2259,8 +2300,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         throw new IgniteCheckedException("WAL archive segment is missing: " + raw);
 
                     deleteTmpFileFromArchive(segIdx, segSize = raw.length(), this::tmpFileName);
-
-                    walArchiveSize.reserveSpaceWithClear(segIdx, segSize);
 
                     compressSegmentToFile(segIdx, raw, tmpZip);
 
@@ -2485,6 +2524,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         );
 
                         walArchiveSize.reserveSpaceWithClear(segmentToDecompress, segmentRawSize);
+
+                        if (isCancelled())
+                            continue;
 
                         try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zip)));
                              FileIO io = ioFactory.create(unzipTmp)) {

@@ -65,6 +65,9 @@ public class WalArchiveSize {
     /** Smallest absolute index of reserved segment, {@code -1} if not present. */
     private long reservedIdx = -1;
 
+    /** Stop flag. */
+    private boolean stop;
+
     /**
      * Constructor.
      *
@@ -99,6 +102,8 @@ public class WalArchiveSize {
                     reservedIdx = absSegIdx == null ? -1 : absSegIdx;
 
                     updateAvailableToClear();
+
+                    logShortInfo("Update after changing minimum reserved segment");
                 }
             });
         }
@@ -118,6 +123,8 @@ public class WalArchiveSize {
                     cpIdx = ((FileWALPointer)cpEntry.checkpointMark()).index();
 
                     updateAvailableToClear();
+
+                    logShortInfo("Update after last finished checkpoint");
                 }
             });
         }
@@ -162,7 +169,9 @@ public class WalArchiveSize {
             synchronized (this) {
                 try {
                     while (maxSize - currentSize() < size) {
-                        if (availableToClear == 0)
+                        if (stop)
+                            break;
+                        else if (availableToClear == 0)
                             wait();
                         else {
                             FileWALPointer low = new FileWALPointer(sizes.firstKey(), 0, 0);
@@ -271,6 +280,15 @@ public class WalArchiveSize {
     }
 
     /**
+     * Shutdown.
+     */
+    public synchronized void shutdown() {
+        stop = true;
+
+        notifyAll();
+    }
+
+    /**
      * Recalculation of number of segments that can be deleted now.
      */
     private synchronized void updateAvailableToClear() {
@@ -297,5 +315,17 @@ public class WalArchiveSize {
      */
     private boolean unlimited() {
         return maxSize == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
+    }
+
+    /**
+     * Output of short information to log.
+     *
+     * @param prefix Message prefix.
+     */
+    private synchronized void logShortInfo(String prefix) {
+        if (log.isInfoEnabled()) {
+            log.info(prefix + " [cpIdx=" + cpIdx + ", reservedIdx=" + reservedIdx + ", minIdx=" + minIdx()
+                + ", segments=" + sizes.size() + ", availableToClear=" + availableToClear + ']');
+        }
     }
 }
