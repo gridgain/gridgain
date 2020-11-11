@@ -31,6 +31,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -38,8 +39,10 @@ import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -51,8 +54,15 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
 /**
- * Class that serves asynchronous part eviction process.
- * Multiple partition from group can be evicted at the same time.
+ * Class that serves asynchronous partition clearing process.
+ * Partitions clearing can be scheduled for following reasons:
+ *
+ * <ul>
+ *     <li>The local node is no longer an owner for a partition (partition is evicted) </li>
+ *     <li>The partition should be cleared before rebalancing to avoid desync, because supplying node
+ *     not guaranties having history for all required keys.</li>
+ *     <li>The partition tombstones must be wiped out.</li>
+ * </ul>
  */
 public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /** Default eviction progress show frequency. */
@@ -216,7 +226,33 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         super.start0();
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
+
+        //scheduleNextCleanup();
     }
+
+    /**
+     *
+     */
+//    private void scheduleNextCleanup() {
+//        GridKernalContext ctx = cctx.kernalContext();
+//        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(30_000) {
+//            @Override public void onTimeout() {
+//                ctx.closure().runLocalSafe(new GridPlainRunnable() {
+//                    @Override public void run() {
+//                        Collection<CacheGroupContext> groups = ctx.cache().cacheGroups();
+//
+//                        for (CacheGroupContext group : groups) {
+//                            for (GridDhtLocalPartition part : group.topology().currentLocalPartitions())
+//                                evictPartitionAsync(group, part, new GridFutureAdapter<>(), EvictReason.TOMBSTONE);
+//                        }
+//
+//
+//                        scheduleNextCleanup();
+//                    }
+//                });
+//            }
+//        });
+//    }
 
     /** {@inheritDoc} */
     @SuppressWarnings("LockAcquiredButNotSafelyReleased")
@@ -489,7 +525,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * Partition evicted after changing to
          * {@link GridDhtPartitionState#MOVING MOVING} state.
          */
-        CLEARING,
+        CLEARING, // TODO remove ?
 
         /** */
         TOMBSTONE;

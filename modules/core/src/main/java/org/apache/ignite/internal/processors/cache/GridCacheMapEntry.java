@@ -144,7 +144,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     private static final long ENTRY_LOCK_TIMEOUT = getLong(ENTRY_LOCK_TIMEOUT_ENV, 1000);
 
     /** */
-    private static final byte IS_DELETED_MASK = 0x01;
+    private static final byte IS_DELETED_MASK = 0x01; // TODO not needed
 
     /** */
     private static final byte IS_UNSWAPPED_MASK = 0x02;
