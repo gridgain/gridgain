@@ -3669,7 +3669,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     readerArgs.topologyVersion());
             }
             catch (GridCacheEntryRemovedException e) {
-               // No-op.
+               // Entry was expired.
             }
         }
     }
@@ -4801,8 +4801,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public final boolean deleted() {
-        if (!cctx.deferredDelete())
-            return false;
+//        if (!cctx.deferredDelete())
+//            return false;
 
         lockEntry();
 
@@ -4834,10 +4834,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     protected final boolean deletedUnlocked() {
         assert lock.isHeldByCurrentThread();
 
-        if (!cctx.deferredDelete())
-            return false;
+        return !isStartVersion() && !hasValueUnlocked(); // ????
 
-        return (flags & IS_DELETED_MASK) != 0;
+//        if (!cctx.deferredDelete())
+//            return false;
+//
+//        return (flags & IS_DELETED_MASK) != 0;
     }
 
     /**
@@ -5839,12 +5841,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         CacheObject expiredVal = row.value();
 
-        // TODO remove.
-        if (cctx.deferredDelete() && !detached() && !isInternal()) {
+        if (isNear()) {
             update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
 
-            if (!deletedUnlocked())
-                deletedUnlocked(true);
+            cctx.decrementPublicSize(this);
+
+//            if (!deletedUnlocked())
+//                deletedUnlocked(true);
         }
 //        else // TODO use start version.
 //            markObsolete0(cctx.cache().nextVersion(), true, null);

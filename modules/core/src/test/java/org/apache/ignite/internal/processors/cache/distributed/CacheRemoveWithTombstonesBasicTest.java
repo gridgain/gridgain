@@ -76,6 +76,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Ign
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtomicCache;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
@@ -527,8 +528,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         putFut.get();
 
-        assertNull(near.cache(DEFAULT_CACHE_NAME).get(part));
-
         // Check local map.
         GridNearAtomicCache<Object, Object> nearCache =
             (GridNearAtomicCache<Object, Object>) near.cachex(DEFAULT_CACHE_NAME).context().near();
@@ -536,6 +535,20 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         GridCacheConcurrentMap map = nearCache.map();
 
         assertEquals(1, map.internalSize());
+
+        assertNull(near.cache(DEFAULT_CACHE_NAME).get(part));
+
+        doSleep(1000);
+
+        assertEquals(1, map.internalSize());
+
+        Iterable<GridCacheMapEntry> entries = map.entries(CU.cacheId(DEFAULT_CACHE_NAME));
+
+        GridNearCacheEntry rmvd = (GridNearCacheEntry) entries.iterator().next();
+
+        Short val = U.field(rmvd, "evictReservations");
+
+        assertEquals(0, val.intValue());
     }
 
     /**

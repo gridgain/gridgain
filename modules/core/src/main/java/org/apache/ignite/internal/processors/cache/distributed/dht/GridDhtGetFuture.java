@@ -417,7 +417,7 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
                         if (e.obsolete())
                             continue;
 
-                        boolean addReader = e.hasValue();
+                        boolean addReader = !e.deleted();
 
                         if (addReader) {
                             e.unswap(false);

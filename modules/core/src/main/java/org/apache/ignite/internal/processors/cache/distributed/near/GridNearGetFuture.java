@@ -721,10 +721,10 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
         for (KeyCacheObject key : keys) {
             GridNearCacheEntry entry = saved.get(key);
 
-            if (entry != null && entry.hasValue()) {
-                entry.releaseEviction(); // TODO WTF ?
+            if (entry != null) {
+                entry.releaseEviction();
 
-                if (tx == null)
+                if (tx == null && !entry.deleted())
                     entry.touch();
             }
         }
