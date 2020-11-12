@@ -34,6 +34,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
@@ -1131,15 +1132,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
 
                         tx = ctx.tm().onCreated(null, tx);
 
-                        GridDhtPartitionsExchangeFuture lastFinishedFut = ctx.shared().exchange().lastFinishedFuture();
-
-                        CacheOperationContext opCtx = ctx.operationContextPerCall();
-
-                        Throwable err = lastFinishedFut.validateCache(ctx, opCtx != null && opCtx.recovery(), req.txRead(), null, keys);
-
-                        if (err != null)
-                            return new GridDhtFinishedFuture<>(err);
-
                         if (tx == null || !tx.init()) {
                             String msg = "Failed to acquire lock (transaction has been completed): " +
                                 req.version();
@@ -1154,6 +1146,15 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
 
                         tx.topologyVersion(req.topologyVersion());
                     }
+
+                    GridDhtPartitionsExchangeFuture lastFinishedFut = ctx.shared().exchange().lastFinishedFuture();
+
+                    CacheOperationContext opCtx = ctx.operationContextPerCall();
+
+                    CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(ctx, opCtx != null && opCtx.recovery(), req.txRead(), null, keys);
+
+                    if (validateCacheE != null)
+                        throw validateCacheE;
                 }
                 else {
                     fut = new GridDhtLockFuture(ctx,
