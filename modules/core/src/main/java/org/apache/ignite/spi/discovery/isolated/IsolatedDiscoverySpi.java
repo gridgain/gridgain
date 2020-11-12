@@ -153,8 +153,8 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
         // No-op.
     }
 
-    @Override
-    protected void injectResources(Ignite ignite) {
+    /** {@inheritDoc} */
+    @Override protected void injectResources(Ignite ignite) {
         super.injectResources(ignite);
 
         if (ignite != null && ignite instanceof IgniteKernal)
