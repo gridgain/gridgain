@@ -180,12 +180,7 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
         awaitPartitionMapExchange();
 
         // Send any request to failover.
-        try {
-            client.cache(REPL_CACHE_NAME).put(0, 0);
-        }
-        catch (Exception expected) {
-            // No-op.
-        }
+        client.cache(REPL_CACHE_NAME).put(0, 0);
 
         initDefaultChannel();
 
