@@ -110,7 +110,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         }
         catch (SecurityException e) {
             // Security context is not propagated yet.
-            // Log this warning and proceed an operation ith already given security context.
+            // Log this warning and proceed an operation with already given security context.
             log.warning("Failed to check security context [subj=" + secCtx.subject().id() + ", err=" + e + ']');
         }
 
