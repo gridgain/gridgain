@@ -354,7 +354,7 @@ public class PlatformCache extends PlatformAbstractTarget {
 
     /** */
     public static final int OP_SIZE_LONG_LOC = 92;
-    
+
     /** */
     public static final int OP_ENABLE_STATISTICS = 93;
 
@@ -1455,17 +1455,21 @@ public class PlatformCache extends PlatformAbstractTarget {
         boolean replicated = reader.readBoolean();
         boolean collocated = reader.readBoolean();
         String schema = reader.readString();
+        int[] partitions = reader.readIntArray();
+        int updateBatchSize = reader.readInt();
 
         SqlFieldsQuery qry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), timeout, TimeUnit.MILLISECONDS)
-            .setPageSize(pageSize)
-            .setArgs(args)
-            .setLocal(loc)
-            .setDistributedJoins(distrJoins)
-            .setEnforceJoinOrder(enforceJoinOrder)
-            .setLazy(lazy)
-            .setReplicatedOnly(replicated)
-            .setCollocated(collocated)
-            .setSchema(schema);
+                .setPageSize(pageSize)
+                .setArgs(args)
+                .setLocal(loc)
+                .setDistributedJoins(distrJoins)
+                .setEnforceJoinOrder(enforceJoinOrder)
+                .setLazy(lazy)
+                .setReplicatedOnly(replicated)
+                .setCollocated(collocated)
+                .setSchema(schema)
+                .setPartitions(partitions)
+                .setUpdateBatchSize(updateBatchSize);
 
         return qry;
     }
