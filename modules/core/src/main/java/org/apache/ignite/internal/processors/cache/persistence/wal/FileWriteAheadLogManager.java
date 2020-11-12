@@ -2234,7 +2234,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             boolean reserved = false;
 
-            File raw = new File(fileName(segmentToCompress));
+            File raw = new File(walArchiveDir, fileName(segmentToCompress));
 
             long rawSize = raw.length();
 
