@@ -818,7 +818,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * Tries to continue delayed partition clearing.
      */
     public void onUnlock() {
-        // No-op.
+        // No-op. // TODO remove
     }
 
     /**
