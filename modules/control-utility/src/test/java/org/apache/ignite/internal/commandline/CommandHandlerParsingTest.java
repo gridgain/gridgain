@@ -501,17 +501,20 @@ public class CommandHandlerParsingTest {
             assertEquals(DFLT_PORT, args.port());
 
             args = parseArgs(asList("--port", "12345", "--host", "test-host", "--ping-interval", "5000",
-                "--ping-timeout", "40000", cmd.text()));
+                "--ping-timeout", "40000", "--connection-timeout", "1000", cmd.text()));
 
             assertEquals(cmd.command(), args.command());
             assertEquals("test-host", args.host());
             assertEquals("12345", args.port());
             assertEquals(5000, args.pingInterval());
             assertEquals(40000, args.pingTimeout());
+            assertEquals(1_000, args.connectionTimeout());
 
             assertParseArgsThrows("Invalid value for port: wrong-port", "--port", "wrong-port", cmd.text());
             assertParseArgsThrows("Invalid value for ping interval: -10", "--ping-interval", "-10", cmd.text());
             assertParseArgsThrows("Invalid value for ping timeout: -20", "--ping-timeout", "-20", cmd.text());
+            assertParseArgsThrows("Invalid value for connection timeout: -30", "--connection-timeout",
+                "-30", cmd.text());
         }
     }
 
