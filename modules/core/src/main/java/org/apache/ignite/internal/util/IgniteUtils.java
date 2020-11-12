@@ -11054,7 +11054,7 @@ public abstract class IgniteUtils {
         // Find out the maximum checkpoint buffer size.
         long maxCpBufSize = 0;
 
-        for (DataRegionConfiguration regCfg : dsCfg.getDataRegionConfigurations()) {
+        for (DataRegionConfiguration regCfg : regCfgs) {
             long cpBufSize = checkpointBufferSize(regCfg);
 
             if (cpBufSize > regCfg.getMaxSize())
