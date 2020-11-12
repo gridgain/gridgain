@@ -73,6 +73,27 @@ namespace ignite
 
 #undef DBG_STR_CASE
 
+            SqlLen Nullability::ToSql(int32_t nullability)
+            {
+                switch (nullability)
+                {
+                    case Nullability::NO_NULL:
+                        return SQL_NO_NULLS;
+
+                    case Nullability::NULLABLE:
+                        return SQL_NULLABLE;
+
+                    case Nullability::NULLABILITY_UNKNOWN:
+                        return SQL_NULLABLE_UNKNOWN;
+
+                    default:
+                        break;
+                }
+
+                assert(false);
+                return SQL_NULLABLE_UNKNOWN;
+            }
+
             void ColumnMeta::Read(ignite::impl::binary::BinaryReaderImpl& reader, const ProtocolVersion& ver)
             {
                 utility::ReadString(reader, schemaName);
@@ -86,6 +107,9 @@ namespace ignite
                     precision = reader.ReadInt32();
                     scale = reader.ReadInt32();
                 }
+
+                if (ver >= ProtocolVersion::VERSION_2_8_0)
+                    nullability = reader.ReadInt8();
             }
 
             bool ColumnMeta::GetAttribute(uint16_t fieldId, std::string& value) const 
@@ -234,7 +258,7 @@ namespace ignite
 
                     case SQL_DESC_NULLABLE:
                     {
-                        value = type_traits::BinaryTypeNullability(dataType);
+                        value = Nullability::ToSql(nullability);
 
                         break;
                     }
@@ -311,7 +335,7 @@ namespace ignite
             }
 
             void ReadColumnMetaVector(ignite::impl::binary::BinaryReaderImpl& reader, ColumnMetaVector& meta,
-                    const ProtocolVersion& ver)
+                const ProtocolVersion& ver)
             {
                 int32_t metaNum = reader.ReadInt32();
 

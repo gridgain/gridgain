@@ -115,6 +115,8 @@ public class TcpIgniteClient implements IgniteClient {
 
         ch = new ReliableChannel(chFactory, cfg, binary);
 
+        ch.channelsInit();
+
         ch.addChannelFailListener(() -> metadataHandler.onReconnect());
 
         transactions = new TcpClientTransactions(ch, marsh,
@@ -373,6 +375,12 @@ public class TcpIgniteClient implements IgniteClient {
             }
 
             cache.addMeta(typeId, meta, failIfUnregistered); // merge
+        }
+
+        /** {@inheritDoc} */
+        @Override public void addMetaLocally(int typeId, BinaryType meta, boolean failIfUnregistered)
+            throws BinaryObjectException {
+            throw new UnsupportedOperationException("Can't register metadata locally for thin client.");
         }
 
         /** {@inheritDoc} */

@@ -118,6 +118,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2;
 import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
 import org.apache.ignite.internal.processors.cache.verify.PartitionKeyV2;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
@@ -2798,6 +2799,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @throws IgniteCheckedException If failed.
      */
     protected void enableCheckpoints(Collection<Ignite> nodes, boolean enable) throws IgniteCheckedException {
+        GridCompoundFuture<Void, Void> fut = new GridCompoundFuture<>();
+
         for (Ignite node : nodes) {
             assert !node.cluster().localNode().isClient();
 
@@ -2808,8 +2811,12 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
             GridCacheDatabaseSharedManager dbMgr0 = (GridCacheDatabaseSharedManager) dbMgr;
 
-            dbMgr0.enableCheckpoints(enable).get();
+            fut.add(dbMgr0.enableCheckpoints(enable));
         }
+
+        fut.markInitialized();
+
+        fut.get();
     }
 
     /**

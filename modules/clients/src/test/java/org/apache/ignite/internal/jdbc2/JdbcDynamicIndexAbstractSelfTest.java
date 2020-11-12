@@ -28,6 +28,7 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils.RunnableX;
@@ -88,6 +89,7 @@ public abstract class JdbcDynamicIndexAbstractSelfTest extends JdbcAbstractDmlSt
 
         ccfg.setCacheMode(cacheMode());
         ccfg.setAtomicityMode(atomicityMode());
+        ccfg.setEntryCompressionConfiguration(entryCompressionConfiguration());
 
         if (nearCache())
             ccfg.setNearConfiguration(new NearCacheConfiguration());
@@ -109,6 +111,11 @@ public abstract class JdbcDynamicIndexAbstractSelfTest extends JdbcAbstractDmlSt
      * @return Whether to use near cache.
      */
     protected abstract boolean nearCache();
+
+    /** @return Compression configuration or {@code null} if none is needed. */
+    protected EntryCompressionConfiguration entryCompressionConfiguration() {
+        return null;
+    }
 
     /**
      * Execute given SQL statement.

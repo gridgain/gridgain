@@ -17,14 +17,16 @@
 package org.apache.ignite.internal;
 
 import java.util.BitSet;
+import java.util.Collection;
+import org.apache.ignite.IgniteEncryption;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -186,7 +188,10 @@ public enum IgniteFeatures {
     MASTER_KEY_CHANGE(48),
 
     /** Incremental DR. */
-    INCREMENTAL_DR(49);
+    INCREMENTAL_DR(49),
+
+    /** Cache encryption key change. See {@link IgniteEncryption#changeCacheGroupKey(Collection)}. */
+    CACHE_GROUP_KEY_CHANGE(50);
 
     /**
      * Unique feature identifier.

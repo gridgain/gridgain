@@ -1176,6 +1176,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             // be able to start receiving messages once discovery completes.
             try {
                 startProcessor(COMPRESSION.createOptional(ctx));
+                startProcessor(new GridMarshallerMappingProcessor(ctx));
                 startProcessor(new MvccProcessorImpl(ctx));
                 startProcessor(createComponent(DiscoveryNodeValidationProcessor.class, ctx));
                 startProcessor(new GridAffinityProcessor(ctx));
@@ -1202,7 +1203,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(new GridContinuousProcessor(ctx));
                 startProcessor(new DataStructuresProcessor(ctx));
                 startProcessor(createComponent(PlatformProcessor.class, ctx));
-                startProcessor(new GridMarshallerMappingProcessor(ctx));
 
                 if (isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
                     startProcessor(new DistributedMetaStorageImpl(ctx));
@@ -2142,9 +2142,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             log.info(str);
         }
 
-        if (!ctx.state().clusterState().active()) {
-            U.quietAndInfo(log, ">>> Ignite cluster is not active (limited functionality available). " +
-                "Use control.(sh|bat) script or IgniteCluster interface to activate.");
+        if (!ClusterState.active(ctx.state().clusterState().state())) {
+            U.quietAndInfo(log, ">>> Ignite cluster is in " + ClusterState.INACTIVE + " state (limited functionality available). " +
+                "Use control.(sh|bat) script or IgniteCluster.state(ClusterState.ACTIVE) or " +
+                "IgniteCluster.state(ClusterState.ACTIVE_READ_ONLY) to change the state.");
         }
     }
 
@@ -4457,7 +4458,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         reg.register("longJVMPauseLastEvents", this::getLongJVMPauseLastEvents, Map.class,
             LONG_JVM_PAUSE_LAST_EVENTS_DESC);
 
-        reg.register("active", () -> ctx.state().clusterState().active()/*this::active*/, Boolean.class,
+        reg.register("active", () -> ClusterState.active(ctx.state().clusterState().state()), Boolean.class,
             ACTIVE_DESC);
 
         reg.register("clusterState", this::clusterState, String.class, CLUSTER_STATE_DESC);
