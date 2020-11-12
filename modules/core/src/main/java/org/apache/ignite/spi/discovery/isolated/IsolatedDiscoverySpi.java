@@ -23,13 +23,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpiInternalListener;
@@ -92,6 +92,9 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
     /** Node authenticator. */
     private DiscoverySpiNodeAuthenticator nodeAuth;
 
+    /** */
+    private JdkMarshaller marsh;
+
     /** {@inheritDoc} */
     @Override public Serializable consistentId() throws IgniteSpiException {
         if (consistentId == null) {
@@ -153,6 +156,11 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
     @Override
     protected void injectResources(Ignite ignite) {
         super.injectResources(ignite);
+
+        if (ignite != null && ignite instanceof IgniteKernal)
+            marsh = ((IgniteKernal)ignite).context().marshallerContext().jdkMarshaller();
+        else
+            marsh = new JdkMarshaller();
     }
 
     /** {@inheritDoc} */
@@ -231,14 +239,12 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
             Map<String, Object> attrs = new HashMap<>(locNode.attributes());
 
-            JdkMarshaller marsh = new JdkMarshaller();
-
             try {
                 attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, U.marshal(marsh, subj));
                 attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT, marshalWithSecurityVersion(marsh, subj, 1));
             }
             catch (IgniteCheckedException e) {
-                // No-op.
+                throw new IgniteSpiException("Failed to authenticate local node (will shutdown local node).", e);
             }
 
             locNode.setAttributes(attrs);
