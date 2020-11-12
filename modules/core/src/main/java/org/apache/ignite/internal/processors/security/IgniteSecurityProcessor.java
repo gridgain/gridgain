@@ -109,6 +109,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
             secPrc.touch(secCtx);
         }
         catch (SecurityException e) {
+            // Security context is not propagated yet.
+            // Log this warning and proceed an operation ith already given security context.
             log.warning("Failed to check security context [subj=" + secCtx.subject().id() + ", err=" + e + ']');
         }
 
@@ -129,102 +131,14 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
             : secPrc.securityContext(subjId);
 
         if (res == null) {
-            //throw new IllegalStateException("Failed to find security context for subject with given ID : " + subjId);
-            log.warning("Failed to find security context for subject with given ID : " + subjId + ". Switched to allow nothing");
+            log.warning("Switched to the 'deny all' policy because of failing to find a security context [subjId=" + subjId + ']');
 
-            res = new AllowNothingSecurityContext(subjId, node!= null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT);
+            res = new DenyAllSecurityContext(
+                subjId,
+                node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT);
         }
 
         return withContext(res);
-    }
-
-    private static class AllowNothingSecurityContext implements SecurityContext, Serializable {
-        /** Serial version uid. */
-        private static final long serialVersionUID = 0L;
-
-        SecuritySubject secSubj;
-
-        AllowNothingSecurityContext(UUID subjId, SecuritySubjectType subjType) {
-            secSubj = new AllowNothingSecuritySubject(subjId, subjType);
-        }
-
-        @Override public SecuritySubject subject() {
-            return secSubj;
-        }
-
-        @Override public boolean taskOperationAllowed(String taskClsName, SecurityPermission perm) {
-            return false;
-        }
-
-        @Override public boolean cacheOperationAllowed(String cacheName, SecurityPermission perm) {
-            return false;
-        }
-
-        @Override public boolean serviceOperationAllowed(String srvcName, SecurityPermission perm) {
-            return false;
-        }
-
-        @Override public boolean systemOperationAllowed(SecurityPermission perm) {
-            return false;
-        }
-    }
-
-    private static class AllowNothingSecuritySubject implements SecuritySubject {
-        /** Serial version uid. */
-        private static final long serialVersionUID = 0L;
-
-        UUID subjectId;
-        SecuritySubjectType subjType;
-
-        AllowNothingSecuritySubject(UUID subjId, SecuritySubjectType subjType) {
-            this.subjectId = subjId;
-            this.subjType = subjType;
-        }
-
-        @Override public UUID id() {
-            return subjectId;
-        }
-
-        @Override public SecuritySubjectType type() {
-            return subjType;
-        }
-
-        @Override public Object login() {
-            return "";
-        }
-
-        @Override public InetSocketAddress address() {
-            return null;
-        }
-
-        @Override public SecurityPermissionSet permissions() {
-            return new AllowNothingSecurityPermissionSet();
-        }
-    }
-
-    private static class AllowNothingSecurityPermissionSet implements SecurityPermissionSet {
-        /** Serial version uid. */
-        private static final long serialVersionUID = 0L;
-
-        @Override public boolean defaultAllowAll() {
-            return false;
-        }
-
-        @Override public Map<String, Collection<SecurityPermission>> taskPermissions() {
-            return Collections.emptyMap();
-        }
-
-        @Override public Map<String, Collection<SecurityPermission>> cachePermissions() {
-            return Collections.emptyMap();
-        }
-
-        @Override public Map<String, Collection<SecurityPermission>> servicePermissions() {
-            return Collections.emptyMap();
-        }
-
-        @Override public Collection<SecurityPermission> systemPermissions() {
-            return Collections.emptyList();
-        }
     }
 
     /** {@inheritDoc} */
@@ -404,5 +318,134 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
      */
     public GridSecurityProcessor gridSecurityProcessor() {
         return secPrc;
+    }
+
+    /**
+     * Security context that deny all operation.
+     */
+    private static class DenyAllSecurityContext implements SecurityContext, Serializable {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        /** Security subject identifier. */
+        private final SecuritySubject secSubj;
+
+        /**
+         * Creates a new security context for the given subject and type.
+         *
+         * @param subjId Security subject identifier.
+         * @param subjType Subject type.
+         */
+        DenyAllSecurityContext(UUID subjId, SecuritySubjectType subjType) {
+            secSubj = new DenyAllSecuritySubject(subjId, subjType);
+        }
+
+        /** {@inheritDoc} */
+        @Override public SecuritySubject subject() {
+            return secSubj;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean taskOperationAllowed(String taskClsName, SecurityPermission perm) {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean cacheOperationAllowed(String cacheName, SecurityPermission perm) {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean serviceOperationAllowed(String srvcName, SecurityPermission perm) {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean systemOperationAllowed(SecurityPermission perm) {
+            return false;
+        }
+    }
+
+    /**
+     * Security subject with empty permission set.
+     */
+    private static class DenyAllSecuritySubject implements SecuritySubject {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        /** Subject identifier. */
+        private final UUID subjId;
+
+        /** Security subject type. */
+        private final SecuritySubjectType subjType;
+
+        /**
+         * Creates a new security subject fro the given subject id and type.
+         *
+         * @param subjId Subject identifier.
+         * @param subjType Subject type.
+         */
+        DenyAllSecuritySubject(UUID subjId, SecuritySubjectType subjType) {
+            this.subjId = subjId;
+            this.subjType = subjType;
+        }
+
+        /** {@inheritDoc} */
+        @Override public UUID id() {
+            return subjId;
+        }
+
+        /** {@inheritDoc} */
+        @Override public SecuritySubjectType type() {
+            return subjType;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Object login() {
+            return "";
+        }
+
+        /** {@inheritDoc} */
+        @Override public InetSocketAddress address() {
+            return null;
+        }
+
+        /** {@inheritDoc} */
+        @Override public SecurityPermissionSet permissions() {
+            return new AllowNothingSecurityPermissionSet();
+        }
+    }
+
+    /**
+     * Empty permission set that deny all operations.
+     */
+    private static class AllowNothingSecurityPermissionSet implements SecurityPermissionSet {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        /** {@inheritDoc} */
+        @Override public boolean defaultAllowAll() {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Map<String, Collection<SecurityPermission>> taskPermissions() {
+            return Collections.emptyMap();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Map<String, Collection<SecurityPermission>> cachePermissions() {
+            return Collections.emptyMap();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Map<String, Collection<SecurityPermission>> servicePermissions() {
+            return Collections.emptyMap();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Collection<SecurityPermission> systemPermissions() {
+            return Collections.emptyList();
+        }
     }
 }
