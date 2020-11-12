@@ -403,7 +403,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         lockEntry();
 
         try {
-            if (isNew() || !valid(AffinityTopologyVersion.NONE) || deletedUnlocked())
+            if (isNew() || !valid(AffinityTopologyVersion.NONE))
                 return null;
             else {
                 CacheObject val0 = this.val;

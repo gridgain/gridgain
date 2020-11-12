@@ -1940,7 +1940,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             if (expireTimeExtras() > 0 && expireTimeExtras() < U.currentTimeMillis()) {
                 if (onExpired(val, null)) {
-                    assert !deletedUnlocked();
+                    //assert !deletedUnlocked();
 
                     update(null, CU.TTL_ETERNAL, CU.EXPIRE_TIME_ETERNAL, ver, true);
 
@@ -4635,8 +4635,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                     // TODO IGNITE-5286: need keep removed entries in heap map, otherwise removes can be lost.
                     // TODO get rid or not ? TODO IGNITE-5286 remove !!!!
-                    if (cctx.deferredDelete() && deletedUnlocked())
-                        return false;
+//                    if (cctx.deferredDelete() && deletedUnlocked())
+//                        return false;
 
                     if (!hasReaders() && markObsolete0(obsoleteVer, false, null)) {
                         // Nullify value after swap.
@@ -6233,12 +6233,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                     entry.val = oldVal;
 
-                    if (entry.deletedUnlocked())
-                        entry.deletedUnlocked(false);
+//                    if (entry.deletedUnlocked())
+//                        entry.deletedUnlocked(false);
                 }
             }
-            else if (oldVal != null && entry.deletedUnlocked())
-                entry.deletedUnlocked(false);
+//            else if (oldVal != null && entry.deletedUnlocked())
+//                entry.deletedUnlocked(false);
 
             CacheInvokeEntry<Object, Object> invokeEntry = null;
             IgniteBiTuple<Object, Exception> invokeRes = null;
@@ -6847,7 +6847,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         CacheObject val = entry.val;
 
                         if (val == null) {
-                            assert entry.deletedUnlocked();
+                            //assert entry.deletedUnlocked();
 
                             cctx.store().remove(null, entry.key);
                         }
@@ -6911,7 +6911,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         CacheObject val = entry.val;
 
                         if (val == null) {
-                            assert entry.deletedUnlocked();
+                            //assert entry.deletedUnlocked();
 
                             cctx.store().remove(null, entry.key);
                         }
