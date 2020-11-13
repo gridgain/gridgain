@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 /**
- * Additional context for partition eviction process.
+ * Additional context for partition eviction process. TODO remove
  */
 public interface EvictionContext {
     /**

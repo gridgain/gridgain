@@ -64,7 +64,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     public static final int MAX_MISSED_UPDATES = 10_000;
 
     /** Counter updates serialization version. */
-    private static final byte VERSION = 1;
+    private static final byte VERSION = 2;
 
     /** Queue of applied out of order counter updates. */
     private NavigableMap<Long, Item> queue = new TreeMap<>();
@@ -81,6 +81,9 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     /** */
     protected final CacheGroupContext grp;
 
+    /** Tombstones clearing state: cleared (1 bite) | counter (rest0 */
+    private long clearingState;
+
     /**
      * Initial counter points to last sequential update after WAL recovery.
      * @deprecated TODO FIXME https://issues.apache.org/jira/browse/IGNITE-11794
@@ -95,12 +98,12 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     }
 
     /** {@inheritDoc} */
-    @Override public void init(long initUpdCntr, @Nullable byte[] cntrUpdData) {
+    @Override public synchronized void init(long initUpdCntr, @Nullable byte[] cntrUpdData) {
         cntr.set(initUpdCntr);
 
         reserveCntr.set(initCntr = initUpdCntr);
 
-        queue = fromBytes(cntrUpdData);
+        fromBytes(cntrUpdData);
     }
 
     /** {@inheritDoc} */
@@ -276,7 +279,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public synchronized @Nullable byte[] getBytes() {
-        if (queue.isEmpty())
+        if (queue.isEmpty() && clearingState == 0)
             return null;
 
         try {
@@ -295,6 +298,8 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
                 dos.writeLong(item.delta);
             }
 
+            dos.writeLong(clearingState);
+
             bos.close();
 
             return bos.toByteArray();
@@ -305,30 +310,33 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     }
 
     /**
+     * Initializes state from raw bytes.
+     *
      * @param raw Raw bytes.
      */
-    private @Nullable NavigableMap<Long, Item> fromBytes(@Nullable byte[] raw) {
-        NavigableMap<Long, Item> ret = new TreeMap<>();
+    private void fromBytes(@Nullable byte[] raw) {
+        queue = new TreeMap<>();
 
         if (raw == null)
-            return ret;
+            return;
 
         try {
             ByteArrayInputStream bis = new ByteArrayInputStream(raw);
 
             DataInputStream dis = new DataInputStream(bis);
 
-            dis.readByte(); // Version.
+            byte ver = dis.readByte();// Version.
 
             int cnt = dis.readInt(); // Holes count.
 
             while (cnt-- > 0) {
                 Item item = new Item(dis.readLong(), dis.readLong());
 
-                ret.put(item.start, item);
+                queue.put(item.start, item);
             }
 
-            return ret;
+            if (ver > 1)
+                clearingState = dis.readLong();
         }
         catch (IOException e) {
             throw new IgniteException(e);
@@ -453,5 +461,24 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     /** {@inheritDoc} */
     @Override public CacheGroupContext context() {
         return grp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized long startTombstoneClearing() {
+        long lwm = get();
+
+        clearingState = lwm | 0x8000000000000000L; // Save LWM.
+
+        return lwm;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void finishTombstoneClearing() {
+        clearingState &= ~0x8000000000000000L;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized long tombstoneClearingState() {
+        return clearingState;
     }
 }

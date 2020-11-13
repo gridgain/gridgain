@@ -181,7 +181,7 @@ public class GridCacheRebalancingWithAsyncClearingTest extends GridCommonAbstrac
         boolean asyncClearingIsRunning = false;
         for (int p = 0; p < PARTITIONS_CNT; p++) {
             GridDhtLocalPartition part = grid(2).cachex(CACHE_NAME).context().topology().localPartition(p);
-            if (part != null && part.state() == GridDhtPartitionState.MOVING && part.isClearing()) {
+            if (part != null && part.state() == GridDhtPartitionState.MOVING) {
                 asyncClearingIsRunning = true;
                 break;
             }

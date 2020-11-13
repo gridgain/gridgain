@@ -54,10 +54,10 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 
 /**
- * TODO
+ * Tests if tombstones are correctly used for providing versions for removed entries.
  */
 @RunWith(Parameterized.class)
-@Ignore
+@Ignore // TODO
 public class CacheRemoveWithTombstonesPreloadingTest extends GridCommonAbstractTest {
     /** Test parameters. */
     @Parameterized.Parameters(name = "persistenceEnabled={0}, historicalRebalance={1}")

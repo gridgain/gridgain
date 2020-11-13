@@ -98,4 +98,19 @@ public class TombstoneCacheObject extends CacheObjectAdapter {
     @Override public void onAckReceived() {
 
     }
+
+    /**
+     * @param state State.
+     */
+    public static boolean clearing(long state) {
+        return (state & 0x8000000000000000L) == 0x8000000000000000L;
+    }
+
+    /**
+     * @param state State.
+     * @return Counter.
+     */
+    public static long counter(long state) {
+        return state & ~0x8000000000000000L;
+    }
 }

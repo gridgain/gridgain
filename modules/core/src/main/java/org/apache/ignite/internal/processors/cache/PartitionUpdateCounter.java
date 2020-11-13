@@ -142,4 +142,19 @@ public interface PartitionUpdateCounter extends Iterable<long[]> {
      * @return Cache group context.
      */
     public CacheGroupContext context();
+
+    /**
+     * Callback on tombstone clearing start.
+     */
+    public long startTombstoneClearing();
+
+    /**
+     * Callback on tombstone clearing finish.
+     */
+    public void finishTombstoneClearing();
+
+    /**
+     * @return Cuurent tombstone clearing state packed in long.
+     */
+    public long tombstoneClearingState();
 }

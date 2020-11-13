@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
@@ -82,27 +83,23 @@ public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
     }
 
     /** {@inheritDoc} */
-    @Override protected long clearAll(EvictionContext evictionCtx, PartitionsEvictManager.EvictReason reason) throws NodeStoppingException {
-        EvictionContext spied = mode == 1 ? Mockito.spy(evictionCtx) : evictionCtx;
+    @Override protected long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.EvictReason reason) throws NodeStoppingException {
+        BooleanSupplier realClo = mode == 1 ? new BooleanSupplier() {
+            @Override public boolean getAsBoolean() {
+                if (!delayed) {
+                    sync();
+
+                    delayed = true;
+                }
+
+                return stopClo.getAsBoolean();
+            }
+        } : stopClo;
 
         if (mode == 3)
             sync();
 
-        if (mode == 1) {
-            Mockito.doAnswer(new Answer() {
-                @Override public Object answer(InvocationOnMock invocation) throws Throwable {
-                    if (!delayed) {
-                        sync();
-
-                        delayed = true;
-                    }
-
-                    return invocation.callRealMethod();
-                }
-            }).when(spied).shouldStop();
-        }
-
-        long cnt = super.clearAll(spied, reason);
+        long cnt = super.clearAll(realClo, reason);
 
         if (mode == 2)
             sync();

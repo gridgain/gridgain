@@ -2798,7 +2798,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         try {
             // Write lock protects from concurrent partition creation.
-            lock.writeLock().lock();
+            if (!lock.writeLock().tryLock())
+                return false;
 
             try {
                 if (stopping)
