@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.database.io;
+package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
-/**
- * Leaf page for H2 row references.
- */
-public class H2ExtrasLeafIO extends AbstractH2ExtrasLeafIO {
-    /**
-     * @param type Page type.
-     * @param ver Page format version.
-     * @param payloadSize Payload size.
-     */
-    public H2ExtrasLeafIO(short type, int ver, int payloadSize) {
-        super(type, ver, 8, payloadSize);
-    }
+import org.apache.ignite.IgniteCheckedException;
+
+/** */
+public interface PageIoResolver {
+    /** */
+    public static final PageIoResolver DEFAULT_PAGE_IO_RESOLVER = PageIO::getPageIO;
+
+    /** */
+    PageIO resolve(long pageAddr) throws IgniteCheckedException;
 }
+
