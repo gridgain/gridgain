@@ -384,10 +384,10 @@ public class ConnectionClientPool {
 
                 fut.get(failTimeout);
             }
-            catch (IgniteCheckedException triggerException) {
-                IgniteSpiException spiE = new IgniteSpiException(triggerException);
+            catch (Throwable triggerException) {
+                IgniteSpiException spiE = new IgniteSpiException(e);
 
-                spiE.addSuppressed(e);
+                spiE.addSuppressed(triggerException);
 
                 String msg = "Failed to wait for establishing inverse communication connection from node " + node;
 
