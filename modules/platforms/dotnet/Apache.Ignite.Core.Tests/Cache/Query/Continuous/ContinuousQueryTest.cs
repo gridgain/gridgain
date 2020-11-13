@@ -20,7 +20,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Event;
     using Apache.Ignite.Core.Cache.Query.Continuous;
@@ -68,7 +67,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
             cache.Put(entry.Id, entry);
 
             // Wait for events.
-            Thread.Sleep(100);
+            TestUtils.WaitForTrueCondition(() => Listener.Events.Count == 2);
 
             ICacheEntryEvent<Guid, Data> e;
 
@@ -99,7 +98,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
 
         private class Listener : ICacheEntryEventListener<Guid, Data>
         {
-            public static readonly ConcurrentStack<ICacheEntryEvent<Guid, Data>> Events 
+            public static readonly ConcurrentStack<ICacheEntryEvent<Guid, Data>> Events
                 = new ConcurrentStack<ICacheEntryEvent<Guid, Data>>();
 
             public void OnEvent(IEnumerable<ICacheEntryEvent<Guid, Data>> evts)
