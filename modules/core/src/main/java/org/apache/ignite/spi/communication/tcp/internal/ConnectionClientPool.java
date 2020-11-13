@@ -55,6 +55,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.shmem.SHMemHandshakeClosure;
 import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
@@ -119,7 +120,7 @@ public class ConnectionClientPool {
     private final ConnectionRequestor connRequestor;
 
     /** Scheduled executor service which closed the socket if handshake timeout is out. **/
-    private final ScheduledExecutorService handshakeTimeoutExecutorService = newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService handshakeTimeoutExecutorService;
 
     /**
      * @param cfg Config.
@@ -134,6 +135,7 @@ public class ConnectionClientPool {
      * @param clusterStateProvider Cluster state provider.
      * @param nioSrvWrapper Nio server wrapper.
      * @param connRequestor External connection requestor.
+     * @param igniteInstanceName Ignite instance name.
      */
     public ConnectionClientPool(
         TcpCommunicationConfiguration cfg,
@@ -147,7 +149,8 @@ public class ConnectionClientPool {
         TcpCommunicationSpi tcpCommSpi,
         ClusterStateProvider clusterStateProvider,
         GridNioServerWrapper nioSrvWrapper,
-        @Nullable ConnectionRequestor connRequestor
+        @Nullable ConnectionRequestor connRequestor,
+        String igniteInstanceName
     ) {
         this.cfg = cfg;
         this.attrs = attrs;
@@ -161,6 +164,10 @@ public class ConnectionClientPool {
         this.clusterStateProvider = clusterStateProvider;
         this.nioSrvWrapper = nioSrvWrapper;
         this.connRequestor = connRequestor;
+
+        this.handshakeTimeoutExecutorService = newSingleThreadScheduledExecutor(
+            new IgniteThreadFactory(igniteInstanceName, "handshake-timeout-client")
+        );
     }
 
     /**

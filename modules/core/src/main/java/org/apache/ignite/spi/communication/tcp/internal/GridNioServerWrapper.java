@@ -89,6 +89,7 @@ import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
 import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
@@ -198,7 +199,7 @@ public class GridNioServerWrapper {
     private ConnectionClientPool clientPool;
 
     /** Scheduled executor service which closed the socket if handshake timeout is out. **/
-    private final ScheduledExecutorService handshakeTimeoutExecutorService = newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService handshakeTimeoutExecutorService;
 
     /** Executor for establishing a connection to a node. */
     private final TcpHandshakeExecutor tcpHandshakeExecutor;
@@ -256,6 +257,10 @@ public class GridNioServerWrapper {
         this.metricMgr = metricMgr;
         this.createTcpClientFun = createTcpClientFun;
         this.tcpHandshakeExecutor = tcpHandshakeExecutor;
+
+        this.handshakeTimeoutExecutorService = newSingleThreadScheduledExecutor(
+            new IgniteThreadFactory(igniteInstanceName, "handshake-timeout-nio")
+        );
     }
 
     /**
