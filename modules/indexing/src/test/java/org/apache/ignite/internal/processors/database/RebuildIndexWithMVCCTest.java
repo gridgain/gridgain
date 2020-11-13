@@ -24,7 +24,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
  * Test index rebuild with MVCC enabled.
  */
 public class RebuildIndexWithMVCCTest extends RebuildIndexTest {
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         final IgniteConfiguration configuration = super.getConfiguration(gridName);
