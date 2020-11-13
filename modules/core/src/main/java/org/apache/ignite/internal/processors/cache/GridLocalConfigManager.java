@@ -267,10 +267,8 @@ public class GridLocalConfigManager {
 
         cacheProcessor.cloneCheckSerializable(cfg);
 
-        CacheObjectContext cacheObjCtx = ctx.cacheObjects().contextForCache(cfg);
-
         // Initialize defaults.
-        cacheProcessor.initialize(cfg, cacheObjCtx);
+        cacheProcessor.initialize(cfg, ctx.cacheObjects().contextForCache(cfg));
 
         StoredCacheData cacheData = new StoredCacheData(cfg);
 

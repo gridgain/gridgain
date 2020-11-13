@@ -29,6 +29,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -337,6 +338,7 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
         ccfg.setSqlEscapeAll(true);
         ccfg.setAtomicityMode(atomicityMode());
         ccfg.setCacheMode(cacheMode());
+        ccfg.setEntryCompressionConfiguration(entryCompressionConfiguration());
 
         if (nearCache())
             ccfg.setNearConfiguration(new NearCacheConfiguration<KeyClass, ValueClass>());
@@ -358,4 +360,11 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
      * @return Whether to use near cache.
      */
     protected abstract boolean nearCache();
+
+    /**
+     * @return Compression configuration or {@code null} if none is needed.
+     */
+    protected EntryCompressionConfiguration entryCompressionConfiguration() {
+        return null;
+    }
 }

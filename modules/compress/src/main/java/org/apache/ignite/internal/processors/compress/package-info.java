@@ -13,26 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.ignite.internal.processors.cache.persistence;
-
-import org.apache.ignite.internal.processors.database.IgniteDbSingleNodePutGetTest;
-
 /**
- *
+ * <!-- Package description. -->
+ * Contains page compression implementation.
  */
-public class IgnitePdsSingleNodePutGetPersistenceTest extends IgniteDbSingleNodePutGetTest {
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        cleanPersistenceDir();
-
-        super.beforeTest();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
-        cleanPersistenceDir();
-    }
-}
+package org.apache.ignite.internal.processors.compress;

@@ -51,6 +51,10 @@ public class ThinClientAffinityAwarenessConnectionTest extends ThinClientAbstrac
 
         TestTcpClientChannel expCahnnel = channels[1];
 
+        // Warm up topology info
+        cache.put(1, 1);
+        opsQueue.clear();
+
         for (int i = 0; i < KEY_CNT; ++i)
             testAllOperations(cache, expCahnnel, i, i * 2);
     }
