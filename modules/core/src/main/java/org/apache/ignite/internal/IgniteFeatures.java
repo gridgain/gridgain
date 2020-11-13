@@ -191,7 +191,10 @@ public enum IgniteFeatures {
     INCREMENTAL_DR(49),
 
     /** Cache encryption key change. See {@link IgniteEncryption#changeCacheGroupKey(Collection)}. */
-    CACHE_GROUP_KEY_CHANGE(50);
+    CACHE_GROUP_KEY_CHANGE(50),
+
+    /** Custom snapshot operations. */
+    CUSTOM_SNAPSHOT_OPERATIONS(51);
 
     /**
      * Unique feature identifier.
