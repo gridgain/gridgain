@@ -1153,8 +1153,10 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
 
                     CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(ctx, opCtx != null && opCtx.recovery(), req.txRead(), null, keys);
 
-                    if (validateCacheE != null)
+                    if (validateCacheE != null) {
+                        assert false : "qwer123";
                         throw validateCacheE;
+                    }
                 }
                 else {
                     fut = new GridDhtLockFuture(ctx,
