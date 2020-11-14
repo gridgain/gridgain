@@ -166,16 +166,16 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             PartitionEvictionTask prev = futs.putIfAbsent(key, task);
 
             if (prev == null) {
-                if (log.isInfoEnabled())
-                    log.info("Enqueued partition clearing [grp=" + grp.cacheOrGroupName()
+                if (log.isDebugEnabled())
+                    log.debug("Enqueued partition clearing [grp=" + grp.cacheOrGroupName()
                         + ", topVer=" + grp.topology().readyTopologyVersion()
                         + ", task=" + task + ']');
 
                 break;
             }
             else {
-                if (log.isInfoEnabled())
-                    log.info("Cancelling current clearing [grp=" + grp.cacheOrGroupName()
+                if (log.isDebugEnabled())
+                    log.debug("Cancelling current clearing [grp=" + grp.cacheOrGroupName()
                         + ", topVer=" + grp.topology().readyTopologyVersion()
                         + ", task=" + task
                         + ", prev=" + prev
@@ -199,8 +199,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             return task;
         }
 
-        if (log.isInfoEnabled())
-            log.info("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
+        if (log.isDebugEnabled())
+            log.debug("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
                 + ", topVer=" + grp.topology().readyTopologyVersion()
                 + ", task" + task + ']');
 
@@ -391,24 +391,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         }
 
         /**
-         * Await evict finish partition.
-         */
-        private void awaitFinish(Integer part, IgniteInternalFuture<?> fut) {
-            // Wait for last offered partition eviction completion
-            try {
-                if (log.isInfoEnabled())
-                    log.info("Await partition evict, grpName=" + grp.cacheOrGroupName() +
-                        ", grpId=" + grp.groupId() + ", partId=" + part);
-
-                fut.get();
-            }
-            catch (IgniteCheckedException e) {
-                if (log.isDebugEnabled())
-                    log.warning("Failed to await partition eviction during stopping.", e);
-            }
-        }
-
-        /**
          * Shows progress group of eviction.
          */
         private void showProgress() {
@@ -521,8 +503,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             try {
                 long clearedEntities = part.clearAll(stopClo, this);
 
-                if (log.isInfoEnabled()) {
-                    log.info("The partition clearing has been finished [grp=" + part.group().cacheOrGroupName() +
+                if (log.isDebugEnabled()) {
+                    log.debug("The partition clearing has been finished [grp=" + part.group().cacheOrGroupName() +
                         ", topVer=" + part.group().topology().readyTopologyVersion() +
                         ", cleared=" + clearedEntities +
                         ", task" + this + ']');
@@ -572,32 +554,18 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
             grpEvictionCtx.taskScheduled(this);
 
-            if (log.isInfoEnabled())
-                log.info("Starting clearing [grp=" + grpEvictionCtx.grp.cacheOrGroupName()
+            if (log.isDebugEnabled())
+                log.debug("Starting clearing [grp=" + grpEvictionCtx.grp.cacheOrGroupName()
                     + ", topVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()
                     + ", task" + this + ']');
         }
 
-        public int cancelType;
-
         /** */
         public void cancel() {
-            if (state.compareAndSet(null, Boolean.FALSE)) {
-                cancelType = 1;
-
+            if (state.compareAndSet(null, Boolean.FALSE))
                 finishFut.onDone(); // Cancelled before start.
-            }
-            else {
-                cancelType = 2;
-
+            else
                 state.set(Boolean.FALSE); // Cancelled while running, need to publish stop request.
-            }
-
-            if (log.isInfoEnabled())
-                log.info("Cancelling clearing [grp=" + grpEvictionCtx.grp.cacheOrGroupName()
-                    + ", topVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()
-                    + ", method=" + cancelType
-                    + ", task" + this + ']');
         }
 
         /** */
