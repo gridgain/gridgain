@@ -510,7 +510,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
 
             walArchiveSize.onStartWalManager(segmentAware, archiver != null);
-            dbMgr.createCheckpointManagerCallback(walArchiveSize::onStartcheckpointManager);
+            dbMgr.createCheckpointManagerCallback(walArchiveSize::onStartCheckpointManager);
         }
     }
 
@@ -2309,8 +2309,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         f0.force();
                     }
 
-                    // Size needs to be adjusted.
-                    walArchiveSize.add(segIdx, zip.length() - segSize);
+                    // Size must be corrected and notified to all.
+                    walArchiveSize.correctSize(segIdx, zip.length() - segSize);
 
                     segmentAware.onSegmentCompressed(segIdx);
 

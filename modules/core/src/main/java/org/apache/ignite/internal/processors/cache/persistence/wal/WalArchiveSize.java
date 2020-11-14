@@ -44,7 +44,7 @@ public class WalArchiveSize {
     /** Maximum WAL archive size in bytes. */
     private final long maxSize;
 
-    /** Сurrent size of WAL archive in bytes. */
+    /** Current size of WAL archive in bytes. */
     private final AtomicLong currSize = new AtomicLong();
 
     /** Mapping: absolute segment index -> segment size in bytes. */
@@ -114,7 +114,7 @@ public class WalArchiveSize {
      *
      * @param cpMgr Checkpoint manager.
      */
-    public void onStartcheckpointManager(CheckpointManager cpMgr) {
+    public void onStartCheckpointManager(CheckpointManager cpMgr) {
         if (!unlimited()) {
             this.cpMgr = cpMgr;
 
@@ -143,11 +143,34 @@ public class WalArchiveSize {
             synchronized (this) {
                 int segmentCnt = sizes.size();
 
-                if (sizes.merge(idx, size, Long::sum) == 0)
+                long res = sizes.merge(idx, size, Long::sum);
+
+                if (res == 0)
                     sizes.remove(idx);
+                else if (res <= 0) {
+                    // To avoid double deletion of one file from different threads.
+                    sizes.remove(idx);
+                    currSize.addAndGet(-size);
+                }
 
                 if (segmentCnt != sizes.size())
                     updateAvailableToClear();
+            }
+        }
+    }
+
+    /**
+     * Correction of segment size with {@link #notifyAll()}.
+     *
+     * @param idx Absolut segment index.
+     * @param size Segment size in bytes.
+     */
+    public void correctSize(long idx, long size) {
+        add(idx, size);
+
+        if (!unlimited()) {
+            synchronized (this) {
+                notifyAll();
             }
         }
     }
@@ -185,7 +208,7 @@ public class WalArchiveSize {
                             int rmvSegments = walMgr.truncate(low, high);
 
                             if (log.isInfoEnabled()) {
-                                log.info("Clearning WAL archive [low=" + low.index() + ", high=" + high.index() +
+                                log.info("Cleaning WAL archive [low=" + low.index() + ", high=" + high.index() +
                                     ", removedSegments=" + rmvSegments + ", availableToClear=" + availableToClear +
                                     ']');
                             }
@@ -248,7 +271,7 @@ public class WalArchiveSize {
                     int rmvSegments = walMgr.truncate(low, high);
 
                     if (log.isInfoEnabled()) {
-                        log.info("Clearning WAL archive on prepare stage [low=" + low + ", high=" + high +
+                        log.info("Cleaning WAL archive on prepare stage [low=" + low + ", high=" + high +
                             ", removedSegments=" + rmvSegments + ", availableToClear=" + availableToClear + ']');
                     }
 
@@ -264,7 +287,7 @@ public class WalArchiveSize {
     /**
      * Return current size of WAL archive in bytes.
      *
-     * @return Сurrent size of WAL archive in bytes.
+     * @return Current size of WAL archive in bytes.
      */
     public long currentSize() {
         return currSize.get();

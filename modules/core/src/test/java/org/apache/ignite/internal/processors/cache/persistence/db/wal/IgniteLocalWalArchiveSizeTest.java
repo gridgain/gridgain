@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -25,6 +26,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.persistence.wal.WalArchiveSize;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -52,7 +54,7 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        stopObserver();
+        stopObserver(null);
 
         stopAllGrids();
         cleanPersistenceDir();
@@ -62,7 +64,7 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        stopObserver();
+        stopObserver(null);
 
         stopAllGrids();
         cleanPersistenceDir();
@@ -87,13 +89,16 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     @Override protected IgniteEx startGrid(int idx) throws Exception {
         IgniteEx n = super.startGrid(idx);
 
-        walArchiveObserver = new WalArchiveSizeObserver(
+        WalArchiveSizeObserver walArchiveSizeObserver0 = new WalArchiveSizeObserver(
             GridTestUtils.getFieldValueHierarchy(n.context().cache().context().wal(), "walArchiveDir"),
+            GridTestUtils.getFieldValueHierarchy(n.context().cache().context().wal(), "walArchiveSize"),
             n.configuration().getDataStorageConfiguration().getMaxWalArchiveSize()
         );
 
-        walArchiveObserver.start();
-        U.await(walArchiveObserver.start);
+        walArchiveSizeObserver0.start();
+        walArchiveObserver = walArchiveSizeObserver0;
+
+        U.await(walArchiveSizeObserver0.start);
 
         n.cluster().state(ClusterState.ACTIVE);
 
@@ -160,25 +165,26 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
         for (int i = 0; i < 1_000; i++)
             n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(100 * U.KB)]);
 
-        assertFalse(stopObserver().exceed);
+        stopObserver(observer -> assertFalse(observer.exceed));
     }
 
     /**
      * Stop {@link #walArchiveObserver}.
      *
-     * @return Stopped observer.
+     * @param c Consumer of stopped observer.
      * @throws Exception If failed.
      */
-    @Nullable private WalArchiveSizeObserver stopObserver() throws Exception {
+    private void stopObserver(@Nullable Consumer<WalArchiveSizeObserver> c) throws Exception {
         WalArchiveSizeObserver observer = walArchiveObserver;
 
         if (observer != null && !observer.stop) {
             observer.stop = true;
 
             observer.join();
-        }
 
-        return observer;
+            if (c != null)
+                c.accept(observer);
+        }
     }
 
     /**
@@ -187,6 +193,9 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     private static class WalArchiveSizeObserver extends Thread {
         /** Wal archive directory. */
         final File dir;
+
+        /** Holder of WAL archive size information. */
+        final WalArchiveSize walArchiveSize;
 
         /** Max size(in bytes) of WAL archive directory. */
         final long max;
@@ -204,10 +213,12 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
          * Constructor.
          *
          * @param dir Wal archive directory.
+         * @param walArchiveSize Holder of WAL archive size information.
          * @param max Max size(in bytes) of WAL archive directory.
          */
-        public WalArchiveSizeObserver(File dir, long max) {
+        public WalArchiveSizeObserver(File dir, WalArchiveSize walArchiveSize, long max) {
             this.dir = dir;
+            this.walArchiveSize = walArchiveSize;
             this.max = max;
         }
 
@@ -226,9 +237,19 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
                 if (size > max) {
                     exceed = true;
 
-                    log.error("Excess [max=" + U.humanReadableByteCount(max) +
-                        ", curr=" + U.humanReadableByteCount(size) +
-                        ", files=" + Stream.of(files).map(File::getName).collect(toList()) + ']');
+                    Object sizes;
+                    long currSize;
+
+                    synchronized (walArchiveSize) {
+                        currSize = walArchiveSize.currentSize();
+                        sizes = GridTestUtils.getFieldValueHierarchy(walArchiveSize, "sizes");
+                    }
+
+                    log.error("Excess [maxSize=" + U.humanReadableByteCount(max) +
+                        ", fileSizes=" + U.humanReadableByteCount(size) +
+                        ", currSize=" + U.humanReadableByteCount(currSize) +
+                        ", files=" + Stream.of(files).map(File::getName).collect(toList()) +
+                        ", sizes=" + sizes + ']');
                 }
             }
         }
