@@ -741,11 +741,13 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @return A future what will be finished then a current clearing attempt is done.
      */
     public IgniteInternalFuture<?> clearAsync() {
-        assert clearTask != null; // Clear task should be scheduled when the partition is switched to moving state.
+        if (clearTask != null) {
+            clearTask.start();
 
-        clearTask.start();
-
-        return clearTask.finishFut;
+            return clearTask.finishFut;
+        }
+        else // No clearing required.
+            return new GridFinishedFuture<>();
     }
 
     /**

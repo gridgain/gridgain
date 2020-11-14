@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -112,7 +113,9 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testStopCache_Volatile() throws Exception {
         testOperationDuringEviction(false, 1, new Runnable() {
             @Override public void run() {
-                grid(0).cache(DEFAULT_CACHE_NAME).close();
+                IgniteInternalFuture fut = runAsync(() -> grid(0).cache(DEFAULT_CACHE_NAME).close());
+
+                doSleep(500);
             }
         });
 
@@ -129,7 +132,9 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testStopCache_Persistence() throws Exception {
         testOperationDuringEviction(true, 1, new Runnable() {
             @Override public void run() {
-                grid(0).cache(DEFAULT_CACHE_NAME).close();
+                IgniteInternalFuture fut = runAsync(() -> grid(0).cache(DEFAULT_CACHE_NAME).close());
+
+                doSleep(500);
             }
         });
 
@@ -383,9 +388,10 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         GridDhtLocalPartition part = g0.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(p0);
 
-        AtomicReference<GridFutureAdapter<?>> ref = U.field(part, "finishFutRef");
+        PartitionsEvictManager.PartitionEvictionTask task =
+            g0.context().cache().context().evict().clearingTask(CU.cacheId(DEFAULT_CACHE_NAME), p0);
 
-        GridFutureAdapter<?> finishFut = ref.get();
+        GridFutureAdapter<?> finishFut = task.finishFut;
 
         IgniteInternalFuture fut = runAsync(g0::close);
 

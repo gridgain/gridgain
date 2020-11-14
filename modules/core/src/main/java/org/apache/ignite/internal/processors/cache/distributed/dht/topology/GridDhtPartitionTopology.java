@@ -428,7 +428,7 @@ public interface GridDhtPartitionTopology {
      *                            (update counter is maximal) and should hold OWNING state for such partition).
      * @param haveHist Set of partitions which have WAL history to rebalance.
      * @param exchFut Exchange future for operation.
-     * @return Map (nodeId, set of partitions that should be rebalanced <b>fully</b> by this node).
+     * @return Map (nodeId, set of partitions) that should be rebalanced <b>fully</b> by this node.
      */
     public Map<UUID, Set<Integer>> resetOwners(
         Map<Integer, Set<UUID>> ownersByUpdCounters,
