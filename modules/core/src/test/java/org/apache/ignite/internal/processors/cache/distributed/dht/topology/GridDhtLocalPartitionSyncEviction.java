@@ -26,9 +26,6 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * Extends a DHT partition adding a support for blocking capabilities on clearing.
@@ -83,7 +80,7 @@ public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
     }
 
     /** {@inheritDoc} */
-    @Override protected long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.EvictReason reason) throws NodeStoppingException {
+    @Override protected long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.PartitionEvictionTask task) throws NodeStoppingException {
         BooleanSupplier realClo = mode == 1 ? new BooleanSupplier() {
             @Override public boolean getAsBoolean() {
                 if (!delayed) {
@@ -99,7 +96,7 @@ public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
         if (mode == 3)
             sync();
 
-        long cnt = super.clearAll(realClo, reason);
+        long cnt = super.clearAll(realClo, task);
 
         if (mode == 2)
             sync();

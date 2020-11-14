@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -164,9 +165,22 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         while (true) {
             PartitionEvictionTask prev = futs.putIfAbsent(key, task);
 
-            if (prev == null)
+            if (prev == null) {
+                if (log.isInfoEnabled())
+                    log.info("Enqueued partition clearing [grp=" + grp.cacheOrGroupName()
+                        + ", topVer=" + grp.topology().readyTopologyVersion()
+                        + ", task=" + task + ']');
+
                 break;
+            }
             else {
+                if (log.isInfoEnabled())
+                    log.info("Cancelling current clearing [grp=" + grp.cacheOrGroupName()
+                        + ", topVer=" + grp.topology().readyTopologyVersion()
+                        + ", task=" + task
+                        + ", prev=" + prev
+                        + ']');
+
                 prev.cancel();
                 prev.awaitCompletion();
             }
@@ -188,8 +202,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         if (log.isInfoEnabled())
             log.info("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
                 + ", topVer=" + grp.topology().readyTopologyVersion()
-                + ", id=" + part.id() + ", state=" + part.state()
-                + ", fullSize=" + part.fullSize() + ", reason=" + reason + ']');
+                + ", task" + task + ']');
 
         return task;
     }
@@ -451,16 +464,19 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private final GridDhtLocalPartition part;
 
         /** Reason for eviction. */
-        private final EvictReason reason;
+        public final EvictReason reason;
 
         /** Eviction context. */
+        @GridToStringExclude
         private final GroupEvictionContext grpEvictionCtx;
 
         /** */
+        @GridToStringExclude
         public final GridFutureAdapter<?> finishFut;
 
         /** */
-        private AtomicReference<Boolean> stop = new AtomicReference<>(null);
+        @GridToStringExclude
+        public AtomicReference<Boolean> state = new AtomicReference<>(null);
 
         /**
          * @param part Partition.
@@ -485,7 +501,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             if (cctx.igniteInstanceName().endsWith("0") && part.id() == 4)
                 System.out.println();
 
-            if (!stop.compareAndSet(null, Boolean.TRUE))
+            if (!state.compareAndSet(null, Boolean.TRUE))
                 return;
 
             if (grpEvictionCtx.grp.cacheObjectContext().kernalContext().isStopping()) {
@@ -500,16 +516,16 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 return;
             }
 
-            BooleanSupplier stopClo = () -> grpEvictionCtx.shouldStop() || stop.get();
+            BooleanSupplier stopClo = () -> grpEvictionCtx.shouldStop() || (state.get() == Boolean.FALSE);
 
             try {
-                long clearedEntities = part.clearAll(stopClo, reason);
+                long clearedEntities = part.clearAll(stopClo, this);
 
-                if (log.isDebugEnabled()) {
-                    log.debug("The partition has been cleared [grp=" + part.group().cacheOrGroupName() +
+                if (log.isInfoEnabled()) {
+                    log.info("The partition clearing has been finished [grp=" + part.group().cacheOrGroupName() +
                         ", topVer=" + part.group().topology().readyTopologyVersion() +
-                        ", id=" + part.id() + ", state=" + part.state() + ", cleared=" + clearedEntities +
-                        ", fullSize=" + part.fullSize() + ']');
+                        ", cleared=" + clearedEntities +
+                        ", task" + this + ']');
                 }
 
                 finishFut.onDone();
@@ -543,35 +559,45 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          */
         public void start() {
             synchronized (mux) {
-                int grpId = grpEvictionCtx.grp.groupId();
-
-                // TODO get rid ?
-                logEvictPartByGrps.computeIfAbsent(grpId, i -> new HashMap<>()).put(part.id(), reason);
-
-                grpEvictionCtx.totalTasks.incrementAndGet();
-
-                updateMetrics(grpEvictionCtx.grp, reason, INCREMENT);
-
-                executor.submit(this);
-
-                showProgress();
-
-                grpEvictionCtx.taskScheduled(this);
-
-                if (log.isInfoEnabled())
-                    log.info("The partition clearing has been started [grp=" + grpEvictionCtx.grp.cacheOrGroupName()
-                        + ", topVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()
-                        + ", id=" + part.id() + ", state=" + part.state()
-                        + ", fullSize=" + part.fullSize() + ", reason=" + reason + ']');
+                logEvictPartByGrps.computeIfAbsent(grpEvictionCtx.grp.groupId(), i -> new HashMap<>()).put(part.id(), reason);
             }
+
+            grpEvictionCtx.totalTasks.incrementAndGet();
+
+            updateMetrics(grpEvictionCtx.grp, reason, INCREMENT);
+
+            executor.submit(this);
+
+            showProgress();
+
+            grpEvictionCtx.taskScheduled(this);
+
+            if (log.isInfoEnabled())
+                log.info("Starting clearing [grp=" + grpEvictionCtx.grp.cacheOrGroupName()
+                    + ", topVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()
+                    + ", task" + this + ']');
         }
+
+        public int cancelType;
 
         /** */
         public void cancel() {
-            if (stop.compareAndSet(null, Boolean.FALSE))
+            if (state.compareAndSet(null, Boolean.FALSE)) {
+                cancelType = 1;
+
                 finishFut.onDone(); // Cancelled before start.
-            else
-                stop.set(Boolean.FALSE); // Cancelled while running, need to publish stop request.
+            }
+            else {
+                cancelType = 2;
+
+                state.set(Boolean.FALSE); // Cancelled while running, need to publish stop request.
+            }
+
+            if (log.isInfoEnabled())
+                log.info("Cancelling clearing [grp=" + grpEvictionCtx.grp.cacheOrGroupName()
+                    + ", topVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()
+                    + ", method=" + cancelType
+                    + ", task" + this + ']');
         }
 
         /** */
@@ -581,6 +607,14 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             } catch (IgniteCheckedException e) {
                 log.warning("Failed to get the result for clearing future [part=" + part + ']', e);
             }
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(PartitionEvictionTask.class, this,
+                "grp", grpEvictionCtx.grp.cacheOrGroupName(),
+                "state", state.get() == null ? "NotStarted" : state.get() ? "Started" : "Cancelled",
+                "done", finishFut.isDone(), "err", finishFut.error() != null);
         }
     }
 

@@ -68,6 +68,7 @@ import org.apache.ignite.internal.util.collection.IntRWHashMap;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridIterator;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -79,6 +80,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
+import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
@@ -702,8 +704,18 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             task.finishFut.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut0) {
-                    if (state() == EVICTED)
-                        rent.onDone(fut0.error());
+                    if (isEmpty()) {
+                        ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
+                            @Override public void run() { // TODO submit to timer for batch.
+                                if (grp.topology().tryFinishEviction(GridDhtLocalPartition.this)) {
+                                    if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_UNLOADED))
+                                        grp.addUnloadEvent(id());
+
+                                    rent.onDone(fut0.error());
+                                }
+                            }
+                        });
+                    }
                 }
             });
 
@@ -1070,14 +1082,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * Removes all entries and rows from this partition.
      *
      * @param stopClo Stop closure.
-     * @param reason Reason.
+     * @param task Task.
      *
      * @return Number of rows cleared from page memory.
      * @throws NodeStoppingException If node stopping.
      */
     protected long clearAll(
         BooleanSupplier stopClo,
-        PartitionsEvictManager.EvictReason reason
+        PartitionsEvictManager.PartitionEvictionTask task
     ) throws NodeStoppingException {
         boolean rec = grp.eventRecordable(EVT_CACHE_REBALANCE_OBJECT_UNLOADED);
 
@@ -1086,11 +1098,11 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
-        Predicate<CacheDataRow> rowFilter = r -> true;
+        Predicate<CacheDataRow> rowFilter = r -> false;
 
         GridDhtPartitionState state0 = state();
 
-        if (reason == PartitionsEvictManager.EvictReason.TOMBSTONE) {
+        if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE) {
             assert state0 == OWNING;
 
             long lwm = TombstoneCacheObject.counter(dataStore().partUpdateCounter().startTombstoneClearing());
@@ -1103,31 +1115,34 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 }
             };
         }
-        else if (reason == PartitionsEvictManager.EvictReason.CLEARING) {
+        else if (task.reason == PartitionsEvictManager.EvictReason.CLEARING) {
             assert state0 == MOVING;
 
             long order0 = clearVer;
 
             rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || order0 > row.version().order());
         }
-        else
-            assert reason == PartitionsEvictManager.EvictReason.EVICTION && state0 == RENTING;
+
+        if (task.reason == PartitionsEvictManager.EvictReason.EVICTION && state() == EVICTED)
+            return 0;
 
         GridCacheVersion clearVer = ctx.versions().startVersion();
 
         GridCacheObsoleteEntryExtras extras = new GridCacheObsoleteEntryExtras(clearVer);
 
         try {
-            GridIterator<CacheDataRow> it0 = reason == PartitionsEvictManager.EvictReason.TOMBSTONE ?
+            GridIterator<CacheDataRow> it0 = task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE ?
                 grp.offheap().partitionIterator(id, IgniteCacheOffheapManager.TOMBSTONES) :
                 grp.offheap().partitionIterator(id, IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
 
             while (it0.hasNext()) {
                 assert state0 == state() : "Partition state can't change during clearing [onStart=" + state + ", part=" + this + ']';
 
+                // Important to check before aquiring lock.
                 if ((stopCntr = (stopCntr + 1) & 1023) == 0 && stopClo.getAsBoolean())
                     return cleared;
 
+                // TODO fixme deadlock possibility, should not get read lock if checkpointer starts
                 ctx.database().checkpointReadLock();
 
                 try {
@@ -1196,20 +1211,20 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             }
 
             // Attempt to destroy.
-            if (reason == PartitionsEvictManager.EvictReason.EVICTION) {
-                if (forceTestCheckpointOnEviction) {
-                    if (partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
-                        ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
-
-                        log.warning("Forced checkpoint by test reasons for partition: " + this);
-
-                        partWhereTestCheckpointEnforced = id;
-                    }
-                }
-
-                ((GridDhtPreloader) grp.preloader()).tryFinishEviction(this);
-            }
-            if (reason == PartitionsEvictManager.EvictReason.TOMBSTONE)
+//            if (reason == PartitionsEvictManager.EvictReason.EVICTION && !stopClo.getAsBoolean()) {
+//                if (forceTestCheckpointOnEviction) {
+//                    if (partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
+//                        ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
+//
+//                        log.warning("Forced checkpoint by test reasons for partition: " + this);
+//
+//                        partWhereTestCheckpointEnforced = id;
+//                    }
+//                }
+//
+//                ((GridDhtPreloader) grp.preloader()).tryFinishEviction(this);
+//            }
+            if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE)
                 dataStore().partUpdateCounter().finishTombstoneClearing();
         }
         catch (NodeStoppingException e) {

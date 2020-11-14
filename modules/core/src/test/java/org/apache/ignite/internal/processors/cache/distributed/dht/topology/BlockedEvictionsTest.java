@@ -477,14 +477,6 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
             setCacheMode(CacheMode.PARTITIONED).
             setBackups(1).
             setStatisticsEnabled(stats).
-            setAffinity(new RendezvousAffinityFunction(false, persistence ? 64 : 64));
-    }
-
-    @Override protected long getTestTimeout() {
-        return super.getTestTimeout() * 100000;
-    }
-
-    @Override protected long getPartitionMapExchangeTimeout() {
-        return super.getPartitionMapExchangeTimeout() * 1000000;
+            setAffinity(new RendezvousAffinityFunction(false, persistence ? 64 : 1024));
     }
 }
