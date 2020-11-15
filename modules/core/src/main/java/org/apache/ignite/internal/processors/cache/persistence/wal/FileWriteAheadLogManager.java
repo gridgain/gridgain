@@ -2310,7 +2310,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     }
 
                     // Size must be corrected and notified to all.
-                    walArchiveSize.correctSize(segIdx, zip.length() - segSize);
+                    walArchiveSize.add(segIdx, zip.length() - segSize);
 
                     segmentAware.onSegmentCompressed(segIdx);
 

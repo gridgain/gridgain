@@ -141,8 +141,6 @@ public class WalArchiveSize {
 
         if (!unlimited()) {
             synchronized (this) {
-                int segmentCnt = sizes.size();
-
                 long res = sizes.merge(idx, size, Long::sum);
 
                 if (res == 0)
@@ -153,24 +151,7 @@ public class WalArchiveSize {
                     currSize.addAndGet(-size);
                 }
 
-                if (segmentCnt != sizes.size())
-                    updateAvailableToClear();
-            }
-        }
-    }
-
-    /**
-     * Correction of segment size with {@link #notifyAll()}.
-     *
-     * @param idx Absolut segment index.
-     * @param size Segment size in bytes.
-     */
-    public void correctSize(long idx, long size) {
-        add(idx, size);
-
-        if (!unlimited()) {
-            synchronized (this) {
-                notifyAll();
+                updateAvailableToClear();
             }
         }
     }
