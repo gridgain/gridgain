@@ -82,6 +82,7 @@ public abstract class CachePutAllFailoverAbstractTest extends GridCacheAbstractS
         ccfg.setCacheStoreFactory(null);
         ccfg.setReadThrough(false);
         ccfg.setWriteThrough(false);
+        ccfg.setEntryCompressionConfiguration(entryCompressionConfiguration());
 
         return ccfg;
     }
