@@ -38,6 +38,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheObject;
@@ -1381,10 +1382,10 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
         CacheOperationContext opCtx = cctx.operationContextPerCall();
 
-        Throwable err = lastFinishedFut.validateCache(cctx, opCtx != null && opCtx.recovery(), read, null, keys);
+        CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(cctx, opCtx != null && opCtx.recovery(), read, null, keys);
 
-        if (err != null)
-            onDone(err);
+        if (validateCacheE != null)
+            onDone(validateCacheE);
 
         return true;
     }
