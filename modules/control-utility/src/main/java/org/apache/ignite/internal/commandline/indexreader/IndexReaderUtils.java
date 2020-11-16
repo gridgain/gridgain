@@ -18,6 +18,13 @@ package org.apache.ignite.internal.commandline.indexreader;
 
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import java.io.File;
+
+import static java.lang.String.format;
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
+
 /**
  * Collection of utility methods used throughout index reading.
  */
@@ -70,5 +77,18 @@ public class IndexReaderUtils {
      */
     public static long objectArraySize(int len) {
         return align(/*Object header*/(2 * linkSize()) + (linkSize() * len), 8);
+    }
+
+    /**
+     * Returns the absolute pathname string of partition.
+     *
+     * @param partId Partition number.
+     * @param parent Partition directory.
+     * @return Partition absolute pathname string.
+     */
+    public static String partitionFileAbsolutePath(File parent, int partId) {
+        String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : format(PART_FILE_TEMPLATE, partId);
+
+        return new File(parent, fileName).getAbsolutePath();
     }
 }
