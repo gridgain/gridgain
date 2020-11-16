@@ -959,6 +959,21 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     }
 
     /**
+     * No-op for non-persistent storage.
+     */
+    public void onTxAcquireCheckpointReadLock() {
+        // No-op.
+    }
+
+
+    /**
+     * No-op for non-persistent storage.
+     */
+    public void onTxReleaseCheckpointReadLock() {
+        // No-op.
+    }
+
+    /**
      * Method will perform cleanup cache page memory and each cache partition store.
      */
     public void cleanupRestoredCaches() {

@@ -20,14 +20,20 @@ import java.util.Collection;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.aware.SegmentAware;
+import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,6 +62,15 @@ public class WalArchiveSize {
     /** Checkpoint manager instance. */
     @Nullable private volatile CheckpointManager cpMgr;
 
+    /** Predicate for checking whether node should fail because WAL archive is full and cannot be cleared. */
+    @Nullable private volatile BooleanSupplier shouldFailure;
+
+    /** Failure processor. */
+    private final FailureProcessor failureProcessor;
+
+    /** Node failed by {@link #shouldFailure}. */
+    private volatile boolean nodeFailure;
+
     /** Number of segments that can be deleted now. */
     private volatile int availableToClear;
 
@@ -74,17 +89,20 @@ public class WalArchiveSize {
      * @param logFun Function for getting a logger.
      * @param dsCfg Data storage configuration.
      * @param walMgr WAL manger instance.
+     * @param failureProcessor Failure processor.
      */
     public WalArchiveSize(
         Function<Class<?>, IgniteLogger> logFun,
         DataStorageConfiguration dsCfg,
-        IgniteWriteAheadLogManager walMgr
+        IgniteWriteAheadLogManager walMgr,
+        FailureProcessor failureProcessor
     ) {
         log = logFun.apply(getClass());
 
         maxSize = dsCfg.getMaxWalArchiveSize();
 
         this.walMgr = walMgr;
+        this.failureProcessor = failureProcessor;
 
         sizes = !unlimited() ? new TreeMap<>() : null;
     }
@@ -93,19 +111,32 @@ public class WalArchiveSize {
      * Callback on start of WAL manager.
      *
      * @param segmentAware Holder of actual information of latest manipulation on WAL segments.
-     * @param availableArchive Archive available.
+     * @param dbMgr Database manager.
+     * @param archiveEnabled Archive enabled.
+     * @param compressionEnabled Compression enabled.
      */
-    public void onStartWalManager(SegmentAware segmentAware, boolean availableArchive) {
-        if (!unlimited() && availableArchive) {
-            segmentAware.addMinReservedSegmentObserver(absSegIdx -> {
-                synchronized (this) {
-                    reservedIdx = absSegIdx == null ? -1 : absSegIdx;
+    public void onStartWalManager(
+        SegmentAware segmentAware,
+        GridCacheDatabaseSharedManager dbMgr,
+        boolean archiveEnabled,
+        boolean compressionEnabled
+    ) {
+        if (!unlimited()) {
+            shouldFailure = () -> dbMgr.txAcquireCheckpointReadLockCount() > 0 &&
+                (!archiveEnabled || (segmentAware.isWaitSegmentArchiving() && !segmentAware.archivingInProgress())) &&
+                (!compressionEnabled || segmentAware.compressionInProgress());
 
-                    updateAvailableToClear();
+            if (archiveEnabled) {
+                segmentAware.addMinReservedSegmentObserver(absSegIdx -> {
+                    synchronized (this) {
+                        reservedIdx = absSegIdx == null ? -1 : absSegIdx;
 
-                    logShortInfo("Update after changing minimum reserved segment");
-                }
-            });
+                        updateAvailableToClear();
+
+                        logShortInfo("Update after changing minimum reserved segment");
+                    }
+                });
+            }
         }
     }
 
@@ -141,6 +172,8 @@ public class WalArchiveSize {
 
         if (!unlimited()) {
             synchronized (this) {
+                assert sizes != null;
+
                 long res = sizes.merge(idx, size, Long::sum);
 
                 if (res == 0)
@@ -171,12 +204,34 @@ public class WalArchiveSize {
     public void reserveSpaceWithClear(long idx, long size) throws IgniteCheckedException {
         if (!unlimited()) {
             synchronized (this) {
+                assert sizes != null;
+
                 try {
                     while (maxSize - currentSize() < size) {
                         if (stop)
                             break;
-                        else if (availableToClear == 0)
-                            wait();
+                        else if (availableToClear == 0) {
+                            BooleanSupplier shouldFall = this.shouldFailure;
+
+                            if (shouldFall != null && shouldFall.getAsBoolean()) {
+                                nodeFailure = true;
+
+                                // TODO: Fix problems with stop node by FH
+
+                                failureProcessor.process(
+                                    new FailureContext(
+                                        FailureType.CRITICAL_ERROR,
+                                        new IgniteCheckedException("WAL archive is full and cannot be cleared")
+                                    ),
+                                    new StopNodeFailureHandler()
+                                );
+
+                                // TODO: Think about it
+                                stop = true;
+                            }
+                            else
+                                wait(1_000);
+                        }
                         else {
                             FileWALPointer low = new FileWALPointer(sizes.firstKey(), 0, 0);
                             FileWALPointer high = new FileWALPointer(minIdx(), 0, 0);
@@ -235,6 +290,8 @@ public class WalArchiveSize {
 
         if (!unlimited()) {
             synchronized (this) {
+                assert sizes != null;
+
                 sizes.clear();
 
                 segments.forEach(t -> sizes.merge(t.get1(), t.get2(), Long::sum));
@@ -248,7 +305,11 @@ public class WalArchiveSize {
                     FileWALPointer low = new FileWALPointer(sizes.firstKey(), 0, 0);
                     FileWALPointer high = new FileWALPointer(minIdx(), 0, 0);
 
-                    cpMgr.removeCheckpointsUntil(high);
+                    CheckpointManager cpMgr = this.cpMgr;
+
+                    if (cpMgr != null)
+                        cpMgr.removeCheckpointsUntil(high);
+
                     int rmvSegments = walMgr.truncate(low, high);
 
                     if (log.isInfoEnabled()) {
@@ -293,10 +354,20 @@ public class WalArchiveSize {
     }
 
     /**
+     * Check whether node failed because WAL archive is full and cannot be cleared.
+     *
+     * @return {@code True} if node failed.
+     */
+    public boolean nodeFailure() {
+        return nodeFailure;
+    }
+
+    /**
      * Recalculation of number of segments that can be deleted now.
      */
     private synchronized void updateAvailableToClear() {
         assert !unlimited();
+        assert sizes != null;
 
         availableToClear = sizes.headMap(minIdx(), false).size();
 
@@ -328,8 +399,10 @@ public class WalArchiveSize {
      */
     private synchronized void logShortInfo(String prefix) {
         if (log.isInfoEnabled()) {
+            NavigableMap<Long, Long> sizes = this.sizes;
+
             log.info(prefix + " [cpIdx=" + cpIdx + ", reservedIdx=" + reservedIdx + ", minIdx=" + minIdx()
-                + ", segments=" + sizes.size() + ", availableToClear=" + availableToClear + ']');
+                + ", segments=" + (sizes == null ? 0 : sizes.size()) + ", availableToClear=" + availableToClear + ']');
         }
     }
 }

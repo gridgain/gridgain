@@ -20,6 +20,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 
@@ -29,9 +30,6 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 public class SegmentCompressStorage {
     /** Flag of interrupt waiting on this object. */
     private volatile boolean interrupted;
-
-    /** Manages last archived index, emulates archivation in no-archiver mode. */
-    private final SegmentArchivedStorage segmentArchivedStorage;
 
     /** If WAL compaction enabled. */
     private final boolean compactionEnabled;
@@ -57,17 +55,17 @@ public class SegmentCompressStorage {
     /** Logger. */
     private final IgniteLogger log;
 
+    /** Counter of segments that are being compressed now. */
+    private final AtomicInteger inProgressCnt = new AtomicInteger();
+
     /**
-     * @param segmentArchivedStorage Storage of last archived segment.
      * @param compactionEnabled If WAL compaction enabled.
      * @param log Logger.
      */
     private SegmentCompressStorage(
-        SegmentArchivedStorage segmentArchivedStorage,
         boolean compactionEnabled,
-        IgniteLogger log) {
-        this.segmentArchivedStorage = segmentArchivedStorage;
-
+        IgniteLogger log
+    ) {
         this.compactionEnabled = compactionEnabled;
 
         this.log = log;
@@ -81,21 +79,13 @@ public class SegmentCompressStorage {
     static SegmentCompressStorage buildCompressStorage(
         SegmentArchivedStorage segmentArchivedStorage,
         boolean compactionEnabled,
-        IgniteLogger log) {
-        SegmentCompressStorage storage = new SegmentCompressStorage(segmentArchivedStorage, compactionEnabled, log);
+        IgniteLogger log
+    ) {
+        SegmentCompressStorage storage = new SegmentCompressStorage(compactionEnabled, log);
 
         segmentArchivedStorage.addObserver(storage::onSegmentArchived);
 
         return storage;
-    }
-
-    /**
-     * Sets the largest index of previously compressed segment.
-     *
-     * @param idx Segment index.
-     */
-    synchronized void lastSegmentCompressed(long idx) {
-        onSegmentCompressed(lastEnqueuedToCompressIdx = idx);
     }
 
     /**
@@ -202,5 +192,28 @@ public class SegmentCompressStorage {
      */
     public void reset() {
         interrupted = false;
+    }
+
+    /**
+     * Callback at start of segment compression.
+     */
+    public void onStartSegmentCompression() {
+        inProgressCnt.incrementAndGet();
+    }
+
+    /**
+     * Callback at finish of segment compression.
+     */
+    public void onFinishSegmentCompression() {
+        inProgressCnt.decrementAndGet();
+    }
+
+    /**
+     * Check if the segments is being compression now.
+     *
+     * @return {@code True} if in progress.
+     */
+    public boolean compressionInProgress() {
+        return inProgressCnt.get() > 0;
     }
 }

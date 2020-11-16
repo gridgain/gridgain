@@ -40,6 +40,9 @@ class SegmentCurrentStateStorage {
      */
     private volatile long curAbsWalIdx = -1;
 
+    /** Waiting for a segment to be archived because it is not possible to switch to next segment. */
+    private volatile boolean waitSegmentArchiving;
+
     /**
      * @param walSegmentsCnt Total WAL segments count.
      * @param segmentArchivedStorage Last archived segment storage.
@@ -107,8 +110,14 @@ class SegmentCurrentStateStorage {
         notifyAll();
 
         try {
-            while (curAbsWalIdx - segmentArchivedStorage.lastArchivedAbsoluteIndex() > walSegmentsCnt && !forceInterrupted)
+            while (curAbsWalIdx - segmentArchivedStorage.lastArchivedAbsoluteIndex() > walSegmentsCnt
+                && !forceInterrupted) {
+                waitSegmentArchiving = true;
+
                 wait();
+            }
+
+            waitSegmentArchiving = false;
         }
         catch (InterruptedException e) {
             throw new IgniteInterruptedCheckedException(e);
@@ -179,5 +188,14 @@ class SegmentCurrentStateStorage {
         interrupted = false;
 
         forceInterrupted = false;
+    }
+
+    /**
+     * Checks whether a segment is waiting to be archived because it is not possible to switch to next segment.
+     *
+     * @return {@code True} if waiting.
+     */
+    public boolean isWaitSegmentArchiving() {
+        return waitSegmentArchiving;
     }
 }

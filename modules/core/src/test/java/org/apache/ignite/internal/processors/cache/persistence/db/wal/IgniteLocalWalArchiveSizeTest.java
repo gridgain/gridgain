@@ -20,6 +20,7 @@ import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -30,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.WalArchiveSiz
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -73,7 +75,9 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME))
+            .setCacheConfiguration(
+                new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            )
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
@@ -154,6 +158,23 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
         checkNotExceedMaxWalArchiveSize();
     }
 
+    @Test
+    public void name() throws Exception {
+        IgniteEx n = startGrid(0);
+
+        try (Transaction tx = n.transactions().txStart()) {
+            for (int i = 0; i < 1_000; i++)
+                n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(100 * U.KB)]);
+
+            tx.commit();
+        }
+
+        stopObserver(observer -> {
+            assertFalse(observer.exceed);
+            assertTrue(observer.walArchiveSize.nodeFailure());
+        });
+    }
+
     /**
      * Checking that max WAL archive size is not exceeded.
      *
@@ -165,7 +186,10 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
         for (int i = 0; i < 1_000; i++)
             n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(100 * U.KB)]);
 
-        stopObserver(observer -> assertFalse(observer.exceed));
+        stopObserver(observer -> {
+            assertFalse(observer.exceed);
+            assertFalse(observer.walArchiveSize.nodeFailure());
+        });
     }
 
     /**

@@ -408,7 +408,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
 
-        walArchiveSize = new WalArchiveSize(ctx::log, ctx.config().getDataStorageConfiguration(), this);
+        walArchiveSize = new WalArchiveSize(
+            ctx::log,
+            ctx.config().getDataStorageConfiguration(),
+            this,
+            failureProcessor
+        );
     }
 
     /**
@@ -509,7 +514,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     getDefaultCompressionLevel(pageCompression);
             }
 
-            walArchiveSize.onStartWalManager(segmentAware, archiver != null);
+            walArchiveSize.onStartWalManager(segmentAware, dbMgr, archiver != null, compressor != null);
             dbMgr.createCheckpointManagerCallback(walArchiveSize::onStartCheckpointManager);
         }
     }
@@ -1806,6 +1811,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 if (first.idx() != last.idx()) {
                     archiveSegment(first.idx());
 
+                    segmentAware.onFinishSegmentArchiving();
+
                     // Use copied segment as min archived segment.
                     return F.t(first.idx(), first.idx());
                 }
@@ -1870,7 +1877,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     blockingSectionBegin();
 
                     try {
-                        toArchive = segmentAware.waitNextSegmentForArchivation();
+                        toArchive = segmentAware.waitNextSegmentForArchiving();
                     }
                     finally {
                         blockingSectionEnd();
@@ -1884,33 +1891,38 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     blockingSectionBegin();
 
                     try {
-                        res = archiveSegment(toArchive);
+                        try {
+                            res = archiveSegment(toArchive);
 
-                        if (res == null)
-                            continue;
+                            if (res == null)
+                                continue;
+                        }
+                        finally {
+                            blockingSectionEnd();
+                        }
+
+                        blockingSectionBegin();
+
+                        try {
+                            segmentAware.markAsMovedToArchive(toArchive);
+                        }
+                        finally {
+                            blockingSectionEnd();
+                        }
+
+                        if (evt.isRecordable(EVT_WAL_SEGMENT_ARCHIVED) && !cctx.kernalContext().recoveryMode()) {
+                            evt.record(new WalSegmentArchivedEvent(
+                                cctx.discovery().localNode(),
+                                res.getAbsIdx(),
+                                res.getDstArchiveFile())
+                            );
+                        }
+
+                        onIdle();
                     }
                     finally {
-                        blockingSectionEnd();
+                        segmentAware.onFinishSegmentArchiving();
                     }
-
-                    blockingSectionBegin();
-
-                    try {
-                        segmentAware.markAsMovedToArchive(toArchive);
-                    }
-                    finally {
-                        blockingSectionEnd();
-                    }
-
-                    if (evt.isRecordable(EVT_WAL_SEGMENT_ARCHIVED) && !cctx.kernalContext().recoveryMode()) {
-                        evt.record(new WalSegmentArchivedEvent(
-                            cctx.discovery().localNode(),
-                            res.getAbsIdx(),
-                            res.getDstArchiveFile())
-                        );
-                    }
-
-                    onIdle();
                 }
             }
             catch (IgniteInterruptedCheckedException e) {
@@ -2014,6 +2026,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                 if (isCancelled())
                     return null;
+
+                segmentAware.onStartSegmentArchiving();
 
                 if (log.isInfoEnabled()) {
                     log.info("Starting to copy WAL segment [absIdx=" + absIdx + ", segIdx=" + segIdx +
@@ -2286,6 +2300,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     if ((segIdx = tryReserveNextSegmentOrWait()) == -1)
                         continue;
 
+                    segmentAware.onStartSegmentCompression();
+
                     deleteObsoleteRawSegments();
 
                     String segmentFileName = fileName(segIdx);
@@ -2331,8 +2347,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     segmentAware.onSegmentCompressed(segIdx);
                 }
                 finally {
-                    if (segIdx != -1L)
+                    if (segIdx != -1L) {
                         release(new FileWALPointer(segIdx, 0, 0));
+
+                        segmentAware.onFinishSegmentCompression();
+                    }
                 }
             }
         }

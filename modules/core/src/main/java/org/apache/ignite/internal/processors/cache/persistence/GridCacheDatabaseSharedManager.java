@@ -320,6 +320,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Callback on checpoint manager creation.*/
     @Nullable private Consumer<CheckpointManager> onCreateCpMgrCb;
 
+    /** Counter transactions, which have acquired checkpoint read lock. */
+    private final AtomicInteger txCheckpointReadLockCnt = new AtomicInteger();
+
     /**
      * @param ctx Kernal context.
      */
@@ -2769,6 +2772,29 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      */
     @Override public void checkpointReadLockTimeout(long val) {
         checkpointManager.checkpointTimeoutLock().checkpointReadLockTimeout(val);
+    }
+
+    /**
+     * Callback when a checkpoint read lock is acquired by a transaction.
+     */
+    @Override public void onTxAcquireCheckpointReadLock() {
+        txCheckpointReadLockCnt.incrementAndGet();
+    }
+
+    /**
+     * Callback when a checkpoint read lock is released by a transaction.
+     */
+    @Override public void onTxReleaseCheckpointReadLock() {
+        txCheckpointReadLockCnt.decrementAndGet();
+    }
+
+    /**
+     * Return count of acquired checkpoint read locks by transactions.
+     *
+     * @return Count of acquired checkpoint read locks by transactions.
+     */
+    public int txAcquireCheckpointReadLockCount() {
+        return txCheckpointReadLockCnt.get();
     }
 
     /**

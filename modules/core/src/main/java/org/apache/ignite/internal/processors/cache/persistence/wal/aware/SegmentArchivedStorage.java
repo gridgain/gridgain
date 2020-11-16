@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 
 /**
- * Manages last archived index, allows to emulate archivation in no-archiver mode. Monitor which is notified each time
+ * Manages last archived index, allows to emulate archiving in no-archiver mode. Monitor which is notified each time
  * WAL segment is archived.
  *
  * Class for inner usage.
@@ -31,13 +31,16 @@ class SegmentArchivedStorage extends SegmentObservable {
     private volatile boolean interrupted;
 
     /**
-     * Last archived file absolute index, 0-based. Write is quarded by {@code this}. Negative value indicates there are
+     * Last archived file absolute index, 0-based. Write is guarded by {@code this}. Negative value indicates there are
      * no segments archived.
      */
     private volatile long lastAbsArchivedIdx = -1;
 
     /** Latest truncated segment. */
     private volatile long lastTruncatedArchiveIdx = -1;
+
+    /** Archiving a segment in progress. */
+    private volatile boolean inProgress;
 
     /**
      * @param segmentLockStorage Protects WAL work segments from moving.
@@ -160,5 +163,28 @@ class SegmentArchivedStorage extends SegmentObservable {
      */
     long lastTruncatedArchiveIdx() {
         return lastTruncatedArchiveIdx;
+    }
+
+    /**
+     * Callback at start of segment archiving.
+     */
+    public void onStartSegmentArchiving() {
+        inProgress = true;
+    }
+
+    /**
+     * Callback at finish of segment archiving.
+     */
+    public void onFinishSegmentArchiving() {
+        inProgress = false;
+    }
+
+    /**
+     * Check if the segment is being archived now.
+     *
+     * @return {@code True} if in progress.
+     */
+    public boolean archivingInProgress() {
+        return inProgress;
     }
 }

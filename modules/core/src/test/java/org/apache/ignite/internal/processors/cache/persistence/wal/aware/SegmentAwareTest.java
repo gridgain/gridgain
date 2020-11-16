@@ -160,7 +160,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(5);
         aware.setLastArchivedAbsoluteIndex(4);
 
-        IgniteInternalFuture future = awaitThread(aware::waitNextSegmentForArchivation);
+        IgniteInternalFuture future = awaitThread(aware::waitNextSegmentForArchiving);
 
         //when: next work segment triggered.
         aware.nextAbsoluteSegmentIndex();
@@ -180,7 +180,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(5);
         aware.setLastArchivedAbsoluteIndex(4);
 
-        IgniteInternalFuture future = awaitThread(aware::waitNextSegmentForArchivation);
+        IgniteInternalFuture future = awaitThread(aware::waitNextSegmentForArchiving);
 
         //when: set work segment greater than required.
         aware.curAbsWalIdx(7);
@@ -200,7 +200,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(5);
         aware.setLastArchivedAbsoluteIndex(4);
 
-        IgniteInternalFuture future = awaitThread(aware::waitNextSegmentForArchivation);
+        IgniteInternalFuture future = awaitThread(aware::waitNextSegmentForArchiving);
 
         //when: interrupt waiting.
         aware.interrupt();

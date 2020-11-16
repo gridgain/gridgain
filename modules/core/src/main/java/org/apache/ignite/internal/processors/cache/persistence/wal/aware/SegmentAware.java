@@ -34,7 +34,7 @@ public class SegmentAware {
     /** Lock on segment protects from archiving segment. */
     private final SegmentLockStorage segmentLockStorage = new SegmentLockStorage();
 
-    /** Manages last archived index, emulates archivation in no-archiver mode. */
+    /** Manages last archived index, emulates archiving in no-archiver mode. */
     private final SegmentArchivedStorage segmentArchivedStorage = buildArchivedStorage(segmentLockStorage);
 
     /** Storage of actual information about current index of compressed segments. */
@@ -79,9 +79,9 @@ public class SegmentAware {
     }
 
     /**
-     * Waiting until archivation of next segment will be allowed.
+     * Waiting until archiving of next segment will be allowed.
      */
-    public long waitNextSegmentForArchivation() throws IgniteInterruptedCheckedException {
+    public long waitNextSegmentForArchiving() throws IgniteInterruptedCheckedException {
         return segmentCurrStateStorage.waitNextSegmentForArchivation();
     }
 
@@ -284,5 +284,60 @@ public class SegmentAware {
      */
     public void addMinReservedSegmentObserver(Consumer<Long> observer) {
         reservationStorage.addObserver(observer);
+    }
+
+    /**
+     * Checks whether a segment is waiting to be archived because it is not possible to switch to next segment.
+     *
+     * @return {@code True} if waiting.
+     */
+    public boolean isWaitSegmentArchiving() {
+        return segmentCurrStateStorage.isWaitSegmentArchiving();
+    }
+
+    /**
+     * Callback at start of segment archiving.
+     */
+    public void onStartSegmentArchiving() {
+        segmentArchivedStorage.onStartSegmentArchiving();
+    }
+
+    /**
+     * Callback at finish of segment archiving.
+     */
+    public void onFinishSegmentArchiving() {
+        segmentArchivedStorage.onFinishSegmentArchiving();
+    }
+
+    /**
+     * Check if the segment is being archived now.
+     *
+     * @return {@code True} if in progress.
+     */
+    public boolean archivingInProgress() {
+        return segmentArchivedStorage.archivingInProgress();
+    }
+
+    /**
+     * Callback at start of segment compression.
+     */
+    public void onStartSegmentCompression() {
+        segmentCompressStorage.onStartSegmentCompression();
+    }
+
+    /**
+     * Callback at finish of segment compression.
+     */
+    public void onFinishSegmentCompression() {
+        segmentCompressStorage.onFinishSegmentCompression();
+    }
+
+    /**
+     * Check if the segments is being compression now.
+     *
+     * @return {@code True} if in progress.
+     */
+    public boolean compressionInProgress() {
+        return segmentCompressStorage.compressionInProgress();
     }
 }
