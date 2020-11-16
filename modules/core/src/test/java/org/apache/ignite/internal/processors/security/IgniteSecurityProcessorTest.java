@@ -40,7 +40,7 @@ public class IgniteSecurityProcessorTest {
      * Checks that {@link IgniteSecurityProcessor#withContext(UUID)} swithes to "deny all policy" in case node ID is unknown.
      */
     @Test
-    public void testThrowIllegalStateExceptionIfNodeNotFoundInDiscoCache() {
+    public void testSwitchToDenyAllPolicyIfNodeNotFoundInDiscoCache() {
         GridKernalContext ctx = mock(GridKernalContext.class);
         when(ctx.config()).thenReturn(new IgniteConfiguration());
         when(ctx.discovery()).thenReturn(mock(GridDiscoveryManager.class));

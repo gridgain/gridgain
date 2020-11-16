@@ -105,14 +105,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     @Override public OperationSecurityContext withContext(SecurityContext secCtx) {
         assert secCtx != null;
 
-        try {
-            secPrc.touch(secCtx);
-        }
-        catch (SecurityException e) {
-            // Security context is not propagated yet.
-            // Log this warning and proceed an operation with already given security context.
-            log.warning("Failed to check security context [subj=" + secCtx.subject().id() + ", err=" + e + ']');
-        }
+        secPrc.touch(secCtx);
 
         SecurityContext old = curSecCtx.get();
 
@@ -131,11 +124,12 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
             : secPrc.securityContext(subjId);
 
         if (res == null) {
-            log.warning("Switched to the 'deny all' policy because of failing to find a security context [subjId=" + subjId + ']');
+            SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
 
-            res = new DenyAllSecurityContext(
-                subjId,
-                node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT);
+            log.warning("Switched to the 'deny all' policy because of failing to find a security context " +
+                "[subjId=" + subjId + ", type=" + type + ']');
+
+            res = new DenyAllSecurityContext(subjId, type);
         }
 
         return withContext(res);
@@ -380,7 +374,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         private final SecuritySubjectType subjType;
 
         /**
-         * Creates a new security subject fro the given subject id and type.
+         * Creates a new security subject for the given subject id and type.
          *
          * @param subjId Subject identifier.
          * @param subjType Subject type.
