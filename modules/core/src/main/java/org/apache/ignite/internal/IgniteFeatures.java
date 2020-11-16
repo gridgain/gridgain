@@ -190,11 +190,11 @@ public enum IgniteFeatures {
     /** Incremental DR. */
     INCREMENTAL_DR(49),
 
-    /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
-    SAFE_CLUSTER_DEACTIVATION(50),
-
     /** Cache encryption key change. See {@link IgniteEncryption#changeCacheGroupKey(Collection)}. */
-    CACHE_GROUP_KEY_CHANGE(51);
+    CACHE_GROUP_KEY_CHANGE(50),
+
+    /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
+    SAFE_CLUSTER_DEACTIVATION(51);
 
     /**
      * Unique feature identifier.
