@@ -108,6 +108,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         super.afterTest();
 
         stopAllGrids();
+
         System.clearProperty(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
     }
 
@@ -374,6 +375,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         assertTrue(GridTestUtils.waitForCondition(() -> failCount.get() == fails, TimeUnit.SECONDS.toMillis(60)));
 
+        server.close();
+
         List<Thread> asyncRunnables = Thread.getAllStackTraces().keySet().stream()
                 .filter(t -> t.getName().contains("async-runnable-runner"))
                 .collect(Collectors.toList());
@@ -384,7 +387,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             U.join(asyncRunnable, log);
         }
 
-        IgnitionEx.stop(client.name(), true, null, true);
+        IgnitionEx.stopAll(true, null);
     }
 
     /**
