@@ -30,7 +30,7 @@ import javax.cache.CacheException;
 /**
  * Tests check that second operation fail if it doesn't pass validation.
  */
-public class TransactionValidationTest extends GridCommonAbstractTest  {
+public class TransactionValidationTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
