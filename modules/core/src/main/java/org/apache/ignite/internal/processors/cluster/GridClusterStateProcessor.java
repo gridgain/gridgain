@@ -723,7 +723,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             List<String> inMemCaches = listInMemoryUserCaches();
 
             if (msg.state() == INACTIVE && !msg.forceDeactivation() && !inMemCaches.isEmpty() &&
-                allNodesSupports(ctx, ctx.discovery().serverNodes(topVer), SAFE_CLUSTER_DEACTIVATION)) {
+                allNodesSupportSafeDeactivationMode()) {
                 GridChangeGlobalStateFuture stateFut = changeStateFuture(msg);
 
                 if (stateFut != null) {
@@ -1496,9 +1496,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         U.log(
             log,
             "Sending " + prettyString(state) +
-                ", forceDeactivation=" + forceDeactivation +
                 " request from node [id=" + ctx.localNodeId() +
                 ", topVer=" + topVer +
+                ", forceDeactivation=" + forceDeactivation +
                 ", client=" + ctx.clientNode() +
                 ", daemon=" + ctx.isDaemon() + "]"
         );

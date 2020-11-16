@@ -504,7 +504,6 @@ public class GridClientNioTcpConnection extends GridClientConnection {
                     sndFut.get();
                 }
                 catch (Exception e) {
-                    System.err.println("!!! ses.send3 " + e.toString());
                     throw new GridClientConnectionResetException("Failed to send message over connection " +
                         "(will try to reconnect): " + serverAddress(), e);
                 }
