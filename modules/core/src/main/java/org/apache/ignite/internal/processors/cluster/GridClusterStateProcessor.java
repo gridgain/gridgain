@@ -121,7 +121,6 @@ import static org.apache.ignite.internal.IgniteFeatures.BASELINE_AUTO_ADJUSTMENT
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
 import static org.apache.ignite.internal.IgniteFeatures.SAFE_CLUSTER_DEACTIVATION;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
