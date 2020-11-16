@@ -2846,6 +2846,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
     /**
      * Clears tombstones on a DHT node.
+     * TODO can use cache clear. Must write counter on cache clear.
      *
      * @param cache Cache.
      */

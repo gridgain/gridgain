@@ -55,7 +55,6 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
 import org.apache.ignite.internal.processors.cache.extras.GridCacheObsoleteEntryExtras;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
@@ -87,7 +86,6 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
-import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 
 /**
  * Key partition.
@@ -776,7 +774,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * TODO must use compact iterator form, use ts indexes or PendingTree ?
      */
     public IgniteInternalFuture<?> clearTombstonesAsync() {
-        return grp.shared().evict().clearTombstonesAsync(grp, this);
+        return grp.shared().evict().clearTombstonesAsync(grp, this).finishFut;
     }
 
     /**

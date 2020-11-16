@@ -31,8 +31,10 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -40,7 +42,11 @@ import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -51,6 +57,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
 /**
  * Class that serves asynchronous partition clearing process.
@@ -63,12 +70,15 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
  *     <li>The partition tombstones must be wiped out.</li>
  * </ul>
  */
-public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
+public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implements PartitionsExchangeAware {
     /** Default eviction progress show frequency. */
     private static final int DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS = 2 * 60 * 1000;
 
     /** Eviction progress frequency property name. */
     private static final String SHOW_EVICTION_PROGRESS_FREQ = "SHOW_EVICTION_PROGRESS_FREQ";
+
+    /** */
+    private static final String TOMBSTONES_EVICTION_FREQ = "TOMBSTONES_EVICTION_FREQ";
 
     /** Eviction progress frequency in ms. */
     private final long evictionProgressFreqMs =
@@ -94,13 +104,22 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /** */
     private final ConcurrentMap<PartitionKey, PartitionEvictionTask> futs = new ConcurrentHashMap<>();
 
+    /** */
+    private final long tsClearFreq = getLong(TOMBSTONES_EVICTION_FREQ, 30_000);
+
+    /** */
+    private volatile boolean paused;
+
+    /** Current clearing task. */
+    private volatile @Nullable PartitionEvictionTask clearTask;
+
     /**
      * Callback on cache group start.
      *
      * @param grp Group.
      */
     public void onCacheGroupStarted(CacheGroupContext grp) {
-        // No-op.
+        evictionGroupsMap.put(grp.groupId(), new GroupEvictionContext(grp));
     }
 
     /**
@@ -122,12 +141,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @param grp Group context.
      * @param part Partition to clear tombstones.
      */
-    public IgniteInternalFuture<?> clearTombstonesAsync(CacheGroupContext grp, GridDhtLocalPartition part) {
+    public PartitionEvictionTask clearTombstonesAsync(CacheGroupContext grp, GridDhtLocalPartition part) {
         PartitionEvictionTask task = scheduleEviction(grp, part, EvictReason.TOMBSTONE);
 
         task.start();
 
-        return task.finishFut;
+        return task;
     }
 
     /**
@@ -255,32 +274,80 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
 
-        //scheduleNextCleanup();
+        cctx.cache().context().exchange().registerExchangeAwareComponent(this);
+
+        scheduleNextTombstoneCleanup();
     }
 
     /**
      *
      */
-//    private void scheduleNextCleanup() {
-//        GridKernalContext ctx = cctx.kernalContext();
-//        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(30_000) {
-//            @Override public void onTimeout() {
-//                ctx.closure().runLocalSafe(new GridPlainRunnable() {
-//                    @Override public void run() {
-//                        Collection<CacheGroupContext> groups = ctx.cache().cacheGroups();
-//
-//                        for (CacheGroupContext group : groups) {
-//                            for (GridDhtLocalPartition part : group.topology().currentLocalPartitions())
-//                                evictPartitionAsync(group, part, new GridFutureAdapter<>(), EvictReason.TOMBSTONE);
-//                        }
-//
-//
-//                        scheduleNextCleanup();
-//                    }
-//                });
-//            }
-//        });
-//    }
+    private void scheduleNextTombstoneCleanup() {
+        GridKernalContext ctx = cctx.kernalContext();
+
+        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(tsClearFreq) {
+            @Override public void onTimeout() {
+                ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                    @Override public void run() {
+                        clearTombstones();
+
+                        scheduleNextTombstoneCleanup();
+                    }
+                });
+            }
+        });
+    }
+
+    /** */
+    public void clearTombstones() {
+        if (paused)
+            return;
+
+        log.info("Start clearing tombstones, groups to process [" +
+            evictionGroupsMap.values().stream().map(g -> g.grp.cacheOrGroupName() +
+                "(" + g.grp.topology().localPartitions().stream().map(p -> p.dataStore().tombstonesCount()).count() + ")").collect(Collectors.joining(",")) + ']');
+
+        for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
+            int grpId = ctx0.grp.groupId();
+
+            if (cctx.cache().cacheGroup(grpId) != null) {
+                if (ctx0.grp.topology().hasMovingPartitions())
+                    continue; // Skipping rebalancing group.
+
+                for (GridDhtLocalPartition part : ctx0.grp.topology().currentLocalPartitions()) {
+                    assert part.state() == OWNING : part;
+
+                    if (cctx.kernalContext().isStopping() || paused)
+                        return;
+
+                    try {
+                        clearTask = clearTombstonesAsync(ctx0.grp, part);
+
+                        clearTask.finishFut.get();
+                    }
+                    catch (IgniteCheckedException e) {
+                        log.error("Failed to clear tombstones [grp=" + ctx0.grp.cacheOrGroupName(), e);
+                    }
+                }
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+        // Clearing should be cancelled before sending partition maps.
+        paused = true;
+
+        if (clearTask != null) {
+            clearTask.cancel();
+            clearTask.awaitCompletion();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
+        paused = false;
+    }
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -572,7 +639,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         public void awaitCompletion() {
             try {
                 finishFut.get();
-            } catch (IgniteCheckedException e) {
+            }
+            catch (IgniteCheckedException e) {
                 log.warning("Failed to get the result for clearing future [part=" + part + ']', e);
             }
         }

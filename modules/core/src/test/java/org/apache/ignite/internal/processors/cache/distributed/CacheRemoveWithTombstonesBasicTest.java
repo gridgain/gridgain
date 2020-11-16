@@ -62,6 +62,7 @@ import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMap;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -95,6 +96,7 @@ import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.util.deque.FastSizeDeque;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -1340,9 +1342,85 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(1, TombstoneCacheObject.counter(state));
     }
 
-    @Test // TODO !!!!!!
-    public void testClearingAfterRestartCorrectVersionsAreRemoved() {
+    @Test
+    @WithSystemProperty(key = "TOMBSTONES_EVICTION_FREQ", value = "10000000")
+    public void testTombstonesClearingTimeout() throws Exception {
+        IgniteEx crd = startGrid(0);
 
+        IgniteCache<Object, Object> cache1Grp1 = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName("cache11").setGroupName("g1"));
+        IgniteCache<Object, Object> cache2Grp1 = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName("cache12").setGroupName("g1"));
+        IgniteCache<Object, Object> cache1Grp2 = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName("cache21").setGroupName("g2"));
+        IgniteCache<Object, Object> cache2Grp2 = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName("cache22").setGroupName("g2"));
+
+        int pk = 0;
+        cache1Grp1.put(pk, 0);
+        cache1Grp2.put(pk, 0);
+        cache2Grp1.put(pk, 0);
+        cache2Grp2.put(pk, 0);
+
+        CacheGroupContext grpCtx1 = grid(0).cachex("cache11").context().group();
+        List<CacheDataRow> rows1 = new ArrayList<>();
+        grpCtx1.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows1::add);
+        assertEquals(0, rows1.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
+        assertEquals(2, rows1.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
+
+        CacheGroupContext grpCtx2 = grid(0).cachex("cache21").context().group();
+        List<CacheDataRow> rows2 = new ArrayList<>();
+        grpCtx2.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows2::add);
+        assertEquals(0, rows2.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
+        assertEquals(2, rows2.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
+
+        //crd.context().cache().context().evict().clearTombstones();
+
+        cache1Grp1.remove(pk);
+        cache1Grp2.remove(pk);
+        cache2Grp1.remove(pk);
+        cache2Grp2.remove(pk);
+
+        grpCtx1 = grid(0).cachex("cache11").context().group();
+        rows1 = new ArrayList<>();
+        grpCtx1.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows1::add);
+        assertEquals(2, rows1.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
+        assertEquals(0, rows1.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
+
+        grid(0).cachex("cache21").context().group();
+        rows2 = new ArrayList<>();
+        grpCtx2.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows2::add);
+        assertEquals(2, rows2.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
+        assertEquals(0, rows2.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
+
+        crd.context().cache().context().evict().clearTombstones();
+
+        grpCtx1 = grid(0).cachex("cache11").context().group();
+        rows1 = new ArrayList<>();
+        grpCtx1.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows1::add);
+        assertEquals(0, rows1.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
+        assertEquals(0, rows1.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
+
+        grid(0).cachex("cache21").context().group();
+        rows2 = new ArrayList<>();
+        grpCtx2.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows2::add);
+        assertEquals(0, rows2.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
+        assertEquals(0, rows2.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
+
+
+    }
+
+    @Test // TODO !!!!!!
+    public void testClearingAfterRestartCorrectVersionsAreRemoved() throws Exception {
+//        IgniteEx crd = startGrids(2);
+//
+//        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName(DEFAULT_CACHE_NAME).setNearConfiguration(new NearCacheConfiguration<>()));
+//
+//        Integer pk = primaryKey(cache);
+//
+//        IgniteCache<Object, Object> cache1 = grid(1).cache(DEFAULT_CACHE_NAME);
+//
+//        try(Transaction tx = grid(1).transactions().txStart()) {
+//            cache1.put(pk, 0);
+//
+//            tx.commit();
+//        }
     }
 
     @Test
