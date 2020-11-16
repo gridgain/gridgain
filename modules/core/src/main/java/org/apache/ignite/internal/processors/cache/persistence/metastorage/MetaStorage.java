@@ -194,7 +194,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                     @Override public void beforeCheckpointBegin(Context ctx) {
 
                     }
-                });
+                }, dataRegion);
             }
         }
     }
@@ -278,7 +278,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                 diagnosticMgr.pageLockTracker().createPageLockTracker(treeName));
 
             if (!readOnly)
-                ((GridCacheDatabaseSharedManager)db).addCheckpointListener(this);
+                ((GridCacheDatabaseSharedManager)db).addCheckpointListener(this, dataRegion);
         }
     }
 

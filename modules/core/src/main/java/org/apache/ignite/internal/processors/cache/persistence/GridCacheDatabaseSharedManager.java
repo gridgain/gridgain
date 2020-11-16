@@ -136,6 +136,7 @@ import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.TimeBag;
@@ -309,6 +310,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Lock for releasing history for preloading. */
     private ReentrantLock releaseHistForPreloadingLock = new ReentrantLock();
 
+    /** Data regions which should be checkpointed. */
+    protected final Set<DataRegion> checkpointedDataRegions = new GridConcurrentHashSet<>();
+
     /**
      * @param ctx Kernal context.
      */
@@ -435,7 +439,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 persistenceCfg,
                 storeMgr,
                 this::isCheckpointInapplicableForWalRebalance,
-                this::dataRegions,
+                this::checkpointedDataRegions,
                 this::cacheGroupContexts,
                 this::getPageMemoryForCacheGroup,
                 resolveThrottlingPolicy(),
@@ -455,6 +459,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             persStoreMetrics.wal(cctx.wal());
         }
+    }
+
+    /** */
+    public Collection<DataRegion> checkpointedDataRegions() {
+        return checkpointedDataRegions;
     }
 
     /** */
@@ -556,6 +565,16 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 cctx.localNodeId() + " path=" + fileLockHolder.lockPath() + "]");
 
         fileLockHolder.close();
+    }
+
+    /** {@inheritDoc} */
+    @Override public DataRegion addDataRegion(DataStorageConfiguration dataStorageCfg, DataRegionConfiguration dataRegionCfg,
+        boolean trackable) throws IgniteCheckedException {
+        DataRegion region = super.addDataRegion(dataStorageCfg, dataRegionCfg, trackable);
+
+        checkpointedDataRegions.add(region);
+
+        return region;
     }
 
     /** */
@@ -1590,9 +1609,17 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /**
      * @param lsnr Listener.
+     * @param dataRegion Data region for which listener is corresponded to.
+     */
+    public void addCheckpointListener(CheckpointListener lsnr, DataRegion dataRegion) {
+        checkpointManager.addCheckpointListener(lsnr, dataRegion);
+    }
+
+    /**
+     * @param lsnr Listener.
      */
     public void addCheckpointListener(CheckpointListener lsnr) {
-        checkpointManager.addCheckpointListener(lsnr);
+        checkpointManager.addCheckpointListener(lsnr, null);
     }
 
     /**
