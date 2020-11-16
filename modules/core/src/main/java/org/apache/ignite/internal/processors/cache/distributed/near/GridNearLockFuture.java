@@ -816,6 +816,7 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
      * part. Note that if primary node leaves grid, the future will fail and transaction will be rolled back.
      */
     void map() {
+        assert false : "qefgras";
         if (isDone()) // Possible due to async rollback.
             return;
 
