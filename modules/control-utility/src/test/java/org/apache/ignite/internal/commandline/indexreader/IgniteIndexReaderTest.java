@@ -501,6 +501,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @param travErrCnt Count of errors that can occur during traversal.
      * @param pageListsErrCnt Count of errors that can occur during page lists scan.
      * @param seqErrCnt Count of errors that can occur during sequential scan.
+     * @param partReadingErr partition file reading errors should be present.
      * @param idxSizeConsistent Index size should be consistent
      */
     private void checkOutput(
@@ -509,6 +510,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         int travErrCnt,
         int pageListsErrCnt,
         int seqErrCnt,
+        boolean idxReadingErr,
+        boolean partReadingErr,
         boolean idxSizeConsistent
     ) {
         assertContains(log, output, RECURSIVE_TRAVERSE_NAME + "Total trees: " + treesCnt);
@@ -529,6 +532,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         if (travErrCnt == 0 && pageListsErrCnt == 0 && seqErrCnt == 0)
             assertNotContains(log, output, ERROR_PREFIX);
+
+        if (idxReadingErr)
+            assertContains(log, output, ERROR_PREFIX + "Errors detected while reading index.bin");
+
+        if (partReadingErr)
+            assertContains(log, output, ERROR_PREFIX + "Errors detected while reading partition files:");
     }
 
     /**
@@ -808,7 +817,10 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
 
-            checkOutput(output, 19, 23, 0, 2, false);
+            boolean idxReadingErr = isReportIdxAndPartFilesReadingErr();
+            boolean partReadingErr = isReportIdxAndPartFilesReadingErr();
+
+            checkOutput(output, 19, 23, 0, 2, idxReadingErr, partReadingErr, false);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);
@@ -838,7 +850,9 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
 
-            checkOutput(output, 19, 23, 0, 0, true);
+            boolean partReadingErr = isReportIdxAndPartFilesReadingErr();
+
+            checkOutput(output, 19, 23, 0, 0, false, partReadingErr, true);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);
@@ -904,7 +918,9 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
             // 2 errors while sequential scan: 1 page with unknown IO type, and 1 correct, but orphan innerIO page.
             int seqErrCnt = 2;
 
-            checkOutput(output, 19, travErrCnt, 0, seqErrCnt, false);
+            boolean idxReadingErr = isReportIdxAndPartFilesReadingErr();
+
+            checkOutput(output, 19, travErrCnt, 0, seqErrCnt, idxReadingErr, false, false);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);
@@ -924,7 +940,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     protected void checkQryCacheGroup(File workDir) throws IgniteCheckedException {
         String output = runIndexReader(workDir, QUERY_CACHE_GROUP_NAME, null, false);
 
-        checkOutput(output, 5, 0, 0, 0, true);
+        checkOutput(output, 5, 0, 0, 0, false, false, true);
     }
 
     /**
@@ -936,7 +952,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     protected void checkCorrectIdx(File workDir) throws IgniteCheckedException {
         String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
 
-        checkOutput(output, 19, 0, 0, 0, true);
+        checkOutput(output, 19, 0, 0, 0, false, false, true);
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             checkIdxs(output, TableInfo.generate(i), false);
@@ -951,7 +967,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     protected void checkCorrectIdxWithCheckParts(File workDir) throws IgniteCheckedException {
         String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true);
 
-        checkOutput(output, 19, 0, 0, 0, true);
+        checkOutput(output, 19, 0, 0, 0, false, false, true);
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             checkIdxs(output, TableInfo.generate(i), false);
@@ -971,7 +987,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         String output = runIndexReader(workDir, CACHE_GROUP_NAME, idxsToCheck, false);
 
-        checkOutput(output, 3, 0, 0, -1, true);
+        checkOutput(output, 3, 0, 0, -1, false, false, true);
 
         Set<String> idxSet = new HashSet<>(asList(idxsToCheck));
 
@@ -1002,7 +1018,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         // Check output for empty cache group.
         String output = runIndexReader(workDir, EMPTY_CACHE_GROUP_NAME, null, false);
 
-        checkOutput(output, 1, 0, 0, 0, true);
+        checkOutput(output, 1, 0, 0, 0, false, false, true);
 
         // Create an empty directory and try to check it.
         String newCleanGrp = "noCache";
@@ -1022,6 +1038,13 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         finally {
             U.delete(cleanDir);
         }
+    }
+
+    /**
+     * @return Flag indicates partition file reading errors should be present in output.
+     */
+    protected boolean isReportIdxAndPartFilesReadingErr() {
+        return false;
     }
 
     /**

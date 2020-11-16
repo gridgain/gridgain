@@ -18,6 +18,7 @@ package org.apache.ignite.internal.commandline.indexreader;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
@@ -71,7 +72,7 @@ public class IgniteIndexReaderFilePageStoreFactoryImpl implements IgniteIndexRea
     }
 
     /** {@inheritDoc} */
-    @Override @Nullable public FilePageStore createFilePageStore(int partId, byte type) throws IgniteCheckedException {
+    @Override @Nullable public FilePageStore createFilePageStore(int partId, byte type, Collection<Throwable> errors) throws IgniteCheckedException {
         File file = getFile(dir, partId, null);
 
         return !file.exists() ? null : (FilePageStore)storeFactory.createPageStore(type, file, allocationTracker);
