@@ -252,7 +252,7 @@ namespace ignite
     {
         SQL_DATE_STRUCT res;
 
-        CheckSingleResult0(request, SQL_C_DATE, &res, 0, 0);
+        CheckSingleResult0(request, SQL_C_TYPE_DATE, &res, 0, 0);
     }
 
     template<>
@@ -260,7 +260,7 @@ namespace ignite
     {
         SQL_TIMESTAMP_STRUCT res;
 
-        CheckSingleResult0(request, SQL_C_TIMESTAMP, &res, 0, 0);
+        CheckSingleResult0(request, SQL_C_TYPE_TIMESTAMP, &res, 0, 0);
     }
 
     template<>
@@ -268,7 +268,7 @@ namespace ignite
     {
         SQL_TIME_STRUCT res;
 
-        CheckSingleResult0(request, SQL_C_TIME, &res, 0, 0);
+        CheckSingleResult0(request, SQL_C_TYPE_TIME, &res, 0, 0);
     }
 
     template<>
@@ -304,7 +304,7 @@ namespace ignite
     {
         SQL_DATE_STRUCT res;
 
-        CheckSingleResult0(request, SQL_C_DATE, &res, 0, 0);
+        CheckSingleResult0(request, SQL_C_TYPE_DATE, &res, 0, 0);
 
         using ignite::impl::binary::BinaryUtils;
         Date actual = common::MakeDateGmt(res.year, res.month, res.day);
@@ -316,7 +316,7 @@ namespace ignite
     {
         SQL_TIMESTAMP_STRUCT res;
 
-        CheckSingleResult0(request, SQL_C_TIMESTAMP, &res, 0, 0);
+        CheckSingleResult0(request, SQL_C_TYPE_TIMESTAMP, &res, 0, 0);
 
         using ignite::impl::binary::BinaryUtils;
         Timestamp actual = common::MakeTimestampGmt(res.year, res.month, res.day, res.hour, res.minute, res.second, res.fraction);
@@ -330,7 +330,7 @@ namespace ignite
     {
         SQL_TIME_STRUCT res;
 
-        CheckSingleResult0(request, SQL_C_TIME, &res, 0, 0);
+        CheckSingleResult0(request, SQL_C_TYPE_TIME, &res, 0, 0);
 
         using ignite::impl::binary::BinaryUtils;
         Time actual = common::MakeTimeGmt(res.hour, res.minute, res.second);

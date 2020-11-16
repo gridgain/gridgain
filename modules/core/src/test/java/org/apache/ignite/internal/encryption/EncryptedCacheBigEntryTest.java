@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.managers.encryption.GroupKey;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionKey;
@@ -58,7 +59,7 @@ public class EncryptedCacheBigEntryTest extends AbstractEncryptionTest {
         int grpId = CU.cacheGroupId(cacheName(), null);
 
         KeystoreEncryptionKey keyBeforeRestart =
-            (KeystoreEncryptionKey)grids.get1().context().encryption().groupKey(grpId);
+            (KeystoreEncryptionKey)grids.get1().context().encryption().groupKey(grpId).key();
 
         stopAllGrids();
 
@@ -66,7 +67,11 @@ public class EncryptedCacheBigEntryTest extends AbstractEncryptionTest {
 
         checkEncryptedCaches(grids.get1(), grids.get2());
 
-        KeystoreEncryptionKey keyAfterRestart = (KeystoreEncryptionKey)grids.get1().context().encryption().groupKey(grpId);
+        GroupKey grpKeyAfterRestart = grids.get1().context().encryption().groupKey(grpId);
+
+        assertNotNull(grpKeyAfterRestart);
+
+        KeystoreEncryptionKey keyAfterRestart = (KeystoreEncryptionKey)grpKeyAfterRestart.key();
 
         assertNotNull(keyAfterRestart);
         assertNotNull(keyAfterRestart.key());

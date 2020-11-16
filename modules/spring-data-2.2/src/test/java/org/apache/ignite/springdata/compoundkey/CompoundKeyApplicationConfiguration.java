@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence;
+package org.apache.ignite.springdata.compoundkey;
 
-import org.apache.ignite.internal.processors.database.IgniteDbSingleNodePutGetTest;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.Ignition;
+import org.apache.ignite.springdata22.repository.config.EnableIgniteRepositories;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- *
- */
-public class IgnitePdsSingleNodePutGetPersistenceTest extends IgniteDbSingleNodePutGetTest {
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        cleanPersistenceDir();
-
-        super.beforeTest();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
-        cleanPersistenceDir();
+ * Spring application configuration
+ * */
+@Configuration
+@EnableIgniteRepositories
+public class CompoundKeyApplicationConfiguration {
+    /**
+     * Ignite instance bean
+     * */
+    @Bean
+    public Ignite igniteInstance() {
+        return Ignition.start();
     }
 }

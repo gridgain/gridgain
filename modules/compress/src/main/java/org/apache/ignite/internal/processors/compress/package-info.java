@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * <!-- Package description. -->
- * Contains utility port scanner.
+ * Contains page compression implementation.
  */
-package org.apache.ignite.internal.util.portscanner;
+package org.apache.ignite.internal.processors.compress;

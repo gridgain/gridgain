@@ -40,6 +40,7 @@ public class Merge extends CommandWithValues {
     private Column[] keys;
     private Query query;
     private Prepared update;
+    private boolean explicitKeys;
 
     public Merge(Session session) {
         super(session);
@@ -62,6 +63,7 @@ public class Merge extends CommandWithValues {
     }
 
     public void setKeys(Column[] keys) {
+        explicitKeys = true;
         this.keys = keys;
     }
 
@@ -275,7 +277,7 @@ public class Merge extends CommandWithValues {
             if (idx == null) {
                 throw DbException.get(ErrorCode.CONSTRAINT_NOT_FOUND_1, "PRIMARY KEY");
             }
-            keys = idx.getColumns();
+            keys = new Column[] {idx.getTable().getColumn(0)};
         }
         StringBuilder builder = new StringBuilder("UPDATE ");
         targetTable.getSQL(builder, true).append(" SET ");
@@ -317,6 +319,7 @@ public class Merge extends CommandWithValues {
         setTargetTable(targetTableFilter.getTable());
     }
 
-
-
+    public boolean isExplicitKeys() {
+        return explicitKeys;
+    }
 }

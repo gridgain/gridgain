@@ -17,7 +17,6 @@
 package org.apache.ignite.maintenance;
 
 import java.util.List;
-
 import org.apache.ignite.lang.IgniteExperimental;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,7 +50,7 @@ public interface MaintenanceWorkflowCallback {
      *
      * @return Not null and non-empty {@link List} of {@link MaintenanceAction}.
      */
-    @NotNull public List<MaintenanceAction> allActions();
+    @NotNull public List<MaintenanceAction<?>> allActions();
 
     /**
      * Component can provide optional {@link MaintenanceAction} that will be executed automatically
@@ -63,5 +62,5 @@ public interface MaintenanceWorkflowCallback {
      * @return {@link MaintenanceAction} for automatic execution or null if maintenance situation
      * should not be fixed automatically.
      */
-    @Nullable public MaintenanceAction automaticAction();
+    @Nullable public MaintenanceAction<?> automaticAction();
 }
