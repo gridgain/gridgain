@@ -19,11 +19,11 @@ package org.apache.ignite.internal.processors.cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
-import org.junit.Assert;
 import org.junit.Test;
 
 import javax.cache.CacheException;
@@ -37,7 +37,15 @@ public class TransactionValidationTest extends GridCommonAbstractTest {
      */
     @Test
     public void validationOnRemoteNode() throws Exception {
-        validationTest(true);
+        validationTest(true, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void validationWithNearCache() throws Exception {
+        validationTest(true, true);
     }
 
     /**
@@ -45,13 +53,13 @@ public class TransactionValidationTest extends GridCommonAbstractTest {
      */
     @Test
     public void validationOnLocalNode() throws Exception {
-        validationTest(false);
+        validationTest(false, false);
     }
 
     /**
      * @throws Exception If failed.
      */
-    public void validationTest(boolean distributed) throws Exception {
+    public void validationTest(boolean distributed, boolean nearCache) throws Exception {
         IgniteEx txCrd;
 
         if (distributed) {
@@ -62,16 +70,24 @@ public class TransactionValidationTest extends GridCommonAbstractTest {
         else
             txCrd = startGrid(0);
 
-        IgniteCache<Object, Object> cache0 = txCrd.createCache(
-                new CacheConfiguration<>("cache0")
-                        .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-        );
+        CacheConfiguration<Object, Object> cfgCache0 = new CacheConfiguration<>("cache0")
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+                .setNearConfiguration(new NearCacheConfiguration<>());
 
-        IgniteCache<Object, Object> cache1 = txCrd.createCache(
-                new CacheConfiguration<>("cache1")
-                        .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                        .setTopologyValidator(nodes -> false)
-        );
+        CacheConfiguration<Object, Object> cfgCache1 = new CacheConfiguration<>("cache1")
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+                .setTopologyValidator(nodes -> false)
+                .setNearConfiguration(new NearCacheConfiguration<>());
+
+        if (nearCache) {
+            cfgCache0.setNearConfiguration(new NearCacheConfiguration<>());
+
+            cfgCache1.setNearConfiguration(new NearCacheConfiguration<>());
+        }
+
+        IgniteCache<Object, Object> cache0 = txCrd.createCache(cfgCache0);
+
+        IgniteCache<Object, Object> cache1 = txCrd.createCache(cfgCache1);
 
         try (Transaction tx = txCrd.transactions().txStart()) {
             cache0.put(1, 1);

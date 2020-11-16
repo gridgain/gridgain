@@ -1151,9 +1151,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
 
                     CacheOperationContext opCtx = ctx.operationContextPerCall();
 
-                    AffinityTopologyVersion topologyVersion = lastFinishedFut.get();
-
-                    CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(ctx, opCtx != null && opCtx.recovery(), req.txRead(), null, keys);
+                    CacheInvalidStateException validateCacheE = lastFinishedFut
+                            .validateCache(ctx, opCtx != null && opCtx.recovery(), req.txRead(), null, keys);
 
                     if (validateCacheE != null)
                         throw validateCacheE;
