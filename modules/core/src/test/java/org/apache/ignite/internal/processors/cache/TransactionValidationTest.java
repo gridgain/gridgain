@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Assert;
@@ -79,11 +80,12 @@ public class TransactionValidationTest extends GridCommonAbstractTest {
 
             try {
                 cache1.put(1, 1);
-            } catch (CacheException e0) {
+            }
+            catch (CacheException e0) {
                 e = e0;
             }
 
-            Assert.assertTrue(e.getCause() instanceof CacheInvalidStateException);
+            assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
         }
     }
 
