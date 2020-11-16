@@ -211,7 +211,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         res1.forEach(r -> assertTrue("Invalid result type: " +
                 r.get(0) + ",\n at results: " + res1, r.get(0) instanceof Long));
 
-        List<List<?>> res2 = execute(new SqlFieldsQuery("SELECT VAL_TS - SYSDATE() FROM TEST").setLocal(true)).getAll();
+        List<List<?>> res2 = executeOnSrv(new SqlFieldsQuery("SELECT VAL_TS - SYSDATE() FROM TEST").setLocal(true)).getAll();
 
         assertTrue(!res2.isEmpty());
 
