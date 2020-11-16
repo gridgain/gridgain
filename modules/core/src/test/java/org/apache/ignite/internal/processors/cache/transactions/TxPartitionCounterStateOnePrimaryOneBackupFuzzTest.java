@@ -27,7 +27,7 @@ import org.junit.Test;
  */
 public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartitionCounterStateAbstractTest {
     /** */
-    private static final int[] PREPARE_ORDER = new int[] {0, 1, 2};
+    private static final int[] PREPARE_ORDER = new int[] {1, 0, 2};
 
     /** */
     private static final int[] PRIMARY_COMMIT_ORDER = new int[] {2, 1, 0};
@@ -37,6 +37,9 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
 
     /** */
     private static final int[] SIZES = new int[] {5, 7, 3};
+
+    /** */
+    private static final int PRELOAD_KEYS_CNT = 1000;
 
     /** */
     private static final int TOTAL = IntStream.of(SIZES).sum() + PRELOAD_KEYS_CNT;
@@ -113,7 +116,7 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
 
         assertEquals(TOTAL, cntr.get());
 
-        stopGrid(backupName);
+        stopGrid(primaryName);
 
         awaitPartitionMapExchange();
 
@@ -126,12 +129,36 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
 
         loadDataToPartition(PARTITION_ID, primaryName, DEFAULT_CACHE_NAME, addCnt, TOTAL);
 
+        TestRecordingCommunicationSpi.stopBlockAll();
+
+        TestRecordingCommunicationSpi backupSpi = TestRecordingCommunicationSpi.spi(grid(backupName));
+
+        backupSpi.blockMessages((node, msg) -> {
+            if (msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage m0 = (GridDhtPartitionSupplyMessage)msg;
+
+                return m0.groupId() == CU.cacheId(DEFAULT_CACHE_NAME);
+            }
+
+            return false;
+        });
+
+
+        startGrid(primaryName);
+
+        stopGrid(primaryName);
+
         // TODO https://issues.apache.org/jira/browse/IGNITE-11607
         // Historical rebalance is not possible from history containing rebalanced entries.
         // Next rebalance will be full.
-        IgniteEx grid0 = startGrid(backupName);
+
+        TestRecordingCommunicationSpi.stopBlockAll();
+
+        IgniteEx grid0 = startGrid(primaryName);
 
         awaitPartitionMapExchange();
+
+        stopGrid(backupName);
 
         assertNotNull(cntr = counter(PARTITION_ID, grid0.name()));
 
