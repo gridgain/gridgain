@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
@@ -143,22 +145,13 @@ public class CheckpointPagesWriterFactory {
         AtomicInteger cpPagesCnt
     ) {
         return () -> {
-            PageStoreWriter pageStoreWriter = (fullPageId, buf, tag) -> {
-                assert tag != PageMemoryImpl.TRY_AGAIN_TAG : "Lock is held by other thread for page " + fullPageId;
-
-                // Write buf to page store.
-                PageStore store = checkpointPageWriter.write(fullPageId, buf, tag);
-
-                // Save store for future fsync.
-                updStores.add(store);
-            };
-
             GridConcurrentMultiPairQueue.Result<PageMemoryEx, FullPageId> res =
                 new GridConcurrentMultiPairQueue.Result<>();
 
             int pagesWritten = 0;
             ByteBuffer tmpWriteBuf = threadBuf.get();
 
+            Map<PageMemoryEx, PageStoreWriter> pageStoreWriters = new HashMap<>();
             try {
                 while (pages.next(res)) {
                     // Fail-fast break if some exception occurred.
@@ -166,6 +159,19 @@ public class CheckpointPagesWriterFactory {
                         break;
 
                     PageMemoryEx pageMem = res.getKey();
+
+                    PageStoreWriter pageStoreWriter = pageStoreWriters.computeIfAbsent(
+                        pageMem,
+                        (pageMemEx) -> (fullPageId, buf, tag) -> {
+                            assert tag != PageMemoryImpl.TRY_AGAIN_TAG : "Lock is held by other thread for page " + fullPageId;
+
+                            // Write buf to page store.
+                            PageStore store = checkpointPageWriter.write(pageMemEx, fullPageId, buf, tag);
+
+                            // Save store for future fsync.
+                            updStores.add(store);
+                        }
+                    );
 
                     // Write page content to page store via pageStoreWriter.
                     // Tracker is null, because no need to track checkpoint metrics on recovery.
