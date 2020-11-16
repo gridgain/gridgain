@@ -1752,6 +1752,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                     m.addPartitionUpdateCounters(grp.groupId(),
                         newCntrMap ? cntrsMap : CachePartitionPartialCountersMap.toCountersMap(cntrsMap));
+
+                    m.partitionClearCounters(grp.groupId(), grp.topology().clearCountersMap());
                 }
 
                 m.addPartitionSizes(grp.groupId(), grp.topology().partitionSizes());

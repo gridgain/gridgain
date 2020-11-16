@@ -3374,10 +3374,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private List<SupplyPartitionInfo> assignPartitionStates(GridDhtPartitionTopology top, boolean resetOwners) {
         Map<Integer, CounterWithNodes> maxCntrs = new HashMap<>();
         Map<Integer, TreeSet<Long>> varCntrs = new HashMap<>();
+        Map<Integer, Long> maxClearCntrs = new HashMap<>();
 
         for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e : msgs.entrySet()) {
             CachePartitionPartialCountersMap nodeCntrs = e.getValue().partitionUpdateCounters(top.groupId(),
                 top.partitions());
+
+            Map<Integer, Long> clearCntrs = e.getValue().partitionClearCounters(top.groupId());
 
             assert nodeCntrs != null;
 
@@ -3406,6 +3409,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     maxCntrs.put(p, new CounterWithNodes(cntr, e.getValue().partitionSizes(top.groupId()).get(p), remoteNodeId));
                 else if (cntr == maxCntr.cnt)
                     maxCntr.nodes.add(remoteNodeId);
+
+                // Calculate maximal clear counter of all owners. If a demander has LWM less than this value
+                // the partition should be cleared before rebalancing.
+                Long maxClearCntr = maxClearCntrs.get(p);
+                Long testCntr = clearCntrs.getOrDefault(p, 0L);
+
+                if (maxClearCntr == null || testCntr > maxClearCntr)
+                    maxClearCntrs.put(p, testCntr);
             }
         }
 
@@ -3441,14 +3452,41 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 maxCntrs.put(part.id(), new CounterWithNodes(cntr, part.fullSize(), cctx.localNodeId()));
             else if (cntr == maxCntr.cnt)
                 maxCntr.nodes.add(cctx.localNodeId());
+
+            // Same for local node.
+            Long maxClearCntr = maxClearCntrs.get(part.id());
+            Long testCntr = part.dataStore().partUpdateCounter() == null ? 0 :
+                part.dataStore().partUpdateCounter().tombstoneClearingState();
+
+            if (maxClearCntr == null || testCntr > maxClearCntr)
+                maxClearCntrs.put(part.id(), testCntr);
         }
 
-        Set<Integer> haveHistory = new HashSet<>();
+        Set<Integer> haveHist = new HashSet<>();
 
-        List<SupplyPartitionInfo> list = assignHistoricalSuppliers(top, maxCntrs, varCntrs, haveHistory);
+        List<SupplyPartitionInfo> list = assignHistoricalSuppliers(top, maxCntrs, varCntrs, haveHist);
 
         if (resetOwners)
-            resetOwnersByCounter(top, maxCntrs, haveHistory);
+            resetOwnersByCounter(top, maxCntrs, haveHist);
+
+        for (Map.Entry<Integer, TreeSet<Long>> sortedCnrs : varCntrs.entrySet()) {
+            Integer part = sortedCnrs.getKey();
+
+            // Check if history is beoynd removed tombstones.
+            if (sortedCnrs.getValue().first() <= maxClearCntrs.getOrDefault(part, 0L)) {
+                // Need full clear.
+                for (UUID nodeId : msgs.keySet()) {
+                    if (nodeId.equals(cctx.localNodeId())) {
+                        GridDhtLocalPartition locPart = top.localPartition(part);
+
+                        if (locPart != null && locPart.state() == GridDhtPartitionState.MOVING)
+                            addClearingPartition(top.groupId(), part);
+                    }
+
+                    partsToReload.put(nodeId, top.groupId(), part);
+                }
+            }
+        }
 
         return list;
     }
@@ -5633,12 +5671,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param grp Group.
      * @param part Partition.
      */
-    public void addClearingPartition(CacheGroupContext grp, int part) {
-        if (!grp.persistenceEnabled())
-            return;
-
+    public void addClearingPartition(int grpId, int part) {
         synchronized (mux) {
-            clearingPartitions.computeIfAbsent(grp.groupId(), k -> new HashSet()).add(part);
+            clearingPartitions.computeIfAbsent(grpId, k -> new HashSet()).add(part);
         }
     }
 

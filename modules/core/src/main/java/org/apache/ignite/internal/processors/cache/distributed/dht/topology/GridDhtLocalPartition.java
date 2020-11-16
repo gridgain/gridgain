@@ -738,7 +738,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      *
      * @return A future what will be finished then a current clearing attempt is done.
      */
-    public IgniteInternalFuture<?> clearAsync() {
+    public IgniteInternalFuture<Void> clearAsync() {
         if (clearTask != null) {
             clearTask.start();
 
@@ -1138,11 +1138,11 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             while (it0.hasNext()) {
                 assert state0 == state() : "Partition state can't change during clearing [onStart=" + state + ", part=" + this + ']';
 
-                // Important to check before aquiring lock.
+                // Important to check before aquiring lock. TODO more frequesnt check.
                 if ((stopCntr = (stopCntr + 1) & 1023) == 0 && stopClo.getAsBoolean())
                     return cleared;
 
-                // TODO fixme deadlock possibility, should not get read lock if checkpointer starts
+                // TODO fixme deadlock possibility, should not get read lock if checkpointer starts !!!!!!!
                 ctx.database().checkpointReadLock();
 
                 try {

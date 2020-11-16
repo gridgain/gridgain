@@ -154,7 +154,9 @@ public interface PartitionUpdateCounter extends Iterable<long[]> {
     public void finishTombstoneClearing();
 
     /**
-     * @return Cuurent tombstone clearing state packed in long.
+     * Returns the clearing counter - all tombstones up to this counter are cleared, later tombstones are not cleared.
+     *
+     * @return Cuurent tombstone clearing state.
      */
     public long tombstoneClearingState();
 }

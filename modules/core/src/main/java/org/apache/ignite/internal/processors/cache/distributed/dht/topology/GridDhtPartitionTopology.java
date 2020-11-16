@@ -368,6 +368,11 @@ public interface GridDhtPartitionTopology {
     public CachePartitionPartialCountersMap localUpdateCounters(boolean skipZeros);
 
     /**
+     * @return Clear counters map;
+     */
+    public Map<Integer, Long> clearCountersMap();
+
+    /**
      * @return Partition cache sizes.
      */
     public Map<Integer, Long> partitionSizes();

@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
@@ -176,7 +175,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         // Register new task, cancelling previous if presents.
         PartitionKey key = new PartitionKey(grp.groupId(), part.id());
-        GridFutureAdapter<Boolean> finishFut = new GridFutureAdapter<>();
+        GridFutureAdapter<Void> finishFut = new GridFutureAdapter<>();
         PartitionEvictionTask task = new PartitionEvictionTask(part, grpEvictionCtx, reason, finishFut);
 
         finishFut.listen(fut -> futs.remove(key));
@@ -521,7 +520,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         /** */
         @GridToStringExclude
-        public final GridFutureAdapter<?> finishFut;
+        public final GridFutureAdapter<Void> finishFut;
 
         /** */
         @GridToStringExclude
@@ -537,7 +536,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
             GridDhtLocalPartition part,
             GroupEvictionContext grpEvictionCtx,
             EvictReason reason,
-            GridFutureAdapter<?> finishFut
+            GridFutureAdapter<Void> finishFut
         ) {
             this.part = part;
             this.grpEvictionCtx = grpEvictionCtx;

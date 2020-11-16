@@ -2521,7 +2521,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             part.moving();
 
         if (clear)
-            exchFut.addClearingPartition(grp, part.id());
+            exchFut.addClearingPartition(grp.groupId(), part.id());
 
         assert part.state() == MOVING : part;
 
@@ -2982,6 +2982,41 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             res.trim();
 
             return res;
+        }
+        finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public Map<Integer, Long> clearCountersMap() {
+        lock.readLock().lock();
+
+        try {
+            int locPartCnt = 0;
+
+            for (int i = 0; i < locParts.length(); i++) {
+                GridDhtLocalPartition part = locParts.get(i);
+
+                if (part != null)
+                    locPartCnt++;
+            }
+
+            Map<Integer, Long> map = U.newHashMap(locPartCnt);
+
+            for (int i = 0; i < locParts.length(); i++) {
+                GridDhtLocalPartition part = locParts.get(i);
+
+                if (part == null)
+                    continue;
+
+                long cntr = part.dataStore().partUpdateCounter().tombstoneClearingState();
+
+                if (cntr != 0)
+                    map.put(part.id(), cntr);
+            }
+
+            return map;
         }
         finally {
             lock.readLock().unlock();

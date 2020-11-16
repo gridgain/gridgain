@@ -71,6 +71,7 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.future.GridCompoundIdentityFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridIterableAdapter;
@@ -1420,58 +1421,44 @@ public class GridDhtPartitionDemander {
                     d.rebalanceId(rebalanceId);
                     d.timeout(grp.preloader().timeout());
 
-                    // Make sure partitions scheduled for full rebalancing are cleared first.
-                    // Clearing attempt is also required for in-memory caches because some partitions can be switched
-                    // from RENTING to MOVING state in the middle of clearing.
-                    if (grp.mvccEnabled() || assignments.forceClear()) {
-                        final int fullSetSize = d.partitions().fullSet().size();
+                    GridCompoundIdentityFuture<Void> fut = new GridCompoundIdentityFuture<>();
+                    GridDhtPartitionsExchangeFuture lastFinished = ctx.cache().context().exchange().lastFinishedFuture();
 
-                        AtomicInteger waitCnt = new AtomicInteger(fullSetSize);
+                    for (Integer partId : d.partitions().fullSet()) {
+                        GridDhtLocalPartition part = grp.topology().localPartition(partId);
 
-                        for (Integer partId : d.partitions().fullSet()) {
-                            GridDhtLocalPartition part = grp.topology().localPartition(partId);
+                        // Due to rebalance cancellation it's possible for a group to be already partially rebalanced,
+                        // so the partition could be in OWNING state.
+                        // Due to async eviction it's possible for the partition to be in RENTING/EVICTED state.
 
-                            // Due to rebalance cancellation it's possible for a group to be already partially rebalanced,
-                            // so the partition could be in OWNING state.
-                            // Due to async eviction it's possible for the partition to be in RENTING/EVICTED state.
+                        // Reset the initial update counter value to prevent historical rebalancing on this partition.
+                        part.dataStore().resetInitialUpdateCounter();
 
-                            // Reset the initial update counter value to prevent historical rebalancing on this partition.
-                            part.dataStore().resetInitialUpdateCounter();
+                        if (grp.mvccEnabled() || assignments.forceClear() || lastFinished.isClearingPartition(grp, partId)) {
+                            IgniteInternalFuture<Void> fut0 = part.clearAsync();
 
-                            part.clearAsync().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
+                            fut0.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                                 @Override public void apply(IgniteInternalFuture<?> fut) {
                                     if (fut.error() != null) {
                                         tryCancel();
 
                                         log.error("Failed to clear a partition, cancelling rebalancing for a group [grp="
                                             + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
-
-                                        return;
                                     }
-
-                                    if (waitCnt.decrementAndGet() == 0)
-                                        ctx.kernalContext().closure().runLocalSafe(() -> requestPartitions0(node, parts, d));
                                 }
                             });
-                        }
 
-                        // The special case for historical only rebalancing.
-                        if (d.partitions().fullSet().isEmpty() && !d.partitions().historicalSet().isEmpty())
+                            fut.add(fut0);
+                        }
+                    }
+
+                    fut.listen(new IgniteInClosure<IgniteInternalFuture<Void>>() {
+                        @Override public void apply(IgniteInternalFuture<Void> fut0) {
                             ctx.kernalContext().closure().runLocalSafe(() -> requestPartitions0(node, parts, d));
-                    }
-                    else {
-                        // TODO start rebalancing (-> moving, requestPartitions0) after renting is cleared - possible ?
-                        // TODO cancel clearing if switching renting -> moving, should work, negates above stmt.
-
-                        for (Integer partId : d.partitions().fullSet()) {
-                            GridDhtLocalPartition part = grp.topology().localPartition(partId);
-
-                            // TODO move to assignment generation, get rid of initial counter.
-                            part.dataStore().resetInitialUpdateCounter();
                         }
+                    });
 
-                        ctx.kernalContext().closure().runLocalSafe(() -> requestPartitions0(node, parts, d));
-                    }
+                    fut.markInitialized();
                 }
             }
         }
