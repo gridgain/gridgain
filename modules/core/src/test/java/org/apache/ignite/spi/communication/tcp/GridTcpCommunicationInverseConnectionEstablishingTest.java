@@ -371,6 +371,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             });
         }
 
+        GridTestUtils.waitForCondition(() -> failCount.get() == fails, TimeUnit.SECONDS.toMillis(60));
+
         List<Thread> asyncRunnables = Thread.getAllStackTraces().keySet().stream()
                 .filter(t -> t.getName().contains("async-runnable-runner"))
                 .collect(Collectors.toList());
@@ -378,14 +380,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         for (Thread asyncRunnable : asyncRunnables) {
             U.interrupt(asyncRunnable);
 
-            boolean joined = false;
-
-            while (!joined) {
-                joined = U.join(asyncRunnable, log);
-            }
+            U.join(asyncRunnable, log);
         }
-
-        GridTestUtils.waitForCondition(() -> failCount.get() == fails, TimeUnit.SECONDS.toMillis(60));
 
         IgnitionEx.stop(client.name(), true, null, true);
     }
