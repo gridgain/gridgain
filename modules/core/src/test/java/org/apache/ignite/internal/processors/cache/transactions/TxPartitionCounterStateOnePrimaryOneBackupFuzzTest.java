@@ -5,7 +5,9 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CachePeekMode;
@@ -26,52 +28,78 @@ import org.junit.Test;
  * SDSB-11903 temporary test
  */
 public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartitionCounterStateAbstractTest {
-    /** */
-    private static final int[] PREPARE_ORDER = new int[] {1, 0, 2};
+    /**
+     *
+     */
+    private static final int[] PREPARE_ORDER = new int[]{1, 0, 2};
 
-    /** */
-    private static final int[] PRIMARY_COMMIT_ORDER = new int[] {2, 1, 0};
+    /**
+     *
+     */
+    private static final int[] PRIMARY_COMMIT_ORDER = new int[]{2, 1, 0};
 
-    /** */
-    private static final int[] BACKUP_COMMIT_ORDER = new int[] {1, 2, 0};
+    /**
+     *
+     */
+    private static final int[] BACKUP_COMMIT_ORDER = new int[]{1, 2, 0};
 
-    /** */
-    private static final int[] SIZES = new int[] {5, 7, 3};
+    /**
+     *
+     */
+    private static final int[] SIZES = new int[]{5, 7, 3};
 
-    /** */
+    /**
+     *
+     */
     private static final int PRELOAD_KEYS_CNT = 1000;
 
-    /** */
+    /**
+     *
+     */
     private static final int TOTAL = IntStream.of(SIZES).sum() + PRELOAD_KEYS_CNT;
 
-    /** */
+    /**
+     *
+     */
     private static final int PARTITION_ID = 0;
 
-    /** */
+    /**
+     *
+     */
     private static final int BACKUPS = 1;
 
-    /** */
+    /**
+     *
+     */
     private static final int SERVERS_CNT = 2;
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testPrepareCommitReorder() throws Exception {
         doTestPrepareCommitReorder(false);
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testPrepareCommitReorderSkipCheckpoint() throws Exception {
         doTestPrepareCommitReorder(true);
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testPrepareCommitReorderFailRebalance() throws Exception {
         doTestPrepareCommitReorder_2(false);
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testPrepareCommitReorderFailRebalanceSkipCheckpoint() throws Exception {
         doTestPrepareCommitReorder_2(true);
@@ -82,10 +110,10 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
      * historical rebalance or only partial data defined by counter range will be loaded.
      *
      * @param skipCheckpoint Skip checkpoint.
-     *
      * @throws Exception
      */
     private void doTestPrepareCommitReorder(boolean skipCheckpoint) throws Exception {
+
         T2<Ignite, List<Ignite>> txTop = runTest(skipCheckpoint).get(PARTITION_ID);
 
         waitForTopology(SERVERS_CNT);
@@ -135,7 +163,7 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
 
         backupSpi.blockMessages((node, msg) -> {
             if (msg instanceof GridDhtPartitionSupplyMessage) {
-                GridDhtPartitionSupplyMessage m0 = (GridDhtPartitionSupplyMessage)msg;
+                GridDhtPartitionSupplyMessage m0 = (GridDhtPartitionSupplyMessage) msg;
 
                 return m0.groupId() == CU.cacheId(DEFAULT_CACHE_NAME);
             }
@@ -143,8 +171,13 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
             return false;
         });
 
+        ThreadLocalRandom rand = ThreadLocalRandom.current();
+
+        applyPressure(backupName, rand.nextInt(0, 20));
 
         startGrid(primaryName);
+
+        applyPressure(primaryName, rand.nextInt(0, 20));
 
         stopGrid(primaryName);
 
@@ -167,6 +200,10 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
         assertEquals(TOTAL + addCnt, cntr.reserved());
 
         assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
+    }
+
+    private void applyPressure(String nodeName, int cnt) {
+        loadDataToPartition(PARTITION_ID, nodeName, DEFAULT_CACHE_NAME, cnt, TOTAL);
     }
 
     /**
@@ -204,7 +241,7 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
 
         backupSpi.blockMessages((node, msg) -> {
             if (msg instanceof GridDhtPartitionSupplyMessage) {
-                GridDhtPartitionSupplyMessage m0 = (GridDhtPartitionSupplyMessage)msg;
+                GridDhtPartitionSupplyMessage m0 = (GridDhtPartitionSupplyMessage) msg;
 
                 return m0.groupId() == CU.cacheId(DEFAULT_CACHE_NAME);
             }
@@ -216,8 +253,7 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
             try {
                 backupSpi.waitForBlocked();
-            }
-            catch (InterruptedException e) {
+            } catch (InterruptedException e) {
                 fail("Unexpected interruption");
             }
 
@@ -229,8 +265,7 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
                 startGrid(primaryName);
 
                 awaitPartitionMapExchange();
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 fail();
             }
         }, 1);
@@ -248,29 +283,43 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
      * The callback order prepares and commits on primary node.
      */
     protected class OnePhaseCommitTxCallbackAdapter extends TxCallbackAdapter {
-        /** */
+        /**
+         *
+         */
         private Queue<Integer> prepOrder;
 
-        /** */
+        /**
+         *
+         */
         private Queue<Integer> primCommitOrder;
 
-        /** */
+        /**
+         *
+         */
         private Queue<Integer> backupCommitOrder;
 
-        /** */
+        /**
+         *
+         */
         private Map<IgniteUuid, GridFutureAdapter<?>> prepFuts = new ConcurrentHashMap<>();
 
-        /** */
+        /**
+         *
+         */
         private Map<IgniteUuid, GridFutureAdapter<?>> primFinishFuts = new ConcurrentHashMap<>();
 
-        /** */
+        /**
+         *
+         */
         private Map<IgniteUuid, GridFutureAdapter<?>> backupFinishFuts = new ConcurrentHashMap<>();
 
-        /** */
+        /**
+         *
+         */
         private final int txCnt;
 
         /**
-         * @param prepOrd Prepare order.
+         * @param prepOrd         Prepare order.
          * @param primCommitOrder Commit order.
          */
         public OnePhaseCommitTxCallbackAdapter(int[] prepOrd, int[] primCommitOrder, int[] backupCommitOrder) {
@@ -292,7 +341,9 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
                 this.backupCommitOrder.add(aCommitOrd);
         }
 
-        /** */
+        /**
+         *
+         */
         protected boolean onPrimaryPrepared(IgniteEx primary, IgniteInternalTx tx, int idx) {
             log.info("TX: prepared on primary [name=" + primary.name() + ", txId=" + idx + ", tx=" + CU.txString(tx) + ']');
 
@@ -308,7 +359,7 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
 
         /**
          * @param primary Primary node.
-         * @param idx Index.
+         * @param idx     Index.
          */
         protected boolean onPrimaryCommitted(IgniteEx primary, int idx) {
             log.info("TX: primary committed [name=" + primary.name() + ", txId=" + idx + ']');
@@ -318,7 +369,7 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
 
         /**
          * @param backup Backup node.
-         * @param idx Index.
+         * @param idx    Index.
          */
         protected boolean onBackupCommitted(IgniteEx backup, int idx) {
             log.info("TX: backup committed [name=" + backup.name() + ", txId=" + idx + ']');
@@ -340,9 +391,12 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
             log.info("TX: all backup committed [name=" + backup.name() + ']');
         }
 
-        /** {@inheritDoc} */
-        @Override public boolean beforePrimaryPrepare(IgniteEx primary, IgniteUuid nearXidVer,
-                                                      GridFutureAdapter<?> proceedFut) {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean beforePrimaryPrepare(IgniteEx primary, IgniteUuid nearXidVer,
+                                            GridFutureAdapter<?> proceedFut) {
             runAsync(() -> {
                 prepFuts.put(nearXidVer, proceedFut);
 
@@ -355,9 +409,12 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
             return true;
         }
 
-        /** {@inheritDoc} */
-        @Override public boolean beforeBackupPrepare(IgniteEx primary, IgniteEx backup, IgniteInternalTx primaryTx,
-                                                     GridFutureAdapter<?> proceedFut) {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean beforeBackupPrepare(IgniteEx primary, IgniteEx backup, IgniteInternalTx primaryTx,
+                                           GridFutureAdapter<?> proceedFut) {
             runAsync(() -> {
                 IgniteUuid nearXidVer = primaryTx.nearXidVersion().asGridUuid();
 
@@ -381,9 +438,12 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
             return true;
         }
 
-        /** {@inheritDoc} */
-        @Override public boolean afterBackupPrepare(IgniteEx primary, IgniteEx backup, IgniteInternalTx backupTx, IgniteUuid nearXidVer,
-                                                    GridFutureAdapter<?> proceedFut) {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean afterBackupPrepare(IgniteEx primary, IgniteEx backup, IgniteInternalTx backupTx, IgniteUuid nearXidVer,
+                                          GridFutureAdapter<?> proceedFut) {
             runAsync(() -> {
                 primFinishFuts.put(nearXidVer, proceedFut);
 
@@ -406,9 +466,12 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
             return true;
         }
 
-        /** {@inheritDoc} */
-        @Override public boolean afterPrimaryPrepare(IgniteEx primary, @Nullable IgniteInternalTx tx, IgniteUuid nearXidVer,
-                                                     GridFutureAdapter<?> proceedFut) {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean afterPrimaryPrepare(IgniteEx primary, @Nullable IgniteInternalTx tx, IgniteUuid nearXidVer,
+                                           GridFutureAdapter<?> proceedFut) {
             runAsync(() -> {
                 if (onPrimaryCommitted(primary, order(nearXidVer)))
                     return;
@@ -437,7 +500,7 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
      * <p>
      * 4. Stop primary node.
      * <p>
-     *
+     * <p>
      * Pass condition: after primary start partitions are in sync.
      *
      * @param skipCheckpoint Skip checkpoint.
@@ -447,11 +510,13 @@ public class TxPartitionCounterStateOnePrimaryOneBackupFuzzTest extends TxPartit
                 new IgniteClosure<Map<Integer, T2<Ignite, List<Ignite>>>, TxCallback>() {
                     private Map<Integer, T2<Ignite, List<Ignite>>> txTop;
 
-                    @Override public TxCallback apply(Map<Integer, T2<Ignite, List<Ignite>>> map) {
+                    @Override
+                    public TxCallback apply(Map<Integer, T2<Ignite, List<Ignite>>> map) {
                         txTop = map;
 
                         return new TxPartitionCounterStateOnePrimaryOneBackupFuzzTest.OnePhaseCommitTxCallbackAdapter(PREPARE_ORDER, PRIMARY_COMMIT_ORDER, BACKUP_COMMIT_ORDER) {
-                            @Override protected boolean onPrimaryCommitted(IgniteEx primary, int idx) {
+                            @Override
+                            protected boolean onPrimaryCommitted(IgniteEx primary, int idx) {
                                 if (idx == PRIMARY_COMMIT_ORDER[0]) {
                                     PartitionUpdateCounter cntr = counter(PARTITION_ID, primary.name());
 
