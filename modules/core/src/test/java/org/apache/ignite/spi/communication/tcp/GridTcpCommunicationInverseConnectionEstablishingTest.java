@@ -334,23 +334,26 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         });
 
         // wait until client node is (partially) available
-        GridTestUtils.waitForCondition(() -> IgnitionEx.allGridsx().size() == 2, 60_000);
+        assertTrue(GridTestUtils.waitForCondition(() -> IgnitionEx.allGridsx().size() == 2, 60_000));
         final List<Ignite> ignites = IgnitionEx.allGridsx();
 
         // get client node
-        GridTestUtils.waitForCondition(() -> {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
             final IgniteEx client = (IgniteEx) ignites.get(0);
             if (client != null && client.context() != null) {
                 return client.context().clientNode();
             }
             return false;
-        }, 60_000);
+        }, 60_000));
         final IgniteEx client = (IgniteEx) ignites.get(0);
 
         final UUID clientId = client.context().localNodeId();
 
         // wait until client node is visible for server node
-        GridTestUtils.waitForCondition(() -> server.context().discovery().discoCache() != null && server.context().discovery().node(clientId) != null, 60_000);
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            return server.context().discovery().discoCache() != null && server.context().discovery().node(clientId) != null;
+        }, 60_000));
+
         final ClusterNode clientNode = server.context().discovery().node(clientId);
 
         AtomicInteger failCount = new AtomicInteger(0);
@@ -369,7 +372,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             });
         }
 
-        GridTestUtils.waitForCondition(() -> failCount.get() == fails, TimeUnit.SECONDS.toMillis(60));
+        assertTrue(GridTestUtils.waitForCondition(() -> failCount.get() == fails, TimeUnit.SECONDS.toMillis(60)));
 
         List<Thread> asyncRunnables = Thread.getAllStackTraces().keySet().stream()
                 .filter(t -> t.getName().contains("async-runnable-runner"))
