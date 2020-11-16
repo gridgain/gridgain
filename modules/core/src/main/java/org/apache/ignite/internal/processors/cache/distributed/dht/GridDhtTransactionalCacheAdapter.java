@@ -1146,15 +1146,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
 
                         tx.topologyVersion(req.topologyVersion());
                     }
-
-                    GridDhtPartitionsExchangeFuture lastFinishedFut = ctx.shared().exchange().lastFinishedFuture();
-
-                    CacheOperationContext opCtx = ctx.operationContextPerCall();
-
-                    CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(ctx, opCtx != null && opCtx.recovery(), req.txRead(), null, keys);
-
-                    if (validateCacheE != null)
-                        throw validateCacheE;
                 }
                 else {
                     fut = new GridDhtLockFuture(ctx,
