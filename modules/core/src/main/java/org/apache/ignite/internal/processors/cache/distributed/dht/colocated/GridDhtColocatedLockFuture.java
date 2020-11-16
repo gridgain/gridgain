@@ -1392,15 +1392,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
             lockLocally(distributedKeys, topVer);
         }
 
-        GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
-
-        CacheOperationContext opCtx = cctx.operationContextPerCall();
-
-        CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(cctx, opCtx != null && opCtx.recovery(), read, null, keys);
-
-        if (validateCacheE != null)
-            onDone(validateCacheE);
-
         return true;
     }
 
