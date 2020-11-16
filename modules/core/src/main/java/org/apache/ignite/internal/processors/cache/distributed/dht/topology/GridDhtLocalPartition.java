@@ -1098,6 +1098,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
+        // Define rows excluded from clearing.
         Predicate<CacheDataRow> rowFilter = r -> false;
 
         GridDhtPartitionState state0 = state();
@@ -1105,7 +1106,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE) {
             assert state0 == OWNING;
 
-            long lwm = TombstoneCacheObject.counter(dataStore().partUpdateCounter().startTombstoneClearing());
+            long lwm = dataStore().partUpdateCounter() == null ? 0 : dataStore().partUpdateCounter().startTombstoneClearing();
 
             rowFilter = new Predicate<CacheDataRow>() {
                 @Override public boolean test(CacheDataRow row) {
@@ -1120,7 +1121,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             long order0 = clearVer;
 
-            rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || order0 > row.version().order());
+            rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || row.version().order() > order0);
         }
 
         if (task.reason == PartitionsEvictManager.EvictReason.EVICTION && state() == EVICTED)
@@ -1224,7 +1225,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 //
 //                ((GridDhtPreloader) grp.preloader()).tryFinishEviction(this);
 //            }
-            if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE)
+            if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE && dataStore().partUpdateCounter() != null)
                 dataStore().partUpdateCounter().finishTombstoneClearing();
         }
         catch (NodeStoppingException e) {

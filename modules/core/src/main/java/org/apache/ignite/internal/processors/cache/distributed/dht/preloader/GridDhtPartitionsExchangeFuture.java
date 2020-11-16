@@ -3415,7 +3415,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 Long maxClearCntr = maxClearCntrs.get(p);
                 Long testCntr = clearCntrs.getOrDefault(p, 0L);
 
-                if (maxClearCntr == null || testCntr > maxClearCntr)
+                if (testCntr != 0 && (maxClearCntr == null || testCntr > maxClearCntr))
                     maxClearCntrs.put(p, testCntr);
             }
         }
@@ -3458,7 +3458,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             Long testCntr = part.dataStore().partUpdateCounter() == null ? 0 :
                 part.dataStore().partUpdateCounter().tombstoneClearingState();
 
-            if (maxClearCntr == null || testCntr > maxClearCntr)
+            if (testCntr != 0 && (maxClearCntr == null || testCntr > maxClearCntr))
                 maxClearCntrs.put(part.id(), testCntr);
         }
 
