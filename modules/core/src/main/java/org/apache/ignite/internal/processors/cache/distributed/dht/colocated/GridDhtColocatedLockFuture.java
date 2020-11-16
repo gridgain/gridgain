@@ -804,20 +804,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                     }
                 }
 
-                for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
-                    if (fut.exchangeDone() && fut.topologyVersion().equals(lastChangeVer)) {
-                        Throwable err = fut.validateCache(cctx, recovery, read, null, keys);
-
-                        if (err != null) {
-                            onDone(err);
-
-                            return;
-                        }
-
-                        break;
-                    }
-                }
-
                 // Continue mapping on the same topology version as it was before.
                 synchronized (this) {
                     if (this.topVer == null)
@@ -1391,6 +1377,15 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
             lockLocally(distributedKeys, topVer);
         }
+
+        GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
+
+        CacheOperationContext opCtx = cctx.operationContextPerCall();
+
+        CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(cctx, opCtx != null && opCtx.recovery(), read, null, keys);
+
+        if (validateCacheE != null)
+            onDone(validateCacheE);
 
         return true;
     }

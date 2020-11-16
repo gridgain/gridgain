@@ -393,7 +393,9 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
                         if (i != nodeToStop0) {
                             GridDhtPartitionsExchangeFuture lastFinishedFut =
                                     grid(i).cachex(cacheName).context().shared().exchange().lastFinishedFuture();
+
                             assertTrue(lastFinishedFut.rebalanced());
+
                             assertTrue(lastFinishedFut.topologyVersion()
                                     .equals(new AffinityTopologyVersion(nodes + 1, 0)));
                         }

@@ -1146,6 +1146,17 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
 
                         tx.topologyVersion(req.topologyVersion());
                     }
+
+                    GridDhtPartitionsExchangeFuture lastFinishedFut = ctx.shared().exchange().lastFinishedFuture();
+
+                    CacheOperationContext opCtx = ctx.operationContextPerCall();
+
+                    AffinityTopologyVersion topologyVersion = lastFinishedFut.get();
+
+                    CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(ctx, opCtx != null && opCtx.recovery(), req.txRead(), null, keys);
+
+                    if (validateCacheE != null)
+                        throw validateCacheE;
                 }
                 else {
                     fut = new GridDhtLockFuture(ctx,
@@ -1300,10 +1311,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             }
         }
         catch (IgniteCheckedException | RuntimeException e) {
-            String err = "Failed to unmarshal at least one of the keys for lock request message: " + req;
-
-            U.error(log, err, e);
-
             if (tx != null) {
                 try {
                     tx.rollbackDhtLocal();
@@ -1328,7 +1335,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             }
 
             return new GridDhtFinishedFuture<>(
-                new IgniteCheckedException(err, e));
+                new IgniteCheckedException(e));
         }
     }
 
