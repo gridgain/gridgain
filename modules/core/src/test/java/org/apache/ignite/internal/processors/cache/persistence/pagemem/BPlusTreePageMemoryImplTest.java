@@ -106,6 +106,7 @@ public class BPlusTreePageMemoryImplTest extends BPlusTreeSelfTest {
         PageMemory mem = new PageMemoryImpl(
             provider, sizes,
             sharedCtx,
+            sharedCtx.pageStore(),
             PAGE_SIZE,
             (fullPageId, byteBuf, tag) -> {
                 assert false : "No page replacement should happen during the test";
