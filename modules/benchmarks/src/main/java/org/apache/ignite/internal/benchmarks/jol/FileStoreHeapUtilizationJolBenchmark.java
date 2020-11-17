@@ -27,7 +27,6 @@ import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.openjdk.jol.info.GraphLayout;
 
@@ -57,7 +56,7 @@ public class FileStoreHeapUtilizationJolBenchmark {
             PageStore ps = factory.createPageStore(
                 PageMemory.FLAG_DATA,
                 () -> getPartitionFilePath(workDir, p),
-                new LongAdderMetric("NO-OP", null)
+                (j) -> {}
             );
 
             ps.ensure();

@@ -590,6 +590,10 @@
                                 <title>Maintenance Mode API</title>
                                 <packages>org.apache.ignite.maintenance</packages>
                             </group>
+                            <group>
+                                <title>Kubernetes Integration</title>
+                                <packages>org.apache.ignite.kubernetes*</packages>
+                            </group>
                         </groups>
                         <bottom>
                             <![CDATA[
