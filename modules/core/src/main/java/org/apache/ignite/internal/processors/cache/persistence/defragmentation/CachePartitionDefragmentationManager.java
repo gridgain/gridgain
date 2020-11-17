@@ -36,6 +36,7 @@ import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.CacheType;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
@@ -61,6 +62,8 @@ import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.DataRow;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogRow;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
@@ -565,6 +568,11 @@ public class CachePartitionDefragmentationManager {
                 if (row instanceof DataRow && !partCtx.oldGrpCtx.storeCacheIdInDataPage())
                     ((DataRow)row).cacheId(CU.UNDEFINED_CACHE_ID);
 
+                CacheObjectContext coctx = partCtx.newGrpCtx.cacheObjectContext();
+
+                row.key().prepareForCache(coctx, coctx.compressKeys());
+                row.value().prepareForCache(coctx, true);
+
                 freeList.insertDataRow(row, IoStatisticsHolderNoOp.INSTANCE);
 
                 // Put it back.
@@ -602,6 +610,8 @@ public class CachePartitionDefragmentationManager {
 
             copyCacheMetadata(partCtx);
 
+            copyLogTree(partCtx, treeIter);
+
             tracker.complete(METADATA);
         }
         finally {
@@ -627,7 +637,7 @@ public class CachePartitionDefragmentationManager {
             PagePartitionMetaIO oldPartMetaIo = PageIO.getPageIO(oldPartMetaPageAddr);
 
             // Newer meta versions may contain new data that we don't copy during defragmentation.
-            assert Arrays.asList(1, 2, 3).contains(oldPartMetaIo.getVersion())
+            assert Arrays.asList(1, 2, 3, 65534, 65535).contains(oldPartMetaIo.getVersion())
                 : "IO version " + oldPartMetaIo.getVersion() + " is not supported by current defragmentation algorithm." +
                 " Please implement copying of all data added in new version.";
 
@@ -690,6 +700,31 @@ public class CachePartitionDefragmentationManager {
             });
 
             return null;
+        });
+    }
+
+    /** */
+    private void copyLogTree(PartitionContext partCtx, TreeIterator treeIter) throws IgniteCheckedException {
+        PartitionLogTree oldLogTree = partCtx.oldCacheDataStore.logTree();
+        PartitionLogTree newLogTree = partCtx.newCacheDataStore.logTree();
+
+        treeIter.iterate(oldLogTree, partCtx.cachePageMemory, (tree, io, pageAddr, idx) -> {
+            UpdateLogRow oldRow = tree.getRow(io, pageAddr, idx);
+
+            long newLink = partCtx.linkMap.get(oldRow.link());
+
+            UpdateLogRow newRow = new UpdateLogRow(oldRow.cacheId(), oldRow.updateCounter(), newLink);
+
+            defragmentationCheckpoint.checkpointTimeoutLock().checkpointReadLock();
+
+            try {
+                newLogTree.putx(newRow);
+            }
+            finally {
+                defragmentationCheckpoint.checkpointTimeoutLock().checkpointReadUnlock();
+            }
+
+            return true;
         });
     }
 
