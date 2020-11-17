@@ -169,7 +169,7 @@ public class CheckpointManager {
 
         checkpointPagesWriterFactory = new CheckpointPagesWriterFactory(
             logger, snapshotMgr,
-            (fullPage, buf, tag) -> pageStoreManager.writeInternal(fullPage.groupId(), fullPage.pageId(), buf, tag, true),
+            (pageMemEx, fullPage, buf, tag) -> pageStoreManager.write(fullPage.groupId(), fullPage.pageId(), buf, tag, true),
             persStoreMetrics,
             throttlingPolicy, threadBuf,
             pageMemoryGroupResolver
@@ -232,12 +232,13 @@ public class CheckpointManager {
     /**
      * @param lsnr Listener.
      */
-    public void addCheckpointListener(CheckpointListener lsnr) {
-        checkpointWorkflow.addCheckpointListener(lsnr);
+    public void addCheckpointListener(CheckpointListener lsnr, DataRegion dataRegion) {
+        checkpointWorkflow.addCheckpointListener(lsnr, dataRegion);
     }
 
     /**
      * @param lsnr Listener.
+     * @param dataRegion Data region for which listener is corresponded to.
      */
     public void removeCheckpointListener(CheckpointListener lsnr) {
         checkpointWorkflow.removeCheckpointListener(lsnr);

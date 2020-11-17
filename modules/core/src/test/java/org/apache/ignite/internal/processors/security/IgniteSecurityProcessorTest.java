@@ -17,12 +17,19 @@
 package org.apache.ignite.internal.processors.security;
 
 import java.util.UUID;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
+import static org.junit.Assert.assertFalse;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -30,18 +37,34 @@ import static org.mockito.Mockito.when;
  */
 public class IgniteSecurityProcessorTest {
     /**
-     * Checks that {@link IgniteSecurityProcessor#withContext(UUID)} throws exception in case node ID is unknown.
+     * Checks that {@link IgniteSecurityProcessor#withContext(UUID)} swithes to "deny all policy" in case node ID is unknown.
      */
-    @Test(expected = IllegalStateException.class)
-    public void testThrowIllegalStateExceptionIfNodeNotFoundInDiscoCache() {
+    @Test
+    public void testSwitchToDenyAllPolicyIfNodeNotFoundInDiscoCache() {
         GridKernalContext ctx = mock(GridKernalContext.class);
         when(ctx.config()).thenReturn(new IgniteConfiguration());
         when(ctx.discovery()).thenReturn(mock(GridDiscoveryManager.class));
+        when(ctx.log(any(Class.class))).thenReturn(mock(IgniteLogger.class));
 
         GridSecurityProcessor secPrc = mock(GridSecurityProcessor.class);
 
-        IgniteSecurityProcessor ignSecPrc = new IgniteSecurityProcessor(ctx, secPrc);
+        IgniteSecurityProcessor realIgniteSecProc = new IgniteSecurityProcessor(ctx, secPrc);
 
-        ignSecPrc.withContext(UUID.randomUUID());
+        IgniteSecurityProcessor igniteSecProc = spy(realIgniteSecProc);
+        OperationSecurityContext secCtxMock = mock(OperationSecurityContext.class);
+        ArgumentCaptor<SecurityContext> arg = ArgumentCaptor.forClass(SecurityContext.class);
+        doReturn(secCtxMock).when(igniteSecProc).withContext(any(SecurityContext.class));
+
+        UUID subjectId = UUID.randomUUID();
+
+        igniteSecProc.withContext(subjectId);
+
+        verify(igniteSecProc).withContext(arg.capture());
+
+        assertFalse(arg.getValue().subject().permissions().defaultAllowAll());
+        assertFalse(arg.getValue().systemOperationAllowed(null));
+        assertFalse(arg.getValue().cacheOperationAllowed(null, null));
+        assertFalse(arg.getValue().serviceOperationAllowed(null, null));
+        assertFalse(arg.getValue().taskOperationAllowed(null, null));
     }
 }

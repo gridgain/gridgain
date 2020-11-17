@@ -23,7 +23,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
@@ -186,11 +185,11 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
      */
     private void proceedWithMaintenance() {
         for (Map.Entry<String, MaintenanceWorkflowCallback> cbE : workflowCallbacks.entrySet()) {
-            MaintenanceAction mntcAction = cbE.getValue().automaticAction();
+            MaintenanceAction mntcAct = cbE.getValue().automaticAction();
 
-            if (mntcAction != null) {
+            if (mntcAct != null) {
                 try {
-                    mntcAction.execute();
+                    mntcAct.execute();
                 }
                 catch (Throwable t) {
                     log.warning("Failed to execute automatic action for maintenance task: " +
@@ -240,7 +239,7 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
         if (inMemoryMode)
             throw new IgniteException(IN_MEMORY_MODE_ERR_MSG);
 
-        List<MaintenanceAction> actions = cb.allActions();
+        List<MaintenanceAction<?>> actions = cb.allActions();
 
         if (actions == null || actions.isEmpty())
             throw new IgniteException("Maintenance workflow callback should provide at least one mainetance action");
@@ -267,7 +266,7 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     }
 
     /** {@inheritDoc} */
-    @Override public List<MaintenanceAction> actionsForMaintenanceTask(String maintenanceTaskName) {
+    @Override public List<MaintenanceAction<?>> actionsForMaintenanceTask(String maintenanceTaskName) {
         if (inMemoryMode)
             throw new IgniteException(IN_MEMORY_MODE_ERR_MSG);
 
