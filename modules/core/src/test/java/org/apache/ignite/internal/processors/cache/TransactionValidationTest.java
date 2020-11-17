@@ -29,6 +29,9 @@ import org.junit.Test;
 
 import javax.cache.CacheException;
 
+import static org.apache.ignite.testframework.MvccFeatureChecker.Feature.NEAR_CACHE;
+import static org.apache.ignite.testframework.MvccFeatureChecker.skipIfNotSupported;
+
 /**
  * Tests check that second operation in transaction fail if it doesn't pass validation.
  */
@@ -54,6 +57,8 @@ public class TransactionValidationTest extends GridCommonAbstractTest {
      */
     @Test
     public void validationOnNearCache() throws Exception {
+        skipIfNotSupported(NEAR_CACHE);
+
         validationTest(true, true);
     }
 
