@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.LongJVMPauseDetector;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
@@ -90,6 +91,7 @@ public class LightweightCheckpointManager {
      * @param longJvmPauseDetector Long JVM pause detector.
      * @param failureProcessor Failure processor.
      * @param cacheProcessor Cache processor.
+     * @param walMgr Write ahead log manager.
      * @throws IgniteCheckedException if fail.
      */
     public LightweightCheckpointManager(
@@ -106,7 +108,8 @@ public class LightweightCheckpointManager {
         LongJVMPauseDetector longJvmPauseDetector,
         FailureProcessor failureProcessor,
         GridCacheProcessor cacheProcessor,
-        FilePageStoreManager pageStoreManager
+        FilePageStoreManager pageStoreManager,
+        IgniteWriteAheadLogManager walMgr
     ) throws IgniteCheckedException {
         CheckpointReadWriteLock lock = new CheckpointReadWriteLock(logger);
 
@@ -178,7 +181,8 @@ public class LightweightCheckpointManager {
             dataRegions,
             lock,
             checkpointer,
-            checkpointReadLockTimeout
+            checkpointReadLockTimeout,
+            walMgr
         );
     }
 
