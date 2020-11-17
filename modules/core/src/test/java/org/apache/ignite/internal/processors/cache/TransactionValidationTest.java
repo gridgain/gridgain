@@ -106,7 +106,8 @@ public class TransactionValidationTest extends GridCommonAbstractTest {
                 fail("Validation broken");
             }
             catch (CacheException e) {
-                assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+                assertTrue(X.getFullStackTrace(e),
+                        X.hasCause(e, "cache topology is not valid", CacheInvalidStateException.class));
             }
         }
     }

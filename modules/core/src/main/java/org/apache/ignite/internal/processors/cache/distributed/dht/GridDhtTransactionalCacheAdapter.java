@@ -1310,6 +1310,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             }
         }
         catch (IgniteCheckedException | RuntimeException e) {
+            U.error(log, req, e);
+
             if (tx != null) {
                 try {
                     tx.rollbackDhtLocal();
