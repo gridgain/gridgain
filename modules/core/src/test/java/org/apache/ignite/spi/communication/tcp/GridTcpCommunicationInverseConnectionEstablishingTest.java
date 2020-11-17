@@ -16,22 +16,21 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import java.io.IOException;
+import java.nio.channels.SocketChannel;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
@@ -40,23 +39,27 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.communication.IgniteIoTestMessage;
+import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
+import org.apache.ignite.internal.util.nio.ssl.GridSslMeta;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
+import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
+import org.apache.ignite.spi.communication.tcp.internal.TcpHandshakeExecutor;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
+import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assume;
 import org.junit.Test;
@@ -249,119 +252,99 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      * Verify that inverse connection request won't hang cluster in case of paired connections enabled.
      *
      * Description:
-     * 1. Start server node that won't be able to reach server.
+     * 1. Start server node.
      * 2. Start client node.
-     * 3. Send message from server node to client node waiting for server node to start creating communication client
-     * thus making sure that second operation of sending message will try to wait on Future created for communication client.
-     * 4. Both operations must fail and not hang.
+     * 3. Prohibit handshaking and disconnect communication clients between server and client nodes.
+     * 4. Try sending two messages, making second sending reuse first's future of communication client.
+     * 5. Verify that both messages were failed to send and that they failed due to inverse protocol.
+     * 6. Allow handshaking and verify that nodes can communicate again by sending message.
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL, value = "true")
     public void testPairedAndInverseConnectionDoesntHang() throws Exception {
+        AtomicBoolean doTheShake = new AtomicBoolean(true);
+
         final int fails = 2;
 
-        UNREACHABLE_DESTINATION.set(UNRESOLVED_HOST);
+        // Control handshaking
+        final DependencyResolver rslvr = new DependencyResolver() {
+            @Override public <T> T resolve(T instance) {
+                if (instance instanceof TcpHandshakeExecutor) {
+                    TcpHandshakeExecutor gridNioServer = (TcpHandshakeExecutor) instance;
 
-        AtomicBoolean enableBarrier = new AtomicBoolean(false);
-
-        CountDownLatch messageLatch = new CountDownLatch(fails);
-        CountDownLatch clientLatch = new CountDownLatch(fails);
-
-        class LatchedCommunicationSpi extends TestCommunicationSpi {
-
-            @Override public void sendMessage(ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC) throws IgniteSpiException {
-                if (node.isClient() && enableBarrier.get()) {
-                    try {
-                        messageLatch.countDown();
-                        messageLatch.await();
-
-                        clientLatch.countDown();
-                        clientLatch.await();
-                    } catch (InterruptedException ignored) {
-                    }
+                    return (T) new TcpHandshakeExecutor(log, null, false) {
+                        @Override public long tcpHandshake(
+                            SocketChannel ch,
+                            UUID rmtNodeId,
+                            GridSslMeta sslMeta,
+                            HandshakeMessage msg
+                        ) throws IgniteCheckedException, IOException {
+                            if (doTheShake.get()) {
+                                return gridNioServer.tcpHandshake(ch, rmtNodeId, sslMeta, msg);
+                            }
+                            throw new NodeUnreachableException("");
+                        }
+                    };
                 }
-                super.sendMessage(node, msg, ackC);
-            }
 
-            @Override protected GridCommunicationClient createTcpClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
-                if (node.isClient()) {
-                    try {
-                        enableBarrier.set(true);
-                        clientLatch.await();
-                    } catch (InterruptedException ignored) {
-                    }
-                }
-                return super.createTcpClient(node, connIdx);
+                return instance;
             }
-        }
+        };
 
         Assume.assumeThat(System.getProperty("zookeeper.forceSync"), is(nullValue()));
 
         final IgniteEx server = startGridWithCfg(0, cfg -> {
-            cfg.setCommunicationSpi(new LatchedCommunicationSpi().setUsePairedConnections(true));
+            final TcpCommunicationSpi spi = new TcpCommunicationSpi();
+            spi.setUsePairedConnections(true).failureDetectionTimeoutEnabled(false);
+
+            cfg.setCommunicationSpi(spi);
+
+            // need to make sure that client node won't be qualified as offline
+            cfg.setClientFailureDetectionTimeout(60_000);
+            cfg.setFailureDetectionTimeout(60_000);
             return cfg;
-        });
+        }, rslvr);
 
         server.cluster().state(ClusterState.ACTIVE);
 
         final int clientIdx = 1;
 
-        GridTestUtils.runAsync(() -> {
-            try {
-                startGridWithCfg(clientIdx, cfg -> {
-                    cfg.setClientMode(true);
+        IgniteEx client = startGridWithCfg(clientIdx,
+            cfg -> {
+                cfg.setClientMode(true);
+                final TcpCommunicationSpi spi = new TcpCommunicationSpi();
+                spi.setUsePairedConnections(true).failureDetectionTimeoutEnabled(false);
 
-                    ((TcpDiscoverySpi) cfg.getDiscoverySpi()).setIpFinder(new TcpDiscoveryVmIpFinder(false)
-                            .setAddresses(
-                                    Collections.singletonList("127.0.0.1:47500..47502") // "47501" is a port of the client itself.
-                            )
-                    );
+                cfg.setCommunicationSpi(spi);
 
-                    final LatchedCommunicationSpi spi = new LatchedCommunicationSpi();
+                // need to make sure that remote node won't be qualified as offline
+                cfg.setFailureDetectionTimeout(60_000);
+                return cfg;
+            },
+            rslvr
+        );
 
-                    cfg.setCommunicationSpi(spi);
-
-                    spi.setUsePairedConnections(true);
-                    spi.setForceClientToServerConnections(forceClientToSrvConnections);
-
-                    return cfg;
-                });
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        // wait until client node is (partially) available
-        assertTrue(GridTestUtils.waitForCondition(() -> IgnitionEx.allGridsx().size() == 2, 60_000));
-
-        // get client node
-        assertTrue(GridTestUtils.waitForCondition(() -> {
-            final List<Ignite> ignites = IgnitionEx.allGridsx();
-            return ignites.stream()
-                .map(ignite -> (IgniteEx) ignite)
-                .anyMatch(ignite -> ignite.context() != null && ignite.context().clientNode());
-        }, 60_000));
-
-        final List<Ignite> ignites = IgnitionEx.allGridsx();
-
-        final IgniteEx client = ignites.stream()
-            .map(ignite -> (IgniteEx) ignite)
-            .filter(ignite -> ignite.context() != null && ignite.context().clientNode())
-            .findFirst().get();
+        awaitPartitionMapExchange(true, true, null);
 
         final UUID clientId = client.context().localNodeId();
-
-        // wait until client node is visible for server node
-        assertTrue(GridTestUtils.waitForCondition(() -> {
-            return server.context().discovery().discoCache() != null && server.context().discovery().node(clientId) != null;
-        }, 60_000));
 
         final ClusterNode clientNode = server.context().discovery().node(clientId);
 
         AtomicInteger failCount = new AtomicInteger(0);
 
         final GridIoManager serverGridIo = server.context().io();
+
+        // prohibit handshakes, making creating communication clients fail
+        doTheShake.set(false);
+
+        // close all existing communication clients
+        try {
+            TcpCommunicationSpi commSpi = (TcpCommunicationSpi) server.context().config().getCommunicationSpi();
+
+            ConnectionClientPool connPool = U.field(commSpi, "clientPool");
+
+            connPool.forceCloseConnection(client.cluster().localNode().id());
+        } catch (Exception ignored) {}
 
         // send two messages from server to client, making it wait on communication client future
         for (int i = 0; i < fails; i++) {
@@ -370,26 +353,36 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
                 try {
                     future.get();
                 } catch (IgniteCheckedException e) {
-                    failCount.incrementAndGet();
+                    // verify that we indeed fail because inverse is not supported here
+                    Throwable t = e;
+                    while (t != null) {
+                        final Throwable[] suppressed = t.getSuppressed();
+                        for (Throwable throwable : suppressed) {
+                            if ("Inverse connection protocol doesn't support paired connections".equals(throwable.getMessage())) {
+                                failCount.incrementAndGet();
+                            }
+                        }
+                        t = t.getCause();
+                    }
                 }
             });
         }
 
+        // verify that both messages couldn't be sent
         assertTrue(GridTestUtils.waitForCondition(() -> failCount.get() == fails, TimeUnit.SECONDS.toMillis(60)));
 
-        server.close();
+        // allow handshaking
+        doTheShake.set(true);
 
-        List<Thread> asyncRunnables = Thread.getAllStackTraces().keySet().stream()
-                .filter(t -> t.getName().contains("async-runnable-runner"))
-                .collect(Collectors.toList());
-
-        for (Thread asyncRunnable : asyncRunnables) {
-            U.interrupt(asyncRunnable);
-
-            U.join(asyncRunnable, log);
-        }
-
-        IgnitionEx.stopAll(true, null);
+        // verify that nodes can communicate
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            try {
+                serverGridIo.sendIoTest(clientNode, new byte[]{1, 2, 3, 4}, false).get();
+            } catch (IgniteCheckedException e) {
+                return false;
+            }
+            return true;
+        }, TimeUnit.SECONDS.toMillis(60)));;
     }
 
     /**
