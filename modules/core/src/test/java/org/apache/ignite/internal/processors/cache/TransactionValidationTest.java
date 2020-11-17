@@ -21,6 +21,7 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTransactionalCache;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -29,7 +30,7 @@ import org.junit.Test;
 import javax.cache.CacheException;
 
 /**
- * Tests check that second operation fail if it doesn't pass validation.
+ * Tests check that second operation in transaction fail if it doesn't pass validation.
  */
 public class TransactionValidationTest extends GridCommonAbstractTest {
     /**
@@ -44,16 +45,16 @@ public class TransactionValidationTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void validationWithNearCache() throws Exception {
-        validationTest(true, true);
+    public void validationOnLocalNode() throws Exception {
+        validationTest(false, false);
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void validationOnLocalNode() throws Exception {
-        validationTest(false, false);
+    public void validationOnNearCache() throws Exception {
+        validationTest(true, true);
     }
 
     /**
@@ -62,22 +63,22 @@ public class TransactionValidationTest extends GridCommonAbstractTest {
     public void validationTest(boolean distributed, boolean nearCache) throws Exception {
         IgniteEx txCrd;
 
-        if (distributed) {
-            startGrid(0);
-            startGrid(1);
+        if (distributed && nearCache)
+            txCrd = startGrids(2);
+        else if (distributed && !nearCache) {
+            startGrids(2);
+
             txCrd = startClientGrid(2);
         }
         else
             txCrd = startGrid(0);
 
         CacheConfiguration<Object, Object> cfgCache0 = new CacheConfiguration<>("cache0")
-                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                .setNearConfiguration(new NearCacheConfiguration<>());
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
 
         CacheConfiguration<Object, Object> cfgCache1 = new CacheConfiguration<>("cache1")
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                .setTopologyValidator(nodes -> false)
-                .setNearConfiguration(new NearCacheConfiguration<>());
+                .setTopologyValidator(nodes -> false);
 
         if (nearCache) {
             cfgCache0.setNearConfiguration(new NearCacheConfiguration<>());
@@ -92,16 +93,21 @@ public class TransactionValidationTest extends GridCommonAbstractTest {
         try (Transaction tx = txCrd.transactions().txStart()) {
             cache0.put(1, 1);
 
-            CacheException e = null;
+            boolean isNearCache = ((GatewayProtectedCacheProxy) cache1).context().cache() instanceof GridNearTransactionalCache;
+
+            if (nearCache)
+                assertTrue("Must be near cache", isNearCache);
+            else
+                assertTrue("Must not be near cache", !isNearCache);
 
             try {
                 cache1.put(1, 1);
-            }
-            catch (CacheException e0) {
-                e = e0;
-            }
 
-            assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+                fail("Validation broken");
+            }
+            catch (CacheException e) {
+                assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+            }
         }
     }
 
