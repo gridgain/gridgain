@@ -289,7 +289,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
     }
 
     /** {@inheritDoc} */
-    @Override public Serializable decryptKey(byte[] key) {
+    @Override public KeystoreEncryptionKey decryptKey(byte[] key) {
         return decryptKey(key, null);
     }
 
