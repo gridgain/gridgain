@@ -128,7 +128,7 @@ public class DefragmentationFileUtils {
      *
      * @param workDir Cache group working directory.
      * @param grpId Cache group Id of cache group belonging to the given working directory.
-     * @param partId Partionion index to check.
+     * @param partId Partition index to check.
      * @param log Logger to write messages.
      * @return {@code true} if given partition is already defragmented.
      * @throws IgniteCheckedException If {@link IOException} occurred.
@@ -166,7 +166,7 @@ public class DefragmentationFileUtils {
             Files.deleteIfExists(defragmentedPartMappingFile.toPath());
         }
         catch (IOException e) {
-            handleIoException(e);
+            throw new IgniteCheckedException(e);
         }
 
         return false;
@@ -215,7 +215,7 @@ public class DefragmentationFileUtils {
             }
         }
         catch (IOException e) {
-            handleIoException(e);
+            throw new IgniteCheckedException(e);
         }
     }
 
@@ -266,7 +266,7 @@ public class DefragmentationFileUtils {
     }
 
     /**
-     * Rename temporary index defragmenation file to a finalized one.
+     * Rename temporary index defragmentation file to a finalized one.
      *
      * @param workDir Cache group working directory.
      * @throws IgniteCheckedException If {@link IOException} occurred.
@@ -282,7 +282,7 @@ public class DefragmentationFileUtils {
             Files.move(defragmentedIdxTmpFile.toPath(), defragmentedIdxFile.toPath(), ATOMIC_MOVE);
         }
         catch (IOException e) {
-            handleIoException(e);
+            throw new IgniteCheckedException(e);
         }
     }
 
@@ -291,7 +291,7 @@ public class DefragmentationFileUtils {
      * partition during the process.
      *
      * @param workDir Cache group working directory.
-     * @param partId Parition index, will be substituted into file name.
+     * @param partId Partition index, will be substituted into file name.
      * @return File.
      *
      * @see DefragmentationFileUtils#defragmentedPartFile(File, int)
@@ -305,7 +305,7 @@ public class DefragmentationFileUtils {
      * partition when the process is over.
      *
      * @param workDir Cache group working directory.
-     * @param partId Parition index, will be substituted into file name.
+     * @param partId Partition index, will be substituted into file name.
      * @return File.
      *
      * @see DefragmentationFileUtils#defragmentedPartTmpFile(File, int)
@@ -315,10 +315,10 @@ public class DefragmentationFileUtils {
     }
 
     /**
-     * Rename temporary partition defragmenation file to a finalized one.
+     * Rename temporary partition defragmentation file to a finalized one.
      *
      * @param workDir Cache group working directory.
-     * @param partId Parition index.
+     * @param partId Partition index.
      * @throws IgniteCheckedException If {@link IOException} occurred.
      *
      * @see DefragmentationFileUtils#defragmentedPartTmpFile(File, int)
@@ -334,7 +334,7 @@ public class DefragmentationFileUtils {
             Files.move(defragmentedPartTmpFile.toPath(), defragmentedPartFile.toPath(), ATOMIC_MOVE);
         }
         catch (IOException e) {
-            handleIoException(e);
+            throw new IgniteCheckedException(e);
         }
     }
 
@@ -343,7 +343,7 @@ public class DefragmentationFileUtils {
      * mapping for given partition during and after defragmentation process. No temporary counterpart is required here.
      *
      * @param workDir Cache group working directory.
-     * @param partId Parition index, will be substituted into file name.
+     * @param partId Partition index, will be substituted into file name.
      * @return File.
      *
      * @see LinkMap
@@ -388,12 +388,7 @@ public class DefragmentationFileUtils {
             io.force(true);
         }
         catch (IOException e) {
-            handleIoException(e);
+            throw new IgniteCheckedException(e);
         }
-    }
-
-    /** */
-    private static void handleIoException(IOException e) throws IgniteCheckedException {
-        throw new IgniteCheckedException(e);
     }
 }

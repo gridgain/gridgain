@@ -125,7 +125,7 @@ public class CachePartitionDefragmentationManager {
     /** Logger. */
     private final IgniteLogger log;
 
-    /** Database schared manager. */
+    /** Database shared manager. */
     private final GridCacheDatabaseSharedManager dbMgr;
 
     /** File page store manager. */
@@ -489,13 +489,6 @@ public class CachePartitionDefragmentationManager {
         DefragmentationPageReadWriteManager partMgr = (DefragmentationPageReadWriteManager)partPageMem.pageManager();
 
         partMgr.pageStoreMap().addPageStore(grpId, PageIdAllocator.INDEX_PARTITION, idxPageStore);
-    }
-
-    /**
-     * Cancel the process of defragmentation.
-     */
-    public void cancel(){
-
     }
 
     /** */
