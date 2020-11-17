@@ -336,17 +336,21 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         // wait until client node is (partially) available
         assertTrue(GridTestUtils.waitForCondition(() -> IgnitionEx.allGridsx().size() == 2, 60_000));
-        final List<Ignite> ignites = IgnitionEx.allGridsx();
 
         // get client node
         assertTrue(GridTestUtils.waitForCondition(() -> {
-            final IgniteEx client = (IgniteEx) ignites.get(0);
-            if (client != null && client.context() != null) {
-                return client.context().clientNode();
-            }
-            return false;
+            final List<Ignite> ignites = IgnitionEx.allGridsx();
+            return ignites.stream()
+                .map(ignite -> (IgniteEx) ignite)
+                .anyMatch(ignite -> ignite.context() != null && ignite.context().clientNode());
         }, 60_000));
-        final IgniteEx client = (IgniteEx) ignites.get(0);
+
+        final List<Ignite> ignites = IgnitionEx.allGridsx();
+
+        final IgniteEx client = ignites.stream()
+            .map(ignite -> (IgniteEx) ignite)
+            .filter(ignite -> ignite.context() != null && ignite.context().clientNode())
+            .findFirst().get();
 
         final UUID clientId = client.context().localNodeId();
 
