@@ -340,4 +340,27 @@ public class SegmentAware {
     public boolean compressionInProgress() {
         return segmentCompressStorage.compressionInProgress();
     }
+
+    /**
+     * Callback at start of segment rollover.
+     */
+    public void onStartSegmentRollover() {
+        segmentCurrStateStorage.onStartSegmentRollover();
+    }
+
+    /**
+     * Callback at finish of segment rollover.
+     */
+    public void onFinishSegmentRollover() {
+        segmentCurrStateStorage.onFinishSegmentRollover();
+    }
+
+    /**
+     * Check if the segment is being rollover now.
+     *
+     * @return {@code True} if in progress.
+     */
+    public boolean rolloverInProgress() {
+        return segmentCurrStateStorage.rolloverInProgress();
+    }
 }

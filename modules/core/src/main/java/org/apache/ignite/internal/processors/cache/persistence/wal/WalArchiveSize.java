@@ -32,6 +32,8 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkpointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.aware.SegmentAware;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -62,26 +64,29 @@ public class WalArchiveSize {
     /** Checkpoint manager instance. */
     @Nullable private volatile CheckpointManager cpMgr;
 
-    /** Predicate for checking whether node should fail because WAL archive is full and cannot be cleared. */
-    @Nullable private volatile BooleanSupplier shouldFailure;
+    /** Holder of actual information of latest manipulation on WAL segments. */
+    @Nullable private volatile SegmentAware segmentAware;
 
     /** Failure processor. */
     private final FailureProcessor failureProcessor;
 
-    /** Node failed by {@link #shouldFailure}. */
-    private volatile boolean nodeFailure;
+    /** Predicate for checking whether node should fail because WAL archive is full and cannot be cleared. */
+    @Nullable private volatile BooleanSupplier shouldFailure;
 
     /** Number of segments that can be deleted now. */
     private volatile int availableToClear;
 
-    /** Absolute segment index last checkpoint. */
+    /** Segment index of last checkpoint, up to which we can safely delete segments in archive. */
     private long cpIdx;
 
-    /** Smallest absolute index of reserved segment, {@code -1} if not present. */
+    /** Index of smallest reserved segment, up to which we can safely delete segments in archive. */
     private long reservedIdx = -1;
 
-    /** Stop flag. */
-    private boolean stop;
+    /** Node stopping flag. */
+    private boolean nodeStop;
+
+    /** Node failed by {@link #shouldFailure} flag. */
+    private volatile boolean nodeFailure;
 
     /**
      * Constructor.
@@ -110,24 +115,27 @@ public class WalArchiveSize {
     /**
      * Callback on start of WAL manager.
      *
-     * @param segmentAware Holder of actual information of latest manipulation on WAL segments.
+     * @param segAware Holder of actual information of latest manipulation on WAL segments.
      * @param dbMgr Database manager.
      * @param archiveEnabled Archive enabled.
      * @param compressionEnabled Compression enabled.
      */
     public void onStartWalManager(
-        SegmentAware segmentAware,
+        SegmentAware segAware,
         GridCacheDatabaseSharedManager dbMgr,
         boolean archiveEnabled,
         boolean compressionEnabled
     ) {
         if (!unlimited()) {
-            shouldFailure = () -> dbMgr.txAcquireCheckpointReadLockCount() > 0 &&
-                (!archiveEnabled || (segmentAware.isWaitSegmentArchiving() && !segmentAware.archivingInProgress())) &&
-                (!compressionEnabled || segmentAware.compressionInProgress());
+            this.segmentAware = segAware;
+
+            shouldFailure = () -> !checkpointInProgress(dbMgr) && dbMgr.txAcquireCheckpointReadLockCount() > 0 &&
+                ((!archiveEnabled && !segAware.rolloverInProgress())
+                    || (archiveEnabled && segAware.isWaitSegmentArchiving() && !segAware.archivingInProgress())) &&
+                (!compressionEnabled || !segAware.compressionInProgress());
 
             if (archiveEnabled) {
-                segmentAware.addMinReservedSegmentObserver(absSegIdx -> {
+                segAware.addMinReservedSegmentObserver(absSegIdx -> {
                     synchronized (this) {
                         reservedIdx = absSegIdx == null ? -1 : absSegIdx;
 
@@ -199,24 +207,34 @@ public class WalArchiveSize {
      *
      * @param idx Absolut segment index.
      * @param size Required space in bytes.
+     * @param afterReserveCb Callback after reserving.
      * @throws IgniteCheckedException If failed.
      */
-    public void reserveSpaceWithClear(long idx, long size) throws IgniteCheckedException {
+    public void reserveSpaceWithClear(
+        long idx,
+        long size,
+        @Nullable Runnable afterReserveCb
+    ) throws IgniteCheckedException {
         if (!unlimited()) {
             synchronized (this) {
                 assert sizes != null;
 
                 try {
                     while (maxSize - currentSize() < size) {
-                        if (stop)
-                            break;
+                        if (nodeStop)
+                            throw new IgniteCheckedException("Node stopping");
+                        else if (nodeFailure)
+                            throw new IgniteCheckedException("WAL archive is full and cannot be cleared");
                         else if (availableToClear == 0) {
                             BooleanSupplier shouldFall = this.shouldFailure;
 
                             if (shouldFall != null && shouldFall.getAsBoolean()) {
                                 nodeFailure = true;
 
-                                // TODO: Fix problems with stop node by FH
+                                SegmentAware segmentAware = this.segmentAware;
+
+                                if (segmentAware != null)
+                                    segmentAware.forceInterrupt();
 
                                 failureProcessor.process(
                                     new FailureContext(
@@ -226,15 +244,14 @@ public class WalArchiveSize {
                                     new StopNodeFailureHandler()
                                 );
 
-                                // TODO: Think about it
-                                stop = true;
+                                notifyAll();
                             }
                             else
                                 wait(1_000);
                         }
                         else {
                             FileWALPointer low = new FileWALPointer(sizes.firstKey(), 0, 0);
-                            FileWALPointer high = new FileWALPointer(minIdx(), 0, 0);
+                            FileWALPointer high = new FileWALPointer(safeIdx(), 0, 0);
 
                             CheckpointManager cpMgr = this.cpMgr;
 
@@ -255,6 +272,10 @@ public class WalArchiveSize {
                     }
 
                     add(idx, size);
+
+                    if (afterReserveCb != null)
+                        afterReserveCb.run();
+
                     notifyAll();
                 }
                 catch (InterruptedException e) {
@@ -303,7 +324,7 @@ public class WalArchiveSize {
                         return false;
 
                     FileWALPointer low = new FileWALPointer(sizes.firstKey(), 0, 0);
-                    FileWALPointer high = new FileWALPointer(minIdx(), 0, 0);
+                    FileWALPointer high = new FileWALPointer(safeIdx(), 0, 0);
 
                     CheckpointManager cpMgr = this.cpMgr;
 
@@ -327,7 +348,7 @@ public class WalArchiveSize {
     }
 
     /**
-     * Return current size of WAL archive in bytes.
+     * Getting current size of WAL archive in bytes.
      *
      * @return Current size of WAL archive in bytes.
      */
@@ -336,7 +357,7 @@ public class WalArchiveSize {
     }
 
     /**
-     * Return maximum WAL archive size in bytes.
+     * Getting maximum WAL archive size in bytes.
      *
      * @return Maximum WAL archive size in bytes.
      */
@@ -345,10 +366,10 @@ public class WalArchiveSize {
     }
 
     /**
-     * Shutdown.
+     * Shutdown when the node stopping.
      */
     public synchronized void shutdown() {
-        stop = true;
+        nodeStop = true;
 
         notifyAll();
     }
@@ -369,24 +390,24 @@ public class WalArchiveSize {
         assert !unlimited();
         assert sizes != null;
 
-        availableToClear = sizes.headMap(minIdx(), false).size();
+        availableToClear = sizes.headMap(safeIdx(), false).size();
 
         notifyAll();
     }
 
     /**
-     * Return index to which it is safe to clear archive.
+     * Calculation of index up to which we can delete segments in archive.
      *
      * @return Index to which it is safe to clear archive.
      */
-    private long minIdx() {
+    private long safeIdx() {
         return reservedIdx == -1 ? cpIdx : Math.min(cpIdx, reservedIdx);
     }
 
     /**
      * Checking that archive is unlimited.
      *
-     * @return {@code True} if archive is unlimited.
+     * @return {@code True} if archive unlimited.
      */
     private boolean unlimited() {
         return maxSize == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
@@ -401,8 +422,29 @@ public class WalArchiveSize {
         if (log.isInfoEnabled()) {
             NavigableMap<Long, Long> sizes = this.sizes;
 
-            log.info(prefix + " [cpIdx=" + cpIdx + ", reservedIdx=" + reservedIdx + ", minIdx=" + minIdx()
+            log.info(prefix + " [cpIdx=" + cpIdx + ", reservedIdx=" + reservedIdx + ", safeIdx=" + safeIdx()
                 + ", segments=" + (sizes == null ? 0 : sizes.size()) + ", availableToClear=" + availableToClear + ']');
         }
+    }
+
+    /**
+     * Checking that checkpoint is in progress.
+     *
+     * @param dbMgr Database manager.
+     * @return {@code True} if checkpoint in progress.
+     */
+    private boolean checkpointInProgress(@Nullable GridCacheDatabaseSharedManager dbMgr) {
+        if (dbMgr != null) {
+            Checkpointer checkpointer = dbMgr.getCheckpointer();
+
+            if (checkpointer != null) {
+                CheckpointProgress checkpointProgress = checkpointer.currentProgress();
+
+                if (checkpointProgress != null)
+                    return checkpointProgress.inProgress();
+            }
+        }
+
+        return false;
     }
 }

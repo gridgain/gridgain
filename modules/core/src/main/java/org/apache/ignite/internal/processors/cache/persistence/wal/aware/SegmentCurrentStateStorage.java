@@ -43,6 +43,9 @@ class SegmentCurrentStateStorage {
     /** Waiting for a segment to be archived because it is not possible to switch to next segment. */
     private volatile boolean waitSegmentArchiving;
 
+    /** Rollover a segment in progress. */
+    private volatile boolean rolloverInProgress;
+
     /**
      * @param walSegmentsCnt Total WAL segments count.
      * @param segmentArchivedStorage Last archived segment storage.
@@ -197,5 +200,28 @@ class SegmentCurrentStateStorage {
      */
     public boolean isWaitSegmentArchiving() {
         return waitSegmentArchiving;
+    }
+
+    /**
+     * Callback at start of segment rollover.
+     */
+    public void onStartSegmentRollover() {
+        rolloverInProgress = true;
+    }
+
+    /**
+     * Callback at finish of segment rollover.
+     */
+    public void onFinishSegmentRollover() {
+        rolloverInProgress = false;
+    }
+
+    /**
+     * Check if the segment is being rollover now.
+     *
+     * @return {@code True} if in progress.
+     */
+    public boolean rolloverInProgress() {
+        return rolloverInProgress;
     }
 }

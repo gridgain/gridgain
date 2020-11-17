@@ -112,75 +112,122 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Check that WAL archive will not be exceeded if only archiving will work.
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will not be a fail node due to the inability to clear WAL archive
+     * if only archiving will work.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testArchiverOnly() throws Exception {
-        checkNotExceedMaxWalArchiveSize();
+    public void testNotFailAndExceedMaxArchiverOnly() throws Exception {
+        checkNotFailedAndNotExceedMaxWalArchiveSize();
     }
 
     /**
-     * Check that WAL archive will not be exceeded if archiving and compaction works.
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will not be a fail node due to the inability to clear WAL archive
+     * if archiving and compaction works.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testArchiverWithCompaction() throws Exception {
+    public void testNotFailAndExceedMaxArchiverWithCompaction() throws Exception {
         walCompactionEnabled = true;
 
-        checkNotExceedMaxWalArchiveSize();
+        checkNotFailedAndNotExceedMaxWalArchiveSize();
     }
 
     /**
-     * Check that WAL archive will not be exceeded if only rollOver will work.
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will not be a fail node due to the inability to clear WAL archive
+     * if only rollOver will work.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void rollOverOnly() throws Exception {
+    public void testNotFailAndExceedMaxRollOverOnly() throws Exception {
         walArchiveEnabled = false;
 
-        checkNotExceedMaxWalArchiveSize();
+        checkNotFailedAndNotExceedMaxWalArchiveSize();
     }
 
     /**
-     * Check that WAL archive will not be exceeded if rollOver and compaction works.
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will not be a fail node due to the inability to clear WAL archive
+     * if rollOver and compaction works.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void rollOverWithCompaction() throws Exception {
+    public void testNotFailAndExceedMaxRollOverWithCompaction() throws Exception {
         walArchiveEnabled = false;
         walCompactionEnabled = true;
 
-        checkNotExceedMaxWalArchiveSize();
-    }
-
-    @Test
-    public void name() throws Exception {
-        IgniteEx n = startGrid(0);
-
-        try (Transaction tx = n.transactions().txStart()) {
-            for (int i = 0; i < 1_000; i++)
-                n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(100 * U.KB)]);
-
-            tx.commit();
-        }
-
-        stopObserver(observer -> {
-            assertFalse(observer.exceed);
-            assertTrue(observer.walArchiveSize.nodeFailure());
-        });
+        checkNotFailedAndNotExceedMaxWalArchiveSize();
     }
 
     /**
-     * Checking that max WAL archive size is not exceeded.
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will be a fail node due to the inability to clear WAL archive
+     * if only archiving will work.
      *
      * @throws Exception If failed.
      */
-    private void checkNotExceedMaxWalArchiveSize() throws Exception {
+    @Test
+    public void testFailAndExceedMaxArchiverOnly() throws Exception {
+        checkFailedAndNotExceedMaxWalArchiveSize();
+    }
+
+    /**
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will be a fail node due to the inability to clear WAL archive
+     * if archiving and compaction works.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testFailAndExceedMaxArchiverWithCompaction() throws Exception {
+        walCompactionEnabled = true;
+
+        checkFailedAndNotExceedMaxWalArchiveSize();
+    }
+
+    /**
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will be a fail node due to the inability to clear WAL archive
+     * if only rollOver will work.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testFailAndExceedMaxRollOverOnly() throws Exception {
+        walArchiveEnabled = false;
+
+        checkFailedAndNotExceedMaxWalArchiveSize();
+    }
+
+    /**
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will be a fail node due to the inability to clear WAL archive
+     * if rollOver and compaction works.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testFailAndExceedMaxRollOverWithCompaction() throws Exception {
+        walArchiveEnabled = false;
+        walCompactionEnabled = true;
+
+        checkFailedAndNotExceedMaxWalArchiveSize();
+    }
+
+    /**
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will not be a fail node due to the inability to clear WAL archive.
+     *
+     * @throws Exception If failed.
+     */
+    private void checkNotFailedAndNotExceedMaxWalArchiveSize() throws Exception {
         IgniteEx n = startGrid(0);
 
         for (int i = 0; i < 1_000; i++)
@@ -189,6 +236,30 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
         stopObserver(observer -> {
             assertFalse(observer.exceed);
             assertFalse(observer.walArchiveSize.nodeFailure());
+        });
+    }
+
+    /**
+     * Check that maximum WAL archive size will not be exceeded and
+     * that there will be a fail node due to the inability to clear WAL archive.
+     *
+     * @throws Exception If failed.
+     */
+    private void checkFailedAndNotExceedMaxWalArchiveSize() throws Exception {
+        IgniteEx n = startGrid(0);
+
+        GridTestUtils.assertThrows(log, () -> {
+            try (Transaction tx = n.transactions().txStart()) {
+                for (int i = 0; i < 1_000; i++)
+                    n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(100 * U.KB)]);
+
+                tx.commit();
+            }
+        }, Throwable.class, null);
+
+        stopObserver(observer -> {
+            assertFalse(observer.exceed);
+            assertTrue(observer.walArchiveSize.nodeFailure());
         });
     }
 
