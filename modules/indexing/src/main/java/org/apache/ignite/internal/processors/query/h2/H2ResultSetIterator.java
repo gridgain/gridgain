@@ -42,6 +42,7 @@ import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.jdbc.JdbcResultSet;
 import org.gridgain.internal.h2.result.ResultInterface;
+import org.gridgain.internal.h2.value.DataType;
 import org.gridgain.internal.h2.value.Value;
 
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PAGE_ROWS;
@@ -255,6 +256,8 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
 
                     row[c] = valCacheObj.getObject(true);
                 }
+                else if (DataType.isIntervalType(val.getValueType()))
+                    row[c] = val.getLong();
                 else
                     row[c] = val.getObject();
             }

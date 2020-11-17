@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.PartitionAllocationMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -27,6 +28,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.WorkProgressDispatcher;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 
 /**
  * Context with information about current checkpoint.
@@ -74,6 +77,11 @@ public class CheckpointContextImpl implements CheckpointListener.Context {
     /** {@inheritDoc} */
     @Override public boolean nextSnapshot() {
         return curr.nextSnapshot();
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteInternalFuture<?> finishedStateFut() {
+        return curr.futureFor(FINISHED);
     }
 
     /** {@inheritDoc} */
