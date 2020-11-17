@@ -51,7 +51,15 @@ public class GroupPartitionId implements Comparable<GroupPartitionId> {
      * @param partId Partition ID.
      * @return flag to be used for partition
      */
-    private static byte getFlagByPartId(final int partId) {
+    public static byte getFlagByPartId(final int partId) {
+        return partId == PageIdAllocator.INDEX_PARTITION ? PageIdAllocator.FLAG_IDX : PageIdAllocator.FLAG_DATA;
+    }
+
+    /**
+     * @param partId Partition ID.
+     * @return page store type to be used for partition
+     */
+    public static byte getTypeByPartId(final int partId) {
         return partId == PageIdAllocator.INDEX_PARTITION ? PageStore.TYPE_IDX : PageStore.TYPE_DATA;
     }
 

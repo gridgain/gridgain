@@ -98,13 +98,15 @@ public class PageIdUtilsSelfTest extends GridCommonAbstractTest {
     @Test
     public void testPageIdFromLink() throws Exception {
         assertEquals(0x00FFFFFFFFFFFFFFL, PageIdUtils.pageId(0x00FFFFFFFFFFFFFFL));
-        assertEquals(0x10FFFFFFFFFFFFFFL, PageIdUtils.pageId(0x10FFFFFFFFFFFFFFL));
-        assertEquals(0x01FFFFFFFFFFFFFFL, PageIdUtils.pageId(0x01FFFFFFFFFFFFFFL));
-        assertEquals(0x11FFFFFFFFFFFFFFL, PageIdUtils.pageId(0x11FFFFFFFFFFFFFFL));
-        assertEquals(0x80FFFFFFFFFFFFFFL, PageIdUtils.pageId(0x80FFFFFFFFFFFFFFL));
-        assertEquals(0x88FFFFFFFFFFFFFFL, PageIdUtils.pageId(0x88FFFFFFFFFFFFFFL));
-        assertEquals(0x08FFFFFFFFFFFFFFL, PageIdUtils.pageId(0x08FFFFFFFFFFFFFFL));
-        assertEquals(0xFFFFFFFFFFFFFFFFL, PageIdUtils.pageId(0xFFFFFFFFFFFFFFFFL));
+
+        assertEquals(0x0001FFFFFFFFFFFFL, PageIdUtils.pageId(0x0001FFFFFFFFFFFFL));
+        assertEquals(0x0001FFFFFFFFFFFFL, PageIdUtils.pageId(0x1001FFFFFFFFFFFFL));
+        assertEquals(0x0001FFFFFFFFFFFFL, PageIdUtils.pageId(0x0101FFFFFFFFFFFFL));
+        assertEquals(0x0001FFFFFFFFFFFFL, PageIdUtils.pageId(0x1101FFFFFFFFFFFFL));
+        assertEquals(0x0001FFFFFFFFFFFFL, PageIdUtils.pageId(0x8001FFFFFFFFFFFFL));
+        assertEquals(0x0001FFFFFFFFFFFFL, PageIdUtils.pageId(0x8801FFFFFFFFFFFFL));
+        assertEquals(0x0001FFFFFFFFFFFFL, PageIdUtils.pageId(0x0801FFFFFFFFFFFFL));
+        assertEquals(0x0001FFFFFFFFFFFFL, PageIdUtils.pageId(0xFF01FFFFFFFFFFFFL));
 
         assertEquals(0x0002FFFFFFFFFFFFL, PageIdUtils.pageId(0x0002FFFFFFFFFFFFL));
         assertEquals(0x1002FFFFFFFFFFFFL, PageIdUtils.pageId(0x1002FFFFFFFFFFFFL));
@@ -114,6 +116,15 @@ public class PageIdUtilsSelfTest extends GridCommonAbstractTest {
         assertEquals(0x8802FFFFFFFFFFFFL, PageIdUtils.pageId(0x8802FFFFFFFFFFFFL));
         assertEquals(0x0802FFFFFFFFFFFFL, PageIdUtils.pageId(0x0802FFFFFFFFFFFFL));
         assertEquals(0xFF02FFFFFFFFFFFFL, PageIdUtils.pageId(0xFF02FFFFFFFFFFFFL));
+
+        assertEquals(0x0004FFFFFFFFFFFFL, PageIdUtils.pageId(0x0004FFFFFFFFFFFFL));
+        assertEquals(0x1004FFFFFFFFFFFFL, PageIdUtils.pageId(0x1004FFFFFFFFFFFFL));
+        assertEquals(0x0104FFFFFFFFFFFFL, PageIdUtils.pageId(0x0104FFFFFFFFFFFFL));
+        assertEquals(0x1104FFFFFFFFFFFFL, PageIdUtils.pageId(0x1104FFFFFFFFFFFFL));
+        assertEquals(0x8004FFFFFFFFFFFFL, PageIdUtils.pageId(0x8004FFFFFFFFFFFFL));
+        assertEquals(0x8804FFFFFFFFFFFFL, PageIdUtils.pageId(0x8804FFFFFFFFFFFFL));
+        assertEquals(0x0804FFFFFFFFFFFFL, PageIdUtils.pageId(0x0804FFFFFFFFFFFFL));
+        assertEquals(0xFF04FFFFFFFFFFFFL, PageIdUtils.pageId(0xFF04FFFFFFFFFFFFL));
 
         assertEquals(0x0000000000000000L, PageIdUtils.pageId(0x0000000000000000L));
         assertEquals(0x1000000000000000L, PageIdUtils.pageId(0x1000000000000000L));
