@@ -56,6 +56,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assume;
 import org.junit.Test;
@@ -108,8 +109,6 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         super.afterTest();
 
         stopAllGrids();
-
-        System.clearProperty(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
     }
 
     /** {@inheritDoc} */
@@ -258,9 +257,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL, value = "true")
     public void testPairedAndInverseConnectionDoesntHang() throws Exception {
-        System.setProperty(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL, "true");
-
         final int fails = 2;
 
         UNREACHABLE_DESTINATION.set(UNRESOLVED_HOST);
