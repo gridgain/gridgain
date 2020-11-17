@@ -30,7 +30,6 @@ import java.util.Set;
  * Unit tests for Hasher.
  */
 public class HasherSelfTest extends GridCommonAbstractTest {
-
     /**
      * Create hash by arrays with different size and check that hash differ.
      */

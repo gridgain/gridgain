@@ -20,9 +20,9 @@ import org.apache.ignite.IgniteCheckedException;
 import org.junit.Test;
 
 /**
- * Partial statistics collection (by set of columns) tests.
+ * Planner statistics usage test: partial statistics collection (by set of columns) tests.
  */
-public class StatisticPartialCollectionTest extends TableStatisticsAbstractTest {
+public class PSUStatisticPartialCollectionTest extends StatisticsAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(1);

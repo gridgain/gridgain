@@ -55,9 +55,6 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /** Table to calculate costs by. */
     private final GridH2Table tbl;
 
-    /** Cost function object. */
-    private final CostFunctionLast cfl;
-
     /**
      * Logger.
      */
@@ -92,29 +89,25 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
             costFuncType = CostFunctionType.LAST;
         }
-
+        //costFuncType = CostFunctionType.COMPATIBLE_8_7_28;
         switch (costFuncType) {
             case COMPATIBLE_8_7_12:
-                cfl = null;
                 constFunc = this::getCostRangeIndex_8_7_12;
 
                 break;
 
             case COMPATIBLE_8_7_6:
-                cfl = null;
                 constFunc = this::getCostRangeIndex_8_7_6;
 
                 break;
 
             case COMPATIBLE_8_7_28:
-                cfl = null;
                 constFunc = this::getCostRangeIndex_8_7_28;
 
                 break;
 
             default:
-                cfl = new CostFunctionLast();
-                constFunc = cfl::getCostRangeIndex;
+                constFunc = new CostFunctionLast()::getCostRangeIndex;
 
                 break;
         }
@@ -132,9 +125,16 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /**
      * Re-implement {@link BaseIndex#getCostRangeIndex} to support  compatibility with old version.
      */
-    private long getCostRangeIndex_8_7_28(Session ses, int[] masks, long rowCount,
-                                          TableFilter[] filters, int filter, SortOrder sortOrder,
-                                          boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+    private long getCostRangeIndex_8_7_28(
+            Session ses,
+            int[] masks,
+            long rowCount,
+            TableFilter[] filters,
+            int filter,
+            SortOrder sortOrder,
+            boolean isScanIndex,
+            AllColumnsForPlan allColumnsSet
+    ) {
         rowCount += Constants.COST_ROW_OFFSET;
 
         int totalSelectivity = 0;
@@ -320,9 +320,16 @@ public abstract class H2IndexCostedBase extends BaseIndex {
      * Re-implement {@link BaseIndex#getCostRangeIndex} to support compatibility with versions
      * between 8.7.8 and 8.7.12.
      */
-    protected final long getCostRangeIndex_8_7_12(Session ses, int[] masks, long rowCount,
-                                                  TableFilter[] filters, int filter, SortOrder sortOrder,
-                                                  boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+    protected final long getCostRangeIndex_8_7_12(
+            Session ses,
+            int[] masks,
+            long rowCount,
+            TableFilter[] filters,
+            int filter,
+            SortOrder sortOrder,
+            boolean isScanIndex,
+            AllColumnsForPlan allColumnsSet
+    ) {
         rowCount += Constants.COST_ROW_OFFSET;
         int totalSelectivity = 0;
         long rowsCost = rowCount;
@@ -501,9 +508,16 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /**
      * Re-implement {@link BaseIndex#getCostRangeIndex} to suppor  compatibility with versions 8.7.6 and older.
      */
-    private final long getCostRangeIndex_8_7_6(Session ses, int[] masks, long rowCount,
-                                               TableFilter[] filters, int filter, SortOrder sortOrder,
-                                               boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+    private final long getCostRangeIndex_8_7_6(
+            Session ses,
+            int[] masks,
+            long rowCount,
+            TableFilter[] filters,
+            int filter,
+            SortOrder sortOrder,
+            boolean isScanIndex,
+            AllColumnsForPlan allColumnsSet
+    ) {
         // Compatibility with old version without statistics.
         rowCount = 10_000;
 
@@ -724,8 +738,13 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * @param locTblStats Local table statistics.
          * @return Row cost.
          */
-        private long rowCost(Session ses, TableFilter filter, int[] masks, long rowCount,
-                             ObjectStatisticsImpl locTblStats) {
+        private long rowCost(
+                Session ses,
+                TableFilter filter,
+                int[] masks,
+                long rowCount,
+                ObjectStatisticsImpl locTblStats
+        ) {
             int totalCardinality = 0;
 
             long rowsCost = rowCount;
@@ -785,11 +804,13 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         if (colStats != null)
                             rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost -
                                     (i > 0 ? 1 : 0));
+                        break;
                     }
                     else if (isNotNullFilter(ses, column, filter)) {
                         if (colStats != null)
                             rowsCost = Math.min(5 + Math.max(rowsCost * (100 - colStats.nulls()) / 100, 1), rowsCost -
                                     (i > 0 ? 1 : 0));
+                        break;
                     }
                     else
                         break;
@@ -1012,7 +1033,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             // If one select from column with exactly one (same for all rows) value - all rows will be selected if
             // the border is equal to that single value
             if (total.signum() == 0)
-                return (minStat.equals(minValue)) ? 100 : 0;
+                return (minStat.equals(start)) ? 100 - colStat.nulls() : 0;
 
             // 1) actual range divided by total range to get simple piece of table (selecting values part, 0-1)
             // 2) taking into account nulls by multiplying by percent of non null values: (100 - null)/100
@@ -1196,8 +1217,16 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * @param allColumnsSet All columns to select.
          * @return The cost.
          */
-        public long getCostRangeIndex(Session ses, int[] masks, long rowCount, TableFilter[] filters, int filter,
-                                      SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+        @Override public long getCostRangeIndex(
+                Session ses,
+                int[] masks,
+                long rowCount,
+                TableFilter[] filters,
+                int filter,
+                SortOrder sortOrder,
+                boolean isScanIndex,
+                AllColumnsForPlan allColumnsSet
+        ) {
             ObjectStatisticsImpl locTblStats = (ObjectStatisticsImpl) tbl.tableStatistics();
 
             if (locTblStats != null)

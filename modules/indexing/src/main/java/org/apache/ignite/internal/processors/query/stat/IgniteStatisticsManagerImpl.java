@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
@@ -68,7 +69,11 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         this.schemaMgr = schemaMgr;
 
         log = ctx.log(IgniteStatisticsManagerImpl.class);
-        statsRepos = new IgniteStatisticsRepositoryImpl(ctx);
+
+        boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
+        boolean persistence = GridCacheUtils.isPersistenceEnabled(ctx.config());
+        IgniteLogger repositoryLogger = ctx.log(IgniteStatisticsRepositoryImpl.class);
+        statsRepos = new IgniteStatisticsRepositoryImpl(storeData, persistence, this, repositoryLogger);
     }
 
     /**
@@ -127,17 +132,24 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         if (F.isEmpty(colNames)) {
             fullStat = true;
             selectedColumns = tbl.getColumns();
-        } else {
+        }
+        else {
             fullStat = false;
             selectedColumns = filterColumns(tbl.getColumns(), colNames);
         }
 
         Collection<ObjectPartitionStatisticsImpl> partsStats = collectPartitionStatistics(tbl, selectedColumns);
         StatsKey key = new StatsKey(tbl.identifier().schema(), tbl.identifier().table());
-        statsRepos.saveLocalPartitionsStatistics(key, partsStats, fullStat);
+        if (fullStat)
+            statsRepos.saveLocalPartitionsStatistics(key, partsStats);
+        else
+            statsRepos.mergeLocalPartitionsStatistics(key, partsStats);
 
-        ObjectStatisticsImpl tblStats = aggregateLocalStatistics(tbl, selectedColumns, partsStats);
-        statsRepos.saveLocalStatistics(key, tblStats, fullStat);
+        ObjectStatisticsImpl objStats = aggregateLocalStatistics(tbl, selectedColumns, partsStats);
+        if (fullStat)
+            statsRepos.saveLocalStatistics(key, objStats);
+        else
+            statsRepos.mergeLocalStatistics(key, objStats);
         if (log.isDebugEnabled())
             log.debug(String.format("Statistics collection by %s.%s object is finished.", schemaName, objName));
     }
@@ -228,10 +240,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Aggregate partition level statistics to local level one.
      *
-     * @param tbl table to aggregate statistics by.
-     * @param selectedColumns columns to aggregate statistics by.
-     * @param tblPartStats collection of partition level statistics.
-     * @return local level statistics.
+     * @param tbl Table to aggregate statistics by.
+     * @param selectedColumns Columns to aggregate statistics by.
+     * @param tblPartStats Collection of partition level statistics.
+     * @return Local level statistics.
      */
     private ObjectStatisticsImpl aggregateLocalStatistics(
             GridH2Table tbl,

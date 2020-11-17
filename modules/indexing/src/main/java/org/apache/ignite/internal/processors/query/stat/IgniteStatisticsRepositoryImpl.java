@@ -16,8 +16,6 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -31,8 +29,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     /** Logger. */
     private IgniteLogger log;
 
-    /** Kernal context. */
-    private final GridKernalContext ctx;
+    /** Statistics manager. */
+    private final IgniteStatisticsManagerImpl statisticsManager;
 
     /** Table->Partition->Partition Statistics map, populated only on server nodes without persistence enabled. */
     private final Map<StatsKey, Map<Integer, ObjectPartitionStatisticsImpl>> partsStats;
@@ -46,73 +44,100 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     /**
      * Constructor.
      *
-     * @param ctx Kernal context.
+     * @param storeData If {@code true} - node stores data locally, {@code false} - otherwise.
+     * @param persistence If {@code true} - node have persistence store, {@code false} - otherwise.
+     * @param statisticsManager Ignite statistics manager.
+     * @param log Ignite logger to use.
      */
-    public IgniteStatisticsRepositoryImpl(GridKernalContext ctx) {
-        this.ctx = ctx;
-
-        if (ctx.config().isClientMode() || ctx.isDaemon()) {
+    public IgniteStatisticsRepositoryImpl(
+            boolean storeData,
+            boolean persistence,
+            IgniteStatisticsManagerImpl statisticsManager,
+            IgniteLogger log) {
+        if (storeData) {
+            // Persistence store
+            partsStats = (persistence) ? null : new ConcurrentHashMap<>();
+            localStats = new ConcurrentHashMap<>();
+        }
+        else {
             // Cache only global statistics, no store
             partsStats = null;
             localStats = null;
-        } else {
-            // Persistence store
-            partsStats = GridCacheUtils.isPersistenceEnabled(ctx.config()) ? null : new ConcurrentHashMap<>();
-
-            localStats = new ConcurrentHashMap<>();
         }
-        log = ctx.log(IgniteStatisticsRepositoryImpl.class);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void saveLocalPartitionsStatistics(StatsKey key,
-                                                        Collection<ObjectPartitionStatisticsImpl> statistics,
-                                                        boolean fullStat) {
-        if (partsStats != null) {
-            Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = new ConcurrentHashMap<>();
-            for (ObjectPartitionStatisticsImpl s : statistics) {
-                if (statisticsMap.put(s.partId(), s) != null)
-                    log.warning(String.format("Trying to save more than one %s.%s partition statistics for partition %d",
-                            key.schema(), key.obj(), s.partId()));
-            }
-
-            if (fullStat) {
-                partsStats.compute(key, (k, v) -> {
-                    if (v == null)
-                        v = statisticsMap;
-                    else
-                        v.putAll(statisticsMap);
-
-                    return v;
-                });
-            } else {
-                partsStats.compute(key, (k, v) -> {
-                    if (v != null) {
-                        for (Map.Entry<Integer, ObjectPartitionStatisticsImpl> partStat : v.entrySet()) {
-                            ObjectPartitionStatisticsImpl newStat = statisticsMap.get(partStat.getKey());
-                            if (newStat != null) {
-                                ObjectPartitionStatisticsImpl combinedStat = add(partStat.getValue(), newStat);
-                                statisticsMap.put(partStat.getKey(), combinedStat);
-                            }
-                        }
-                    }
-                    return statisticsMap;
-                });
-            }
-        }
+        this.statisticsManager = statisticsManager;
+        this.log = log;
     }
 
     /**
-     * Get local partition statistics.
+     * Convert collection of partition level statistics into map(partId->partStatistics).
      *
-     * @param key Object to get statistics by.
-     * @return Collection of local partitions statistics.
+     * @param key Object key.
+     * @param statistics Collection of tables partition statistics.
+     * @return Partition id to statistics map.
      */
-    public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key) {
+    private Map<Integer, ObjectPartitionStatisticsImpl> buildStatisticsMap(
+            StatsKey key,
+            Collection<ObjectPartitionStatisticsImpl> statistics
+    ) {
+        Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = new ConcurrentHashMap<>();
+        for (ObjectPartitionStatisticsImpl s : statistics) {
+            if (statisticsMap.put(s.partId(), s) != null)
+                log.warning(String.format("Trying to save more than one %s.%s partition statistics for partition %d",
+                        key.schema(), key.obj(), s.partId()));
+        }
+        return statisticsMap;
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public void saveLocalPartitionsStatistics(
+            StatsKey key,
+            Collection<ObjectPartitionStatisticsImpl> statistics
+    ) {
+        if (partsStats != null) {
+            Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = buildStatisticsMap(key, statistics);
+
+            partsStats.compute(key, (k, v) -> {
+                if (v == null)
+                    v = statisticsMap;
+                else
+                    v.putAll(statisticsMap);
+
+                return v;
+            });
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void mergeLocalPartitionsStatistics(
+            StatsKey key,
+            Collection<ObjectPartitionStatisticsImpl> statistics
+    ) {
+        if (partsStats != null) {
+            Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = buildStatisticsMap(key, statistics);
+
+            partsStats.compute(key, (k, v) -> {
+                if (v != null) {
+                    for (Map.Entry<Integer, ObjectPartitionStatisticsImpl> partStat : v.entrySet()) {
+                        ObjectPartitionStatisticsImpl newStat = statisticsMap.get(partStat.getKey());
+                        if (newStat != null) {
+                            ObjectPartitionStatisticsImpl combinedStat = add(partStat.getValue(), newStat);
+                            statisticsMap.put(partStat.getKey(), combinedStat);
+                        }
+                    }
+                }
+                return statisticsMap;
+            });
+        }
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key) {
         if (partsStats != null) {
             Map<Integer, ObjectPartitionStatisticsImpl> objectStatisticsMap = partsStats.get(key);
 
-            return (objectStatisticsMap == null) ? null : objectStatisticsMap.values();
+            return (objectStatisticsMap == null) ? Collections.emptyList() : objectStatisticsMap.values();
         }
 
         return Collections.emptyList();
@@ -123,7 +148,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         if (colNames == null || colNames.length == 0) {
             if (partsStats != null)
                 partsStats.remove(key);
-        } else {
+        }
+        else {
             if (partsStats != null) {
                 partsStats.computeIfPresent(key, (tblKey, partMap) -> {
                     partMap.replaceAll((partId, partStat) -> {
@@ -176,25 +202,26 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat) {
+    @Override public void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
+        if (localStats != null)
+            localStats.put(key, statistics);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
         if (localStats != null) {
-            if (fullStat)
-                localStats.put(key, statistics);
-            else {
-                localStats.compute(key, (k, v) -> {
-                    if (v == null)
-                        return statistics;
-                    return add(v, statistics);
-                });
-            }
+            localStats.compute(key, (k, v) -> {
+                if (v == null)
+                    return statistics;
+                return add(v, statistics);
+            });
         }
     }
 
     /** {@inheritDoc} */
     @Override public void cacheLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics) {
-        IgniteStatisticsManagerImpl statManager = (IgniteStatisticsManagerImpl)ctx.query().getIndexing().statsManager();
         if (localStats != null)
-            localStats.put(key, statManager.aggregateLocalStatistics(key, statistics));
+            localStats.put(key, statisticsManager.aggregateLocalStatistics(key, statistics));
     }
 
     /** {@inheritDoc} */
@@ -207,7 +234,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         if (colNames == null || colNames.length == 0) {
             if (localStats != null)
                 localStats.remove(key);
-        } else {
+        }
+        else {
             if (localStats != null) {
                 localStats.computeIfPresent(key, (k, v) -> {
                     ObjectStatisticsImpl locStatNew = substract(v, colNames);
@@ -218,17 +246,17 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public void saveGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat) {
+    @Override public void saveGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
         globalStats.put(key, statistics);
     }
 
-    /**
-     * Get global statistics by key.
-     *
-     * @param key Object key to get global statistics by.
-     * @return Object global statistics or {@code null} if there are no global statistics.
-     */
-    public ObjectStatisticsImpl getGlobalStatistics(StatsKey key) {
+    /** {@inheritDoc} */
+    @Override public void mergeGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
+        globalStats.compute(key, (k,v) -> (v == null) ? statistics : add(v, statistics));
+    }
+
+    /** {@inheritDoc} */
+    @Override public ObjectStatisticsImpl getGlobalStatistics(StatsKey key) {
         return globalStats.get(key);
     }
 
@@ -250,9 +278,9 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      */
     private <T extends ObjectStatisticsImpl> T add(T base, T add) {
         T result = (T)add.clone();
-        for (Map.Entry<String, ColumnStatistics> entry : base.columnsStatistics().entrySet()) {
+        for (Map.Entry<String, ColumnStatistics> entry : base.columnsStatistics().entrySet())
             result.columnsStatistics().putIfAbsent(entry.getKey(), entry.getValue());
-        }
+
         return result;
     }
 

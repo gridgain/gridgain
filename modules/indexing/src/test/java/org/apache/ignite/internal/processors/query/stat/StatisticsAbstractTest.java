@@ -34,7 +34,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 /**
  * Base test for table statistics.
  */
-public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest {
+public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     /** Big table size. */
     static final int BIG_SIZE = 1000;
 
@@ -135,9 +135,9 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
         // Extract scan count from EXPLAIN ANALYZE with regex: return all numbers after "scanCount: ".
         Matcher m = Pattern.compile(".*\\/\\*.+?\\.(\\w+):.*\\R*.*\\R*.*\\R*.*\\R*\\*\\/.*").matcher(explainRes);
         List<String> result = new ArrayList<>();
-        while (m.find()) {
+        while (m.find())
             result.add(m.group(1).trim());
-        }
+
         return result.toArray(new String[result.size()]);
     }
 
@@ -182,7 +182,9 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
     }
 
     /**
-     * @param sql Statement.
+     * Run specified SQL on grid0.
+     *
+     * @param sql Statement to execute.
      */
     protected void runSql(String sql) {
         grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(sql)).getAll();
@@ -192,7 +194,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
      * Replaces index hint placeholder like "i1", "i2" with specified index names in the ISQL query.
      *
      * @param sql SQL to replace index placeholders.
-     * @param idxs index names array.
+     * @param idxs Index names array.
      * @return SQL with actual index names.
      */
     private static String replaceIndexHintPlaceholders(String sql, String[][] idxs) {
@@ -208,7 +210,8 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
             if (!F.isEmpty(idx)) {
                 String idxStr = "USE INDEX (" + String.join(",", idx) + ")";
                 sql = sql.replaceAll(idxPlaceHolder, idxStr);
-            } else
+            }
+            else
                 sql = sql.replaceAll(idxPlaceHolder, "");
 
         }
@@ -221,9 +224,9 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
     /**
      * Replaces table placeholders like "t1", "t2" and others with actual table names in the SQL query.
      *
-     * @param sql Sql query.
+     * @param sql SQL query.
      * @param tbls Actual table names.
-     * @return Sql with place holders replaced by the actual names.
+     * @return SQL with place holders replaced by the actual names.
      */
     private static String replaceTablePlaceholders(String sql, String... tbls) {
         assert !sql.contains("t0");

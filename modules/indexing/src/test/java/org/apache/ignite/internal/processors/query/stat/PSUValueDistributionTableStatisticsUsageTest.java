@@ -29,10 +29,11 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
 /**
- * Test cases to ensure that proper index is chosen by H2 optimizer when value distribution statistics is collected.
+ * Planner statistics usage test: ensure that proper index is chosen by H2 optimizer when value distribution statistics
+ * is collected.
  */
 @RunWith(Parameterized.class)
-public class ValueDistributionTableStatisticsUsageTest extends TableStatisticsAbstractTest {
+public class PSUValueDistributionTableStatisticsUsageTest extends StatisticsAbstractTest {
     /** */
     @Parameterized.Parameter(0)
     public CacheMode cacheMode;

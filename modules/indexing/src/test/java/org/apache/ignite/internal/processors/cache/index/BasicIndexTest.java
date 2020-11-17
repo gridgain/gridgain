@@ -85,7 +85,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** {@code True} If composite index required. */
     private static boolean createCompositeIdx;
 
-    /** {@code True} If cache nedd to be created throught static config. */
+    /** {@code True} If cache need to be created throught static config. */
     private static boolean createStaticCache = true;
 
     /** Default table name. */
@@ -537,10 +537,10 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /**
      * Check that specified index is used in query plan with specified where clause tables.
      *
-     * @param qryProc query processor to run queries on.
-     * @param idxName index name to test.
-     * @param tblName table to query.
-     * @param reqFlds fields to add into where clause.
+     * @param qryProc Query processor to run queries on.
+     * @param idxName Index name to test.
+     * @param tblName Table to query.
+     * @param reqFlds Fields to add into where clause.
      */
     private void checkIdxIsNotUsed(GridQueryProcessor qryProc, String idxName, String tblName, String... reqFlds) {
         checkIdxUsage(qryProc, null, idxName, tblName, reqFlds);

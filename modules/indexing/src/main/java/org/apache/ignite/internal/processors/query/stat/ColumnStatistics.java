@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.gridgain.internal.h2.value.Value;
+
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Values statistic in particular column.
@@ -31,8 +33,10 @@ public class ColumnStatistics {
     /** Percent of null values in column. */
     private final int nulls;
 
-    /** Percent of different values in column, i.e. 100 means that all values are unique, 0% means that all values
-     * are the same. */
+    /**
+     * Percent of different values in column, i.e. 100 means that all values are unique, 0% means that all values
+     * are the same.
+     */
     private final int cardinality;
 
     /** Total number of values in column. */
@@ -112,5 +116,26 @@ public class ColumnStatistics {
      */
     public byte[] raw() {
         return raw;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ColumnStatistics that = (ColumnStatistics) o;
+        return nulls == that.nulls &&
+                cardinality == that.cardinality &&
+                total == that.total &&
+                size == that.size &&
+                Objects.equals(min, that.min) &&
+                Objects.equals(max, that.max) &&
+                Arrays.equals(raw, that.raw);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        int result = Objects.hash(min, max, nulls, cardinality, total, size);
+        result = 31 * result + Arrays.hashCode(raw);
+        return result;
     }
 }

@@ -18,19 +18,24 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.Collection;
 
 /**
- * Repository to store all necessary statistics. Can request absent ones from cluster and store to
- * {@link SqlStatisticsStoreImpl}.
+ * Repository to store all necessary statistics. Can request absent ones from cluster and store to repository.
  */
 public interface IgniteStatisticsRepository {
-
     /**
-     * Replace all object statistics with specified ones if fillStat is {@code true} or merge it otherwise.
+     * Replace all object statistics with specified ones.
      *
      * @param key Object key.
      * @param statistics Collection of tables partition statistics.
-     * @param fullStat if {@code true} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveLocalPartitionsStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics, boolean fullStat);
+    public void saveLocalPartitionsStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics);
+
+    /**
+     * Merge existing statistics with specified ones.
+     *
+     * @param key Object key.
+     * @param statistics Collection of tables partition statistics.
+     */
+    public void mergeLocalPartitionsStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics);
 
     /**
      * Get local partition statistics by specified object.
@@ -38,7 +43,7 @@ public interface IgniteStatisticsRepository {
      * @param key Object to get statistics by.
      * @return Collection of partitions statistics.
      */
-    Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key);
+    public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key);
 
     /**
      * Clear partition statistics for specified object.
@@ -46,15 +51,15 @@ public interface IgniteStatisticsRepository {
      * @param key Object to clear statistics by.
      * @param colNames if specified - only statistics by specified columns will be cleared.
      */
-    void clearLocalPartitionsStatistics(StatsKey key, String... colNames);
+    public void clearLocalPartitionsStatistics(StatsKey key, String... colNames);
 
     /**
      * Save specified local partition statistics.
      *
-     * @param tbl Object key.
+     * @param key Object key.
      * @param statistics Statistics to save.
      */
-    void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics);
+    public void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics);
 
     /**
      * Get partition statistics.
@@ -63,7 +68,7 @@ public interface IgniteStatisticsRepository {
      * @param partId Partition id.
      * @return Object partition statistics or {@code null} if there are no statistics collected for such partition.
      */
-    ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId);
+    public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId);
 
     /**
      * Clear partition statistics.
@@ -71,16 +76,23 @@ public interface IgniteStatisticsRepository {
      * @param key Object key.
      * @param partId Partition id.
      */
-    void clearLocalPartitionStatistics(StatsKey key, int partId);
+    public void clearLocalPartitionStatistics(StatsKey key, int partId);
 
     /**
      * Save local object statistics.
      *
      * @param key Object key.
      * @param statistics Statistics to save.
-     * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat);
+    public void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics);
+
+    /**
+     * Merge local object statistics.
+     *
+     * @param key Object key.
+     * @param statistics Statistics to merge.
+     */
+    public void mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics);
 
     /**
      * Calculate and cache saved local statistics.
@@ -88,7 +100,7 @@ public interface IgniteStatisticsRepository {
      * @param key Object key.
      * @param statistics Collection of partitions statistics.
      */
-    void cacheLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics);
+    public void cacheLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics);
 
     /**
      * Get local statistics.
@@ -96,7 +108,7 @@ public interface IgniteStatisticsRepository {
      * @param key Object key to load statistics by.
      * @return Object local statistics or {@code null} if there are no statistics collected for such object.
      */
-    ObjectStatisticsImpl getLocalStatistics(StatsKey key);
+    public ObjectStatisticsImpl getLocalStatistics(StatsKey key);
 
     /**
      * Clear local object statistics.
@@ -104,16 +116,23 @@ public interface IgniteStatisticsRepository {
      * @param key Object key to clear local statistics by.
      * @param colNames If specified - only statistics by specified columns will be cleared.
      */
-    void clearLocalStatistics(StatsKey key, String... colNames);
+    public void clearLocalStatistics(StatsKey key, String... colNames);
 
     /**
      * Save global statistics.
      *
      * @param key Object key.
      * @param statistics Statistics to save.
-     * @param fullStat If {@code true} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics, boolean fullStat);
+    public void saveGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics);
+
+    /**
+     * Merge global statistics.
+     *
+     * @param key Object key.
+     * @param statistics Statistics to merge.
+     */
+    public void mergeGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics);
 
     /**
      * Get global statistics by object.
@@ -121,7 +140,7 @@ public interface IgniteStatisticsRepository {
      * @param key To get global statistics by.
      * @return Object statistics of {@code null} if there are no global statistics for specified object.
      */
-    ObjectStatisticsImpl getGlobalStatistics(StatsKey key);
+    public ObjectStatisticsImpl getGlobalStatistics(StatsKey key);
 
     /**
      * Clear global statistics by object.
@@ -129,5 +148,5 @@ public interface IgniteStatisticsRepository {
      * @param key Object key.
      * @param colNames If specified - only statistics by specified columns will be cleared.
      */
-    void clearGlobalStatistics(StatsKey key, String... colNames);
+    public void clearGlobalStatistics(StatsKey key, String... colNames);
 }

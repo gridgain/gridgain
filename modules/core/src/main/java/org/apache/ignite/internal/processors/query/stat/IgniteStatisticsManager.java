@@ -29,7 +29,7 @@ public interface IgniteStatisticsManager {
      * @param colNames Columns to collect statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
      */
-    void collectObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
+    public void collectObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
 
     /**
      * Get local statistics by object.
@@ -38,7 +38,7 @@ public interface IgniteStatisticsManager {
      * @param objName Object to collect statistics by.
      * @return Object statistics or {@code null} if there are no available statistics by specified object.
      */
-    ObjectStatistics getLocalStatistics(String schemaName, String objName);
+    public ObjectStatistics getLocalStatistics(String schemaName, String objName);
 
     /**
      * Clear object statistics.
@@ -47,5 +47,5 @@ public interface IgniteStatisticsManager {
      * @param objName Object to collect statistics by.
      * @param colNames Columns to remove statistics by.
      */
-    void clearObjectStatistics(String schemaName, String objName, String... colNames);
+    public void clearObjectStatistics(String schemaName, String objName, String... colNames);
 }

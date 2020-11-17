@@ -16,12 +16,12 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.List;
 
 import org.apache.ignite.internal.processors.query.stat.hll.HLL;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.value.Value;
 
@@ -31,7 +31,6 @@ import static org.apache.ignite.internal.processors.query.h2.H2Utils.isNullValue
  * Collector to compute statistic by single column.
  */
 public class ColumnStatisticsCollector {
-
     /** Column. */
     private final Column col;
 
@@ -86,7 +85,8 @@ public class ColumnStatisticsCollector {
             case Value.DECIMAL:
             case Value.DOUBLE:
             case Value.FLOAT:
-                return value.getBigDecimal().unscaledValue().toByteArray();
+                return U.join(value.getBigDecimal().unscaledValue().toByteArray(),
+                        BigInteger.valueOf(value.getBigDecimal().scale()).toByteArray());
             case Value.TIME:
                 return BigInteger.valueOf(value.getTime().getTime()).toByteArray();
             case Value.DATE:
