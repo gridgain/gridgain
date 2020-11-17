@@ -964,8 +964,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     public void onTxAcquireCheckpointReadLock() {
         // No-op.
     }
-
-
+    
     /**
      * No-op for non-persistent storage.
      */
