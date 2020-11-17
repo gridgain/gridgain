@@ -3681,7 +3681,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             disabledAfterStart,
             null,
             null,
-            false);
+            true);
     }
 
     /**
@@ -3692,6 +3692,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param checkThreadTx If {@code true} checks that current thread does not have active transactions.
      * @param disabledAfterStart If true, cache proxies will be only activated after {@link #restartProxies()}.
      * @param restartId Restart requester id (it'll allow to start this cache only him).
+     * @param keys Group's encryption keys that should be propagated to caches before start.
+     * @param isKeysGenerationRequired True if it is needed to generate group's encryption keys.
      * @return Future that will be completed when all caches are deployed.
      */
     public IgniteInternalFuture<Boolean> dynamicStartCachesByStoredConf(
@@ -3701,7 +3703,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean disabledAfterStart,
         IgniteUuid restartId,
         @Nullable Map<Integer, byte[]> keys,
-        boolean isCancelSnapOper
+        boolean isKeysGenerationRequired
     ) {
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(() -> {
@@ -3719,7 +3721,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             List<DynamicCacheChangeRequest> srvReqs = null;
             Map<String, DynamicCacheChangeRequest> clientReqs = null;
 
-            assert (grpKeys == null) == isCancelSnapOper;
+            // Keys had to be generated before in that case
+            assert !((grpKeys == null) && (isKeysGenerationRequired));
 
             Iterator<byte[]> grpKeysIter = grpKeys != null ? grpKeys.iterator() : null;
 
@@ -3737,8 +3740,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     restartId,
                     disabledAfterStart,
                     ccfg.queryEntities(),
-                    ccfg.config().isEncryptionEnabled() && !isCancelSnapOper ? grpKeysIter.next() : null,
-                    ccfg.config().isEncryptionEnabled() && !isCancelSnapOper ? masterKeyDigest : null);
+                    ccfg.config().isEncryptionEnabled() && grpKeys != null ? grpKeysIter.next() : null,
+                    ccfg.config().isEncryptionEnabled() && grpKeys != null ? masterKeyDigest : null);
 
                 if (req != null) {
                     if (req.clientStartOnly()) {
@@ -3785,7 +3788,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 encGrpCnt++;
         }
 
-        if (keys != null || isCancelSnapOper)
+        if (!isKeysGenerationRequired)
             return receiveEncryptionKeysAndStartCacheAfter(keys, startCacheClsr);
 
         return generateEncryptionKeysAndStartCacheAfter(encGrpCnt, startCacheClsr);
