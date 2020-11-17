@@ -64,6 +64,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.DefragmentationConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.failure.FailureContext;
@@ -120,7 +121,11 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointStatus;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkpointer;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.LightweightCheckpointManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.ReservationReason;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.CachePartitionDefragmentationManager;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationPageReadWriteManager;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.maintenance.DefragmentationWorkflowCallback;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
@@ -183,6 +188,8 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.LOCK_RELEASED;
 import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointReadWriteLock.CHECKPOINT_LOCK_HOLD_COUNT;
+import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.CachePartitionDefragmentationManager.DEFRAGMENTATION_MNTC_TASK_NAME;
+import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.maintenance.DefragmentationParameters.fromStore;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CORRUPTED_DATA_FILES_MNTC_TASK_NAME;
 import static org.apache.ignite.internal.util.IgniteUtils.checkpointBufferSize;
 
@@ -202,6 +209,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** MemoryPolicyConfiguration name reserved for meta store. */
     public static final String METASTORE_DATA_REGION_NAME = "metastoreMemPlc";
+
+    /** */
+    public static final String DEFRAGMENTATION_PART_REGION_NAME = "defragPartitionsDataRegion";
+
+    /** */
+    public static final String DEFRAGMENTATION_MAPPING_REGION_NAME = "defragMappingDataRegion";
 
     /**
      * Threshold to calculate limit for pages list on-heap caches.
@@ -319,6 +332,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Lock for releasing history for preloading. */
     private ReentrantLock releaseHistForPreloadingLock = new ReentrantLock();
 
+    /** */
+    private CachePartitionDefragmentationManager defrgMgr;
+
     /** Data regions which should be checkpointed. */
     protected final Set<DataRegion> checkpointedDataRegions = new GridConcurrentHashSet<>();
 
@@ -414,6 +430,36 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         cfg.setName(METASTORE_DATA_REGION_NAME);
         cfg.setInitialSize(storageCfg.getSystemRegionInitialSize());
         cfg.setMaxSize(storageCfg.getSystemRegionMaxSize());
+        cfg.setPersistenceEnabled(true);
+        cfg.setLazyMemoryAllocation(false);
+
+        return cfg;
+    }
+
+    /** */
+    private DataRegionConfiguration createDefragmentationDataRegionConfig(DataStorageConfiguration storageCfg) {
+        DataRegionConfiguration cfg = new DataRegionConfiguration();
+
+        DefragmentationConfiguration defrgCfg = storageCfg.getDefragmentationConfiguration();
+
+        cfg.setName(DEFRAGMENTATION_PART_REGION_NAME);
+        cfg.setInitialSize(defrgCfg.getRegionSize());
+        cfg.setMaxSize(defrgCfg.getRegionSize());
+        cfg.setPersistenceEnabled(true);
+        cfg.setLazyMemoryAllocation(false);
+
+        return cfg;
+    }
+
+    /** */
+    private DataRegionConfiguration createDefragmentationMappingRegionConfig(DataStorageConfiguration storageCfg) {
+        DataRegionConfiguration cfg = new DataRegionConfiguration();
+
+        DefragmentationConfiguration defrgCfg = storageCfg.getDefragmentationConfiguration();
+
+        cfg.setName(DEFRAGMENTATION_MAPPING_REGION_NAME);
+        cfg.setInitialSize(defrgCfg.getMappingRegionSize());
+        cfg.setMaxSize(defrgCfg.getMappingRegionSize());
         cfg.setPersistenceEnabled(true);
         cfg.setLazyMemoryAllocation(false);
 
@@ -576,10 +622,68 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         fileLockHolder.close();
     }
 
+    /** */
+    private void prepareCacheDefragmentation(List<Integer> cacheGroupIds) throws IgniteCheckedException {
+        GridKernalContext kernalCtx = cctx.kernalContext();
+        DataStorageConfiguration dsCfg = kernalCtx.config().getDataStorageConfiguration();
+
+        assert CU.isPersistenceEnabled(dsCfg);
+
+        checkpointedDataRegions.remove(
+            addDataRegion(
+                dsCfg,
+                createDefragmentationDataRegionConfig(dsCfg),
+                true,
+                new DefragmentationPageReadWriteManager(kernalCtx, "defrgPartitionsStore")
+            )
+        );
+        checkpointedDataRegions.remove(
+            addDataRegion(
+                dsCfg,
+                createDefragmentationMappingRegionConfig(dsCfg),
+                true,
+                new DefragmentationPageReadWriteManager(kernalCtx, "defrgLinkMappingStore")
+            )
+        );
+
+        List<DataRegion> regions = Arrays.asList(
+            dataRegion(DEFRAGMENTATION_MAPPING_REGION_NAME),
+            dataRegion(DEFRAGMENTATION_PART_REGION_NAME)
+        );
+
+        LightweightCheckpointManager lightCheckpointMgr = new LightweightCheckpointManager(
+            kernalCtx::log,
+            cctx.igniteInstanceName(),
+            "db-checkpoint-thread-defrag",
+            kernalCtx.workersRegistry(),
+            persistenceCfg,
+            () -> regions,
+            this::getPageMemoryForCacheGroup,
+            resolveThrottlingPolicy(),
+            snapshotMgr,
+            persistentStoreMetricsImpl(),
+            kernalCtx.longJvmPauseDetector(),
+            kernalCtx.failure(),
+            kernalCtx.cache()
+        );
+
+        lightCheckpointMgr.start();
+
+        defrgMgr = new CachePartitionDefragmentationManager(
+            cacheGroupIds,
+            cctx,
+            this,
+            (FilePageStoreManager)cctx.pageStore(),
+            checkpointManager,
+            lightCheckpointMgr,
+            persistenceCfg.getPageSize()
+        );
+    }
+
     /** {@inheritDoc} */
     @Override public DataRegion addDataRegion(DataStorageConfiguration dataStorageCfg, DataRegionConfiguration dataRegionCfg,
-        boolean trackable) throws IgniteCheckedException {
-        DataRegion region = super.addDataRegion(dataStorageCfg, dataRegionCfg, trackable);
+        boolean trackable, PageReadWriteManager pmPageMgr) throws IgniteCheckedException {
+        DataRegion region = super.addDataRegion(dataStorageCfg, dataRegionCfg, trackable, pmPageMgr);
 
         checkpointedDataRegions.add(region);
 
@@ -607,6 +711,21 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 checkpointManager.initializeStorage();
 
                 notifyMetastorageReadyForRead();
+
+                MaintenanceRegistry mntcReg = cctx.kernalContext().maintenanceRegistry();
+
+                if (mntcReg.isMaintenanceMode()) {
+                    MaintenanceTask task = mntcReg.activeMaintenanceTask(DEFRAGMENTATION_MNTC_TASK_NAME);
+
+                    if (task != null) {
+                        prepareCacheDefragmentation(fromStore(task).cacheGroupIds());
+
+                        mntcReg.registerWorkflowCallback(
+                            DEFRAGMENTATION_MNTC_TASK_NAME,
+                            new DefragmentationWorkflowCallback(cctx.kernalContext()::log, defrgMgr)
+                        );
+                    }
+                }
             }
             finally {
                 metaStorage = null;
