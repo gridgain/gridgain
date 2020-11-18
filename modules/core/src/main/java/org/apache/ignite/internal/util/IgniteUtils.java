@@ -12615,4 +12615,22 @@ public abstract class IgniteUtils {
 
         return dep == null || dep.classLoaderId().equals(depInfo.classLoaderId());
     }
+
+    /**
+     * Getting size of uncompressed data in zip.
+     *
+     * @param zip Zip file.
+     * @return Total uncompressed size in bytes.
+     * @throws IOException If an I/O error has occurred.
+     */
+    public static long uncompressedSize(File zip) throws IOException {
+        long size = 0;
+
+        try (ZipFile zipFile = new ZipFile(zip)) {
+            for (Enumeration<? extends ZipEntry> enumeration = zipFile.entries(); enumeration.hasMoreElements(); )
+                size += enumeration.nextElement().getSize();
+        }
+
+        return size;
+    }
 }

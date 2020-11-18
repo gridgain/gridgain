@@ -120,7 +120,7 @@ public class WalArchiveSize {
      * @param size Byte count.
      */
     public synchronized void release(long size) {
-        reserved += size;
+        reserved -= size;
 
         notifyAll();
     }
@@ -222,6 +222,15 @@ public class WalArchiveSize {
      */
     public long reservedSize() {
         return reserved;
+    }
+
+    /**
+     * Getting max WAL archive size in bytes.
+     *
+     * @return Size in bytes.
+     */
+    public long maxSize() {
+        return max;
     }
 
     /**
