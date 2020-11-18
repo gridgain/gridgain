@@ -27,7 +27,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLoc
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_AUX;
 
 /**
  *
@@ -78,6 +78,7 @@ public class MetastorageTree extends BPlusTree<MetastorageRow, MetastorageDataRo
             reuseList,
             MetastorageBPlusIO.INNER_IO_VERSIONS,
             MetastorageBPlusIO.LEAF_IO_VERSIONS,
+            FLAG_AUX,
             failureProcessor,
             lockLsnr
         );
@@ -114,6 +115,6 @@ public class MetastorageTree extends BPlusTree<MetastorageRow, MetastorageDataRo
 
     /** {@inheritDoc} */
     @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
-        return pageMem.allocatePage(grpId, partId, FLAG_DATA);
+        return pageMem.allocatePage(grpId, partId, FLAG_AUX);
     }
 }
