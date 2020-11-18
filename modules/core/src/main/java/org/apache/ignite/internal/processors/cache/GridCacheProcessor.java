@@ -3561,17 +3561,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param keys Encryption keys for groups.
      * @param after Closure to execute.
      */
-    private IgniteInternalFuture<Boolean> receiveEncryptionKeysAndStartCacheAfter(@Nullable Map<Integer, byte[]> keys,
+    private IgniteInternalFuture<Boolean> receiveEncryptionKeysAndStartCacheAfter(@Nullable Collection<byte[]> keys,
         GridPlainClosure2<Collection<byte[]>, byte[], IgniteInternalFuture<Boolean>> after) {
 
         GridFutureAdapter<Boolean> res = new GridFutureAdapter<>();
 
         try {
-            Collection<byte[]> grpKeys = keys != null ? keys.values() : null;
-
             byte[] masterKeyDigest = context().kernalContext().config().getEncryptionSpi().masterKeyDigest();
 
-            IgniteInternalFuture<Boolean> dynStartCacheFut = after.apply(grpKeys, masterKeyDigest);
+            IgniteInternalFuture<Boolean> dynStartCacheFut = after.apply(keys, masterKeyDigest);
 
             dynStartCacheFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
                 @Override public void apply(IgniteInternalFuture<Boolean> fut) {
@@ -3788,8 +3786,19 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 encGrpCnt++;
         }
 
-        if (!isKeysGenerationRequired)
-            return receiveEncryptionKeysAndStartCacheAfter(keys, startCacheClsr);
+        if (!isKeysGenerationRequired) {
+            if (keys != null) {
+                ArrayList<byte[]> cacheKeys = new ArrayList<>();
+
+                for (StoredCacheData ccfg : storedCacheDataList)
+                    if (ccfg.config().isEncryptionEnabled())
+                        cacheKeys.add(keys.get(CU.cacheGroupId(ccfg.config().getName(), ccfg.config().getGroupName())));
+
+                return receiveEncryptionKeysAndStartCacheAfter(cacheKeys, startCacheClsr);
+            }
+            else
+                return receiveEncryptionKeysAndStartCacheAfter(null, startCacheClsr);
+        }
 
         return generateEncryptionKeysAndStartCacheAfter(encGrpCnt, startCacheClsr);
     }
