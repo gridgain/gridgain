@@ -73,12 +73,53 @@ public class PSUCompositeIndexTableStatisticsUsageTest extends StatisticsAbstrac
     }
 
     /**
-     * Select with only one clause with "is null" condition and check that right index will be selected.
+     * 1) Check that "is null" equal clause with column.null() == 0 lead to complex index selection.
+     * 2) Add index for "less than" column and update statistics.
+     * 3) Check that complex index still used.
+     *
+     * Select contain conditions with:
+     * 1) two clauses with "is null" condition for the first indexed columns
+     * 2) one clause with "less than" condition for the third indexed columns
+     * And check that right index will be selected.
      */
     @Test
     public void selectAllColumns() {
         String sql = "select count(*) from ci_table i1 where col_a is null and col_b is null and col_c < 2";
+
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"CI_TABLE_ABC"}, sql, new String[1][]);
+
+        runSql("CREATE INDEX ci_table_c ON ci_table(col_c)");
+        updateStatistics("ci_table");
+
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"CI_TABLE_ABC"}, sql, new String[1][]);
+
+        runSql("DROP INDEX IF EXISTS ci_table_c");
+        updateStatistics("ci_table");
+    }
+
+    /**
+     * 1) Check that "is null" equal clause with column.null() == 0 lead to complex index selection.
+     * 2) Add index for "less than" column and update statistics.
+     * 3) Check that complex index still used.
+     *
+     * Select contain conditions with:
+     * 1) two clauses with "is not null" condition for the first indexed columns
+     * 2) one clause with "equal" condition for the third indexed columns
+     * And check that scan index will be selected.
+     */
+    @Test
+    public void selectAllColumns2() {
+        String sql = "select count(*) from ci_table i1 where col_a is not null and col_b is not null and col_c = 2";
+
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, sql, new String[1][]);
+
+        runSql("CREATE INDEX ci_table_c ON ci_table(col_c)");
+        updateStatistics("ci_table");
+
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"CI_TABLE_C"}, sql, new String[1][]);
+
+        runSql("DROP INDEX IF EXISTS ci_table_c");
+        updateStatistics("ci_table");
     }
 
     /**
