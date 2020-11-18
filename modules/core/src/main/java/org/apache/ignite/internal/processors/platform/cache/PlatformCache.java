@@ -354,7 +354,7 @@ public class PlatformCache extends PlatformAbstractTarget {
 
     /** */
     public static final int OP_SIZE_LONG_LOC = 92;
-    
+
     /** */
     public static final int OP_ENABLE_STATISTICS = 93;
 
@@ -976,6 +976,7 @@ public class PlatformCache extends PlatformAbstractTarget {
             case OP_QRY_CONTINUOUS: {
                 long ptr = reader.readLong();
                 boolean loc = reader.readBoolean();
+                boolean includeExpired = reader.readBoolean();
                 boolean hasFilter = reader.readBoolean();
                 Object filter = reader.readObjectDetached();
                 int bufSize = reader.readInt();
@@ -985,7 +986,7 @@ public class PlatformCache extends PlatformAbstractTarget {
 
                 PlatformContinuousQuery qry = platformCtx.createContinuousQuery(ptr, hasFilter, filter);
 
-                qry.start(cache, loc, bufSize, timeInterval, autoUnsubscribe, initQry);
+                qry.start(cache, loc, bufSize, timeInterval, autoUnsubscribe, initQry, includeExpired);
 
                 return new PlatformContinuousQueryProxy(platformCtx, qry);
             }
@@ -1454,17 +1455,21 @@ public class PlatformCache extends PlatformAbstractTarget {
         boolean replicated = reader.readBoolean();
         boolean collocated = reader.readBoolean();
         String schema = reader.readString();
+        int[] partitions = reader.readIntArray();
+        int updateBatchSize = reader.readInt();
 
         SqlFieldsQuery qry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), timeout, TimeUnit.MILLISECONDS)
-            .setPageSize(pageSize)
-            .setArgs(args)
-            .setLocal(loc)
-            .setDistributedJoins(distrJoins)
-            .setEnforceJoinOrder(enforceJoinOrder)
-            .setLazy(lazy)
-            .setReplicatedOnly(replicated)
-            .setCollocated(collocated)
-            .setSchema(schema);
+                .setPageSize(pageSize)
+                .setArgs(args)
+                .setLocal(loc)
+                .setDistributedJoins(distrJoins)
+                .setEnforceJoinOrder(enforceJoinOrder)
+                .setLazy(lazy)
+                .setReplicatedOnly(replicated)
+                .setCollocated(collocated)
+                .setSchema(schema)
+                .setPartitions(partitions)
+                .setUpdateBatchSize(updateBatchSize);
 
         return qry;
     }

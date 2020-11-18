@@ -378,7 +378,8 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
             true,
             null,
             new GridTestKernalContext(log),
-            null
+            null,
+            PageIdAllocator.FLAG_IDX
         );
     }
 
@@ -602,7 +603,7 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public CacheObject prepareForCache(CacheObjectContext ctx) {
+        @Override public KeyCacheObject prepareForCache(CacheObjectContext ctx, boolean compress) {
             assert false;
 
             return this;

@@ -1257,7 +1257,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 throw e;
             }
 
-            // All components exept Discovery are started, time to check if maintenance is still needed
+            // All components exept Discovery are started, time to check if maintenance is still needed.
             mntcProcessor.prepareAndExecuteMaintenance();
 
             gw.writeLock();
@@ -2142,9 +2142,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             log.info(str);
         }
 
-        if (!ctx.state().clusterState().active()) {
-            U.quietAndInfo(log, ">>> Ignite cluster is not active (limited functionality available). " +
-                "Use control.(sh|bat) script or IgniteCluster interface to activate.");
+        if (!ClusterState.active(ctx.state().clusterState().state())) {
+            U.quietAndInfo(log, ">>> Ignite cluster is in " + ClusterState.INACTIVE + " state (limited functionality available). " +
+                "Use control.(sh|bat) script or IgniteCluster.state(ClusterState.ACTIVE) or " +
+                "IgniteCluster.state(ClusterState.ACTIVE_READ_ONLY) to change the state.");
         }
     }
 
@@ -4457,7 +4458,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         reg.register("longJVMPauseLastEvents", this::getLongJVMPauseLastEvents, Map.class,
             LONG_JVM_PAUSE_LAST_EVENTS_DESC);
 
-        reg.register("active", () -> ctx.state().clusterState().active()/*this::active*/, Boolean.class,
+        reg.register("active", () -> ClusterState.active(ctx.state().clusterState().state()), Boolean.class,
             ACTIVE_DESC);
 
         reg.register("clusterState", this::clusterState, String.class, CLUSTER_STATE_DESC);

@@ -20,7 +20,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -294,9 +293,9 @@ public class MaintenanceRegistrySimpleTest {
     /** */
     private final class SimpleMaintenanceCallback implements MaintenanceWorkflowCallback {
         /** */
-        private final List<MaintenanceAction> actions = new ArrayList<>();
+        private final List<MaintenanceAction<?>> actions = new ArrayList<>();
 
-        SimpleMaintenanceCallback(List<MaintenanceAction> actions) {
+        SimpleMaintenanceCallback(List<MaintenanceAction<?>> actions) {
             this.actions.addAll(actions);
         }
 
@@ -306,7 +305,7 @@ public class MaintenanceRegistrySimpleTest {
         }
 
         /** {@inheritDoc} */
-        @Override public @NotNull List<MaintenanceAction> allActions() {
+        @Override public @NotNull List<MaintenanceAction<?>> allActions() {
             return actions;
         }
 

@@ -62,6 +62,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -82,6 +83,8 @@ import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
+import org.apache.ignite.internal.processors.platform.PlatformContext;
+import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.internal.processors.query.property.QueryBinaryProperty;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
@@ -141,6 +144,7 @@ import static org.apache.ignite.internal.processors.query.schema.SchemaOperation
 /**
  * Indexing processor.
  */
+@SuppressWarnings("rawtypes")
 public class GridQueryProcessor extends GridProcessorAdapter {
     /** */
     private static final String INLINE_SIZES_DISCO_BAG_KEY = "inline_sizes";
@@ -289,8 +293,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     ctxs.queries().evictDetailMetrics();
             }
         }, QRY_DETAIL_METRICS_EVICTION_FREQ, QRY_DETAIL_METRICS_EVICTION_FREQ);
-
-        registerMetadataForRegisteredCaches();
     }
 
     /** {@inheritDoc} */
@@ -340,6 +342,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @throws IgniteCheckedException If failed.
      */
     public void onCacheKernalStart() throws IgniteCheckedException {
+        registerMetadataForRegisteredCaches();
+
         synchronized (stateMux) {
             exchangeReady = true;
 
@@ -1184,14 +1188,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
                 if (binaryEnabled) {
                     for (QueryEntity qryEntity : qryEntities) {
-                        Class<?> keyCls = U.box(U.classForName(qryEntity.findKeyType(), null, true));
-                        Class<?> valCls = U.box(U.classForName(qryEntity.findValueType(), null, true));
-
-                        if (keyCls != null)
-                            registerDescriptorLocallyIfNeeded(keyCls);
-
-                        if (valCls != null)
-                            registerDescriptorLocallyIfNeeded(valCls);
+                        registerTypeLocally(qryEntity.findKeyType());
+                        registerTypeLocally(qryEntity.findValueType());
                     }
                 }
             }
@@ -1201,17 +1199,49 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /**
      * Register class metadata locally if it didn't do it earlier.
      *
-     * @param cls Class for which the metadata should be registered.
+     * @param clsName Class name for which the metadata should be registered.
      * @throws BinaryObjectException if register was failed.
      */
-    private void registerDescriptorLocallyIfNeeded(Class<?> cls) throws BinaryObjectException {
+    private void registerTypeLocally(String clsName) throws BinaryObjectException {
+        if (clsName == null)
+            return;
+
         IgniteCacheObjectProcessor cacheObjProc = ctx.cacheObjects();
 
         if (cacheObjProc instanceof CacheObjectBinaryProcessorImpl) {
-            ((CacheObjectBinaryProcessorImpl)cacheObjProc)
-                .binaryContext()
-                .registerClass(cls, true, false, true);
+            CacheObjectBinaryProcessorImpl binProc = (CacheObjectBinaryProcessorImpl) cacheObjProc;
+
+            Class<?> cls = U.box(U.classForName(clsName, null, true));
+
+            if (cls != null)
+                binProc.binaryContext().registerClass(cls, true, false, true);
+            else
+                registerPlatformTypeLocally(clsName, binProc);
         }
+    }
+
+    /**
+     * Registers platform type locally.
+     *
+     * @param clsName Class name.
+     * @param binProc Binary processor.
+     */
+    private void registerPlatformTypeLocally(String clsName, CacheObjectBinaryProcessorImpl binProc) {
+        PlatformProcessor platformProc = ctx.platform();
+
+        assert platformProc != null : "Platform processor must be initialized";
+
+        if (!platformProc.hasContext())
+            return;
+
+        PlatformContext platformCtx = platformProc.context();
+        BinaryMetadata meta = platformCtx.getBinaryType(clsName);
+
+        if (meta != null)
+            binProc.binaryContext().registerClassLocally(
+                    meta.wrap(binProc.binaryContext()),
+                    false,
+                    platformCtx.getMarshallerPlatformId());
     }
 
     /**
