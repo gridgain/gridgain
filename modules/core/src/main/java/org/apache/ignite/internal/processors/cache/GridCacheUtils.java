@@ -57,6 +57,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.configuration.WarmUpConfiguration;
@@ -69,6 +70,8 @@ import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.LocalAffinityFunction;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategy;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategySupplier;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
@@ -116,9 +119,9 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.nonNull;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.of;
-import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -2030,9 +2033,13 @@ public class GridCacheUtils {
      * @return Page size without encryption overhead.
      */
     public static int encryptedPageSize(int pageSize, EncryptionSpi encSpi) {
+        // If encryption is enabled, a space of one encryption block is reserved to store CRC and encryption key ID.
+        // If encryption is disabled, NoopEncryptionSPI with a zero encryption block size is used.
+        assert encSpi.blockSize() >= /* CRC */ 4 + /* Key ID */ 1 || encSpi.blockSize() == 0;
+
         return pageSize
             - (encSpi.encryptedSizeNoPadding(pageSize) - pageSize)
-            - encSpi.blockSize(); /* For CRC. */
+            - encSpi.blockSize(); /* For CRC and encryption key ID. */
     }
 
     /**
@@ -2112,6 +2119,29 @@ public class GridCacheUtils {
                 for (WarmUpStrategy<?> strategy : supplier.strategies())
                     strategies.putIfAbsent(strategy.configClass(), strategy);
             }
+        }
+
+        return strategies;
+    }
+
+    /**
+     * Getting available cache entry compression strategies.
+     *
+     * @param kernalCtx Kernal context.
+     * @return Mapping of configuration class to strategy class.
+     */
+    public static Map<Class<? extends EntryCompressionConfiguration>,
+        IgniteClosure<EntryCompressionConfiguration, EntryCompressionStrategy>>
+        entryCompressionStrategies(GridKernalContext kernalCtx) {
+        Map strategies = new HashMap<>();
+
+        // Adding strategies from plugins.
+        EntryCompressionStrategySupplier[] suppliers = kernalCtx.plugins()
+            .extensions(EntryCompressionStrategySupplier.class);
+
+        if (suppliers != null) {
+            for (EntryCompressionStrategySupplier supplier : suppliers)
+                strategies.putAll(supplier.strategies());
         }
 
         return strategies;

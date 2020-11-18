@@ -22,6 +22,7 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
@@ -75,6 +76,13 @@ public class PageEvictionAbstractTest extends GridCommonAbstractTest {
         return false;
     }
 
+    /**
+     * @return Compression configuration or {@code null} if none is needed.
+     */
+    protected EntryCompressionConfiguration entryCompressionConfiguration() {
+        return null;
+    }
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
@@ -100,10 +108,10 @@ public class PageEvictionAbstractTest extends GridCommonAbstractTest {
 
     /**
      * @param name Name.
+     * @param memoryPlcName Memory policy name.
      * @param cacheMode Cache mode.
      * @param atomicityMode Atomicity mode.
      * @param writeSynchronizationMode Write synchronization mode.
-     * @param memoryPlcName Memory policy name.
      * @return Cache configuration.
      */
     protected CacheConfiguration<Object, Object> cacheConfig(
@@ -119,7 +127,8 @@ public class PageEvictionAbstractTest extends GridCommonAbstractTest {
             .setCacheMode(cacheMode)
             .setAtomicityMode(atomicityMode)
             .setDataRegionName(memoryPlcName)
-            .setWriteSynchronizationMode(writeSynchronizationMode);
+            .setWriteSynchronizationMode(writeSynchronizationMode)
+            .setEntryCompressionConfiguration(entryCompressionConfiguration());
 
         if (cacheMode == CacheMode.PARTITIONED)
             cacheConfiguration.setBackups(1);

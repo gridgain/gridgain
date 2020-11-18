@@ -59,6 +59,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DeploymentMode;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.configuration.WarmUpConfiguration;
 import org.apache.ignite.events.EventType;
@@ -84,6 +85,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategy;
 import org.apache.ignite.internal.processors.cache.datastructures.CacheDataStructuresManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
@@ -1986,7 +1988,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         CacheConfiguration ccfg = new CacheConfiguration(startCfg);
 
-        CacheObjectContext cacheObjCtx = ctx.cacheObjects().contextForCache(ccfg);
+        CacheObjectContext cacheObjCtx = desc.cacheObjectContext(ctx.cacheObjects());
 
         boolean affNode = checkForAffinityNode(desc, reqNearCfg, ccfg);
 
@@ -1995,6 +1997,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         try {
             CacheGroupContext grp = getOrCreateCacheGroupContext(
                 desc, exchTopVer, cacheObjCtx, affNode, startCfg.getGroupName(), false);
+
+            cacheObjCtx.compressionStrategy(grp.entryCompressionStrategy());
 
             GridCacheContext cacheCtx = createCacheContext(ccfg,
                 grp,
@@ -2291,7 +2295,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         CacheConfiguration cfg = desc.cacheConfiguration();
 
-        CacheObjectContext cacheObjCtx = ctx.cacheObjects().contextForCache(cfg);
+        CacheObjectContext cacheObjCtx = desc.cacheObjectContext(ctx.cacheObjects());
 
         preparePageStore(desc, true);
 
@@ -2309,6 +2313,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 cfg.getGroupName(),
                 true
             );
+
+            cacheObjCtx.compressionStrategy(grpCtx.entryCompressionStrategy());
 
             cacheCtx = createCacheContext(cfg,
                 grpCtx,
@@ -2461,6 +2467,17 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean persistenceEnabled = recoveryMode || sharedCtx.localNode().isClient() ? desc.persistenceEnabled() :
             dataRegion != null && dataRegion.config().isPersistenceEnabled();
 
+        EntryCompressionStrategy compressionStrategy = null;
+
+        EntryCompressionConfiguration compressionConfiguration = desc.config().getEntryCompressionConfiguration();
+
+        if (compressionConfiguration != null) {
+            compressionStrategy = CU.entryCompressionStrategies(ctx).get(compressionConfiguration.getClass())
+                .apply(compressionConfiguration);
+
+            compressionStrategy.start(ctx, cfg);
+        }
+
         CacheGroupContext grp = new CacheGroupContext(sharedCtx,
             desc.groupId(),
             desc.receivedFrom(),
@@ -2475,7 +2492,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             persistenceEnabled,
             desc.walEnabled(),
             recoveryMode,
-            desc.persistenceEnabled()
+            desc.persistenceEnabled(),
+            compressionStrategy
         );
 
         for (Object obj : grp.configuredUserObjects())
@@ -2920,7 +2938,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param success Future result.
      * @param err Error if any.
      */
-    void completeCacheStartFuture(DynamicCacheChangeRequest req, boolean success, @Nullable Throwable err) {
+    public void completeCacheStartFuture(DynamicCacheChangeRequest req, boolean success, @Nullable Throwable err) {
         if (ctx.localNodeId().equals(req.initiatingNodeId())) {
             DynamicCacheStartFuture fut = (DynamicCacheStartFuture)pendingFuts.get(req.requestId());
 
@@ -4112,8 +4130,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             return msg0.needExchange();
         }
 
-        if (msg instanceof DynamicCacheChangeBatch)
-            return cachesInfo.onCacheChangeRequested((DynamicCacheChangeBatch)msg, topVer);
+        if (msg instanceof DynamicCacheChangeBatch) {
+            boolean changeRequested = cachesInfo.onCacheChangeRequested((DynamicCacheChangeBatch)msg, topVer);
+
+            ctx.query().onCacheChangeRequested((DynamicCacheChangeBatch)msg);
+
+            return changeRequested;
+        }
 
         if (msg instanceof DynamicCacheChangeFailureMessage)
             cachesInfo.onCacheChangeRequested((DynamicCacheChangeFailureMessage)msg, topVer);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,16 @@
  * limitations under the License.
  */
 
-/**
- * <!-- Package description. -->
- * Contains utility port scanner.
- */
-package org.apache.ignite.internal.util.portscanner;
+package org.apache.ignite.internal.processors.cache.persistence.tree.io;
+
+import org.apache.ignite.IgniteCheckedException;
+
+/** */
+public interface PageIoResolver {
+    /** */
+    public static final PageIoResolver DEFAULT_PAGE_IO_RESOLVER = PageIO::getPageIO;
+
+    /** */
+    PageIO resolve(long pageAddr) throws IgniteCheckedException;
+}
+
