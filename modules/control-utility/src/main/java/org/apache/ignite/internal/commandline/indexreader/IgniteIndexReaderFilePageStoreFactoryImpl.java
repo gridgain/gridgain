@@ -75,14 +75,14 @@ public class IgniteIndexReaderFilePageStoreFactoryImpl implements IgniteIndexRea
     @Override @Nullable public FilePageStore createFilePageStore(int partId, byte type, Collection<Throwable> errors) throws IgniteCheckedException {
         File file = getFile(dir, partId, null);
 
-        return !file.exists() ? null : (FilePageStore)storeFactory.createPageStore(type, file, allocationTracker);
+        return !file.exists() ? null : (FilePageStore)storeFactory.createPageStore(type, file, allocationTracker::add);
     }
 
     /** {@inheritDoc} */
     @Override public ByteBuffer headerBuffer(byte type) {
         int ver = storeFactory.latestVersion();
 
-        FilePageStore store = storeFactory.createPageStore(type, null, ver, allocationTracker);
+        FilePageStore store = storeFactory.createPageStore(type, null, ver, allocationTracker::add);
 
         return store.header(type, storeFactory.headerSize(ver));
     }
