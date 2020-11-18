@@ -20,6 +20,7 @@ import java.lang.management.ManagementFactory;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -47,7 +48,6 @@ import javax.management.ObjectName;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -73,6 +73,7 @@ import org.apache.ignite.lang.IgniteProducer;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Rule;
 import org.junit.Test;
@@ -1172,17 +1173,16 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
             cache.put(0, "value1");
 
-            IgniteProducer<String> getServerTxLabel =
-                    () -> F.first(ignite.transactions().localActiveTransactions()).label();
-
-            IgniteProducer<Integer> getServerTxSize = () -> ignite.transactions().localActiveTransactions().size();
+            IgniteProducer<Collection<Transaction>> serverTxs = () -> ignite.transactions().localActiveTransactions();
+            IgniteProducer<String> serverTxLabel = () -> F.first(serverTxs.produce()).label();
+            IgniteProducer<Integer> serverTxSize = () -> serverTxs.produce().size();
 
             try (ClientTransaction tx = client.transactions().withLabel("label").txStart()) {
                 cache.put(0, "value2");
 
-                assertEquals(1, (int)getServerTxSize.produce());
+                assertEquals(1, (int)serverTxSize.produce());
 
-                assertEquals("label", getServerTxLabel.produce());
+                assertEquals("label", serverTxLabel.produce());
 
                 assertEquals("value2", cache.get(0));
             }
@@ -1192,9 +1192,9 @@ public class FunctionalTest extends GridCommonAbstractTest {
             try (ClientTransaction tx = client.transactions().withLabel("label1").withLabel("label2").txStart()) {
                 cache.put(0, "value2");
 
-                assertEquals(1, (int)getServerTxSize.produce());
+                assertEquals(1, (int)serverTxSize.produce());
 
-                assertEquals("label2", getServerTxLabel.produce());
+                assertEquals("label2", serverTxLabel.produce());
 
                 tx.commit();
             }
@@ -1226,9 +1226,8 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
                 assertNull(cache.get(1));
 
-                // TODO
-//                assertEquals(1, F.size(txsView.iterator(), txv -> txv.label() == null));
-//                assertEquals(1, F.size(txsView.iterator(), txv -> "label".equals(txv.label())));
+                assertEquals(1, F.size(serverTxs.produce(), txv -> txv.label() == null));
+                assertEquals(1, F.size(serverTxs.produce(), txv -> "label".equals(txv.label())));
 
                 barrier.await();
 
