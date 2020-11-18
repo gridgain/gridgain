@@ -846,14 +846,16 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     }
 
     /**
-     * Callback for cache group start event.
+     * Sets new initial group key if key is not null.
      *
      * @param grpId Cache group ID.
      * @param encKey Encryption key
      */
-    public void beforeCacheGroupStart(int grpId, @Nullable byte[] encKey) {
+    public void setInitialGroupKey(int grpId, @Nullable byte[] encKey) {
         if (encKey == null || ctx.clientNode())
             return;
+
+        removeGroupKey(grpId);
 
         withMasterKeyChangeReadLock(() -> {
             addGroupKey(grpId, new GroupKeyEncrypted(INITIAL_KEY_ID, encKey));
