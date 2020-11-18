@@ -69,6 +69,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteProducer;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -1171,14 +1172,17 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
             cache.put(0, "value1");
 
-            IgniteTransactions serverTx = ignite.transactions();
+            IgniteProducer<String> getServerTxLabel =
+                    () -> F.first(ignite.transactions().localActiveTransactions()).label();
+
+            IgniteProducer<Integer> getServerTxSize = () -> ignite.transactions().localActiveTransactions().size();
 
             try (ClientTransaction tx = client.transactions().withLabel("label").txStart()) {
                 cache.put(0, "value2");
 
-                assertEquals(1, serverTx.localActiveTransactions().size());
+                assertEquals(1, (int)getServerTxSize.produce());
 
-                assertEquals("label", F.first(serverTx.localActiveTransactions()).label());
+                assertEquals("label", getServerTxLabel.produce());
 
                 assertEquals("value2", cache.get(0));
             }
@@ -1188,12 +1192,9 @@ public class FunctionalTest extends GridCommonAbstractTest {
             try (ClientTransaction tx = client.transactions().withLabel("label1").withLabel("label2").txStart()) {
                 cache.put(0, "value2");
 
-                // TODO
-//                assertEquals(1, F.size(txsView.iterator()));
-//
-//                TransactionView txv = txsView.iterator().next();
-//
-//                assertEquals("label2", txv.label());
+                assertEquals(1, (int)getServerTxSize.produce());
+
+                assertEquals("label2", getServerTxLabel.produce());
 
                 tx.commit();
             }
