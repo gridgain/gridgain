@@ -233,7 +233,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 rootPage,
                 grp.reuseList(),
                 true,
-                lsnr
+                lsnr,
+                FLAG_IDX
             );
         }
     }
@@ -1253,7 +1254,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             rowStore,
             rootPage,
             true,
-            lsnr
+            lsnr,
+            FLAG_IDX
         );
 
         return new CacheDataStoreImpl(p, rowStore, dataTree, () -> pendingEntries, grp, busyLock, log);
