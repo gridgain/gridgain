@@ -1347,6 +1347,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /** {@inheritDoc} */
+    @Override public boolean tryCheckpointReadLock() {
+        return checkpointManager.checkpointTimeoutLock().tryCheckpointReadLock();
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean checkpointLockIsHeldByThread() {
         return checkpointManager.checkpointTimeoutLock().checkpointLockIsHeldByThread();
     }

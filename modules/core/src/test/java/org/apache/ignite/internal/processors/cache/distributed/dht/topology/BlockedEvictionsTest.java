@@ -407,6 +407,25 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
             finishFut.error() != null && X.hasCause(finishFut.error(), NodeStoppingException.class));
     }
 
+    /** */
+    @Test
+    public void testCheckpoint() throws Exception {
+        testOperationDuringEviction(true, 1, new Runnable() {
+            @Override public void run() {
+                doSleep(500);
+
+                grid(0).context().cache().context().database().wakeupForCheckpoint("Forced checkpoint");
+
+                doSleep(500);
+
+                System.out.println();
+            }
+        });
+
+        awaitPartitionMapExchange(true, true, null);
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+    }
+
     /**
      * @param persistence {@code True} to use persistence.
      * @param mode        Mode: <ul><li>0 - block before clearing start</li>

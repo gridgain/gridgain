@@ -244,6 +244,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 + ", p=" + id + ", state=" + state() + "]");
 
         clearVer = ctx.versions().localOrder();
+        clearTask = ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.CLEARING);
     }
 
     /**
@@ -1139,12 +1140,17 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             while (it0.hasNext()) {
                 assert state0 == state() : "Partition state can't change during clearing [onStart=" + state + ", part=" + this + ']';
 
-                // Important to check before aquiring lock. TODO more frequesnt check.
+                // TODO more frequesnt check.
                 if ((stopCntr = (stopCntr + 1) & 1023) == 0 && stopClo.getAsBoolean())
                     return cleared;
 
-                // TODO fixme deadlock possibility, should not get read lock if checkpointer starts !!!!!!!
-                ctx.database().checkpointReadLock();
+                // TODO batch cp read locks on removal.
+                if (!ctx.database().tryCheckpointReadLock()) {
+                    if (stopClo.getAsBoolean()) // Check if waiting for clearing cancellation.
+                        return cleared;
+                    else
+                        ctx.database().checkpointReadLock();
+                }
 
                 try {
                     CacheDataRow row = it0.next();

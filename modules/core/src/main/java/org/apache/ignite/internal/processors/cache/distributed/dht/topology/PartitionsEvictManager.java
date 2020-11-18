@@ -275,7 +275,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         cctx.cache().context().exchange().registerExchangeAwareComponent(this);
 
-        scheduleNextTombstoneCleanup();
+        if (tsClearFreq >= 1_000)
+            scheduleNextTombstoneCleanup();
     }
 
     /**
@@ -332,20 +333,37 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-        // Clearing should be cancelled before sending partition maps.
+    /**
+     * Pauses clearing. Should not be called under cp read lock to avoid checkpointer rwlock deadlock.
+     */
+    public synchronized void pause() {
+        // TODO assertion
         paused = true;
 
         if (clearTask != null) {
             clearTask.cancel();
             clearTask.awaitCompletion();
+
+            clearTask = null;
         }
+    }
+
+    /**
+     * Resume clearing.
+     */
+    public void resume() {
+        paused = false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+        // Clearing should be cancelled before sending partition maps.
+        pause();
     }
 
     /** {@inheritDoc} */
     @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
-        paused = false;
+        resume();
     }
 
     /** {@inheritDoc} */

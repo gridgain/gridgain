@@ -808,26 +808,28 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         GridDhtLocalPartition locPart = localPartition0(p, topVer, false, true);
 
                         if (partitionLocalNode(p, topVer)) {
+                            assert locPart != null && locPart.state() != RENTING && locPart.state() != EVICTED : locPart;
+
                             // Prepare partition to rebalance if it's not happened on full map update phase.
-                            if (locPart == null || locPart.state() == RENTING || locPart.state() == EVICTED)
-                                locPart = rebalancePartition(p, true, exchFut);
-
-                            GridDhtPartitionState state = locPart.state();
-
-                            if (state == MOVING) {
-                                if (grp.rebalanceEnabled()) {
-                                    Collection<ClusterNode> owners = owners(p);
-
-                                    // If an owner node left during exchange, then new exchange should be started with detecting lost partitions.
-                                    if (!F.isEmpty(owners)) {
-                                        if (log.isDebugEnabled())
-                                            log.debug("Will not own partition (there are owners to rebalance from) " +
-                                                "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", owners = " + owners + ']');
-                                    }
-                                }
-                                else
-                                    updateSeq = updateLocal(p, locPart.state(), updateSeq, topVer);
-                            }
+//                            if (locPart == null || locPart.state() == RENTING || locPart.state() == EVICTED)
+//                                locPart = rebalancePartition(p, true, exchFut);
+//
+//                            GridDhtPartitionState state = locPart.state();
+//
+//                            if (state == MOVING) {
+//                                if (grp.rebalanceEnabled()) {
+//                                    Collection<ClusterNode> owners = owners(p);
+//
+//                                    // If an owner node left during exchange, then new exchange should be started with detecting lost partitions.
+//                                    if (!F.isEmpty(owners)) {
+//                                        if (log.isDebugEnabled())
+//                                            log.debug("Will not own partition (there are owners to rebalance from) " +
+//                                                "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", owners = " + owners + ']');
+//                                    }
+//                                }
+//                                else
+//                                    updateSeq = updateLocal(p, locPart.state(), updateSeq, topVer);
+//                            }
                         }
                         else {
                             if (locPart != null) {
@@ -852,6 +854,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 AffinityAssignment aff = grp.affinity().readyAffinity(topVer);
 
+                // TODO need this ?
                 if (node2part != null && node2part.valid())
                     changed |= checkEvictions(updateSeq, aff);
 
@@ -1691,11 +1694,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         else if (state == MOVING) {
                             GridDhtLocalPartition locPart = locParts.get(p);
 
-                            rebalancePartition(p, partsToReload.contains(p) ||
-                                locPart != null && locPart.state() == MOVING && exchFut.localJoinExchange(), exchFut);
+                            GridDhtPartitionState prevState = locPart.state();
 
-                            changed = true;
+                            rebalancePartition(p, exchFut);
+
+                            changed = prevState != locPart.state();
                         }
+
+                        if (partsToReload.contains(p))
+                            exchFut.addClearingPartition(grp.groupId(), p);
                     }
                 }
 
@@ -2401,7 +2408,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                     // Partition state should be mutated only on joining nodes if they are exists for the exchange.
                     if (joinedNodes.isEmpty() && !maxCntrPartOwners.contains(locNodeId)) {
-                        rebalancePartition(part, !haveHist.contains(part), exchFut);
+                        rebalancePartition(part, exchFut);
 
                         res.computeIfAbsent(locNodeId, n -> new HashSet<>()).add(part);
                     }
@@ -2493,13 +2500,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * Prepares given partition {@code p} for rebalance.
      * Changes partition state to MOVING and starts clearing if needed.
      * Prevents ongoing renting if required.
-     *
      * @param p Partition id.
-     * @param clear If {@code true} partition have to be cleared before rebalance (full rebalance or rebalance restart
-     * after cancellation).
-     * @param exchFut Future related to partition state change.
+     * @param exchFut Future related to partition state change. TODO remove.
      */
-    private GridDhtLocalPartition rebalancePartition(int p, boolean clear, GridDhtPartitionsExchangeFuture exchFut) {
+    private GridDhtLocalPartition rebalancePartition(int p, GridDhtPartitionsExchangeFuture exchFut) {
         GridDhtLocalPartition part = getOrCreatePartition(p);
 
         if (part.state() == LOST)
@@ -2519,9 +2523,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         if (part.state() != MOVING)
             part.moving();
-
-        if (clear)
-            exchFut.addClearingPartition(grp.groupId(), part.id());
 
         assert part.state() == MOVING : part;
 

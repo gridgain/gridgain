@@ -1298,7 +1298,7 @@ public class GridDhtPartitionDemander {
                 assert v.partitions() != null :
                     "Partitions are null [grp=" + grp.cacheOrGroupName() + ", fromNode=" + k.id() + "]";
 
-                remaining.put(k.id(), v.partitions());
+                remaining.put(k.id(), v.partitions()); // We do not create copy, so assignments will be destroyed.
 
                 partitionsLeft.addAndGet(v.partitions().size());
 
@@ -1434,7 +1434,7 @@ public class GridDhtPartitionDemander {
                         // Reset the initial update counter value to prevent historical rebalancing on this partition.
                         part.dataStore().resetInitialUpdateCounter();
 
-                        if (grp.mvccEnabled() || assignments.forceClear() || lastFinished.isClearingPartition(grp, partId)) {
+                        if (grp.mvccEnabled() || assignments.forceClear() || exchFut.isClearingPartition(grp, partId)) {
                             IgniteInternalFuture<Void> fut0 = part.clearAsync();
 
                             fut0.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
@@ -1452,11 +1452,7 @@ public class GridDhtPartitionDemander {
                         }
                     }
 
-                    fut.listen(new IgniteInClosure<IgniteInternalFuture<Void>>() {
-                        @Override public void apply(IgniteInternalFuture<Void> fut0) {
-                            ctx.kernalContext().closure().runLocalSafe(() -> requestPartitions0(node, parts, d));
-                        }
-                    });
+                    fut.listen(f -> ctx.kernalContext().closure().runLocalSafe(() -> requestPartitions0(node, parts, d)));
 
                     fut.markInitialized();
                 }

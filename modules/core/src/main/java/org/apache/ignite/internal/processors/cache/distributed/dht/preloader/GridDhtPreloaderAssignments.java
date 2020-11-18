@@ -79,6 +79,7 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
     }
 
     /**
+     * TODO need this ?
      * @return True if force clearing requested.
      */
     public boolean forceClear() {

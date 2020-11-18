@@ -1038,6 +1038,11 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         // No-op.
     }
 
+    /** */
+    public boolean tryCheckpointReadLock() {
+        return true;
+    }
+
     /**
      * No-op for non-persistent storage.
      */
