@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 
@@ -274,5 +275,24 @@ public class SegmentAware {
         segmentCompressStorage.interrupt();
 
         segmentCurrStateStorage.forceInterrupt();
+    }
+
+    /**
+     * Add an observer for minimum reserved segment.
+     * {@code null} will be passed if there are no reserved segments.
+     *
+     * @param observer Observer.
+     */
+    public void addObserverMinReservedSegment(Consumer<Long> observer) {
+        reservationStorage.addObserver(observer);
+    }
+
+    /**
+     * Checking if segments are being compressed now.
+     *
+     * @return {@code True} if in progress.
+     */
+    public boolean compressionInProgress() {
+        return segmentCompressStorage.compressionInProgress();
     }
 }

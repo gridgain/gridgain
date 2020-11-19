@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -27,6 +28,7 @@ import org.junit.Test;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -629,6 +631,59 @@ public class SegmentAwareTest {
         }
 
         fail("Should fail with AssertError because this segment have not reserved");
+    }
+
+    /**
+     * Checking whether the minimum reserved segment is observed correctly.
+     */
+    @Test
+    public void testObserverMinReservedSegment() {
+        SegmentAware aware = new SegmentAware(10, false, new NullLogger());
+
+        AtomicReference<Long> observer = new AtomicReference<>();
+        aware.addObserverMinReservedSegment(observer::set);
+
+        aware.reserve(1);
+        assertEquals(1, observer.get().longValue());
+
+        aware.reserve(2);
+        assertEquals(1, observer.get().longValue());
+
+        aware.reserve(0);
+        assertEquals(0, observer.get().longValue());
+
+        aware.release(0);
+        assertEquals(1, observer.get().longValue());
+
+        aware.release(1);
+        assertEquals(2, observer.get().longValue());
+
+        aware.release(2);
+        assertNull(observer.get());
+    }
+
+    /**
+     * Checking correctness of {@link SegmentAware#compressionInProgress}.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCompressionInProgress() throws Exception {
+        SegmentAware aware = new SegmentAware(10, true, new NullLogger());
+
+        assertFalse(aware.compressionInProgress());
+
+        aware.markAsMovedToArchive(0);
+        assertFalse(aware.compressionInProgress());
+
+        assertEquals(0, aware.waitNextSegmentToCompress());
+        assertTrue(aware.compressionInProgress());
+
+        aware.onSegmentCompressed(1);
+        assertTrue(aware.compressionInProgress());
+
+        aware.onSegmentCompressed(0);
+        assertFalse(aware.compressionInProgress());
     }
 
     /**

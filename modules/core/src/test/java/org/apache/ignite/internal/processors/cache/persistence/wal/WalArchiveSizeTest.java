@@ -83,6 +83,11 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
             for (long j = 0; j < i + 1; j++)
                 assertEquals(segments.get(j).longValue(), U.MB);
         }
+
+        for (int i = 0; i < 2; i++) {
+            size.updateCurrentSize(0, -U.MB);
+            assertFalse(size.currentSegments().containsKey(0L));
+        }
     }
 
     /**

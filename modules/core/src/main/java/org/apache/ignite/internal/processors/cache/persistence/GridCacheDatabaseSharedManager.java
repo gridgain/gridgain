@@ -254,7 +254,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private FilePageStoreManager storeMgr;
 
     /** */
-    CheckpointManager checkpointManager;
+    @Nullable CheckpointManager checkpointManager;
 
     /** Database configuration. */
     private final DataStorageConfiguration persistenceCfg;
@@ -2722,7 +2722,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @param highBound WALPointer.
      */
     public void onWalTruncated(WALPointer highBound) throws IgniteCheckedException {
-        checkpointManager.removeCheckpointsUntil(highBound);
+        CheckpointManager cpMgr = checkpointManager;
+
+        if (cpMgr != null)
+            cpMgr.removeCheckpointsUntil(highBound);
     }
 
     /**

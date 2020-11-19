@@ -57,10 +57,10 @@ public class CheckpointMarkersStorage {
     public static final Pattern CP_FILE_NAME_PATTERN = Pattern.compile("(\\d+)-(.*)-(START|END)\\.bin");
 
     /** Logger. */
-    protected IgniteLogger log;
+    protected final IgniteLogger log;
 
     /** Checkpoint history. */
-    private CheckpointHistory cpHistory;
+    private final CheckpointHistory cpHistory;
 
     /** File I/O factory for writing checkpoint markers. */
     private final FileIOFactory ioFactory;

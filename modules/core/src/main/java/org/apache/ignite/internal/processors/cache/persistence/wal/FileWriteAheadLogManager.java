@@ -84,6 +84,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter
 import org.apache.ignite.internal.processors.cache.WalStateManager.WALDisableContext;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
@@ -381,11 +382,16 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      */
     private final Map<Long, Long> segmentSize = new ConcurrentHashMap<>();
 
+    /** Holder of actual information about WAL archive size. */
+    private final WalArchiveSize walArchiveSize;
+
     /**
      * @param ctx Kernal context.
      */
     public FileWriteAheadLogManager(final GridKernalContext ctx) {
         igCfg = ctx.config();
+
+        log = ctx.log(getClass());
 
         DataStorageConfiguration dsCfg = igCfg.getDataStorageConfiguration();
 
@@ -413,6 +419,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         / dsCfg.getWalSegmentSize());
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
+
+        walArchiveSize = new WalArchiveSize(log, dsCfg.getMaxWalArchiveSize());
     }
 
     /**
@@ -514,6 +522,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     checkCompressionLevelBounds(dsCfg.getWalPageCompressionLevel(), pageCompression) :
                     getDefaultCompressionLevel(pageCompression);
             }
+
+            segmentAware.addObserverMinReservedSegment(walArchiveSize::updateMinReservedSegmentIndex);
         }
     }
 
@@ -980,25 +990,31 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         if (mode == WALMode.NONE)
             return false;
 
-        segmentAware.reserve(((FileWALPointer)start).index());
+        // To avoid deadlock.
+        synchronized (walArchiveSize) {
+            segmentAware.reserve(((FileWALPointer)start).index());
 
-        if (!hasIndex(((FileWALPointer)start).index())) {
-            segmentAware.release(((FileWALPointer)start).index());
+            if (!hasIndex(((FileWALPointer)start).index())) {
+                segmentAware.release(((FileWALPointer)start).index());
 
-            return false;
+                return false;
+            }
+
+            return true;
         }
-
-        return true;
     }
 
     /** {@inheritDoc} */
     @Override public void release(WALPointer start) {
-        assert start != null && start instanceof FileWALPointer : "Invalid start pointer: " + start;
+        assert start instanceof FileWALPointer : "Invalid start pointer: " + start;
 
         if (mode == WALMode.NONE)
             return;
 
-        segmentAware.release(((FileWALPointer)start).index());
+        // To avoid deadlock.
+        synchronized (walArchiveSize) {
+            segmentAware.release(((FileWALPointer)start).index());
+        }
     }
 
     /**
@@ -1027,53 +1043,60 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public int truncate(WALPointer low, WALPointer high) {
+    @Override public int truncate(@Nullable WALPointer low, @Nullable WALPointer high) {
         if (high == null)
             return 0;
 
         assert high instanceof FileWALPointer : high;
+        assert low == null || low instanceof FileWALPointer : low;
 
         // File pointer bound: older entries will be deleted from archive
         FileWALPointer lowPtr = (FileWALPointer)low;
         FileWALPointer highPtr = (FileWALPointer)high;
 
-        FileDescriptor[] descs = scan(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER));
+        // To avoid parallel cleaning.
+        synchronized (walArchiveSize) {
+            FileDescriptor[] descs = walArchiveFiles();
 
-        int deleted = 0;
+            int deleted = 0;
 
-        for (FileDescriptor desc : descs) {
-            if (lowPtr != null && desc.idx < lowPtr.index())
-                continue;
+            for (FileDescriptor desc : descs) {
+                if (lowPtr != null && desc.idx < lowPtr.index())
+                    continue;
 
-            // Do not delete reserved or locked segment and any segment after it.
-            if (segmentReservedOrLocked(desc.idx))
-                return deleted;
+                // Do not delete reserved or locked segment and any segment after it.
+                if (segmentReservedOrLocked(desc.idx))
+                    return deleted;
 
-            long archivedAbsIdx = segmentAware.lastArchivedAbsoluteIndex();
+                long archivedAbsIdx = segmentAware.lastArchivedAbsoluteIndex();
 
-            long lastArchived = archivedAbsIdx >= 0 ? archivedAbsIdx : lastArchivedIndex();
+                long lastArchived = archivedAbsIdx >= 0 ? archivedAbsIdx : lastArchivedIndex();
 
-            // We need to leave at least one archived segment to correctly determine the archive index.
-            if (desc.idx < highPtr.index() && desc.idx < lastArchived) {
-                if (!desc.file.delete()) {
-                    U.warn(log, "Failed to remove obsolete WAL segment (make sure the process has enough rights): " +
-                        desc.file.getAbsolutePath());
+                // We need to leave at least one archived segment to correctly determine the archive index.
+                if (desc.idx < highPtr.index() && desc.idx < lastArchived) {
+                    long fileSize = desc.file().length();
+
+                    if (!desc.file.delete()) {
+                        U.warn(log, "Failed to remove obsolete WAL segment " +
+                            "(make sure the process has enough rights): " + desc.file.getAbsolutePath());
+                    }
+                    else {
+                        deleted++;
+
+                        segmentSize.remove(desc.idx());
+                        walArchiveSize.updateCurrentSize(desc.idx(), -fileSize);
+                    }
+
+                    // Bump up the oldest archive segment index.
+                    if (segmentAware.lastTruncatedArchiveIdx() < desc.idx)
+                        segmentAware.lastTruncatedArchiveIdx(desc.idx);
+
+                    cctx.kernalContext().encryption().onWalSegmentRemoved(desc.idx);
                 }
-                else {
-                    deleted++;
-
-                    segmentSize.remove(desc.idx());
-                }
-
-                // Bump up the oldest archive segment index.
-                if (segmentAware.lastTruncatedArchiveIdx() < desc.idx)
-                    segmentAware.lastTruncatedArchiveIdx(desc.idx);
-
-                cctx.kernalContext().encryption().onWalSegmentRemoved(desc.idx);
             }
-        }
 
-        return deleted;
+            return deleted;
+        }
     }
 
     /**
@@ -1091,8 +1114,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public void notchLastCheckpointPtr(WALPointer ptr) {
+        assert ptr instanceof FileWALPointer : "Invalid pointer: " + ptr;
+
         if (compressor != null)
             segmentAware.keepUncompressedIdxFrom(((FileWALPointer)ptr).index());
+
+        walArchiveSize.updateLastCheckpointSegmentIndex(((FileWALPointer)ptr).index());
     }
 
     /** {@inheritDoc} */
@@ -3121,5 +3148,48 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     public static boolean isSegmentFileName(@Nullable String name) {
         return name != null && (WAL_NAME_PATTERN.matcher(name).matches() ||
             WAL_SEGMENT_FILE_COMPACTED_PATTERN.matcher(name).matches());
+    }
+
+    /**
+     * Clearing archive in range with clearing checkpoint history.
+     *
+     * @param low Segment index since which WAL archive will be cleaned.
+     * @param high Segment index to which WALL archive will be cleared.
+     * @throws IgniteCheckedException If failed.
+     */
+    private void cleanWalArchive(Long low, Long high) throws IgniteCheckedException {
+        FileWALPointer lowPtr = new FileWALPointer(low, 0, 0);
+        FileWALPointer highPtr = new FileWALPointer(high, 0, 0);
+
+        GridCacheDatabaseSharedManager dbMgr = dbMgr();
+
+        if (dbMgr != null)
+            dbMgr.onWalTruncated(highPtr);
+
+        int truncateCnt = truncate(lowPtr, highPtr);
+
+        if (log.isInfoEnabled()) {
+            log.info("WAL archive is cleared [lowIdx=" + low + ", highIdx=" + high + ", cleanCnt=" + truncateCnt
+                + ", maxSize=" + U.humanReadableByteCount(walArchiveSize.maxSize()) +
+                ", currentSize=" + U.humanReadableByteCount(walArchiveSize.currentSize()) + ']');
+        }
+    }
+
+    /**
+     * Getting database manager.
+     *
+     * @return Database manager.
+     */
+    @Nullable private GridCacheDatabaseSharedManager dbMgr() {
+        GridCacheSharedContext<?, ?> cctx = this.cctx;
+
+        if (cctx != null) {
+            IgniteCacheDatabaseSharedManager dbMgr0 = cctx.database();
+
+            if (dbMgr0 instanceof GridCacheDatabaseSharedManager)
+                return (GridCacheDatabaseSharedManager)dbMgr0;
+        }
+
+        return null;
     }
 }
