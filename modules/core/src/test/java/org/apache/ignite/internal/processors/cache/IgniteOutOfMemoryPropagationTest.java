@@ -16,31 +16,44 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /**
  *
  */
+@RunWith(JUnit4.class)
 public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
     /** */
     public static final int NODES = 3;
@@ -227,20 +240,131 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
 
         DataStorageConfiguration memCfg = new DataStorageConfiguration();
 
-        memCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-            .setMaxSize(10L * 1024 * 1024 + 1));
+        memCfg.setDefaultDataRegionConfiguration(
+            new DataRegionConfiguration()
+                .setMaxSize(1024L * 1024 * 1024)
+                .setPersistenceEnabled(false)
+                .setPageEvictionMode(DataPageEvictionMode.RANDOM_2_LRU)
+        );
 
         cfg.setDataStorageConfiguration(memCfg);
 
         CacheConfiguration<Object, Object> baseCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
-        baseCfg.setAtomicityMode(this.atomicityMode);
-        baseCfg.setCacheMode(this.mode);
-        baseCfg.setBackups(this.backupsCnt);
-        baseCfg.setWriteSynchronizationMode(this.writeSyncMode);
+        baseCfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
 
         cfg.setCacheConfiguration(baseCfg);
+        cfg.setMetricsLogFrequency(1_000);
+        cfg.setFailureHandler(new StopNodeOrHaltFailureHandler(false, 0));
+
 
         return cfg;
+    }
+
+    /**
+     * Tests how eviction behaves when {@link DataRegionConfiguration#getEmptyPagesPoolSize()} is not enough for large
+     * values.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIgniteOOM() throws Exception {
+        IgniteEx sn = startGrids(1);
+
+        IgniteEx cn = startClientGrid(2);
+
+        awaitPartitionMapExchange();
+
+        IgniteCache<Object, Object> cache = cn.cache(DEFAULT_CACHE_NAME);
+
+        List<IgniteInternalFuture<Object>> futures = new ArrayList<>();
+
+        AtomicInteger k = new AtomicInteger(102);
+
+        Function<ThreadLocalRandom, byte[]> function = random -> new byte[/*random.nextInt(3) * k.get()*/500 * 1024];
+
+        AtomicInteger exceptionsCnt = new AtomicInteger();
+
+        AtomicInteger successfulOpCountAfterException = new AtomicInteger();
+
+        final int exceptionsLimit = 1;
+
+        for (int i = 0; i < 3; i++) {
+            IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
+                ThreadLocalRandom random = ThreadLocalRandom.current();
+
+                while (true) {
+                    if (exceptionsCnt.get() >= exceptionsLimit)
+                        break;
+
+                    try {
+                        cache.put(random.nextInt(), function.apply(random));
+
+                        if (exceptionsCnt.get() > 0)
+                            successfulOpCountAfterException.incrementAndGet();
+                    }
+                    catch (Exception e) {
+                        exceptionsCnt.incrementAndGet();
+
+                        e.printStackTrace();
+
+                        break;
+                    }
+                }
+            });
+
+            futures.add(fut);
+        }
+
+        for (int i = 0; i < 2; i++) {
+            IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
+                ThreadLocalRandom random = ThreadLocalRandom.current();
+
+                while (true) {
+                    cache.get(random.nextInt());
+
+                    if (exceptionsCnt.get() >= exceptionsLimit)
+                        break;
+                }
+            });
+
+            futures.add(fut);
+        }
+
+        for (int i = 0; i < 2; i++) {
+            IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
+                ThreadLocalRandom random = ThreadLocalRandom.current();
+
+                while (true) {
+                    if (exceptionsCnt.get() >= exceptionsLimit)
+                        break;
+
+                    try {
+                        cache.replace(random.nextInt(), function.apply(random));
+
+                        if (exceptionsCnt.get() > 0)
+                            successfulOpCountAfterException.incrementAndGet();
+                    }
+                    catch (Exception e) {
+                        exceptionsCnt.incrementAndGet();
+
+                        e.printStackTrace();
+
+                        break;
+                    }
+                }
+            });
+
+            futures.add(fut);
+        }
+
+        for (IgniteInternalFuture<Object> future : futures) {
+            future.get();
+        }
+
+        assertTrue(exceptionsCnt.get() >= exceptionsLimit);
+        assertTrue(successfulOpCountAfterException.get() > 0);
+
+        log.info("Successful operations after exception: " + successfulOpCountAfterException.get());
     }
 }
