@@ -482,7 +482,7 @@
                                     <exportAntProperties>true</exportAntProperties>
                                 </configuration>
                             </execution>
-                            <execution>
+                            <!--<execution>
                                 <id>release-cpp</id>
                                 <goals>
                                     <goal>run</goal>
@@ -491,7 +491,7 @@
                                 <configuration>
                                     <target name="release-autotools" if="${cpp}">
                                         <exec executable="libtoolize" dir="${release.dir}/platforms/cpp">
-                                            <arg value="--copy"/>
+                                            <arg value="&#45;&#45;copy"/>
                                         </exec>
 
                                         <exec executable="aclocal" dir="${release.dir}/platforms/cpp"/>
@@ -499,8 +499,8 @@
                                         <exec executable="autoheader" dir="${release.dir}/platforms/cpp"/>
 
                                         <exec executable="automake" dir="${release.dir}/platforms/cpp">
-                                            <arg value="--add-missing"/>
-                                            <arg value="--copy"/>
+                                            <arg value="&#45;&#45;add-missing"/>
+                                            <arg value="&#45;&#45;copy"/>
                                         </exec>
 
                                         <exec executable="autoreconf" dir="${release.dir}/platforms/cpp"/>
@@ -508,7 +508,7 @@
                                         <delete dir="${release.dir}/platforms/cpp/autom4te.cache" quiet="true"/>
                                     </target>
                                 </configuration>
-                            </execution>
+                            </execution>-->
                             <execution>
                                 <id>release-zip</id>
                                 <goals>

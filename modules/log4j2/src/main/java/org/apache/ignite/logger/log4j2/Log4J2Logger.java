@@ -277,6 +277,17 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
     }
 
     /**
+     * Checks if Log4j is already configured within this VM or not.
+     *
+     * @return {@code True} if log4j was already configured, {@code false} otherwise.
+     */
+    public static boolean isConfigured() {
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+
+        return ctx.getConfiguration().getAppenders().size() > 1;
+    }
+
+    /**
      * Adds console appender when needed with some default logging settings.
      *
      * @param initLogClo Optional log implementation init closure.
