@@ -905,8 +905,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         List<Cache.Entry<Integer, Integer>> rows = cache.query(new SqlQuery<Integer, Integer>(Integer.class, "val = 2")).getAll();
 
-        System.out.println();
-
         assertEquals(2, cache.get(0));
     }
 

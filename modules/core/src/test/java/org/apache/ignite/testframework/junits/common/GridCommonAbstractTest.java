@@ -114,10 +114,8 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
+import org.apache.ignite.internal.processors.cache.verify.ConsistencyUtils;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
-import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2;
-import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
-import org.apache.ignite.internal.processors.cache.verify.PartitionKeyV2;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
@@ -128,9 +126,6 @@ import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
-import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTask;
-import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTaskArg;
-import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTaskResult;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskV2;
 import org.apache.ignite.lang.IgniteBiInClosure;
@@ -2537,43 +2532,18 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      */
     protected void assertPartitionsSame(IdleVerifyResultV2 res) throws AssertionFailedError {
         if (res.hasConflicts()) {
-            printDivergedKeyAfterUnsuccessfulIdleVerify(res);
+            try {
+                ConsistencyUtils.printDivergenceDetailsForKey(res, log);
+            }
+            catch (IgniteCheckedException e) {
+                log.error("Cannot print diverged key history", e);
+            }
 
             StringBuilder b = new StringBuilder();
 
             res.print(b::append);
 
             fail(b.toString());
-        }
-    }
-
-    /**
-     * Call this method to find and log first diverged key after unsuccessful idle_verify check.
-     * @param res Result of idle_verify.
-     */
-    protected void printDivergedKeyAfterUnsuccessfulIdleVerify(IdleVerifyResultV2 res) {
-        if (res.hasConflicts()) {
-            Map<PartitionKeyV2, List<PartitionHashRecordV2>> conflicts = res.hashConflicts();
-
-            if (F.isEmpty(conflicts))
-                conflicts = res.counterConflicts();
-
-            PartitionKeyV2 partKeyV2 = conflicts.keySet().iterator().next();
-
-            VisorIdleAnalyzeTaskArg taskArg = new VisorIdleAnalyzeTaskArg(new PartitionKey(
-                partKeyV2.groupId(), partKeyV2.partitionId(), partKeyV2.groupName()));
-
-            Ignite node = G.allGrids().stream()
-                .filter(ig -> !ig.cluster().localNode().isClient())
-                .findAny()
-                .orElseThrow(() -> new AssertionError("No server node found to execute analyze task"));
-
-            VisorIdleAnalyzeTaskResult analyzeRes = node.compute().execute(
-                VisorIdleAnalyzeTask.class.getName(),
-                new VisorTaskArgument<>(node.cluster().localNode().id(), taskArg, false)
-            );
-
-            log.error("Idle analyze result: " + analyzeRes.toString());
         }
     }
 

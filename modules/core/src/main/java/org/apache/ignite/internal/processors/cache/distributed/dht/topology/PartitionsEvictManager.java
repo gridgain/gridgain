@@ -275,6 +275,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         cctx.cache().context().exchange().registerExchangeAwareComponent(this);
 
+        // TODO wait for cache groups start.
         if (tsClearFreq >= 1_000)
             scheduleNextTombstoneCleanup();
     }
@@ -303,9 +304,10 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
         if (paused)
             return;
 
-        log.info("Start clearing tombstones, groups to process [" +
+        // TODO avoid clearing partitions with 0 tombstones.
+        log.info("Start clearing tombstones for groups [" +
             evictionGroupsMap.values().stream().map(g -> g.grp.cacheOrGroupName() +
-                "(" + g.grp.topology().localPartitions().stream().map(p -> p.dataStore().tombstonesCount()).count() + ")").collect(Collectors.joining(",")) + ']');
+                "(" + g.grp.topology().localPartitions().stream().mapToLong(p -> p.dataStore().tombstonesCount()).sum() + ")").collect(Collectors.joining(",")) + ']');
 
         for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
             int grpId = ctx0.grp.groupId();
@@ -538,7 +540,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         /** */
         @GridToStringExclude
-        public final GridFutureAdapter<Void> finishFut;
+        public final GridFutureAdapter<Void> finishFut; // TODO fix public field
 
         /** */
         @GridToStringExclude
@@ -564,9 +566,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         /** {@inheritDoc} */
         @Override public void run() {
-            if (cctx.igniteInstanceName().endsWith("0") && part.id() == 4)
-                System.out.println();
-
             if (!state.compareAndSet(null, Boolean.TRUE))
                 return;
 
@@ -624,19 +623,19 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
          * Submits the task for execution.
          */
         public void start() {
-            synchronized (mux) {
-                logEvictPartByGrps.computeIfAbsent(grpEvictionCtx.grp.groupId(), i -> new HashMap<>()).put(part.id(), reason);
-            }
-
-            grpEvictionCtx.totalTasks.incrementAndGet();
-
-            updateMetrics(grpEvictionCtx.grp, reason, INCREMENT);
-
             executor.submit(this);
 
-            showProgress();
+            synchronized (mux) {
+                logEvictPartByGrps.computeIfAbsent(grpEvictionCtx.grp.groupId(), i -> new HashMap<>()).put(part.id(), reason);
 
-            grpEvictionCtx.taskScheduled(this);
+                grpEvictionCtx.totalTasks.incrementAndGet();
+
+                updateMetrics(grpEvictionCtx.grp, reason, INCREMENT);
+
+                showProgress();
+
+                grpEvictionCtx.taskScheduled(this);
+            }
 
             if (log.isDebugEnabled())
                 log.debug("Starting clearing [grp=" + grpEvictionCtx.grp.cacheOrGroupName()

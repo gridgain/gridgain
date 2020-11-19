@@ -61,7 +61,6 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
@@ -74,7 +73,6 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
 import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2;
 import org.apache.ignite.internal.processors.cache.verify.PartitionKeyV2;
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.CacheQueryObjectValueContext;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -90,6 +88,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
@@ -184,6 +183,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting primary node under load.
      */
     @Test
+    @Ignore
     public void testPartitionConsistencyWithPrimaryRestart() throws Exception {
         backups = 2;
 
@@ -230,6 +230,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting random backup nodes under load.
      */
     @Test
+    @Ignore
     public void testPartitionConsistencyWithBackupsRestart() throws Exception {
         backups = 2;
 
@@ -289,113 +290,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         IdleVerifyResultV2 res = idleVerify(prim, DEFAULT_CACHE_NAME);
 
-        // TODO prettify.
-        if (!res.hashConflicts().isEmpty()) {
-            Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> first = res.hashConflicts().entrySet().iterator().next();
-
-            List<PartitionHashRecordV2> list = first.getValue();
-
-            IgniteEx g0 = null;
-            IgniteEx g1 = null;
-
-            // Find first hash diff TODO FIXME remove outer
-            outer: for (int i = 0; i < list.size(); i++) {
-                PartitionHashRecordV2 r0 = list.get(i);
-
-                for (int j = i; j < list.size(); j++) {
-                    PartitionHashRecordV2 r1 = list.get(j);
-
-                    if (r0.partitionHash() != r1.partitionHash()) {
-                        g0 = (IgniteEx) G.allGrids().stream().filter(g -> g.configuration().getConsistentId().equals(r0.consistentId())).findFirst().get();
-                        g1 = (IgniteEx) G.allGrids().stream().filter(g -> g.configuration().getConsistentId().equals(r1.consistentId())).findFirst().get();
-
-                        break outer;
-                    }
-                }
-            }
-
-            int part = first.getKey().partitionId();
-
-            CacheGroupContext grpCtx0 = g0.cachex(DEFAULT_CACHE_NAME).context().group();
-            CacheQueryObjectValueContext fakeCtx0 = new CacheQueryObjectValueContext(grpCtx0.cacheObjectContext().kernalContext());
-            GridDhtLocalPartition locPart0 = grpCtx0.topology().localPartition(part);
-            List<CacheDataRow> dataRows0 = new ArrayList<>();
-            grpCtx0.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(dataRows0::add);
-            dataRows0.forEach(rr -> rr.value().value(fakeCtx0, false));
-
-            long ts0 = dataRows0.stream().filter(rr -> rr.value() == TombstoneCacheObject.INSTANCE).count();
-            long ts00 = locPart0.dataStore().tombstonesCount();
-            long sz0 = locPart0.fullSize();
-
-            CacheGroupContext grpCtx1 = g1.cachex(DEFAULT_CACHE_NAME).context().group();
-            CacheQueryObjectValueContext fakeCtx1 = new CacheQueryObjectValueContext(grpCtx1.cacheObjectContext().kernalContext());
-            GridDhtLocalPartition locPart1 = grpCtx1.topology().localPartition(part);
-            List<CacheDataRow> dataRows1 = new ArrayList<>();
-            grpCtx1.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(dataRows1::add);
-            dataRows1.forEach(rr -> rr.value().value(fakeCtx1, false));
-
-            long ts1 = dataRows1.stream().filter(rr -> rr.value() == TombstoneCacheObject.INSTANCE).count();
-            long ts10 = locPart1.dataStore().tombstonesCount();
-            long sz1 = locPart1.fullSize();
-
-            List<CacheDataRow> diff0 = diff(fakeCtx0, dataRows0, fakeCtx1, dataRows1);
-            List<CacheDataRow> diff1 = diff(fakeCtx1, dataRows1, fakeCtx0, dataRows0);
-
-            CacheDataRow testRow = diff0.isEmpty() ? diff1.get(0) : diff0.get(0);
-
-            for (CacheDataRow cacheDataRow : dataRows0) {
-                if (cacheDataRow.key().equals(testRow.key())) {
-                    log.info("Checking [name=" + g0.name() + ", testRow=" + cacheDataRow + ']');
-
-                    break;
-                }
-            }
-
-            for (CacheDataRow cacheDataRow : dataRows1) {
-                if (cacheDataRow.key().equals(testRow.key())) {
-                    log.info("Checking [name=" + g1.name() + ", testRow=" + cacheDataRow + ']');
-
-                    break;
-                }
-            }
-
-            try (WALIterator iter0 = walIterator(g0)) {
-                log.info("Dump WAL " + g0.name());
-                while (iter0.hasNext()) {
-                    IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
-
-                    if (tup.get2() instanceof DataRecord) {
-                        DataRecord rec = (DataRecord) tup.get2();
-
-                        for (DataEntry entry : rec.writeEntries()) {
-                            if (entry.key().equals(testRow.key())) {
-                                log.info("Rec: " + entry + ", key=" + entry.key() + ", val=" +
-                                    (entry.value() == null ? "NULL" : entry.value().value(fakeCtx0, false).toString()));
-                            }
-                        }
-                    }
-                }
-            }
-
-            log.info("Dump WAL " + g1.name());
-            try (WALIterator iter0 = walIterator(g1)) {
-                while (iter0.hasNext()) {
-                    IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
-
-                    if (tup.get2() instanceof DataRecord) {
-                        DataRecord rec = (DataRecord) tup.get2();
-
-                        for (DataEntry entry : rec.writeEntries()) {
-                            if (entry.key().equals(testRow.key())) {
-                                log.info("Rec: " + entry + ", key=" + entry.key() + ", val=" +
-                                    (entry.value() == null ? "NULL" : entry.value().value(fakeCtx1, false).toString()));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         assertPartitionsSame(res);
     }
 
@@ -403,6 +297,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting backup nodes under load with changing BLT.
      */
     @Test
+    @Ignore
     public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
         backups = 2;
 
@@ -1551,41 +1446,5 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      */
     @Override public String getTestIgniteInstanceName() {
         return "transactions.TxPartitionCounterStateConsistencyTest";
-    }
-
-    /**
-     * @param dataRows0 Data rows 0.
-     * @param dataRows1 Data rows 1.
-     *
-     * @return Diff.
-     */
-    private List<CacheDataRow> diff(CacheQueryObjectValueContext fakeCtx0, List<CacheDataRow> dataRows0, CacheQueryObjectValueContext fakeCtx1, List<CacheDataRow> dataRows1) {
-        List<CacheDataRow> diff = new ArrayList<>();
-
-        for (CacheDataRow r0 : dataRows0) {
-            boolean exists = false;
-
-            GridCacheVersion ver0 = r0.version();
-            KeyCacheObject k0 = r0.key();
-            Object v0 = r0.value().value(fakeCtx0, false);
-
-            for (CacheDataRow r1 : dataRows1) {
-                GridCacheVersion ver1 = r1.version();
-                KeyCacheObject k1 = r1.key();
-                Object v1 = r1.value().value(fakeCtx1, false);
-
-                if (ver0.equals(ver1) && k0.equals(k1) && (v0 != null && v0.equals(v1) || v0 == null && v1 == null )) {
-                    exists = true;
-
-                    break;
-                }
-
-            }
-
-            if (!exists)
-                diff.add(r0);
-        }
-
-        return diff;
     }
 }
