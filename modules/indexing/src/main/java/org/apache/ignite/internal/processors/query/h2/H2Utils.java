@@ -527,6 +527,16 @@ public class H2Utils {
     }
 
     /**
+     * Test if specified value is null.
+     *
+     * @param v Value to test.
+     * @return {@code true} if value is null, {@code false} - otherwise.
+     */
+    public static boolean isNullValue(Value v) {
+        return v == null || v.getType().getValueType() == Value.NULL;
+    }
+
+    /**
      * @return Single-column, single-row cursor with 0 as number of updated records.
      */
     @SuppressWarnings("unchecked")

@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
@@ -511,4 +512,11 @@ public interface GridQueryIndexing {
     default TimeZone clusterTimezone() {
         return TimeZone.getDefault();
     }
+
+    /**
+     * Get statistics manager.
+     *
+     * @return Statistics manager.
+     */
+    IgniteStatisticsManager statsManager();
 }
