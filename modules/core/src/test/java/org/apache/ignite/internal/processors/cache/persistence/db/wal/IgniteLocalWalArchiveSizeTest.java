@@ -37,6 +37,8 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toMap;
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_ARCHIVE_PATH;
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_PATH;
 
 /**
  * Class for testing not exceeding {@link DataStorageConfiguration#getMaxWalArchiveSize()}.
@@ -44,6 +46,12 @@ import static java.util.stream.Collectors.toMap;
 public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     /** Watcher of physical exceeding of the archive. */
     @Nullable private volatile WalArchiveWatcher walArchiveWatcher;
+
+    /** WAL compaction enabled flag. */
+    private boolean walCompactionEnabled;
+
+    /** WAL archive enabled flag. */
+    private boolean walArchiveEnabled = true;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -75,6 +83,8 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
                     .setMaxWalArchiveSize(5 * U.MB)
                     .setWalSegmentSize((int)U.MB)
+                    .setWalCompactionEnabled(walCompactionEnabled)
+                    .setWalArchivePath(walArchiveEnabled ? DFLT_WAL_ARCHIVE_PATH : DFLT_WAL_PATH)
             );
     }
 
@@ -96,6 +106,9 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
 
     @Test
     public void name() throws Exception {
+        walArchiveEnabled = true;
+        walCompactionEnabled = true;
+
         IgniteEx n = startGrid(0);
 
         for (int i = 0; i < 1_000; i++)

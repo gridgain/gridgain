@@ -501,6 +501,7 @@ public class SegmentAwareTest {
         for (int i = 0; i < 5; i++) {
             aware.setLastArchivedAbsoluteIndex(i);
             aware.waitNextSegmentToCompress();
+            aware.onStartCompression(i);
         }
 
         aware.onSegmentCompressed(0);
@@ -677,6 +678,9 @@ public class SegmentAwareTest {
         assertFalse(aware.compressionInProgress());
 
         assertEquals(0, aware.waitNextSegmentToCompress());
+        assertFalse(aware.compressionInProgress());
+
+        aware.onStartCompression(0);
         assertTrue(aware.compressionInProgress());
 
         aware.onSegmentCompressed(1);

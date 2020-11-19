@@ -131,8 +131,6 @@ public class SegmentCompressStorage {
 
         assert idx != null;
 
-        compressingSegments.add(idx);
-
         return idx;
     }
 
@@ -195,5 +193,14 @@ public class SegmentCompressStorage {
      */
     synchronized boolean compressionInProgress() {
         return !compressingSegments.isEmpty();
+    }
+
+    /**
+     * Callback at the beginning of segment compression.
+     *
+     * @param idx Absolut segment index.
+     */
+    synchronized void onStartCompression(long idx) {
+        compressingSegments.add(idx);
     }
 }

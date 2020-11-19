@@ -295,4 +295,13 @@ public class SegmentAware {
     public boolean compressionInProgress() {
         return segmentCompressStorage.compressionInProgress();
     }
+
+    /**
+     * Callback at the beginning of segment compression.
+     *
+     * @param idx Absolut segment index.
+     */
+    public void onStartCompression(long idx) {
+        segmentCompressStorage.onStartCompression(idx);
+    }
 }
