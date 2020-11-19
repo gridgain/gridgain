@@ -89,7 +89,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
             costFuncType = CostFunctionType.LAST;
         }
-        //costFuncType = CostFunctionType.COMPATIBLE_8_7_28;
+        
         switch (costFuncType) {
             case COMPATIBLE_8_7_12:
                 constFunc = this::getCostRangeIndex_8_7_12;
