@@ -25,7 +25,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteAbsClosureX;
-import org.apache.ignite.lang.IgniteBiInClosureX;
+import org.apache.ignite.lang.IgniteBiClosureX;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -97,13 +97,11 @@ public class WalArchiveSize {
      */
     public synchronized void reserve(
         long size,
-        @Nullable IgniteBiInClosureX<Long, Long> cleanupC,
+        @Nullable IgniteBiClosureX<Long, Long, Integer> cleanupC,
         @Nullable IgniteAbsClosureX beforeWaitC
     ) throws IgniteCheckedException {
         while (!unlimited() && max - (curr + reserved) < size) {
-            if (availableDel > 0 && cleanupC != null)
-                cleanupC.applyx(segments.firstKey(), safeCleanIdx());
-            else {
+            if (availableDel == 0 || (cleanupC != null && cleanupC.applyx(segments.firstKey(), safeCleanIdx()) == 0)) {
                 if (beforeWaitC != null)
                     beforeWaitC.applyx();
 

@@ -18,18 +18,60 @@ package org.apache.ignite.internal.processors.cache.persistence.wal;
 
 import java.util.NavigableMap;
 import java.util.concurrent.CountDownLatch;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.configuration.DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
 
 /**
  * Class for testing {@link WalArchiveSize}.
  */
 public class WalArchiveSizeTest extends GridCommonAbstractTest {
+    /** Max wal archive size. */
+    private long maxWalArchiveSize = 5 * U.MB;
+
+    /** Wal segment size. */
+    private long walSegmentSize = U.MB;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(TRANSACTIONAL))
+            .setDataStorageConfiguration(
+                new DataStorageConfiguration()
+                    .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
+                    .setMaxWalArchiveSize(maxWalArchiveSize)
+                    .setWalSegmentSize((int)walSegmentSize)
+            );
+    }
+
     /**
      * Checking whether {@link WalArchiveSize#unlimited} works correctly.
      */
@@ -161,6 +203,8 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
                 assertEquals(1, high.longValue());
 
                 size.updateCurrentSize(low, -U.MB);
+
+                return 1;
             }, latch::countDown);
 
             return null;
@@ -174,5 +218,48 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
         assertFalse(size.exceedMax());
         assertEquals(4 * U.MB, size.currentSize());
         assertEquals(U.MB, size.reservedSize());
+    }
+
+    /**
+     * Checking exceeded WAL archive at start of node.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testExceedMaxWalArchiveSizeOnStartNode() throws Exception {
+        IgniteEx n = startGrid(0);
+
+        n.cluster().state(ClusterState.ACTIVE);
+        awaitPartitionMapExchange();
+
+        for (int i = 0; i < 10_000; i++)
+            n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(10 * U.KB)]);
+
+        stopGrid(0);
+
+        maxWalArchiveSize = 2 * U.MB;
+        walSegmentSize = U.MB;
+
+        // Expectation of not exceeding.
+        n = startGrid(0);
+
+        WalArchiveSize size = GridTestUtils.getFieldValueHierarchy(
+            n.context().cache().context().wal(),
+            "walArchiveSize"
+        );
+
+        assertFalse(size.exceedMax());
+
+        stopGrid(0);
+
+        // Expectation of exceeding.
+        maxWalArchiveSize = 513 * U.KB;
+        walSegmentSize = 512 * U.KB;
+
+        GridTestUtils.assertThrows(
+            log, () -> startGrid(0),
+            IgniteCheckedException.class,
+            "Exceeding maximum WAL archive size"
+        );
     }
 }

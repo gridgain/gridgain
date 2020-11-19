@@ -5333,6 +5333,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             restorePartitionStates(cacheGrps, restoreState.partitionRecoveryStates());
 
+            if (!cacheGrps.isEmpty() && context().wal() instanceof FileWriteAheadLogManager)
+                ((FileWriteAheadLogManager)context().wal()).onRecoveryFinish();
+
             // Start warm-up only after restoring memory storage, but before starting GridDiscoveryManager.
             if (!cacheGrps.isEmpty())
                 startWarmUp();

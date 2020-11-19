@@ -3233,13 +3233,42 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /**
+     * Callback on finish recovery.
+     */
+    public void onRecoveryFinish() throws IgniteCheckedException {
+        for (FileDescriptor fd : walArchiveFiles())
+            walArchiveSize.updateCurrentSize(fd.idx(), fd.file().length());
+
+        if (walArchiveSize.exceedMax()) {
+            if (walArchiveSize.availableDelete() > 0) {
+                try {
+                    walArchiveSize.reserve(1, this::cleanWalArchive, Thread.currentThread()::interrupt);
+                }
+                catch (IgniteInterruptedCheckedException e) {
+                    //ignore
+                }
+                finally {
+                    walArchiveSize.release(1);
+                }
+            }
+
+            if (walArchiveSize.exceedMax()) {
+                throw new IgniteCheckedException("Exceeding maximum WAL archive size [" +
+                    "maxSize=" + U.humanReadableByteCount(walArchiveSize.maxSize()) +
+                    ", currentSize=" + U.humanReadableByteCount(walArchiveSize.currentSize()) + ']');
+            }
+        }
+    }
+
+    /**
      * Clearing archive in range with clearing checkpoint history.
      *
      * @param low Segment index since which WAL archive will be cleaned.
      * @param high Segment index to which WALL archive will be cleared.
+     * @return Number of deleted WAL segments.
      * @throws IgniteCheckedException If failed.
      */
-    private void cleanWalArchive(Long low, Long high) throws IgniteCheckedException {
+    private int cleanWalArchive(Long low, Long high) throws IgniteCheckedException {
         FileWALPointer lowPtr = new FileWALPointer(low, 0, 0);
         FileWALPointer highPtr = new FileWALPointer(high, 0, 0);
 
@@ -3255,6 +3284,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 + ", maxSize=" + U.humanReadableByteCount(walArchiveSize.maxSize()) +
                 ", currentSize=" + U.humanReadableByteCount(walArchiveSize.currentSize()) + ']');
         }
+
+        return truncateCnt;
     }
 
     /**

@@ -37,6 +37,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toMap;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_ARCHIVE_PATH;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_PATH;
 
@@ -76,9 +77,8 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setCacheConfiguration(
-                new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            ).setDataStorageConfiguration(
+            .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(TRANSACTIONAL))
+            .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
                     .setMaxWalArchiveSize(5 * U.MB)
