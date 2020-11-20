@@ -1,5 +1,6 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -7,6 +8,8 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.discovery.tcp.BlockTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -42,6 +45,14 @@ public class TxPartitionCounterStateConsistencyFuzzTest extends TxPartitionCount
      */
     @Test
     public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_RemoveQueueCleared() throws Exception {
+
+        customDiscoSpi = new BlockTcpDiscoverySpi().setIpFinder(IP_FINDER);
+
+        Field rndAddrsField = U.findField(BlockTcpDiscoverySpi.class, "skipAddrsRandomization");
+        assertNotNull(rndAddrsField);
+        rndAddrsField.set(customDiscoSpi, true);
+
+
         backups = 2;
 
         Ignite prim = startGridsMultiThreaded(SERVER_NODES);
@@ -74,9 +85,13 @@ public class TxPartitionCounterStateConsistencyFuzzTest extends TxPartitionCount
                 fail(X.getFullStackTrace(e));
             }
 
+            customDiscoSpi.disconnect();
+
             prim.cache(DEFAULT_CACHE_NAME).remove(keys.get(0));
 
             doSleep(1000);
+
+            customDiscoSpi.clientReconnect();
 
             // Ensure queue cleanup is triggered before releasing supply message.
             spiBack.stopBlock();
