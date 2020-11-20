@@ -291,7 +291,7 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         };
 
         when(pageMemory2g.checkpointBufferPagesSize()).thenReturn(100);
-        when(pageMemory2g.checkpointBufferPagesCount()).thenAnswer(mock -> new AtomicInteger(70));
+        when(pageMemory2g.checkpointBufferPagesCount()).thenAnswer(mock -> 70);
 
         AtomicBoolean stopLoad = new AtomicBoolean();
         List<Thread> loadThreads = new ArrayList<>();
