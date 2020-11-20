@@ -76,7 +76,10 @@ public enum CommandList {
     WARM_UP("--warm-up", new WarmUpCommand()),
 
     /** Commands to manage distributed properties. */
-    PROPERTY("--property", new PropertyCommand());
+    PROPERTY("--property", new PropertyCommand()),
+
+    /** Command to manage PDS defragmentation. */
+    DEFRAGMENTATION("--defragmentation", new DefragmentationCommand());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();
