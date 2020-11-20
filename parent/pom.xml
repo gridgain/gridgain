@@ -1133,6 +1133,9 @@
                                         <exclude>packaging/**</exclude>
                                         <!-- Checkstyle -->
                                         <exclude>checkstyle/**</exclude>
+                                        <!-- HLL -->
+                                        <exclude>src/main/java/org/apache/ignite/internal/processors/query/stat/hll/**</exclude>
+                                        <exclude>src/test/java/org/apache/ignite/internal/processors/query/stat/hll/**</exclude>
                                     </excludes>
                                 </configuration>
                             </execution>

@@ -378,7 +378,8 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
             true,
             null,
             new GridTestKernalContext(log),
-            null
+            null,
+            PageIdAllocator.FLAG_IDX
         );
     }
 

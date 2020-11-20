@@ -78,6 +78,9 @@ public enum CommandList {
     /** Commands to manage distributed properties. */
     PROPERTY("--property", new PropertyCommand()),
 
+    /** */
+    PERSISTENCE("--persistence", new PersistenceCommand()),
+
     /** Command to manage PDS defragmentation. */
     DEFRAGMENTATION("--defragmentation", new DefragmentationCommand());
 

@@ -264,6 +264,15 @@ import org.apache.ignite.internal.processors.query.h2.twostep.InOperationExtract
 import org.apache.ignite.internal.processors.query.h2.twostep.JoinPartitionPruningSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.MvccDmlPartitionPruningSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.SqlDataTypeConversionTest;
+import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollectorAggregationTest;
+import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollectorTest;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepositoryTest;
+import org.apache.ignite.internal.processors.query.stat.ManagerStatisticsTypesTest;
+import org.apache.ignite.internal.processors.query.stat.PSUBasicValueDistributionTableStatisticsUsageTest;
+import org.apache.ignite.internal.processors.query.stat.PSUCompositeIndexTableStatisticsUsageTest;
+import org.apache.ignite.internal.processors.query.stat.PSUStatisticsTypesTest;
+import org.apache.ignite.internal.processors.query.stat.PSUStatisticPartialCollectionTest;
+import org.apache.ignite.internal.processors.query.stat.PSUValueDistributionTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.sql.IgniteCachePartitionedAtomicColumnConstraintsTest;
 import org.apache.ignite.internal.processors.sql.IgniteCachePartitionedTransactionalColumnConstraintsTest;
 import org.apache.ignite.internal.processors.sql.IgniteCachePartitionedTransactionalSnapshotColumnConstraintTest;
@@ -644,9 +653,20 @@ import org.junit.runners.Suite;
     KillQueryOnClientDisconnectTest.class,
     KillQueryErrorOnCancelTest.class,
 
-    // Table statistics.
+    // Table statistics collection.
+    ColumnStatisticsCollectorTest.class,
+    ColumnStatisticsCollectorAggregationTest.class,
+    ManagerStatisticsTypesTest.class,
+    IgniteStatisticsRepositoryTest.class,
+
+    // Table statistics usage.
     RowCountTableStatisticsUsageTest.class,
     RowCountTableStatisticsSurvivesNodeRestartTest.class,
+    PSUStatisticsTypesTest.class,
+    PSUStatisticPartialCollectionTest.class,
+    PSUBasicValueDistributionTableStatisticsUsageTest.class,
+    PSUValueDistributionTableStatisticsUsageTest.class,
+    PSUCompositeIndexTableStatisticsUsageTest.class,
 
     SqlViewExporterSpiTest.class,
     SystemViewSelfTest.class

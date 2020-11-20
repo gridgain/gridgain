@@ -18,19 +18,30 @@ package org.apache.ignite.spi.discovery.isolated;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpiInternalListener;
+import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.processors.security.SecurityUtils;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
+import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -77,6 +88,12 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** */
     private ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+    /** Node authenticator. */
+    private DiscoverySpiNodeAuthenticator nodeAuth;
+
+    /** */
+    private JdkMarshaller marsh;
 
     /** {@inheritDoc} */
     @Override public Serializable consistentId() throws IgniteSpiException {
@@ -137,8 +154,18 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
     }
 
     /** {@inheritDoc} */
+    @Override protected void injectResources(Ignite ignite) {
+        super.injectResources(ignite);
+
+        if (ignite != null && ignite instanceof IgniteKernal)
+            marsh = ((IgniteKernal)ignite).context().marshallerContext().jdkMarshaller();
+        else
+            marsh = new JdkMarshaller();
+    }
+
+    /** {@inheritDoc} */
     @Override public void setAuthenticator(DiscoverySpiNodeAuthenticator auth) {
-        // No-op.
+        nodeAuth = auth;
     }
 
     /** {@inheritDoc} */
@@ -189,6 +216,8 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
+        authenticateNode();
+
         exec.execute(() -> {
             lsnr.onLocalNodeInitialized(locNode);
 
@@ -199,6 +228,43 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
                 singleton(locNode))
             );
         });
+    }
+
+    /** */
+    private void authenticateNode() {
+        SecurityCredentials locCred = locNode.attribute(IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS);
+
+        if (nodeAuth != null) {
+            SecurityContext subj = nodeAuth.authenticateNode(locNode, locCred);
+
+            Map<String, Object> attrs = new HashMap<>(locNode.attributes());
+
+            try {
+                attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, U.marshal(marsh, subj));
+                attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT, marshalWithSecurityVersion(marsh, subj, 1));
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteSpiException("Failed to authenticate local node (will shutdown local node).", e);
+            }
+
+            locNode.setAttributes(attrs);
+        }
+    }
+
+    /**
+     * @param obj Object.
+     * @param ver Security serialize version.
+     * @return Marshaled object.
+     */
+    private byte[] marshalWithSecurityVersion(Marshaller marsh, Object obj, int ver) throws IgniteCheckedException {
+        try {
+            SecurityUtils.serializeVersion(ver);
+
+            return U.marshal(marsh, obj);
+        }
+        finally {
+            SecurityUtils.restoreDefaultSerializeVersion();
+        }
     }
 
     /** {@inheritDoc} */
