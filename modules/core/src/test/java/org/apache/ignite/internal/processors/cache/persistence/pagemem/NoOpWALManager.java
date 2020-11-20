@@ -192,4 +192,14 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     @Override public WALPointer lastWritePointer() {
         return null;
     }
+
+    /** {@inheritDoc} */
+    @Override public boolean isArchiveFull() {
+        return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int availableDeleteArchiveSegments() {
+        return 0;
+    }
 }

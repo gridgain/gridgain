@@ -17,11 +17,13 @@
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -32,9 +34,12 @@ import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.WalArchiveSize;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.Repeat;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -44,15 +49,33 @@ import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_
 /**
  * Class for testing not exceeding {@link DataStorageConfiguration#getMaxWalArchiveSize()}.
  */
+@RunWith(Parameterized.class)
 public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     /** Watcher of physical exceeding of the archive. */
     @Nullable private volatile WalArchiveWatcher walArchiveWatcher;
 
-    /** WAL compaction enabled flag. */
-    private boolean walCompactionEnabled;
-
     /** WAL archive enabled flag. */
-    private boolean walArchiveEnabled = true;
+    @Parameterized.Parameter(0)
+    public boolean walArchiveEnabled;
+
+    /** WAL compaction enabled flag. */
+    @Parameterized.Parameter(1)
+    public boolean walCompactionEnabled;
+
+    /**
+     * Generate test's parameters.
+     *
+     * @return Test's parameters.
+     */
+    @Parameterized.Parameters(name = "walArchiveEnabled={0}, walCompactionEnabled={1}")
+    public static Iterable<Object[]> params() {
+        return Arrays.asList(
+//            new Object[] {true, false},
+//            new Object[] {true, true},
+            new Object[] {false, false},
+            new Object[] {false, true}
+        );
+    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -104,11 +127,14 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
         return n;
     }
 
+    /**
+     * Checking that maximum WAL archive size is not exceeded.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void name() throws Exception {
-        walArchiveEnabled = true;
-        walCompactionEnabled = true;
-
+    @Repeat(20)
+    public void test() throws Exception {
         IgniteEx n = startGrid(0);
 
         for (int i = 0; i < 1_000; i++)
@@ -186,10 +212,12 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
                 if (size > walArchiveSize.maxSize()) {
                     synchronized (walArchiveSize) {
                         Map<Long, String> segments = walArchiveSize.currentSegments().entrySet().stream()
-                            .collect(toMap(Map.Entry::getKey, e -> U.humanReadableByteCount(e.getValue())));
+                            .collect(toMap(Map.Entry::getKey, e -> U.humanReadableByteCount(e.getValue()),
+                                Objects::toString, TreeMap::new));
 
                         Map<String, String> physicalFiles = Stream.of(files)
-                            .collect(toMap(File::getName, f -> U.humanReadableByteCount(f.length())));
+                            .collect(toMap(File::getName, f -> U.humanReadableByteCount(f.length()),
+                                Objects::toString, TreeMap::new));
 
                         log.error("There was an excess of WAL archive [physicalSize=" + U.humanReadableByteCount(size)
                             + ", maxSize=" + U.humanReadableByteCount(walArchiveSize.maxSize())

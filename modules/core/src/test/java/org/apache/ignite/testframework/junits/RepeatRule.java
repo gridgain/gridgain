@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testframework.junits;
 
+import org.apache.ignite.IgniteLogger;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -24,6 +25,18 @@ import org.junit.runners.model.Statement;
  * Rule for repeating test N times.
  */
 public class RepeatRule implements TestRule {
+    /** Logger. */
+    private final IgniteLogger log;
+
+    /**
+     * Constructor.
+     *
+     * @param log Logger.
+     */
+    public RepeatRule(IgniteLogger log) {
+        this.log = log;
+    }
+
     /** {@inheritDoc} */
     @Override public Statement apply(Statement statement, Description desc) {
         Statement res = statement;
@@ -33,7 +46,7 @@ public class RepeatRule implements TestRule {
         if (repeat != null) {
             int times = repeat.value();
 
-            res = new RepeatStatement(statement, times);
+            res = new RepeatStatement(log, statement, times);
         }
 
         return res;
@@ -41,6 +54,9 @@ public class RepeatRule implements TestRule {
 
     /** */
     private static class RepeatStatement extends Statement {
+        /** Logger. */
+        private final IgniteLogger log;
+
         /** Statement. */
         private final Statement statement;
 
@@ -48,19 +64,34 @@ public class RepeatRule implements TestRule {
         private final int repeat;
 
         /**
+         * @param log Logger.
          * @param statement Statement.
          * @param repeat Repeat.
          */
-        public RepeatStatement(Statement statement, int repeat) {
+        public RepeatStatement(IgniteLogger log, Statement statement, int repeat) {
+            this.log = log;
             this.statement = statement;
             this.repeat = repeat;
         }
 
         /** {@inheritDoc} */
         @Override public void evaluate() throws Throwable {
-            for (int i = 0; i < repeat; i++)
-                statement.evaluate();
-        }
+            for (int i = 0; i < repeat; i++) {
+                if (log.isInfoEnabled())
+                    log.info("Running a repeating test, iteration: " + i);
 
+                try {
+                    statement.evaluate();
+                }
+                catch (Throwable t) {
+                    log.error("Falling a repeating test, iteration: ", t);
+
+                    throw t;
+                }
+
+                if (log.isInfoEnabled())
+                    log.info("Completing a repeating test, iteration: " + i);
+            }
+        }
     }
 }

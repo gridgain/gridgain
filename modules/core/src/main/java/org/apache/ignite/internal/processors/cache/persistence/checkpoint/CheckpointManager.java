@@ -208,7 +208,8 @@ public class CheckpointManager {
             dataRegions,
             lock,
             checkpointer,
-            checkpointReadLockTimeout
+            checkpointReadLockTimeout,
+            wal
         );
     }
 
@@ -237,7 +238,6 @@ public class CheckpointManager {
 
     /**
      * @param lsnr Listener.
-     * @param dataRegion Data region for which listener is corresponded to.
      */
     public void removeCheckpointListener(CheckpointListener lsnr) {
         checkpointWorkflow.removeCheckpointListener(lsnr);

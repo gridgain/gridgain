@@ -221,7 +221,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     private static final Collection<Class<?>> clearStaticLogClasses = newSetFromMap(new ConcurrentHashMap<>());
 
     /** Allows easy repeating for test. */
-    @Rule public transient RepeatRule repeatRule = new RepeatRule();
+    @Rule public transient RepeatRule repeatRule = new RepeatRule(log);
 
     /**
      * Supports obtaining test name for JUnit4 framework in a way that makes it available for methods invoked

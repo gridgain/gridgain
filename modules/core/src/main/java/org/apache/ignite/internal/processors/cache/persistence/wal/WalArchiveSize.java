@@ -32,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
  * Class for keeping track of WAL archive size.
  * <p/>
  * Allows to organize parallel work with WAL archive
- * using methods {@link #reserve} and {@link #release} similar to locks.
+ * using methods {@link #reserveSize} and {@link #releaseSize} similar to locks.
  * <p/>
  * If during reservation there is no space and it is impossible to clear WAL archive,
  * then there will be a wait for state update through the methods:
@@ -83,7 +83,7 @@ public class WalArchiveSize {
 
     /**
      * Reservation of space in WAL archive, with ability to clean up if there is insufficient space.
-     * After reservation and end of work with WAL archive, space must be {@link #release released}.
+     * After reservation and end of work with WAL archive, space must be {@link #releaseSize released}.
      *
      * A range of segments that can be safely deleted are passed to input of cleanup function.
      * If cleaning is not possible now, it will wait for the update of WAL archive state.
@@ -95,7 +95,7 @@ public class WalArchiveSize {
      * @throws IgniteInterruptedCheckedException If waiting for free space is interrupted.
      * @throws IgniteCheckedException If failed.
      */
-    public synchronized void reserve(
+    public synchronized void reserveSize(
         long size,
         @Nullable IgniteBiClosureX<Long, Long, Integer> cleanupC,
         @Nullable IgniteAbsClosureX beforeWaitC
@@ -109,15 +109,15 @@ public class WalArchiveSize {
             }
         }
 
-        release(-size);
+        releaseSize(-size);
     }
 
     /**
-     * Release previously {@link #reserve reserved} space in WAL archive.
+     * Release previously {@link #reserveSize reserved} space in WAL archive.
      *
      * @param size Byte count.
      */
-    public synchronized void release(long size) {
+    public synchronized void releaseSize(long size) {
         reserved -= size;
 
         notifyAll();

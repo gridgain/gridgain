@@ -169,7 +169,7 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checking whether {@link WalArchiveSize#reserve}, {@link WalArchiveSize#release} and
+     * Checking whether {@link WalArchiveSize#reserveSize}, {@link WalArchiveSize#releaseSize} and
      * {@link WalArchiveSize#reservedSize} works correctly.
      *
      * @throws Exception If failed.
@@ -179,14 +179,14 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
         WalArchiveSize size = new WalArchiveSize(log, 5 * U.MB);
 
         for (long i = 0; i < 5; i++) {
-            size.reserve(U.MB, null, null);
+            size.reserveSize(U.MB, null, null);
 
             assertFalse(size.exceedMax());
             assertEquals(U.MB * (i + 1), size.reservedSize());
         }
 
         for (long i = 0; i < 5; i++) {
-            size.release(U.MB);
+            size.releaseSize(U.MB);
 
             assertFalse(size.exceedMax());
             assertEquals(U.MB * (5 - (i + 1)), size.reservedSize());
@@ -198,7 +198,7 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
         CountDownLatch latch = new CountDownLatch(1);
 
         IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
-            size.reserve(U.MB, (low, high) -> {
+            size.reserveSize(U.MB, (low, high) -> {
                 assertEquals(0, low.longValue());
                 assertEquals(1, high.longValue());
 
@@ -223,7 +223,7 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
         CountDownLatch latch1 = new CountDownLatch(1);
 
         fut = GridTestUtils.runAsync(() -> {
-            size.reserve(U.MB, (low, high) -> {
+            size.reserveSize(U.MB, (low, high) -> {
                 assertEquals(1, low.longValue());
                 assertEquals(2, high.longValue());
 

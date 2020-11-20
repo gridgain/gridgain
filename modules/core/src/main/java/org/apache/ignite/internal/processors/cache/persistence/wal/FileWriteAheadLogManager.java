@@ -1899,14 +1899,19 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     if (isCancelled())
                         break;
 
-                    SegmentArchiveResult res;
-
                     blockingSectionBegin();
+
+                    long reserveSize = segmentSize(toArchive);
+                    walArchiveSize.reserveSize(reserveSize, FileWriteAheadLogManager.this::cleanWalArchive, null);
+
+                    SegmentArchiveResult res;
 
                     try {
                         res = archiveSegment(toArchive);
                     }
                     finally {
+                        walArchiveSize.releaseSize(reserveSize);
+
                         blockingSectionEnd();
                     }
 
@@ -2120,7 +2125,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
 
         /**
-         * Getting segment size.
+         * Getting segment size from {@link #walWorkDir} for archiving.
          *
          * @param idx Absolute segment index.
          * @return Size in bytes.
@@ -2129,7 +2134,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             long segIdx = idx % dsCfg.getWalSegments();
 
             long offs = switchSegmentRecordOffset.get((int)segIdx);
-            long size = new File(walArchiveDir, fileName(segIdx)).length();
+            long size = new File(walWorkDir, fileName(segIdx)).length();
 
             return offs > 0 && offs < size ? offs : size;
         }
@@ -2250,11 +2255,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             boolean reserved = reserve(new FileWALPointer(segmentToCompress, 0, 0));
 
-            if (reserved) {
-                segmentAware.onStartCompression(segmentToCompress);
-
+            if (reserved)
                 return segmentToCompress;
-            }
             else {
                 segmentAware.onSegmentCompressed(segmentToCompress);
 
@@ -2271,16 +2273,31 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         private void body0() {
             while (!isCancelled()) {
                 long segIdx = -1L;
+                long startIdx = -1L;
+                long reserveIdx = -1L;
+                long reserveSize = -1L;
 
                 try {
-                    if ((segIdx = tryReserveNextSegmentOrWait()) == -1)
-                        continue;
+                    segIdx = segmentAware.waitNextSegmentToCompress();
 
                     String segmentFileName = fileName(segIdx);
+                    File raw = new File(walArchiveDir, segmentFileName);
+
+                    long reserveSize0 = raw.length();
+
+                    walArchiveSize.reserveSize(reserveSize0, FileWriteAheadLogManager.this::cleanWalArchive, null);
+                    reserveSize = reserveSize0;
+
+                    if (!reserve(new FileWALPointer(segIdx, 0, 0)))
+                        continue;
+
+                    reserveIdx = segIdx;
+
+                    segmentAware.onStartCompression(segIdx);
+                    startIdx = segIdx;
 
                     File tmpZip = new File(walArchiveDir, segmentFileName + ZIP_SUFFIX + TMP_SUFFIX);
                     File zip = new File(walArchiveDir, segmentFileName + ZIP_SUFFIX);
-                    File raw = new File(walArchiveDir, segmentFileName);
 
                     if (log.isInfoEnabled()) {
                         log.info("Starting of compression WAL segment [absIdx=" + segIdx +
@@ -2308,8 +2325,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                         segmentSize.put(segIdx, zip.length());
                         walArchiveSize.updateCurrentSize(segIdx, zip.length());
-
-                        segmentAware.onSegmentCompressed(segIdx);
 
                         if (log.isInfoEnabled()) {
                             log.info("Compressed file [rawFile=" + raw.getAbsolutePath() +
@@ -2340,8 +2355,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     segmentAware.onSegmentCompressed(segIdx);
                 }
                 finally {
-                    if (segIdx != -1L)
+                    if (reserveIdx != -1L)
                         release(new FileWALPointer(segIdx, 0, 0));
+
+                    if (reserveSize != -1L)
+                        walArchiveSize.releaseSize(reserveSize);
+
+                    if (startIdx != -1L)
+                        segmentAware.onSegmentCompressed(startIdx);
                 }
             }
         }
@@ -2461,13 +2482,13 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      */
     private class FileDecompressor extends GridWorker {
         /** Decompression futures. */
-        private Map<Long, GridFutureAdapter<Void>> decompressionFutures = new HashMap<>();
+        private final Map<Long, GridFutureAdapter<Void>> decompressionFutures = new HashMap<>();
 
         /** Segments queue. */
         private final PriorityBlockingQueue<Long> segmentsQueue = new PriorityBlockingQueue<>();
 
         /** Byte array for draining data. */
-        private byte[] arr = new byte[BUF_SIZE];
+        private final byte[] arr = new byte[BUF_SIZE];
 
         /**
          * @param log Logger.
@@ -2483,13 +2504,13 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             try {
                 while (!isCancelled()) {
-                    long segmentToDecompress = -1L;
+                    long segIdx = -1L;
 
                     try {
                         blockingSectionBegin();
 
                         try {
-                            segmentToDecompress = segmentsQueue.take();
+                            segIdx = segmentsQueue.take();
                         }
                         finally {
                             blockingSectionEnd();
@@ -2498,22 +2519,25 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         if (isCancelled())
                             break;
 
-                        String segmentFileName = fileName(segmentToDecompress);
+                        String segmentFileName = fileName(segIdx);
 
                         File zip = new File(walArchiveDir, segmentFileName + ZIP_SUFFIX);
                         File unzipTmp = new File(walArchiveDir, segmentFileName + TMP_SUFFIX);
                         File unzip = new File(walArchiveDir, segmentFileName);
 
+                        long reserveSize = U.uncompressedSize(zip);
+                        walArchiveSize.reserveSize(reserveSize, FileWriteAheadLogManager.this::cleanWalArchive, null);
+
                         try {
                             if (!unzip.exists()) {
                                 if (log.isInfoEnabled()) {
-                                    log.info("Starting of decompression WAL segment [absIdx=" + segmentToDecompress +
+                                    log.info("Starting of decompression WAL segment [absIdx=" + segIdx +
                                         ", rawFile=" + unzip.getAbsolutePath() +
                                         ", zipFile=" + zip.getAbsolutePath() + ']');
                                 }
 
                                 for (File segmentFile : F.asList(unzipTmp)) {
-                                    if (!deleteWalArchiveFileIfExists(segmentToDecompress, segmentFile))
+                                    if (!deleteWalArchiveFileIfExists(segIdx, segmentFile))
                                         throw new IOException("Can't delete file: " + segmentFile.getAbsolutePath());
                                 }
 
@@ -2535,14 +2559,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                                     U.error(log, "Can't rename temporary unzipped segment: " +
                                         "raw segment is already present [tmp=" + unzipTmp + ", raw=" + unzip + "]", e);
 
-                                    if (!deleteWalArchiveFileIfExists(segmentToDecompress, unzipTmp)) {
+                                    if (!deleteWalArchiveFileIfExists(segIdx, unzipTmp)) {
                                         U.error(log, "Can't delete temporary unzipped segment [tmp=" + unzipTmp + "]");
 
-                                        walArchiveSize.updateCurrentSize(segmentToDecompress, unzipTmp.length());
+                                        walArchiveSize.updateCurrentSize(segIdx, unzipTmp.length());
                                     }
                                 }
 
-                                walArchiveSize.updateCurrentSize(segmentToDecompress, unzip.length());
+                                walArchiveSize.updateCurrentSize(segIdx, unzip.length());
 
                                 if (log.isInfoEnabled()) {
                                     log.info("Decompressed file [rawFile=" + unzip.getAbsolutePath() +
@@ -2552,26 +2576,29 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         }
                         catch (IOException e) {
                             for (File segmentFile : F.asList(unzipTmp)) {
-                                if (!deleteWalArchiveFileIfExists(segmentToDecompress, segmentFile))
-                                    walArchiveSize.updateCurrentSize(segmentToDecompress, segmentFile.length());
+                                if (!deleteWalArchiveFileIfExists(segIdx, segmentFile))
+                                    walArchiveSize.updateCurrentSize(segIdx, segmentFile.length());
                             }
 
                             throw e;
+                        }
+                        finally {
+                            walArchiveSize.releaseSize(reserveSize);
                         }
 
                         updateHeartbeat();
 
                         synchronized (this) {
-                            decompressionFutures.remove(segmentToDecompress).onDone();
+                            decompressionFutures.remove(segIdx).onDone();
                         }
                     }
                     catch (IOException ex) {
-                        if (!isCancelled && segmentToDecompress != -1L) {
+                        if (!isCancelled && segIdx != -1L) {
                             IgniteCheckedException e = new IgniteCheckedException("Error during WAL segment " +
-                                "decompression [segmentIdx=" + segmentToDecompress + "]", ex);
+                                "decompression [segmentIdx=" + segIdx + "]", ex);
 
                             synchronized (this) {
-                                decompressionFutures.remove(segmentToDecompress).onDone(e);
+                                decompressionFutures.remove(segIdx).onDone(e);
                             }
                         }
                     }
@@ -3171,6 +3198,16 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return currHnd.position();
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean isArchiveFull() {
+        return walArchiveSize.exceedMax();
+    }
+
+    /** {@inheritDoc} */
+    @Override public int availableDeleteArchiveSegments() {
+        return walArchiveSize.availableDelete();
+    }
+
     /**
      * Concurrent {@link #currHnd} update.
      *
@@ -3215,13 +3252,13 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         if (walArchiveSize.exceedMax()) {
             if (walArchiveSize.availableDelete() > 0) {
                 try {
-                    walArchiveSize.reserve(1, this::cleanWalArchive, Thread.currentThread()::interrupt);
+                    walArchiveSize.reserveSize(1, this::cleanWalArchive, Thread.currentThread()::interrupt);
                 }
                 catch (IgniteInterruptedCheckedException e) {
                     //ignore
                 }
                 finally {
-                    walArchiveSize.release(1);
+                    walArchiveSize.releaseSize(1);
                 }
             }
 
