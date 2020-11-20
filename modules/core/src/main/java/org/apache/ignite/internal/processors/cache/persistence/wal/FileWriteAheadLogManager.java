@@ -134,6 +134,7 @@ import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_COMPRESSOR_WORKER_THREAD_CNT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_MMAP;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_SERIALIZER_VERSION;
@@ -224,6 +225,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         IgniteSystemProperties.getDouble(IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, 0.25);
 
     /**
+     * Percentage of WAL archive size to calculate threshold since which removing of old archive should be started.
+     */
+    private static final double THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE =
+        IgniteSystemProperties.getDouble(IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE, 0.0);
+
+    /**
      * Number of WAL compressor worker threads.
      */
     private final int WAL_COMPRESSOR_WORKER_THREAD_CNT =
@@ -246,6 +253,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      * It is simple way to calculate WAL size without checkpoint instead fair WAL size calculating.
      */
     private final long maxSegCountWithoutCheckpoint;
+
+    /** Size of wal archive since which removing of old archive should be started */
+    private final long allowedThresholdWalArchiveSize;
 
     /** */
     private final WALMode mode;
@@ -396,6 +406,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         ioFactory = mode == WALMode.FSYNC ? dsCfg.getFileIOFactory() : new RandomAccessFileIOFactory();
         segmentFileInputFactory = new SimpleSegmentFileInputFactory();
         walAutoArchiveAfterInactivity = dsCfg.getWalAutoArchiveAfterInactivity();
+
+        allowedThresholdWalArchiveSize = (long)(dsCfg.getMaxWalArchiveSize() * THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE);
 
         evt = ctx.event();
         failureProcessor = ctx.failure();
@@ -3229,24 +3241,44 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      * @return Number of deleted WAL segments.
      * @throws IgniteCheckedException If failed.
      */
-    private int cleanWalArchive(Long low, Long high) throws IgniteCheckedException {
-        FileWALPointer lowPtr = new FileWALPointer(low, 0, 0);
-        FileWALPointer highPtr = new FileWALPointer(high, 0, 0);
+    private int cleanWalArchive(long low, long high) throws IgniteCheckedException {
+        synchronized (walArchiveSize) {
+            if (allowedThresholdWalArchiveSize > 0) {
+                FileDescriptor[] files = walArchiveFiles();
 
-        GridCacheDatabaseSharedManager dbMgr = dbMgr();
+                high = calculateHighCleanIdxByThreshold(files, low, high);
 
-        if (dbMgr != null)
-            dbMgr.onWalTruncated(highPtr);
+                if (high == -1) {
+                    if (log.isInfoEnabled()) {
+                        log.info("Cleanup WAL archive is skipped because threshold for starting cleanup has not been" +
+                            " reached [thresholdSize=" + U.humanReadableByteCount(allowedThresholdWalArchiveSize) +
+                            ", currentSize=" + U.humanReadableByteCount(currentWalArchiveSize(files, low, high)) +
+                            ", thresholdPercentage=" + THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE + ']'
+                        );
+                    }
 
-        int truncateCnt = truncate(lowPtr, highPtr);
+                    return 0;
+                }
+            }
 
-        if (log.isInfoEnabled()) {
-            log.info("WAL archive is cleared [lowIdx=" + low + ", highIdx=" + high + ", cleanCnt=" + truncateCnt
-                + ", maxSize=" + U.humanReadableByteCount(walArchiveSize.maxSize()) +
-                ", currentSize=" + U.humanReadableByteCount(walArchiveSize.currentSize()) + ']');
+            FileWALPointer lowPtr = new FileWALPointer(low, 0, 0);
+            FileWALPointer highPtr = new FileWALPointer(high, 0, 0);
+
+            GridCacheDatabaseSharedManager dbMgr = dbMgr();
+
+            if (dbMgr != null)
+                dbMgr.onWalTruncated(highPtr);
+
+            int truncateCnt = truncate(lowPtr, highPtr);
+
+            if (log.isInfoEnabled()) {
+                log.info("WAL archive is cleared [lowIdx=" + low + ", highIdx=" + high + ", cleanCnt=" + truncateCnt
+                    + ", maxSize=" + U.humanReadableByteCount(walArchiveSize.maxSize()) +
+                    ", currentSize=" + U.humanReadableByteCount(walArchiveSize.currentSize()) + ']');
+            }
+
+            return truncateCnt;
         }
-
-        return truncateCnt;
     }
 
     /**
@@ -3286,5 +3318,48 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
 
         return true;
+    }
+
+    /**
+     * Calculation of high segment index to which it will be possible to safely clean WAL archive,
+     * taking into account threshold for starting cleaning.
+     *
+     * @param walArchiveFiles WAL archive segemnts.
+     * @param low Low segment index (inclusive).
+     * @param high High segment index (Exclusive).
+     * @return Segment index, {@code -1} if absent.
+     * @see #allowedThresholdWalArchiveSize
+     */
+    private long calculateHighCleanIdxByThreshold(FileDescriptor[] walArchiveFiles, long low, long high) {
+        assert allowedThresholdWalArchiveSize > 0;
+
+        long cleanSize = currentWalArchiveSize(walArchiveFiles, low, high);
+
+        if (cleanSize < allowedThresholdWalArchiveSize)
+            return -1;
+
+        long archiveSize = 0;
+
+        for (FileDescriptor desc : walArchiveFiles) {
+            if (cleanSize - (archiveSize += desc.file().length()) < allowedThresholdWalArchiveSize)
+                return desc.idx();
+        }
+
+        return high;
+    }
+
+    /**
+     * Calculation size of WAL archive in range.
+     *
+     * @param low Low segment index (inclusive).
+     * @param high High segment index (Exclusive).
+     * @param walArchiveFiles WAL archive segments.
+     * @return Size in bytes.
+     */
+    private long currentWalArchiveSize(FileDescriptor[] walArchiveFiles, long low, long high) {
+        return Stream.of(walArchiveFiles)
+            .filter(fd -> fd.idx() >= low && fd.idx() < high)
+            .mapToLong(fd -> fd.file().length())
+            .sum();
     }
 }
