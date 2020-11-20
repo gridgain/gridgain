@@ -60,6 +60,7 @@ import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.mxbean.SqlQueryMXBean;
 import org.apache.ignite.internal.mxbean.SqlQueryMXBeanImpl;
+import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -159,6 +160,8 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryReq
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -336,6 +339,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Query message listener. */
     private GridMessageListener qryLsnr;
+
+    /** Statistic manager. */
+    private IgniteStatisticsManager statsMgr;
 
     /**
      * @return Kernal context.
@@ -2244,6 +2250,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         schemaMgr = new SchemaManager(ctx, connections());
         schemaMgr.start(ctx.config().getSqlConfiguration().getSqlSchemas());
 
+        statsMgr = new IgniteStatisticsManagerImpl(ctx, schemaMgr);
+
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
 
@@ -2590,6 +2598,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             reuseList,
             H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
             H2ExtrasLeafIO.getVersions(inlineSize, mvccEnabled),
+            PageIdAllocator.FLAG_IDX,
             ctx.failure(),
             lockLsnr
         ) {
@@ -3374,6 +3383,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         return map;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteStatisticsManager statsManager() {
+        return statsMgr;
     }
 
     /** {@inheritDoc} */

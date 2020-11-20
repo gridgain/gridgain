@@ -135,6 +135,12 @@ public class IsolatedNode implements IgniteClusterNode {
         attrs = Collections.unmodifiableMap(map);
     }
 
+    /** */
+    public void setAttributes(Map<String, Object> attrs) {
+        this.attrs = Collections.unmodifiableMap(attrs);
+
+    }
+
     /** {@inheritDoc} */
     @Override public void setMetrics(ClusterMetrics metrics) {
         this.metrics = metrics;
