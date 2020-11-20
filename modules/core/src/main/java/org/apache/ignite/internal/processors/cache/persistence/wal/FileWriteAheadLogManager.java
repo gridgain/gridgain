@@ -1453,6 +1453,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     private FileWriteHandle initNextWriteHandle(FileWriteHandle cur) throws IgniteCheckedException {
         IgniteCheckedException error = null;
 
+        if (archiver == null)
+            walArchiveSize.reserveSize(maxWalSegmentSize, this::cleanWalArchive, null);
+
         try {
             File nextFile = pollNextFile(cur.getSegmentId());
 
@@ -1480,6 +1483,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                     if (interrupted)
                         Thread.currentThread().interrupt();
+
+                    if (archiver == null)
+                        walArchiveSize.updateCurrentSize(hnd.getSegmentId(), maxWalSegmentSize);
 
                     break;
                 }
@@ -1514,6 +1520,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         finally {
             if (error != null)
                 cctx.kernalContext().failure().process(new FailureContext(CRITICAL_ERROR, error));
+
+            if (archiver == null)
+                walArchiveSize.releaseSize(maxWalSegmentSize);
         }
     }
 
@@ -3224,9 +3233,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             res = CURR_HND_UPD.compareAndSet(this, c, n);
 
         segmentSize.put(n.getSegmentId(), maxWalSegmentSize);
-
-        if (archiver == null)
-            walArchiveSize.updateCurrentSize(n.getSegmentId(), maxWalSegmentSize);
 
         return res;
     }

@@ -70,8 +70,8 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     @Parameterized.Parameters(name = "walArchiveEnabled={0}, walCompactionEnabled={1}")
     public static Iterable<Object[]> params() {
         return Arrays.asList(
-//            new Object[] {true, false},
-//            new Object[] {true, true},
+            new Object[] {true, false},
+            new Object[] {true, true},
             new Object[] {false, false},
             new Object[] {false, true}
         );
