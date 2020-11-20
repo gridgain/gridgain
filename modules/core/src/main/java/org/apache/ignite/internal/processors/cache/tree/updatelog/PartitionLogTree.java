@@ -65,7 +65,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
             reuseList,
             grp.sharedGroup() ? CacheIdAwareUpdateLogInnerIO.VERSIONS : UpdateLogInnerIO.VERSIONS,
             grp.sharedGroup() ? CacheIdAwareUpdateLogLeafIO.VERSIONS : UpdateLogLeafIO.VERSIONS,
-            PageIdAllocator.FLAG_IDX,
+            PageIdAllocator.FLAG_AUX,
             grp.shared().kernalContext().failure(),
             lockLsnr
         );
