@@ -52,7 +52,8 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         long metaPageId,
         ReuseList reuseList,
         boolean initNew,
-        PageLockListener lockLsnr
+        PageLockListener lockLsnr,
+        byte flag
     ) throws IgniteCheckedException {
         super(
             name,
@@ -65,7 +66,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
             reuseList,
             grp.sharedGroup() ? CacheIdAwareUpdateLogInnerIO.VERSIONS : UpdateLogInnerIO.VERSIONS,
             grp.sharedGroup() ? CacheIdAwareUpdateLogLeafIO.VERSIONS : UpdateLogLeafIO.VERSIONS,
-            PageIdAllocator.FLAG_AUX,
+            flag,
             grp.shared().kernalContext().failure(),
             lockLsnr
         );
