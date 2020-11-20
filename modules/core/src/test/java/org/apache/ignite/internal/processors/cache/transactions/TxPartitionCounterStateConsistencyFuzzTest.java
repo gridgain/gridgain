@@ -157,29 +157,11 @@ public class TxPartitionCounterStateConsistencyFuzzTest extends TxPartitionCount
 
     private class TestListener implements CommunicationListener<Message> {
         /**
-         *
-         */
-        private GridConcurrentHashSet<Long> msgIds = new GridConcurrentHashSet<>();
-
-        /**
-         *
-         */
-        private AtomicInteger rcvCnt = new AtomicInteger();
-
-        /**
          * {@inheritDoc}
          */
         @Override
         public void onMessage(UUID nodeId, Message msg, IgniteRunnable msgC) {
             info("Test listener received message: " + msg);
-
-            assertTrue("Unexpected message: " + msg, msg instanceof GridTestMessage);
-
-            GridTestMessage msg0 = (GridTestMessage) msg;
-
-            assertTrue("Duplicated message received: " + msg0, msgIds.add(msg0.getMsgId()));
-
-            rcvCnt.incrementAndGet();
 
             msgC.run();
         }
