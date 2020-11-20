@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.metric.IndexPageType;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
@@ -51,10 +54,6 @@ import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogInner
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogLeafIO;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
-
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Base format for all the page types.
