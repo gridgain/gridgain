@@ -218,6 +218,37 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
         assertFalse(size.exceedMax());
         assertEquals(4 * U.MB, size.currentSize());
         assertEquals(U.MB, size.reservedSize());
+
+        CountDownLatch latch0 = new CountDownLatch(1);
+        CountDownLatch latch1 = new CountDownLatch(1);
+
+        fut = GridTestUtils.runAsync(() -> {
+            size.reserve(U.MB, (low, high) -> {
+                assertEquals(1, low.longValue());
+                assertEquals(2, high.longValue());
+
+                if (latch0.getCount() > 0 || latch1.getCount() > 0)
+                    return 0;
+                else {
+                    size.updateCurrentSize(low, -U.MB);
+
+                    return 1;
+                }
+            }, () -> (latch0.getCount() > 0 ? latch0 : latch1).countDown());
+
+            return null;
+        });
+
+        U.await(latch0);
+        size.updateLastCheckpointSegmentIndex(2);
+
+        U.await(latch1);
+        size.updateMinReservedSegmentIndex(3L);
+
+        fut.get(1_000);
+        assertFalse(size.exceedMax());
+        assertEquals(3 * U.MB, size.currentSize());
+        assertEquals(2 * U.MB, size.reservedSize());
     }
 
     /**
