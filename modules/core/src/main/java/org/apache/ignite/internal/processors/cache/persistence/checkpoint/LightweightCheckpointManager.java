@@ -34,7 +34,6 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMetricsImpl;
-import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
@@ -105,8 +104,7 @@ public class LightweightCheckpointManager {
         DataStorageMetricsImpl persStoreMetrics,
         LongJVMPauseDetector longJvmPauseDetector,
         FailureProcessor failureProcessor,
-        GridCacheProcessor cacheProcessor,
-        FilePageStoreManager pageStoreManager
+        GridCacheProcessor cacheProcessor
     ) throws IgniteCheckedException {
         CheckpointReadWriteLock lock = new CheckpointReadWriteLock(logger);
 
@@ -138,7 +136,7 @@ public class LightweightCheckpointManager {
             logger,
             snapshotMgr,
             (pageMemEx, fullPage, buf, tag) ->
-                pageStoreManager.write(fullPage.groupId(), fullPage.pageId(), buf, tag, true),
+                pageMemEx.pageManager().write(fullPage.groupId(), fullPage.pageId(), buf, tag, true),
             persStoreMetrics,
             throttlingPolicy,
             threadBuf,

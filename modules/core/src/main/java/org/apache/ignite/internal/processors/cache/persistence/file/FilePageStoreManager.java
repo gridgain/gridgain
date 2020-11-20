@@ -72,6 +72,7 @@ import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationFileUtils;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderSettings;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManager;
@@ -84,6 +85,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteOutClosure;
+import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerUtils;
@@ -640,6 +642,47 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /**
+     * @param grpId Cache group id.
+     * @param encrypted {@code true} if cache group encryption enabled.
+     * @return Factory to create page stores.
+     */
+    public FilePageStoreFactory getPageStoreFactory(int grpId, boolean encrypted) {
+        FileIOFactory pageStoreFileIoFactory = this.pageStoreFileIoFactory;
+        FileIOFactory pageStoreV1FileIoFactory = this.pageStoreV1FileIoFactory;
+
+        if (encrypted) {
+            pageStoreFileIoFactory = new EncryptedFileIOFactory(
+                this.pageStoreFileIoFactory,
+                grpId,
+                pageSize(),
+                cctx.kernalContext().encryption(),
+                cctx.gridConfig().getEncryptionSpi());
+
+            pageStoreV1FileIoFactory = new EncryptedFileIOFactory(
+                this.pageStoreV1FileIoFactory,
+                grpId,
+                pageSize(),
+                cctx.kernalContext().encryption(),
+                cctx.gridConfig().getEncryptionSpi());
+        }
+
+        FileVersionCheckingFactory pageStoreFactory = new FileVersionCheckingFactory(
+            pageStoreFileIoFactory,
+            pageStoreV1FileIoFactory,
+            igniteCfg.getDataStorageConfiguration()
+        );
+
+        if (encrypted) {
+            int headerSize = pageStoreFactory.headerSize(pageStoreFactory.latestVersion());
+
+            ((EncryptedFileIOFactory)pageStoreFileIoFactory).headerSize(headerSize);
+            ((EncryptedFileIOFactory)pageStoreV1FileIoFactory).headerSize(headerSize);
+        }
+
+        return pageStoreFactory;
+    }
+
+    /**
      * @param cacheWorkDir Work directory.
      * @param grpId Group ID.
      * @param partitions Number of partitions.
@@ -655,6 +698,13 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         boolean encrypted) throws IgniteCheckedException {
         try {
             boolean dirExisted = checkAndInitCacheWorkDir(cacheWorkDir);
+
+            if (dirExisted) {
+                MaintenanceRegistry mntcReg = cctx.kernalContext().maintenanceRegistry();
+
+                if (!mntcReg.isMaintenanceMode())
+                    DefragmentationFileUtils.beforeInitPageStores(cacheWorkDir, log);
+            }
 
             File idxFile = new File(cacheWorkDir, INDEX_FILE_NAME);
 
