@@ -58,6 +58,7 @@ import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.Lig
 import org.apache.ignite.internal.processors.cache.persistence.db.filename.IgniteUidAsConsistentIdMigrationTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.CorruptedCheckpointReservationTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.FsyncWalRolloverDoesNotBlockTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteLocalWalArchiveSizeDeadlockDetectTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteLocalWalArchiveSizeTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteLocalWalSizeTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteNodeStoppedDuringDisableWALTest;
@@ -287,5 +288,6 @@ public class IgnitePdsTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, IgniteLocalWalSizeTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgniteLocalWalArchiveSizeTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteLocalWalArchiveSizeDeadlockDetectTest.class, ignoredTests);
     }
 }

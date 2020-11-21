@@ -66,6 +66,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.evict.FairFifoPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.NoOpPageEvictionTracker;
@@ -973,6 +974,20 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * No-op for non-persistent storage.
      */
     public void checkpointReadLockTimeout(long val) {
+        // No-op.
+    }
+
+    /**
+     * No-op for non-persistent storage.
+     */
+    public void onTxAcquireCheckpointReadLock() {
+        // No-op.
+    }
+
+    /**
+     * No-op for non-persistent storage.
+     */
+    public void onTxReleaseCheckpointReadLock() {
         // No-op.
     }
 

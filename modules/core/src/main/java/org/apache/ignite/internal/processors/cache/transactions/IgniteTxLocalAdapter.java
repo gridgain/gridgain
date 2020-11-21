@@ -605,6 +605,8 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
 
             cctx.database().checkpointReadLock();
 
+            cctx.database().onTxAcquireCheckpointReadLock();
+
             try {
                 cctx.tm().txContext(this);
 
@@ -983,6 +985,8 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
             }
             finally {
                 cctx.database().checkpointReadUnlock();
+
+                cctx.database().onTxReleaseCheckpointReadLock();
 
                 cctx.tm().resetContext();
             }

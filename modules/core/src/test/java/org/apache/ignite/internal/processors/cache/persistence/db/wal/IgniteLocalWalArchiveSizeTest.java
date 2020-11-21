@@ -32,8 +32,10 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.WalArchiveSize;
+import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.Repeat;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
@@ -51,6 +53,10 @@ import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_
  */
 @RunWith(Parameterized.class)
 public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
+    /** Fail node log message prefix. */
+    private static final String FAIL_NODE_MSG_PREFIX =
+        GridTestUtils.getFieldValueHierarchy(FailureProcessor.class, "FAILURE_LOG_MSG");
+
     /** Watcher of physical exceeding of the archive. */
     @Nullable private volatile WalArchiveWatcher walArchiveWatcher;
 
@@ -61,6 +67,12 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     /** WAL compaction enabled flag. */
     @Parameterized.Parameter(1)
     public boolean walCompactionEnabled;
+
+    /** Listening logger. */
+    @Nullable private volatile ListeningTestLogger listeningLog;
+
+    /** Holder fail node message from log. */
+    @Nullable protected volatile String failNodeMsg;
 
     /**
      * Generate test's parameters.
@@ -85,6 +97,9 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
 
         stopAllGrids();
         cleanPersistenceDir();
+
+        listeningLog = new ListeningTestLogger(log);
+        failNodeMsg = null;
     }
 
     /** {@inheritDoc} */
@@ -95,11 +110,19 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
 
         stopAllGrids();
         cleanPersistenceDir();
+
+        ListeningTestLogger listeningLog = this.listeningLog;
+
+        if (listeningLog != null)
+            listeningLog.clearListeners();
+
+        failNodeMsg = null;
     }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
+            .setGridLogger(log)
             .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(TRANSACTIONAL))
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
@@ -113,6 +136,15 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteEx startGrid(int idx) throws Exception {
+        ListeningTestLogger listeningLog = this.listeningLog;
+
+        assertNotNull(listeningLog);
+
+        listeningLog.registerListener(s -> {
+            if (s.contains(FAIL_NODE_MSG_PREFIX))
+                failNodeMsg = s;
+        });
+
         IgniteEx n = super.startGrid(idx);
 
         WalArchiveWatcher watcher;
@@ -141,6 +173,7 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
             n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(100 * U.KB)]);
 
         stopWatcher(watcher -> assertFalse(watcher.exceed));
+        assertNull(failNodeMsg);
     }
 
     /**
@@ -149,7 +182,7 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
      * @param consumer Watcher consumer.
      * @throws Exception If failed.
      */
-    private void stopWatcher(@Nullable Consumer<WalArchiveWatcher> consumer) throws Exception {
+    protected void stopWatcher(@Nullable Consumer<WalArchiveWatcher> consumer) throws Exception {
         WalArchiveWatcher watcher = walArchiveWatcher;
 
         if (watcher != null) {
@@ -167,7 +200,7 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     /**
      * Class for tracking the physical excess of WAL archive.
      */
-    private static class WalArchiveWatcher extends Thread {
+    protected static class WalArchiveWatcher extends Thread {
         /** Path to WAL archive dir. */
         final File walArchivePath;
 

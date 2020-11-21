@@ -322,6 +322,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Data regions which should be checkpointed. */
     protected final Set<DataRegion> checkpointedDataRegions = new GridConcurrentHashSet<>();
 
+    /** Counter transactions, which have acquired checkpoint read lock. */
+    private final AtomicInteger txCheckpointReadLockCnt = new AtomicInteger();
+
     /**
      * @param ctx Kernal context.
      */
@@ -364,8 +367,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /**
      *
      */
-    public Checkpointer getCheckpointer() {
-        return checkpointManager.getCheckpointer();
+    @Nullable public Checkpointer getCheckpointer() {
+        CheckpointManager cpMgr = checkpointManager;
+
+        return cpMgr != null ? cpMgr.getCheckpointer() : null;
     }
 
     /**
@@ -3552,5 +3557,28 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         public Map<GroupPartitionId, Integer> partitionRecoveryStates() {
             return Collections.unmodifiableMap(partitionRecoveryStates);
         }
+    }
+
+    /**
+     * Callback when a checkpoint read lock is acquired by a transaction.
+     */
+    @Override public void onTxAcquireCheckpointReadLock() {
+        txCheckpointReadLockCnt.incrementAndGet();
+    }
+
+    /**
+     * Callback when a checkpoint read lock is released by a transaction.
+     */
+    @Override public void onTxReleaseCheckpointReadLock() {
+        txCheckpointReadLockCnt.decrementAndGet();
+    }
+
+    /**
+     * Return count of acquired checkpoint read locks by transactions.
+     *
+     * @return Count of acquired checkpoint read locks by transactions.
+     */
+    public int txAcquireCheckpointReadLockCount() {
+        return txCheckpointReadLockCnt.get();
     }
 }

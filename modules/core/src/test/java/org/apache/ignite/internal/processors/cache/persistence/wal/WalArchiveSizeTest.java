@@ -179,14 +179,14 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
         WalArchiveSize size = new WalArchiveSize(log, 5 * U.MB);
 
         for (long i = 0; i < 5; i++) {
-            size.reserveSize(U.MB, null, null);
+            size.reserveSize(U.MB, null, null, null);
 
             assertFalse(size.exceedMax());
             assertEquals(U.MB * (i + 1), size.reservedSize());
         }
 
         for (long i = 0; i < 5; i++) {
-            size.releaseSize(U.MB);
+            size.releaseSize(U.MB, null);
 
             assertFalse(size.exceedMax());
             assertEquals(U.MB * (5 - (i + 1)), size.reservedSize());
@@ -205,7 +205,7 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
                 size.updateCurrentSize(low, -U.MB);
 
                 return 1;
-            }, latch::countDown);
+            }, latch::countDown, null);
 
             return null;
         });
@@ -234,7 +234,7 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
 
                     return 1;
                 }
-            }, () -> (latch0.getCount() > 0 ? latch0 : latch1).countDown());
+            }, () -> (latch0.getCount() > 0 ? latch0 : latch1).countDown(), null);
 
             return null;
         });

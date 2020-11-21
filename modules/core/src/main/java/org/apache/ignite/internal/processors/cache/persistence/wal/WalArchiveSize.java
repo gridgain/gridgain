@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteAbsClosure;
 import org.apache.ignite.lang.IgniteAbsClosureX;
 import org.apache.ignite.lang.IgniteBiClosureX;
 import org.jetbrains.annotations.Nullable;
@@ -91,6 +92,7 @@ public class WalArchiveSize {
      * @param size Byte count.
      * @param cleanupC Cleanup closure.
      * @param beforeWaitC Closing before waiting.
+     * @param afterReserveC After reserve closure.
      *
      * @throws IgniteInterruptedCheckedException If waiting for free space is interrupted.
      * @throws IgniteCheckedException If failed.
@@ -98,7 +100,8 @@ public class WalArchiveSize {
     public synchronized void reserveSize(
         long size,
         @Nullable IgniteBiClosureX<Long, Long, Integer> cleanupC,
-        @Nullable IgniteAbsClosureX beforeWaitC
+        @Nullable IgniteAbsClosureX beforeWaitC,
+        @Nullable IgniteAbsClosure afterReserveC
     ) throws IgniteCheckedException {
         while (!unlimited() && max - (curr + reserved) < size) {
             if (availableDel == 0 || (cleanupC != null && cleanupC.applyx(segments.firstKey(), safeCleanIdx()) == 0)) {
@@ -109,18 +112,25 @@ public class WalArchiveSize {
             }
         }
 
-        releaseSize(-size);
+        releaseSize(-size, null);
+
+        if (afterReserveC != null)
+            afterReserveC.apply();
     }
 
     /**
      * Release previously {@link #reserveSize reserved} space in WAL archive.
      *
      * @param size Byte count.
+     * @param afterReleaseC After release closure.
      */
-    public synchronized void releaseSize(long size) {
+    public synchronized void releaseSize(long size, @Nullable IgniteAbsClosure afterReleaseC) {
         reserved -= size;
 
         notifyAll();
+
+        if (afterReleaseC != null)
+            afterReleaseC.apply();
     }
 
     /**
@@ -238,6 +248,13 @@ public class WalArchiveSize {
      */
     public synchronized NavigableMap<Long, Long> currentSegments() {
         return new TreeMap<>(segments);
+    }
+
+    /**
+     * Wake up threads that are waiting for {@link #reserveSize}.
+     */
+    public synchronized void weakUp() {
+        notifyAll();
     }
 
     /**

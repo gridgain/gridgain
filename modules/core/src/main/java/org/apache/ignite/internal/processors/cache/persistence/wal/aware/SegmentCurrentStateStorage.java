@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.lang.IgniteAbsClosure;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Storage of absolute current segment index.
@@ -99,16 +101,23 @@ class SegmentCurrentStateStorage {
      * Calculate next segment index or wait if needed. Uninterrupted waiting. - for force interrupt used
      * forceInterrupted flag.
      *
+     * @param beforeWaitC Closure before wait.
      * @return Next absolute segment index.
      */
-    synchronized long nextAbsoluteSegmentIndex() throws IgniteInterruptedCheckedException {
+    synchronized long nextAbsoluteSegmentIndex(
+        @Nullable IgniteAbsClosure beforeWaitC
+    ) throws IgniteInterruptedCheckedException {
         curAbsWalIdx++;
 
         notifyAll();
 
         try {
-            while (curAbsWalIdx - segmentArchivedStorage.lastArchivedAbsoluteIndex() > walSegmentsCnt && !forceInterrupted)
+            while (archivingSegmentRequired() && !forceInterrupted) {
+                if (beforeWaitC != null)
+                    beforeWaitC.apply();
+
                 wait();
+            }
         }
         catch (InterruptedException e) {
             throw new IgniteInterruptedCheckedException(e);
@@ -179,5 +188,15 @@ class SegmentCurrentStateStorage {
         interrupted = false;
 
         forceInterrupted = false;
+    }
+
+    /**
+     * Check if archiving is needed to get next segment.
+     *
+     * @return {@code True} if required.
+     * @see #nextAbsoluteSegmentIndex
+     */
+    public boolean archivingSegmentRequired() {
+        return curAbsWalIdx -  segmentArchivedStorage.lastArchivedAbsoluteIndex() > walSegmentsCnt;
     }
 }

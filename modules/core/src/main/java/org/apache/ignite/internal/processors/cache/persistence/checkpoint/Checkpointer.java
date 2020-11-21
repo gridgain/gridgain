@@ -161,7 +161,7 @@ public class Checkpointer extends GridWorker {
     private volatile CheckpointProgressImpl scheduledCp;
 
     /** Current checkpoint. This field is updated only by checkpoint thread. */
-    private volatile CheckpointProgressImpl curCpProgress;
+    @Nullable private volatile CheckpointProgressImpl curCpProgress;
 
     /** Shutdown now. */
     private volatile boolean shutdownNow;
@@ -996,7 +996,7 @@ public class Checkpointer extends GridWorker {
     /**
      * @return Progress of current chekpoint, last finished one or {@code null}, if checkpoint has never started.
      */
-    public CheckpointProgress currentProgress() {
+    @Nullable public CheckpointProgress currentProgress() {
         return curCpProgress;
     }
 

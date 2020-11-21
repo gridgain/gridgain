@@ -128,7 +128,7 @@ public class SegmentAwareTest {
         assertFutureIsNotFinish(future);
 
         //when: trigger next segment.
-        aware.nextAbsoluteSegmentIndex();
+        aware.nextAbsoluteSegmentIndex(null);
 
         //then: waiting should finish immediately
         future.get(20);
@@ -165,7 +165,7 @@ public class SegmentAwareTest {
         IgniteInternalFuture future = awaitThread(aware::waitNextSegmentForArchivation);
 
         //when: next work segment triggered.
-        aware.nextAbsoluteSegmentIndex();
+        aware.nextAbsoluteSegmentIndex(null);
 
         //then: waiting should finish immediately.
         future.get(20);
@@ -222,7 +222,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(5);
 
         //when: request next work segment.
-        long segmentIndex = aware.nextAbsoluteSegmentIndex();
+        long segmentIndex = aware.nextAbsoluteSegmentIndex(null);
 
         //then:
         assertThat(segmentIndex, is(6L));
@@ -239,7 +239,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(1);
         aware.setLastArchivedAbsoluteIndex(-1);
 
-        IgniteInternalFuture future = awaitThread(aware::nextAbsoluteSegmentIndex);
+        IgniteInternalFuture future = awaitThread(() -> aware.nextAbsoluteSegmentIndex(null));
 
         //when: mark first segment as moved.
         aware.markAsMovedToArchive(0);
@@ -259,7 +259,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(1);
         aware.setLastArchivedAbsoluteIndex(-1);
 
-        IgniteInternalFuture future = awaitThread(aware::nextAbsoluteSegmentIndex);
+        IgniteInternalFuture future = awaitThread(() -> aware.nextAbsoluteSegmentIndex(null));
 
         //when: mark first segment as moved.
         aware.setLastArchivedAbsoluteIndex(0);
@@ -279,7 +279,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(2);
         aware.setLastArchivedAbsoluteIndex(-1);
 
-        IgniteInternalFuture future = awaitThread(aware::nextAbsoluteSegmentIndex);
+        IgniteInternalFuture future = awaitThread(() -> aware.nextAbsoluteSegmentIndex(null));
 
         //when: interrupt waiting.
         aware.interrupt();
