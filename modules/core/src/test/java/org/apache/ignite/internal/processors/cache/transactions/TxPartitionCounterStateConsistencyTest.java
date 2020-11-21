@@ -183,7 +183,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting primary node under load.
      */
     @Test
-    @Ignore
     public void testPartitionConsistencyWithPrimaryRestart() throws Exception {
         backups = 2;
 
@@ -230,7 +229,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting random backup nodes under load.
      */
     @Test
-    @Ignore
     public void testPartitionConsistencyWithBackupsRestart() throws Exception {
         backups = 2;
 
@@ -297,7 +295,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting backup nodes under load with changing BLT.
      */
     @Test
-    @Ignore
     public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
         backups = 2;
 

@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePrimar
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConcurrentRemoveObjectsTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesFailoverTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstoneClearingCountersTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCachePartitionConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceTest;
@@ -122,6 +123,7 @@ public class IgniteCacheMvccTestSuite9 {
         ignoredTests.add(CacheRemoveWithTombstonesPreloadingTest.class);
         ignoredTests.add(CacheRemoveWithTombstonesPreloadingLoadTest.class);
         ignoredTests.add(CacheRemoveWithTombstonesFailoverTest.class);
+        ignoredTests.add(TombstoneClearingCountersTest.class);
 
         return new ArrayList<>(IgniteCacheTestSuite9.suite(ignoredTests));
     }

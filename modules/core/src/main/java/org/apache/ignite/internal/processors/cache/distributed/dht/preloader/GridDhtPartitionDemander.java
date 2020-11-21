@@ -1422,7 +1422,6 @@ public class GridDhtPartitionDemander {
                     d.timeout(grp.preloader().timeout());
 
                     GridCompoundIdentityFuture<Void> fut = new GridCompoundIdentityFuture<>();
-                    GridDhtPartitionsExchangeFuture lastFinished = ctx.cache().context().exchange().lastFinishedFuture();
 
                     for (Integer partId : d.partitions().fullSet()) {
                         GridDhtLocalPartition part = grp.topology().localPartition(partId);

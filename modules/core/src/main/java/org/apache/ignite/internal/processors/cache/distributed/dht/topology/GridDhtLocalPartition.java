@@ -1118,7 +1118,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             };
         }
         else if (task.reason == PartitionsEvictManager.EvictReason.CLEARING) {
-            assert state0 == MOVING;
+            assert state0 == MOVING : this;
 
             long order0 = clearVer;
 
@@ -1138,7 +1138,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 grp.offheap().partitionIterator(id, IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
 
             while (it0.hasNext()) {
-                assert state0 == state() : "Partition state can't change during clearing [onStart=" + state + ", part=" + this + ']';
+                assert state0 == state() : "Partition state can't change during clearing [onStart=" + state0 + ", part=" + this + ']';
 
                 // TODO more frequesnt check.
                 if ((stopCntr = (stopCntr + 1) & 1023) == 0 && stopClo.getAsBoolean())

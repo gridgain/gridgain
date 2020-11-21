@@ -73,6 +73,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
     /** Default eviction progress show frequency. */
     private static final int DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS = 2 * 60 * 1000;
 
+    /** Default tombstone clearing frequency. */
+    private static final int DEFAULT_TOMBSTONE_EVICTION_FREQ = 60 * 60 * 1000;
+
     /** Eviction progress frequency property name. */
     private static final String SHOW_EVICTION_PROGRESS_FREQ = "SHOW_EVICTION_PROGRESS_FREQ";
 
@@ -104,7 +107,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
     private final ConcurrentMap<PartitionKey, PartitionEvictionTask> futs = new ConcurrentHashMap<>();
 
     /** */
-    private final long tsClearFreq = getLong(TOMBSTONES_EVICTION_FREQ, 30_000);
+    private final long tsClearFreq = getLong(TOMBSTONES_EVICTION_FREQ, DEFAULT_TOMBSTONE_EVICTION_FREQ);
 
     /** */
     private volatile boolean paused;
@@ -118,7 +121,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
      * @param grp Group.
      */
     public void onCacheGroupStarted(CacheGroupContext grp) {
-        evictionGroupsMap.put(grp.groupId(), new GroupEvictionContext(grp));
+        if (!grp.isLocal())
+            evictionGroupsMap.put(grp.groupId(), new GroupEvictionContext(grp));
     }
 
     /**
@@ -181,20 +185,25 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
         finishFut.listen(fut -> futs.remove(key));
 
         while (true) {
+            if (grp.cacheObjectContext().kernalContext().isStopping()) {
+                finishFut.onDone(new NodeStoppingException("Node is stopping"));
+
+                return task;
+            }
+
             PartitionEvictionTask prev = futs.putIfAbsent(key, task);
 
             if (prev == null) {
                 if (log.isDebugEnabled())
                     log.debug("Enqueued partition clearing [grp=" + grp.cacheOrGroupName()
-                        + ", topVer=" + grp.topology().readyTopologyVersion()
                         + ", task=" + task + ']');
 
                 break;
             }
-            else {
+            else if (prev.reason != reason) {
                 if (log.isDebugEnabled())
-                    log.debug("Cancelling current clearing [grp=" + grp.cacheOrGroupName()
-                        + ", topVer=" + grp.topology().readyTopologyVersion()
+                    log.debug("Cancelling the clearing [grp=" + grp.cacheOrGroupName()
+                        + ", topVer=" + (grp.topology().initialized() ? grp.topology().readyTopologyVersion() : "NA")
                         + ", task=" + task
                         + ", prev=" + prev
                         + ']');
@@ -202,6 +211,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                 prev.cancel();
                 prev.awaitCompletion();
             }
+            else
+                return prev;
         }
 
         // Try eviction fast-path.
@@ -219,7 +230,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         if (log.isDebugEnabled())
             log.debug("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
-                + ", topVer=" + grp.topology().readyTopologyVersion()
+                + ", topVer=" + (grp.topology().initialized() ? grp.topology().readyTopologyVersion() : "NA")
                 + ", task" + task + ']');
 
         return task;
@@ -313,6 +324,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
             int grpId = ctx0.grp.groupId();
 
             if (cctx.cache().cacheGroup(grpId) != null) {
+                assert !ctx0.grp.isLocal();
+
                 if (ctx0.grp.topology().hasMovingPartitions())
                     continue; // Skipping rebalancing group.
 
@@ -566,9 +579,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         /** {@inheritDoc} */
         @Override public void run() {
-            if (!state.compareAndSet(null, Boolean.TRUE))
-                return;
-
             if (grpEvictionCtx.grp.cacheObjectContext().kernalContext().isStopping()) {
                 finishFut.onDone(new NodeStoppingException("Node is stopping"));
 
@@ -623,6 +633,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
          * Submits the task for execution.
          */
         public void start() {
+            if (!state.compareAndSet(null, Boolean.TRUE))
+                return;
+
             executor.submit(this);
 
             synchronized (mux) {
@@ -665,6 +678,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
         @Override public String toString() {
             return S.toString(PartitionEvictionTask.class, this,
                 "grp", grpEvictionCtx.grp.cacheOrGroupName(),
+                "reason", reason,
                 "state", state.get() == null ? "NotStarted" : state.get() ? "Started" : "Cancelled",
                 "done", finishFut.isDone(), "err", finishFut.error() != null);
         }
@@ -688,11 +702,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         /** */
         TOMBSTONE;
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return name().toLowerCase();
-        }
     }
 
     /**

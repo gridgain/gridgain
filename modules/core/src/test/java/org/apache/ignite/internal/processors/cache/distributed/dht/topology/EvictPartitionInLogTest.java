@@ -23,13 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -116,11 +119,20 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
             .peek(p -> p.setState(RENTING))
             .collect(toList());
 
-        parts.subList(0, parts.size() - 1).forEach(GridDhtLocalPartition::clearAsync);
+        parts.subList(0, parts.size() - 1).forEach(new Consumer<GridDhtLocalPartition>() {
+            @Override public void accept(GridDhtLocalPartition part) {
+                try {
+                    part.rent().get();
+                }
+                catch (IgniteCheckedException e) {
+                    fail(X.getFullStackTrace(e));
+                }
+            }
+        });
 
         doSleep(500);
 
-        parts.get(parts.size() - 1).clearAsync();
+        parts.get(parts.size() - 1).rent().get();
 
         check(logLsnr, parts, parseParts);
     }
