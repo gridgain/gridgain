@@ -360,6 +360,8 @@ public class ConnectionClientPool {
         if (connRequestor != null) {
             ConnectFuture fut0 = (ConnectFuture)fut;
 
+            final ConnectionKey key = new ConnectionKey(node.id(), connIdx, -1);
+
             ConnectionRequestFuture triggerFut = new ConnectionRequestFuture();
 
             triggerFut.listen(f -> {
@@ -368,10 +370,12 @@ public class ConnectionClientPool {
                 }
                 catch (Throwable t) {
                     fut0.onDone(t);
+                } finally {
+                    clientFuts.remove(key, triggerFut);
                 }
             });
 
-            clientFuts.put(new ConnectionKey(node.id(), connIdx, -1), triggerFut);
+            clientFuts.put(key, triggerFut);
 
             fut = triggerFut;
 
@@ -384,10 +388,10 @@ public class ConnectionClientPool {
 
                 fut.get(failTimeout);
             }
-            catch (IgniteCheckedException triggerException) {
-                IgniteSpiException spiE = new IgniteSpiException(triggerException);
+            catch (Throwable triggerException) {
+                IgniteSpiException spiE = new IgniteSpiException(e);
 
-                spiE.addSuppressed(e);
+                spiE.addSuppressed(triggerException);
 
                 String msg = "Failed to wait for establishing inverse communication connection from node " + node;
 
