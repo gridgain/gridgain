@@ -69,7 +69,7 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
     public boolean walCompactionEnabled;
 
     /** Listening logger. */
-    @Nullable private volatile ListeningTestLogger listeningLog;
+    private static final ListeningTestLogger listeningLog = new ListeningTestLogger(log);
 
     /** Holder fail node message from log. */
     @Nullable protected volatile String failNodeMsg;
@@ -98,7 +98,7 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
         stopAllGrids();
         cleanPersistenceDir();
 
-        listeningLog = new ListeningTestLogger(log);
+        listeningLog.clearListeners();
         failNodeMsg = null;
     }
 
@@ -111,18 +111,14 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
         stopAllGrids();
         cleanPersistenceDir();
 
-        ListeningTestLogger listeningLog = this.listeningLog;
-
-        if (listeningLog != null)
-            listeningLog.clearListeners();
-
+        listeningLog.clearListeners();
         failNodeMsg = null;
     }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setGridLogger(log)
+            .setGridLogger(listeningLog)
             .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(TRANSACTIONAL))
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
@@ -136,10 +132,6 @@ public class IgniteLocalWalArchiveSizeTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteEx startGrid(int idx) throws Exception {
-        ListeningTestLogger listeningLog = this.listeningLog;
-
-        assertNotNull(listeningLog);
-
         listeningLog.registerListener(s -> {
             if (s.contains(FAIL_NODE_MSG_PREFIX))
                 failNodeMsg = s;
