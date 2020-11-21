@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -50,8 +53,12 @@ public class IgniteLocalWalArchiveSizeDeadlockDetectTest extends IgniteLocalWalA
 
         stopWatcher(watcher -> assertFalse(watcher.exceed));
 
-        String failNodeMsg = this.failNodeMsg;
-        assertNotNull(failNodeMsg);
-        GridTestUtils.assertContains(log, failNodeMsg, "WAL archive is full and cannot be cleared");
+        FailureContext failureCtx = n.context().failure().failureContext();
+        assertNotNull(failureCtx);
+        assertEquals(FailureType.CRITICAL_ERROR, failureCtx.type());
+
+        Throwable error = failureCtx.error();
+        assertTrue(error instanceof IgniteCheckedException);
+        GridTestUtils.assertContains(log, error.getMessage(), "WAL archive is full and cannot be cleared");
     }
 }
