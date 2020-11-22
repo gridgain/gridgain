@@ -1094,7 +1094,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         boolean rec = grp.eventRecordable(EVT_CACHE_REBALANCE_OBJECT_UNLOADED);
 
         long cleared = 0;
-        int stopCntr = 0;
 
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
@@ -1137,20 +1136,16 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 grp.offheap().partitionIterator(id, IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
 
             while (it0.hasNext()) {
-                // TODO more frequesnt check.
-                if ((stopCntr = (stopCntr + 1) & 1023) == 0 && stopClo.getAsBoolean())
+                if (stopClo.getAsBoolean() || state0 != state())
                     return cleared;
 
                 // TODO batch cp read locks on removal.
-                if (!ctx.database().tryCheckpointReadLock()) {
+                if (!ctx.database().tryCheckpointReadLock()) { // Avoid a deadlock with a checkpointer.
                     if (stopClo.getAsBoolean()) // Check if waiting for clearing cancellation.
                         return cleared;
                     else
                         ctx.database().checkpointReadLock();
                 }
-
-                // Important to test under cp read lock.
-                assert state0 == state() : "Partition state can't change during clearing [onStart=" + state0 + ", part=" + this + ']';
 
                 try {
                     CacheDataRow row = it0.next();
