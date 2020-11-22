@@ -193,7 +193,7 @@ public class WalArchiveSize {
      * @return {@code True} if exceeded.
      */
     public boolean exceedMax() {
-        return max - (curr + reserved) < 0;
+        return !unlimited() && max - (curr + reserved) < 0;
     }
 
     /**
