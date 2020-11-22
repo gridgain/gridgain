@@ -1854,12 +1854,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * @throws IgniteInterruptedCheckedException If failed to wait for thread shutdown.
          */
         private void shutdown() throws IgniteInterruptedCheckedException {
-            synchronized (this) {
-                if (runner() != null) {
-                    U.await(allocateRemainingFilesLatch);
-                    allocateRemainingFilesLatch = new CountDownLatch(1);
-                }
+            if (runner() != null) {
+                U.await(allocateRemainingFilesLatch);
+                allocateRemainingFilesLatch = new CountDownLatch(1);
+            }
 
+            synchronized (this) {
                 U.cancel(this);
 
                 notifyAll();
