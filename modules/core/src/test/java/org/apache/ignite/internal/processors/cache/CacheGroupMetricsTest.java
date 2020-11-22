@@ -53,6 +53,7 @@ import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.mxbean.CacheGroupMetricsMXBean;
@@ -339,6 +340,14 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
         grid(1).rebalanceEnabled(false);
 
         stopGrid(2);
+
+        // Wait until renting moved to evicting.
+        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            @Override public boolean apply() {
+                return grid(0).context().cache().cacheGroup(CU.cacheId("group1")).
+                    topology().localPartitions().stream().noneMatch(p -> p.state() == RENTING);
+            }
+        }, 5_000);
 
         // Check moving partitions while rebalancing.
         assertFalse(arrayToAllocationMap(new int[10][]).equals(movingPartitionsAllocationMap.value()));

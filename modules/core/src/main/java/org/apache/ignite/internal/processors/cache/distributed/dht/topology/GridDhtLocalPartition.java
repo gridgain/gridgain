@@ -52,7 +52,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheMapEntryFactory;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
 import org.apache.ignite.internal.processors.cache.extras.GridCacheObsoleteEntryExtras;
@@ -1138,8 +1137,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 grp.offheap().partitionIterator(id, IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
 
             while (it0.hasNext()) {
-                assert state0 == state() : "Partition state can't change during clearing [onStart=" + state0 + ", part=" + this + ']';
-
                 // TODO more frequesnt check.
                 if ((stopCntr = (stopCntr + 1) & 1023) == 0 && stopClo.getAsBoolean())
                     return cleared;
@@ -1151,6 +1148,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     else
                         ctx.database().checkpointReadLock();
                 }
+
+                // Important to test under cp read lock.
+                assert state0 == state() : "Partition state can't change during clearing [onStart=" + state0 + ", part=" + this + ']';
 
                 try {
                     CacheDataRow row = it0.next();

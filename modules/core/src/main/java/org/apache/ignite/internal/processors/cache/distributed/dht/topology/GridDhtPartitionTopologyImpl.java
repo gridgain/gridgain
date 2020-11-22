@@ -812,7 +812,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             // Prepare partition to rebalance if it's not happened on full map update phase.
 //                            if (locPart == null || locPart.state() == RENTING || locPart.state() == EVICTED)
-//                                locPart = rebalancePartition(p, true, exchFut);
+//                                locPart = rebalancePartition(p, exchFut);
 //
 //                            GridDhtPartitionState state = locPart.state();
 //

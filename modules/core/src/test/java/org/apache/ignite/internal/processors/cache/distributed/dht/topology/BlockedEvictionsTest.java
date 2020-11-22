@@ -266,7 +266,8 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         try {
             ref.get().get(10_000);
-        } catch (IgniteFutureTimeoutCheckedException e) {
+        }
+        catch (IgniteFutureTimeoutCheckedException e) {
             fail(X.getFullStackTrace(e));
         }
 

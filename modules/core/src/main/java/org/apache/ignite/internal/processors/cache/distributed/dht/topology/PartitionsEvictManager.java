@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
@@ -666,11 +667,20 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         /** */
         public void awaitCompletion() {
-            try {
-                finishFut.get();
-            }
-            catch (IgniteCheckedException e) {
-                log.warning("Failed to get the result for clearing future [part=" + part + ']', e);
+            while(true) {
+                try {
+                    finishFut.get(5_000);
+
+                    return;
+                }
+                catch (IgniteFutureTimeoutCheckedException e) {
+                    log.warning("Failed to wait for clearing finish [task=" + this + ']');
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning("The clearing has finished with error [part=" + part + ']', e);
+
+                    return;
+                }
             }
         }
 
