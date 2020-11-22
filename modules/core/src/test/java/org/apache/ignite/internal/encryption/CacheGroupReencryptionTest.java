@@ -107,7 +107,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
             .setPageSize(4 * 1024)
             .setWalSegmentSize(10 * 1024 * 1024)
             .setWalSegments(4)
-            .setMaxWalArchiveSize(100 * 1024 * 1024L)
+            .setMaxWalArchiveSize(2 * 1024 * 1024 * 1024L)
             .setCheckpointFrequency(30 * 1000L)
             .setWalMode(LOG_ONLY)
             .setFileIOFactory(new FailingFileIOFactory(new RandomAccessFileIOFactory(), failFileIO))
@@ -306,7 +306,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         createEncryptedCache(node0, node1, cacheName(), null);
 
-        loadData(100_000);
+        loadData(200_000);
 
         IgniteCache<?, ?> cache = node0.cache(cacheName());
 
@@ -637,7 +637,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         createEncryptedCache(node0, node1, cacheName(), null);
 
-        loadData(100_000);
+        loadData(200_000);
 
         node0.encryption().changeCacheGroupKey(Collections.singleton(cacheName())).get();
 

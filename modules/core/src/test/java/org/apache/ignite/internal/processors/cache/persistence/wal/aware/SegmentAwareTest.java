@@ -291,7 +291,7 @@ public class SegmentAwareTest {
         aware.forceInterrupt();
 
         //then: IgniteInterruptedCheckedException should be throw.
-        assertTrue(future.get(20) instanceof IgniteInterruptedCheckedException);
+        assertTrue(future.get(1_000) instanceof IgniteInterruptedCheckedException);
     }
 
     /**
