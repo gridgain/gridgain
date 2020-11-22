@@ -225,7 +225,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      * Checkpoint should be triggered when max size of WAL after last checkpoint more than maxWallArchiveSize * thisValue
      */
     private static final double CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE =
-        IgniteSystemProperties.getDouble(IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, 0.25);
+        IgniteSystemProperties.getDouble(IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, 0.5);
 
     /**
      * Percentage of WAL archive size to calculate threshold since which removing of old archive should be started.
@@ -418,8 +418,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         fileHandleManagerFactory = new FileHandleManagerFactory(dsCfg);
 
         maxSegCountWithoutCheckpoint =
-                (long)((U.adjustedWalHistorySize(dsCfg, log) * CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE)
-                        / dsCfg.getWalSegmentSize());
+            ((long)(U.adjustedWalHistorySize(dsCfg, log) * CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE)
+                / dsCfg.getWalSegmentSize());
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
 

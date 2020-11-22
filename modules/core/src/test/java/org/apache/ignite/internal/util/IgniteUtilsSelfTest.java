@@ -72,6 +72,8 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
@@ -1524,6 +1526,28 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
             assertTrue(txt.delete());
             assertTrue(zip.delete());
         }
+    }
+
+    /**
+     * Testing the correctness of {@link IgniteUtils#adjustedWalHistorySize}.
+     */
+    @Test
+    public void testAdjustedWalHistorySize() {
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration().setMaxWalArchiveSize(10);
+        assertEquals(10, U.adjustedWalHistorySize(dsCfg, log));
+
+        dsCfg.setMaxWalArchiveSize(DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE);
+        assertEquals(DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE, U.adjustedWalHistorySize(dsCfg, log));
+
+        dsCfg.setMaxWalArchiveSize(DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE);
+        assertEquals(4 * DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE, U.adjustedWalHistorySize(dsCfg, log));
+
+        dsCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(true).setCheckpointPageBufferSize(10);
+        assertEquals(40, U.adjustedWalHistorySize(dsCfg, log));
+
+        dsCfg.setDataRegionConfigurations(
+            new DataRegionConfiguration().setPersistenceEnabled(true).setCheckpointPageBufferSize(20));
+        assertEquals(80, U.adjustedWalHistorySize(dsCfg, log));
     }
 
     /**
