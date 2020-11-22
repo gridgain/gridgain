@@ -54,7 +54,6 @@ public class SegmentCompressStorage {
     /** Min uncompressed index to keep. */
     private volatile long minUncompressedIdxToKeep = -1L;
 
-
     /**
      * @param compactionEnabled If WAL compaction enabled.
      * @param log Logger.

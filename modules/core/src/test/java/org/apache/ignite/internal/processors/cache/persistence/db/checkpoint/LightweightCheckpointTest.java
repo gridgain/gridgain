@@ -153,8 +153,7 @@ public class LightweightCheckpointTest extends GridCommonAbstractTest {
             db.persistentStoreMetricsImpl(),
             context.longJvmPauseDetector(),
             context.failure(),
-            context.cache(),
-            context.cache().context().wal()
+            context.cache()
         );
 
         //and: Add checkpoint listener for DEFAULT_CACHE in order of storing the meta pages.

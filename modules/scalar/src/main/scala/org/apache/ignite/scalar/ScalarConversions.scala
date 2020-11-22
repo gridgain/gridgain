@@ -20,6 +20,7 @@ import org.apache.ignite.{IgniteCache, Ignite}
 import org.apache.ignite.cluster.ClusterGroup
 import org.apache.ignite.compute.ComputeJob
 import org.apache.ignite.internal.util.lang._
+import org.apache.ignite.internal.util.lang.IgniteInClosureX
 import org.apache.ignite.lang._
 import org.apache.ignite.scalar.lang._
 import org.apache.ignite.scalar.pimps._

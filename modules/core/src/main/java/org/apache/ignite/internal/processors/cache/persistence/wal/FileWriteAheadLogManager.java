@@ -44,6 +44,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
@@ -1747,6 +1748,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         /** Formatted index. */
         private int formatted;
 
+        /** Latch to wait for {#link {@link #allocateRemainingFiles} to execute. */
+        private volatile CountDownLatch allocateRemainingFilesLatch = new CountDownLatch(1);
+
         /**
          * Constructor.
          *
@@ -1851,6 +1855,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          */
         private void shutdown() throws IgniteInterruptedCheckedException {
             synchronized (this) {
+                if (runner() != null) {
+                    U.await(allocateRemainingFilesLatch);
+                    allocateRemainingFilesLatch = new CountDownLatch(1);
+                }
+
                 U.cancel(this);
 
                 notifyAll();
@@ -1865,6 +1874,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             try {
                 allocateRemainingFiles();
+                allocateRemainingFilesLatch.countDown();
             }
             catch (StorageException e) {
                 synchronized (this) {
@@ -2114,18 +2124,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             checkFiles(
                 1,
                 true,
-                new IgnitePredicate<Integer>() {
-                    @Override public boolean apply(Integer integer) {
-                        return !checkStop();
-                    }
-                },
-                new CI1<Integer>() {
-                    @Override public void apply(Integer idx) {
-                        synchronized (FileArchiver.this) {
-                            formatted = idx;
+                (IgnitePredicate<Integer>)integer -> !checkStop(),
+                (CI1<Integer>)idx -> {
+                    synchronized (FileArchiver.this) {
+                        formatted = idx;
 
-                            FileArchiver.this.notifyAll();
-                        }
+                        FileArchiver.this.notifyAll();
                     }
                 }
             );

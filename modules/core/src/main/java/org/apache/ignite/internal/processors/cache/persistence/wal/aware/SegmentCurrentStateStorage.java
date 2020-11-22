@@ -197,6 +197,6 @@ class SegmentCurrentStateStorage {
      * @see #nextAbsoluteSegmentIndex
      */
     public boolean archivingSegmentRequired() {
-        return curAbsWalIdx -  segmentArchivedStorage.lastArchivedAbsoluteIndex() > walSegmentsCnt;
+        return curAbsWalIdx - segmentArchivedStorage.lastArchivedAbsoluteIndex() > walSegmentsCnt;
     }
 }
