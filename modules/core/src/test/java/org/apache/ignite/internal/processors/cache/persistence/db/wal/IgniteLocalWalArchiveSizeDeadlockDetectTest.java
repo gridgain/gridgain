@@ -38,7 +38,7 @@ public class IgniteLocalWalArchiveSizeDeadlockDetectTest extends IgniteLocalWalA
      * @throws Exception If failed.
      */
     @Test
-    @Repeat(1)
+    @Repeat(10)
     @Override public void test() throws Exception {
         IgniteEx n = startGrid(0);
 

@@ -3340,7 +3340,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             GridCacheDatabaseSharedManager dbMgr = dbMgr();
 
             if ((dbMgr != null && dbMgr.txAcquireCheckpointReadLockCount() > 0) &&
-                (archiver != null && segmentAware.archivingSegmentRequired()) &&
+                (archiver == null || segmentAware.archivingSegmentRequired()) &&
                 (cpProgress != null && !cpProgress.inProgress()) && !segmentAware.compressionInProgress()) {
                 IgniteCheckedException err = new IgniteCheckedException("WAL archive is full and cannot be cleared");
 
