@@ -28,6 +28,7 @@ import org.apache.ignite.util.GridCommandHandlerBrokenIndexTest;
 import org.apache.ignite.util.GridCommandHandlerCheckIndexesInlineSizeTest;
 import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
 import org.apache.ignite.util.GridCommandHandlerClusterByClassWithSSLTest;
+import org.apache.ignite.util.GridCommandHandlerDefragmentationTest;
 import org.apache.ignite.util.GridCommandHandlerGetCacheSizeTest;
 import org.apache.ignite.util.GridCommandHandlerIndexForceRebuildTest;
 import org.apache.ignite.util.GridCommandHandlerIndexListTest;
@@ -106,7 +107,8 @@ import org.junit.runners.Suite;
     IgniteIndexReaderTest.class,
     IgniteWalConverterTest.class,
     IgniteWalConverterArgumentsTest.class,
-    IgniteWalConverterSensitiveDataTest.class
+    IgniteWalConverterSensitiveDataTest.class,
+    GridCommandHandlerDefragmentationTest.class
 })
 public class IgniteControlUtilityTestSuite {
 }
