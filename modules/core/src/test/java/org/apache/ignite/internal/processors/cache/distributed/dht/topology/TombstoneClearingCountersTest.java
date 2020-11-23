@@ -326,25 +326,68 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
 
         crd.cache(DEFAULT_CACHE_NAME).remove(testPart);
 
-        // We should not clear tombstones on supplier node, because cleared tombstone is not seen on
-        // demander causing partition desync.
-
         IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
         TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
         spi1.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheId(DEFAULT_CACHE_NAME)));
 
         IgniteEx g2 = startGrid(cfg1);
-
         spi1.waitForBlocked();
-        g2.close();
+        forceCheckpoint(g2); // Write adjusted counters to enforce full rebalancing after restart.
+        g2.close(); // Stop before rebalancing for default is starting.
 
         TrackingResolver rslvr = new TrackingResolver(testPart);
         startGrid(1, rslvr);
 
         awaitPartitionMapExchange();
 
-        assertTrue(historical(1).contains(testPart));
+        // Expecting full rebalancing, because LWM on joining node is adjusted to supplier LWM during previous PME.
+        assertFalse(historical(1).contains(testPart));
         assertNull(rslvr.reason);
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_PREFER_WAL_REBALANCE", value = "true")
+    public void testConsistencyOnCounterTriggeredRebalanceHistoricalRestartDemanderClearTombstones() throws Exception {
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        int testPart = 0;
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        cache.put(testPart, 0);
+
+        forceCheckpoint();
+
+        stopGrid(1);
+        awaitPartitionMapExchange();
+
+        crd.cache(DEFAULT_CACHE_NAME).remove(testPart);
+
+        IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
+        TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
+        spi1.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        IgniteEx g2 = startGrid(cfg1);
+        spi1.waitForBlocked();
+        forceCheckpoint(g2); // Write adjusted counters to enforce full rebalancing after restart.
+        g2.close(); // Stop before rebalancing for default is starting.
+
+        clearTombstones(cache);
+
+        TrackingResolver rslvr = new TrackingResolver(testPart);
+        startGrid(1, rslvr);
+
+        awaitPartitionMapExchange();
+
+        // Expecting full rebalancing, because LWM on joining node is adjusted to supplier LWM during previous PME.
+        assertFalse(historical(1).contains(testPart));
+        assertTrue(rslvr.reason == PartitionsEvictManager.EvictReason.CLEARING);
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }

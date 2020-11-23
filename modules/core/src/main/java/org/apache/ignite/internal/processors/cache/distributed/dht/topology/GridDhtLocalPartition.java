@@ -1097,14 +1097,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
-        // Define rows excluded from clearing.
+        // Defines rows excluded from clearing.
         Predicate<CacheDataRow> rowFilter = r -> false;
 
         GridDhtPartitionState state0 = state();
 
         if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE) {
-            assert state0 == OWNING;
-
             long lwm = dataStore().partUpdateCounter() == null ? 0 : dataStore().partUpdateCounter().startTombstoneClearing();
 
             rowFilter = new Predicate<CacheDataRow>() {
@@ -1116,8 +1114,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             };
         }
         else if (task.reason == PartitionsEvictManager.EvictReason.CLEARING) {
-            assert state0 == MOVING : this;
-
             long order0 = clearVer;
 
             rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || row.version().order() > order0);
