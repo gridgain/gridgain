@@ -308,6 +308,8 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         loadData(200_000);
 
+        forceCheckpoint();
+
         IgniteCache<?, ?> cache = node0.cache(cacheName());
 
         node0.encryption().changeCacheGroupKey(Collections.singleton(cacheName())).get();
@@ -593,6 +595,8 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         loadData(cacheName(), 100_000);
         loadData(cache2, 100_000);
 
+        forceCheckpoint();
+
         List<String> cacheGroups = Arrays.asList(cacheName(), cache2);
 
         node0.encryption().changeCacheGroupKey(cacheGroups).get();
@@ -638,6 +642,8 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         createEncryptedCache(node0, node1, cacheName(), null);
 
         loadData(200_000);
+
+        forceCheckpoint();
 
         node0.encryption().changeCacheGroupKey(Collections.singleton(cacheName())).get();
 
