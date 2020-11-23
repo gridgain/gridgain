@@ -194,7 +194,7 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isArchiveFull() {
+    @Override public boolean isArchiveAlmostFull() {
         return false;
     }
 

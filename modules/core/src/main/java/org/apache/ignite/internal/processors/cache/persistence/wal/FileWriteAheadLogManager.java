@@ -3211,8 +3211,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isArchiveFull() {
-        return walArchiveSize.exceedMax();
+    @Override public boolean isArchiveAlmostFull() {
+        return !walArchiveSize.unlimited() &&
+            (walArchiveSize.currentSize() + maxWalSegmentSize) > walArchiveSize.maxSize();
     }
 
     /** {@inheritDoc} */

@@ -287,6 +287,6 @@ public class CheckpointTimeoutLock {
      * @return {@code True} if the archive will not overflow.
      */
     private boolean walArchiveNotOverflow() {
-        return !walMgr.isArchiveFull() || walMgr.availableDeleteArchiveSegments() >= 2;
+        return !walMgr.isArchiveAlmostFull() || walMgr.availableDeleteArchiveSegments() >= 2;
     }
 }

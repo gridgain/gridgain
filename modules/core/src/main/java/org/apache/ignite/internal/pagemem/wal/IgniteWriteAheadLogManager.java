@@ -224,11 +224,11 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
     WALPointer lastWritePointer();
 
     /**
-     * Checking whether WAL archive is full.
+     * Checking whether WAL archive is almost full.
      *
-     * @return {True} if full.
+     * @return {@code True} if almost full.
      */
-    boolean isArchiveFull();
+    boolean isArchiveAlmostFull();
 
     /**
      * Getting number of segments that can be deleted from WAL archive.
