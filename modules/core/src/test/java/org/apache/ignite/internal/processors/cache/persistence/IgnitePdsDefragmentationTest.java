@@ -76,7 +76,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
     public static final int PARTS = 5;
 
     /** */
-    public static final int ADDED_KEYS_COUNT = 150;
+    public static final int ADDED_KEYS_COUNT = 15000;
 
     /** */
     protected static final String GRP_NAME = "group";
@@ -473,7 +473,9 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         stopGrid(0);
 
-        startGrid(0);
+        IgniteEx ex = startGrid(0);
+
+        ex.cluster().state(ClusterState.ACTIVE);
 
         waitForDefragmentation(0);
 
