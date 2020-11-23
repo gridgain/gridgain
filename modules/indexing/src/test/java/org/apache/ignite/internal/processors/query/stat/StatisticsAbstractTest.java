@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
@@ -35,6 +36,9 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
  * Base test for table statistics.
  */
 public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
+    /** Counter to avoid query caching. */
+    private static final AtomicInteger queryRandomizer = new AtomicInteger(0);
+
     /** Big table size. */
     static final int BIG_SIZE = 1000;
 
@@ -56,7 +60,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @param sql Query with placeholders to hint indexes (i1, i2, ...).
      * @param indexes Arrays of indexes to put into placeholders.
      */
-    protected void checkOptimalPlanChosenForDifferentIndexes(Ignite grid, String[] optimal, String sql, String[][] indexes) {
+    protected void checkOptimalPlanChosenForDifferentIndexes(IgniteEx grid, String[] optimal, String sql, String[][] indexes) {
         int size = -1;
         for (String[] idxs : indexes) {
             if (size == -1)
@@ -65,6 +69,14 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             assert idxs == null || idxs.length == size;
         }
         sql = replaceIndexHintPlaceholders(sql, indexes);
+
+        int spaces = queryRandomizer.incrementAndGet();
+        StringBuilder spaceBuilder = new StringBuilder(spaces);
+        for (int i = 0; i < spaces; i++)
+            spaceBuilder.append(' ');
+
+        sql = sql.replaceFirst(" ", spaceBuilder.toString());
+
         String actual[] = runLocalExplainIdx(grid, sql);
 
         assertTrue(String.format("got %s, expected %s in query %s", Arrays.asList(actual), Arrays.asList(optimal), sql),
@@ -125,7 +137,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      *
      * @param grid Grid where query should be executed.
      * @param sql Query to explain.
-     * @return Qrray of selected indexes.
+     * @return Array of selected indexes.
      */
     protected String[] runLocalExplainIdx(Ignite grid, String sql) {
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("EXPLAIN " + sql).setLocal(true))
@@ -270,5 +282,30 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         catch (IgniteCheckedException ex) {
             throw new IgniteException(ex);
         }
+    }
+
+    /**
+     * Get object statistics.
+     *
+     * @param rowsCnt Rows count.
+     * @return Object statistics.
+     */
+    protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
+        ColumnStatistics columnStatistics = new ColumnStatistics(null, null,100,0, 100,
+                0, new byte[0]);
+        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", columnStatistics));
+    }
+
+    /**
+     * Get object partition statistics.
+     *
+     * @param partId Partition id.
+     * @return Object partition statistics with specified partition id.
+     */
+    protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
+        ColumnStatistics columnStatistics = new ColumnStatistics(null, null,100,0, 100,
+                0, new byte[0]);
+        return new ObjectPartitionStatisticsImpl(partId, true, 0, 0,
+                Collections.singletonMap("col1", columnStatistics));
     }
 }

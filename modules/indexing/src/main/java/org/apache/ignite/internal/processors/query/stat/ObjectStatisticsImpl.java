@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * All statistics by some object (table or index).
@@ -71,6 +72,20 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl clone() {
         return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat));
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ObjectStatisticsImpl that = (ObjectStatisticsImpl) o;
+        return rowsCnt == that.rowsCnt &&
+                Objects.equals(colNameToStat, that.colNameToStat);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(rowsCnt, colNameToStat);
     }
 }
 

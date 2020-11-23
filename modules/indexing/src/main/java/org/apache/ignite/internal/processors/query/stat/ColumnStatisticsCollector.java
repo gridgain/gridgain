@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.ignite.internal.processors.query.stat.hll.HLL;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.isNullValue;
@@ -136,6 +137,13 @@ public class ColumnStatisticsCollector {
 
         int averageSize = averageSize(size, total, nullsCnt);
 
+        TypeInfo colTypeInfo = col.getType();
+
+        // Avoid serializing complex types.
+        if (colTypeInfo == TypeInfo.TYPE_ARRAY || colTypeInfo == TypeInfo.TYPE_ENUM_UNDEFINED
+                || colTypeInfo == TypeInfo.TYPE_JAVA_OBJECT || colTypeInfo == TypeInfo.TYPE_RESULT_SET
+                || colTypeInfo == TypeInfo.TYPE_UNKNOWN)
+            min = max = null;
         return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes());
     }
 

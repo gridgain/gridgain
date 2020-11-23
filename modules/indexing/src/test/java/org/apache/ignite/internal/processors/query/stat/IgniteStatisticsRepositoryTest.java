@@ -15,24 +15,24 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
+import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.junit.Test;
-
+import org.mockito.Mockito;
 import java.util.Arrays;
-import java.util.Collections;
 
 /**
  * Test for statistics repository.
  */
-public class IgniteStatisticsRepositoryTest extends GridCommonAbstractTest {
+public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
     /** First default key. */
-    private static final StatsKey k1 = new StatsKey("PUBLIC", "tab1");
+    private static final StatsKey K1 = new StatsKey("PUBLIC", "tab1");
 
     /** Second default key. */
-    private static final StatsKey k2 = new StatsKey("PUBLIC", "tab2");
-
-    /** Third default key. */
-    private static final StatsKey k3 = new StatsKey("PUBLIC", "tab3");
+    private static final StatsKey K2 = new StatsKey("PUBLIC", "tab2");
 
     /**
      * Test ignite statistics repository on client node without persistence.
@@ -40,7 +40,8 @@ public class IgniteStatisticsRepositoryTest extends GridCommonAbstractTest {
     @Test
     public void testClientNode() {
         IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(false, false,
-                null, log);
+                new IgniteCacheDatabaseSharedManager(){}, null, null, cls -> log);
+
         testRepositoryGlobal(statsRepos);
     }
 
@@ -50,7 +51,30 @@ public class IgniteStatisticsRepositoryTest extends GridCommonAbstractTest {
     @Test
     public void testServerWithoutPersistence() {
         IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(true, false,
-                null, log);
+                new IgniteCacheDatabaseSharedManager(),null, null, cls -> log);
+
+        testRepositoryGlobal(statsRepos);
+        testRepositoryLocal(statsRepos);
+        testRepositoryPartitions(statsRepos);
+    }
+
+    /**
+     * Test ignite statistics repository on server node with persistence.
+     */
+    @Test
+    public void testServerWithPersistence() throws IgniteCheckedException {
+        MetastorageLifecycleListener listener[] = new MetastorageLifecycleListener[1];
+
+        GridInternalSubscriptionProcessor subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
+        Mockito.doAnswer(invocation -> listener[0] = invocation.getArgument(0))
+                .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
+
+        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(true, true,
+                new IgniteCacheDatabaseSharedManager(), subscriptionProcessor, null, cls -> log);
+
+        ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
+        listener[0].onReadyForReadWrite(metastorage);
+
         testRepositoryGlobal(statsRepos);
         testRepositoryLocal(statsRepos);
         testRepositoryPartitions(statsRepos);
@@ -76,102 +100,87 @@ public class IgniteStatisticsRepositoryTest extends GridCommonAbstractTest {
 
         ObjectPartitionStatisticsImpl stat1_2 = getPartitionStatistics(1);
 
-        assertTrue(repository.getLocalPartitionsStatistics(k1).isEmpty());
-        assertTrue(repository.getLocalPartitionsStatistics(k2).isEmpty());
+        assertTrue(repository.getLocalPartitionsStatistics(K1).isEmpty());
+        assertTrue(repository.getLocalPartitionsStatistics(K2).isEmpty());
 
-        repository.saveLocalPartitionStatistics(k1, stat1);
-        repository.saveLocalPartitionStatistics(k1, stat10);
-        repository.saveLocalPartitionStatistics(k2, stat1_2);
+        repository.saveLocalPartitionStatistics(K1, stat1);
+        repository.saveLocalPartitionStatistics(K1, stat10);
+        repository.saveLocalPartitionStatistics(K2, stat1_2);
 
-        ObjectPartitionStatisticsImpl stat1Readed = repository.getLocalPartitionStatistics(k1, 1);
+        ObjectPartitionStatisticsImpl stat1Readed = repository.getLocalPartitionStatistics(K1, 1);
         assertNotNull(stat1Readed);
         assertEquals(1, stat1Readed.partId());
 
-        ObjectPartitionStatisticsImpl stat10Readed = repository.getLocalPartitionStatistics(k1, 10);
+        ObjectPartitionStatisticsImpl stat10Readed = repository.getLocalPartitionStatistics(K1, 10);
         assertNotNull(stat10Readed);
         assertEquals(10, stat10Readed.partId());
 
-        assertNull(repository.getLocalPartitionStatistics(k1, 2));
+        assertNull(repository.getLocalPartitionStatistics(K1, 2));
 
-        assertEquals(2, repository.getLocalPartitionsStatistics(k1).size());
-        assertEquals(1, repository.getLocalPartitionsStatistics(k2).size());
+        assertEquals(2, repository.getLocalPartitionsStatistics(K1).size());
+        assertEquals(1, repository.getLocalPartitionsStatistics(K2).size());
 
-        repository.saveLocalPartitionsStatistics(k1, Arrays.asList(new ObjectPartitionStatisticsImpl[]{stat10, stat100}));
+        repository.saveLocalPartitionsStatistics(K1, Arrays.asList(new ObjectPartitionStatisticsImpl[]{stat10, stat100}));
 
-        assertEquals(3, repository.getLocalPartitionsStatistics(k1).size());
+        assertEquals(2, repository.getLocalPartitionsStatistics(K1).size());
     }
 
     /**
-     * Test specified repository with local statistics.
+     * Test specified repository with local statistics:
+     *
+     * 1) Check that repository doesn't contains test table statistics.
+     * 2) Save local statistics.
+     * 3) Check that it doesn't available by wrong key and available by right one.
+     * 4) Merge local statistics and check that new version available.
      *
      * @param repository Ignite statistics repository to test.
      */
     public void testRepositoryLocal(IgniteStatisticsRepositoryImpl repository) {
-        assertNull(repository.getLocalStatistics(k1));
-        assertNull(repository.getLocalStatistics(k2));
+        assertNull(repository.getLocalStatistics(K1));
+        assertNull(repository.getLocalStatistics(K2));
 
         ObjectStatisticsImpl stat1 = getStatistics(1);
 
-        repository.saveLocalStatistics(k1, stat1);
-        assertNull(repository.getLocalStatistics(k2));
+        repository.saveLocalStatistics(K1, stat1);
+        assertNull(repository.getLocalStatistics(K2));
 
-        assertEquals(1L, repository.getLocalStatistics(k1).rowCount());
+        assertEquals(1L, repository.getLocalStatistics(K1).rowCount());
 
         ObjectStatisticsImpl stat2 = getStatistics(2);
 
-        repository.mergeLocalStatistics(k1, stat2);
+        repository.mergeLocalStatistics(K1, stat2);
 
-        assertNull(repository.getLocalStatistics(k2));
-        assertEquals(2L, repository.getLocalStatistics(k1).rowCount());
+        assertNull(repository.getLocalStatistics(K2));
+        assertEquals(2L, repository.getLocalStatistics(K1).rowCount());
     }
 
     /**
-     * Test specified repository with global statistics.
+     * Test specified repository with global statistics:
+     *
+     * 1) Clear empty statistics (whole object and only one column).
+     * 2) Save global statistics.
+     * 3) Check that it doesn't available by wrong key and available by right key.
+     * 4) Merge global statistics and check that new version available.
      *
      * @param repository Ignite statistics repository to test.
      */
     public void testRepositoryGlobal(IgniteStatisticsRepositoryImpl repository) {
-        assertNull(repository.getGlobalStatistics(k1));
-        repository.clearGlobalStatistics(k1);
-        repository.clearGlobalStatistics(k1, "col10");
+        assertNull(repository.getGlobalStatistics(K1));
+        repository.clearGlobalStatistics(K1);
+        repository.clearGlobalStatistics(K1, "col10");
 
         ObjectStatisticsImpl tab1Statistics = getStatistics(1);
 
-        repository.saveGlobalStatistics(k1, tab1Statistics);
+        repository.saveGlobalStatistics(K1, tab1Statistics);
 
-        assertNull(repository.getGlobalStatistics(k2));
+        assertNull(repository.getGlobalStatistics(K2));
 
-        assertEquals(1L, repository.getGlobalStatistics(k1).rowCount());
+        assertEquals(1L, repository.getGlobalStatistics(K1).rowCount());
 
         ObjectStatisticsImpl tab1Statistics2 = getStatistics(2);
 
-        repository.mergeGlobalStatistics(k1, tab1Statistics2);
+        repository.mergeGlobalStatistics(K1, tab1Statistics2);
 
-        assertEquals(2L, repository.getGlobalStatistics(k1).rowCount());
-    }
-
-    /**
-     * Get object partition statistics.
-     *
-     * @param partId Partition id.
-     * @return Object partition statistics with specified partition id.
-     */
-    private ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
-        ColumnStatistics columnStatistics = new ColumnStatistics(null, null,100,0, 100,
-                0, new byte[0]);
-        return new ObjectPartitionStatisticsImpl(partId, true, 0, 0, Collections
-                .singletonMap("col1", columnStatistics));
-    }
-
-    /**
-     * Get object statistics.
-     *
-     * @param rowsCnt Rows count.
-     * @return Object statistics.
-     */
-    private ObjectStatisticsImpl getStatistics(long rowsCnt) {
-        ColumnStatistics columnStatistics = new ColumnStatistics(null, null,100,0, 100,
-                0, new byte[0]);
-        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", columnStatistics));
+        assertEquals(2L, repository.getGlobalStatistics(K1).rowCount());
     }
 }

@@ -270,9 +270,13 @@ import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsReposito
 import org.apache.ignite.internal.processors.query.stat.ManagerStatisticsTypesTest;
 import org.apache.ignite.internal.processors.query.stat.PSUBasicValueDistributionTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.stat.PSUCompositeIndexTableStatisticsUsageTest;
+import org.apache.ignite.internal.processors.query.stat.PSUStatistcsRestartTest;
+import org.apache.ignite.internal.processors.query.stat.PSUStatisticsStorageTest;
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticsTypesTest;
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticPartialCollectionTest;
 import org.apache.ignite.internal.processors.query.stat.PSUValueDistributionTableStatisticsUsageTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsStorageRestartTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsStorageTest;
 import org.apache.ignite.internal.processors.sql.IgniteCachePartitionedAtomicColumnConstraintsTest;
 import org.apache.ignite.internal.processors.sql.IgniteCachePartitionedTransactionalColumnConstraintsTest;
 import org.apache.ignite.internal.processors.sql.IgniteCachePartitionedTransactionalSnapshotColumnConstraintTest;
@@ -658,6 +662,8 @@ import org.junit.runners.Suite;
     ColumnStatisticsCollectorAggregationTest.class,
     ManagerStatisticsTypesTest.class,
     IgniteStatisticsRepositoryTest.class,
+    StatisticsStorageTest.class,
+    StatisticsStorageRestartTest.class,
 
     // Table statistics usage.
     RowCountTableStatisticsUsageTest.class,
@@ -667,6 +673,8 @@ import org.junit.runners.Suite;
     PSUBasicValueDistributionTableStatisticsUsageTest.class,
     PSUValueDistributionTableStatisticsUsageTest.class,
     PSUCompositeIndexTableStatisticsUsageTest.class,
+    PSUStatisticsStorageTest.class,
+    PSUStatistcsRestartTest.class,
 
     SqlViewExporterSpiTest.class,
     SystemViewSelfTest.class

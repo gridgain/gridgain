@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.typedef.F;
 import org.gridgain.internal.h2.table.Column;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -72,8 +73,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
         boolean persistence = GridCacheUtils.isPersistenceEnabled(ctx.config());
-        IgniteLogger repositoryLogger = ctx.log(IgniteStatisticsRepositoryImpl.class);
-        statsRepos = new IgniteStatisticsRepositoryImpl(storeData, persistence, this, repositoryLogger);
+
+        statsRepos = new IgniteStatisticsRepositoryImpl(storeData, persistence, ctx.cache().context().database(),
+                ctx.internalSubscriptionProcessor(),this, ctx::log);
     }
 
     /**
@@ -103,7 +105,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @param colNames Column names.
      * @return Column with specified names.
      */
-    private Column[] filterColumns(Column[] columns, String... colNames) {
+    private Column[] filterColumns(Column[] columns, @Nullable String... colNames) {
         if (F.isEmpty(colNames))
             return columns;
 
@@ -128,15 +130,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             log.debug(String.format("Starting statistics collection by %s.%s object", schemaName, objName));
 
         Column[] selectedColumns;
-        boolean fullStat;
-        if (F.isEmpty(colNames)) {
-            fullStat = true;
-            selectedColumns = tbl.getColumns();
-        }
-        else {
-            fullStat = false;
-            selectedColumns = filterColumns(tbl.getColumns(), colNames);
-        }
+        boolean fullStat = F.isEmpty(colNames);
+        selectedColumns = filterColumns(tbl.getColumns(), colNames);
 
         Collection<ObjectPartitionStatisticsImpl> partsStats = collectPartitionStatistics(tbl, selectedColumns);
         StatsKey key = new StatsKey(tbl.identifier().schema(), tbl.identifier().table());
@@ -162,8 +157,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @return Collection of partition level statistics by local primary partitions.
      * @throws IgniteCheckedException in case of error.
      */
-    private Collection<ObjectPartitionStatisticsImpl> collectPartitionStatistics(GridH2Table tbl, Column[] selectedColumns)
-            throws IgniteCheckedException {
+    private Collection<ObjectPartitionStatisticsImpl> collectPartitionStatistics(
+            GridH2Table tbl,
+            Column[] selectedColumns
+    ) throws IgniteCheckedException {
         List<ObjectPartitionStatisticsImpl> tblPartStats = new ArrayList<>();
         GridH2RowDescriptor desc = tbl.rowDescriptor();
         String tblName = tbl.getName();
@@ -225,7 +222,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @param tblPartStats Collection of all local partition level statistics by specified key.
      * @return Local level aggregated statistics.
      */
-    public ObjectStatisticsImpl aggregateLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> tblPartStats) {
+    public ObjectStatisticsImpl aggregateLocalStatistics(
+            StatsKey key,
+            Collection<ObjectPartitionStatisticsImpl> tblPartStats
+    ) {
         // For now there can be only tables
         GridH2Table table = schemaMgr.dataTable(key.schema(), key.obj());
 
