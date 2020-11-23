@@ -42,6 +42,8 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
      * @param metaPageId Meta page ID.
      * @param reuseList Reuse list.
      * @param initNew Initialize new index.
+     * @param lockLsnr Page lock listener.
+     * @param pageFlag Default flag value for allocated pages.
      * @throws IgniteCheckedException If failed.
      */
     public PartitionLogTree(
@@ -52,7 +54,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         ReuseList reuseList,
         boolean initNew,
         PageLockListener lockLsnr,
-        byte flag
+        byte pageFlag
     ) throws IgniteCheckedException {
         super(
             name,
@@ -65,7 +67,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
             reuseList,
             grp.sharedGroup() ? CacheIdAwareUpdateLogInnerIO.VERSIONS : UpdateLogInnerIO.VERSIONS,
             grp.sharedGroup() ? CacheIdAwareUpdateLogLeafIO.VERSIONS : UpdateLogLeafIO.VERSIONS,
-            flag,
+            pageFlag,
             grp.shared().kernalContext().failure(),
             lockLsnr
         );
