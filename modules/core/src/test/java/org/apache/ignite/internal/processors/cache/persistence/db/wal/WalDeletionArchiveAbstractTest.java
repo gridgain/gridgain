@@ -16,10 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -31,14 +35,13 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkpointer;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
 
 /**
@@ -171,24 +174,38 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
      * Checkpoint triggered depends on wal size.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, value = "0.25")
     public void testCheckpointStarted_WhenWalHasTooBigSizeWithoutCheckpoint() throws Exception {
         //given: configured grid with max wal archive size = 1MB, wal segment size = 512KB
         Ignite ignite = startGrid(dbCfg -> dbCfg.setMaxWalArchiveSize(U.MB));
 
         GridCacheDatabaseSharedManager dbMgr = gridDatabase(ignite);
 
+        Set<String> cpReasons = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+        dbMgr.addCheckpointListener(new CheckpointListener() {
+            /** {@inheritDoc} */
+            @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                cpReasons.add(ctx.progress().reason());
+            }
+
+            /** {@inheritDoc} */
+            @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                // No-op.
+            }
+
+            /** {@inheritDoc} */
+            @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                // No-op.
+            }
+        });
+
+        //then: checkpoint triggered by size limit of wall without checkpoint
         IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(cacheConfiguration());
 
         for (int i = 0; i < 100; i++)
             cache.put(i, i);
 
-        //then: checkpoint triggered by size limit of wall without checkpoint
-        Checkpointer checkpointer = dbMgr.getCheckpointer();
-
-        String checkpointReason = U.field((Object)U.field(checkpointer, "curCpProgress"), "reason");
-
-        assertEquals("too big size of WAL without checkpoint", checkpointReason);
+        assertTrue(cpReasons.toString(), cpReasons.contains("too big size of WAL without checkpoint"));
     }
 
     /**
