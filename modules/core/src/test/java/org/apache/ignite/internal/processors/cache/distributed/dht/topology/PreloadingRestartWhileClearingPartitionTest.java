@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -138,18 +139,19 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
 
         assertTrue(U.await(lock, GridDhtLocalPartitionSyncEviction.TIMEOUT, TimeUnit.MILLISECONDS));
 
-        // Stop supplier for clearingPart.
-        GridCacheContext<Object, Object> ctx = g2.cachex(DEFAULT_CACHE_NAME).context();
+        // Stop a supplier for the #clearingPart.
+        GridCacheContext<Object, Object> ctx2 = g2.cachex(DEFAULT_CACHE_NAME).context();
         GridDhtPartitionDemander.RebalanceFuture rebFut =
-            (GridDhtPartitionDemander.RebalanceFuture) ctx.preloader().rebalanceFuture();
+            (GridDhtPartitionDemander.RebalanceFuture) ctx2.preloader().rebalanceFuture();
 
         GridDhtPreloaderAssignments assignments = U.field(rebFut, "assignments");
 
         ClusterNode supplier = assignments.supplier(clearingPart);
 
-        AtomicReference<GridFutureAdapter<?>> ref = U.field(ctx.topology().localPartition(clearingPart), "finishFutRef");
+        PartitionsEvictManager.PartitionEvictionTask task =
+            g2.context().cache().context().evict().clearingTask(CU.cacheId(DEFAULT_CACHE_NAME), clearingPart);
 
-        GridFutureAdapter clearFut = ref.get();
+        GridFutureAdapter clearFut = task.finishFut;
 
         assertFalse(clearFut.isDone());
 

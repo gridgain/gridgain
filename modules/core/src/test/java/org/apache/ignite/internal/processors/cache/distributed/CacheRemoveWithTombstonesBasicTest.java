@@ -623,7 +623,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(keysCnt, map.internalSize());
         assertEquals(rmvCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
 
-        // These updates make entries in deferred queue not applicable (version mismatch)
+        // These updates make entries in deferred rmv queue not applicable (version mismatch)
         for (int i = 0; i < rmvCnt; i++)
             nearCache.put(nearKeys.get(i), nearKeys.get(i));
 

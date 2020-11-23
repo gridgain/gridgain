@@ -604,11 +604,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                         ", task" + this + ']');
                 }
 
-                finishFut.onDone();
+                if (cctx.kernalContext().isStopping())
+                    finishFut.onDone(new NodeStoppingException("Node is stopping"));
+                else
+                    finishFut.onDone();
             }
             catch (Throwable ex) {
-                updateMetrics(grpEvictionCtx.grp, reason, DECREMENT);
-
                 finishFut.onDone(ex);
 
                 if (cctx.kernalContext().isStopping()) {

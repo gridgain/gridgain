@@ -276,11 +276,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         // Group eviction context should remain in map.
         Map evictionGroupsMap = U.field(mgr, "evictionGroupsMap");
 
-        assertEquals("Group context must be cleaned up", 0, evictionGroupsMap.size());
+        assertFalse("Group context must be cleaned up", evictionGroupsMap.containsKey(CU.cacheId(DEFAULT_CACHE_NAME)));
 
         grid(0).getOrCreateCache(cacheConfiguration());
 
-        assertEquals(0, evictionGroupsMap.size());
+        assertEquals(2, evictionGroupsMap.size());
 
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
