@@ -1545,7 +1545,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
 
         for (File tmp : tmpFiles) {
-            if (!tmp.delete()) {
+            if (tmp.exists() && !tmp.delete()) {
                 throw new StorageException("Failed to delete previously created temp file " +
                     "(make sure Ignite process has enough rights): " + tmp.getAbsolutePath());
             }
