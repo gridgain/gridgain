@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.persistence.db.IgniteShutdown
 import org.apache.ignite.internal.processors.cache.persistence.db.filename.IgniteUidAsConsistentIdMigrationTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.CorruptedCheckpointReservationTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.FsyncWalRolloverDoesNotBlockTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteLocalWalArchiveSizeDeadlockDetectTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWALTailIsReachedDuringIterationOverArchiveTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalFormatFileFailoverTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalIteratorExceptionDuringReadTest;
@@ -99,6 +100,7 @@ public class IgnitePdsMvccTestSuite2 {
         ignoredTests.add(FsyncWalRolloverDoesNotBlockTest.class);
         ignoredTests.add(IgniteWalRebalanceLoggingTest.class);
         ignoredTests.add(CorruptedCheckpointReservationTest.class);
+        ignoredTests.add(IgniteLocalWalArchiveSizeDeadlockDetectTest.class);
 
         return IgnitePdsTestSuite2.suite(ignoredTests);
     }

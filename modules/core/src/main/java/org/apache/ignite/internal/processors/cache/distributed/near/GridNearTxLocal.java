@@ -1442,6 +1442,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                 if (primaryLocal(entry)) {
                                     cctx.database().checkpointReadLock();
 
+                                    cctx.database().onTxAcquireCheckpointReadLock();
+
                                     try {
                                         EntryGetResult res = entry.innerGetVersioned(
                                             null,
@@ -1462,11 +1464,15 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                     }
                                     finally {
                                         cctx.database().checkpointReadUnlock();
+
+                                        cctx.database().onTxReleaseCheckpointReadLock();
                                     }
                                 }
                             }
                             else {
                                 cctx.database().checkpointReadLock();
+
+                                cctx.database().onTxAcquireCheckpointReadLock();
 
                                 try {
                                     old = entry.innerGet(
@@ -1483,6 +1489,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                 }
                                 finally {
                                     cctx.database().checkpointReadUnlock();
+
+                                    cctx.database().onTxReleaseCheckpointReadLock();
                                 }
                             }
                         }

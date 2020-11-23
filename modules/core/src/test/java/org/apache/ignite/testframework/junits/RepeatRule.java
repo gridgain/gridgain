@@ -84,7 +84,7 @@ public class RepeatRule implements TestRule {
                     statement.evaluate();
                 }
                 catch (Throwable t) {
-                    log.error("Falling a repeating test, iteration: ", t);
+                    log.error("Falling a repeating test, iteration: " + i, t);
 
                     throw t;
                 }

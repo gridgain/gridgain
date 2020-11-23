@@ -437,6 +437,8 @@ public abstract class GridDhtTxAbstractEnlistFuture<T> extends GridCacheFutureAd
                     while (true) {
                         cctx.shared().database().checkpointReadLock();
 
+                        cctx.shared().database().onTxAcquireCheckpointReadLock();
+
                         try {
                             switch (op) {
                                 case DELETE:
@@ -494,6 +496,8 @@ public abstract class GridDhtTxAbstractEnlistFuture<T> extends GridCacheFutureAd
                         }
                         finally {
                             cctx.shared().database().checkpointReadUnlock();
+
+                            cctx.shared().database().onTxReleaseCheckpointReadLock();
                         }
                     }
 

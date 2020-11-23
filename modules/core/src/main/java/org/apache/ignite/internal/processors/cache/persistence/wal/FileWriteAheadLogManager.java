@@ -3355,6 +3355,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                 throw err;
             }
+            else if (cctx.kernalContext().isStopping() && (cpProgress != null && !cpProgress.inProgress()) &&
+                !segmentAware.compressionInProgress())
+                throw new IgniteCheckedException("Node is stopping and cannot clear WAL archive");
         }
     }
 
