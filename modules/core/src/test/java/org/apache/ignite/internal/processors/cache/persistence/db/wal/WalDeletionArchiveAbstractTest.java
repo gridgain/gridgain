@@ -38,6 +38,7 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
 
 /**
@@ -170,17 +171,16 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
      * Checkpoint triggered depends on wal size.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, value = "0.25")
     public void testCheckpointStarted_WhenWalHasTooBigSizeWithoutCheckpoint() throws Exception {
         //given: configured grid with max wal archive size = 1MB, wal segment size = 512KB
-        Ignite ignite = startGrid(dbCfg -> {
-            dbCfg.setMaxWalArchiveSize(1 * 1024 * 1024);// 1 Mbytes
-        });
+        Ignite ignite = startGrid(dbCfg -> dbCfg.setMaxWalArchiveSize(U.MB));
 
         GridCacheDatabaseSharedManager dbMgr = gridDatabase(ignite);
 
         IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(cacheConfiguration());
 
-        for (int i = 0; i < 500; i++)
+        for (int i = 0; i < 100; i++)
             cache.put(i, i);
 
         //then: checkpoint triggered by size limit of wall without checkpoint
