@@ -54,5 +54,10 @@ public interface EntryCompressionStrategy extends AutoCloseable {
      * @param ccfg Cache configuration.
      */
     void start(GridKernalContext ctx, CacheConfiguration ccfg);
+
+    /**
+     * Removes any persistent data associated with this compression strategy when cache is destroyed.
+     */
+    void remove();
 }
 
