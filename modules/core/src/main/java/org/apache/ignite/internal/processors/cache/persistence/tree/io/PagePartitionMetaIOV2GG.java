@@ -85,7 +85,7 @@ public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV3 implements Pa
 
         delegate.upgradePage(pageAddr);
 
-        if (from < 3) {
+        if (from < 3 || from > REGISTERED_VERSION) {
             setEncryptedPageIndex(pageAddr, 0);
             setEncryptedPageCount(pageAddr, 0);
         }
