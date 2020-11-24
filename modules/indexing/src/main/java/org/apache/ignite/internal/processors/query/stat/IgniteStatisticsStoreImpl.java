@@ -44,10 +44,10 @@ import java.util.stream.Collectors;
  */
 public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, MetastorageLifecycleListener {
     // In local meta store it store partitions statistics by path: stats.<SCHEMA>.<OBJECT>.<partId>
-    private final static String META_SEPARATOR = ".";
+    private static final String META_SEPARATOR = ".";
 
     /** Local metastore statistics prefix. */
-    private final static String META_STAT_PREFIX = "stats";
+    private static final String META_STAT_PREFIX = "stats";
 
     /** Logger. */
     private IgniteLogger log;
@@ -137,7 +137,7 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
                             .toObjectPartitionStatistics(null, (StatsObjectData)statMsg);
                     statsMap.compute(key, (k,v) -> {
                         if (v == null)
-                            v =  new ArrayList<>();
+                            v = new ArrayList<>();
                         v.add(statistics);
 
                         return v;

@@ -109,7 +109,6 @@ public class StatisticsUtils {
         return new StatsPropagationMessage(reqId, Collections.singletonList(data));
     }
 
-
     /**
      * Convert StatsObjectData message to ObjectPartitionStatistics.
      *
