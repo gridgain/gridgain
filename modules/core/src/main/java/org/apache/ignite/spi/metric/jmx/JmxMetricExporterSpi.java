@@ -127,7 +127,7 @@ public class JmxMetricExporterSpi extends IgniteSpiAdapter implements MetricExpo
 
     /**
      * @param ignite Ignite instance.
-     * @param bean Bean to unregister.
+     * @param bean Bean name to unregister.
      */
     private void unregBean(Ignite ignite, ObjectName bean) {
         MBeanServer jmx = ignite.configuration().getMBeanServer();
@@ -145,7 +145,7 @@ public class JmxMetricExporterSpi extends IgniteSpiAdapter implements MetricExpo
 
     /** {@inheritDoc} */
     @Override public void setMetricRegistry(ReadOnlyMetricRegistry reg) {
-        this.mreg = reg;
+        mreg = reg;
     }
 
     /** {@inheritDoc} */
