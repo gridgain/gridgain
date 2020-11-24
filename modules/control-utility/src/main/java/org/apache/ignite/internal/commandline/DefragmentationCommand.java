@@ -123,10 +123,17 @@ public class DefragmentationCommand implements Command<DefragmentationArguments>
                 String subarg;
 
                 do {
-                    subarg = argIter.nextArg("Expected one of subcommand arguments.").toLowerCase(Locale.ENGLISH);
+                    subarg = argIter.peekNextArg();
+
+                    if (subarg == null)
+                        break;
+
+                    subarg = subarg.toLowerCase(Locale.ENGLISH);
 
                     switch (subarg) {
                         case NODES_ARG: {
+                            argIter.nextArg("");
+
                             Set<String> ids = argIter.nextStringSet(NODES_ARG);
 
                             if (ids.isEmpty())
@@ -138,6 +145,8 @@ public class DefragmentationCommand implements Command<DefragmentationArguments>
                         }
 
                         case CACHES_ARG: {
+                            argIter.nextArg("");
+
                             Set<String> ids = argIter.nextStringSet(CACHES_ARG);
 
                             if (ids.isEmpty())
