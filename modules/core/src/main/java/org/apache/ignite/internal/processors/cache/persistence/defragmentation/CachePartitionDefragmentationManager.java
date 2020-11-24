@@ -72,6 +72,7 @@ import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.collection.IntMap;
+import org.apache.ignite.internal.util.collection.IntRWHashMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -344,7 +345,7 @@ public class CachePartitionDefragmentationManager {
                             defragmentationCheckpoint.checkpointTimeoutLock().checkpointReadUnlock();
                         }
 
-                        IntMap<LinkMap> linkMapByPart = new IntHashMap<>();
+                        IntMap<LinkMap> linkMapByPart = new IntRWHashMap<>();
 
                         IgniteUtils.doInParallel(
                             defragmentationThreadPool,
