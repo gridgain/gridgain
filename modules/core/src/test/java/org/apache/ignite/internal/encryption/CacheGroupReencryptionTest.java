@@ -438,12 +438,12 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         long walSegment = nodes.get1().context().cache().context().wal().currentSegment();
 
         for (long n = 0; n <= walSegment; n++)
-            nodes.get1().context().encryption().onWalSegmentRemoved(n);
+            nodes.get1().context().encryption().onWalSegmentRemoved(n).get();
 
         walSegment = nodes.get2().context().cache().context().wal().currentSegment();
 
         for (long n = 0; n <= walSegment; n++)
-            nodes.get2().context().encryption().onWalSegmentRemoved(n);
+            nodes.get2().context().encryption().onWalSegmentRemoved(n).get();
 
         // Force checkpoint to prevent logical recovery after key rotation.
         forceCheckpoint();
@@ -517,12 +517,12 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         // Simulate that wal was removed.
         for (long segment = startIdx1; segment <= endIdx1; segment++)
-            grid(GRID_0).context().encryption().onWalSegmentRemoved(segment);
+            grid(GRID_0).context().encryption().onWalSegmentRemoved(segment).get();
 
         assertEquals(1, grid(GRID_0).context().encryption().groupKeyIds(grpId).size());
 
         for (long segment = startIdx2; segment <= endIdx2; segment++)
-            grid(GRID_1).context().encryption().onWalSegmentRemoved(segment);
+            grid(GRID_1).context().encryption().onWalSegmentRemoved(segment).get();
 
         assertEquals(1, grid(GRID_1).context().encryption().groupKeyIds(grpId).size());
     }
@@ -708,7 +708,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         // Simulate that wal was removed.
         for (long segment = startIdx; segment <= endIdx; segment++)
-            node1.context().encryption().onWalSegmentRemoved(segment);
+            node1.context().encryption().onWalSegmentRemoved(segment).get();
 
         stopGrid(GRID_1);
 

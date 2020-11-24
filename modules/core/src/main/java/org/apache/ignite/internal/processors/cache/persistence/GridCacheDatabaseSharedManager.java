@@ -301,7 +301,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private final long lockWaitTime;
 
     /** This is the earliest WAL pointer that was reserved during exchange and would release after exchange completed. */
-    private WALPointer reservedForExchange;
+    private volatile WALPointer reservedForExchange;
 
     /** This is the earliest WAL pointer that was reserved during preloading. */
     private volatile WALPointer reservedForPreloading;
@@ -1719,12 +1719,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         assert cctx.wal().reserved(reservedForExchange)
             : "Earliest checkpoint WAL pointer is not reserved for exchange: " + reservedForExchange;
 
-        try {
-            cctx.wal().release(reservedForExchange);
-        }
-        catch (IgniteCheckedException e) {
-            log.error("Failed to release earliest checkpoint WAL pointer: " + reservedForExchange, e);
-        }
+        cctx.wal().release(reservedForExchange);
 
         reservedForExchange = null;
     }
@@ -1768,11 +1763,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 reservedForPreloading = null;
             }
-        }
-        catch (IgniteCheckedException ex) {
-            U.error(log, "Could not release WAL reservation", ex);
-
-            throw new IgniteException(ex);
         }
         finally {
             releaseHistForPreloadingLock.unlock();
@@ -3784,5 +3774,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      */
     public int txAcquireCheckpointReadLockCount() {
         return txCheckpointReadLockCnt.get();
+    }
+
+    /**
+     * Getting earliest WAL pointer that was reserved during exchange and would release after exchange completed.
+     *
+     * @return Earliest WAL pointer for exchange.
+     */
+    @Nullable public WALPointer earliestReservedWalPointerForExchange() {
+        return reservedForExchange;
     }
 }

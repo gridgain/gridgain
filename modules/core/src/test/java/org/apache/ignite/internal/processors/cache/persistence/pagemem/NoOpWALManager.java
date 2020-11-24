@@ -89,7 +89,7 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
-    @Override public void release(WALPointer start) throws IgniteCheckedException {
+    @Override public void release(WALPointer start) {
         // No-op.
     }
 
@@ -194,12 +194,7 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isArchiveAlmostFull() {
+    @Override public boolean isArchiveOverflow() {
         return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override public int availableDeleteArchiveSegments() {
-        return 0;
     }
 }

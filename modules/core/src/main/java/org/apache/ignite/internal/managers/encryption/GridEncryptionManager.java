@@ -29,14 +29,18 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteEncryption;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.WALMode;
@@ -44,6 +48,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
@@ -66,6 +71,7 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteFutureCancelledException;
 import org.apache.ignite.lang.IgniteProductVersion;
@@ -77,6 +83,7 @@ import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MASTER_KEY_NAME_TO_CHANGE_BEFORE_STARTUP;
@@ -232,6 +239,9 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     /** Cache group page stores scanner. */
     private CacheGroupPageScanner pageScanner;
 
+    /** Worker to handle WAL segment removal event. */
+    private final WalSegmentRemoveWorker segmentRemoveWorker;
+
     /**
      * @param ctx Kernel context.
      */
@@ -239,6 +249,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         super(ctx, ctx.config().getEncryptionSpi());
 
         ctx.internalSubscriptionProcessor().registerMetastorageListener(this);
+
+        segmentRemoveWorker = new WalSegmentRemoveWorker(log);
     }
 
     /** {@inheritDoc} */
@@ -320,6 +332,9 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         grpKeys = new CacheGroupEncryptionKeys(getSpi());
         pageScanner = new CacheGroupPageScanner(ctx);
         grpKeyChangeProc = new GroupKeyChangeProcess(ctx, grpKeys);
+
+        segmentRemoveWorker.restart();
+        U.await(segmentRemoveWorker.startLatch);
     }
 
     /** {@inheritDoc} */
@@ -327,6 +342,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         stopSpi();
 
         pageScanner.stop();
+
+        segmentRemoveWorker.shutdown();
     }
 
     /** {@inheritDoc} */
@@ -914,44 +931,10 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      * Callback when WAL segment is removed.
      *
      * @param segmentIdx WAL segment index.
+     * @return Future of asynchronous processing of a segment removal event.
      */
-    public void onWalSegmentRemoved(long segmentIdx) {
-        withMasterKeyChangeReadLock(() -> {
-            synchronized (metaStorageMux) {
-                Map<Integer, Set<Integer>> rmvKeys = grpKeys.releaseWalKeys(segmentIdx);
-
-                if (F.isEmpty(rmvKeys))
-                    return null;
-
-                try {
-                    writeTrackedWalIdxsToMetaStore();
-
-                    for (Map.Entry<Integer, Set<Integer>> entry : rmvKeys.entrySet()) {
-                        Integer grpId = entry.getKey();
-
-                        if (reencryptGroups.containsKey(grpId))
-                            continue;
-
-                        Set<Integer> keyIds = entry.getValue();
-
-                        if (!grpKeys.removeKeysById(grpId, keyIds))
-                            continue;
-
-                        writeGroupKeysToMetaStore(grpId, grpKeys.getAll(grpId));
-
-                        if (log.isInfoEnabled()) {
-                            log.info("Previous encryption keys have been removed [grpId=" + grpId +
-                                ", keyIds=" + keyIds + "]");
-                        }
-                    }
-                }
-                catch (IgniteCheckedException e) {
-                    log.error("Unable to remove encryption keys from metastore.", e);
-                }
-            }
-
-            return null;
-        });
+    public GridFutureAdapter<Void> onWalSegmentRemoved(long segmentIdx) {
+        return segmentRemoveWorker.add(segmentIdx);
     }
 
     /** {@inheritDoc} */
@@ -1869,6 +1852,156 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(KeyChangeFuture.class, this);
+        }
+    }
+
+    /**
+     * Worker to handle WAL segment removal event.
+     */
+    private class WalSegmentRemoveWorker extends GridWorker {
+        /** Segment futures. */
+        private final Map<Long, GridFutureAdapter<Void>> segmentFutures = new ConcurrentHashMap<>();
+
+        /** Segment queue. */
+        private final BlockingQueue<Long> segmentQueue = new PriorityBlockingQueue<>();
+
+        /** Start latch. */
+        private volatile CountDownLatch startLatch;
+
+        /**
+         * Constructor.
+         *
+         * @param log Logger.
+         */
+        public WalSegmentRemoveWorker(IgniteLogger log) {
+            super(
+                ctx.igniteInstanceName(),
+                "reencrypt-on-wal-removed%" + ctx.igniteInstanceName(),
+                log,
+                ctx.workersRegistry()
+            );
+        }
+
+        /** {@inheritDoc} */
+        @Override public void body() throws InterruptedException, IgniteInterruptedCheckedException {
+            assert startLatch != null;
+
+            startLatch.countDown();
+
+            while (!isCancelled()) {
+                try {
+                    long segIdx;
+
+                    blockingSectionBegin();
+
+                    try {
+                        segIdx = segmentQueue.take();
+                    }
+                    finally {
+                        blockingSectionEnd();
+                    }
+
+                    if (segIdx == -1 || isCancelled())
+                        continue;
+
+                    long segmentIdx = segIdx;
+
+                    try {
+                        withMasterKeyChangeReadLock(() -> {
+                            synchronized (metaStorageMux) {
+                                Map<Integer, Set<Integer>> rmvKeys = grpKeys.releaseWalKeys(segmentIdx);
+
+                                if (F.isEmpty(rmvKeys))
+                                    return null;
+
+                                try {
+                                    updateHeartbeat();
+
+                                    writeTrackedWalIdxsToMetaStore();
+
+                                    updateHeartbeat();
+
+                                    for (Map.Entry<Integer, Set<Integer>> entry : rmvKeys.entrySet()) {
+                                        Integer grpId = entry.getKey();
+
+                                        if (reencryptGroups.containsKey(grpId))
+                                            continue;
+
+                                        Set<Integer> keyIds = entry.getValue();
+
+                                        if (!grpKeys.removeKeysById(grpId, keyIds))
+                                            continue;
+
+                                        updateHeartbeat();
+
+                                        writeGroupKeysToMetaStore(grpId, grpKeys.getAll(grpId));
+
+                                        updateHeartbeat();
+
+                                        if (log.isInfoEnabled()) {
+                                            log.info("Previous encryption keys have been removed [grpId=" + grpId +
+                                                ", keyIds=" + keyIds + "]");
+                                        }
+                                    }
+                                }
+                                catch (IgniteCheckedException e) {
+                                    log.error("Unable to remove encryption keys from metastore.", e);
+                                }
+                            }
+
+                            return null;
+                        });
+                    }
+                    finally {
+                        segmentFutures.remove(segIdx).onDone();
+                    }
+
+                    updateHeartbeat();
+                }
+                catch (InterruptedException e) {
+                    // No-op.
+                }
+            }
+        }
+
+        /**
+         * Process the event of removal a segment from WAL archive asynchronously.
+         *
+         * @param segmentIdx Absolut segment index.
+         * @return Future.
+         */
+        public GridFutureAdapter<Void> add(long segmentIdx) {
+            GridFutureAdapter<Void> fut = new GridFutureAdapter<>();
+
+            segmentFutures.put(segmentIdx, fut);
+            segmentQueue.add(segmentIdx);
+
+            return fut;
+        }
+
+        /**
+         * Restart worker.
+         */
+        public void restart() {
+            assert runner() == null : this.getClass().getName() + " is still running.";
+
+            isCancelled = false;
+
+            startLatch = new CountDownLatch(1);
+
+            new IgniteThread(this).start();
+        }
+
+        /**
+         * Shutdown worker.
+         */
+        private void shutdown() {
+            U.cancel(this);
+
+            // Put fake -1 to wake thread from queue.take()
+            segmentQueue.add(-1L);
+
+            U.join(this, log);
         }
     }
 }

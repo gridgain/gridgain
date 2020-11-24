@@ -3211,14 +3211,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isArchiveAlmostFull() {
+    @Override public boolean isArchiveOverflow() {
         return !walArchiveSize.unlimited() &&
-            (walArchiveSize.currentSize() + maxWalSegmentSize) > walArchiveSize.maxSize();
-    }
-
-    /** {@inheritDoc} */
-    @Override public int availableDeleteArchiveSegments() {
-        return walArchiveSize.availableDelete();
+            (walArchiveSize.currentSize() + walArchiveSize.reservedSize() + maxWalSegmentSize) >
+                walArchiveSize.maxSize() && walArchiveSize.availableDelete() < 2;
     }
 
     /**
@@ -3344,7 +3340,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             CheckpointProgress cpProgress = checkpointProgress();
             GridCacheDatabaseSharedManager dbMgr = dbMgr();
 
-            if ((dbMgr != null && dbMgr.txAcquireCheckpointReadLockCount() > 0) &&
+            boolean txAcquireCpReadLock = dbMgr != null && dbMgr.txAcquireCheckpointReadLockCount() > 0;
+            boolean reserveByHistRebalance = dbMgr != null && dbMgr.earliestReservedWalPointerForExchange() != null;
+
+            if ((txAcquireCpReadLock || reserveByHistRebalance) &&
                 (archiver == null || segmentAware.archivingSegmentRequired()) &&
                 (cpProgress != null && !cpProgress.inProgress()) && !segmentAware.compressionInProgress()) {
                 IgniteCheckedException err = new IgniteCheckedException("WAL archive is full and cannot be cleared");

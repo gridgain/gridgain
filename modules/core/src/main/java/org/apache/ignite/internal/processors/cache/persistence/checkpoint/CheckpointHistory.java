@@ -715,13 +715,22 @@ public class CheckpointHistory {
         }
 
         if (oldestCpForReservation != null) {
-            if (!wal.reserve(oldestCpForReservation.checkpointMark())) {
-                log.warning("Could not reserve cp " + oldestCpForReservation.checkpointMark());
+            WALPointer ptr = oldestCpForReservation.checkpointMark();
+
+            boolean reserve = wal.reserve(ptr);
+            boolean walArchiveOverflow = wal.isArchiveOverflow();
+
+            if (!reserve || walArchiveOverflow) {
+                log.warning(!reserve ? "Could not reserve cp: " + ptr :
+                    "After a reserve cp WAL archive may overflow: " + ptr);
 
                 for (Map.Entry<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> entry : res.entrySet())
                     entry.setValue(new T2<>(ReservationReason.WAL_RESERVATION_ERROR, null));
 
                 oldestCpForReservation = null;
+
+                if (walArchiveOverflow)
+                    wal.release(ptr);
             }
         }
 

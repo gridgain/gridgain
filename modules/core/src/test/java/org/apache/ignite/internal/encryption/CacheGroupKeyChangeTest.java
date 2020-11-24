@@ -514,7 +514,7 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
 
         // Simulate WAL segment deletion.
         for (long n = 0; n <= walIdx; n++)
-            node1.context().encryption().onWalSegmentRemoved(walIdx);
+            node1.context().encryption().onWalSegmentRemoved(walIdx).get();
 
         encrMgr1.changeCacheGroupKey(Collections.singleton(cacheName())).get(MAX_AWAIT_MILLIS);
         checkGroupKey(grpId, INITIAL_KEY_ID + 1, MAX_AWAIT_MILLIS);
@@ -525,8 +525,8 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
 
         // Simulate WAL segment deletion.
         for (long n = 0; n <= walIdx; n++) {
-            encrMgr0.onWalSegmentRemoved(walIdx);
-            encrMgr1.onWalSegmentRemoved(walIdx);
+            encrMgr0.onWalSegmentRemoved(walIdx).get();
+            encrMgr1.onWalSegmentRemoved(walIdx).get();
         }
 
         // Make sure the previous key has been removed.
@@ -925,8 +925,8 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
             nodes.get2().context().cache().context().wal().currentSegment());
 
         for (long idx = 0; idx <= maxWalIdx; idx++) {
-            encrMgr0.onWalSegmentRemoved(maxWalIdx);
-            encrMgr1.onWalSegmentRemoved(maxWalIdx);
+            encrMgr0.onWalSegmentRemoved(maxWalIdx).get();
+            encrMgr1.onWalSegmentRemoved(maxWalIdx).get();
         }
 
         assertEquals(1, encrMgr1.groupKeyIds(grpId).size());

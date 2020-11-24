@@ -135,7 +135,7 @@ public class CheckpointTimeoutLock {
                     }
 
                     if (checkpointReadWriteLock.getReadHoldCount() > 1 ||
-                        (safeToUpdatePageMemories() && walArchiveNotOverflow()) || checkpointer.runner() == null)
+                        (safeToUpdatePageMemories() && !walMgr.isArchiveOverflow()) || checkpointer.runner() == null)
                         break;
                     else {
                         //If the checkpoint is triggered outside of the lock,
@@ -279,14 +279,5 @@ public class CheckpointTimeoutLock {
         private CheckpointReadLockTimeoutException(String msg) {
             super(msg);
         }
-    }
-
-    /**
-     * Heuristic: Check that the archive will not be full.
-     *
-     * @return {@code True} if the archive will not overflow.
-     */
-    private boolean walArchiveNotOverflow() {
-        return !walMgr.isArchiveAlmostFull() || walMgr.availableDeleteArchiveSegments() >= 2;
     }
 }
