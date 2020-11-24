@@ -38,7 +38,7 @@ public class GridClientClusterStateRequestV2 extends GridClientAbstractMessage {
     private boolean reqCurrentState;
 
     /** New cluster state. */
-    protected ClusterState state;
+    private ClusterState state;
 
     /** */
     public boolean isReqCurrentState() {

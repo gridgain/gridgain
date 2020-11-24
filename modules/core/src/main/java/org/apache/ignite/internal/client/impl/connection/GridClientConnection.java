@@ -333,7 +333,8 @@ public abstract class GridClientConnection {
      *
      * @param state New cluster state.
      * @param destNodeId Destination node id.
-     * @param forceDeactivation If {@code true}, cluster deactivation will be forced.
+     * @param forceDeactivation If {@code true}, cluster deactivation will be forced, this flag makes sense only for
+     * {@link ClusterState#INACTIVE} transition.
      * @throws GridClientConnectionResetException In case of error.
      * @throws GridClientClosedException If client was manually closed before request was sent over network.
      */

@@ -2180,7 +2180,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     private List<String> listInMemoryUserCaches() {
         return ctx.cache().cacheDescriptors().values().stream()
             .filter(desc -> !isPersistentCache(desc.cacheConfiguration(), ctx.config().getDataStorageConfiguration())
-                && (!desc.cacheConfiguration().isWriteBehindEnabled() || !desc.cacheConfiguration().isReadThrough())
+                && (!desc.cacheConfiguration().isWriteThrough() || !desc.cacheConfiguration().isReadThrough())
                 && !CU.isSystemCache(desc.cacheName())).map(DynamicCacheDescriptor::cacheName).collect(Collectors.toList());
     }
 
