@@ -192,7 +192,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
 
         IgniteEx crd = startGrids(NODE_COUNT);
 
-        S.metaStorage.write(SENSITIVE_DATA_LOGGING, sensitiveDataLogging);
+//        S.metaStorage.write(SENSITIVE_DATA_LOGGING, sensitiveDataLogging);
 
         awaitPartitionMapExchange();
 
@@ -294,7 +294,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
 
         startGrids(NODE_COUNT);
 
-        S.metaStorage.write(SENSITIVE_DATA_LOGGING, sensitiveDataLogging);
+//        S.metaStorage.write(SENSITIVE_DATA_LOGGING, sensitiveDataLogging);
 
         client = true;
 

@@ -133,7 +133,7 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
     private void testNodeFailBeforeSendGridNearTxFinishResponse(GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging) throws Exception {
         startGrids(2);
 
-        S.metaStorage.write(SENSITIVE_DATA_LOGGING, sensitiveDataLogging);
+//        S.metaStorage.write(SENSITIVE_DATA_LOGGING, sensitiveDataLogging);
 
         grid(0).cluster().active(true);
 

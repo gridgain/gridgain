@@ -103,29 +103,30 @@ public class GridToStringBuilder {
         PLAIN, HASH, NONE
     }
 
-    public static volatile DistributedMetaStorage metaStorage;
+//    public static volatile DistributedMetaStorage metaStorage;
 
     public static SensitiveDataLogging getSensitiveDataLogging() {
-        if (S.metaStorage == null)
-            return SensitiveDataLogging.HASH;
-
-        Serializable sensitiveDataLogging;
-
-        try {
-            sensitiveDataLogging = S.metaStorage.read(SENSITIVE_DATA_LOGGING);
-        } catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
-
-        if (sensitiveDataLogging != null) //TODO improve validation
-            return (SensitiveDataLogging) sensitiveDataLogging;
-        else
-            return SensitiveDataLogging.HASH;
+//        if (S.metaStorage == null)
+//            return SensitiveDataLogging.HASH;
+//
+//        Serializable sensitiveDataLogging;
+//
+//        try {
+//            sensitiveDataLogging = S.metaStorage.read(SENSITIVE_DATA_LOGGING);
+//        } catch (IgniteCheckedException e) {
+//            throw U.convertException(e);
+//        }
+//
+//        if (sensitiveDataLogging != null) //TODO improve validation
+//            return (SensitiveDataLogging) sensitiveDataLogging;
+//        else
+//            return SensitiveDataLogging.HASH;
 
 //        if (sensitiveDataLogging != null && sensitiveDataLogging instanceof String) //TODO improve validation
 //            return SensitiveDataLogging.valueOf((String) sensitiveDataLogging);
 //        else
 //            return SensitiveDataLogging.HASH;
+        return SensitiveDataLogging.PLAIN;
     }
 
     /** */
@@ -213,8 +214,8 @@ public class GridToStringBuilder {
      * @see GridToStringBuilder#setIncludeSensitiveSupplier(Supplier)
      */
     public static boolean includeSensitive() {
-        if (metaStorage == null)
-            return Holder.INCL_SENS_SUP.get();
+//        if (metaStorage == null)
+//            return Holder.INCL_SENS_SUP.get();
         return getSensitiveDataLogging() == SensitiveDataLogging.PLAIN;
     }
 

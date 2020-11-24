@@ -1488,26 +1488,26 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         startTimer.finishGlobalStage("Await exchange");
 
-        if (isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE)) {
-            GridToStringBuilder.metaStorage = ctx.distributedMetastorage();
-
-            Serializable sensitiveDataLogging = GridToStringBuilder.metaStorage.read(SENSITIVE_DATA_LOGGING);
-
-            if (sensitiveDataLogging == null) {
-                String sysStrIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
-
-                if (sysStrIncludeSensitive != null) {
-                    boolean sysIncludeSensitive = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE, false);
-
-                    if (!sysIncludeSensitive) {
-                        GridToStringBuilder.metaStorage.write(SENSITIVE_DATA_LOGGING, NONE);
-                    }
-                }
-                else
-                    GridToStringBuilder.metaStorage.write(SENSITIVE_DATA_LOGGING, HASH);
-            }
-//            GridToStringBuilder.metaStorage.write(SENSITIVE_DATA_LOGGING, PLAIN);
-        }
+//        if (isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE)) {
+//            GridToStringBuilder.metaStorage = ctx.distributedMetastorage();
+//
+//            Serializable sensitiveDataLogging = GridToStringBuilder.metaStorage.read(SENSITIVE_DATA_LOGGING);
+//
+//            if (sensitiveDataLogging == null) {
+//                String sysStrIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
+//
+//                if (sysStrIncludeSensitive != null) {
+//                    boolean sysIncludeSensitive = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE, false);
+//
+//                    if (!sysIncludeSensitive) {
+//                        GridToStringBuilder.metaStorage.write(SENSITIVE_DATA_LOGGING, NONE);
+//                    }
+//                }
+//                else
+//                    GridToStringBuilder.metaStorage.write(SENSITIVE_DATA_LOGGING, HASH);
+//            }
+////            GridToStringBuilder.metaStorage.write(SENSITIVE_DATA_LOGGING, PLAIN);
+//        }
     }
 
     /** */
