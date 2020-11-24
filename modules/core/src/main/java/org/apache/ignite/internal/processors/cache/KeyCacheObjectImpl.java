@@ -16,14 +16,20 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
 /**
  *
@@ -211,10 +217,31 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
     }
 
     /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(S.includeSensitive() ? getClass().getSimpleName() : "KeyCacheObject",
-            "part", part, true,
-            "val", val, true,
-            "hasValBytes", valBytes != null, false);
+    @Override public String toString() {//
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+
+        if (sensitiveDataLogging == PLAIN) {
+            return S.toString(getClass().getSimpleName(),
+                    "part", part, false,
+                    "val", val, false,
+                    "hasValBytes", valBytes != null, false);
+        }
+        else if (sensitiveDataLogging == HASH)
+            return String.valueOf(hashCode());
+        else
+            return "KeyCacheObject";
+
+//        System.out.println("!qrefkj");
+////        return S.toString(S.includeSensitive() ? getClass().getSimpleName() : "KeyCacheObject",
+////            "part", part, true,
+////            "val", val, true,
+////            "hasValBytes", valBytes != null, false);
+//        return S.includeSensitive() ?
+//                S.toString(getClass().getSimpleName(),
+//                "part", part, true,
+//                "val", val, true,
+//                "hasValBytes", valBytes != null, false) :
+//                S.toString("KeyCacheObject",
+//                "val", "@" + (val.hashCode() + part), false);// val может быть null
     }
 }

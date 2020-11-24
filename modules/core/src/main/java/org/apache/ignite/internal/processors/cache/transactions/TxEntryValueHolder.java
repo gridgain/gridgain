@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectTransient;
@@ -24,6 +25,7 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -37,6 +39,9 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DEL
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOOP;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
 /**
  * Auxiliary class to hold value, value-has-been-set flag, value update operation, value bytes.
@@ -47,7 +52,7 @@ public class TxEntryValueHolder implements Message {
     private static final long serialVersionUID = 0L;
 
     /** */
-    @GridToStringInclude(sensitive = true)
+    @GridToStringInclude(/*sensitive = true*/)//
     private CacheObject val;
 
     /** */
@@ -162,7 +167,18 @@ public class TxEntryValueHolder implements Message {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(TxEntryValueHolder.class, this);
+//        return S.toString(TxEntryValueHolder.class, this);
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+
+        if (sensitiveDataLogging == PLAIN || sensitiveDataLogging == HASH) {
+            return S.toString(getClass().getSimpleName(),
+                    "val", val, false,
+                    "op", op, false);
+        }
+        else {
+            return S.toString(getClass().getSimpleName(),
+                    "op", op, false);
+        }
     }
 
     /** {@inheritDoc} */

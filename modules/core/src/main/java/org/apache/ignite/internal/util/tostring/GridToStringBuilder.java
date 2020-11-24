@@ -40,10 +40,15 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Supplier;
 import java.util.function.Function;
+
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -92,6 +97,37 @@ import static org.apache.ignite.IgniteSystemProperties.getBoolean;
  * </ul>
  */
 public class GridToStringBuilder {
+    public static final String SENSITIVE_DATA_LOGGING = "SENSITIVE_DATA_LOGGING";
+
+    public enum SensitiveDataLogging {
+        PLAIN, HASH, NONE
+    }
+
+    public static volatile DistributedMetaStorage metaStorage;
+
+    public static SensitiveDataLogging getSensitiveDataLogging() {
+        if (S.metaStorage == null)
+            return SensitiveDataLogging.HASH;
+
+        Serializable sensitiveDataLogging;
+
+        try {
+            sensitiveDataLogging = S.metaStorage.read(SENSITIVE_DATA_LOGGING);
+        } catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
+
+        if (sensitiveDataLogging != null) //TODO improve validation
+            return (SensitiveDataLogging) sensitiveDataLogging;
+        else
+            return SensitiveDataLogging.HASH;
+
+//        if (sensitiveDataLogging != null && sensitiveDataLogging instanceof String) //TODO improve validation
+//            return SensitiveDataLogging.valueOf((String) sensitiveDataLogging);
+//        else
+//            return SensitiveDataLogging.HASH;
+    }
+
     /** */
     private static final Object[] EMPTY_ARRAY = new Object[0];
 
@@ -177,7 +213,9 @@ public class GridToStringBuilder {
      * @see GridToStringBuilder#setIncludeSensitiveSupplier(Supplier)
      */
     public static boolean includeSensitive() {
-        return Holder.INCL_SENS_SUP.get();
+        if (metaStorage == null)
+            return Holder.INCL_SENS_SUP.get();
+        return getSensitiveDataLogging() == SensitiveDataLogging.PLAIN;
     }
 
     /**
@@ -1988,7 +2026,7 @@ public class GridToStringBuilder {
         String savedName = name + hash;
         String charsAtPos = buf.impl().substring(pos, pos + savedName.length());
 
-        if (!buf.isOverflowed() && !savedName.equals(charsAtPos)) {
+        if (!buf.isOverflowed() && !savedName.equals(charsAtPos)) {//
             if (charsAtPos.startsWith(cls.getSimpleName())) {
                 buf.i(pos + name.length(), hash);
 
