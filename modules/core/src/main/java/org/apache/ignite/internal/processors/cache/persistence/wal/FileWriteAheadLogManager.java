@@ -1963,15 +1963,18 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     onIdle();
                 }
             }
-            catch (IgniteInterruptedCheckedException e) {
-                Thread.currentThread().interrupt();
-
-                synchronized (this) {
-                    isCancelled = true;
-                }
-            }
             catch (Throwable t) {
-                err = t;
+                if (t instanceof IgniteInterruptedCheckedException) {
+                    Thread.currentThread().interrupt();
+
+                    synchronized (this) {
+                        isCancelled = true;
+                    }
+                }
+                else if (t.getCause() instanceof ClosedByInterruptException && isCancelled())
+                    log.warning("An error occurred while canceling a worker", t);
+                else
+                    err = t;
             }
             finally {
                 if (err == null && !isCancelled())
