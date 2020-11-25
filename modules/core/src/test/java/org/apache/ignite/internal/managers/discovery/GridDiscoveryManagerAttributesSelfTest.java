@@ -23,6 +23,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.discovery.TestReconnectSecurityPluginProvider;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -90,16 +91,48 @@ public abstract class GridDiscoveryManagerAttributesSelfTest extends GridCommonA
      * @throws Exception If failed.
      */
     @Test
-    public void testPreferIpV4StackTrue() throws Exception {
-        testPreferIpV4Stack(true);
+    public void testPreferIpV4StackTrueTrue() throws Exception {
+        testPreferIpV4Stack("true", "true");
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void testPreferIpV4StackFalse() throws Exception {
-        testPreferIpV4Stack(false);
+    public void testPreferIpV4StackFalseFalse() throws Exception {
+        testPreferIpV4Stack("false", "false");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPreferIpV4StackNullNull() throws Exception {
+        testPreferIpV4Stack(null, null);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPreferIpV4StackFalseTrue() throws Exception {
+        testPreferIpV4Stack("false", "true");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPreferIpV4StackNullFalse() throws Exception {
+        testPreferIpV4StackFailure(null, "false");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPreferIpV4StackTrueNull() throws Exception {
+        testPreferIpV4StackFailure("true", null);
     }
 
     /**
@@ -114,7 +147,7 @@ public abstract class GridDiscoveryManagerAttributesSelfTest extends GridCommonA
      */
     @Test
     public void testPreferIpV4StackDifferentValues() throws Exception {
-        System.setProperty(PREFER_IPV4, "true");
+        setPreferIpV4("true");
 
         for (int i = 0; i < 2; i++) {
             Ignite g = startGrid(i);
@@ -124,7 +157,7 @@ public abstract class GridDiscoveryManagerAttributesSelfTest extends GridCommonA
             checkIsClientFlag((IgniteEx) g);
         }
 
-        System.setProperty(PREFER_IPV4, "false");
+        setPreferIpV4("false");
 
         IgniteEx g = startGrid(2);
 
@@ -384,22 +417,53 @@ public abstract class GridDiscoveryManagerAttributesSelfTest extends GridCommonA
         }
     }
 
-    /**
-     * @param preferIpV4 {@code java.net.preferIPv4Stack} system property value.
-     * @throws Exception If failed.
-     */
-    private void testPreferIpV4Stack(boolean preferIpV4) throws Exception {
-        String val = String.valueOf(preferIpV4);
+    /** */
+    private void testPreferIpV4Stack(String preferIpV4n1, String preferIpV4n2) throws Exception {
+        String val;
 
-        System.setProperty(PREFER_IPV4, val);
+        for (int i = 0; i < 2; i++) {
+            val = i == 0 ? preferIpV4n1 : preferIpV4n2;
+
+            setPreferIpV4(val);
+
+            Ignite g = startGrid(i);
+
+            assertEquals(val, g.cluster().localNode().attribute(PREFER_IPV4));
+
+            checkIsClientFlag((IgniteEx) g);
+        }
+    }
+
+    /** */
+    private void testPreferIpV4StackFailure(String preferIpV4n1, String preferIpV4n2) throws Exception {
+        setPreferIpV4(preferIpV4n1);
 
         for (int i = 0; i < 2; i++) {
             Ignite g = startGrid(i);
 
-            assert val.equals(g.cluster().localNode().attribute(PREFER_IPV4));
-
-            checkIsClientFlag((IgniteEx) g);
+            assertEquals(preferIpV4n1, g.cluster().localNode().attribute(PREFER_IPV4));
         }
+
+        setPreferIpV4(preferIpV4n2);
+
+        try {
+            startGrid(2);
+        }
+        catch (IgniteCheckedException ex) {
+            X.hasCause(ex, "nodes with no value are not allowed, set it to 'true'");
+
+            return;
+        }
+
+        fail("Exception not thrown");
+    }
+
+    /** */
+    private void setPreferIpV4(String val) {
+        if (val != null)
+            System.setProperty(PREFER_IPV4, val);
+        else
+            System.getProperties().remove(PREFER_IPV4);
     }
 
     /**

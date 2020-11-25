@@ -1211,6 +1211,17 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
             String rmtPreferIpV4 = n.attribute("java.net.preferIPv4Stack");
 
+            if ((locPreferIpV4 != null && rmtPreferIpV4 == null) ||
+                (locPreferIpV4 == null && rmtPreferIpV4 != null)) {
+                throw new IgniteCheckedException((locPreferIpV4 == null ? "Remote" : "Local") +
+                    " node specifies 'java.net.preferIPv4Stack' system property but " +
+                    (locPreferIpV4 == null ? "local" : "remote") + " node does not " +
+                    "(nodes with no value are not allowed, set it to 'true') " +
+                    "[locPreferIpV4=" + locPreferIpV4 + ", rmtPreferIpV4=" + rmtPreferIpV4 +
+                    ", locId8=" + U.id8(locNode.id()) + ", rmtId8=" + U.id8(n.id()) +
+                    ", rmtAddrs=" + U.addressesAsString(n) + ", rmtNode=" + U.toShortString(n) + "]");
+            }
+
             if (!F.eq(rmtPreferIpV4, locPreferIpV4)) {
                 if (!ipV4Warned)
                     U.warn(log, "Local node's value of 'java.net.preferIPv4Stack' " +
