@@ -57,7 +57,9 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.collection.IntMap;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.value.Value;
 
@@ -99,11 +101,10 @@ public class IndexingDefragmentation implements GridQueryIndexingDefragmentation
         IntMap<LinkMap> mappingByPartition,
         CheckpointTimeoutLock cpLock,
         Runnable cancellationChecker,
-        IgniteLogger log
+        IgniteLogger log,
+        IgniteThreadPoolExecutor defragmentationThreadPool
     ) throws IgniteCheckedException {
         int pageSize = grpCtx.cacheObjectContext().kernalContext().grid().configuration().getDataStorageConfiguration().getPageSize();
-
-        TreeIterator treeIterator = new TreeIterator(pageSize);
 
         PageMemoryEx oldCachePageMem = (PageMemoryEx)grpCtx.dataRegion().pageMemory();
 
@@ -113,126 +114,173 @@ public class IndexingDefragmentation implements GridQueryIndexingDefragmentation
 
         long cpLockThreshold = 150L;
 
+        AtomicLong lastCpLockTs = new AtomicLong(System.currentTimeMillis());
+
+        IgniteUtils.doInParallel(
+            defragmentationThreadPool,
+            tables,
+            table -> defragmentTable(
+                grpCtx,
+                newCtx,
+                mappingByPartition,
+                cpLock,
+                cancellationChecker,
+                log,
+                pageSize,
+                oldCachePageMem,
+                newCachePageMemory,
+                cpLockThreshold,
+                lastCpLockTs,
+                table
+            )
+        );
+
+        if (log.isInfoEnabled())
+            log.info("Defragmentation indexes completed for group '" + grpCtx.groupId() + "'");
+    }
+
+    /**
+     * Defragment one given table.
+     */
+    private boolean defragmentTable(
+        CacheGroupContext grpCtx,
+        CacheGroupContext newCtx,
+        IntMap<LinkMap> mappingByPartition,
+        CheckpointTimeoutLock cpLock,
+        Runnable cancellationChecker,
+        IgniteLogger log,
+        int pageSize,
+        PageMemoryEx oldCachePageMem,
+        PageMemory newCachePageMemory,
+        long cpLockThreshold,
+        AtomicLong lastCpLockTs,
+        GridH2Table table
+    ) throws IgniteCheckedException {
         TimeTracker<IndexStages> tracker = new TimeTracker<>(IndexStages.class);
 
-        cpLock.checkpointReadLock();
         tracker.complete(CP_LOCK);
+        cpLock.checkpointReadLock();
 
         try {
-            AtomicLong lastCpLockTs = new AtomicLong(System.currentTimeMillis());
+            TreeIterator treeIterator = new TreeIterator(pageSize);
 
-            for (GridH2Table table : tables) {
-                GridCacheContext<?, ?> cctx = table.cacheContext();
+            GridCacheContext<?, ?> cctx = table.cacheContext();
 
-                if (cctx.groupId() != grpCtx.groupId())
-                    continue; // Not our index.
+            if (cctx.groupId() != grpCtx.groupId())
+                return false;
 
-                cancellationChecker.run();
+            cancellationChecker.run();
 
-                GridH2RowDescriptor rowDesc = table.rowDescriptor();
+            GridH2RowDescriptor rowDesc = table.rowDescriptor();
 
-                List<Index> indexes = table.getIndexes();
-                H2TreeIndex oldH2Idx = (H2TreeIndex)indexes.get(2);
+            List<Index> indexes = table.getIndexes();
+            H2TreeIndex oldH2Idx = (H2TreeIndex)indexes.get(2);
 
-                int segments = oldH2Idx.segmentsCount();
+            int segments = oldH2Idx.segmentsCount();
 
-                H2Tree firstTree = oldH2Idx.treeForRead(0);
+            H2Tree firstTree = oldH2Idx.treeForRead(0);
 
-                PageIoResolver pageIoRslvr = pageAddr -> {
-                    PageIO io = PageIoResolver.DEFAULT_PAGE_IO_RESOLVER.resolve(pageAddr);
+            PageIoResolver pageIoRslvr = pageAddr -> {
+                PageIO io = PageIoResolver.DEFAULT_PAGE_IO_RESOLVER.resolve(pageAddr);
 
-                    if (io instanceof BPlusMetaIO)
-                        return io;
+                if (io instanceof BPlusMetaIO)
+                    return io;
 
-                    //noinspection unchecked,rawtypes,rawtypes
-                    return wrap((BPlusIO)io);
-                };
+                //noinspection unchecked,rawtypes,rawtypes
+                return wrap((BPlusIO)io);
+            };
 
-                //TODO Create new proper GridCacheContext for it?
-                H2TreeIndex newIdx = H2TreeIndex.createIndex(
-                    cctx,
-                    null,
-                    table,
-                    oldH2Idx.getName(),
-                    firstTree.getPk(),
-                    firstTree.getAffinityKey(),
-                    Arrays.asList(firstTree.cols()),
-                    Arrays.asList(firstTree.cols()),
-                    oldH2Idx.inlineSize(),
-                    segments,
-                    newCachePageMemory,
-                    newCtx.offheap(),
-                    pageIoRslvr,
-                    log
+            //TODO Create new proper GridCacheContext for it?
+            H2TreeIndex newIdx = H2TreeIndex.createIndex(
+                cctx,
+                null,
+                table,
+                oldH2Idx.getName(),
+                firstTree.getPk(),
+                firstTree.getAffinityKey(),
+                Arrays.asList(firstTree.cols()),
+                Arrays.asList(firstTree.cols()),
+                oldH2Idx.inlineSize(),
+                segments,
+                newCachePageMemory,
+                newCtx.offheap(),
+                pageIoRslvr,
+                log
+            );
+
+            tracker.complete(INIT_TREE);
+
+            for (int i = 0; i < segments; i++) {
+                H2Tree tree = oldH2Idx.treeForRead(i);
+
+                treeIterator.iterate(tree, oldCachePageMem, (theTree, io, pageAddr, idx) -> {
+                    tracker.complete(ITERATE);
+
+                    cancellationChecker.run();
+
+                    if (System.currentTimeMillis() - lastCpLockTs.get() >= cpLockThreshold) {
+                        cpLock.checkpointReadUnlock();
+
+                        cpLock.checkpointReadLock();
+                        tracker.complete(CP_LOCK);
+
+                        lastCpLockTs.set(System.currentTimeMillis());
+                    }
+
+                    assert 1 == io.getVersion()
+                        : "IO version " + io.getVersion() + " is not supported by current defragmentation algorithm." +
+                        " Please implement copying of tree in a new format.";
+
+                    BPlusIO<H2Row> h2IO = wrap(io);
+
+                    H2Row row = theTree.getRow(h2IO, pageAddr, idx);
+
+                    tracker.complete(READ_ROW);
+
+                    if (row instanceof H2CacheRowWithIndex) {
+                        H2CacheRowWithIndex h2CacheRow = (H2CacheRowWithIndex)row;
+
+                        CacheDataRow cacheDataRow = h2CacheRow.getRow();
+
+                        int partition = cacheDataRow.partition();
+
+                        long link = h2CacheRow.link();
+
+                        LinkMap map = mappingByPartition.get(partition);
+
+                        long newLink = map.get(link);
+
+                        tracker.complete(READ_MAP);
+
+                        H2CacheRowWithIndex newRow = H2CacheRowWithIndex.create(
+                            rowDesc,
+                            newLink,
+                            h2CacheRow,
+                            ((H2RowLinkIO)io).storeMvccInfo()
+                        );
+
+                        newIdx.putx(newRow);
+
+                        tracker.complete(INSERT_ROW);
+                    }
+
+                    return true;
+                });
+            }
+
+            if (log.isInfoEnabled())
+                log.info(
+                    "Indexes defragmentation timings for cache group '" + grpCtx.groupId()
+                        + "', cache '" + table.cacheName() + "' : " + tracker.toString()
                 );
 
-                tracker.complete(INIT_TREE);
-
-                for (int i = 0; i < segments; i++) {
-                    H2Tree tree = oldH2Idx.treeForRead(i);
-
-                    treeIterator.iterate(tree, oldCachePageMem, (theTree, io, pageAddr, idx) -> {
-                        tracker.complete(ITERATE);
-
-                        cancellationChecker.run();
-
-                        if (System.currentTimeMillis() - lastCpLockTs.get() >= cpLockThreshold) {
-                            cpLock.checkpointReadUnlock();
-
-                            cpLock.checkpointReadLock();
-                            tracker.complete(CP_LOCK);
-
-                            lastCpLockTs.set(System.currentTimeMillis());
-                        }
-
-                        assert 1 == io.getVersion()
-                            : "IO version " + io.getVersion() + " is not supported by current defragmentation algorithm." +
-                            " Please implement copying of tree in a new format.";
-
-                        BPlusIO<H2Row> h2IO = wrap(io);
-
-                        H2Row row = theTree.getRow(h2IO, pageAddr, idx);
-
-                        tracker.complete(READ_ROW);
-
-                        if (row instanceof H2CacheRowWithIndex) {
-                            H2CacheRowWithIndex h2CacheRow = (H2CacheRowWithIndex)row;
-
-                            CacheDataRow cacheDataRow = h2CacheRow.getRow();
-
-                            int partition = cacheDataRow.partition();
-
-                            long link = h2CacheRow.link();
-
-                            LinkMap map = mappingByPartition.get(partition);
-
-                            long newLink = map.get(link);
-
-                            tracker.complete(READ_MAP);
-
-                            H2CacheRowWithIndex newRow = H2CacheRowWithIndex.create(
-                                rowDesc,
-                                newLink,
-                                h2CacheRow,
-                                ((H2RowLinkIO)io).storeMvccInfo()
-                            );
-
-                            newIdx.putx(newRow);
-
-                            tracker.complete(INSERT_ROW);
-                        }
-
-                        return true;
-                    });
-                }
-            }
+            return true;
         }
         finally {
             cpLock.checkpointReadUnlock();
         }
 
-        if (log.isDebugEnabled())
-            log.debug("Indexes defragmentation timings for cache group " + grpCtx.groupId() + ": " + tracker.toString());
+
     }
 
     /** */

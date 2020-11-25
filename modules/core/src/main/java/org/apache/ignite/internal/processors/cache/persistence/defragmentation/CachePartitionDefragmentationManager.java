@@ -443,7 +443,6 @@ public class CachePartitionDefragmentationManager {
     }
 
     /**
-     *
      * Defragment one given partition.
      */
     private boolean defragmentOnePartition(
@@ -507,19 +506,19 @@ public class CachePartitionDefragmentationManager {
 
                 assert oldPageStore != null;
 
-                                    if (log.isDebugEnabled()) {
-                                        log.debug(S.toString(
-                                            "Partition defragmented",
-                                            "grpId", grpId, false,
-                                            "partId", partId, false,
-                                            "oldPages", oldPageStore.pages(), false,
-                                            "newPages", partCtx.partPagesAllocated.get() + 1, false,
-                                            "mappingPages", partCtx.mappingPagesAllocated.get() + 1, false,
-                                            "pageSize", pageSize, false,
-                                            "partFile", defragmentedPartFile(workDir, partId).getName(), false,
-                                            "workDir", workDir, false
-                                        ));
-                                    }
+                if (log.isDebugEnabled()) {
+                    log.debug(S.toString(
+                        "Partition defragmented",
+                        "grpId", grpId, false,
+                        "partId", partId, false,
+                        "oldPages", oldPageStore.pages(), false,
+                        "newPages", partCtx.partPagesAllocated.get() + 1, false,
+                        "mappingPages", partCtx.mappingPagesAllocated.get() + 1, false,
+                        "pageSize", pageSize, false,
+                        "partFile", defragmentedPartFile(workDir, partId).getName(), false,
+                        "workDir", workDir, false
+                    ));
+                }
 
                 oldPageMem.invalidate(grpId, partId);
 
@@ -891,7 +890,8 @@ public class CachePartitionDefragmentationManager {
             mappingByPartition,
             cpLock,
             cancellationChecker,
-            log
+            log,
+            defragmentationThreadPool
         );
     }
 

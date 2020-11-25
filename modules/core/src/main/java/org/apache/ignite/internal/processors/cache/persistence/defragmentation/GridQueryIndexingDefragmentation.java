@@ -22,22 +22,23 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointTimeoutLock;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.util.collection.IntMap;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
 /**
  *
  */
 public interface GridQueryIndexingDefragmentation {
     /**
-     * Defragmentate index partition.
+     * Defragment index partition.
      *
-     * @param grpCtx
-     * @param newCtx
-     * @param partPageMem
-     * @param mappingByPartition
-     * @param cpLock
-     * @param cancellationChecker
-     * @param log
-     *
+     * @param grpCtx Group context.
+     * @param newCtx Group context for defragmented group.
+     * @param partPageMem Page memory.
+     * @param mappingByPartition Page id mapping.
+     * @param cpLock Checkpoint lock.
+     * @param cancellationChecker Cancellation checker.
+     * @param log Logger.
+     * @param defragmentationThreadPool Thread pool for defragmentation.
      * @throws IgniteCheckedException If failed.
      */
     void defragment(
@@ -46,6 +47,8 @@ public interface GridQueryIndexingDefragmentation {
         PageMemoryEx partPageMem,
         IntMap<LinkMap> mappingByPartition,
         CheckpointTimeoutLock cpLock,
-        Runnable cancellationChecker, IgniteLogger log
+        Runnable cancellationChecker,
+        IgniteLogger log,
+        IgniteThreadPoolExecutor defragmentationThreadPool
     ) throws IgniteCheckedException;
 }
