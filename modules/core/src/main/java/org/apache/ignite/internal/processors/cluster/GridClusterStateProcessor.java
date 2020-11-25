@@ -121,7 +121,6 @@ import static org.apache.ignite.internal.IgniteFeatures.BASELINE_AUTO_ADJUSTMENT
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
 import static org.apache.ignite.internal.IgniteFeatures.SAFE_CLUSTER_DEACTIVATION;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
@@ -723,7 +722,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             List<String> inMemCaches = listInMemoryUserCaches();
 
             if (msg.state() == INACTIVE && !msg.forceDeactivation() && !inMemCaches.isEmpty() &&
-                allNodesSupports(ctx, ctx.discovery().serverNodes(topVer), SAFE_CLUSTER_DEACTIVATION)) {
+                allNodesSupportSafeDeactivationMode()) {
                 GridChangeGlobalStateFuture stateFut = changeStateFuture(msg);
 
                 if (stateFut != null) {
@@ -1499,6 +1498,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 ", forceDeactivation=" + forceDeactivation +
                 " request from node [id=" + ctx.localNodeId() +
                 ", topVer=" + topVer +
+                ", forceDeactivation=" + forceDeactivation +
                 ", client=" + ctx.clientNode() +
                 ", daemon=" + ctx.isDaemon() + "]"
         );
@@ -2181,7 +2181,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     private List<String> listInMemoryUserCaches() {
         return ctx.cache().cacheDescriptors().values().stream()
             .filter(desc -> !isPersistentCache(desc.cacheConfiguration(), ctx.config().getDataStorageConfiguration())
-                && (!desc.cacheConfiguration().isWriteBehindEnabled() || !desc.cacheConfiguration().isReadThrough())
+                && (!desc.cacheConfiguration().isWriteThrough() || !desc.cacheConfiguration().isReadThrough())
                 && !CU.isSystemCache(desc.cacheName())).map(DynamicCacheDescriptor::cacheName).collect(Collectors.toList());
     }
 
