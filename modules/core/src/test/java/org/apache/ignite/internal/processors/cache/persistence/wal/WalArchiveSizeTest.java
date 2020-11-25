@@ -145,27 +145,35 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
             size.updateCurrentSize(i, U.MB);
 
         assertEquals(0, size.availableDelete());
+        assertEquals(0, size.availableDeleteSize());
 
         size.updateLastCheckpointSegmentIndex(1);
         assertEquals(1, size.availableDelete());
+        assertEquals(U.MB, size.availableDeleteSize());
 
         size.updateMinReservedSegmentIndex(2L);
         assertEquals(1, size.availableDelete());
+        assertEquals(U.MB, size.availableDeleteSize());
 
         size.updateMinReservedSegmentIndex(null);
         assertEquals(1, size.availableDelete());
+        assertEquals(U.MB, size.availableDeleteSize());
 
         size.updateLastCheckpointSegmentIndex(2);
         assertEquals(2, size.availableDelete());
+        assertEquals(2 * U.MB, size.availableDeleteSize());
 
         size.updateMinReservedSegmentIndex(1L);
         assertEquals(1, size.availableDelete());
+        assertEquals(U.MB, size.availableDeleteSize());
 
         size.updateCurrentSize(0, -U.MB);
         assertEquals(0, size.availableDelete());
+        assertEquals(0, size.availableDeleteSize());
 
         size.updateCurrentSize(0, U.MB);
         assertEquals(1, size.availableDelete());
+        assertEquals(U.MB, size.availableDeleteSize());
     }
 
     /**

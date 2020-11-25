@@ -3212,9 +3212,13 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public boolean isArchiveOverflow() {
-        return !walArchiveSize.unlimited() &&
-            (walArchiveSize.currentSize() + walArchiveSize.reservedSize() + maxWalSegmentSize) >
-                walArchiveSize.maxSize() && walArchiveSize.availableDelete() < 2;
+        if (walArchiveSize.unlimited())
+            return false;
+
+        long occupiedSize = walArchiveSize.currentSize() + walArchiveSize.reservedSize();
+        long availableSize = walArchiveSize.maxSize() - occupiedSize + walArchiveSize.availableDeleteSize();
+
+        return availableSize < 2 * maxWalSegmentSize;
     }
 
     /**

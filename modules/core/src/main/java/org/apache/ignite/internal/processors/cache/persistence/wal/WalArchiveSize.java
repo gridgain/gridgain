@@ -69,6 +69,9 @@ public class WalArchiveSize {
     /** Number of segments that can be removed from WAL archive now. */
     private volatile int availableDel;
 
+    /** How much space will be freed after {@link #availableDel deleting} segments. */
+    private volatile long availableDelSize;
+
     /**
      * Constructor.
      *
@@ -242,6 +245,15 @@ public class WalArchiveSize {
     }
 
     /**
+     * Getting size of freed space after {@link #availableDelete deleting} segments in bytes.
+     *
+     * @return Size in bytes.
+     */
+    public long availableDeleteSize() {
+        return availableDelSize;
+    }
+
+    /**
      * Getting copy of current segments in WAL archive.
      *
      * @return Mapping: absolute segment index -> total segment size.
@@ -262,7 +274,16 @@ public class WalArchiveSize {
      */
     private synchronized void updateAvailableDelete() {
         if (!unlimited()) {
-            availableDel = segments.headMap(safeCleanIdx()).size();
+            int size = 0;
+            long sumBytes = 0;
+
+            for (long bytes : segments.headMap(safeCleanIdx()).values()) {
+                sumBytes += bytes;
+                size++;
+            }
+
+            availableDel = size;
+            availableDelSize = sumBytes;
 
             notifyAll();
         }
