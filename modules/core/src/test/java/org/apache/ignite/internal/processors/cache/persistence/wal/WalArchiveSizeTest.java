@@ -26,6 +26,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -186,6 +187,18 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
     public void testReserve() throws Exception {
         WalArchiveSize size = new WalArchiveSize(log, 5 * U.MB);
 
+        GridTestUtils.assertThrows(
+            log,
+            () -> {
+                size.reserveSize(U.MB, null, null, null);
+                return null;
+            },
+            IgniteInterruptedCheckedException.class,
+            "Reservation disabled"
+        );
+
+        size.startReservation();
+
         for (long i = 0; i < 5; i++) {
             size.reserveSize(U.MB, null, null, null);
 
@@ -257,6 +270,18 @@ public class WalArchiveSizeTest extends GridCommonAbstractTest {
         assertFalse(size.exceedMax());
         assertEquals(3 * U.MB, size.currentSize());
         assertEquals(2 * U.MB, size.reservedSize());
+
+        size.stopReservation();
+
+        GridTestUtils.assertThrows(
+            log,
+            () -> {
+                size.reserveSize(U.MB, null, null, null);
+                return null;
+            },
+            IgniteInterruptedCheckedException.class,
+            "Reservation disabled"
+        );
     }
 
     /**

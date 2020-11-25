@@ -72,6 +72,9 @@ public class WalArchiveSize {
     /** How much space will be freed after {@link #availableDel deleting} segments. */
     private volatile long availableDelSize;
 
+    /** Start flag. */
+    private boolean start;
+
     /**
      * Constructor.
      *
@@ -106,7 +109,7 @@ public class WalArchiveSize {
         @Nullable IgniteAbsClosureX beforeWaitC,
         @Nullable IgniteAbsClosure afterReserveC
     ) throws IgniteCheckedException {
-        while (!unlimited() && max - (curr + reserved) < size) {
+        while (start && !unlimited() && max - (curr + reserved) < size) {
             if (availableDel == 0 || (cleanupC != null && cleanupC.applyx(segments.firstKey(), safeCleanIdx()) == 0)) {
                 if (beforeWaitC != null)
                     beforeWaitC.applyx();
@@ -114,6 +117,9 @@ public class WalArchiveSize {
                 U.wait(this);
             }
         }
+
+        if (!start)
+            throw new IgniteInterruptedCheckedException("Reservation disabled");
 
         releaseSize(-size, null);
 
@@ -266,6 +272,24 @@ public class WalArchiveSize {
      * Wake up threads that are waiting for {@link #reserveSize}.
      */
     public synchronized void weakUp() {
+        notifyAll();
+    }
+
+    /**
+     * Enabling the possibility of {@link #reserveSize reserve} space in WAL archive.
+     */
+    public synchronized void startReservation() {
+        start = true;
+
+        notifyAll();
+    }
+
+    /**
+     * Disable the possibility of {@link #reserveSize reserve} space in WAL archive.
+     */
+    public synchronized void stopReservation() {
+        start = false;
+
         notifyAll();
     }
 

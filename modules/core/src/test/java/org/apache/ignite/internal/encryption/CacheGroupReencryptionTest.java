@@ -54,6 +54,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.configuration.EncryptionConfiguration.DFLT_REENCRYPTION_RATE_MBPS;
@@ -73,7 +74,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     private static final String GRID_3 = "grid-3";
 
     /** Timeout. */
-    private static final long MAX_AWAIT_MILLIS = 15_000;
+    private static final long MAX_AWAIT_MILLIS = 30_000;
 
     /** File IO fail flag. */
     private final AtomicBoolean failFileIO = new AtomicBoolean();
@@ -137,6 +138,11 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     /** {@inheritDoc} */
     @Override protected Object generateValue(long id) {
         return new IndexedObject(id, "string-" + id);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void stopGrid(@Nullable String igniteInstanceName) {
+        stopGrid(igniteInstanceName, false);
     }
 
     /**

@@ -478,7 +478,7 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
                 boolean success =
                     GridTestUtils.waitForCondition(() -> !isReencryptionInProgress(grid, grpId), timeout);
 
-                assertTrue(success);
+                assertTrue("Info [grid=" + grid.context().igniteInstanceName() + ", grpId=" + grpId + ']', success);
 
                 return null;
             });

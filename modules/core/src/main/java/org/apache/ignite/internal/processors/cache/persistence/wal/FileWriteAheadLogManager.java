@@ -44,7 +44,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
@@ -543,6 +542,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      */
     private void startArchiverAndCompressor() {
         segmentAware.reset();
+        walArchiveSize.startReservation();
 
         if (isArchiverEnabled()) {
             assert archiver != null : "FileArchiver should be initialized.";
@@ -649,6 +649,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
 
         segmentAware.interrupt();
+        walArchiveSize.stopReservation();
 
         try {
             if (archiver != null)
@@ -1748,9 +1749,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         /** Formatted index. */
         private int formatted;
 
-        /** Latch to wait for {#link {@link #allocateRemainingFiles} to execute. */
-        private volatile CountDownLatch allocateRemainingFilesLatch = new CountDownLatch(1);
-
         /**
          * Constructor.
          *
@@ -1854,13 +1852,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * @throws IgniteInterruptedCheckedException If failed to wait for thread shutdown.
          */
         private void shutdown() throws IgniteInterruptedCheckedException {
-            if (runner() != null) {
-                U.await(allocateRemainingFilesLatch);
-                allocateRemainingFilesLatch = new CountDownLatch(1);
-            }
-
             synchronized (this) {
-                U.cancel(this);
+                isCancelled = true;
 
                 notifyAll();
             }
@@ -1874,7 +1867,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             try {
                 allocateRemainingFiles();
-                allocateRemainingFilesLatch.countDown();
             }
             catch (StorageException e) {
                 synchronized (this) {
