@@ -20,6 +20,7 @@ import java.lang.management.ManagementFactory;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -34,8 +35,6 @@ import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -61,6 +60,8 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.thin.ClientServerError;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
@@ -68,9 +69,11 @@ import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteProducer;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Rule;
 import org.junit.Test;
@@ -628,14 +631,14 @@ public class FunctionalTest extends GridCommonAbstractTest {
             );
             cache.put(0, "value0");
 
-            Future<?> fut;
+            IgniteInternalFuture<?> fut;
 
             try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, isolation)) {
                 assertEquals("value0", cache.get(0));
 
                 CyclicBarrier barrier = new CyclicBarrier(2);
 
-                fut = ForkJoinPool.commonPool().submit(() -> {
+                fut = GridTestUtils.runAsync(() -> {
                     try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ, 500)) {
                         cache.put(0, "value2");
                         tx2.commit();
@@ -679,7 +682,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
             try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
                 assertEquals("value0", cache.get(0));
 
-                Future<?> fut = ForkJoinPool.commonPool().submit(() -> {
+                IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
                     try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ)) {
                         cache.put(0, "value2");
                         tx2.commit();
@@ -724,15 +727,13 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
                 cache.put(0, "value1");
 
-                Future<?> f = ForkJoinPool.commonPool().submit(() -> {
+                GridTestUtils.runAsync(() -> {
                     assertEquals("value0", cache.get(0));
 
                     cache.put(0, "value2");
 
                     assertEquals("value2", cache.get(0));
-                });
-
-                f.get();
+                }).get();
 
                 tx.commit();
             }
@@ -980,7 +981,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
                 cache.put(0, "value18");
 
-                Future<?> fut = ForkJoinPool.commonPool().submit(() -> {
+                IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
                     try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
                         cache.put(1, "value19");
 
@@ -1020,7 +1021,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
             try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
                 cache.put(0, "value20");
 
-                ForkJoinPool.commonPool().submit(() -> {
+                GridTestUtils.runAsync(() -> {
                     // Implicit transaction started here.
                     cache.put(1, "value21");
 
@@ -1059,7 +1060,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
                 // Start implicit transaction after explicit transaction has been closed by another thread.
                 cache.put(0, "value22");
 
-                ForkJoinPool.commonPool().submit(() -> assertEquals("value22", cache.get(0))).get();
+                GridTestUtils.runAsync(() -> assertEquals("value22", cache.get(0))).get();
 
                 // New explicit transaction can be started after current transaction has been closed by another thread.
                 try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
@@ -1110,7 +1111,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
             // Test that implicit transaction started after commit of previous one without closing.
             cache.put(0, "value24");
 
-            ForkJoinPool.commonPool().submit(() -> assertEquals("value24", cache.get(0))).get();
+            GridTestUtils.runAsync(() -> assertEquals("value24", cache.get(0))).get();
         }
     }
 
@@ -1154,6 +1155,101 @@ public class FunctionalTest extends GridCommonAbstractTest {
             }
 
             assertEquals("value2", cache.get(1));
+        }
+    }
+
+    /**
+     * Test transactions with label.
+     */
+    @Test
+    public void testTransactionsWithLabel() throws Exception {
+        try (IgniteEx ignite = (IgniteEx)Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                .setName("cache")
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+
+            cache.put(0, "value1");
+
+            IgniteProducer<Collection<Transaction>> serverTxs = () -> ignite.transactions().localActiveTransactions();
+            IgniteProducer<String> serverTxLabel = () -> F.first(serverTxs.produce()).label();
+            IgniteProducer<Integer> serverTxSize = () -> serverTxs.produce().size();
+
+            try (ClientTransaction tx = client.transactions().withLabel("label").txStart()) {
+                cache.put(0, "value2");
+
+                assertEquals(1, (int)serverTxSize.produce());
+
+                assertEquals("label", serverTxLabel.produce());
+
+                assertEquals("value2", cache.get(0));
+            }
+
+            assertEquals("value1", cache.get(0));
+
+            try (ClientTransaction tx = client.transactions().withLabel("label1").withLabel("label2").txStart()) {
+                cache.put(0, "value2");
+
+                assertEquals(1, (int)serverTxSize.produce());
+
+                assertEquals("label2", serverTxLabel.produce());
+
+                tx.commit();
+            }
+
+            assertEquals("value2", cache.get(0));
+
+            // Test concurrent with label and without label transactions.
+            try (ClientTransaction tx = client.transactions().withLabel("label").txStart(PESSIMISTIC, READ_COMMITTED)) {
+                CyclicBarrier barrier = new CyclicBarrier(2);
+
+                cache.put(0, "value3");
+
+                IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
+                    try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+                        cache.put(1, "value3");
+
+                        barrier.await();
+
+                        assertEquals("value2", cache.get(0));
+
+                        barrier.await();
+                    }
+                    catch (InterruptedException | BrokenBarrierException ignore) {
+                        // No-op.
+                    }
+                });
+
+                barrier.await();
+
+                assertNull(cache.get(1));
+
+                assertEquals(1, F.size(serverTxs.produce(), txv -> txv.label() == null));
+                assertEquals(1, F.size(serverTxs.produce(), txv -> "label".equals(txv.label())));
+
+                barrier.await();
+
+                fut.get();
+            }
+
+            // Test nested transactions is not possible.
+            try (ClientTransaction tx = client.transactions().withLabel("label1").txStart()) {
+                try (ClientTransaction tx1 = client.transactions().txStart()) {
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+
+                try (ClientTransaction tx1 = client.transactions().withLabel("label2").txStart()) {
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+            }
         }
     }
 

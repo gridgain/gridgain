@@ -118,8 +118,10 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
                     if (log.isDebugEnabled())
                         log.debug("Tracing configuration was updated [oldVal= " + oldVal + ", newVal=" + newVal + "]");
 
-                    if (newVal != null && !newVal.isEmpty())
-                        tracingConfiguration = newVal;
+                    if (newVal != null && !newVal.isEmpty()) {
+                        tracingConfiguration = new HashMap<>(DEFAULT_CONFIGURATION_MAP);
+                        tracingConfiguration.putAll(newVal);
+                    }
                 }
             });
 
