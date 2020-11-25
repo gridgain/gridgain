@@ -41,6 +41,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.locationtech.jts.util.Assert;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
@@ -98,21 +99,21 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
     }
 
     @Test
-//    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testNodeFailBeforeSendGridNearTxFinishResponseWithSensitive() throws Exception {
-        testNodeFailBeforeSendGridNearTxFinishResponse(PLAIN);
+        testNodeFailBeforeSendGridNearTxFinishResponse();
     }
 
     @Test
-//    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testNodeFailBeforeSendGridNearTxFinishResponseWithHashSensitive() throws Exception {
-        testNodeFailBeforeSendGridNearTxFinishResponse(HASH);
+        testNodeFailBeforeSendGridNearTxFinishResponse();
     }
 
     @Test
-//    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testNodeFailBeforeSendGridNearTxFinishResponseWithoutSensitive() throws Exception {
-        testNodeFailBeforeSendGridNearTxFinishResponse(NONE);
+        testNodeFailBeforeSendGridNearTxFinishResponse();
     }
 
     /**
@@ -130,10 +131,8 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed
      */
-    private void testNodeFailBeforeSendGridNearTxFinishResponse(GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging) throws Exception {
+    private void testNodeFailBeforeSendGridNearTxFinishResponse() throws Exception {
         startGrids(2);
-
-//        S.metaStorage.write(SENSITIVE_DATA_LOGGING, sensitiveDataLogging);
 
         grid(0).cluster().active(true);
 
@@ -205,12 +204,12 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
 
                     Pattern msgPtrn;
 
-                    if (sensitiveDataLogging == PLAIN) {
+                    if (S.getSensitiveDataLogging() == PLAIN) {
                         msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " +
                                 "key=KeyCacheObjectImpl \\[part=\\d+, val=" + key0 +
                                 ", hasValBytes=true\\]\\]");
                     }
-                    else if (sensitiveDataLogging == HASH) {
+                    else if (S.getSensitiveDataLogging() == HASH) {
                         msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " +
                                 "key=" + key0 +"\\]");
                     }
@@ -224,11 +223,6 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
                     System.out.println("!qreopf_" + msg);
 
                     Assert.isTrue(matcher.find(), msg);
-
-//                    if (!withSensitive) { // закомментил этот код, так как если значение число, то hashCode() отпечатает это число.
-//                        final String substringWithVal = msg.substring(msg.indexOf("val="));
-//                        Assert.isTrue(!substringWithVal.contains(String.valueOf(key0)));
-//                    }
                 }
 
                 passed = true;

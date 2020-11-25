@@ -196,7 +196,6 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.lang.GridAbsClosure;
-import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -233,7 +232,19 @@ import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.*;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONFIG_URL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_NO_ASCII;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_OPTIMIZED_MARSHALLER_USE_DEFAULT_SUID;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_INTERVAL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.snapshot;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
 import static org.apache.ignite.internal.GridKernalState.STARTED;
 import static org.apache.ignite.internal.GridKernalState.STARTING;
@@ -288,8 +299,6 @@ import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SENSITIVE_DATA_LOGGING;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.*;
 import static org.apache.ignite.lifecycle.LifecycleEventType.AFTER_NODE_START;
 import static org.apache.ignite.lifecycle.LifecycleEventType.BEFORE_NODE_START;
 
@@ -1487,27 +1496,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 EventType.EVT_NODE_JOINED, localNode());
 
         startTimer.finishGlobalStage("Await exchange");
-
-//        if (isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE)) {
-//            GridToStringBuilder.metaStorage = ctx.distributedMetastorage();
-//
-//            Serializable sensitiveDataLogging = GridToStringBuilder.metaStorage.read(SENSITIVE_DATA_LOGGING);
-//
-//            if (sensitiveDataLogging == null) {
-//                String sysStrIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
-//
-//                if (sysStrIncludeSensitive != null) {
-//                    boolean sysIncludeSensitive = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE, false);
-//
-//                    if (!sysIncludeSensitive) {
-//                        GridToStringBuilder.metaStorage.write(SENSITIVE_DATA_LOGGING, NONE);
-//                    }
-//                }
-//                else
-//                    GridToStringBuilder.metaStorage.write(SENSITIVE_DATA_LOGGING, HASH);
-//            }
-////            GridToStringBuilder.metaStorage.write(SENSITIVE_DATA_LOGGING, PLAIN);
-//        }
     }
 
     /** */

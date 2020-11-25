@@ -1018,7 +1018,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
         if (sensitiveDataLogging == PLAIN) {
             if (arr == null || ctx == null)
-                return "BinaryObjectImpl [arr= " + (arr != null) + ", ctx=" + (ctx != null) + ", start=" + start + "]";
+                return "BinaryObjectImpl [arr=" + (arr != null) + ", ctx=" + (ctx != null) + ", start=" + start + "]";
 
             return super.toString();
         }
