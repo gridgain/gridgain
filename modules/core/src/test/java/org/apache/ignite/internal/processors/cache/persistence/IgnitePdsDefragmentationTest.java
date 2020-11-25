@@ -178,7 +178,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testEssentials() throws Exception {
+    public void testSuccessfulDefragmentation() throws Exception {
         IgniteEx ig = startGrid(0);
 
         ig.cluster().state(ClusterState.ACTIVE);
@@ -220,6 +220,8 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
         assertFalse(completionMarkerFile.exists());
 
         validateCache(grid(0).cache(DEFAULT_CACHE_NAME));
+
+        validateLeftovers(workDir);
     }
 
     /**
@@ -306,7 +308,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testFailoverBasic() throws Exception {
+    public void testFailoverOnLastStage() throws Exception {
         testFailover(workDir -> {});
     }
 
