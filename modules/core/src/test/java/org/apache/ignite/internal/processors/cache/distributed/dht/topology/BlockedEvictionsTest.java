@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -427,6 +428,29 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
 
+    /** */
+    @Test
+    public void testRestart() throws Exception {
+        persistence = true;
+
+        AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
+
+        testOperationDuringEviction(true, 1, new Runnable() {
+            @Override public void run() {
+                IgniteInternalFuture fut = runAsync(() -> stopAllGrids());
+
+                ref.set(fut);
+            }
+        });
+
+        ref.get().get();
+
+        IgniteEx crd = startGrids(3);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        awaitPartitionMapExchange();
+    }
+
     /**
      * @param persistence {@code True} to use persistence.
      * @param mode        Mode: <ul><li>0 - block before clearing start</li>
@@ -501,6 +525,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     protected CacheConfiguration<Object, Object> cacheConfiguration() {
         return new CacheConfiguration<>(DEFAULT_CACHE_NAME).
             setCacheMode(CacheMode.PARTITIONED).
+            setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC).
             setBackups(1).
             setStatisticsEnabled(stats).
             setAffinity(new RendezvousAffinityFunction(false, persistence ? 64 : 1024));

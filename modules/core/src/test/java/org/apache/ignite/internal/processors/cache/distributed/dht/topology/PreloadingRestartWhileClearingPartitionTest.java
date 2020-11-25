@@ -157,6 +157,9 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
 
         grid(supplier).close();
 
+        // On rebalancing restart due to cancellation, method GridDhtLocalPartition.clearAsync will be called again,
+        // but the partition is already cleared by previous (delayed) attempt.
+
         doSleep(1000);
 
         unlock.countDown();

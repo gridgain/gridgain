@@ -607,6 +607,10 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         GridNearAtomicCache<Object, Object> nearCache =
             (GridNearAtomicCache<Object, Object>) near.cachex(DEFAULT_CACHE_NAME).context().near();
 
+        FastSizeDeque q = U.field(nearCache, "rmvQueue");
+
+        assertTrue(q.isEmpty());
+
         GridCacheConcurrentMap map = nearCache.map();
 
         assertEquals(keysCnt, nearKeys.size());
@@ -649,8 +653,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(keysCnt, cnt);
 
         // Expecting rmv queue to be full.
-        FastSizeDeque q = U.field(nearCache, "rmvQueue");
-
         assertEquals(rmvCnt, q.size());
     }
 
