@@ -279,8 +279,6 @@ public class IndexingDefragmentation implements GridQueryIndexingDefragmentation
         finally {
             cpLock.checkpointReadUnlock();
         }
-
-
     }
 
     /** */
