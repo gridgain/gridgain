@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.rest.protocols.http.jetty;
+package org.apache.ignite.internal.client.rest;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,7 +38,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * REST probe cmd test.
+ * Test whether REST probe command works correctly when kernal has started and vice versa.
  */
 public class GridProbeCommandTest extends GridCommonAbstractTest {
 
