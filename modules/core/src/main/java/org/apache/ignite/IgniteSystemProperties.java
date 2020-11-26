@@ -1428,8 +1428,9 @@ public final class IgniteSystemProperties {
      * .
      * The possible values:
      *         - "LAST",
+     *         - "COMPATIBLE_8_7_28"
      *         - "COMPATIBLE_8_7_12",
-     *         - COMPATIBLE_8_7_6
+     *         - "COMPATIBLE_8_7_6"
      *
      * The last cost function is used by default.
      */
@@ -1463,6 +1464,12 @@ public final class IgniteSystemProperties {
      * all system actions will be prohibited.
      */
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
+
+    /**
+     * Defragmentation region size percentage of configured region size.
+     */
+    public static final String IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE =
+        "IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE";
 
     /**
      * Enforces singleton.

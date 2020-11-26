@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.metric.IndexPageType;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
@@ -26,6 +29,7 @@ import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLogInnerIO;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLogLeafIO;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.LinkMap;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListNodeIO;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageBPlusIO;
@@ -50,10 +54,6 @@ import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogInner
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogLeafIO;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
-
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Base format for all the page types.
@@ -261,6 +261,12 @@ public abstract class PageIO {
 
     /** */
     public static final short T_MARKER_PAGE = 33;
+
+    /** */
+    public static final short T_DEFRAG_LINK_MAPPING_INNER = 34;
+
+    /** */
+    public static final short T_DEFRAG_LINK_MAPPING_LEAF = 35;
 
     /** Index for payload == 1. */
     public static final short T_H2_EX_REF_LEAF_START = 10_000;
@@ -838,6 +844,12 @@ public abstract class PageIO {
 
             case T_DATA_REF_METASTORAGE_LEAF:
                 return (Q)MetastorageBPlusIO.LEAF_IO_VERSIONS.forVersion(ver);
+
+            case T_DEFRAG_LINK_MAPPING_INNER:
+                return (Q) LinkMap.INNER_IO_VERSIONS.forVersion(ver);
+
+            case T_DEFRAG_LINK_MAPPING_LEAF:
+                return (Q) LinkMap.LEAF_IO_VERSIONS.forVersion(ver);
 
             default:
                 // For tests.
