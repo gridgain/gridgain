@@ -400,9 +400,9 @@ public class TxOptimisticDeadlockDetectionTest extends AbstractDeadlockDetection
 
         for (Object key : involvedKeys) {
             if (involvedLockedKeys.contains(key))
-                assertTrue(msg.contains("[key=" + key + ", cache=" + CACHE_NAME + ']'));
+                assertTrue(msg.contains("[key=" + key.hashCode() + ", cache=" + CACHE_NAME + ']'));
             else
-                assertFalse(msg.contains("[key=" + key));
+                assertFalse(msg.contains("[key=" + key.hashCode()));
         }
     }
 

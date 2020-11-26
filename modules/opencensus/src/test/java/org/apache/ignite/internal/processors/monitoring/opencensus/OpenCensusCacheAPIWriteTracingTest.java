@@ -67,6 +67,7 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
  * </ul>
  */
 @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
+@WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
 public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
 
     /** Client node. */

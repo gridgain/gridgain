@@ -248,7 +248,7 @@ public abstract class GridCacheBinaryObjectsAbstractSelfTest extends GridCommonA
         assertTrue("Unexpected toString: " + str,
             S.includeSensitive() ?
             str.startsWith(typeName) && str.contains("obj=" + typeName + " [") :
-            str.startsWith("BinaryObject") && str.contains("idHash=") && str.contains("hash=")
+            str.contains(String.valueOf(po.hashCode()))
         );
 
         TestReferenceObject obj1_r = po.deserialize();
