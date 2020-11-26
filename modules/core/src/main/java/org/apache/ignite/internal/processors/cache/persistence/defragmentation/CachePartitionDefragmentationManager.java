@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -374,24 +374,24 @@ public class CachePartitionDefragmentationManager {
                         defragmentationCheckpoint.checkpointTimeoutLock().checkpointReadUnlock();
                     }
 
-                        IntMap<LinkMap> linkMapByPart = new IntRWHashMap<>();
+                    IntMap<LinkMap> linkMapByPart = new IntRWHashMap<>();
 
-                        IgniteUtils.doInParallel(
-                            defragmentationThreadPool,
-                            oldCacheDataStores,
-                            oldCacheDataStore -> defragmentOnePartition(
-                                oldGrpCtx,
-                                grpId,
-                                workDir,
-                                busyLock,
-                                pageStoreFactory,
-                                cmpFut,
-                                oldPageMem,
-                                newGrpCtx,
-                                linkMapByPart,
-                                oldCacheDataStore
-                            )
-                        );
+                    IgniteUtils.doInParallel(
+                        defragmentationThreadPool,
+                        oldCacheDataStores,
+                        oldCacheDataStore -> defragmentOnePartition(
+                            oldGrpCtx,
+                            grpId,
+                            workDir,
+                            busyLock,
+                            pageStoreFactory,
+                            cmpFut,
+                            oldPageMem,
+                            newGrpCtx,
+                            linkMapByPart,
+                            oldCacheDataStore
+                        )
+                    );
 
                     // A bit too general for now, but I like it more then saving only the last checkpoint future.
                     cmpFut.markInitialized().get();
@@ -550,16 +550,6 @@ public class CachePartitionDefragmentationManager {
         //TODO Move inside of defragmentSinglePartition.
         IgniteInClosure<IgniteInternalFuture<?>> cpLsnr = fut -> {
             if (fut.error() == null) {
-                PageStore oldPageStore = null;
-
-                try {
-                    oldPageStore = filePageStoreMgr.getStore(grpId, partId);
-                }
-                catch (IgniteCheckedException ignore) {
-                }
-
-                assert oldPageStore != null;
-
                 if (log.isDebugEnabled()) {
                     log.debug(S.toString(
                         "Partition defragmented",
