@@ -1,5 +1,8 @@
 package org.apache.ignite.internal.util.tostring;
 
+import org.apache.ignite.IgniteBinary;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryEnumObjectImpl;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
@@ -40,6 +43,13 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest/*extends G
 
     /** Person name. */
     String rndString = "qwer";
+
+    @Override
+    protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        super.afterTest();
+    }
 
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
@@ -125,29 +135,31 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest/*extends G
 
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-    public void testBinaryObjectImplWithSenstitive() {
+    public void testBinaryObjectImplWithSenstitive() throws Exception {
         testBinaryObjectImpl((strToCheck, object) -> {
-            assertTrue(strToCheck, strToCheck.contains("arr=false"));
-            assertTrue(strToCheck, strToCheck.contains("ctx=false"));
-            assertTrue(strToCheck, strToCheck.contains("start=0"));
+            assertTrue(strToCheck, strToCheck.contains("orgId=" + rndInt0));
+            assertTrue(strToCheck, strToCheck.contains("name=" + rndString));
         });
     }
 
-//    @Test
-//    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
-//    public void testBinaryObjectImplWithHashSenstitive() {
-//        testBinaryObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals(String.valueOf(object.hashCode()))));
-//    }
+    @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
+    public void testBinaryObjectImplWithHashSenstitive() throws Exception {
+        testBinaryObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals(String.valueOf(object.hashCode()))));
+    }
 
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
-    public void testBinaryObjectImplWithoutSenstitive() {
+    public void testBinaryObjectImplWithoutSenstitive() throws Exception {
         testBinaryObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals("BinaryObject")));
     }
 
-    private void testBinaryObjectImpl(BiConsumer<String, Object> checker) {
-        BinaryObjectImpl testObject = new BinaryObjectImpl();
-        checker.accept(testObject.toString(), testObject);
+    private void testBinaryObjectImpl(BiConsumer<String, Object> checker) throws Exception {
+        IgniteEx grid = startGrid(0);
+        IgniteBinary binary = grid.binary();
+        BinaryObject binPerson = binary.toBinary(new Person(rndInt0, rndString));
+        assertTrue(binPerson.getClass().getSimpleName(), binPerson instanceof BinaryObjectImpl);
+        checker.accept(binPerson.toString(), binPerson);
     }
 
     @Test
