@@ -484,6 +484,9 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
         boolean readNoEntry = cctx.readNoEntry(expiryPlc, false);
         boolean evt = !skipVals;
 
+        // postProcessingClos can be not null on remap, need version for correct update on backup.
+        boolean needVer = this.needVer | (postProcessingClos != null);
+
         while (true) {
             cctx.shared().database().checkpointReadLock();
 
