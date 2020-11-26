@@ -17,6 +17,7 @@
 package org.apache.ignite.spi.metric.jmx;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 import javax.management.JMException;
@@ -45,7 +46,7 @@ public class JmxMetricExporterSpi extends IgniteSpiAdapter implements MetricExpo
     private @Nullable Predicate<ReadOnlyMetricRegistry> filter;
 
     /** Registered beans. */
-    private final List<ObjectName> mBeans = new ArrayList<>();
+    private final List<ObjectName> mBeans = Collections.synchronizedList(new ArrayList<>());
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
@@ -126,6 +127,10 @@ public class JmxMetricExporterSpi extends IgniteSpiAdapter implements MetricExpo
             unregBean(ignite, bean);
     }
 
+    /**
+     * @param ignite Ignite instance.
+     * @param bean Bean name to unregister.
+     */
     private void unregBean(Ignite ignite, ObjectName bean) {
         MBeanServer jmx = ignite.configuration().getMBeanServer();
 
@@ -142,7 +147,7 @@ public class JmxMetricExporterSpi extends IgniteSpiAdapter implements MetricExpo
 
     /** {@inheritDoc} */
     @Override public void setMetricRegistry(ReadOnlyMetricManager reg) {
-        this.mreg = reg;
+        mreg = reg;
     }
 
     /** {@inheritDoc} */
