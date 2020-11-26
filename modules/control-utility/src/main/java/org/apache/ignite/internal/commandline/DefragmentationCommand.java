@@ -110,7 +110,7 @@ public class DefragmentationCommand implements Command<DefragmentationArguments>
     @Override public void parseArguments(CommandArgIterator argIter) {
         DefragmentationSubcommands cmd = DefragmentationSubcommands.of(argIter.nextArg("Expected defragmentation subcommand."));
 
-        if (cmd == null || cmd == DefragmentationSubcommands.STATUS) // Status subcommand is not yet completed.
+        if (cmd == null)
             throw new IllegalArgumentException("Expected correct defragmentation subcommand.");
 
         args = new DefragmentationArguments(cmd);
@@ -123,10 +123,17 @@ public class DefragmentationCommand implements Command<DefragmentationArguments>
                 String subarg;
 
                 do {
-                    subarg = argIter.nextArg("Expected one of subcommand arguments.").toLowerCase(Locale.ENGLISH);
+                    subarg = argIter.peekNextArg();
+
+                    if (subarg == null)
+                        break;
+
+                    subarg = subarg.toLowerCase(Locale.ENGLISH);
 
                     switch (subarg) {
                         case NODES_ARG: {
+                            argIter.nextArg("");
+
                             Set<String> ids = argIter.nextStringSet(NODES_ARG);
 
                             if (ids.isEmpty())
@@ -138,6 +145,8 @@ public class DefragmentationCommand implements Command<DefragmentationArguments>
                         }
 
                         case CACHES_ARG: {
+                            argIter.nextArg("");
+
                             Set<String> ids = argIter.nextStringSet(CACHES_ARG);
 
                             if (ids.isEmpty())
