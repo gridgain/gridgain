@@ -2570,13 +2570,6 @@ public class IgnitionEx {
                             }
 
                             if (url != null) {
-                                boolean configured = (Boolean)log4jCls.getMethod("isConfigured").invoke(null);
-
-                                if (configured)
-                                    url = null;
-                            }
-
-                            if (url != null) {
                                 Constructor<?> ctor = log4jCls.getConstructor(URL.class);
 
                                 cfgLog = (IgniteLogger)ctor.newInstance(url);
@@ -2608,6 +2601,7 @@ public class IgnitionEx {
                 return cfgLog;
             }
             catch (Exception e) {
+
                 throw new IgniteCheckedException("Failed to create logger.", e);
             }
         }
