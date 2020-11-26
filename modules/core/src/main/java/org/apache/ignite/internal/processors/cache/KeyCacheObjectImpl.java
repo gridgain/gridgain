@@ -227,7 +227,7 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
                     "hasValBytes", valBytes != null, false);
         }
         else if (sensitiveDataLogging == HASH)
-            return String.valueOf(hashCode());
+            return String.valueOf(val == null ? "null" : hashCode());
         else
             return "KeyCacheObject";
 

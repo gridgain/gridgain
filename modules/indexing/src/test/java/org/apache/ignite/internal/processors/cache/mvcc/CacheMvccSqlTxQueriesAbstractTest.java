@@ -1606,7 +1606,7 @@ public abstract class CacheMvccSqlTxQueriesAbstractTest extends CacheMvccAbstrac
 
                 return null;
             }
-        }, TransactionDuplicateKeyException.class, "Duplicate key during INSERT [key=KeyCacheObjectImpl");
+        }, TransactionDuplicateKeyException.class, "Duplicate key during INSERT [key=1");
     }
 
     /**
