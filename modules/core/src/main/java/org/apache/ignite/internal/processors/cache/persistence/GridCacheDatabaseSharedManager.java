@@ -231,7 +231,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private static final double PAGE_LIST_CACHE_LIMIT_THRESHOLD = 0.1;
 
     /** @see IgniteSystemProperties#IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE */
-    public static final int DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE = 40;
+    public static final int DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE = 60;
 
     /** */
     private final int walRebalanceThreshold = getInteger(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, 500);
