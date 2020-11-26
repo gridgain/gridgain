@@ -110,7 +110,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var constraint = Is.TypeOf<IgniteClientException>()
                 .And.Message
                 .StartsWith(
-                    "Failed to prepare transaction, read/write conflict [key=1, keyCls=java.lang.Integer, val=-1");
+                    "Failed to prepare transaction, read/write conflict [key=1, val=-1");
             Assert.Throws(constraint, () => scope.Dispose());
 
             Assert.AreEqual(-1, cache[1]);
