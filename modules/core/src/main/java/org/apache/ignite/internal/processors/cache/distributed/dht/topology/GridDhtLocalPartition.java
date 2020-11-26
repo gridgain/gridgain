@@ -673,12 +673,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /**
      * Initiates partition eviction process and returns an eviction future.
-     * Future will be completed when a partition is moved to EVICTED state (possibly not yet physically deleted).
+     * Future will be completed when a partition is moved to EVICTED state, but possibly not yet physically deleted.
+     * Actual physical deletion is scheduled until checkpoint in persistence mode.
      *
      * If partition has reservations, eviction will be delayed and continued after all reservations will be released.
      *
-     * @return Future to signal that this node is no longer an owner or backup or null if corresponding partition
-     * state is {@code RENTING} or {@code EVICTED}.
+     * @return Future to await when the partition is evicted from the local node.
      */
     public IgniteInternalFuture<?> rent() {
         long state0 = this.state.get();
@@ -696,13 +696,13 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 //        }
 
         if (tryInvalidateGroupReservations() && getReservations(state0) == 0 && casState(state0, RENTING)) {
-            // Evict asynchronously, as the 'rent' method may be called from within write locks on local partition.
             PartitionsEvictManager.PartitionEvictionTask task =
                 ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.EVICTION);
 
             task.finishFut.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut0) {
                     if (isEmpty()) {
+                        // Try finish eviction asynchronously.
                         ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                             @Override public void run() { // TODO submit to timer for batch.
                                 if (grp.topology().tryFinishEviction(GridDhtLocalPartition.this)) {

@@ -113,7 +113,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
     /** */
     private volatile boolean paused;
 
-    /** Current clearing task. */
+    /** Current tombstone clearing task. */
     private volatile @Nullable PartitionEvictionTask clearTask;
 
     /**
@@ -289,13 +289,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         // TODO wait for cache groups start.
         if (tsClearFreq >= 1_000)
-            scheduleNextTombstoneCleanup();
+            scheduleTombstonesCleanup();
     }
 
     /**
      *
      */
-    private void scheduleNextTombstoneCleanup() {
+    private void scheduleTombstonesCleanup() {
         GridKernalContext ctx = cctx.kernalContext();
 
         ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(tsClearFreq) {
@@ -304,7 +304,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                     @Override public void run() {
                         clearTombstones();
 
-                        scheduleNextTombstoneCleanup();
+                        scheduleTombstonesCleanup();
                     }
                 });
             }
@@ -316,10 +316,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
         if (paused)
             return;
 
-        // TODO avoid clearing partitions with 0 tombstones.
-        log.info("Start clearing tombstones for groups [" +
-            evictionGroupsMap.values().stream().map(g -> g.grp.cacheOrGroupName() +
-                "(" + g.grp.topology().localPartitions().stream().mapToLong(p -> p.dataStore().tombstonesCount()).sum() + ")").collect(Collectors.joining(",")) + ']');
+        if (log.isInfoEnabled()) {
+            log.info("Start clearing tombstones for groups [" +
+                evictionGroupsMap.values().stream().map(g -> g.grp.cacheOrGroupName() +
+                    "(" + g.grp.topology().localPartitions().stream().mapToLong(
+                        p -> p.dataStore().tombstonesCount()).sum() + ")").collect(Collectors.joining(",")) + ']');
+        }
 
         for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
             int grpId = ctx0.grp.groupId();
@@ -333,6 +335,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                 for (GridDhtLocalPartition part : ctx0.grp.topology().currentLocalPartitions()) {
                     assert part.state() == OWNING : part;
 
+                    long ts = part.dataStore().tombstonesCount();
+
+                    assert ts >= 0 : part;
+
+                    if (ts == 0) // Avoid clearing partitions without tombstones.
+                        continue;
+
                     if (cctx.kernalContext().isStopping() || paused)
                         return;
 
@@ -342,7 +351,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                         clearTask.finishFut.get();
                     }
                     catch (IgniteCheckedException e) {
-                        log.error("Failed to clear tombstones [grp=" + ctx0.grp.cacheOrGroupName(), e);
+                        log.error("Failed to clear tombstones [grp=" + ctx0.grp.cacheOrGroupName() +
+                            ", part=" + part + ']', e);
                     }
                 }
             }
@@ -350,16 +360,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
     }
 
     /**
-     * Pauses clearing. Should not be called under cp read lock to avoid checkpointer rwlock deadlock.
+     * Pauses clearing.
      */
     public synchronized void pause() {
-        // TODO assertion
         paused = true;
 
         if (clearTask != null) {
             clearTask.cancel();
-            clearTask.awaitCompletion();
-
             clearTask = null;
         }
     }
@@ -501,34 +508,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                     ", partsEvictInProgress=" + taskInProgress +
                     ", totalParts=" + grp.topology().localPartitions().size() + "]");
         }
-
-        /**
-         * Shows progress group of eviction.
-         */
-//        private void showProgress() {
-//            if (log.isInfoEnabled()) {
-//                StringBuilder msg = new StringBuilder(
-//                    "Group cleanup in progress [grpName=" + grp.cacheOrGroupName() + ", grpId=" + grp.groupId());
-//
-//                synchronized (this) {
-//                    TasksStatistics evicts = stats.get(TaskType.EVICT);
-//                    if (evicts.total > 0) {
-//                        msg.append(", remainingPartsToEvict=" + (evicts.total - evicts.inProgress)).
-//                            append(", partsEvictInProgress=" + evicts.inProgress);
-//                    }
-//
-//                    TasksStatistics tombstones = stats.get(TaskType.CLEAR_TOMBSTONES);
-//                    if (tombstones.total > 0) {
-//                        msg.append(", remainingPartsToClearTombstones=" + (tombstones.total - tombstones.inProgress)).
-//                            append(", tombstoneClearInProgress=" + tombstones.inProgress);
-//                    }
-//                }
-//
-//                msg.append(", totalParts=" + grp.topology().localPartitions().size() + "]");
-//
-//                log.info(msg.toString());
-//            }
-//        }
     }
 
     /**
@@ -641,7 +620,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
             executor.submit(this);
 
             synchronized (mux) {
-                logEvictPartByGrps.computeIfAbsent(grpEvictionCtx.grp.groupId(), i -> new HashMap<>()).put(part.id(), reason);
+                logEvictPartByGrps.computeIfAbsent(grpEvictionCtx.grp.groupId(),
+                    grpId -> new HashMap<>()).put(part.id(), reason);
 
                 grpEvictionCtx.totalTasks.incrementAndGet();
 
@@ -658,7 +638,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                     + ", task" + this + ']');
         }
 
-        /** */
+        /**
+         * Signals this eviction task for cancellation.
+         */
         public void cancel() {
             if (state.compareAndSet(null, Boolean.FALSE))
                 finishFut.onDone(); // Cancelled before start.
@@ -675,7 +657,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                     return;
                 }
                 catch (IgniteFutureTimeoutCheckedException e) {
-                    log.warning("Failed to wait for clearing finish [task=" + this + ']');
+                    log.warning("Failed to wait for clearing finish, retrying [task=" + this + ']');
                 }
                 catch (IgniteCheckedException e) {
                     log.warning("The clearing has finished with error [part=" + part + ']', e);
