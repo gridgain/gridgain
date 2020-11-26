@@ -28,8 +28,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
-import static org.apache.ignite.IgniteSystemProperties.getString;
+import static org.apache.ignite.IgniteSystemProperties.*;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.*;
 import static org.mockito.Mockito.mock;
 
@@ -53,6 +52,48 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest/*extends G
         stopAllGrids();
 
         super.afterTest();
+    }
+
+    @Test
+    public void testSensitivePropertiesResolving0() {
+        assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == HASH);
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
+    public void testSensitivePropertiesResolving1() {
+        assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == PLAIN);
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
+    public void testSensitivePropertiesResolving2() {
+        assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == HASH);
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
+    public void testSensitivePropertiesResolving3() {
+        assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == NONE);
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
+    public void testSensitivePropertiesResolving4() {
+        assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == PLAIN);
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
+    public void testSensitivePropertiesResolving5() {
+        assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == NONE);
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
+    public void testSensitivePropertiesResolving6() {
+        assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == NONE);
     }
 
     @Test

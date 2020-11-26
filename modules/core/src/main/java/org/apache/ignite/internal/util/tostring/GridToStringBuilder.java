@@ -41,20 +41,15 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Supplier;
 import java.util.function.Function;
 
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.GridUnsafe;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.*;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.*;
 
 /**
@@ -153,16 +148,23 @@ public class GridToStringBuilder {
             SensitiveDataLogging SENSITIVE_DATA_LOGGING;
 
             {
-                String sysStrIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
+                SensitiveDataLogging sensitiveRes = null;
 
-                if (sysStrIncludeSensitive != null) {
-                    boolean sysIncludeSensitive = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE, false);
+                String sysStrToStringIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
 
-                    if (!sysIncludeSensitive)
-                        SENSITIVE_DATA_LOGGING = NONE;
+                if (sysStrToStringIncludeSensitive != null) {
+                    boolean sysToStringIncludeSensitive = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
+
+                    if (sysToStringIncludeSensitive)
+                        sensitiveRes = PLAIN;
+                    else
+                        sensitiveRes = NONE;
                 }
-                else
-                    SENSITIVE_DATA_LOGGING = convertDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
+
+                if (sensitiveRes == null)
+                    sensitiveRes = convertDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
+
+                SENSITIVE_DATA_LOGGING = sensitiveRes;
             }
 
             /** {@inheritDoc} */
