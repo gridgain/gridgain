@@ -225,7 +225,6 @@ public class DefragmentationCommand implements Command<DefragmentationArguments>
     private VisorDefragmentationTaskArg convertArguments() {
         return new VisorDefragmentationTaskArg(
             convertSubcommand(args.subcommand()),
-            args.nodeIds(),
             args.cacheNames()
         );
     }
