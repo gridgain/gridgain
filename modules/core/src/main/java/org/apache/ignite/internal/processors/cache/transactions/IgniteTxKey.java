@@ -197,12 +197,12 @@ public class IgniteTxKey implements Message {
 
         if (sensitiveDataLogging == PLAIN || sensitiveDataLogging == HASH) {
             return S.toString(getClass().getSimpleName(),
-                    "key", key,
-                    "cacheId", cacheId);
+                    "key", key, false,
+                    "cacheId", cacheId, false);
         }
         else {
             return S.toString(getClass().getSimpleName(),
-                    "cacheId", cacheId);
+                    "cacheId", cacheId, false);
         }
     }
 }

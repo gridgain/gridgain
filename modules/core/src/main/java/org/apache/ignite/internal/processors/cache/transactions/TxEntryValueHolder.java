@@ -170,12 +170,12 @@ public class TxEntryValueHolder implements Message {
 
         if (sensitiveDataLogging == PLAIN || sensitiveDataLogging == HASH) {
             return S.toString(getClass().getSimpleName(),
-                    "val", val,
-                    "op", op);
+                    "val", val, false,
+                    "op", op, false);
         }
         else {
             return S.toString(getClass().getSimpleName(),
-                    "op", op);
+                    "op", op, false);
         }
     }
 

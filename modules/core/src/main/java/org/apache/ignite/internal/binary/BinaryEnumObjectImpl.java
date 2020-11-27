@@ -294,12 +294,12 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
             }
 
             if (type != null)
-                return S.toString(type.typeName(), "ordinal", ord);
+                return S.toString(type.typeName(), "ordinal", ord, false);
             else {
                 if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID)
-                    return S.toString("BinaryEnum", "clsName", clsName, "ordinal", ord);
+                    return S.toString("BinaryEnum", "clsName", clsName, false, "ordinal", ord, false);
                 else
-                    return S.toString("BinaryEnum", "typeId", typeId, "ordinal", ord);
+                    return S.toString("BinaryEnum", "typeId", typeId, false, "ordinal", ord, false);
             }
         }
         if (sensitiveDataLogging == HASH)
