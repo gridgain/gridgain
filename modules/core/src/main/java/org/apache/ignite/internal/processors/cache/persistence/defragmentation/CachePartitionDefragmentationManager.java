@@ -938,7 +938,7 @@ public class CachePartitionDefragmentationManager {
 
         Runnable cancellationChecker = this::checkCancellation;
 
-        idx.defragmentator().defragment(
+        idx.defragment(
             grpCtx,
             newCtx,
             (PageMemoryEx)partDataRegion.pageMemory(),

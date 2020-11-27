@@ -29,7 +29,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointTimeoutLock;
-import org.apache.ignite.internal.processors.cache.persistence.defragmentation.GridQueryIndexingDefragmentation;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.LinkMap;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.TimeTracker;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.TreeIterator;
@@ -73,7 +72,7 @@ import static org.apache.ignite.internal.processors.query.h2.defragmentation.Ind
 /**
  *
  */
-public class IndexingDefragmentation implements GridQueryIndexingDefragmentation {
+public class IndexingDefragmentation {
     /** Indexing. */
     private final IgniteH2Indexing indexing;
 
@@ -93,8 +92,21 @@ public class IndexingDefragmentation implements GridQueryIndexingDefragmentation
         INSERT_ROW
     }
 
-    /** {@inheritDoc} */
-    @Override public void defragment(
+    /**
+     * Defragment index partition.
+     *
+     * @param grpCtx Old group context.
+     * @param newCtx New group context.
+     * @param partPageMem Partition page memory.
+     * @param mappingByPartition Mapping page memory.
+     * @param cpLock Defragmentation checkpoint read lock.
+     * @param cancellationChecker Cancellation checker.
+     * @param log Log.
+     * @param defragmentationThreadPool Thread pool for defragmentation.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    public void defragment(
         CacheGroupContext grpCtx,
         CacheGroupContext newCtx,
         PageMemoryEx partPageMem,
