@@ -16,6 +16,13 @@
 
 package org.apache.ignite.internal.util.tostring;
 
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.Externalizable;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -38,19 +45,19 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.function.Supplier;
 import java.util.function.Function;
-
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.util.GridUnsafe;
-import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import java.util.function.Supplier;
 
 import static java.util.Objects.nonNull;
-import static org.apache.ignite.IgniteSystemProperties.*;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.*;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_COLLECTION_LIMIT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.getString;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.NONE;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.convertDataLogging;
 
 /**
  * Provides auto-generation framework for {@code toString()} output.
@@ -91,50 +98,6 @@ import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.Sensi
  * </ul>
  */
 public class GridToStringBuilder {
-    public static final String SENSITIVE_DATA_LOGGING = "SENSITIVE_DATA_LOGGING";
-
-    public enum SensitiveDataLogging {
-        PLAIN, HASH, NONE;
-
-        public static SensitiveDataLogging convertDataLogging(String strDataLogging) {
-            switch(strDataLogging) {
-                case "plain":
-                    return PLAIN;
-                case "hash":
-                    return HASH;
-                case "none":
-                default:
-                    return NONE;
-            }
-        }
-    }
-
-//    public static volatile DistributedMetaStorage metaStorage;
-
-    public static SensitiveDataLogging getSensitiveDataLogging() {
-//        if (S.metaStorage == null)
-//            return SensitiveDataLogging.HASH;
-//
-//        Serializable sensitiveDataLogging;
-//
-//        try {
-//            sensitiveDataLogging = S.metaStorage.read(SENSITIVE_DATA_LOGGING);
-//        } catch (IgniteCheckedException e) {
-//            throw U.convertException(e);
-//        }
-//
-//        if (sensitiveDataLogging != null) //TODO improve validation
-//            return (SensitiveDataLogging) sensitiveDataLogging;
-//        else
-//            return SensitiveDataLogging.HASH;
-
-//        if (sensitiveDataLogging != null && sensitiveDataLogging instanceof String) //TODO improve validation
-//            return SensitiveDataLogging.valueOf((String) sensitiveDataLogging);
-//        else
-//            return SensitiveDataLogging.HASH;
-        return Holder.INCL_SENS_SUP.get();
-    }
-
     /** */
     private static final Object[] EMPTY_ARRAY = new Object[0];
 
@@ -205,6 +168,24 @@ public class GridToStringBuilder {
         }
     };
 
+    /** Log levels for sensitive data */
+    public enum SensitiveDataLogging {
+        PLAIN, HASH, NONE;
+
+        /** */
+        public static SensitiveDataLogging convertDataLogging(String strDataLogging) {
+            switch(strDataLogging) {
+                case "plain":
+                    return PLAIN;
+                case "none":
+                    return NONE;
+                case "hash":
+                default:
+                    return HASH;
+            }
+        }
+    }
+
     /**
      * Implementation of the <a href=
      * "https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom">
@@ -213,6 +194,12 @@ public class GridToStringBuilder {
     private static class Holder {
         /** Supplier holder for {@link #includeSensitive}. */
         static final Supplier<SensitiveDataLogging> INCL_SENS_SUP = INCL_SENS_SUP_REF.get();
+    }
+
+    /** @return {@link SensitiveDataLogging} Log levels for sensitive data
+     */
+    public static SensitiveDataLogging getSensitiveDataLogging() {
+        return Holder.INCL_SENS_SUP.get();
     }
 
     /**
@@ -240,9 +227,7 @@ public class GridToStringBuilder {
      * @see GridToStringBuilder#setIncludeSensitiveSupplier(Supplier)
      */
     public static boolean includeSensitive() {
-//        if (metaStorage == null)
-//            return Holder.INCL_SENS_SUP.get();
-        return getSensitiveDataLogging() == SensitiveDataLogging.PLAIN;
+        return Holder.INCL_SENS_SUP.get() == SensitiveDataLogging.PLAIN;
     }
 
     /**

@@ -16,11 +16,6 @@
 
 package org.apache.ignite.internal.binary;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -39,6 +34,12 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.internal.processors.cache.CacheObjectAdapter.objectPutSize;
@@ -293,12 +294,12 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
             }
 
             if (type != null)
-                return S.toString(type.typeName(), "ordinal", ord, false);
+                return S.toString(type.typeName(), "ordinal", ord);
             else {
                 if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID)
-                    return S.toString("BinaryEnum", "clsName", clsName, false, "ordinal", ord, false);
+                    return S.toString("BinaryEnum", "clsName", clsName, "ordinal", ord);
                 else
-                    return S.toString("BinaryEnum", "typeId", typeId, false, "ordinal", ord, false);
+                    return S.toString("BinaryEnum", "typeId", typeId, "ordinal", ord);
             }
         }
         if (sensitiveDataLogging == HASH)

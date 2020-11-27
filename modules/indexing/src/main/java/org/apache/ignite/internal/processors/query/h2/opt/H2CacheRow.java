@@ -40,7 +40,6 @@ import org.gridgain.internal.h2.value.Value;
 import org.gridgain.internal.h2.value.ValueNull;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 
 /**
  * Table row implementation based on {@link GridQueryTypeDescriptor}.

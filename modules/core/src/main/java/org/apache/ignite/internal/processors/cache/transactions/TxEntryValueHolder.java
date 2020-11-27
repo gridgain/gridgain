@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.io.Serializable;
-import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
@@ -34,12 +32,13 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.ByteBuffer;
+
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOOP;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
@@ -167,17 +166,16 @@ public class TxEntryValueHolder implements Message {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-//        return S.toString(TxEntryValueHolder.class, this);
         GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
 
         if (sensitiveDataLogging == PLAIN || sensitiveDataLogging == HASH) {
             return S.toString(getClass().getSimpleName(),
-                    "val", val, false,
-                    "op", op, false);
+                    "val", val,
+                    "op", op);
         }
         else {
             return S.toString(getClass().getSimpleName(),
-                    "op", op, false);
+                    "op", op);
         }
     }
 

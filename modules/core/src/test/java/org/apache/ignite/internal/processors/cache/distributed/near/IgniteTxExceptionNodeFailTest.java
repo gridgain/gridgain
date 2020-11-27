@@ -30,7 +30,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
-import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -42,18 +41,16 @@ import org.junit.runners.Parameterized;
 import org.locationtech.jts.util.Assert;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishFuture.ALL_PARTITION_OWNERS_LEFT_GRID_MSG;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.*;
 
 /**
  * Tests check a result of commit when a node fail before
- * send {@link GridNearTxFinishResponse} to transaction coodinator
+ * send {@link GridNearTxFinishResponse} to transaction coordinator
  */
 @RunWith(Parameterized.class)
 public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
@@ -98,18 +95,21 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
         stopAllGrids();
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testNodeFailBeforeSendGridNearTxFinishResponseWithSensitive() throws Exception {
         testNodeFailBeforeSendGridNearTxFinishResponse();
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testNodeFailBeforeSendGridNearTxFinishResponseWithHashSensitive() throws Exception {
         testNodeFailBeforeSendGridNearTxFinishResponse();
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testNodeFailBeforeSendGridNearTxFinishResponseWithoutSensitive() throws Exception {
@@ -199,9 +199,6 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
                 Assert.isTrue(msg.contains(ALL_PARTITION_OWNERS_LEFT_GRID_MSG));
 
                 if (!mvccEnabled(grid1.context())) {
-                    System.out.println("!qrefvd" + msg);
-                    System.out.println("!qrefvd" + key0);
-
                     Pattern msgPtrn;
 
                     if (S.getSensitiveDataLogging() == PLAIN) {

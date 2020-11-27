@@ -16,9 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.io.Externalizable;
-import java.io.Serializable;
-import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -29,7 +26,9 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SENSITIVE_DATA_LOGGING;
+import java.io.Externalizable;
+import java.nio.ByteBuffer;
+
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
@@ -42,7 +41,7 @@ public class IgniteTxKey implements Message {
     private static final long serialVersionUID = 0L;
 
     /** Key. */
-    @GridToStringInclude(/*sensitive = true*/)//если убрать sensitive = true, то упадет testHideSensitiveDataDuringExchange
+    @GridToStringInclude()
     private KeyCacheObject key;
 
     /** Cache ID. */
@@ -193,18 +192,17 @@ public class IgniteTxKey implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public String toString() {//
-//        return S.toString(IgniteTxKey.class, this);
+    @Override public String toString() {
         GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
 
         if (sensitiveDataLogging == PLAIN || sensitiveDataLogging == HASH) {
             return S.toString(getClass().getSimpleName(),
-                    "key", key, false,
-                    "cacheId", cacheId, false);
+                    "key", key,
+                    "cacheId", cacheId);
         }
         else {
             return S.toString(getClass().getSimpleName(),
-                    "cacheId", cacheId, false);
+                    "cacheId", cacheId);
         }
     }
 }
