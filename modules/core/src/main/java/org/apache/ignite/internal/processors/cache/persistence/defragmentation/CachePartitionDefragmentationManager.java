@@ -433,16 +433,11 @@ public class CachePartitionDefragmentationManager {
 
                         pageMgr.pageStoreMap().clear(grpId);
 
-                        try {
-                            renameTempIndexFile(workDir);
+                        renameTempIndexFile(workDir);
 
-                            writeDefragmentationCompletionMarker(filePageStoreMgr.getPageStoreFileIoFactory(), workDir, log);
+                        writeDefragmentationCompletionMarker(filePageStoreMgr.getPageStoreFileIoFactory(), workDir, log);
 
-                            batchRenameDefragmentedCacheGroupPartitions(workDir, log);
-                        }
-                        catch (IgniteCheckedException e) {
-                            throw new IgniteException(e);
-                        }
+                        batchRenameDefragmentedCacheGroupPartitions(workDir, log);
 
                         return null;
                     });
@@ -580,12 +575,7 @@ public class CachePartitionDefragmentationManager {
 
                 pageMgr.pageStoreMap().removePageStore(grpId, partId); // Yes, it'll be invalid in a second.
 
-                try {
-                    renameTempPartitionFile(workDir, partId);
-                }
-                catch (IgniteCheckedException e) {
-                    throw new IgniteException(e);
-                }
+                renameTempPartitionFile(workDir, partId);
             }
         };
 
