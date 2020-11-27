@@ -2537,6 +2537,8 @@ public class IgnitionEx {
         private IgniteLogger initLogger(@Nullable IgniteLogger cfgLog, UUID nodeId, String workDir)
             throws IgniteCheckedException {
             try {
+                Thread.sleep(40_000);
+
                 Exception log4jInitErr = null;
 
                 if (cfgLog == null) {
@@ -2568,6 +2570,8 @@ public class IgnitionEx {
                                     }
                                 }
                             }
+
+                            boolean configured = (Boolean)log4jCls.getMethod("isConfigured").invoke(null);
 
                             if (url != null) {
                                 Constructor<?> ctor = log4jCls.getConstructor(URL.class);
