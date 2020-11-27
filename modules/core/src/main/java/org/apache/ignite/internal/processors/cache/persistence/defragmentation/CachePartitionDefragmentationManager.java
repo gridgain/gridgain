@@ -73,7 +73,6 @@ import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogRow;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.GridAtomicLong;
-import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.collection.IntMap;
@@ -297,8 +296,6 @@ public class CachePartitionDefragmentationManager {
                 try {
                     GridCacheOffheapManager offheap = (GridCacheOffheapManager)oldGrpCtx.offheap();
 
-                    GridSpinBusyLock busyLock = offheap.busyLock();
-
                     status.onCacheGroupStart(oldGrpCtx, oldCacheDataStores.size());
 
                     if (workDir == null || oldCacheDataStores.isEmpty()) {
@@ -396,7 +393,7 @@ public class CachePartitionDefragmentationManager {
                             oldGrpCtx,
                             grpId,
                             workDir,
-                            busyLock,
+                            offheap,
                             pageStoreFactory,
                             cmpFut,
                             oldPageMem,
@@ -506,7 +503,7 @@ public class CachePartitionDefragmentationManager {
         CacheGroupContext oldGrpCtx,
         int grpId,
         File workDir,
-        GridSpinBusyLock busyLock,
+        GridCacheOffheapManager offheap,
         FilePageStoreFactory pageStoreFactory,
         GridCompoundFuture<Object, Object> cmpFut,
         PageMemoryEx oldPageMem,
@@ -548,7 +545,7 @@ public class CachePartitionDefragmentationManager {
 
         partCtx.createPartPageStore();
 
-        copyPartitionData(partCtx, treeIter, busyLock);
+        copyPartitionData(partCtx, treeIter, offheap);
 
         DefragmentationPageReadWriteManager pageMgr = (DefragmentationPageReadWriteManager)partCtx.partPageMemory.pageManager();
 
@@ -696,14 +693,15 @@ public class CachePartitionDefragmentationManager {
      *
      * @param partCtx
      * @param treeIter
+     * @param offheap
      * @throws IgniteCheckedException If failed.
      */
     private void copyPartitionData(
         PartitionContext partCtx,
         TreeIterator treeIter,
-        GridSpinBusyLock busyLock
+        GridCacheOffheapManager offheap
     ) throws IgniteCheckedException {
-        partCtx.createNewCacheDataStore(busyLock);
+        partCtx.createNewCacheDataStore(offheap);
 
         CacheDataTree tree = partCtx.oldCacheDataStore.tree();
 
@@ -1098,12 +1096,11 @@ public class CachePartitionDefragmentationManager {
         }
 
         /** */
-        public void createNewCacheDataStore(GridSpinBusyLock busyLock) {
-            GridCacheDataStore newCacheDataStore = new GridCacheDataStore(
+        public void createNewCacheDataStore(GridCacheOffheapManager offheap) {
+            GridCacheDataStore newCacheDataStore = offheap.createGridCacheDataStore(
                 newGrpCtx,
                 partId,
                 true,
-                busyLock,
                 log
             );
 
