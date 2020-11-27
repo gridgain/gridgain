@@ -76,7 +76,7 @@ public class PlatformServiceCallTask extends AbstractPlatformServiceCallTask {
                 .assertThrowsWithCause(srv::errorMethod, PlatformNativeException.class)
                 .getCause();
 
-            assertTrue(nativeEx.toString().contains(nativeEx.getCause().getClass().getSimpleName()));
+            assertTrue(nativeEx.toString().contains(nativeEx.getClass().getSimpleName()));
         }
     }
 }
