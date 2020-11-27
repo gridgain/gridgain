@@ -67,8 +67,8 @@ public class IgniteWalConverter {
         H2ExtrasInnerIO.register();
         H2ExtrasLeafIO.register();
 
-        System.setProperty(IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE,
-            Boolean.toString(params.includeSensitive() == ProcessSensitiveData.HIDE));
+//        System.setProperty(IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE,
+//            Boolean.toString(params.includeSensitive() == ProcessSensitiveData.HIDE));
 
         System.setProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC, Boolean.toString(params.isSkipCrc()));
         RecordV1Serializer.skipCrc = params.isSkipCrc();
