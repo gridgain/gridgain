@@ -238,6 +238,11 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                     );
                 }
 
+                @Override public void addMetaLocally(int typeId, BinaryType meta, boolean failIfUnregistered)
+                    throws BinaryObjectException {
+                    CacheObjectBinaryProcessorImpl.this.addMetaLocally(typeId, meta);
+                }
+
                 @Override public BinaryType metadata(int typeId) throws BinaryObjectException {
                     return CacheObjectBinaryProcessorImpl.this.metadata(typeId);
                 }
@@ -350,14 +355,6 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         super.onKernalStart(active);
 
         discoveryStarted = true;
-    }
-
-    /** {@inheritDoc} */
-    @Nullable @Override public CacheObject prepareForCache(@Nullable CacheObject obj, GridCacheContext cctx) {
-        if (obj == null)
-            return null;
-
-        return obj.prepareForCache(cctx.cacheObjectContext());
     }
 
     /** {@inheritDoc} */
@@ -1051,8 +1048,6 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
         boolean binaryEnabled = marsh instanceof BinaryMarshaller && !GridCacheUtils.isSystemCache(ccfg.getName());
 
-        AffinityKeyMapper cacheAffMapper = ccfg.getAffinityMapper();
-
         AffinityKeyMapper dfltAffMapper = binaryEnabled ?
             new CacheDefaultBinaryAffinityKeyMapper(ccfg.getKeyConfiguration()) :
             new GridCacheDefaultAffinityKeyMapper();
@@ -1230,6 +1225,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             case CacheObject.TOMBSTONE:
                 return TombstoneCacheObject.INSTANCE;
+
+            case CacheObject.TYPE_BINARY_COMPRESSED:
+                return new BinaryObjectImpl(binaryContext(), ctx.compressionStrategy().decompress(bytes), 0);
         }
 
         throw new IllegalArgumentException("Invalid object type: " + type);
@@ -1247,6 +1245,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             case CacheObject.TYPE_REGULAR:
                 return new KeyCacheObjectImpl(ctx.kernalContext().cacheObjects().unmarshal(ctx, bytes, null), bytes, -1);
+
+            case CacheObject.TYPE_BINARY_COMPRESSED:
+                return new BinaryObjectImpl(binaryContext(), ctx.compressionStrategy().decompress(bytes), 0);
         }
 
         throw new IllegalArgumentException("Invalid object type: " + type);

@@ -43,6 +43,7 @@ import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.jdbc.JdbcResultSet;
 import org.gridgain.internal.h2.result.LazyResult;
 import org.gridgain.internal.h2.result.ResultInterface;
+import org.gridgain.internal.h2.value.DataType;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -194,7 +195,7 @@ class MapQueryResult {
                 if (!res.res.next())
                     return true;
 
-                Value[] row = res.res.currentRow();
+                Value[] row = convertIntervalTypes(res.res.currentRow());
 
                 if (cpNeeded) {
                     boolean copied = false;
@@ -243,7 +244,7 @@ class MapQueryResult {
                         row(row)));
                 }
 
-                rows.add(res.res.currentRow());
+                rows.add(row);
 
                 res.fetchSizeInterceptor.checkOnFetchNext();
             }
@@ -266,6 +267,16 @@ class MapQueryResult {
             res.add(v.getObject());
 
         return res;
+    }
+
+    /** */
+    private static Value[] convertIntervalTypes(Value[] row) {
+        for (int i = 0; i < row.length; i++) {
+            if (DataType.isIntervalType(row[i].getValueType()))
+                row[i] = row[i].convertTo(Value.LONG);
+        }
+
+        return row;
     }
 
     /**

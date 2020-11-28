@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
 import org.apache.ignite.internal.pagemem.PageUtils;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
@@ -32,10 +31,7 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     private static final int PART_META_REUSE_LIST_ROOT_OFF = PENDING_TREE_ROOT_OFF + 8;
 
     /** */
-    private static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
-
-    /** */
-    protected static final int TOMBSTONES_COUNT = GAPS_LINK + 8;
+    public static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
 
     /**
      * @param ver Version.
@@ -51,8 +47,6 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
         setPendingTreeRoot(pageAddr, 0L);
         setPartitionMetaStoreReuseListRoot(pageAddr, 0L);
         setGapsLink(pageAddr, 0L);
-        setUpdateTreeRoot(pageAddr, 0L);
-        setTombstonesCount(pageAddr, 0L);
     }
 
     /** {@inheritDoc} */
@@ -104,39 +98,11 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     }
 
     /** {@inheritDoc} */
-    @Override public long getTombstonesCount(long pageAddr) {
-        return PageUtils.getLong(pageAddr, TOMBSTONES_COUNT);
-    }
+    @Override protected void printFields(long pageAddr, GridStringBuilder sb) {
+        super.printFields(pageAddr, sb);
 
-    /** {@inheritDoc} */
-    @Override public boolean setTombstonesCount(long pageAddr, long tombstonesCnt) {
-        if (getTombstonesCount(pageAddr) == tombstonesCnt)
-            return false;
-
-        PageUtils.putLong(pageAddr, TOMBSTONES_COUNT, tombstonesCnt);
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void printPage(long pageAddr, int pageSize, GridStringBuilder sb) {
-        byte state = getPartitionState(pageAddr);
-
-        sb.a("PagePartitionMeta[\n\ttreeRoot=").a(getReuseListRoot(pageAddr));
-        sb.a(",\n\tpendingTreeRoot=").a(getLastSuccessfulFullSnapshotId(pageAddr));
-        sb.a(",\n\tlastSuccessfulFullSnapshotId=").a(getLastSuccessfulFullSnapshotId(pageAddr));
-        sb.a(",\n\tlastSuccessfulSnapshotId=").a(getLastSuccessfulSnapshotId(pageAddr));
-        sb.a(",\n\tnextSnapshotTag=").a(getNextSnapshotTag(pageAddr));
-        sb.a(",\n\tlastSuccessfulSnapshotTag=").a(getLastSuccessfulSnapshotTag(pageAddr));
-        sb.a(",\n\tlastAllocatedPageCount=").a(getLastAllocatedPageCount(pageAddr));
-        sb.a(",\n\tcandidatePageCount=").a(getCandidatePageCount(pageAddr));
-        sb.a(",\n\tsize=").a(getSize(pageAddr));
-        sb.a(",\n\tupdateCounter=").a(getUpdateCounter(pageAddr));
-        sb.a(",\n\tglobalRemoveId=").a(getGlobalRemoveId(pageAddr));
-        sb.a(",\n\tpartitionState=").a(state).a("(").a(GridDhtPartitionState.fromOrdinal(state)).a(")");
-        sb.a(",\n\tcacheSizesPageId=").a(getCacheSizesPageId(pageAddr));
-        sb.a(",\n\tcntrUpdDataPageId=").a(getGapsLink(pageAddr));
-        sb.a(",\n\ttombstonesCount=").a(getTombstonesCount(pageAddr));
-        sb.a("\n]");
+        sb.a(",\n\tpendingTreeRoot=").a(getPendingTreeRoot(pageAddr))
+            .a(",\n\tpartitionMetaStoreReuseListRoot=").a(getPartitionMetaStoreReuseListRoot(pageAddr))
+            .a(",\n\tcntrUpdDataPageId=").a(getGapsLink(pageAddr));
     }
 }

@@ -25,10 +25,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
+import org.apache.ignite.internal.managers.encryption.ReencryptStateUtils;
+import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -39,14 +44,15 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.metric.LongMetric;
 
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
-import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
  * Cache group metrics.
@@ -180,6 +186,16 @@ public class CacheGroupMetricsImpl {
         mreg.register("Tombstones",
             this::getTombstones,
             "Number of tombstone entries.");
+
+        if (ctx.config().isEncryptionEnabled()) {
+            mreg.register("ReencryptionFinished",
+                () -> !ctx.shared().kernalContext().encryption().reencryptionInProgress(ctx.groupId()),
+                "The flag indicates whether reencryption is finished or not.");
+
+            mreg.register("ReencryptionPagesLeft",
+                this::getPagesLeftForReencryption,
+                "Number of pages left for reencryption.");
+        }
     }
 
     /** */
@@ -246,7 +262,8 @@ public class CacheGroupMetricsImpl {
      * Calculates the number of partition copies for all partitions of this cache group and filter values by the
      * predicate.
      *
-     * @param pred Predicate.
+     * @param loc Local falg.
+     * @param conv Predicate.
      */
     private int numberOfPartitionCopies(boolean loc, BiFunction<Integer, Integer, Integer> conv) {
         GridDhtPartitionFullMap partFullMap = ctx.topology().partitionMap(false);
@@ -497,6 +514,40 @@ public class CacheGroupMetricsImpl {
             .map(part -> part.dataStore().tombstonesCount()).reduce(Long::sum).orElse(0L);
     }
 
+    /** */
+    public long getPagesLeftForReencryption() {
+        if (!ctx.shared().kernalContext().encryption().reencryptionInProgress(ctx.groupId()))
+            return 0;
+
+        long pagesLeft = 0;
+
+        FilePageStoreManager mgr = (FilePageStoreManager)ctx.shared().pageStore();
+
+        GridEncryptionManager encMgr = ctx.shared().kernalContext().encryption();
+
+        try {
+            for (int p = 0; p < ctx.affinity().partitions(); p++) {
+                PageStore pageStore = mgr.getStore(ctx.groupId(), p);
+
+                if (!pageStore.exists())
+                    continue;
+
+                long state = encMgr.getEncryptionState(ctx.groupId(), p);
+
+                pagesLeft += ReencryptStateUtils.pageCount(state) - ReencryptStateUtils.pageIndex(state);
+            }
+
+            long state = encMgr.getEncryptionState(ctx.groupId(), PageIdAllocator.INDEX_PARTITION);
+
+            pagesLeft += ReencryptStateUtils.pageCount(state) - ReencryptStateUtils.pageIndex(state);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+
+        return pagesLeft;
+    }
+
     /** Removes all metric for cache group. */
     public void remove() {
         if (ctx.shared().kernalContext().isStopping())
@@ -519,6 +570,6 @@ public class CacheGroupMetricsImpl {
 
     /** @return Metric group name. */
     private String metricGroupName() {
-        return metricName(CACHE_GROUP_METRICS_PREFIX, ctx.cacheOrGroupName());
+        return MetricUtils.cacheGroupMetricsRegistryName(ctx.cacheOrGroupName());
     }
 }

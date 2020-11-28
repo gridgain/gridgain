@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.persistence.wal.serializer;
 import java.io.DataInput;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,6 +30,8 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
+import org.apache.ignite.internal.managers.encryption.GroupKey;
+import org.apache.ignite.internal.managers.encryption.GroupKeyEncrypted;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
@@ -38,10 +39,11 @@ import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.EncryptedRecord;
 import org.apache.ignite.internal.pagemem.wal.record.LazyDataEntry;
-import org.apache.ignite.internal.pagemem.wal.record.MasterKeyChangeRecord;
+import org.apache.ignite.internal.pagemem.wal.record.MasterKeyChangeRecordV2;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
+import org.apache.ignite.internal.pagemem.wal.record.ReencryptionStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType;
@@ -67,6 +69,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRootInlineFlagsCreatedVersionRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRootInlineRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRootRecord;
+import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateIndexDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateLastAllocatedIndex;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateLastSuccessfulFullSnapshotId;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateLastSuccessfulSnapshotId;
@@ -117,8 +120,10 @@ import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD;
-import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD_V2;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_RECORD_V2;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MASTER_KEY_CHANGE_RECORD_V2;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.REC_TYPE_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.putRecordType;
@@ -190,7 +195,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         int clSz = plainSize(record);
 
         if (needEncryption(record))
-            return encSpi.encryptedSize(clSz) + 4 /* groupId */ + 4 /* data size */ + REC_TYPE_SIZE;
+            return encSpi.encryptedSize(clSz) + 4 /* groupId */ + 4 /* data size */ + 1 /* key ID */ + REC_TYPE_SIZE;
 
         return clSz;
     }
@@ -198,7 +203,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     /** {@inheritDoc} */
     @Override public WALRecord readRecord(RecordType type, ByteBufferBackedDataInput in, int size)
         throws IOException, IgniteCheckedException {
-        if (type == ENCRYPTED_RECORD) {
+        if (type == ENCRYPTED_RECORD || type == ENCRYPTED_RECORD_V2) {
             if (encSpi == null) {
                 T2<Integer, RecordType> knownData = skipEncryptedRecord(in, true);
 
@@ -206,7 +211,8 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 return new EncryptedRecord(knownData.get1(), knownData.get2());
             }
 
-            T3<ByteBufferBackedDataInput, Integer, RecordType> clData = readEncryptedData(in, true);
+            T3<ByteBufferBackedDataInput, Integer, RecordType> clData =
+                readEncryptedData(in, true, type == ENCRYPTED_RECORD_V2);
 
             //This happen during startup. On first WAL iteration we restore only metastore.
             //So, no encryption keys available. See GridCacheDatabaseSharedManager#readMetastore
@@ -270,13 +276,16 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
      *
      * @param in Input stream.
      * @param readType If {@code true} plain record type will be read from {@code in}.
+     * @param readKeyId If {@code true} encryption key identifier will be read from {@code in}.
      * @return Plain data stream, group id, plain record type,
      * @throws IOException If failed.
      * @throws IgniteCheckedException If failed.
      */
-    private T3<ByteBufferBackedDataInput, Integer, RecordType> readEncryptedData(ByteBufferBackedDataInput in,
-        boolean readType)
-        throws IOException, IgniteCheckedException {
+    private T3<ByteBufferBackedDataInput, Integer, RecordType> readEncryptedData(
+        ByteBufferBackedDataInput in,
+        boolean readType,
+        boolean readKeyId
+    ) throws IOException, IgniteCheckedException {
         int grpId = in.readInt();
         int encRecSz = in.readInt();
         RecordType plainRecType = null;
@@ -284,16 +293,18 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         if (readType)
             plainRecType = RecordV1Serializer.readRecordType(in);
 
+        int keyId = readKeyId ? in.readUnsignedByte() : GridEncryptionManager.INITIAL_KEY_ID;
+
         byte[] encData = new byte[encRecSz];
 
         in.readFully(encData);
 
-        Serializable key = encMgr.groupKey(grpId);
+        GroupKey grpKey = encMgr.groupKey(grpId, keyId);
 
-        if (key == null)
+        if (grpKey == null)
             return new T3<>(null, grpId, plainRecType);
 
-        byte[] clData = encSpi.decrypt(encData, key);
+        byte[] clData = encSpi.decrypt(encData, grpKey.key());
 
         return new T3<>(new ByteBufferBackedDataInputImpl().buffer(ByteBuffer.wrap(clData)), grpId, plainRecType);
     }
@@ -310,6 +321,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         throws IOException, IgniteCheckedException {
         int grpId = in.readInt();
         int encRecSz = in.readInt();
+
         RecordType plainRecType = null;
 
         if (readType)
@@ -339,11 +351,11 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         if (plainRecType != null)
             putRecordType(dst, plainRecType);
 
-        Serializable key = encMgr.groupKey(grpId);
+        GroupKey grpKey = encMgr.groupKey(grpId);
 
-        assert key != null;
+        dst.put(grpKey.id());
 
-        encSpi.encrypt(clData, key, dst);
+        encSpi.encrypt(clData, grpKey.key(), dst);
     }
 
     /**
@@ -375,6 +387,9 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case META_PAGE_INIT:
                 return /*cache ID*/4 + /*page ID*/8 + /*ioType*/2 + /*ioVer*/2 +  /*tree root*/8 + /*reuse root*/8;
 
+            case INDEX_META_PAGE_DELTA_RECORD:
+                return /*cache ID*/4 + /*page ID*/8 + /*encrypt page index*/ 4 + /*encrypt pages count*/4;
+
             case PARTITION_META_PAGE_UPDATE_COUNTERS:
                 return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
                         + /*allocatedIdxCandidate*/ 4;
@@ -383,9 +398,9 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
                     + /*allocatedIdxCandidate*/ 4 + /*link*/ 8;
 
-            case PARTITION_META_PAGE_UPDATE_COUNTERS_V3:
+            case PARTITION_META_PAGE_DELTA_RECORD_V3:
                 return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
-                    + /*allocatedIdxCandidate*/ 4 + /*link*/ 8 + /*tombstones cnt*/ 8;
+                    + /*allocatedIdxCandidate*/ 4 + /*link*/ 8 + /*encrypt page index*/ 4 + /*encrypt pages count*/4 + /*tombstones cnt*/ 8;
 
             case MEMORY_RECOVERY:
                 return 8;
@@ -543,10 +558,12 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case TX_RECORD:
                 return txRecordSerializer.size((TxRecord)record);
 
-            case MASTER_KEY_CHANGE_RECORD:
-                MasterKeyChangeRecord rec = (MasterKeyChangeRecord)record;
+            case MASTER_KEY_CHANGE_RECORD_V2:
+                return ((MasterKeyChangeRecordV2)record).dataSize();
 
-                return rec.dataSize();
+            case REENCRYPTION_START_RECORD:
+                return ((ReencryptionStartRecord)record).dataSize();
+
             default:
                 throw new UnsupportedOperationException("Type: " + record.type());
         }
@@ -616,6 +633,11 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
+            case INDEX_META_PAGE_DELTA_RECORD:
+                res = new MetaPageUpdateIndexDataRecord(in);
+
+                break;
+
             case PARTITION_META_PAGE_UPDATE_COUNTERS:
                 res = new MetaPageUpdatePartitionDataRecord(in);
 
@@ -626,7 +648,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
-            case PARTITION_META_PAGE_UPDATE_COUNTERS_V3:
+            case PARTITION_META_PAGE_DELTA_RECORD_V3:
                 res = new MetaPageUpdatePartitionDataRecordV3(in);
 
                 break;
@@ -659,12 +681,13 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 break;
 
             case ENCRYPTED_DATA_RECORD:
+            case ENCRYPTED_DATA_RECORD_V2:
                 entryCnt = in.readInt();
 
                 entries = new ArrayList<>(entryCnt);
 
                 for (int i = 0; i < entryCnt; i++)
-                    entries.add(readEncryptedDataEntry(in));
+                    entries.add(readEncryptedDataEntry(in, type == ENCRYPTED_DATA_RECORD_V2));
 
                 res = new DataRecord(entries, 0L);
 
@@ -1196,6 +1219,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 break;
 
             case MASTER_KEY_CHANGE_RECORD:
+            case MASTER_KEY_CHANGE_RECORD_V2:
                 int keyNameLen = in.readInt();
 
                 byte[] keyNameBytes = new byte[keyNameLen];
@@ -1206,21 +1230,39 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 int keysCnt = in.readInt();
 
-                HashMap<Integer, byte[]> grpKeys = new HashMap<>(keysCnt);
+                List<T2<Integer, GroupKeyEncrypted>> grpKeys = new ArrayList<>(keysCnt);
+
+                boolean readKeyId = type == MASTER_KEY_CHANGE_RECORD_V2;
 
                 for (int i = 0; i < keysCnt; i++) {
                     int grpId = in.readInt();
+                    int keyId = readKeyId ? in.readByte() & 0xff : 0;
 
                     int grpKeySize = in.readInt();
-
                     byte[] grpKey = new byte[grpKeySize];
 
                     in.readFully(grpKey);
 
-                    grpKeys.put(grpId, grpKey);
+                    grpKeys.add(new T2<>(grpId, new GroupKeyEncrypted(keyId, grpKey)));
                 }
 
-                res = new MasterKeyChangeRecord(masterKeyName, grpKeys);
+                res = new MasterKeyChangeRecordV2(masterKeyName, grpKeys);
+
+                break;
+
+            case REENCRYPTION_START_RECORD:
+                int grpsCnt = in.readInt();
+
+                Map<Integer, Byte> map = U.newHashMap(grpsCnt);
+
+                for (int i = 0; i < grpsCnt; i++) {
+                    int grpId = in.readInt();
+                    byte keyId = in.readByte();
+
+                    map.put(grpId, keyId);
+                }
+
+                res = new ReencryptionStartRecord(map);
 
                 break;
 
@@ -1277,9 +1319,14 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
+            case INDEX_META_PAGE_DELTA_RECORD:
+                ((MetaPageUpdateIndexDataRecord)rec).toBytes(buf);
+
+                break;
+
             case PARTITION_META_PAGE_UPDATE_COUNTERS:
             case PARTITION_META_PAGE_UPDATE_COUNTERS_V2:
-            case PARTITION_META_PAGE_UPDATE_COUNTERS_V3:
+            case PARTITION_META_PAGE_DELTA_RECORD_V3:
                 ((MetaPageUpdatePartitionDataRecord)rec).toBytes(buf);
 
                 break;
@@ -1812,23 +1859,40 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case SWITCH_SEGMENT_RECORD:
                 break;
 
-            case MASTER_KEY_CHANGE_RECORD:
-                MasterKeyChangeRecord mkChangeRec = (MasterKeyChangeRecord)rec;
+            case MASTER_KEY_CHANGE_RECORD_V2:
+                MasterKeyChangeRecordV2 mkChangeRec = (MasterKeyChangeRecordV2)rec;
 
                 byte[] keyIdBytes = mkChangeRec.getMasterKeyName().getBytes();
 
                 buf.putInt(keyIdBytes.length);
                 buf.put(keyIdBytes);
 
-                Map<Integer, byte[]> grpKeys = mkChangeRec.getGrpKeys();
+                List<T2<Integer, GroupKeyEncrypted>> grpKeys = mkChangeRec.getGrpKeys();
 
                 buf.putInt(grpKeys.size());
 
-                for (Entry<Integer, byte[]> entry : grpKeys.entrySet()) {
-                    buf.putInt(entry.getKey());
+                for (T2<Integer, GroupKeyEncrypted> entry : grpKeys) {
+                    GroupKeyEncrypted grpKey = entry.get2();
 
-                    buf.putInt(entry.getValue().length);
-                    buf.put(entry.getValue());
+                    buf.putInt(entry.get1());
+                    buf.put((byte)grpKey.id());
+
+                    buf.putInt(grpKey.key().length);
+                    buf.put(grpKey.key());
+                }
+
+                break;
+
+            case REENCRYPTION_START_RECORD:
+                ReencryptionStartRecord statusRecord = (ReencryptionStartRecord)rec;
+
+                Map<Integer, Byte> grps = statusRecord.groups();
+
+                buf.putInt(grps.size());
+
+                for (Map.Entry<Integer, Byte> e : grps.entrySet()) {
+                    buf.putInt(e.getKey());
+                    buf.put(e.getValue());
                 }
 
                 break;
@@ -1944,11 +2008,12 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
     /**
      * @param in Input to read from.
+     * @param readKeyId If {@code true} encryption key identifier will be read from {@code in}.
      * @return Read entry.
      * @throws IOException If failed.
      * @throws IgniteCheckedException If failed.
      */
-    DataEntry readEncryptedDataEntry(ByteBufferBackedDataInput in) throws IOException, IgniteCheckedException {
+    DataEntry readEncryptedDataEntry(ByteBufferBackedDataInput in, boolean readKeyId) throws IOException, IgniteCheckedException {
         boolean needDecryption = in.readByte() == ENCRYPTED;
 
         if (needDecryption) {
@@ -1958,7 +2023,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 return new EncryptedDataEntry();
             }
 
-            T3<ByteBufferBackedDataInput, Integer, RecordType> clData = readEncryptedData(in, false);
+            T3<ByteBufferBackedDataInput, Integer, RecordType> clData = readEncryptedData(in, false, readKeyId);
 
             if (clData.get1() == null)
                 return null;
@@ -2052,12 +2117,12 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             return rec.type();
 
         if (needEncryption(rec))
-            return ENCRYPTED_RECORD;
+            return ENCRYPTED_RECORD_V2;
 
         if (rec.type() != DATA_RECORD)
             return rec.type();
 
-        return isDataRecordEncrypted((DataRecord)rec) ? ENCRYPTED_DATA_RECORD : DATA_RECORD;
+        return isDataRecordEncrypted((DataRecord)rec) ? ENCRYPTED_DATA_RECORD_V2 : DATA_RECORD;
     }
 
     /**
@@ -2146,7 +2211,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             int clSz = entrySize(entry);
 
             if (!encryptionDisabled && needEncryption(cctx.cacheContext(entry.cacheId()).groupId()))
-                sz += encSpi.encryptedSize(clSz) + 1 /* encrypted flag */ + 4 /* groupId */ + 4 /* data size */;
+                sz += encSpi.encryptedSize(clSz) + 1 /*encrypted flag*/ + 4 /*groupId*/ + 4 /*data size*/ + 1 /*key ID*/;
             else {
                 sz += clSz;
 

@@ -191,6 +191,10 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
         }
     }
 
+    public CacheDataRow getRow() {
+        return row;
+    }
+
     /**
      * @return {@code True} if this is removed row (doesn't have value).
      */
@@ -400,5 +404,9 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
         sb.a(" ]");
 
         return sb.toString();
+    }
+
+    public GridH2RowDescriptor getDesc() {
+        return desc;
     }
 }

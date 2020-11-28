@@ -1,5 +1,5 @@
-﻿/*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+/*
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,16 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Client.Cache
-{
-    using System;
+package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
-    /// <summary>
-    /// Cache operation flags.
-    /// </summary>
-    [Flags]
-    internal enum CacheFlags : byte
-    {
-        /// <summary>
-        /// No flags.
-        /// </summary>
-        None = 0x00,
+import org.apache.ignite.IgniteCheckedException;
 
-        /// <summary>
-        /// Keep binary.
-        /// </summary>
-        KeepBinary = 0x01
-    }
+/** */
+public interface PageIoResolver {
+    /** */
+    public static final PageIoResolver DEFAULT_PAGE_IO_RESOLVER = PageIO::getPageIO;
+
+    /** */
+    PageIO resolve(long pageAddr) throws IgniteCheckedException;
 }
+

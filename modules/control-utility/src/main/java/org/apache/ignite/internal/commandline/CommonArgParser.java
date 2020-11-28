@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 import org.apache.ignite.ssl.SslContextFactory;
 
+import static org.apache.ignite.internal.client.GridClientConfiguration.DFLT_CONNECT_TIMEOUT;
 import static org.apache.ignite.internal.client.GridClientConfiguration.DFLT_PING_INTERVAL;
 import static org.apache.ignite.internal.client.GridClientConfiguration.DFLT_PING_TIMEOUT;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
@@ -59,6 +60,9 @@ public class CommonArgParser {
 
     /** */
     static final String CMD_PING_TIMEOUT = "--ping-timeout";
+
+    /** */
+    static final String CMD_CONNECTION_TIMEOUT = "--connection-timeout";
 
     /** Verbose mode. */
     public static final String CMD_VERBOSE = "--verbose";
@@ -110,6 +114,7 @@ public class CommonArgParser {
 
         AUX_COMMANDS.add(CMD_PING_INTERVAL);
         AUX_COMMANDS.add(CMD_PING_TIMEOUT);
+        AUX_COMMANDS.add(CMD_CONNECTION_TIMEOUT);
 
         AUX_COMMANDS.add(CMD_SSL_PROTOCOL);
         AUX_COMMANDS.add(CMD_SSL_KEY_ALGORITHM);
@@ -157,6 +162,7 @@ public class CommonArgParser {
         list.add(optional(CMD_PASSWORD, "PASSWORD"));
         list.add(optional(CMD_PING_INTERVAL, "PING_INTERVAL"));
         list.add(optional(CMD_PING_TIMEOUT, "PING_TIMEOUT"));
+        list.add(optional(CMD_CONNECTION_TIMEOUT, "CONNECTION_TIMEOUT"));
         list.add(optional(CMD_VERBOSE));
         list.add(optional(CMD_SSL_PROTOCOL, "SSL_PROTOCOL[, SSL_PROTOCOL_2, ..., SSL_PROTOCOL_N]"));
         list.add(optional(CMD_SSL_CIPHER_SUITES, "SSL_CIPHER_1[, SSL_CIPHER_2, ..., SSL_CIPHER_N]"));
@@ -200,6 +206,8 @@ public class CommonArgParser {
         Long pingInterval = DFLT_PING_INTERVAL;
 
         Long pingTimeout = DFLT_PING_TIMEOUT;
+
+        Integer connTimeout = DFLT_CONNECT_TIMEOUT;
 
         boolean autoConfirmation = false;
 
@@ -270,6 +278,11 @@ public class CommonArgParser {
 
                     case CMD_PING_TIMEOUT:
                         pingTimeout = argIter.nextNonNegativeLongArg("ping timeout");
+
+                        break;
+
+                    case CMD_CONNECTION_TIMEOUT:
+                        connTimeout = argIter.nextNonNegativeIntArg("connection timeout");
 
                         break;
 
@@ -353,7 +366,7 @@ public class CommonArgParser {
             throw new IllegalArgumentException("No action was specified");
 
         return new ConnectionAndSslParameters(command, host, port, user, pwd,
-                pingTimeout, pingInterval, autoConfirmation, verbose,
+                pingTimeout, pingInterval, connTimeout, autoConfirmation, verbose,
                 sslProtocol, sslCipherSuites,
                 sslKeyAlgorithm, sslKeyStorePath, sslKeyStorePassword, sslKeyStoreType,
                 sslTrustStorePath, sslTrustStorePassword, sslTrustStoreType);

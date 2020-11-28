@@ -75,7 +75,7 @@ public class TombstoneCacheObject extends CacheObjectAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject prepareForCache(CacheObjectContext ctx) {
+    @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) throws IgniteCheckedException {
         return this;
     }
 
