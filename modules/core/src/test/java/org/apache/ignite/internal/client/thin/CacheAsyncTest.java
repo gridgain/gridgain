@@ -356,7 +356,7 @@ public class CacheAsyncTest extends AbstractThinClientTest {
      * Tests that request encode errors are handled correctly.
      */
     @Test
-//    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testPutAsyncThrowsExceptionOnFailedSerialization() {
         ClientCache<Integer, PersonBinarylizable> cache = client.createCache(TMP_CACHE_NAME);
 
