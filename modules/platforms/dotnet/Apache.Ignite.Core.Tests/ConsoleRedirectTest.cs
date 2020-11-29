@@ -168,7 +168,7 @@ namespace Apache.Ignite.Core.Tests
                 Logger = null,
                 JvmOptions = new List<string>
                 {
-                    "-J-DIGNITE_QUIET=false"
+                    "-DIGNITE_QUIET=false"
                 }
             };
             
