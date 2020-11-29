@@ -16,13 +16,6 @@
 
 package org.apache.ignite.internal.util.tostring;
 
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.util.GridUnsafe;
-import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.io.Externalizable;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -47,6 +40,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
@@ -107,7 +106,7 @@ public class GridToStringBuilder {
     /** Supplier for {@link #includeSensitive} with default behavior. */
     private static final AtomicReference<Supplier<SensitiveDataLogging>> INCL_SENS_SUP_REF =
         new AtomicReference<>(new Supplier<SensitiveDataLogging>() {
-            /** Value of "IGNITE_TO_STRING_INCLUDE_SENSITIVE". */
+            /** Value of "IGNITE_SENSITIVE_DATA_LOGGING". */
             SensitiveDataLogging SENSITIVE_DATA_LOGGING;
 
             {
@@ -2084,7 +2083,7 @@ public class GridToStringBuilder {
         String savedName = name + hash;
         String charsAtPos = buf.impl().substring(pos, pos + savedName.length());
 
-        if (!buf.isOverflowed() && !savedName.equals(charsAtPos)) {//
+        if (!buf.isOverflowed() && !savedName.equals(charsAtPos)) {
             if (charsAtPos.startsWith(cls.getSimpleName())) {
                 buf.i(pos + name.length(), hash);
 

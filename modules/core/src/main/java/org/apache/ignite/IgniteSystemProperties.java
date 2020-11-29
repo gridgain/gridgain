@@ -198,6 +198,11 @@ public final class IgniteSystemProperties {
     @Deprecated
     public static final String IGNITE_TO_STRING_INCLUDE_SENSITIVE = "IGNITE_TO_STRING_INCLUDE_SENSITIVE";
 
+    /**
+     * Setting to {@code "plain"} enables writing sensitive information in {@code toString()} output.
+     * Setting to {@code "hash"} enables writing hash of sensitive information in {@code toString()} output.
+     * Setting to {@code "none"} disables writing sensitive information in {@code toString()} output.
+     */
     public static final String IGNITE_SENSITIVE_DATA_LOGGING = "IGNITE_SENSITIVE_DATA_LOGGING";
 
     /** Maximum length for {@code toString()} result. */

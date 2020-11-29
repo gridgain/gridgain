@@ -223,7 +223,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
 
         startGrid(NODE_COUNT);
 
-        if (S.getSensitiveDataLogging() == PLAIN/*includeSensitive*/) {
+        if (S.getSensitiveDataLogging() == PLAIN) {
             assertContains(log, maskIdHash(strToCheckRef.get()), maskIdHash(toStr(binKey, Key.class)));
 
             assertContains(log, maskIdHash(strToCheckRef.get()), maskIdHash(toStr(binPerson, Person.class)));

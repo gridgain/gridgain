@@ -46,7 +46,8 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishFuture.ALL_PARTITION_OWNERS_LEFT_GRID_MSG;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.*;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
 /**
  * Tests check a result of commit when a node fail before
@@ -208,7 +209,7 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
                     }
                     else if (S.getSensitiveDataLogging() == HASH) {
                         msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " +
-                                "key=" + key0 +"\\]");
+                                "key=" + key0 + "\\]");
                     }
                     else {
                         msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " +
@@ -216,8 +217,6 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
                     }
 
                     Matcher matcher = msgPtrn.matcher(msg);
-
-                    System.out.println("!qreopf_" + msg);
 
                     Assert.isTrue(matcher.find(), msg);
                 }

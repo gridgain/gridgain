@@ -1263,7 +1263,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             if (sensitiveDataLogging == PLAIN)
                 msg.append("key=").append(key.toString()).append(", keyCls=").append(key.getClass().getName());
             else if (sensitiveDataLogging == HASH)
-                msg.append("key=").append(key.toString());
+                msg.append("key=").append(key.hashCode());
 
         }
         catch (Exception e) {
@@ -1281,7 +1281,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 if (sensitiveDataLogging == PLAIN)
                     msg.append(", val=").append(val.toString()).append(", valCls=").append(val.getClass().getName());
                 else if (sensitiveDataLogging == HASH)
-                    msg.append(", val=").append(val.toString());
+                    msg.append(", val=").append(val.hashCode());
             }
             else
                 msg.append(", val=null");

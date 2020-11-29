@@ -1,11 +1,24 @@
+/*
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.util.tostring;
 
 import org.apache.ignite.IgniteBinary;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryEnumObjectImpl;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.binary.BinaryObjectOffheapImpl;
@@ -18,19 +31,18 @@ import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectByteArra
 import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectImpl;
 import org.apache.ignite.internal.processors.cacheobject.UserKeyCacheObjectImpl;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
-import static org.apache.ignite.IgniteSystemProperties.*;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.*;
-import static org.mockito.Mockito.mock;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.NONE;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
 public class SensitiveDataToStringTest extends GridCommonAbstractTest/*extends GridAbstractTest*/ {
     /** Id organization. */
@@ -206,21 +218,6 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest/*extends G
         assertTrue(binPerson.getClass().getSimpleName(), binPerson instanceof BinaryObjectImpl);
         checker.accept(binPerson.toString(), binPerson);
     }
-
-    @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-    public void testBinaryObjectOffheapImplWithSensitive() {
-        testBinaryObjectOffheapImpl((strToCheck, object) -> {
-            assertTrue(strToCheck, strToCheck.contains("ctx=false"));
-            assertTrue(strToCheck, strToCheck.contains("start=" + rndInt1));
-        });
-    }
-
-//    @Test
-//    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
-//    public void testBinaryObjectOffheapImplWithHashSensitive() {
-//        testBinaryObjectOffheapImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals(String.valueOf(object.hashCode()))));
-//    }
 
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
@@ -31,8 +32,6 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
-
-import java.nio.ByteBuffer;
 
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
@@ -51,7 +50,7 @@ public class TxEntryValueHolder implements Message {
     private static final long serialVersionUID = 0L;
 
     /** */
-    @GridToStringInclude(/*sensitive = true*/)//
+    @GridToStringInclude()
     private CacheObject val;
 
     /** */
