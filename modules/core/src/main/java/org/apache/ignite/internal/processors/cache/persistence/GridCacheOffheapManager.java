@@ -434,7 +434,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     boolean changed = false;
 
                     try {
-                        PagePartitionMetaIOV3 io = PageIO.getPageIO(partMetaPageAddr);
+                        PagePartitionMetaIO io = PageIO.getPageIO(partMetaPageAddr);
 
                         changed |= io.setPartitionState(partMetaPageAddr, state != null ? (byte)state.ordinal() : -1);
                         changed |= io.setUpdateCounter(partMetaPageAddr, updCntr);
@@ -443,24 +443,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         changed |= io.setTombstonesCount(partMetaPageAddr, store.tombstonesCount());
                         changed |= savePartitionUpdateCounterGaps(store, io, partMetaPageAddr);
                         changed |= saveCacheSizes(store, io, partMetaPageAddr);
-
-                        if (grp.config().isEncryptionEnabled()) {
-                            long reencryptState = encMgr.getEncryptionState(grpId, store.partId());
-
-                            if (reencryptState != 0) {
-                                int encryptIdx = ReencryptStateUtils.pageIndex(reencryptState);
-                                int encryptCnt = ReencryptStateUtils.pageCount(reencryptState);
-
-                                if (encryptIdx == encryptCnt) {
-                                    encMgr.setEncryptionState(grp, store.partId(), 0, 0);
-
-                                    encryptIdx = encryptCnt = 0;
-                                }
-
-                                changed |= io.setEncryptedPageIndex(partMetaPageAddr, encryptIdx);
-                                changed |= io.setEncryptedPageCount(partMetaPageAddr, encryptCnt);
-                            }
-                        }
+                        changed |= saveEncryptionState(store, encMgr, io, partMetaPageAddr);
 
                         if (needSnapshot)
                             changed |= savePagesCount(ctx, part, store, io, partMetaPageAddr);
@@ -507,7 +490,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
      */
     private boolean savePartitionUpdateCounterGaps(
         CacheDataStore store,
-        PagePartitionMetaIOV2 io,
+        PagePartitionMetaIO io,
         long partMetaPageAddr
     ) throws IgniteCheckedException {
         PartitionMetaStorage<SimpleDataRow> partStore = store.partStorage();
@@ -525,7 +508,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             io.setGapsLink(partMetaPageAddr, 0);
 
             changed = true;
-        } else if (updCntrsBytes != null && gapsLink == 0) {
+        }
+        else if (updCntrsBytes != null && gapsLink == 0) {
             SimpleDataRow row = new SimpleDataRow(store.partId(), updCntrsBytes);
 
             partStore.insertDataRow(row, grp.statisticsHolderData());
@@ -533,7 +517,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             io.setGapsLink(partMetaPageAddr, row.link());
 
             changed = true;
-        } else if (updCntrsBytes != null && gapsLink != 0) {
+        }
+        else if (updCntrsBytes != null && gapsLink != 0) {
             byte[] prev = partStore.readRow(gapsLink);
 
             assert prev != null : "Read null gaps using link=" + gapsLink;
@@ -568,7 +553,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
      */
     private boolean saveCacheSizes(
         CacheDataStore store,
-        PagePartitionMetaIOV2 io,
+        PagePartitionMetaIO io,
         long partMetaPageAddr
     ) throws IgniteCheckedException {
         if (grp.sharedGroup()) {
@@ -597,6 +582,43 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /**
+     * @param store Store.
+     * @param encMgr Encryption manager.
+     * @param io page IO.
+     * @param partMetaPageAddr Partition meta page address.
+     */
+    private boolean saveEncryptionState(
+        CacheDataStore store,
+        GridEncryptionManager encMgr,
+        PagePartitionMetaIO io,
+        long partMetaPageAddr
+    ) {
+        if (grp.config().isEncryptionEnabled()) {
+            long reencryptState = encMgr.getEncryptionState(grp.groupId(), store.partId());
+
+            if (reencryptState != 0) {
+                int encryptIdx = ReencryptStateUtils.pageIndex(reencryptState);
+                int encryptCnt = ReencryptStateUtils.pageCount(reencryptState);
+
+                if (encryptIdx == encryptCnt) {
+                    encMgr.setEncryptionState(grp, store.partId(), 0, 0);
+
+                    encryptIdx = encryptCnt = 0;
+                }
+
+                boolean changed = false;
+
+                changed |= io.setEncryptedPageIndex(partMetaPageAddr, encryptIdx);
+                changed |= io.setEncryptedPageCount(partMetaPageAddr, encryptCnt);
+
+                return changed;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Saves to partition meta page information about pages count.
      *
      * @param ctx Checkpoint context.
@@ -611,7 +633,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         Context ctx,
         GridDhtLocalPartition part,
         CacheDataStore store,
-        PagePartitionMetaIOV2 io,
+        PagePartitionMetaIO io,
         long partMetaPageAddr
     ) throws IgniteCheckedException {
         int grpId = grp.groupId();

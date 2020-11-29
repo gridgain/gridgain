@@ -73,17 +73,30 @@ public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV1GG {
 
         // Will be overrided by super call, need to store.
         int from = PageIO.getVersion(pageAddr);
-        PagePartitionMetaIO oldIo = PagePartitionMetaIO.VERSIONS.forVersion(from);
-        long tombstonesCount = 0;
+        PagePartitionMetaIO fromIo = PagePartitionMetaIO.VERSIONS.forVersion(from);
+
+        long tombstonesCnt = 0;
+        long updLogRootPageId = 0;
+
         try {
-            tombstonesCount = oldIo.getTombstonesCount(pageAddr);
-        } catch (Throwable e) {
+            tombstonesCnt = fromIo.getTombstonesCount(pageAddr);
+        }
+        catch (Throwable e) {
+            // No-op.
+        }
+
+        try {
+            updLogRootPageId = fromIo.getUpdateTreeRoot(pageAddr);
+        }
+        catch (Throwable e) {
             // No-op.
         }
 
         super.upgradePage(pageAddr);
 
-        if (from < getVersion())
-            setTombstonesCount(pageAddr, tombstonesCount);
+        if (from < getVersion()) {
+            setUpdateTreeRoot(pageAddr, updLogRootPageId);
+            setTombstonesCount(pageAddr, tombstonesCnt);
+        }
     }
 }

@@ -46,15 +46,14 @@ public class GGPageIoTest {
         testUpgrade(1, GG_VERSION_OFFSET);
         testUpgrade(2, GG_VERSION_OFFSET);
         testUpgrade(3, GG_VERSION_OFFSET);
-        testUpgrade(4, GG_VERSION_OFFSET);
     }
 
     /** */
     @Test
     public void testUpgradeToGGV2FromAI() {
-//        testUpgrade(1, GG_VERSION_OFFSET + 1);
-//        testUpgrade(2, GG_VERSION_OFFSET + 1);
-//        testUpgrade(3, GG_VERSION_OFFSET + 1);
+        testUpgrade(1, GG_VERSION_OFFSET + 1);
+        testUpgrade(2, GG_VERSION_OFFSET + 1);
+        testUpgrade(3, GG_VERSION_OFFSET + 1);
         testUpgrade(4, GG_VERSION_OFFSET + 1);
     }
 
@@ -87,12 +86,12 @@ public class GGPageIoTest {
 
             setFields(addr);
 
-            System.out.println("Page before upgrade:");
+            System.out.println("The page before upgrade:");
             System.out.println(PageIO.printPage(addr, PAGE_SIZE));
 
             ((PagePartitionMetaIOGG)toIO).upgradePage(addr);
 
-            System.out.println("Page after upgrade:");
+            System.out.println("The page after upgrade:");
             System.out.println(PageIO.printPage(addr, PAGE_SIZE));
 
             validate("Failed upgrading from " + from + " to " + to, addr, from);
@@ -128,7 +127,7 @@ public class GGPageIoTest {
             io.setEncryptedPageCount(addr, 10);
         }
 
-        if (io.getVersion() >= 4)
+        if (io.getVersion() >= 4 && io.getVersion() < GG_VERSION_OFFSET)
             io.setTombstonesCount(addr, 11);
 
         if (io.getVersion() >= GG_VERSION_OFFSET)
