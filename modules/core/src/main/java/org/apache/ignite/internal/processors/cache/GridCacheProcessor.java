@@ -3747,7 +3747,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     disabledAfterStart,
                     ccfg.queryEntities(),
                     ccfg.config().isEncryptionEnabled() && grpKeys != null ? grpKeysIter.next() : null,
-                    ccfg.config().isEncryptionEnabled() && grpKeys != null ? masterKeyDigest : null);
+                    ccfg.config().isEncryptionEnabled() ? masterKeyDigest : null);
 
                 if (req != null) {
                     if (req.clientStartOnly()) {
