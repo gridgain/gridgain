@@ -16,12 +16,14 @@
 
 package org.apache.ignite.examples.spark
 
-import java.lang.{Long ⇒ JLong}
+import java.lang.{Long => JLong}
 
 import org.apache.ignite.cache.query.SqlFieldsQuery
 import org.apache.ignite.configuration.CacheConfiguration
 import org.apache.ignite.{Ignite, Ignition}
-import org.apache.log4j.{Level, Logger}
+import org.apache.logging.log4j.{Level, LogManager}
+import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.config.{Configuration, LoggerConfig}
 import org.apache.spark.sql.ignite.IgniteSparkSession
 
 /**
@@ -51,9 +53,14 @@ object IgniteCatalogExample extends App {
             .igniteConfig(CONFIG)
             .getOrCreate()
 
-        //Adjust the logger to exclude the logs of no interest.
-        Logger.getRootLogger.setLevel(Level.ERROR)
-        Logger.getLogger("org.apache.ignite").setLevel(Level.INFO)
+        // Adjust the logger to exclude the logs of no interest.
+        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+        Configuration config = ctx.getConfiguration();
+        LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+        loggerConfig.setLevel(Level.ERROR);
+        LoggerConfig loggerConfig = config.getLoggerConfig("org.apache.ignite");
+        loggerConfig.setLevel(Level.INFO);
+        ctx.updateLoggers();
 
         println("List of available tables:")
 

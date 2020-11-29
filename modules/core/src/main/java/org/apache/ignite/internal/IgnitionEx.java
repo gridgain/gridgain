@@ -2595,7 +2595,7 @@ public class IgnitionEx {
                     ((LoggerNodeIdAware)cfgLog).setNodeId(nodeId);
 
                 if (log4jInitErr != null)
-                    U.warn(cfgLog, "Failed to initialize Log4JLogger (falling back to standard java logging): "
+                    U.warn(cfgLog, "Failed to initialize Log4J2Logger (falling back to standard java logging): "
                         + log4jInitErr.getCause());
 
                 return cfgLog;
