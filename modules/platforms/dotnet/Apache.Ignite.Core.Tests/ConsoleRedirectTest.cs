@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Text;
     using System.Text.RegularExpressions;
@@ -164,7 +165,11 @@ namespace Apache.Ignite.Core.Tests
         {
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
-                Logger = null
+                Logger = null,
+                JvmOptions = new List<string>
+                {
+                    "-J-DIGNITE_QUIET=false"
+                }
             };
             
             using (var ignite = Ignition.Start(cfg))
