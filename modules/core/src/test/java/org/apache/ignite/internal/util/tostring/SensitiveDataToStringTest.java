@@ -59,8 +59,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest/*extends G
     /** Person name. */
     String rndString = "qwer";
 
-    @Override
-    protected void afterTest() throws Exception {
+    @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         super.afterTest();
