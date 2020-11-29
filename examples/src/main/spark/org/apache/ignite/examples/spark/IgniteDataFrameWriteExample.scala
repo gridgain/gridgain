@@ -55,11 +55,11 @@ object IgniteDataFrameWriteExample extends App {
             .getOrCreate()
 
         // Adjust the logger to exclude the logs of no interest.
-        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-        Configuration config = ctx.getConfiguration();
-        LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+        val ctx = (LoggerContext) LogManager.getContext(false);
+        val config = ctx.getConfiguration();
+        val loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
         loggerConfig.setLevel(Level.ERROR);
-        LoggerConfig loggerConfig = config.getLoggerConfig("org.apache.ignite");
+        val loggerConfig = config.getLoggerConfig("org.apache.ignite");
         loggerConfig.setLevel(Level.INFO);
         ctx.updateLoggers();
 
