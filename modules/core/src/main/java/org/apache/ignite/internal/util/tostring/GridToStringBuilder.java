@@ -173,7 +173,7 @@ public class GridToStringBuilder {
 
         /** */
         public static SensitiveDataLogging convertDataLogging(String strDataLogging) {
-            switch(strDataLogging) {
+            switch (strDataLogging) {
                 case "plain":
                     return PLAIN;
                 case "none":

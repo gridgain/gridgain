@@ -340,13 +340,11 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest/*extends G
             this.name = name;
         }
 
-        @Override
-        public int hashCode() {
+        @Override public int hashCode() {
             return Objects.hash(orgId, name);
         }
 
-        @Override
-        public String toString() {
+        @Override public String toString() {
             return "Person{" +
                     "orgId=" + orgId +
                     ", name='" + name + '\'' +
