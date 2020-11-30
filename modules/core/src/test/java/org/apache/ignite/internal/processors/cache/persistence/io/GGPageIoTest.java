@@ -76,6 +76,36 @@ public class GGPageIoTest {
         testUpgrade(3, GG_VERSION_OFFSET, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 9, 10, 0L);
     }
 
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromAIV1() {
+        testUpgrade(1, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 0L, 0L, 0L, 0, 0, 0L, 0L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromAIV2() {
+        testUpgrade(2, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 0, 0, 0L, 0L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromAIV3() {
+        testUpgrade(3, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 9, 10, 0L, 0L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromAIV4() {
+        testUpgrade(4, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 9, 10, 0L, 11L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromGGV1() {
+        testUpgrade(GG_VERSION_OFFSET, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 9, 10, 1001L, 0L);
+    }
+
     /**
      * Tests upgrade to GG version.
      *
@@ -138,6 +168,12 @@ public class GGPageIoTest {
             io.setEncryptedPageIndex(addr, 9);
             io.setEncryptedPageCount(addr, 10);
         }
+
+        if (io.getVersion() == 4 || io.getVersion() == GG_VERSION_OFFSET + 1)
+            io.setTombstonesCount(addr, 11);
+
+        if (io.getVersion() == GG_VERSION_OFFSET)
+            io.setUpdateTreeRoot(addr, 1001);
     }
 
     /**
@@ -161,6 +197,9 @@ public class GGPageIoTest {
         assertEquals(msg, expVals[8], io.getEncryptedPageIndex(addr));
         assertEquals(msg, expVals[9], io.getEncryptedPageCount(addr));
         assertEquals(msg, expVals[10], io.getUpdateTreeRoot(addr));
+
+        if (expVals.length > 11)
+            assertEquals(msg, expVals[11], io.getTombstonesCount(addr));
     }
 
     /** */
