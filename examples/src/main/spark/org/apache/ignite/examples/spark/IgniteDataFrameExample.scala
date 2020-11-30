@@ -16,7 +16,7 @@
 
 package org.apache.ignite.examples.spark
 
-import java.lang.{Long => JLong, String => JString}
+import java.lang.{Long ⇒ JLong, String ⇒ JString}
 
 import org.apache.ignite.cache.query.SqlFieldsQuery
 import org.apache.ignite.configuration.CacheConfiguration
