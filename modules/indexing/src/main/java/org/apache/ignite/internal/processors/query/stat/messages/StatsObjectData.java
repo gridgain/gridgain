@@ -17,13 +17,7 @@ package org.apache.ignite.internal.processors.query.stat.messages;
 
 import org.apache.ignite.internal.processors.query.stat.StatsKey;
 import org.apache.ignite.internal.processors.query.stat.StatsType;
-import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageReader;
-import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-
-import java.io.Externalizable;
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**

@@ -16,7 +16,6 @@
 package org.apache.ignite.internal.processors.query.stat.messages;
 
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
-import java.io.Externalizable;
 import java.io.Serializable;
 
 /**
