@@ -56,7 +56,7 @@ import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getString;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.NONE;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.convertDataLogging;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.convertSensitiveDataLogging;
 
 /**
  * Provides auto-generation framework for {@code toString()} output.
@@ -124,7 +124,7 @@ public class GridToStringBuilder {
                 }
 
                 if (sensitiveRes == null)
-                    sensitiveRes = convertDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
+                    sensitiveRes = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
 
                 SENSITIVE_DATA_LOGGING = sensitiveRes;
             }
@@ -172,7 +172,7 @@ public class GridToStringBuilder {
         PLAIN, HASH, NONE;
 
         /** */
-        public static SensitiveDataLogging convertDataLogging(String strDataLogging) {
+        public static SensitiveDataLogging convertSensitiveDataLogging(String strDataLogging) {
             switch (strDataLogging) {
                 case "plain":
                     return PLAIN;

@@ -289,7 +289,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             }
 
             if (sensitiveRes == null)
-                sensitiveRes = convertDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
+                sensitiveRes = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
 
             return sensitiveRes;
         });
