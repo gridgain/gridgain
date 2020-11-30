@@ -110,7 +110,7 @@ public class DefragmentationCommand implements Command<DefragmentationArguments>
     @Override public void parseArguments(CommandArgIterator argIter) {
         DefragmentationSubcommands cmd = DefragmentationSubcommands.of(argIter.nextArg("Expected defragmentation subcommand."));
 
-        if (cmd == null || cmd == DefragmentationSubcommands.STATUS) // Status subcommand is not yet completed.
+        if (cmd == null)
             throw new IllegalArgumentException("Expected correct defragmentation subcommand.");
 
         args = new DefragmentationArguments(cmd);
@@ -225,7 +225,6 @@ public class DefragmentationCommand implements Command<DefragmentationArguments>
     private VisorDefragmentationTaskArg convertArguments() {
         return new VisorDefragmentationTaskArg(
             convertSubcommand(args.subcommand()),
-            args.nodeIds(),
             args.cacheNames()
         );
     }

@@ -231,7 +231,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private static final double PAGE_LIST_CACHE_LIMIT_THRESHOLD = 0.1;
 
     /** @see IgniteSystemProperties#IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE */
-    public static final int DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE = 40;
+    public static final int DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE = 60;
 
     /** */
     private final int walRebalanceThreshold = getInteger(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, 500);
@@ -243,7 +243,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private final String throttlingPlcOverride = IgniteSystemProperties.getString(
         IgniteSystemProperties.IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED);
 
-    /** Defragmentation region size percentage of configured one. */
+    /** Defragmentation regions size percentage of configured ones. */
     private final int defragmentationRegionSizePercentageOfConfiguredSize =
         getInteger(IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE, DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE);
 
@@ -553,12 +553,22 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             regionConfs.addAll(Arrays.asList(dataConf.getDataRegionConfigurations()));
 
         long totalDefrRegionSize = 0;
+        long totalRegionsSize = 0;
+
+        for (DataRegionConfiguration regionCfg : regionConfs) {
+            totalDefrRegionSize = Math.max(
+                totalDefrRegionSize,
+                (long)(regionCfg.getMaxSize() * 0.01 * defragmentationRegionSizePercentageOfConfiguredSize)
+            );
+
+            totalRegionsSize += regionCfg.getMaxSize();
+        }
+
+        double shrinkPercentage = 1d * (totalRegionsSize - totalDefrRegionSize) / totalRegionsSize;
 
         for (DataRegionConfiguration region : regionConfs) {
-            long newSize = (long)(region.getMaxSize() / 100.0 * defragmentationRegionSizePercentageOfConfiguredSize);
+            long newSize = (long)(region.getMaxSize() * shrinkPercentage);
             long newInitSize = Math.min(region.getInitialSize(), newSize);
-
-            totalDefrRegionSize += region.getMaxSize() - newSize;
 
             log.info("Region size was reassigned by defragmentation reason: " +
                 "region = '" + region.getName() + "', " +
@@ -746,7 +756,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             (FilePageStoreManager)cctx.pageStore(),
             checkpointManager,
             lightCheckpointMgr,
-            persistenceCfg.getPageSize()
+            persistenceCfg.getPageSize(),
+            persistenceCfg.getDefragmentationThreadPoolSize()
         );
     }
 
