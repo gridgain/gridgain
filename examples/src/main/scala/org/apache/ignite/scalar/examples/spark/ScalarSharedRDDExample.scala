@@ -44,7 +44,7 @@ object ScalarSharedRDDExample extends App {
     val sparkContext = new SparkContext(conf)
 
     // Adjust the logger to exclude the logs of no interest.
-    val ctx = (LoggerContext) LogManager.getContext(false)
+    val ctx = (LogManager.getContext(false)).asInstanceOf[LoggerContext];
     val config = ctx.getConfiguration()
     val loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME)
     loggerConfig.setLevel(Level.ERROR)
