@@ -701,7 +701,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             task.finishFut.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut0) {
-                    if (isEmpty()) {
+                    if (fut0.error() == null) {
                         // Try finish eviction asynchronously.
                         ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                             @Override public void run() { // TODO submit to timer for batch.
@@ -796,7 +796,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         // Some entries still might be present in partition cache maps due to concurrent updates on backup nodes,
         // but it's safe to finish eviction because no physical updates are possible.
         // A partition is promoted to EVICTED state if it is not reserved and empty.
-        if (store.isEmpty() && getReservations(state0) == 0 && state == RENTING)
+        if (state == RENTING && store.isEmpty() && getReservations(state0) == 0)
             casState(state0, EVICTED);
     }
 
