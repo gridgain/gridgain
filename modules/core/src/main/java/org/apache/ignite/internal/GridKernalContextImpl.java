@@ -57,6 +57,8 @@ import org.apache.ignite.internal.processors.cache.CacheConflictResolutionManage
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccProcessor;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.IgniteDefragmentation;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.IgniteDefragmentationImpl;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFoldersResolver;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
@@ -178,6 +180,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** */
     @GridToStringExclude
     private GridEncryptionManager encryptionMgr;
+
+    /** */
+    @GridToStringExclude
+    private IgniteDefragmentation defragMgr;
 
     /** */
     @GridToStringExclude
@@ -563,6 +569,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
         marshCtx = new MarshallerContextImpl(plugins, clsFilter);
 
+        defragMgr = new IgniteDefragmentationImpl(this);
+
         try {
             spring = SPRING.create(false);
         }
@@ -924,6 +932,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public GridEncryptionManager encryption() {
         return encryptionMgr;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteDefragmentation defragmentation() {
+        return defragMgr;
     }
 
     /** {@inheritDoc} */
