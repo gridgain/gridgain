@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.junit.Test;
 
 /**
- * Includes all base sql test plus tests that make sense in replicated mode with a non-default number of partitions..
+ * Includes all base sql test plus tests that make sense in replicated mode with a non-default number of partitions.
  */
 public class ReplicatedSqlCustomPartitionsTest extends ReplicatedSqlTest {
     private static final int NUM_OF_PARTITIONS = 509;
@@ -46,11 +46,11 @@ public class ReplicatedSqlCustomPartitionsTest extends ReplicatedSqlTest {
      * test mixed partitioned/replicated scenarios.
      */
     @Override protected void setupData() {
-        createTables("template=replicated11");
+        createTables("template=replicated" + NUM_OF_PARTITIONS);
 
         fillCommonData();
 
-        createDepartmentTable(DEP_PART_TAB, "template=partitioned11");
+        createDepartmentTable(DEP_PART_TAB, "template=partitioned" + NUM_OF_PARTITIONS);
 
         fillDepartmentTable(DEP_PART_TAB);
     }
@@ -62,5 +62,13 @@ public class ReplicatedSqlCustomPartitionsTest extends ReplicatedSqlTest {
     @Test
     public void testLeftJoinReplicatedPartitioned() {
         checkLeftJoinEmployeeDepartment(DEP_PART_TAB);
+    }
+
+    /**
+     * Check RIGHT JOIN with collocated data of partitioned and replicated tables.
+     */
+    @Test
+    public void testRightJoinPartitionedReplicated() {
+        checkRightJoinDepartmentEmployee(DEP_PART_TAB);
     }
 }

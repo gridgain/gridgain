@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -49,6 +50,9 @@ public class IgniteCacheJoinPartitionedAndReplicatedTest extends GridCommonAbstr
 
     /** */
     private static final String ORG_CACHE_REPLICATED = "orgRepl";
+
+    /** */
+    private static final int NUMBER_OF_PARTITIONS = 32;
 
     /** */
     private boolean client;
@@ -125,6 +129,7 @@ public class IgniteCacheJoinPartitionedAndReplicatedTest extends GridCommonAbstr
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setAtomicityMode(ATOMIC);
         ccfg.setBackups(1);
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, NUMBER_OF_PARTITIONS));
 
         return ccfg;
     }

@@ -340,12 +340,4 @@ public class ReplicatedSqlTest extends BaseSqlTest {
     public void testRightJoinReplicatedPartitioned() {
         checkRightJoinEmployeeDepartment(DEP_PART_TAB);
     }
-
-    /**
-     * Check RIGHT JOIN with collocated data of partitioned and replicated tables.
-     */
-    @Test
-    public void testRightJoinPartitionedReplicated() {
-        checkRightJoinDepartmentEmployee(DEP_PART_TAB);
-    }
 }
