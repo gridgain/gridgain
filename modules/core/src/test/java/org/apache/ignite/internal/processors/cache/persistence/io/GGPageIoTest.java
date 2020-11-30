@@ -17,24 +17,20 @@
 package org.apache.ignite.internal.processors.cache.persistence.io;
 
 import java.nio.ByteBuffer;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOGG;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV1GG;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV2;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV3;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
-import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO.GG_VERSION_OFFSET;
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions.GG_VERSION_OFFSET;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
- * Test updating various page IO to GridGain page IO.
+ * Tests upgrading each compatible AI/GG page IO to GG page IO.
  */
 public class GGPageIoTest {
     /** Page size. */
@@ -42,34 +38,51 @@ public class GGPageIoTest {
 
     /** */
     @Test
-    public void testUpgradeToGGV1FromAI() {
-        testUpgrade(1, GG_VERSION_OFFSET);
-        testUpgrade(2, GG_VERSION_OFFSET);
-        testUpgrade(3, GG_VERSION_OFFSET);
+    public void testCheckVersions1() {
+        new IOVersions<>(
+            new TestPageIO(1),
+            new TestPageIO(2),
+            new TestPageIO(GG_VERSION_OFFSET),
+            new TestPageIO(GG_VERSION_OFFSET + 1));
     }
 
     /** */
     @Test
-    public void testUpgradeToGGV2FromAI() {
-        testUpgrade(1, GG_VERSION_OFFSET + 1);
-        testUpgrade(2, GG_VERSION_OFFSET + 1);
-        testUpgrade(3, GG_VERSION_OFFSET + 1);
-        testUpgrade(4, GG_VERSION_OFFSET + 1);
+    public void testCheckVersions2() {
+        new IOVersions<>(new TestPageIO(1), new TestPageIO(2), new TestPageIO(3));
     }
 
     /** */
     @Test
-    public void testUpgradeToGGV1ToGGV2() {
-        testUpgrade(GG_VERSION_OFFSET, GG_VERSION_OFFSET + 1);
+    public void testCheckVersions3() {
+        new IOVersions<>(new TestPageIO(GG_VERSION_OFFSET), new TestPageIO(GG_VERSION_OFFSET + 1));
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV1FromAIV1() {
+        testUpgrade(1, GG_VERSION_OFFSET, 1L, 2L, 3L, (byte)4, 5L, 0L, 0L, 0L, 0, 0, 0L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV1FromAIV2() {
+        testUpgrade(2, GG_VERSION_OFFSET, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 0, 0, 0L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV1FromAIV3() {
+        testUpgrade(3, GG_VERSION_OFFSET, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 9, 10, 0L);
     }
 
     /**
-     * Tests upgrade to gg version.
+     * Tests upgrade to GG version.
      *
      * @param from From version.
      * @param to To version.
      */
-    public void testUpgrade(int from, int to) {
+    private void testUpgrade(int from, int to, Object... expVals) {
         PagePartitionMetaIO fromIO = PagePartitionMetaIO.VERSIONS.forVersion(from);
         assertEquals(from, fromIO.getVersion());
 
@@ -94,13 +107,12 @@ public class GGPageIoTest {
             System.out.println("The page after upgrade:");
             System.out.println(PageIO.printPage(addr, PAGE_SIZE));
 
-            validate("Failed upgrading from " + from + " to " + to, addr, from);
+            validate("Failed upgrading from " + from + " to " + to, addr, from, expVals);
         }
         finally {
             GridUnsafe.freeBuffer(bb);
         }
     }
-
 
     /**
      * Assigns all available fields for the page.
@@ -126,12 +138,6 @@ public class GGPageIoTest {
             io.setEncryptedPageIndex(addr, 9);
             io.setEncryptedPageCount(addr, 10);
         }
-
-        if (io.getVersion() >= 4 && io.getVersion() < GG_VERSION_OFFSET)
-            io.setTombstonesCount(addr, 11);
-
-        if (io.getVersion() >= GG_VERSION_OFFSET)
-            io.setUpdateTreeRoot(addr, 1001);
     }
 
     /**
@@ -139,135 +145,36 @@ public class GGPageIoTest {
      * @param addr Address.
      * @param from From.
      */
-    private void validate(String msg, long addr, int from) {
-//        PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(addr);
-//
-//        assertTrue(io instanceof PagePartitionMetaIOGG);
-//
-//        assertEquals(msg, 1, io.getSize(addr));
-//        assertEquals(msg, 2, io.getUpdateCounter(addr));
-//        assertEquals(msg, 3, io.getGlobalRemoveId(addr));
-//        assertEquals(msg, 4, io.getPartitionState(addr));
-//        assertEquals(msg, 5, io.getCacheSizesPageId(addr));
-//
-//        if (from >= 2) {
-//            assertEquals(msg, 6, io.getPendingTreeRoot(addr));
-//            assertEquals(msg, 7, io.getPartitionMetaStoreReuseListRoot(addr));
-//            assertEquals(msg, 8, io.getGapsLink(addr));
-//        }
-//        else {
-//            assertEquals(msg, 0, io.getPendingTreeRoot(addr));
-//            assertEquals(msg, 0, io.getPartitionMetaStoreReuseListRoot(addr));
-//            assertEquals(msg, 0, io.getGapsLink(addr));
-//        }
-//
-//        if (from >= 3) {
-//            assertEquals(msg, 9, io.getEncryptedPageIndex(addr));
-//            assertEquals(msg, 10, io.getEncryptedPageCount(addr));
-//        }
-//        else {
-//            assertEquals(msg, 0, io.getEncryptedPageIndex(addr));
-//            assertEquals(msg, 0, io.getEncryptedPageCount(addr));
-//        }
-//
-//        if (from >= 4)
-//            assertEquals(msg, 12, io.getTombstonesCount(addr));
-//        else
-//            assertEquals(msg, 0, io.getTombstonesCount(addr));
-//
-//        assertEquals(msg, 11, io.getUpdateTreeRoot(addr));
-//        assertEquals(msg, 12, io.getTombstonesCount(addr));
-    }
-
-    /**
-     * Checks all values for current page.
-     *
-     * @param msg Message.
-     * @param addr Page address.
-     */
-    private void checkFields(String msg, long addr) {
+    private void validate(String msg, long addr, int from, Object... expVals) {
         PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(addr);
 
-        checkFields(msg, addr, io);
+        assertTrue(io instanceof PagePartitionMetaIOGG);
 
-        assertEquals(msg, 1, io.getSize(addr));
-        assertEquals(msg, 2, io.getUpdateCounter(addr));
-        assertEquals(msg, 3, io.getGlobalRemoveId(addr));
-        assertEquals(msg, 4, io.getPartitionState(addr));
-        assertEquals(msg, 5, io.getCacheSizesPageId(addr));
-        assertEquals(msg, 6, io.getPendingTreeRoot(addr));
-        assertEquals(msg, 7, io.getPartitionMetaStoreReuseListRoot(addr));
-        assertEquals(msg, 8, io.getGapsLink(addr));
-        assertEquals(msg, 9, io.getEncryptedPageIndex(addr));
-        assertEquals(msg, 10, io.getEncryptedPageCount(addr));
-        assertEquals(msg, 11, io.getUpdateTreeRoot(addr));
-        assertEquals(msg, 12, io.getTombstonesCount(addr));
+        assertEquals(msg, expVals[0], io.getSize(addr));
+        assertEquals(msg, expVals[1], io.getUpdateCounter(addr));
+        assertEquals(msg, expVals[2], io.getGlobalRemoveId(addr));
+        assertEquals(msg, expVals[3], io.getPartitionState(addr));
+        assertEquals(msg, expVals[4], io.getCacheSizesPageId(addr));
+        assertEquals(msg, expVals[5], io.getPendingTreeRoot(addr));
+        assertEquals(msg, expVals[6], io.getPartitionMetaStoreReuseListRoot(addr));
+        assertEquals(msg, expVals[7], io.getGapsLink(addr));
+        assertEquals(msg, expVals[8], io.getEncryptedPageIndex(addr));
+        assertEquals(msg, expVals[9], io.getEncryptedPageCount(addr));
+        assertEquals(msg, expVals[10], io.getUpdateTreeRoot(addr));
     }
 
-    /**
-     * Checks all values with the specific page IO.
-     *
-     * @param msg Message.
-     * @param addr Page address.
-     * @param io Page IO to check.
-     */
-    private void checkFields(String msg, long addr, PagePartitionMetaIO io) {
-        switch (io.getVersion()) {
-            case GG_VERSION_OFFSET:
-            case 3: {
-                PagePartitionMetaIOV3 io3 = (PagePartitionMetaIOV3)io;
-                assertEquals(msg, 9, io3.getEncryptedPageIndex(addr));
-                assertEquals(msg, 10, io3.getEncryptedPageCount(addr));
-            }
-            case 65535:
-            case 2: {
-                PagePartitionMetaIOV2 io2 = (PagePartitionMetaIOV2)io;
-                assertEquals(msg, 6, io2.getPendingTreeRoot(addr));
-                assertEquals(msg, 7, io2.getPartitionMetaStoreReuseListRoot(addr));
-                assertEquals(msg, 8, io2.getGapsLink(addr));
-            }
-            case 1: {
-                assertEquals(msg, 1, io.getSize(addr));
-                assertEquals(msg, 2, io.getUpdateCounter(addr));
-                assertEquals(msg, 3, io.getGlobalRemoveId(addr));
-                assertEquals(msg, 4, io.getPartitionState(addr));
-                assertEquals(msg, 5, io.getCacheSizesPageId(addr));
-            }
+    /** */
+    private static class TestPageIO extends PageIO {
+        /**
+         * @param ver Version.
+         */
+        public TestPageIO(int ver) {
+            super(1, ver);
         }
 
-        switch (io.getVersion()) {
-            case 65534:
-            case 65535: {
-                PagePartitionMetaIO ggIo = PagePartitionMetaIO.VERSIONS.forPage(addr);
-
-                assertTrue(ggIo instanceof PagePartitionMetaIOGG);
-
-                assertEquals(msg, 11, ggIo.getUpdateTreeRoot(addr));
-            }
-        }
-
-        PagePartitionMetaIO toIo = PagePartitionMetaIO.VERSIONS.forPage(addr);
-
-        //Check zero fields which was appear after update.
-        if (io != toIo) {
-            assertTrue(toIo instanceof PagePartitionMetaIOGG);
-
-            if (io.getVersion() < 2) {
-                PagePartitionMetaIOV2 io2 = (PagePartitionMetaIOV2)toIo;
-                assertEquals(msg, 0, io2.getPendingTreeRoot(addr));
-                assertEquals(msg, 0, io2.getPartitionMetaStoreReuseListRoot(addr));
-                assertEquals(msg, 0, io2.getGapsLink(addr));
-            }
-
-            if (io.getVersion() != 3 && toIo.getVersion() < 65535) {
-                PagePartitionMetaIOV3 io3 = (PagePartitionMetaIOV3)toIo;
-
-                assertEquals(msg, 0, io3.getEncryptedPageIndex(addr));
-                assertEquals(msg, 0, io3.getEncryptedPageCount(addr));
-            }
-
-            if (io.getVersion() < 65534)
-                assertEquals(msg, 0, toIo.getUpdateTreeRoot(addr));
+        /** {@inheritDoc} */
+        @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) {
+            // No-op.
         }
     }
 }

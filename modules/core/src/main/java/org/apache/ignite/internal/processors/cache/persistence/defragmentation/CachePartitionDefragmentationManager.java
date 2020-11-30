@@ -62,7 +62,6 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDa
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV3;
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.DataRow;
@@ -114,6 +113,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.defragment
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.TreeIterator.PageAccessType.ACCESS_READ;
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.TreeIterator.PageAccessType.ACCESS_WRITE;
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.TreeIterator.access;
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions.GG_VERSION_OFFSET;
 
 /**
  * Defragmentation manager is the core class that contains main defragmentation procedure.
@@ -758,12 +758,12 @@ public class CachePartitionDefragmentationManager {
             PagePartitionMetaIO oldPartMetaIo = PageIO.getPageIO(oldPartMetaPageAddr);
 
             // Newer meta versions may contain new data that we don't copy during defragmentation.
-            assert Arrays.asList(1, 2, 3, 65534, 65535).contains(oldPartMetaIo.getVersion())
+            assert Arrays.asList(1, 2, 3, 4, GG_VERSION_OFFSET, GG_VERSION_OFFSET + 1).contains(oldPartMetaIo.getVersion())
                 : "IO version " + oldPartMetaIo.getVersion() + " is not supported by current defragmentation algorithm." +
                 " Please implement copying of all data added in new version.";
 
             access(ACCESS_WRITE, partCtx.partPageMemory, partCtx.grpId, partMetaPageId, newPartMetaPageAddr -> {
-                PagePartitionMetaIOV3 newPartMetaIo = PageIO.getPageIO(newPartMetaPageAddr);
+                PagePartitionMetaIO newPartMetaIo = PageIO.getPageIO(newPartMetaPageAddr);
 
                 // Copy partition state.
                 byte partState = oldPartMetaIo.getPartitionState(oldPartMetaPageAddr);
@@ -816,6 +816,8 @@ public class CachePartitionDefragmentationManager {
                 // Encryption stuff.
                 newPartMetaIo.setEncryptedPageCount(newPartMetaPageAddr, 0);
                 newPartMetaIo.setEncryptedPageIndex(newPartMetaPageAddr, 0);
+
+                newPartMetaIo.setTombstonesCount(newPartMetaPageAddr, oldPartMetaIo.getTombstonesCount(oldPartMetaPageAddr));
 
                 return null;
             });

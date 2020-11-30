@@ -21,13 +21,12 @@ import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions.GG_VERSION_OFFSET;
+
 /**
  * IO for partition metadata pages.
  */
 public class PagePartitionMetaIO extends PageMetaIO {
-    /** */
-    public static final int GG_VERSION_OFFSET = Short.MAX_VALUE;
-
     /** */
     private static final int SIZE_OFF = PageMetaIO.END_OF_PAGE_META;
 

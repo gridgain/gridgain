@@ -22,7 +22,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Registry for IO versions.
  */
 public final class IOVersions<V extends PageIO> {
-    /** */
+    /** Defines an offset from which GG versions are assigned. */
     public static final int GG_VERSION_OFFSET = Short.MAX_VALUE;
 
     /** */
@@ -35,7 +35,7 @@ public final class IOVersions<V extends PageIO> {
     private final V latest;
 
     /** */
-    private int ggOff;
+    private final int ggOff;
 
     /**
      * @param vers Versions.
@@ -48,15 +48,21 @@ public final class IOVersions<V extends PageIO> {
         this.vers = vers;
         type = vers[0].getType();
 
+        int tmp = vers.length;
+
         for (int i = 0; i < vers.length; i++) {
             if (vers[i].getVersion() >= GG_VERSION_OFFSET) {
-                ggOff = i;
+                tmp = i;
 
                 break;
             }
         }
 
+        ggOff = tmp;
+
         latest = vers[vers.length - 1];
+
+        assert checkVersions();
     }
 
     /**
@@ -64,6 +70,27 @@ public final class IOVersions<V extends PageIO> {
      */
     public int getType() {
         return type;
+    }
+
+    /**
+     * @return {@code true} If versions are correct.
+     */
+    private boolean checkVersions() {
+        for (int i = 0; i < ggOff; i++) {
+            PageIO v = vers[i];
+
+            if (v.getType() != type || v.getVersion() != i + 1)
+                return false;
+        }
+
+        for (int i = ggOff, j = 0; i < vers.length; i++, j++) {
+            PageIO v = vers[i];
+
+            if (v.getType() != type || v.getVersion() - GG_VERSION_OFFSET != j)
+                return false;
+        }
+
+        return true;
     }
 
     /**
