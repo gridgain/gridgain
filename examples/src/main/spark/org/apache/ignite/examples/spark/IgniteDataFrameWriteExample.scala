@@ -29,6 +29,8 @@ import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.config.{Configuration, LoggerConfig}
 import org.apache.spark.sql.functions._
 
+import scala.collection.JavaConversions._
+
 /**
   * Example application showing use-case for writing Spark DataFrame API to Ignite.
   */
