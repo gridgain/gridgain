@@ -107,7 +107,7 @@ public class GGPageIoTest {
             System.out.println("The page after upgrade:");
             System.out.println(PageIO.printPage(addr, PAGE_SIZE));
 
-            validate("Failed upgrading from " + from + " to " + to, addr, from, expVals);
+            validate("Failed upgrading from " + from + " to " + to, addr, expVals);
         }
         finally {
             GridUnsafe.freeBuffer(bb);
@@ -143,9 +143,8 @@ public class GGPageIoTest {
     /**
      * @param msg Message.
      * @param addr Address.
-     * @param from From.
      */
-    private void validate(String msg, long addr, int from, Object... expVals) {
+    private void validate(String msg, long addr, Object... expVals) {
         PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(addr);
 
         assertTrue(io instanceof PagePartitionMetaIOGG);
