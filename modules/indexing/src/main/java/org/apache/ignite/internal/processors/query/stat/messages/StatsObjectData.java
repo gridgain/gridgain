@@ -22,43 +22,34 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import java.io.Externalizable;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**
  * Statistics for some object (index or table) in database,
  */
-public class StatsObjectData implements Message {
+public class StatsObjectData implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** */
-    public static final short TYPE_CODE = 178;
-
     /** Statistics key. */
-    public StatsKey key;
+    private StatsKey key;
 
     /** Total row count in current object. */
-    public long rowsCnt;
+    private long rowsCnt;
 
     /** Type of statistics. */
-    public StatsType type;
+    private StatsType type;
 
     /** Partition id if statistics was collected by partition. */
-    public int partId;
+    private int partId;
 
     /** Update counter if statistics was collected by partition. */
-    public long updCnt;
+    private long updCnt;
 
     /** Columns key to statistic map. */
-    public Map<String, StatsColumnData> data;
-
-    /**
-     * {@link Externalizable} support.
-     */
-    public StatsObjectData() {
-        // No-op.
-    }
+    private Map<String, StatsColumnData> data;
 
     /**
      * Constructor.
@@ -86,28 +77,45 @@ public class StatsObjectData implements Message {
         this.data = data;
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        return false;
+    /**
+     * @return Statistics key.
+     */
+    public StatsKey key() {
+        return key;
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        return false;
+    /**
+     * @return Total rows count.
+     */
+    public long rowsCnt() {
+        return rowsCnt;
     }
 
-    /** {@inheritDoc} */
-    @Override public short directType() {
-        return TYPE_CODE;
+    /**
+     * @return Statistics type.
+     */
+    public StatsType type() {
+        return type;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
-        return 0;
+    /**
+     * @return Partition id.
+     */
+    public int partId() {
+        return partId;
     }
 
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
+    /**
+     * @return Partition update counter.
+     */
+    public long updCnt() {
+        return updCnt;
+    }
 
+    /**
+     * @return Statistics column data.
+     */
+    public Map<String, StatsColumnData> data() {
+        return data;
     }
 }

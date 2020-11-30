@@ -22,6 +22,9 @@ import java.util.Objects;
  * Statistics key.
  */
 public class StatsKey implements Serializable {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** Object schema. */
     private String schema;
 

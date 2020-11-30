@@ -15,10 +15,8 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
@@ -26,7 +24,6 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMes
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsPropagationMessage;
 import org.gridgain.internal.h2.value.Value;
 
 /**
@@ -34,7 +31,7 @@ import org.gridgain.internal.h2.value.Value;
  */
 public class StatisticsUtils {
     /**
-     * Convert ColumnStatistics to StatcColumnData message.
+     * Convert ColumnStatistics to StaticColumnData message.
      *
      * @param stat Column statistics to convert.
      * @return Converted stats column data message.
@@ -90,26 +87,6 @@ public class StatisticsUtils {
     }
 
     /**
-     * Convert object statistics to StatsPropagationMessage.
-     *
-     * @param reqId Request id.
-     * @param key Statistics key.
-     * @param type Statistics type.
-     * @param stat ObjectStatistics to convert.
-     * @return Converted StatsPropagationMessage.
-     * @throws IgniteCheckedException In case of errors.
-     */
-    public static StatsPropagationMessage toMessage(
-            UUID reqId,
-            StatsKey key,
-            StatsType type,
-            ObjectStatisticsImpl stat
-    ) throws IgniteCheckedException {
-        StatsObjectData data = toMessage(key, type, stat);
-        return new StatsPropagationMessage(reqId, Collections.singletonList(data));
-    }
-
-    /**
      * Convert StatsObjectData message to ObjectPartitionStatistics.
      *
      * @param ctx Kernal context to use during convertation.
@@ -124,37 +101,14 @@ public class StatisticsUtils {
         if (objData == null)
             return null;
 
-        assert objData.type == StatsType.PARTITION;
+        assert objData.type() == StatsType.PARTITION;
 
-        Map<String, ColumnStatistics> colNameToStat = new HashMap<>(objData.data.size());
+        Map<String, ColumnStatistics> colNameToStat = new HashMap<>(objData.data().size());
 
-        for (Map.Entry<String, StatsColumnData> cs : objData.data.entrySet())
+        for (Map.Entry<String, StatsColumnData> cs : objData.data().entrySet())
             colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
 
-        return new ObjectPartitionStatisticsImpl(objData.partId, true, objData.rowsCnt, objData.updCnt, colNameToStat);
-    }
-
-    /**
-     * Convert statistics propagation message to ObjectStatisticsImpl.
-     *
-     * @param ctx Kernal context to use during convertation.
-     * @param data StatsPropagationMessage to convert.
-     * @return Converted object statistics.
-     * @throws IgniteCheckedException In case of errors.
-     */
-    public static ObjectStatisticsImpl toObjectStatistics(GridKernalContext ctx, StatsPropagationMessage data)
-            throws IgniteCheckedException {
-        if (data == null)
-            return null;
-
-        assert data.data().size() == 1;
-
-        StatsObjectData objData = data.data().get(0);
-        Map<String, ColumnStatistics> colNameToStat = new HashMap<>(objData.data.size());
-
-        for (Map.Entry<String, StatsColumnData> cs : objData.data.entrySet())
-            colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
-
-        return new ObjectStatisticsImpl(objData.rowsCnt, colNameToStat);
+        return new ObjectPartitionStatisticsImpl(objData.partId(), true, objData.rowsCnt(), objData.updCnt(),
+                colNameToStat);
     }
 }

@@ -27,12 +27,12 @@ public interface IgniteStatisticsStore {
     public void clearAllStatistics();
 
     /**
-     * Replace all table statistics with specified ones.
+     * Replace all table statistics with specified ones ().
      *
      * @param key Statistics key to replace statistics by.
      * @param statistics Collection of partition level statistics.
      */
-    public void saveLocalPartitionsStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics);
+    public void replaceLocalPartitionsStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics);
 
     /**
      * Get local partition statistics by specified object.

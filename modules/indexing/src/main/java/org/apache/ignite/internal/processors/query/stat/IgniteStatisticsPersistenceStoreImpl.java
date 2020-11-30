@@ -42,21 +42,21 @@ import java.util.stream.Collectors;
  * Will store all statistics related objects with prefix "stats."
  * Store only partition level statistics.
  */
-public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, MetastorageLifecycleListener {
-    // In local meta store it store partitions statistics by path: stats.<SCHEMA>.<OBJECT>.<partId>
+public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsStore, MetastorageLifecycleListener {
+    /** In local meta store it store partitions statistics by path: stats.<SCHEMA>.<OBJECT>.<partId> */
     private static final String META_SEPARATOR = ".";
 
     /** Local metastore statistics prefix. */
     private static final String META_STAT_PREFIX = "stats";
 
     /** Logger. */
-    private IgniteLogger log;
+    private final IgniteLogger log;
 
     /** Database shared manager. */
-    IgniteCacheDatabaseSharedManager database;
+    private final IgniteCacheDatabaseSharedManager db;
 
     /** Statistics repository. */
-    private IgniteStatisticsRepository repository;
+    private final IgniteStatisticsRepository repo;
 
     /** Metastorage. */
     private volatile ReadWriteMetastorage metastore;
@@ -65,21 +65,21 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
      * Constructor.
      *
      * @param subscriptionProcessor Grid subscription processor to track metastorage availability.
-     * @param database Database shared manager to lock db while reading/writing metastorage.
-     * @param repository Repository to fulfill on metastore available.
+     * @param db Database shared manager to lock db while reading/writing metastorage.
+     * @param repo Repository to fulfill on metastore available.
      * @param logSupplier Logger getting function.
      */
-    public IgniteStatisticsStoreImpl(
+    public IgniteStatisticsPersistenceStoreImpl(
             GridInternalSubscriptionProcessor subscriptionProcessor,
-            IgniteCacheDatabaseSharedManager database,
-            IgniteStatisticsRepository repository,
+            IgniteCacheDatabaseSharedManager db,
+            IgniteStatisticsRepository repo,
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
-        this.database = database;
-        this.repository = repository;
+        this.db = db;
+        this.repo = repo;
         subscriptionProcessor.registerMetastorageListener(this);
 
-        this.log = logSupplier.apply(IgniteStatisticsStoreImpl.class);
+        this.log = logSupplier.apply(IgniteStatisticsPersistenceStoreImpl.class);
     }
 
     /**
@@ -92,7 +92,7 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
         int partIdx = metaKey.lastIndexOf(META_SEPARATOR);
         String partIdStr = metaKey.substring(partIdx + 1);
 
-        return Integer.valueOf(partIdStr);
+        return Integer.parseInt(partIdStr);
     }
 
     /**
@@ -166,7 +166,7 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
             clearLocalPartitionsStatistics(key);
 
         for (Map.Entry<StatsKey, List<ObjectPartitionStatisticsImpl>> entry : statsMap.entrySet())
-            repository.cacheLocalStatistics(entry.getKey(), entry.getValue());
+            repo.cacheLocalStatistics(entry.getKey(), entry.getValue());
     }
 
     /** {@inheritDoc} */
@@ -190,7 +190,7 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
     }
 
     /** {@inheritDoc} */
-    @Override public void saveLocalPartitionsStatistics(
+    @Override public void replaceLocalPartitionsStatistics(
             StatsKey key,
             Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
@@ -198,13 +198,13 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
                 key.obj(), statistics.size()))
             return;
 
-        Map<Integer, ObjectPartitionStatisticsImpl> partitionStatistics = statistics.stream().collect(
+        Map<Integer, ObjectPartitionStatisticsImpl> partStatistics = statistics.stream().collect(
                 Collectors.toMap(ObjectPartitionStatisticsImpl::partId, s -> s));
 
         String objPrefix = getPartKeyPrefix(key);
         try {
             iterateMeta(objPrefix, (k,v) -> {
-                ObjectPartitionStatisticsImpl newStats = partitionStatistics.remove(getPartitionId(k));
+                ObjectPartitionStatisticsImpl newStats = partStatistics.remove(getPartitionId(k));
                 try {
                     if (newStats == null) {
                         if (log.isTraceEnabled())
@@ -224,8 +224,8 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
                             e);
                 }
             }, false);
-            if (!partitionStatistics.isEmpty()) {
-                for (Map.Entry<Integer, ObjectPartitionStatisticsImpl> entry : partitionStatistics.entrySet())
+            if (!partStatistics.isEmpty()) {
+                for (Map.Entry<Integer, ObjectPartitionStatisticsImpl> entry : partStatistics.entrySet())
                     writeMeta(objPrefix + entry.getKey(), StatisticsUtils.toMessage(key, StatsType.PARTITION,
                             entry.getValue()));
             }
@@ -240,13 +240,13 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
         if (!checkMetastore("Unable to get local partitions statistics %s.%s", key.schema(), key.obj()))
             return Collections.emptyList();
 
-        List<ObjectPartitionStatisticsImpl> result = new ArrayList<>();
+        List<ObjectPartitionStatisticsImpl> res = new ArrayList<>();
         try {
             iterateMeta(getPartKeyPrefix(key), (k,v) -> {
                 try {
                     ObjectPartitionStatisticsImpl partStats = StatisticsUtils
                             .toObjectPartitionStatistics(null, (StatsObjectData)v);
-                    result.add(partStats);
+                    res.add(partStats);
                 }
                 catch (IgniteCheckedException e) {
                     log.warning(String.format("Error during reading statistics %s.%s by key %s", key.schema(), key.obj(),
@@ -257,7 +257,7 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
         catch (IgniteCheckedException e) {
             log.warning(String.format("Error during reading statistics %s.%s", key.schema(), key.obj()), e);
         }
-        return result;
+        return res;
     }
 
     /** {@inheritDoc} */
@@ -289,10 +289,10 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
         String partKey = getPartKeyPrefix(key) + statistics.partId();
 
         try {
-            StatsObjectData statsMessage = StatisticsUtils.toMessage(key, StatsType.PARTITION, statistics);
+            StatsObjectData statsMsg = StatisticsUtils.toMessage(key, StatsType.PARTITION, statistics);
             if (log.isTraceEnabled())
                 log.trace("Writing statistics by key " + partKey);
-            writeMeta(partKey, statsMessage);
+            writeMeta(partKey, statsMsg);
         }
         catch (IgniteCheckedException e) {
             log.warning(String.format("Error while storing local partition statistics %s.%s:%d", key.schema(), key.obj(),
@@ -348,7 +348,7 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
             removeMeta(metaKeys);
         }
         catch (IgniteCheckedException e) {
-            log.warning(String.format("Error while clearing local partitions statistics %s.%s %d",
+            log.warning(String.format("Error while clearing local partitions statistics %s.%s %s",
                     key.schema(), key.obj(), partIds), e);
         }
     }
@@ -375,21 +375,21 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
      * Write object to local metastore.
      *
      * @param key Path to write.
-     * @param object Object to write.
+     * @param obj Object to write.
      * @throws IgniteCheckedException Throws in case of errors.
      */
-    private void writeMeta(String key, Serializable object) throws IgniteCheckedException {
-        assert object != null;
+    private void writeMeta(String key, Serializable obj) throws IgniteCheckedException {
+        assert obj != null;
 
         if (!checkMetastore("Unable to save metadata to %s", key))
             return;
 
-        database.checkpointReadLock();
+        db.checkpointReadLock();
         try {
-            metastore.write(key, object);
+            metastore.write(key, obj);
         }
         finally {
-            database.checkpointReadUnlock();
+            db.checkpointReadUnlock();
         }
     }
 
@@ -398,17 +398,17 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
      *
      * @param key Key to read object by.
      * @return Read object or {@code null} if there are no such object.
-     * @throws IgniteCheckedException
+     * @throws IgniteCheckedException Throws in case of errors.
      */
     private Serializable readMeta(String key) throws IgniteCheckedException {
         assert key != null;
 
-        database.checkpointReadLock();
+        db.checkpointReadLock();
         try {
             return metastore.read(key);
         }
         finally {
-            database.checkpointReadUnlock();
+            db.checkpointReadUnlock();
         }
     }
 
@@ -419,12 +419,12 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
      * @throws IgniteCheckedException Throws in case of errors.
      */
     private void removeMeta(String key) throws IgniteCheckedException {
-        database.checkpointReadLock();
+        db.checkpointReadLock();
         try {
             metastore.remove(key);
         }
         finally {
-            database.checkpointReadUnlock();
+            db.checkpointReadUnlock();
         }
     }
 
@@ -435,13 +435,13 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
      * @throws IgniteCheckedException In case of errors.
      */
     private void removeMeta(Collection<String> keys) throws IgniteCheckedException {
-        database.checkpointReadLock();
+        db.checkpointReadLock();
         try {
             for (String key : keys)
                 metastore.remove(key);
         }
         finally {
-            database.checkpointReadUnlock();
+            db.checkpointReadUnlock();
         }
     }
 
@@ -457,12 +457,12 @@ public class IgniteStatisticsStoreImpl implements IgniteStatisticsStore, Metasto
             throws IgniteCheckedException {
         assert metastore != null;
 
-        database.checkpointReadLock();
+        db.checkpointReadLock();
         try {
             metastore.iterate(keyPrefix, cb, unmarshall);
         }
         finally {
-            database.checkpointReadUnlock();
+            db.checkpointReadUnlock();
         }
     }
 }

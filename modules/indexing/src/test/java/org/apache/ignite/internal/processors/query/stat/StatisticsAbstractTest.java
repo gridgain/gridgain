@@ -267,9 +267,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected void updateStatistics(String table, String... tables) {
         List<String> allTbls = new ArrayList<>();
         allTbls.add(table);
-        if (null != tables) {
+        if (null != tables)
             allTbls.addAll(Arrays.asList(tables));
-        }
 
         try {
             for (String tbl : allTbls) {
@@ -303,8 +302,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @return Object partition statistics with specified partition id.
      */
     protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
-        ColumnStatistics columnStatistics = new ColumnStatistics(null, null,100,0, 100,
-                0, new byte[0]);
+        ColumnStatistics columnStatistics = new ColumnStatistics(null, null, 100, 0,
+                100, 0, new byte[0]);
         return new ObjectPartitionStatisticsImpl(partId, true, 0, 0,
                 Collections.singletonMap("col1", columnStatistics));
     }

@@ -31,6 +31,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
@@ -38,7 +39,6 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.typedef.F;
 import org.gridgain.internal.h2.table.Column;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -72,10 +72,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         log = ctx.log(IgniteStatisticsManagerImpl.class);
 
         boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
-        boolean persistence = GridCacheUtils.isPersistenceEnabled(ctx.config());
-
-        statsRepos = new IgniteStatisticsRepositoryImpl(storeData, persistence, ctx.cache().context().database(),
-                ctx.internalSubscriptionProcessor(),this, ctx::log);
+        IgniteCacheDatabaseSharedManager db = (GridCacheUtils.isPersistenceEnabled(ctx.config())) ?
+                ctx.cache().context().database() : null;
+        statsRepos = new IgniteStatisticsRepositoryImpl(storeData, db, ctx.internalSubscriptionProcessor(),this,
+                ctx::log);
     }
 
     /**
@@ -105,7 +105,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @param colNames Column names.
      * @return Column with specified names.
      */
-    private Column[] filterColumns(Column[] columns, @Nullable String... colNames) {
+    private Column[] filterColumns(Column[] columns, String... colNames) {
         if (F.isEmpty(colNames))
             return columns;
 

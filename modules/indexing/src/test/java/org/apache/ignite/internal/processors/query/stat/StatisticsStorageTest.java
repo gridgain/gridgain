@@ -21,7 +21,7 @@ import org.junit.Test;
 /**
  * Tests for statistics storage.
  */
-public class StatisticsStorageTest extends StatisticsStorageAbstractTest {
+public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTest {
     /**
      * Test that statistics manager will return local statistics after cleaning of statistics repository.
      * @throws IgniteCheckedException In case of errors.
@@ -31,7 +31,7 @@ public class StatisticsStorageTest extends StatisticsStorageAbstractTest {
         IgniteStatisticsManager statsManager = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsRepositoryImpl statsRepository = (IgniteStatisticsRepositoryImpl)
                 ((IgniteStatisticsManagerImpl)statsManager).statisticsRepository();
-        IgniteStatisticsStoreImpl statsStore = (IgniteStatisticsStoreImpl)statsRepository.statisticsStore();
+        IgniteStatisticsStore statsStore = statsRepository.statisticsStore();
 
         statsStore.clearAllStatistics();
 

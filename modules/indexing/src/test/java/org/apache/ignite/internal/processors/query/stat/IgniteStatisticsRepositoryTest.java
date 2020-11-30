@@ -39,8 +39,8 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
      */
     @Test
     public void testClientNode() {
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(false, false,
-                new IgniteCacheDatabaseSharedManager(){}, null, null, cls -> log);
+        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(false, null,
+                null, null, cls -> log);
 
         testRepositoryGlobal(statsRepos);
     }
@@ -50,8 +50,8 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
      */
     @Test
     public void testServerWithoutPersistence() {
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(true, false,
-                new IgniteCacheDatabaseSharedManager(),null, null, cls -> log);
+        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(true, null,
+                null, null, cls -> log);
 
         testRepositoryGlobal(statsRepos);
         testRepositoryLocal(statsRepos);
@@ -69,7 +69,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         Mockito.doAnswer(invocation -> listener[0] = invocation.getArgument(0))
                 .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
 
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(true, true,
+        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(true,
                 new IgniteCacheDatabaseSharedManager(), subscriptionProcessor, null, cls -> log);
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
