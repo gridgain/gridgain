@@ -63,10 +63,8 @@ public class JavaIgniteCatalogExample {
         // Adjust the logger to exclude the logs of no interest.
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         Configuration config = ctx.getConfiguration();
-        LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-        loggerConfig.setLevel(Level.ERROR);
-        LoggerConfig loggerConfig = config.getLoggerConfig("org.apache.ignite");
-        loggerConfig.setLevel(Level.INFO);
+        config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
+        config.getLoggerConfig("org.apache.ignite").setLevel(Level.INFO);
         ctx.updateLoggers();
 
         System.out.println("List of available tables:");

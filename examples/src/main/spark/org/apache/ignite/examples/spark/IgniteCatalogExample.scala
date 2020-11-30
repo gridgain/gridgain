@@ -56,11 +56,9 @@ object IgniteCatalogExample extends App {
         // Adjust the logger to exclude the logs of no interest.
         val ctx = (LogManager.getContext(false)).asInstanceOf[LoggerContext];
         val config = ctx.getConfiguration()
-        val loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME)
-        loggerConfig.setLevel(Level.ERROR)
-        val loggerConfig2 = config.getLoggerConfig("org.apache.ignite")
-        loggerConfig.setLevel(Level.INFO)
-        ctx.updateLoggers()
+        config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME).setLevel(Level.ERROR)
+        config.getLoggerConfig("org.apache.ignite").setLevel(Level.INFO)
+        ctx.updateLoggers(config)
 
         println("List of available tables:")
 

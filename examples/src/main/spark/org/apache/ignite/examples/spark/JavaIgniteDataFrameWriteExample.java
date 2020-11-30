@@ -71,11 +71,9 @@ public class JavaIgniteDataFrameWriteExample {
         // Adjust the logger to exclude the logs of no interest.
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         Configuration config = ctx.getConfiguration();
-        LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-        loggerConfig.setLevel(Level.ERROR);
-        LoggerConfig loggerConfig = config.getLoggerConfig("org.apache.ignite");
-        loggerConfig.setLevel(Level.INFO);
-        ctx.updateLoggers();
+        config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
+        config.getLoggerConfig("org.apache.ignite").setLevel(Level.INFO);
+        ctx.updateLoggers(config);
 
         // Executing examples.
         System.out.println("Example of writing json file to Ignite:");

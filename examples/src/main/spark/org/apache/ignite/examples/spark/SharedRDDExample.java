@@ -64,11 +64,9 @@ public class SharedRDDExample {
         // Adjust the logger to exclude the logs of no interest.
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         Configuration config = ctx.getConfiguration();
-        LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-        loggerConfig.setLevel(Level.ERROR);
-        LoggerConfig loggerConfig = config.getLoggerConfig("org.apache.ignite");
-        loggerConfig.setLevel(Level.INFO);
-        ctx.updateLoggers();
+        config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
+        config.getLoggerConfig("org.apache.ignite").setLevel(Level.INFO);
+        ctx.updateLoggers(config);
 
         // Creates Ignite context with specific configuration and runs Ignite in the embedded mode.
         JavaIgniteContext<Integer, Integer> igniteContext = new JavaIgniteContext<Integer, Integer>(
