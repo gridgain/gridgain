@@ -681,19 +681,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @return Future to await when the partition is evicted from the local node.
      */
     public IgniteInternalFuture<?> rent() {
-        long state0 = this.state.get();
+        long state0 = state.get();
 
         GridDhtPartitionState partState = getPartState(state0);
 
-        if (partState == EVICTED)
+        /** Avoid concurrent renting tasks execution. This can lead to race between async eviction and clearing
+         * of already evicted partition, causing critical failures. */
+        if (partState == EVICTED || partState == RENTING)
             return rent;
-
-//        if (partState == RENTING) {
-//            // If for some reason a partition has stuck in renting state try restart clearing.
-//            clearAsync();
-//
-//            return rent;
-//        }
 
         if (tryInvalidateGroupReservations() && getReservations(state0) == 0 && casState(state0, RENTING)) {
             PartitionsEvictManager.PartitionEvictionTask task =
@@ -702,7 +697,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             task.finishFut.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut0) {
                     if (fut0.error() == null) {
-                        // Try finish eviction asynchronously.
                         ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                             @Override public void run() { // TODO submit to timer for batch.
                                 if (grp.topology().tryFinishEviction(GridDhtLocalPartition.this)) {
@@ -789,7 +783,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * Moves partition state to {@code EVICTED} if possible.
      */
     public void finishEviction() {
-        long state0 = this.state.get();
+        long state0 = state.get();
 
         GridDhtPartitionState state = getPartState(state0);
 
@@ -1119,7 +1113,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || row.version().order() > order0);
         }
 
-        if (task.reason == PartitionsEvictManager.EvictReason.EVICTION && state() == EVICTED)
+        if (state0 == EVICTED && task.reason == PartitionsEvictManager.EvictReason.EVICTION)
             return 0;
 
         GridCacheVersion clearVer = ctx.versions().startVersion();

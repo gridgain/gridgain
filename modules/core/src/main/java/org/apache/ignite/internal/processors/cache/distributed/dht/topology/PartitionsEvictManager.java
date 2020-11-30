@@ -201,19 +201,18 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
                 break;
             }
-            else if (prev.reason != reason) {
-                if (log.isDebugEnabled())
+            else {
+                if (log.isDebugEnabled()) {
                     log.debug("Cancelling the clearing [grp=" + grp.cacheOrGroupName()
                         + ", topVer=" + (grp.topology().initialized() ? grp.topology().readyTopologyVersion() : "NA")
                         + ", task=" + task
                         + ", prev=" + prev
                         + ']');
+                }
 
                 prev.cancel();
                 prev.awaitCompletion();
             }
-            else
-                return prev;
         }
 
         // Try eviction fast-path.
@@ -639,12 +638,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
         }
 
         /**
-         * Signals this eviction task for cancellation.
+         * Signals this eviction task to stop.
          */
         public void cancel() {
             if (state.compareAndSet(null, Boolean.FALSE))
                 finishFut.onDone(); // Cancelled before start.
-            else
+            else if (state.get() == Boolean.TRUE)
                 state.set(Boolean.FALSE); // Cancelled while running, need to publish stop request.
         }
 
