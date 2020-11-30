@@ -114,7 +114,6 @@ public class GGPageIoTest {
         }
     }
 
-
     /**
      * Assigns all available fields for the page.
      *
@@ -174,7 +173,7 @@ public class GGPageIoTest {
         }
 
         /** {@inheritDoc} */
-        @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb)  {
+        @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) {
             // No-op.
         }
     }
