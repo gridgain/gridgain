@@ -25,7 +25,6 @@ import java.util.Set;
 import java.util.TimeZone;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -536,7 +535,6 @@ public interface GridQueryIndexing {
      * @param mappingByPartition Mapping page memory.
      * @param cpLock Defragmentation checkpoint read lock.
      * @param cancellationChecker Cancellation checker.
-     * @param log Log.
      * @param defragmentationThreadPool Thread pool for defragmentation.
      *
      * @throws IgniteCheckedException If failed.
@@ -548,7 +546,6 @@ public interface GridQueryIndexing {
         IntMap<LinkMap> mappingByPartition,
         CheckpointTimeoutLock cpLock,
         Runnable cancellationChecker,
-        IgniteLogger log,
         IgniteThreadPoolExecutor defragmentationThreadPool
     ) throws IgniteCheckedException;
 }
