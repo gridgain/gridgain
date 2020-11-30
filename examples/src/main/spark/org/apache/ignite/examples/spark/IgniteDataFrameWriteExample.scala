@@ -59,7 +59,7 @@ object IgniteDataFrameWriteExample extends App {
         val config = ctx.getConfiguration();
         val loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
         loggerConfig.setLevel(Level.ERROR);
-        val loggerConfig = config.getLoggerConfig("org.apache.ignite");
+        val loggerConfig2 = config.getLoggerConfig("org.apache.ignite");
         loggerConfig.setLevel(Level.INFO);
         ctx.updateLoggers();
 
