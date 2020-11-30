@@ -114,6 +114,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.defragment
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.TreeIterator.PageAccessType.ACCESS_READ;
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.TreeIterator.PageAccessType.ACCESS_WRITE;
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.TreeIterator.access;
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions.GG_VERSION_OFFSET;
 
 /**
  * Defragmentation manager is the core class that contains main defragmentation procedure.
@@ -758,7 +759,7 @@ public class CachePartitionDefragmentationManager {
             PagePartitionMetaIO oldPartMetaIo = PageIO.getPageIO(oldPartMetaPageAddr);
 
             // Newer meta versions may contain new data that we don't copy during defragmentation.
-            assert Arrays.asList(1, 2, 3, 65534, 65535).contains(oldPartMetaIo.getVersion())
+            assert Arrays.asList(1, 2, 3, GG_VERSION_OFFSET).contains(oldPartMetaIo.getVersion())
                 : "IO version " + oldPartMetaIo.getVersion() + " is not supported by current defragmentation algorithm." +
                 " Please implement copying of all data added in new version.";
 
