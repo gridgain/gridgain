@@ -26,7 +26,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.lang.IgniteRunnable;
-import org.apache.ignite.logger.log4j2.Log4J2Logger;
+import org.apache.ignite.logger.log4j.Log4JLogger;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -78,11 +78,7 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
 
         cfg.setPeerClassLoadingEnabled(false);
 
-        cfg.setFailureDetectionTimeout(300_000);
-
-        cfg.setClientFailureDetectionTimeout(300_000);
-
-        Log4J2Logger log = new Log4J2Logger(ROUTER_LOG_CFG);
+        Log4JLogger log = new Log4JLogger(ROUTER_LOG_CFG);
 
         cfg.setGridLogger(log);
 
@@ -123,8 +119,6 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
         {
             IgniteCompute client1Compute =
                 srv.compute(srv.cluster().forNodeId(ignite(1).cluster().localNode().id()));
-
-            Thread.sleep(30_000);
 
             client1Compute.run(new HibernateInsertRunnable());
         }
