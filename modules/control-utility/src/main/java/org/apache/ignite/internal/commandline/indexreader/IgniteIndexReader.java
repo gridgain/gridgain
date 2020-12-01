@@ -169,7 +169,7 @@ public class IgniteIndexReader implements AutoCloseable {
     @Nullable private final Predicate<String> idxFilter;
 
     /** Output strean. */
-    private final PrintStream outStream;
+    protected final PrintStream outStream;
 
     /** Page store of {@link FilePageStoreManager#INDEX_FILE_NAME}. */
     @Nullable private final FilePageStore idxStore;
@@ -191,6 +191,16 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private final PageIOProcessor metaPageIOProcessor = new MetaPageIOProcessor();
+
+    protected IgniteIndexReader(PrintStream outStream, int pageSize) {
+        idxFilter = null;
+        checkParts = false;
+        idxStore = null;
+        this.outStream = outStream;
+        this.pageSize = pageSize;
+        partStores = new FilePageStore[]{};
+        this.partCnt = 0;
+    }
 
     /**
      * Constructor.
@@ -295,7 +305,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param pageId Page ID.
      * @param buf Buffer.
      */
-    private void readPage(FilePageStore store, long pageId, ByteBuffer buf) throws IgniteCheckedException {
+    protected void readPage(FilePageStore store, long pageId, ByteBuffer buf) throws IgniteCheckedException {
         try {
             store.read(pageId, buf, false);
         }
@@ -461,7 +471,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @return Result of closure.
      * @throws IgniteCheckedException If failed.
      */
-    private <T> T doWithBuffer(BufferClosure<T> c) throws IgniteCheckedException {
+    protected <T> T doWithBuffer(BufferClosure<T> c) throws IgniteCheckedException {
         ByteBuffer buf = allocateBuffer(pageSize);
 
         try {
@@ -627,7 +637,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @return Map of found pages. First page of this class that was found, is put to this map.
      * @throws IgniteCheckedException If failed.
      */
-    private Map<Short, Long> findPages(int partId, byte flag, FilePageStore store, Set<Short> pageTypes)
+    protected Map<Short, Long> findPages(int partId, byte flag, FilePageStore store, Set<Short> pageTypes)
         throws IgniteCheckedException {
         Map<Short, Long> res = new HashMap<>();
 
@@ -1057,7 +1067,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param itemStorage Items storage.
      * @return Tree traversal info.
      */
-    private TreeTraversalInfo horizontalTreeScan(
+    protected TreeTraversalInfo horizontalTreeScan(
         FilePageStore store,
         long rootPageId,
         String treeName,
@@ -1332,7 +1342,7 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      *
      */
-    private interface BufferClosure<T> {
+    protected interface BufferClosure<T> {
         /** */
         T apply(ByteBuffer buf, Long addr) throws IgniteCheckedException;
     }
