@@ -37,7 +37,6 @@ import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.event.EventType;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
@@ -124,9 +123,6 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
 
     /** P2P unmarshalling future. */
     protected transient IgniteInternalFuture<Void> p2pUnmarshalFut = new GridFinishedFuture<>();
-
-    /** Initialization future. */
-    protected transient IgniteInternalFuture<Void> initFut;
 
     /** Local listener. */
     private transient CacheEntryUpdatedListener<K, V> locLsnr;
@@ -362,23 +358,12 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
 
         initLocalListener(locLsnr, ctx);
 
-        if (initFut == null) {
-            initFut = p2pUnmarshalFut.chain((fut) -> {
-                try {
-                    fut.get();
-
-                    initRemoteFilter(getEventFilter0(), ctx);
-                }
-                catch (IgniteCheckedException e) {
-                    throw new IgniteException("Failed to initialize a remote filter.", e);
-                }
-
-                return null;
-            });
+        try {
+            initRemoteFilter(getEventFilter0(), ctx);
         }
-
-        if (initFut.error() != null)
-            throw new IgniteCheckedException("Failed to initialize a continuous query.", initFut.error());
+        catch (IgniteCheckedException | ExceptionInInitializerError e) {
+            throw new IgniteCheckedException("Failed to initialize a continuous query.", e);
+        }
 
         entryBufs = new ConcurrentHashMap<>();
 
@@ -674,7 +659,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
         RegisterStatus regStatus = mgr.registerListener(routineId, lsnr, internal);
 
         if (regStatus == RegisterStatus.REGISTERED)
-            initFut.listen(res -> sendQueryExecutedEvent());
+            p2pUnmarshalFut.listen(res -> sendQueryExecutedEvent());
 
         return regStatus;
     }
@@ -766,7 +751,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
      * @throws IgniteCheckedException If P2P unmarshalling failed.
      */
     public CacheEntryEventFilter getEventFilter() throws IgniteCheckedException {
-        initFut.get();
+        p2pUnmarshalFut.get();
 
         return getEventFilter0();
     }
@@ -1339,6 +1324,11 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
                 ((GridFutureAdapter)p2pUnmarshalFut).onDone(e);
 
                 throw e;
+            }
+            catch (ExceptionInInitializerError e) {
+                ((GridFutureAdapter)p2pUnmarshalFut).onDone(e);
+
+                throw new IgniteCheckedException("Failed to unmarshal deployable object.", e);
             }
         }
         else

@@ -124,7 +124,14 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     /** {@inheritDoc} */
     @Override public RegisterStatus register(UUID nodeId, UUID routineId,
         GridKernalContext ctx) throws IgniteCheckedException {
-        final IgniteClosure trans = getTransformer();
+
+        final IgniteClosure trans;
+
+        try {
+            trans = getTransformer();
+        } catch (ExceptionInInitializerError e) {
+            throw new IgniteCheckedException("Failed to initialize a remote transformer.", e);
+        }
 
         if (trans != null)
             ctx.resource().injectGeneric(trans);
