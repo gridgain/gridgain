@@ -274,7 +274,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             for (String tbl : allTbls) {
                 for (Ignite node : G.allGrids()) {
                     IgniteStatisticsManager statsManager = ((IgniteEx)node).context().query().getIndexing().statsManager();
-                    statsManager.collectObjectStatistics("PUBLIC", tbl.toUpperCase(), null);
+                    statsManager.collectObjectStatistics("PUBLIC", tbl.toUpperCase());
                 }
             }
         }
@@ -290,7 +290,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @return Object statistics.
      */
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
-        ColumnStatistics columnStatistics = new ColumnStatistics(null, null,100,0, 100,
+        ColumnStatistics columnStatistics = new ColumnStatistics(null, null, 100, 0, 100,
                 0, new byte[0]);
         return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", columnStatistics));
     }

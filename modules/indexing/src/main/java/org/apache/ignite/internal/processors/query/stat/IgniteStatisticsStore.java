@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.Collection;
 
 /**
- * Statistics persistence store interface.
+ * Statistics store interface.
  */
 public interface IgniteStatisticsStore {
     /**
