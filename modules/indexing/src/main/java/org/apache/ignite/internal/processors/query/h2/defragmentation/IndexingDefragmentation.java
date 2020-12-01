@@ -30,7 +30,6 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointTimeoutLock;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.LinkMap;
-import org.apache.ignite.internal.processors.cache.persistence.defragmentation.TimeTracker;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.TreeIterator;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -62,13 +61,6 @@ import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.value.Value;
 
-import static org.apache.ignite.internal.processors.query.h2.defragmentation.IndexingDefragmentation.IndexStages.CP_LOCK;
-import static org.apache.ignite.internal.processors.query.h2.defragmentation.IndexingDefragmentation.IndexStages.INIT_TREE;
-import static org.apache.ignite.internal.processors.query.h2.defragmentation.IndexingDefragmentation.IndexStages.INSERT_ROW;
-import static org.apache.ignite.internal.processors.query.h2.defragmentation.IndexingDefragmentation.IndexStages.ITERATE;
-import static org.apache.ignite.internal.processors.query.h2.defragmentation.IndexingDefragmentation.IndexStages.READ_MAP;
-import static org.apache.ignite.internal.processors.query.h2.defragmentation.IndexingDefragmentation.IndexStages.READ_ROW;
-
 /**
  *
  */
@@ -79,17 +71,6 @@ public class IndexingDefragmentation {
     /** Constructor. */
     public IndexingDefragmentation(IgniteH2Indexing indexing) {
         this.indexing = indexing;
-    }
-
-    /** */
-    public enum IndexStages {
-        START,
-        CP_LOCK,
-        INIT_TREE,
-        ITERATE,
-        READ_ROW,
-        READ_MAP,
-        INSERT_ROW
     }
 
     /**
@@ -168,9 +149,6 @@ public class IndexingDefragmentation {
         AtomicLong lastCpLockTs,
         GridH2Table table
     ) throws IgniteCheckedException {
-        TimeTracker<IndexStages> tracker = new TimeTracker<>(IndexStages.class);
-
-        tracker.complete(CP_LOCK);
         cpLock.checkpointReadLock();
 
         try {
@@ -219,21 +197,16 @@ public class IndexingDefragmentation {
                 log
             );
 
-            tracker.complete(INIT_TREE);
-
             for (int i = 0; i < segments; i++) {
                 H2Tree tree = oldH2Idx.treeForRead(i);
 
                 treeIterator.iterate(tree, oldCachePageMem, (theTree, io, pageAddr, idx) -> {
-                    tracker.complete(ITERATE);
-
                     cancellationChecker.run();
 
                     if (System.currentTimeMillis() - lastCpLockTs.get() >= cpLockThreshold) {
                         cpLock.checkpointReadUnlock();
 
                         cpLock.checkpointReadLock();
-                        tracker.complete(CP_LOCK);
 
                         lastCpLockTs.set(System.currentTimeMillis());
                     }
@@ -245,8 +218,6 @@ public class IndexingDefragmentation {
                     BPlusIO<H2Row> h2IO = wrap(io);
 
                     H2Row row = theTree.getRow(h2IO, pageAddr, idx);
-
-                    tracker.complete(READ_ROW);
 
                     if (row instanceof H2CacheRowWithIndex) {
                         H2CacheRowWithIndex h2CacheRow = (H2CacheRowWithIndex)row;
@@ -261,8 +232,6 @@ public class IndexingDefragmentation {
 
                         long newLink = map.get(link);
 
-                        tracker.complete(READ_MAP);
-
                         H2CacheRowWithIndex newRow = H2CacheRowWithIndex.create(
                             rowDesc,
                             newLink,
@@ -271,19 +240,11 @@ public class IndexingDefragmentation {
                         );
 
                         newIdx.putx(newRow);
-
-                        tracker.complete(INSERT_ROW);
                     }
 
                     return true;
                 });
             }
-
-            if (log.isInfoEnabled())
-                log.info(
-                    "Indexes defragmentation timings for cache group '" + grpCtx.groupId()
-                        + "', cache '" + table.cacheName() + "' : " + tracker.toString()
-                );
 
             return true;
         }
