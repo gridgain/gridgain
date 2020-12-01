@@ -44,9 +44,6 @@ public class ColumnStatisticsCollector {
     /** Maximum value. */
     private Value max = null;
 
-    /** Is column has complex type. */
-    private boolean complexType;
-
     /** Total values in column. */
     private long total = 0;
 
@@ -58,6 +55,9 @@ public class ColumnStatisticsCollector {
 
     /** Null values counter. */
     private long nullsCnt;
+
+    /** Is column has complex type. */
+    private final boolean complexType;
 
     /** Hasher. */
     private final Hasher hash = new Hasher();

@@ -297,25 +297,25 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      * @return Combined statistics.
      */
     private <T extends ObjectStatisticsImpl> T add(T base, T add) {
-        T result = (T)add.clone();
+        T res = (T)add.clone();
         for (Map.Entry<String, ColumnStatistics> entry : base.columnsStatistics().entrySet())
-            result.columnsStatistics().putIfAbsent(entry.getKey(), entry.getValue());
+            res.columnsStatistics().putIfAbsent(entry.getKey(), entry.getValue());
 
-        return result;
+        return res;
     }
 
     /**
      * Remove specified columns from clone of base ObjectStatistics object.
      *
      * @param base ObjectStatistics to remove columns from.
-     * @param columns Columns to remove.
+     * @param cols Columns to remove.
      * @return Cloned object without specified columns statistics.
      */
-    private <T extends ObjectStatisticsImpl> T subtract(T base, String[] columns) {
-        T result = (T)base.clone();
-        for (String col : columns)
-            result.columnsStatistics().remove(col);
+    private <T extends ObjectStatisticsImpl> T subtract(T base, String[] cols) {
+        T res = (T)base.clone();
+        for (String col : cols)
+            res.columnsStatistics().remove(col);
 
-        return result;
+        return res;
     }
 }

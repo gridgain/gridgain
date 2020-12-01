@@ -28,7 +28,6 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.Collection;
 
-
 /**
  * Unit tests for statistics store.
  */
@@ -48,19 +47,19 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
      * @return Test parameters.
      */
     @Parameterized.Parameters(name = "cacheMode={0}")
-    public static Collection parameters() throws IgniteCheckedException {
+    public static Collection<Object[]> parameters() throws IgniteCheckedException {
 
-        MetastorageLifecycleListener listener[] = new MetastorageLifecycleListener[1];
+        MetastorageLifecycleListener lsnr[] = new MetastorageLifecycleListener[1];
 
         GridInternalSubscriptionProcessor subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
-        Mockito.doAnswer(invocation -> listener[0] = invocation.getArgument(0))
+        Mockito.doAnswer(invocation -> lsnr[0] = invocation.getArgument(0))
                 .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
 
         IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(true,
                 new IgniteCacheDatabaseSharedManager(), subscriptionProcessor, null, cls -> log);
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
-        listener[0].onReadyForReadWrite(metastorage);
+        lsnr[0].onReadyForReadWrite(metastorage);
 
         IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
 
@@ -115,6 +114,12 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
         assertNull(store.getLocalPartitionStatistics(KEY2, 1));
     }
 
+    /**
+     * Test saving and acquiring set of partition statistics:
+     *
+     * 1) Save a few statistics with group replace method.
+     * 2) Check that group load methods return correct number of partition statistics with right and wrong keys.
+     */
     @Test
     public void testGroupOperations() {
         ObjectPartitionStatisticsImpl partStat1 = getPartitionStatistics(101);

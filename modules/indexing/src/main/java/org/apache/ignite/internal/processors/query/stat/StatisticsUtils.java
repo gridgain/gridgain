@@ -70,19 +70,19 @@ public class StatisticsUtils {
      */
     public static StatsObjectData toMessage(StatsKey key, StatsType type, ObjectStatisticsImpl stat)
             throws IgniteCheckedException {
-        Map<String, StatsColumnData> columnData = new HashMap<>(stat.columnsStatistics().size());
+        Map<String, StatsColumnData> colData = new HashMap<>(stat.columnsStatistics().size());
 
         for (Map.Entry<String, ColumnStatistics> ts : stat.columnsStatistics().entrySet())
-            columnData.put(ts.getKey(), toMessage(ts.getValue()));
+            colData.put(ts.getKey(), toMessage(ts.getValue()));
 
         StatsObjectData data;
         if (stat instanceof ObjectPartitionStatisticsImpl) {
             ObjectPartitionStatisticsImpl partStats = (ObjectPartitionStatisticsImpl) stat;
             data = new StatsObjectData(key, stat.rowCount(), type, partStats.partId(),
-                    partStats.updCnt(), columnData);
+                    partStats.updCnt(), colData);
         }
         else
-            data = new StatsObjectData(key, stat.rowCount(), type, 0,0, columnData);
+            data = new StatsObjectData(key, stat.rowCount(), type, 0,0, colData);
         return data;
     }
 

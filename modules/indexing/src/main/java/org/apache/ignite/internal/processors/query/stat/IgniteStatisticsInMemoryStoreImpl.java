@@ -53,8 +53,8 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
 
     /** {@inheritDoc} */
     @Override public void replaceLocalPartitionsStatistics(
-            StatsKey key,
-            Collection<ObjectPartitionStatisticsImpl> statistics
+        StatsKey key,
+        Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
         partsStats.put(key, buildStatisticsMap(key, statistics));
     }
