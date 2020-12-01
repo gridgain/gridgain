@@ -30,10 +30,7 @@ import org.apache.ignite.logger.log4j2.Log4J2Logger;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -57,7 +54,11 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
     private static final String TIMESTAMP_CACHE = "org.hibernate.cache.spi.UpdateTimestampsCache";
 
     /** */
-    public static final String ROUTER_LOG_CFG = "modules/hibernate-4.2/config/ignite-log4j2.xml";
+    public static final String ROUTER_LOG_CFG = "modules/hibernate-4.2/config/ignite-log4j.xml";
+
+    @Override protected long getTestTimeout() {
+        return 1_000_000;
+    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -76,6 +77,10 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
         cfg.setMarshaller(new BinaryMarshaller());
 
         cfg.setPeerClassLoadingEnabled(false);
+
+        cfg.setFailureDetectionTimeout(300_000);
+
+        cfg.setClientFailureDetectionTimeout(300_000);
 
         Log4J2Logger log = new Log4J2Logger(ROUTER_LOG_CFG);
 
@@ -118,6 +123,8 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
         {
             IgniteCompute client1Compute =
                 srv.compute(srv.cluster().forNodeId(ignite(1).cluster().localNode().id()));
+
+            Thread.sleep(30_000);
 
             client1Compute.run(new HibernateInsertRunnable());
         }
@@ -241,16 +248,7 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
         SessionFactory startHibernate(String igniteInstanceName) {
             log.info("Start hibernate on node: " + igniteInstanceName);
 
-            //WA to logger issue.
-            LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-
-            org.apache.logging.log4j.core.config.Configuration config = ctx.getConfiguration();
-
-            LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-
-            loggerConfig.setLevel(Level.INFO);
-
-            ctx.updateLoggers();
+            Logger.getRootLogger().setLevel(org.apache.log4j.Level.INFO);
 
             Configuration cfg = hibernateConfiguration(igniteInstanceName);
 
