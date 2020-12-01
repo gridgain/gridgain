@@ -2536,7 +2536,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             try {
                 ConsistencyUtils.printDivergenceDetailsForKey(res, log);
             }
-            catch (IgniteCheckedException e) {
+            catch (Throwable e) {
                 log.error("Cannot print diverged key history", e);
             }
 

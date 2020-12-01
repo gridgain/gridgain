@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.CacheQueryObjectValueContext;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
@@ -51,7 +52,8 @@ public class ConsistencyUtils {
      * @param log Logger.
      */
     public static void printDivergenceDetailsForKey(IdleVerifyResultV2 res, IgniteLogger log) throws IgniteCheckedException {
-        Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> e0 = res.hasConflicts() ? res.hashConflicts().entrySet().iterator().next() :
+        Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> e0 = !F.isEmpty(res.hashConflicts()) ?
+            res.hashConflicts().entrySet().iterator().next() :
             res.counterConflicts().entrySet().iterator().next();
 
         List<PartitionHashRecordV2> list = e0.getValue();

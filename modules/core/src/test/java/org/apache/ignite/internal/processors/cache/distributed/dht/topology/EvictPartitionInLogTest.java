@@ -119,7 +119,6 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
             .map(node::cache)
             .map(GridCommonAbstractTest::internalCache0)
             .flatMap(internalCache -> internalCache.context().topology().localPartitions().stream())
-            .peek(p -> p.setState(RENTING))
             .collect(toList());
 
         parts.subList(0, parts.size() - 1).forEach(new Consumer<GridDhtLocalPartition>() {

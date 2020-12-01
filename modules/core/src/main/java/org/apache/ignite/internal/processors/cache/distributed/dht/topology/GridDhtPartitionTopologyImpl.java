@@ -2063,6 +2063,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             // Own orphan moving partitions (having no suppliers).
             if (fut != null && (fut.events().hasServerJoin() || fut.changedBaseline()))
                 ownOrphans();
+
+            // Resume eviction of RENTING partitions on first PME.
+            if (grp.localStartVersion().equals(fut.initialVersion()) && grp.persistenceEnabled()) {
+                for (GridDhtLocalPartition part : localPartitions()) {
+                    if (part.state() == RENTING)
+                        part.evictAsync();
+                }
+            }
         }
         finally {
             lock.writeLock().unlock();

@@ -17,12 +17,15 @@
 package org.apache.ignite.internal.processors.cache.persistence.io;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOGG;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions.GG_VERSION_OFFSET;
@@ -44,6 +47,20 @@ public class GGPageIoTest {
             new TestPageIO(2),
             new TestPageIO(GG_VERSION_OFFSET),
             new TestPageIO(GG_VERSION_OFFSET + 1));
+    }
+
+    /** */
+    @Test
+    public void testGGVersionsCovered() {
+        List<Integer> knownVers = Arrays.asList(1, 2, 3, 4, GG_VERSION_OFFSET, GG_VERSION_OFFSET + 1);
+
+        PagePartitionMetaIO[] vers = U.field(PagePartitionMetaIO.VERSIONS, "vers");
+
+        for (int i = 0; i < vers.length; i++) {
+            PagePartitionMetaIO ver = vers[i];
+
+            assertTrue(String.valueOf(ver.getVersion()), knownVers.contains(ver.getVersion()));
+        }
     }
 
     /** */
@@ -111,6 +128,7 @@ public class GGPageIoTest {
      *
      * @param from From version.
      * @param to To version.
+     * @param expVals Expected values to test.
      */
     private void testUpgrade(int from, int to, Object... expVals) {
         PagePartitionMetaIO fromIO = PagePartitionMetaIO.VERSIONS.forVersion(from);
@@ -139,7 +157,7 @@ public class GGPageIoTest {
             System.out.println("The page after upgrade:");
             System.out.println(PageIO.printPage(addr, PAGE_SIZE));
 
-            validate("Failed upgrading from " + from + " to " + to, addr, from, expVals);
+            validate("Failed upgrading from " + from + " to " + to, addr, expVals);
 
             assertEquals(toIO.getVersion(), PageIO.getVersion(addr));
         }
@@ -183,9 +201,9 @@ public class GGPageIoTest {
     /**
      * @param msg Message.
      * @param addr Address.
-     * @param from From.
+     * @param expVals Expected values to test.
      */
-    private void validate(String msg, long addr, int from, Object... expVals) {
+    private void validate(String msg, long addr, Object... expVals) {
         PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(addr);
 
         assertTrue(io instanceof PagePartitionMetaIOGG);

@@ -536,7 +536,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         /** */
         @GridToStringExclude
-        public AtomicReference<Boolean> state = new AtomicReference<>(null);
+        public AtomicReference<Boolean> state = new AtomicReference<>(null); // TODO fix public field
 
         /**
          * @param part Partition.
@@ -612,9 +612,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
         /**
          * Submits the task for execution.
          */
-        public void start() {
+        public boolean start() {
             if (!state.compareAndSet(null, Boolean.TRUE))
-                return;
+                return false;
 
             executor.submit(this);
 
@@ -635,6 +635,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                 log.debug("Starting clearing [grp=" + grpEvictionCtx.grp.cacheOrGroupName()
                     + ", topVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()
                     + ", task" + this + ']');
+
+            return true;
         }
 
         /**
