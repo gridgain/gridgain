@@ -23,86 +23,78 @@ import org.apache.ignite.internal.util.GridStringBuilder;
  * IO for partition metadata pages.
  * Add UpdateLogTree (update counter -> row link) for each partition.
  */
-public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 implements PagePartitionMetaIOGG {
+public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV3 implements PagePartitionMetaIOGG {
     /**
-     * Registered version.
-     * This parameter depends of that the version registered in {@see VERSIONS}.
+     * Default field offset.
      */
-    private static final int REGISTERED_VERSION = Short.toUnsignedInt((short)-1);
-
-    /** Default field offset. */
-    public static final int DFT_OFFSET = GAPS_LINK + 8;
-
-    /** Filed offset. */
-    private final int updateLogTreeRootOff;
-
-    /**
-     * Default constructor.
-     */
-    public PagePartitionMetaIOV1GG() {
-        this(REGISTERED_VERSION, DFT_OFFSET);
-    }
+    protected static final int UPDATE_TREE_ROOT_OFF = ENCRYPT_PAGE_MAX_OFF + 4;
 
     /**
      * @param ver Version.
-     * @param fieldOffset Offset after which the page fields are written.
      */
-    public PagePartitionMetaIOV1GG(int ver, int fieldOffset) {
+    public PagePartitionMetaIOV1GG(int ver) {
         super(ver);
-
-        updateLogTreeRootOff = fieldOffset;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override public void initNewPage(long pageAddr, long pageId, int pageSize) {
-        if (REGISTERED_VERSION == getVersion())
-            super.initNewPage(pageAddr, pageId, pageSize);
+        super.initNewPage(pageAddr, pageId, pageSize);
 
         setUpdateTreeRoot(pageAddr, 0L);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override public long getUpdateTreeRoot(long pageAddr) {
-        return PageUtils.getLong(pageAddr, updateLogTreeRootOff);
+        return PageUtils.getLong(pageAddr, UPDATE_TREE_ROOT_OFF);
     }
 
-    /** {@inheritDoc} */
-    @Override public void setUpdateTreeRoot(long pageAddr, long link) {
-        PageUtils.putLong(pageAddr, updateLogTreeRootOff, link);
+    /**
+     * {@inheritDoc}
+     */
+    @Override public boolean setUpdateTreeRoot(long pageAddr, long link) {
+        if (getUpdateTreeRoot(pageAddr) == link)
+            return false;
+
+        PageUtils.putLong(pageAddr, UPDATE_TREE_ROOT_OFF, link);
+
+        return true;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override protected void printFields(long pageAddr, GridStringBuilder sb) {
-        if (REGISTERED_VERSION == getVersion())
-            super.printFields(pageAddr, sb);
+        super.printFields(pageAddr, sb);
 
         sb.a(",\n\tupdLogRootPageId=").a(getUpdateTreeRoot(pageAddr));
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override public void upgradePage(long pageAddr) {
         assert PageIO.getType(pageAddr) == getType();
 
         int from = PageIO.getVersion(pageAddr);
 
-        if (from == REGISTERED_VERSION) {
-            int shift = updateLogTreeRootOff - DFT_OFFSET;
-
-            assert shift >= 0 : "Negative shift unexpected: " + shift;
-
-            if (shift > 0)
-                setUpdateTreeRoot(pageAddr, getUpdateTreeRoot(pageAddr - shift));
-        }
-
         PageIO.setVersion(pageAddr, getVersion());
 
+        // GG v1 supports upgrading only from AI versions.
         if (from < 2) {
             setPendingTreeRoot(pageAddr, 0);
             setPartitionMetaStoreReuseListRoot(pageAddr, 0);
             setGapsLink(pageAddr, 0);
         }
 
-        if (from < getVersion())
-            setUpdateTreeRoot(pageAddr, 0);
+        if (from < 3) {
+            setEncryptedPageIndex(pageAddr, 0);
+            setEncryptedPageCount(pageAddr, 0);
+        }
+
+        setUpdateTreeRoot(pageAddr, 0);
     }
 }

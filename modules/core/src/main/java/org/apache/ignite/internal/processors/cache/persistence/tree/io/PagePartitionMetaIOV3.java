@@ -48,7 +48,7 @@ public class PagePartitionMetaIOV3 extends PagePartitionMetaIOV2 {
      * @param pageAddr Page address.
      * @return Index of the last reencrypted page.
      */
-    public int getEncryptedPageIndex(long pageAddr) {
+    @Override public int getEncryptedPageIndex(long pageAddr) {
         return PageUtils.getInt(pageAddr, ENCRYPT_PAGE_IDX_OFF);
     }
 
@@ -58,7 +58,7 @@ public class PagePartitionMetaIOV3 extends PagePartitionMetaIOV2 {
      *
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
-    public boolean setEncryptedPageIndex(long pageAddr, int pageIdx) {
+    @Override public boolean setEncryptedPageIndex(long pageAddr, int pageIdx) {
         if (getEncryptedPageIndex(pageAddr) == pageIdx)
             return false;
 
@@ -71,7 +71,7 @@ public class PagePartitionMetaIOV3 extends PagePartitionMetaIOV2 {
      * @param pageAddr Page address.
      * @return Total pages to be reencrypted.
      */
-    public int getEncryptedPageCount(long pageAddr) {
+    @Override public int getEncryptedPageCount(long pageAddr) {
         return PageUtils.getInt(pageAddr, ENCRYPT_PAGE_MAX_OFF);
     }
 
@@ -81,7 +81,7 @@ public class PagePartitionMetaIOV3 extends PagePartitionMetaIOV2 {
      *
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
-    public boolean setEncryptedPageCount(long pageAddr, int pagesCnt) {
+    @Override public boolean setEncryptedPageCount(long pageAddr, int pagesCnt) {
         if (getEncryptedPageCount(pageAddr) == pagesCnt)
             return false;
 
