@@ -28,8 +28,7 @@ import org.junit.Test;
 public class ReplicatedSqlCustomPartitionsTest extends ReplicatedSqlTest {
     private static final int NUM_OF_PARTITIONS = 509;
 
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(
                 new CacheConfiguration("partitioned" + NUM_OF_PARTITIONS + "*")
