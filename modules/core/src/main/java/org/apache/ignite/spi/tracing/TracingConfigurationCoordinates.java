@@ -16,31 +16,35 @@
 
 package org.apache.ignite.spi.tracing;
 
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.Serializable;
 
 /**
  * Specifies to which traces, specific configuration will be applied. In other words it's a sort of tracing
  * configuration locator.
  */
 public class TracingConfigurationCoordinates implements Serializable {
-
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** Logger. */
+    private static final Logger LOG = Logger.getLogger(TracingConfigurationCoordinates.class.getName());
 
     /**
      * Specifies the {@link Scope} of a trace's root span to which some specific tracing configuration will be applied.
      * It's a mandatory attribute.
      */
-    private final Scope scope;
+    private Scope scope;
 
     /**
      * Specifies the label of a traced operation. It's an optional attribute.
      */
-    private final String lb;
+    private String lb;
 
     /**
      * Private constructor to be used with builder.
@@ -140,6 +144,21 @@ public class TracingConfigurationCoordinates implements Serializable {
          */
         public TracingConfigurationCoordinates build() {
             return new TracingConfigurationCoordinates(scope, lb);
+        }
+    }
+
+    /**
+     * Deserialize tracing configuration coordinated.
+     * @param in Input stream.
+     */
+    private void readObject(ObjectInputStream in) {
+        try {
+            in.defaultReadObject();
+        }
+        catch (Exception e) {
+            LOG.log(Level.WARNING, "Unable to deserialize tracing configuration coordinates.", e);
+            scope = Scope.UNDEFINED;
+            lb = null;
         }
     }
 }

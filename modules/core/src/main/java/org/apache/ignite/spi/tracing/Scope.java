@@ -39,7 +39,13 @@ public enum Scope {
     CACHE_API_READ((short)6),
 
     /** SQL query scope. */
-    SQL((short)7);
+    SQL((short)7),
+
+    /**
+     * Undefined scope, that is used in case of exceptions during scope deserialization.
+     * It's possible if for example in heterogeneous cluster older node doesn't know about new Scope instance.
+     */
+    UNDEFINED((short)8);
 
     /** Scope index. */
     private final short idx;
