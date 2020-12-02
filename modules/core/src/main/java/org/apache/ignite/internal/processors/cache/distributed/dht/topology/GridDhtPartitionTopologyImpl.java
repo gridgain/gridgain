@@ -2065,7 +2065,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 ownOrphans();
 
             // Resume eviction of RENTING partitions on first PME.
-            if (grp.localStartVersion().equals(fut.initialVersion()) && grp.persistenceEnabled()) {
+            if (fut != null && grp.localStartVersion().equals(fut.initialVersion()) && grp.persistenceEnabled()) {
                 for (GridDhtLocalPartition part : localPartitions()) {
                     if (part.state() == RENTING)
                         part.evictAsync();
