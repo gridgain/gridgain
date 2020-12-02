@@ -37,7 +37,19 @@ public class IndexingQueryFilterImpl implements IndexingQueryFilter {
     /** Partitions. */
     private final HashSet<Integer> parts;
 
-    /** Treat replicated as partitioned - only iterate over primary in replicated caches. */
+    /**
+     * Treat replicated as partitioned.
+     * This was introduced as a partial solution for "[IGNITE-8732] SQL: REPLICATED cache cannot be left-joined
+     * to PARTITIONED".
+     *
+     * If this flag is set, only primary partitions of the REPLICATED caches will be scanned (same as with
+     * PARTITIONED caches).
+     *
+     * This flag requires the REPLICATED and PARTITIONED to have the same number of partitions and affinity,
+     * and requires the JOIN to be on an affinity key of both caches.
+     *
+     * This flag is incompatible with distributed joins.
+     */
     private final boolean treatReplicatedAsPartitioned;
 
     /**

@@ -167,6 +167,9 @@ public class SplitterUtils {
     /**
      * Checks whether the expression has an OUTER JOIN from replicated to partitioned.
      *
+     * This is used to infer the `treatReplicatedAsPartitioned` flag
+     * to eventually pass it to {@link org.apache.ignite.spi.indexing.IndexingQueryFilterImpl}.
+     *
      * @param from FROM expression.
      * @return {@code true} if the expression has an OUTER JOIN from replicated to partitioned.
      */
