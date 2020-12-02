@@ -1142,6 +1142,13 @@ public class CacheGroupContext {
     }
 
     /**
+     * @return {@code true} if this group was configured as persistence in despite of data region.
+     */
+    public boolean persistenceGroup() {
+        return persistenceGroup;
+    }
+
+    /**
      * @return Entry compression strategy to use with this group, or {@code null}.
      */
     @Nullable public EntryCompressionStrategy entryCompressionStrategy() {
