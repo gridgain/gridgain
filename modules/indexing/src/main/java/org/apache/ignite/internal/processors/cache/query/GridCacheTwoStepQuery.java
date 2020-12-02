@@ -72,7 +72,6 @@ public class GridCacheTwoStepQuery {
     private final boolean treatReplicatedAsPartitioned;
 
     /**
-     *
      * @param originalSql Original SQL.
      * @param paramsCnt Parameters count.
      * @param tbls Tables.
@@ -237,6 +236,9 @@ public class GridCacheTwoStepQuery {
         return paramsCnt;
     }
 
+    /**
+     * @return {@code true} if need to treat replicated as partitioned (for outer joins).
+     */
     public boolean treatReplicatedAsPartitioned() {
         return treatReplicatedAsPartitioned;
     }

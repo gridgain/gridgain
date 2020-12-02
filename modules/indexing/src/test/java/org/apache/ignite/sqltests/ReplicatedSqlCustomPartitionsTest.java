@@ -26,8 +26,10 @@ import org.junit.Test;
  * Includes all base sql test plus tests that make sense in replicated mode with a non-default number of partitions.
  */
 public class ReplicatedSqlCustomPartitionsTest extends ReplicatedSqlTest {
+    /** Test partitions count. */
     private static final int NUM_OF_PARTITIONS = 509;
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(
