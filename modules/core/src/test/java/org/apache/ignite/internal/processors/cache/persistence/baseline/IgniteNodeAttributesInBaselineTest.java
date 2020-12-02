@@ -163,7 +163,7 @@ public class IgniteNodeAttributesInBaselineTest extends GridCommonAbstractTest {
                 "add the node and activate the cluster again.In this case options listed below will be removed from " +
                 "cluster baseline topology for joining node.\n" +
                 "Missing options:\n" +
-                "Attr name: basicUserAttrNameAttr val: basicUserAttrVal";
+                "Attr name: basicUserAttrName Attr val: basicUserAttrVal";
 
             assertEquals(expMsg, msg);
         }

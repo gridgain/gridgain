@@ -1466,9 +1466,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             }
         }
 
-        if (globalState.state() != INACTIVE) {
-            Map<String, Object> clusterAttrs = clusterBlt.attributes(node.consistentId());
+        Map<String, Object> clusterAttrs = clusterBlt.attributes(node.consistentId());
 
+        if (globalState.state() != INACTIVE && clusterAttrs != null) {
             Map<String, Object> nodeAttrs = node.attributes();
 
             Map<String, Object> attrsMissingOnNode = new HashMap<>();
@@ -1492,7 +1492,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     .a("Missing options:\n");
 
                 for (Map.Entry<String, Object> missingAttr : attrsMissingOnNode.entrySet()) {
-                    sb.a("Attr name: ").a(missingAttr.getKey()).a("Attr val: ").a(missingAttr.getValue());
+                    sb.a("Attr name: ").a(missingAttr.getKey()).a(" Attr val: ").a(missingAttr.getValue());
                 }
 
                 String msg = sb.toString();
