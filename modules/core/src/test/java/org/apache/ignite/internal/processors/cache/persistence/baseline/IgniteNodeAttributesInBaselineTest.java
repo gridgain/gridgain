@@ -41,15 +41,19 @@ public class IgniteNodeAttributesInBaselineTest extends GridCommonAbstractTest {
 
     /** Extra user attr name. */
     private static final String EXTRA_USER_ATTR_NAME = "extraUserAttrName";
+
     /** Extra user attr value. */
     private static final String EXTRA_USER_ATTR_VAL = "extraUserAttrVal";
+
     /** Basic user attr name. */
     private static final String BASIC_USER_ATTR_NAME = "basicUserAttrName";
+
     /** Basic user attr value. */
     private static final String BASIC_USER_ATTR_VAL = "basicUserAttrVal";
 
     /** */
     private boolean addBasicAttrs = true;
+
     /** */
     private boolean addExtraAttr = false;
 
