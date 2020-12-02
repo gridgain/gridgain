@@ -238,6 +238,9 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
         SessionFactory startHibernate(String igniteInstanceName) {
             log.info("Start hibernate on node: " + igniteInstanceName);
 
+            // Hibernate autoconfigures log4j logger with root level set to debug mode, this is causing
+            // exception on calling getTransactionIsolation from the hibernate internals with cause
+            // function LOCK_MODE not found.
             Logger.getRootLogger().setLevel(org.apache.log4j.Level.INFO);
 
             Configuration cfg = hibernateConfiguration(igniteInstanceName);
