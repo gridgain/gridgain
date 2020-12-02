@@ -17,12 +17,15 @@
 package org.apache.ignite.internal.processors.cache.persistence.io;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOGG;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions.GG_VERSION_OFFSET;
@@ -35,6 +38,20 @@ import static org.junit.Assert.assertTrue;
 public class GGPageIoTest {
     /** Page size. */
     public static final int PAGE_SIZE = 1024;
+
+    /** */
+    @Test
+    public void testGGVersionsCovered() {
+        List<Integer> knownVers = Arrays.asList(1, 2, 3, GG_VERSION_OFFSET);
+
+        PagePartitionMetaIO[] vers = U.field(PagePartitionMetaIO.VERSIONS, "vers");
+
+        for (int i = 0; i < vers.length; i++) {
+            PagePartitionMetaIO ver = vers[i];
+
+            assertTrue(String.valueOf(ver.getVersion()), knownVers.contains(ver.getVersion()));
+        }
+    }
 
     /** */
     @Test
