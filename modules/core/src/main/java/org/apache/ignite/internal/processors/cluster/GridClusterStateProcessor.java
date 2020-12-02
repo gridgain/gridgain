@@ -1706,7 +1706,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     @Override public void addAttrsToCurrBlt(Object consId, Map<String, Object> newAttrs) throws IgniteCheckedException {
         BaselineTopology blt = globalState.baselineTopology();
 
-        if (blt != null) {
+        if (blt != null && metastorage != null) {
             blt.addAttributesIfNeeded(consId, newAttrs);
 
             writeBaselineTopology(blt, null);
