@@ -272,15 +272,26 @@ public class BaselineTopology implements Serializable {
      *
      * @param consId Node consistent ID.
      * @param newAttrs Attributes map to be added.
+     * @return {@code True} if one or more attributes were added.
      */
-    public void addAttributesIfNeeded(Object consId, Map<String, Object> newAttrs) {
+    public boolean addAttributesIfNeeded(Object consId, Map<String, Object> newAttrs) {
+        boolean attrsAdded = false;
+
         Map<String, Object> curAttrs = nodeMap.get(consId);
 
         if (curAttrs == null)
-            return;
+            return false;
 
-        for (Map.Entry<String, Object> newEntry : newAttrs.entrySet())
-            curAttrs.putIfAbsent(newEntry.getKey(), newEntry.getValue());
+        for (Map.Entry<String, Object> newEntry : newAttrs.entrySet()) {
+            if (curAttrs.containsKey(newEntry.getKey()))
+                continue;
+
+            curAttrs.put(newEntry.getKey(), newEntry.getValue());
+
+            attrsAdded = true;
+        }
+
+        return attrsAdded;
     }
 
     /**

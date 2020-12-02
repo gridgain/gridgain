@@ -1707,9 +1707,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         BaselineTopology blt = globalState.baselineTopology();
 
         if (blt != null && metastorage != null) {
-            blt.addAttributesIfNeeded(consId, newAttrs);
-
-            writeBaselineTopology(blt, null);
+            if (blt.addAttributesIfNeeded(consId, newAttrs))
+                writeBaselineTopology(blt, null);
         }
     }
 
