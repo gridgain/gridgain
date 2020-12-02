@@ -36,6 +36,8 @@ public abstract class AbstractRestProcessorSelfTest extends GridCommonAbstractTe
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
         cleanPersistenceDir();
 
         startGrids(gridCount());
@@ -43,6 +45,8 @@ public abstract class AbstractRestProcessorSelfTest extends GridCommonAbstractTe
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         assert grid(0).cluster().nodes().size() == gridCount();
     }
 
@@ -51,6 +55,8 @@ public abstract class AbstractRestProcessorSelfTest extends GridCommonAbstractTe
         jcache().clear();
 
         assertEquals(0, jcache().localSize());
+
+        super.afterTest();
     }
 
     /** {@inheritDoc} */
@@ -58,6 +64,8 @@ public abstract class AbstractRestProcessorSelfTest extends GridCommonAbstractTe
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTestsStopped();
     }
 
     /** {@inheritDoc} */

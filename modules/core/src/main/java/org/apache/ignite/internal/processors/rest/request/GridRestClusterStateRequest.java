@@ -17,16 +17,30 @@
 package org.apache.ignite.internal.processors.rest.request;
 
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  *
  */
 public class GridRestClusterStateRequest extends GridRestRequest {
+    /** Flag of forced cluster deactivation. */
+    public static final String ARG_FORCE = "force";
+
     /** Request current state. */
     private boolean reqCurrentMode;
 
     /** New state. */
     private ClusterState state;
+
+    /** If {@code true}, cluster deactivation will be forced. */
+    private boolean forceDeactivation;
+
+    /**
+     * @param forceDeactivation If {@code true}, cluster deactivation will be forced.
+     */
+    public void forceDeactivation(boolean forceDeactivation) {
+        this.forceDeactivation = forceDeactivation;
+    }
 
     /** */
     public void reqCurrentMode() {
@@ -36,6 +50,14 @@ public class GridRestClusterStateRequest extends GridRestRequest {
     /** */
     public boolean isReqCurrentMode() {
         return reqCurrentMode;
+    }
+
+    /**
+     * @return {@code True} if cluster deactivation will be forced. {@code False} otherwise.
+     * @see ClusterState#INACTIVE
+     */
+    public boolean forceDeactivation() {
+        return forceDeactivation;
     }
 
     /** */
@@ -54,5 +76,10 @@ public class GridRestClusterStateRequest extends GridRestRequest {
             throw new NullPointerException("State can't be null.");
 
         this.state = state;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(GridRestClusterStateRequest.class, this);
     }
 }
