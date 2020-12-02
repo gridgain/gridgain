@@ -56,10 +56,6 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
     /** */
     public static final String ROUTER_LOG_CFG = "modules/hibernate-4.2/config/ignite-log4j.xml";
 
-    @Override protected long getTestTimeout() {
-        return 1_000_000;
-    }
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
