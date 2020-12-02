@@ -149,7 +149,7 @@ public class IgniteIncompleteCacheObjectSelfTest extends GridCommonAbstractTest 
         }
 
         /** {@inheritDoc} */
-        @Override public CacheObject prepareForCache(final CacheObjectContext ctx) {
+        @Override public CacheObject prepareForCache(final CacheObjectContext ctx, boolean compress) {
             return null;
         }
 

@@ -21,6 +21,8 @@ import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions.GG_VERSION_OFFSET;
+
 /**
  * IO for partition metadata pages.
  */
@@ -47,7 +49,9 @@ public class PagePartitionMetaIO extends PageMetaIO {
     public static final IOVersions<PagePartitionMetaIO> VERSIONS = new IOVersions<>(
         new PagePartitionMetaIO(1),
         new PagePartitionMetaIOV2(2),
-        new PagePartitionMetaIOV1GG(Short.toUnsignedInt((short)-1)) // Prevent partition usage on old versions after upgrade.
+        new PagePartitionMetaIOV3(3), // We should support upgrading from AI
+        // Prevent partition usage on old versions after upgrade.
+        new PagePartitionMetaIOV1GG(GG_VERSION_OFFSET)
     );
 
     /** {@inheritDoc} */
@@ -249,22 +253,71 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @param pageAddr Page address.
      * @param listRoot List root.
      */
-    public void setUpdateTreeRoot(long pageAddr, long listRoot) {
+    public boolean setUpdateTreeRoot(long pageAddr, long listRoot) {
         throw new UnsupportedOperationException("Partition update log is not supported by " +
                 "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     */
+    public int getEncryptedPageIndex(long pageAddr) {
+        throw new UnsupportedOperationException("Gaps link is not supported by " +
+            "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     * @param pageIdx Page index.
+     *
+     * @return {@code true} if value has changed as a result of this method's invocation.
+     */
+    public boolean setEncryptedPageIndex(long pageAddr, int pageIdx) {
+        throw new UnsupportedOperationException("Encrypted page index is not supported by " +
+            "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     */
+    public int getEncryptedPageCount(long pageAddr) {
+        throw new UnsupportedOperationException("Encrypted page count is not supported by " +
+            "this PagePartitionMetaIO version: ver=" + getVersion());
+    }
+
+    /**
+     * @param pageAddr Page address.
+     * @param pagesCnt Pages count.
+     *
+     * @return {@code true} if value has changed as a result of this method's invocation.
+     */
+    public boolean setEncryptedPageCount(long pageAddr, int pagesCnt) {
+        throw new UnsupportedOperationException("Encrypted page count is not supported by " +
+            "this PagePartitionMetaIO version: ver=" + getVersion());
     }
 
     /** {@inheritDoc} */
     @Override protected void printPage(long pageAddr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
         super.printPage(pageAddr, pageSize, sb);
 
+        sb.a(",\nPagePartitionMeta[\n");
+
+        printFields(pageAddr, sb);
+
+        sb.a("\n]");
+    }
+
+    /**
+     * @param pageAddr Address.
+     * @param sb String builder.
+     */
+    protected void printFields(long pageAddr, GridStringBuilder sb) {
         byte state = getPartitionState(pageAddr);
 
-        sb.a(",\nPagePartitionMeta[\n\tsize=").a(getSize(pageAddr))
+        sb.a("\tsize=").a(getSize(pageAddr))
             .a(",\n\tupdateCounter=").a(getUpdateCounter(pageAddr))
             .a(",\n\tglobalRemoveId=").a(getGlobalRemoveId(pageAddr))
             .a(",\n\tpartitionState=").a(state).a("(").a(GridDhtPartitionState.fromOrdinal(state)).a(")")
-            .a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr))
-            .a("\n]");
+            .a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr)).toString();
     }
 }

@@ -60,6 +60,7 @@ import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.mxbean.SqlQueryMXBean;
 import org.apache.ignite.internal.mxbean.SqlQueryMXBeanImpl;
+import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -80,6 +81,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.mvcc.StaticMvccQueryTracker;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.GridQueryIndexingDefragmentation;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
@@ -130,6 +132,7 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2InnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2LeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccLeafIO;
+import org.apache.ignite.internal.processors.query.h2.defragmentation.IndexingDefragmentation;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlDistributedPlanInfo;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlUpdateResultsIterator;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlUpdateSingleEntryIterator;
@@ -157,6 +160,8 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryReq
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -306,6 +311,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     /** Distributed config. */
     private DistributedSqlConfiguration distrCfg;
 
+    private IndexingDefragmentation defragmentation = new IndexingDefragmentation(this);
+
     /** */
     private final IgniteInClosure<? super IgniteInternalFuture<?>> logger = new IgniteInClosure<IgniteInternalFuture<?>>() {
         @Override public void apply(IgniteInternalFuture<?> fut) {
@@ -332,6 +339,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Query message listener. */
     private GridMessageListener qryLsnr;
+
+    /** Statistic manager. */
+    private IgniteStatisticsManager statsMgr;
 
     /**
      * @return Kernal context.
@@ -2079,19 +2089,16 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
         assert nonNull(cctx);
 
-        // No data in fresh in-memory cache.
-        if (!cctx.group().persistenceEnabled())
+        if (!CU.affinityNode(cctx.localNode(), cctx.config().getNodeFilter()))
             return null;
 
         IgnitePageStoreManager pageStore = cctx.shared().pageStore();
-
-        assert nonNull(pageStore);
 
         SchemaIndexCacheVisitorClosure clo;
 
         String cacheName = cctx.name();
 
-        if (!pageStore.hasIndexStore(cctx.groupId())) {
+        if (pageStore == null || !pageStore.hasIndexStore(cctx.groupId())) {
             // If there are no index store, rebuild all indexes.
             clo = new IndexRebuildFullClosure(cctx.queries(), cctx.mvccEnabled());
         }
@@ -2239,6 +2246,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         schemaMgr = new SchemaManager(ctx, connections());
         schemaMgr.start(ctx.config().getSqlConfiguration().getSqlSchemas());
+
+        statsMgr = new IgniteStatisticsManagerImpl(ctx, schemaMgr);
 
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
@@ -2586,6 +2595,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             reuseList,
             H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
             H2ExtrasLeafIO.getVersions(inlineSize, mvccEnabled),
+            PageIdAllocator.FLAG_IDX,
             ctx.failure(),
             lockLsnr
         ) {
@@ -3370,5 +3380,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         return map;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteStatisticsManager statsManager() {
+        return statsMgr;
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridQueryIndexingDefragmentation defragmentator() {
+        return defragmentation;
     }
 }

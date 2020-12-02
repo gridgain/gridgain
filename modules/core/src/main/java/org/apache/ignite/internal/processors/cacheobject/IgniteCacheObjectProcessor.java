@@ -71,15 +71,6 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
     @Nullable public Object unwrapTemporary(GridCacheContext ctx, @Nullable Object obj) throws IgniteException;
 
     /**
-     * Prepares cache object for cache (e.g. copies user-provided object if needed).
-     *
-     * @param obj Cache object.
-     * @param cctx Cache context.
-     * @return Object to be store in cache.
-     */
-    @Nullable public CacheObject prepareForCache(@Nullable CacheObject obj, GridCacheContext cctx);
-
-    /**
      * Checks whether object is binary object.
      *
      * @param obj Object to check.

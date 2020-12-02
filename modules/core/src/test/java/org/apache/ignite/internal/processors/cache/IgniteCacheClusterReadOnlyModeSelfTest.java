@@ -515,11 +515,6 @@ public class IgniteCacheClusterReadOnlyModeSelfTest extends IgniteCacheClusterRe
     @Test
     public void testCloseAllowed() {
         performAction((node, cache) -> {
-            if (!node.configuration().isClientMode()) {
-                // FIXME https://issues.apache.org/jira/browse/IGNITE-13102
-                return;
-            }
-
             assertFalse(cache.isClosed());
 
             cache.close();

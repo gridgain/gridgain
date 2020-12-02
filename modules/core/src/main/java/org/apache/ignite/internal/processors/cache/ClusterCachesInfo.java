@@ -2067,7 +2067,7 @@ public class ClusterCachesInfo {
             else if (!active && isMergeConfigSupport) {
                 DynamicCacheDescriptor desc = registeredCaches.get(cfg.getName());
 
-                QuerySchemaPatch schemaPatch = desc.makeSchemaPatch(cacheInfo.cacheData().queryEntities());
+                QuerySchemaPatch schemaPatch = desc.makeSchemaPatch(cacheInfo.cacheData());
 
                 if (schemaPatch.hasConflicts()) {
                     hasSchemaPatchConflict = true;
@@ -2430,6 +2430,9 @@ public class ClusterCachesInfo {
 
         CU.validateCacheGroupsAttributesMismatch(log, cfg, startCfg, "encryptionEnabled", "Encrypted",
             cfg.isEncryptionEnabled(), startCfg.isEncryptionEnabled(), true);
+
+        CU.validateCacheGroupsAttributesMismatch(log, cfg, startCfg, "entryCompressionConfiguration", "Entry compression",
+            cfg.getEntryCompressionConfiguration(), startCfg.getEntryCompressionConfiguration(), true);
     }
 
     /**

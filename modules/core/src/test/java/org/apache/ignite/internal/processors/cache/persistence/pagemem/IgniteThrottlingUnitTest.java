@@ -46,7 +46,7 @@ import static java.lang.Thread.State.TIMED_WAITING;
 import static org.apache.ignite.internal.processors.database.DataRegionMetricsSelfTest.NO_OP_METRICS;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.junit.Assert.assertNotEquals;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -60,13 +60,13 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
     public Timeout globalTimeout = new Timeout((int)GridTestUtils.DFLT_TEST_TIMEOUT);
 
     /** Logger. */
-    private IgniteLogger log = new NullLogger();
+    private final IgniteLogger log = new NullLogger();
 
     /** Page memory 2 g. */
-    private PageMemoryImpl pageMemory2g = mock(PageMemoryImpl.class);
+    private final PageMemoryImpl pageMemory2g = mock(PageMemoryImpl.class);
 
     /** State checker. */
-    private CheckpointLockStateChecker stateChecker = () -> true;
+    private final CheckpointLockStateChecker stateChecker = () -> true;
 
     {
         when(pageMemory2g.totalPages()).thenReturn((2L * 1024 * 1024 * 1024) / 4096);
@@ -291,7 +291,7 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         };
 
         when(pageMemory2g.checkpointBufferPagesSize()).thenReturn(100);
-        when(pageMemory2g.checkpointBufferPagesCount()).thenAnswer(mock -> new AtomicInteger(70));
+        when(pageMemory2g.checkpointBufferPagesCount()).thenAnswer(mock -> 70);
 
         AtomicBoolean stopLoad = new AtomicBoolean();
         List<Thread> loadThreads = new ArrayList<>();

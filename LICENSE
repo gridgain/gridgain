@@ -60,3 +60,13 @@ For CMake script FindODBC.cmake in C++ module.
 ==============================================================================
 This module contains modified FindODBC.cmake script from CMake distribution,
 which is available under a "3-clause BSD" license. For details, see https://cmake.org/licensing.
+
+==============================================================================
+For HLL package used in indexing module.
+==============================================================================
+This code contains some classes from java-hll library, which is available under
+Apache Licence 2.0. For details, see
+https://github.com/aggregateknowledge/java-hll/blob/master/LICENSE
+Also this code contains modified implementation of Murmur3_128 hashing algorithm
+from Guava, which is also available under Apache Licence 2.0. For details, see
+https://github.com/google/guava/blob/master/COPYING

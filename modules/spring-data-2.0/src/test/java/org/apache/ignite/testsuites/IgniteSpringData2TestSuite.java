@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.springdata.IgniteSpringDataCompoundKeyTest;
 import org.apache.ignite.springdata.IgniteSpringDataCrudSelfTest;
 import org.apache.ignite.springdata.IgniteSpringDataQueriesSelfTest;
 import org.junit.runner.RunWith;
@@ -27,7 +28,8 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     IgniteSpringDataCrudSelfTest.class,
-    IgniteSpringDataQueriesSelfTest.class
+    IgniteSpringDataQueriesSelfTest.class,
+    IgniteSpringDataCompoundKeyTest.class
 })
 public class IgniteSpringData2TestSuite {
 }
