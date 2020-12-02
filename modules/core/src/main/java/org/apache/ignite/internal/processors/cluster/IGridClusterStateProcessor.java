@@ -156,6 +156,15 @@ public interface IGridClusterStateProcessor extends GridProcessor {
     void onExchangeFinishedOnCoordinator(IgniteInternalFuture exchangeFuture, boolean hasMovingPartitions);
 
     /**
+     * Adds attributes from {@code newAttrs} which are not present in nodeMap for given {@code consId}
+     * in current baseline topology.
+     *
+     * @param consId Node consistent ID.
+     * @param newAttrs Attributes map to be added.
+     */
+    void addAttrsToCurrBlt(Object consId, Map<String, Object> newAttrs) throws IgniteCheckedException;
+
+    /**
      * @return {@code True} if partition evictions are allowed in current state.
      */
     boolean evictionsAllowed();

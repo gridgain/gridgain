@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.persistence.baseline.ClusterA
 import org.apache.ignite.internal.processors.cache.persistence.baseline.IgniteAbsentEvictionNodeOutOfBaselineTest;
 import org.apache.ignite.internal.processors.cache.persistence.baseline.IgniteAllBaselineNodesOnlineFullApiSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.baseline.IgniteBaselineRestartClusterTest;
+import org.apache.ignite.internal.processors.cache.persistence.baseline.IgniteNodeAttributesInBaselineTest;
 import org.apache.ignite.internal.processors.cache.persistence.baseline.IgniteOfflineBaselineNodeFullApiSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.baseline.IgniteOnlineNodeOutOfBaselineFullApiSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.FullHistRebalanceOnClientStopTest;
@@ -135,6 +136,7 @@ public class IgnitePdsTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, ClusterStateChangeEventTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ClusterStateChangeEventWithPersistenceTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteBaselineRestartClusterTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteNodeAttributesInBaselineTest.class, ignoredTests);
 
         return suite;
     }

@@ -5466,6 +5466,15 @@ class ServerImpl extends TcpDiscoveryImpl {
                     lastMsg = msg;
                 }
 
+                try {
+                    TcpDiscoveryNode joiningNode = ring.node(msg.nodeId());
+
+                    gridKernalContext().state().addAttrsToCurrBlt(joiningNode.consistentId(), joiningNode.attributes());
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Failed to add extra attributes from joining node " + locNode);
+                }
+
                 if (state == CONNECTED) {
                     boolean notified = notifyDiscovery(EVT_NODE_JOINED, topVer, node, msg.spanContainer());
 

@@ -995,14 +995,16 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @throws IgniteCheckedException If failed.
      */
     private void finishRecovery() throws IgniteCheckedException {
-        assert !cctx.kernalContext().clientNode();
+        final GridKernalContext kernalCtx = cctx.kernalContext();
+
+        assert !kernalCtx.clientNode();
 
         long time = System.currentTimeMillis();
 
         CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() + 1);
 
         try {
-            for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
+            for (DatabaseLifecycleListener lsnr : getDatabaseListeners(kernalCtx))
                 lsnr.beforeResumeWalLogging(this);
 
             // Try to resume logging since last finished checkpoint if possible.
@@ -1022,11 +1024,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             notifyMetastorageReadyForReadWrite();
 
+            kernalCtx.state().addAttrsToCurrBlt(kernalCtx.grid().localNode().consistentId(), kernalCtx.nodeAttributes());
+
             U.log(log, "Finish recovery performed in " + (System.currentTimeMillis() - time) + " ms.");
         }
         catch (IgniteCheckedException e) {
             if (X.hasCause(e, StorageException.class, IOException.class))
-                cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                kernalCtx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
 
             throw e;
         }
