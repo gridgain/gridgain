@@ -18,11 +18,14 @@ package org.apache.ignite.internal.pagemem.wal.record;
 
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
-import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordPurpose.*;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordPurpose.CUSTOM;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordPurpose.INTERNAL;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordPurpose.LOGICAL;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordPurpose.MIXED;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordPurpose.PHYSICAL;
 
 /**
  * Log entry abstract class.
@@ -215,17 +218,38 @@ public abstract class WALRecord {
         /** Rollback tx record. */
         ROLLBACK_TX_RECORD(57, LOGICAL),
 
-        /** */
+        /** Partition meta page containing update counter gaps. */
         PARTITION_META_PAGE_UPDATE_COUNTERS_V2(58, PHYSICAL),
 
         /** Init root meta page (with flags and created version)*/
         BTREE_META_PAGE_INIT_ROOT_V3(59, PHYSICAL),
 
+        /** Master key change record. */
+        MASTER_KEY_CHANGE_RECORD(60, LOGICAL),
+
         /** Record that indicates that "corrupted" flag should be removed from tracking page. */
         TRACKING_PAGE_REPAIR_DELTA(61, PHYSICAL),
 
         /** Atomic out-of-order update. */
-        OUT_OF_ORDER_UPDATE(62, LOGICAL);
+        OUT_OF_ORDER_UPDATE(62, LOGICAL),
+
+        /** Encrypted WAL-record. */
+        ENCRYPTED_RECORD_V2(63, PHYSICAL),
+
+        /** Ecnrypted data record. */
+        ENCRYPTED_DATA_RECORD_V2(64, LOGICAL),
+
+        /** Master key change record containing multiple keys for single cache group. */
+        MASTER_KEY_CHANGE_RECORD_V2(65, LOGICAL),
+
+        /** Logical record to restart reencryption with the latest encryption key. */
+        REENCRYPTION_START_RECORD(66, LOGICAL),
+
+        /** Partition meta page delta record includes encryption status data. */
+        PARTITION_META_PAGE_DELTA_RECORD_V3(67, PHYSICAL),
+
+        /** Index meta page delta record includes encryption status data. */
+        INDEX_META_PAGE_DELTA_RECORD(68, PHYSICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;
@@ -310,12 +334,12 @@ public abstract class WALRecord {
         INTERNAL,
         /**
          * Physical records are needed for correct recovering physical state of {@link org.apache.ignite.internal.pagemem.PageMemory}.
-         * {@link org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager#restoreBinaryMemory(org.apache.ignite.lang.IgnitePredicate, org.apache.ignite.lang.IgniteBiPredicate)}.
+         * {@see org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager#restoreBinaryMemory(org.apache.ignite.lang.IgnitePredicate, org.apache.ignite.lang.IgniteBiPredicate)}.
          */
         PHYSICAL,
         /**
          * Logical records are needed to replay logical updates since last checkpoint.
-         * {@link GridCacheDatabaseSharedManager#applyLogicalUpdates(org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointStatus, org.apache.ignite.lang.IgnitePredicate, org.apache.ignite.lang.IgniteBiPredicate, boolean)}
+         * {@see GridCacheDatabaseSharedManager#applyLogicalUpdates(CheckpointStatus, org.apache.ignite.lang.IgnitePredicate, org.apache.ignite.lang.IgniteBiPredicate, boolean)}
          */
         LOGICAL,
         /**

@@ -728,21 +728,32 @@ public class CommandProcessor {
                     if (err != null)
                         throw err;
 
-                    ctx.query().dynamicTableCreate(
-                        cmd.schemaName(),
-                        e,
-                        cmd.templateName(),
-                        cmd.cacheName(),
-                        cmd.cacheGroup(),
-                        cmd.dataRegionName(),
-                        cmd.affinityKey(),
-                        cmd.atomicityMode(),
-                        cmd.writeSynchronizationMode(),
-                        cmd.backups(),
-                        cmd.ifNotExists(),
-                        cmd.encrypted(),
-                        cmd.parallelism()
-                    );
+                    if (!F.isEmpty(cmd.cacheName()) && ctx.cache().cacheDescriptor(cmd.cacheName()) != null) {
+                        ctx.query().dynamicAddQueryEntity(
+                                cmd.cacheName(),
+                                cmd.schemaName(),
+                                e,
+                                cmd.parallelism(),
+                                true
+                        ).get();
+                    }
+                    else {
+                        ctx.query().dynamicTableCreate(
+                            cmd.schemaName(),
+                            e,
+                            cmd.templateName(),
+                            cmd.cacheName(),
+                            cmd.cacheGroup(),
+                            cmd.dataRegionName(),
+                            cmd.affinityKey(),
+                            cmd.atomicityMode(),
+                            cmd.writeSynchronizationMode(),
+                            cmd.backups(),
+                            cmd.ifNotExists(),
+                            cmd.encrypted(),
+                            cmd.parallelism()
+                        );
+                    }
                 }
             }
             else if (cmdH2 instanceof GridSqlDropTable) {
@@ -1331,7 +1342,7 @@ public class CommandProcessor {
         BulkLoadParser inputParser = BulkLoadParser.createParser(cmd.inputFormat());
 
         BulkLoadProcessor processor = new BulkLoadProcessor(inputParser, dataConverter, outputWriter,
-            idx.runningQueryManager(), qryId);
+            idx.runningQueryManager(), qryId, ctx.tracing());
 
         BulkLoadAckClientParameters params = new BulkLoadAckClientParameters(cmd.localFileName(), cmd.packetSize());
 

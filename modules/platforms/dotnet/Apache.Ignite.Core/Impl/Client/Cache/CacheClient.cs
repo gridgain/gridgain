@@ -330,7 +330,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(val, "val");
 
             _ignite.Transactions.StartTxIfNeeded();
-            
+
             return DoOutInOpAffinity(ClientOp.CacheGetAndReplace, key, val, UnmarshalCacheResult<TV>);
         }
 
@@ -950,6 +950,22 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             writer.WriteBoolean(qry.Lazy);
             writer.WriteTimeSpanAsLong(qry.Timeout);
             writer.WriteBoolean(includeColumns);
+
+            if (qry.Partitions != null)
+            {
+                writer.WriteInt(qry.Partitions.Length);
+
+                foreach (var part in qry.Partitions)
+                {
+                    writer.WriteInt(part);
+                }
+            }
+            else
+            {
+                writer.WriteInt(-1);
+            }
+
+            writer.WriteInt(qry.UpdateBatchSize);
         }
 
         /// <summary>
@@ -1084,7 +1100,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             var w = ctx.Writer;
             w.WriteInt(continuousQuery.BufferSize);
             w.WriteLong((long) continuousQuery.TimeInterval.TotalMilliseconds);
-            w.WriteBoolean(false); // Include expired.
+            w.WriteBoolean(continuousQuery.IncludeExpired);
 
             if (continuousQuery.Filter == null)
             {

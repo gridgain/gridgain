@@ -20,6 +20,8 @@ import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.processors.tracing.MTC;
+import org.apache.ignite.internal.processors.tracing.Span;
 
 /**
  * Query descriptor.
@@ -60,6 +62,9 @@ public class GridRunningQueryInfo {
     /** Originator. */
     private final String qryInitiatorId;
 
+    /** Span of the running query. */
+    private final Span span;
+
     /**
      * Constructor.
      *
@@ -95,6 +100,7 @@ public class GridRunningQueryInfo {
         this.loc = loc;
         this.memMetricProvider = memMetricProvider;
         this.qryInitiatorId = qryInitiatorId;
+        this.span = MTC.span();
     }
 
     /**
@@ -200,5 +206,12 @@ public class GridRunningQueryInfo {
     /**{@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridRunningQueryInfo.class, this);
+    }
+
+    /**
+     * @return Span of the running query.
+     */
+    public Span span() {
+        return span;
     }
 }

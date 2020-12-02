@@ -1387,6 +1387,16 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING = "IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING";
 
     /**
+     * The master key name that the node will use during the recovery.
+     * <p>
+     * If a node was unavailable during a master key change process it won't be able to join to cluster with old the
+     * master key. Set up this property to re-encrypt cache keys on startup and join to cluster with the valid
+     * master key name.
+     */
+    public static final String IGNITE_MASTER_KEY_NAME_TO_CHANGE_BEFORE_STARTUP =
+        "IGNITE_MASTER_KEY_NAME_TO_CHANGE_BEFORE_STARTUP";
+
+    /**
      * Disable group state lazy store. It means that group state won't be cached for {@link CheckpointEntry} and will be
      * read from wal every time. Should be used for test purposes only.
      */
@@ -1413,8 +1423,9 @@ public final class IgniteSystemProperties {
      * .
      * The possible values:
      *         - "LAST",
+     *         - "COMPATIBLE_8_7_28"
      *         - "COMPATIBLE_8_7_12",
-     *         - COMPATIBLE_8_7_6
+     *         - "COMPATIBLE_8_7_6"
      *
      * The last cost function is used by default.
      */
@@ -1448,6 +1459,14 @@ public final class IgniteSystemProperties {
      * all system actions will be prohibited.
      */
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
+
+    /**
+     * Defragmentation region size percentage of configured region size.
+     * This percentage will be calculated from largest configured region size and then proportionally subtracted
+     * from all configured regions.
+     */
+    public static final String IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE =
+        "IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE";
 
     /**
      * Enforces singleton.

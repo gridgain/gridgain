@@ -404,7 +404,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
 
         //noinspection ConstantConditions
         ctx.cache().context().pageStore().initialize(TX_LOG_CACHE_ID, 0,
-            TX_LOG_CACHE_NAME, mgr.dataRegion(TX_LOG_CACHE_NAME).memoryMetrics().totalAllocatedPages());
+            TX_LOG_CACHE_NAME, mgr.dataRegion(TX_LOG_CACHE_NAME).memoryMetrics().totalAllocatedPages()::add);
     }
 
     /** {@inheritDoc} */
@@ -1225,7 +1225,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
      *
      * @return {@code Future} with {@link VacuumMetrics}.
      */
-    IgniteInternalFuture<VacuumMetrics> runVacuum() {
+    public IgniteInternalFuture<VacuumMetrics> runVacuum() {
         assert !ctx.clientNode();
 
         MvccCoordinator crd0 = currentCoordinator();

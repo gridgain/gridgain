@@ -17,6 +17,9 @@
 package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategy;
+import org.apache.ignite.lang.IgniteExperimental;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Context to get value of cache object.
@@ -46,4 +49,20 @@ public interface CacheObjectValueContext {
      * @return Binary enabled flag.
      */
     public boolean binaryEnabled();
+
+    /**
+     * @return {@code True} if cache keys should be compressed.
+     */
+    @IgniteExperimental
+    public default boolean compressKeys() {
+        return false;
+    }
+
+    /**
+     * @return Compression strategy to be used with this cache's data, or {@code null}.
+     */
+    @IgniteExperimental
+    @Nullable public default EntryCompressionStrategy compressionStrategy() {
+        return null;
+    }
 }

@@ -43,7 +43,7 @@ public class CheckCheckpointStartLoggingTest extends GridCommonAbstractTest {
         "walCpRecordFsyncDuration=" + VALID_MS_PATTERN + ", " +
         "writeCheckpointEntryDuration=" + VALID_MS_PATTERN + ", " +
         "splitAndSortCpPagesDuration=" + VALID_MS_PATTERN + ", " +
-        ".* pages=[1-9][0-9]*, " +
+        ".*pages=[1-9][0-9]*, " +
         "reason=.*";
 
     /** */
@@ -64,6 +64,13 @@ public class CheckCheckpointStartLoggingTest extends GridCommonAbstractTest {
         cfg.setGridLogger(testLogger);
 
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        cleanPersistenceDir();
+
+        super.beforeTest();
     }
 
     /** {@inheritDoc} */

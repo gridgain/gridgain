@@ -87,6 +87,10 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
             new TracingConfigurationCoordinates.Builder(Scope.CACHE_API_READ).build(),
             TracingConfigurationManager.DEFAULT_CACHE_API_READ_CONFIGURATION);
 
+        tmpDfltConfigurationMap.put(
+            new TracingConfigurationCoordinates.Builder(Scope.SQL).build(),
+            TracingConfigurationManager.DEFAULT_SQL_CONFIGURATION);
+
         DEFAULT_CONFIGURATION_MAP = Collections.unmodifiableMap(tmpDfltConfigurationMap);
     }
 
@@ -114,8 +118,10 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
                     if (log.isDebugEnabled())
                         log.debug("Tracing configuration was updated [oldVal= " + oldVal + ", newVal=" + newVal + "]");
 
-                    if (newVal != null && !newVal.isEmpty())
-                        tracingConfiguration = newVal;
+                    if (newVal != null && !newVal.isEmpty()) {
+                        tracingConfiguration = new HashMap<>(DEFAULT_CONFIGURATION_MAP);
+                        tracingConfiguration.putAll(newVal);
+                    }
                 }
             });
 

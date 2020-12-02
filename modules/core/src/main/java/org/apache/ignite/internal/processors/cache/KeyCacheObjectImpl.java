@@ -95,6 +95,11 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
 
     /** {@inheritDoc} */
     @Nullable @Override public <T> T value(CacheObjectValueContext ctx, boolean cpy) {
+        return value(ctx, cpy, null);
+    }
+
+    /** {@inheritDoc} */
+    @Nullable @Override public <T> T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr) {
         assert val != null;
 
         return (T)val;
@@ -106,7 +111,10 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject prepareForCache(CacheObjectContext ctx) {
+    @Override public KeyCacheObject prepareForCache(CacheObjectContext ctx, boolean compress) throws IgniteCheckedException {
+        if (valBytes == null)
+            valBytes = ctx.kernalContext().cacheObjects().marshal(ctx, val);
+
         return this;
     }
 
