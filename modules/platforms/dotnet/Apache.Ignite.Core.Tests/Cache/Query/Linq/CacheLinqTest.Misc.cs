@@ -26,7 +26,6 @@
 namespace Apache.Ignite.Core.Tests.Cache.Query.Linq
 {
     using System;
-    using System.Collections.Generic;
     using System.Linq;
     using System.Linq.Expressions;
     using Apache.Ignite.Core.Cache;
@@ -239,7 +238,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Linq
         public void TestLocalQuery()
         {
             // Create partitioned cache
-            var cache = Ignition.GetIgnite().GetOrCreateCache<int, int>(new CacheConfiguration("partCache", 
+            var cache = Ignition.GetIgnite().GetOrCreateCache<int, int>(new CacheConfiguration("partCache",
                     new QueryEntity(typeof(int), typeof(int)))
                 {
                     SqlEscapeAll = GetSqlEscapeAll()
