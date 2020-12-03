@@ -94,7 +94,7 @@ public abstract class JmhThinClientAbstractBenchmark extends JmhAbstractBenchmar
 
         ClientConfiguration cfg = new ClientConfiguration()
                 .setAddresses(addrs)
-                .setPartitionAwarenessEnabled(true);
+                .setAffinityAwarenessEnabled(true);
 
         client = Ignition.startClient(cfg);
 
