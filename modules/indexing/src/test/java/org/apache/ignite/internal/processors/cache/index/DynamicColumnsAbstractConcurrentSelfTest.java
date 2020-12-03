@@ -33,6 +33,7 @@ import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObject;
@@ -560,8 +561,12 @@ public abstract class DynamicColumnsAbstractConcurrentSelfTest extends DynamicCo
      * @param endIdx Ending index.
      */
     private void put(Ignite node, int startIdx, int endIdx) {
-        for (int i = startIdx; i < endIdx; i++)
-            node.cache(CACHE_NAME).put(key(i), val(node, i));
+        try (IgniteDataStreamer<Object, Object> streamer = node.dataStreamer(CACHE_NAME)) {
+            streamer.allowOverwrite(true);
+
+            for (int i = startIdx; i < endIdx; i++)
+                streamer.addData(key(i), val(node, i));
+        }
     }
 
     /**
