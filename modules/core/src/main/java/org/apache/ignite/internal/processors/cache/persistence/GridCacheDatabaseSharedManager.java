@@ -40,7 +40,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -65,12 +64,10 @@ import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
@@ -103,7 +100,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
-import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -149,7 +145,6 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -287,9 +282,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * not the last WAL pointer and can't be used for resumming logging.
      */
     private volatile WALPointer walTail;
-
-    /** Map from a cacheId to a future indicating that there is an in-progress index rebuild for the given cache. */
-    private final ConcurrentMap<Integer, GridFutureAdapter<Void>> idxRebuildFuts = new ConcurrentHashMap<>();
 
     /**
      * Lock holder for compatible folders mode. Null if lock holder was created at start node. <br>
@@ -756,7 +748,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             (FilePageStoreManager)cctx.pageStore(),
             checkpointManager,
             lightCheckpointMgr,
-            persistenceCfg.getPageSize()
+            persistenceCfg.getPageSize(),
+            persistenceCfg.getDefragmentationThreadPoolSize()
         );
     }
 
@@ -1384,35 +1377,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
         }
 
-        if (cctx.kernalContext().query().moduleEnabled()) {
-            ExchangeActions acts = fut.exchangeActions();
-
-            if (acts != null) {
-                if (!F.isEmpty(acts.cacheStartRequests())) {
-                    for (ExchangeActions.CacheActionData actionData : acts.cacheStartRequests())
-                        prepareIndexRebuildFuture(CU.cacheId(actionData.request().cacheName()));
-                }
-                else if (acts.localJoinContext() != null && !F.isEmpty(acts.localJoinContext().caches())) {
-                    for (T2<DynamicCacheDescriptor, NearCacheConfiguration> tup : acts.localJoinContext().caches())
-                        prepareIndexRebuildFuture(tup.get1().cacheId());
-                }
-            }
-        }
-    }
-
-    /**
-     * Creates a new index rebuild future that should be completed later after exchange is done. The future
-     * has to be created before exchange is initialized to guarantee that we will capture a correct future
-     * after activation or restore completes.
-     * If there was an old future for the given ID, it will be completed.
-     *
-     * @param cacheId Cache ID.
-     */
-    private void prepareIndexRebuildFuture(int cacheId) {
-        GridFutureAdapter<Void> old = idxRebuildFuts.put(cacheId, new GridFutureAdapter<>());
-
-        if (old != null)
-            old.onDone();
+        if (cctx.kernalContext().query().moduleEnabled())
+           cctx.kernalContext().query().beforeExchange(fut);
     }
 
     /** {@inheritDoc} */
@@ -1425,7 +1391,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** {@inheritDoc} */
     @Override public void forceRebuildIndexes(Collection<GridCacheContext> contexts) {
-        contexts.forEach(ctx -> prepareIndexRebuildFuture(ctx.cacheId()));
+        contexts.forEach(ctx -> cctx.kernalContext().query().prepareIndexRebuildFuture(ctx.cacheId()));
 
         rebuildIndexes(contexts, (cacheCtx) -> true);
     }
@@ -1446,9 +1412,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             if (!rebuildCond.test(cacheCtx))
                 continue;
 
-            int cacheId = cacheCtx.cacheId();
-            GridFutureAdapter<Void> usrFut = idxRebuildFuts.get(cacheId);
-
             IgniteInternalFuture<?> rebuildFut = qryProc.rebuildIndexesFromHash(cacheCtx);
 
             if (nonNull(rebuildFut)) {
@@ -1459,28 +1422,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     allCacheIdxsCompoundFut = new GridCompoundFuture<>();
 
                 allCacheIdxsCompoundFut.add(rebuildFut);
-
-                rebuildFut.listen(fut -> {
-                    idxRebuildFuts.remove(cacheId, usrFut);
-
-                    Throwable err = fut.error();
-
-                    usrFut.onDone(err);
-
-                    if (isNull(err)) {
-                        if (log.isInfoEnabled())
-                            log.info("Finished indexes rebuilding for cache [" + cacheInfo(cacheCtx) + ']');
-                    }
-                    else {
-                        if (!(err instanceof NodeStoppingException))
-                            log.error("Failed to rebuild indexes for cache [" + cacheInfo(cacheCtx) + ']', err);
-                    }
-                });
-            }
-            else if (nonNull(usrFut)) {
-                idxRebuildFuts.remove(cacheId, usrFut);
-
-                usrFut.onDone();
             }
         }
 
@@ -1504,11 +1445,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         assert nonNull(cacheCtx);
 
         return "name=" + cacheCtx.name() + ", grpName=" + cacheCtx.group().name();
-    }
-
-    /** {@inheritDoc} */
-    @Nullable @Override public IgniteInternalFuture indexRebuildFuture(int cacheId) {
-        return idxRebuildFuts.get(cacheId);
     }
 
     /** {@inheritDoc} */

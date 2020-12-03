@@ -32,6 +32,8 @@
 
 package org.apache.ignite.util;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -58,6 +60,12 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
     /** Grids number. */
     public static final int GRIDS_NUM = 2;
 
+    /** Specified cache name for SQL-table */
+    static final String SPECIFIC_CACHE_NAME = "SpecificCacheName";
+
+    /** Default cache name prefix for SQL-table */
+    static final String DEFAULT_CACHE_NAME_PREFIX = "SQL_PUBLIC_";
+
     /** Ignite instance. */
     private Ignite ignite;
 
@@ -72,6 +80,7 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
         ignite.cluster().active(true);
 
         createAndFillSeveralCaches(ignite);
+        createTable();
     }
 
     /** {@inheritDoc} */
@@ -210,11 +219,11 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
 
     /**
      * Checks --group-name filter for caches without explicitly specified group.
-     * Expect to see 4(3 custom and 1 PK) indexes of three_entries_simple_indexes cache.
+     * Expect to see 8(5 custom and 3 PK) indexes of three_entries_simple_indexes cache.
      */
     @Test
     public void testEmptyGroupFilter() {
-        checkGroup(CacheCommands.EMPTY_GROUP_NAME, CacheCommands.EMPTY_GROUP_NAME, 4);
+        checkGroup(CacheCommands.EMPTY_GROUP_NAME, CacheCommands.EMPTY_GROUP_NAME, 8);
     }
 
     /** */
@@ -258,6 +267,24 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
 
     /**
      * Checks --cache-name filter.
+     * Expects 2 indexes (1 custom and 1 PK) for table T2 created WITH <<... with="cache_name=..." >> statement.
+     * */
+    @Test
+    public void testCacheNameFilterSQLSpecificCacheName() {
+        checkCacheNameFilter(SPECIFIC_CACHE_NAME, cacheName -> cacheName.contains(SPECIFIC_CACHE_NAME), 2);
+    }
+
+    /**
+     * Checks --cache-name filter.
+     * Expects 2 indexes (1 custom and 1 PK) for table T1 created WITHOUT << ... with="cache_name=..." >> statement.
+     * */
+    @Test
+    public void testCacheNameFilterSQLDefaultCacheName() {
+        checkCacheNameFilter(DEFAULT_CACHE_NAME_PREFIX, cacheName -> cacheName.contains(DEFAULT_CACHE_NAME_PREFIX), 2);
+    }
+
+    /**
+     * Checks --cache-name filter.
      * Expect to see 4(3 custom and 1 PK) indexes of three_entries_simple_indexes cache.
      * */
     @Test
@@ -287,5 +314,20 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
 
         int indexesNum = cmdResult.size();
         assertEquals("Unexpected number of indexes: " + indexesNum, indexesNum, expectedResNum);
+    }
+
+    /** create table via jdbc */
+    private void createTable() throws Exception {
+        Class.forName("org.apache.ignite.IgniteJdbcThinDriver");
+        String url = "jdbc:ignite:thin://127.0.0.1";
+        try (Connection conn = DriverManager.getConnection(url)) {
+            conn.prepareStatement("drop table if exists T1").execute();
+            conn.prepareStatement("create table T1 (id integer primary key, enddate timestamp)").execute();
+            conn.prepareStatement("create index idx_t1_enddate ON T1 (enddate)").execute();
+
+            conn.prepareStatement("drop table if exists T2").execute();
+            conn.prepareStatement("create table T2 (id integer primary key, enddate timestamp) with \"cache_name=" + SPECIFIC_CACHE_NAME + "\"").execute();
+            conn.prepareStatement("create index idx_t2_enddate ON T2 (enddate)").execute();
+        }
     }
 }

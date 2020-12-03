@@ -93,6 +93,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheUpdateSqlQuerySelf
 import org.apache.ignite.internal.processors.cache.IgniteCheckClusterStateBeforeExecuteQueryTest;
 import org.apache.ignite.internal.processors.cache.IgniteClientReconnectCacheQueriesFailoverTest;
 import org.apache.ignite.internal.processors.cache.IgniteCrossCachesJoinsQueryTest;
+import org.apache.ignite.internal.processors.cache.IgniteDynamicEnableIndexingRestoreTest;
 import org.apache.ignite.internal.processors.cache.IgniteDynamicSqlRestoreTest;
 import org.apache.ignite.internal.processors.cache.IgniteErrorOnRebalanceTest;
 import org.apache.ignite.internal.processors.cache.IncorrectQueryEntityTest;
@@ -293,6 +294,7 @@ import org.apache.ignite.internal.sql.SqlParserTransactionalKeywordsSelfTest;
 import org.apache.ignite.internal.sql.SqlParserUserSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridOrderedMessageCancelSelfTest;
 import org.apache.ignite.sqltests.PartitionedSqlTest;
+import org.apache.ignite.sqltests.ReplicatedSqlCustomPartitionsTest;
 import org.apache.ignite.sqltests.ReplicatedSqlTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -311,6 +313,7 @@ import org.junit.runners.Suite;
 
     PartitionedSqlTest.class,
     ReplicatedSqlTest.class,
+    ReplicatedSqlCustomPartitionsTest.class,
 
     SqlParserCreateIndexSelfTest.class,
     SqlParserDropIndexSelfTest.class,
@@ -362,6 +365,7 @@ import org.junit.runners.Suite;
     IgniteCacheDuplicateEntityConfigurationSelfTest.class,
     IncorrectQueryEntityTest.class,
     IgniteDynamicSqlRestoreTest.class,
+    IgniteDynamicEnableIndexingRestoreTest.class,
 
     // Queries tests.
     IgniteQueryTableLockAndConnectionPoolLazyModeOnTest.class,
