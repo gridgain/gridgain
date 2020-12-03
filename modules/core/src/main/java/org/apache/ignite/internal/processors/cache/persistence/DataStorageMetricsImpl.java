@@ -609,8 +609,8 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
         long markDuration,
         long pagesWriteDuration,
         long fsyncDuration,
-        long start,
         long duration,
+        long start,
         long totalPages,
         long dataPages,
         long cowPages
