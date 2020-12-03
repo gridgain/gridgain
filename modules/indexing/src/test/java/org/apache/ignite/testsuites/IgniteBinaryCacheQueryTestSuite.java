@@ -667,7 +667,6 @@ import org.junit.runners.Suite;
     ColumnStatisticsCollectorTest.class,
     ManagerStatisticsTypesTest.class,
     IgniteStatisticsRepositoryTest.class,
-    StatisticsStorageTest.class,
     StatisticsStorageRestartTest.class,
 
     // Table statistics usage.
