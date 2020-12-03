@@ -124,18 +124,6 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     /** {@inheritDoc} */
     @Override public RegisterStatus register(UUID nodeId, UUID routineId,
         GridKernalContext ctx) throws IgniteCheckedException {
-
-        final IgniteClosure trans;
-
-        try {
-            trans = getTransformer();
-        } catch (ExceptionInInitializerError e) {
-            throw new IgniteCheckedException("Failed to initialize a remote transformer.", e);
-        }
-
-        if (trans != null)
-            ctx.resource().injectGeneric(trans);
-
         if (locTransLsnr != null) {
             ctx.resource().injectGeneric(locTransLsnr);
 
@@ -155,8 +143,22 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
 
     /** {@inheritDoc} */
     @Override public void p2pUnmarshal(UUID nodeId, GridKernalContext ctx) throws IgniteCheckedException {
-        if (rmtTransFactoryDep != null)
-            rmtTransFactory = p2pUnmarshal(rmtTransFactoryDep, nodeId, ctx);
+        if (rmtTransFactoryDep != null) {
+            try {
+                rmtTransFactory = p2pUnmarshal(rmtTransFactoryDep, nodeId, ctx);
+
+                IgniteClosure trans = getTransformer();
+
+                if (trans != null)
+                    ctx.resource().injectGeneric(trans);
+            } catch (ExceptionInInitializerError e) {
+                IgniteCheckedException err = new IgniteCheckedException("Failed to initialize a remote transformer.", e);
+
+                ((GridFutureAdapter)p2pUnmarshalFut).onDone(err);
+
+                throw err;
+            }
+        }
 
         super.p2pUnmarshal(nodeId, ctx);
     }

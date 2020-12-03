@@ -358,13 +358,6 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
 
         initLocalListener(locLsnr, ctx);
 
-        try {
-            initRemoteFilter(getEventFilter0(), ctx);
-        }
-        catch (IgniteCheckedException | ExceptionInInitializerError e) {
-            throw new IgniteCheckedException("Failed to initialize a continuous query.", e);
-        }
-
         entryBufs = new ConcurrentHashMap<>();
 
         ackBuf = new CacheContinuousQueryAcknowledgeBuffer();
@@ -1284,8 +1277,19 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
         assert ctx != null;
         assert ctx.config().isPeerClassLoadingEnabled();
 
-        if (rmtFilterDep != null)
-            rmtFilter = p2pUnmarshal(rmtFilterDep, nodeId, ctx);
+        if (rmtFilterDep != null) {
+            try {
+                rmtFilter = p2pUnmarshal(rmtFilterDep, nodeId, ctx);
+
+                initRemoteFilter(getEventFilter0(), ctx);
+            } catch (ExceptionInInitializerError e) {
+                IgniteCheckedException err = new IgniteCheckedException("Failed to initialize remote filter.", e);
+
+                ((GridFutureAdapter)p2pUnmarshalFut).onDone(err);
+
+                throw err;
+            }
+        }
 
         if (!p2pUnmarshalFut.isDone())
             ((GridFutureAdapter)p2pUnmarshalFut).onDone();
@@ -1324,11 +1328,6 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
                 ((GridFutureAdapter)p2pUnmarshalFut).onDone(e);
 
                 throw e;
-            }
-            catch (ExceptionInInitializerError e) {
-                ((GridFutureAdapter)p2pUnmarshalFut).onDone(e);
-
-                throw new IgniteCheckedException("Failed to unmarshal deployable object.", e);
             }
         }
         else
