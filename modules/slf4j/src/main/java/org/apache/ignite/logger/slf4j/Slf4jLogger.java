@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
 
@@ -65,7 +66,12 @@ public class Slf4jLogger implements IgniteLogger {
 
         this.impl = impl;
 
-        quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "true"));
+        quiet = Boolean.parseBoolean(System.getProperty(IGNITE_QUIET, "true"));
+
+        // Optionally remove existing handlers attached to j.u.l root logger (since SLF4J 1.6.5)
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+
+        SLF4JBridgeHandler.install();
     }
 
     /** {@inheritDoc} */
