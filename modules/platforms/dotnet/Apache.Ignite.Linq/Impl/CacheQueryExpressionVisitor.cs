@@ -333,6 +333,7 @@ namespace Apache.Ignite.Linq.Impl
             return expression;
         }
 
+        
         /// <summary>
         /// Gets the name of the field from a member expression, with quotes when necessary.
         /// </summary>
@@ -514,9 +515,8 @@ namespace Apache.Ignite.Linq.Impl
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
         protected override Expression VisitInvocation(InvocationExpression expression)
         {
-            VisitArguments(expression.Arguments);
-
-            return expression;
+            throw new NotSupportedException("The LINQ expression '" + expression +
+                "' could not be translated. Either rewrite the query in a form that can be translated, or switch to client evaluation explicitly by inserting a call to either AsEnumerable() or ToList().");
         }
 
         /** <inheritdoc /> */
