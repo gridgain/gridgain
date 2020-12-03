@@ -25,6 +25,7 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -34,6 +35,7 @@ import org.apache.ignite.client.ClientAuthorizationException;
 import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -50,7 +52,8 @@ import static org.mockito.Mockito.mock;
  */
 public class ReliableChannelTest {
     /** Mock factory for creating new channels. */
-    private final Function<ClientChannelConfiguration, ClientChannel> chFactory = cfg -> new TestClientChannel();
+    private final BiFunction<ClientChannelConfiguration, ClientConnectionMultiplexer, ClientChannel> chFactory =
+            (cfg, hnd) -> new TestClientChannel();
 
     /** */
     private final String[] dfltAddrs = new String[]{"127.0.0.1:10800", "127.0.0.1:10801", "127.0.0.1:10802"};
@@ -258,7 +261,7 @@ public class ReliableChannelTest {
             .setAddresses(dfltAddrs)
             .setAffinityAwarenessEnabled(true);
 
-        ReliableChannel rc = new ReliableChannel(cfg -> new TestFailureClientChannel(), ccfg, null);
+        ReliableChannel rc = new ReliableChannel((cfg, hnd) -> new TestFailureClientChannel(), ccfg, null);
 
         rc.channelsInit();
     }
@@ -301,7 +304,7 @@ public class ReliableChannelTest {
         // Emulate cluster is down after TcpClientChannel#send operation.
         AtomicInteger step = new AtomicInteger();
 
-        ReliableChannel rc = new ReliableChannel(cfg -> {
+        ReliableChannel rc = new ReliableChannel((cfg, hnd) -> {
             if (step.getAndIncrement() == 0)
                 return new TestAsyncServiceFailureClientChannel();
             else
