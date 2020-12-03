@@ -517,6 +517,11 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
         @Override public byte newMvccTxState() {
             return 0;
         }
+
+        /** {@inheritDoc} */
+        @Override public boolean tombstone() {
+            return false;
+        }
     }
 
     /**

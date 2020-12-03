@@ -418,10 +418,9 @@ public interface IgniteCacheOffheapManager {
 
     /**
      * @param row Data row.
-     * @return {@code True} if give row is tombstone.
-     * @throws IgniteCheckedException If failed.
+     * @return {@code True} if give row is tombstone. TODO remove
      */
-    public boolean isTombstone(@Nullable CacheDataRow row) throws IgniteCheckedException;
+    public boolean isTombstone(@Nullable CacheDataRow row);
 
     /**
      * @param ldr Class loader.

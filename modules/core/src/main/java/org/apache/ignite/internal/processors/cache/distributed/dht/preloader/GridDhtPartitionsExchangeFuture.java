@@ -3456,7 +3456,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             // Same for local node.
             Long maxClearCntr = maxClearCntrs.get(part.id());
             Long testCntr = part.dataStore().partUpdateCounter() == null ? 0 :
-                part.dataStore().partUpdateCounter().tombstoneClearingState();
+                part.dataStore().partUpdateCounter().tombstoneClearingCounter();
 
             if (testCntr != 0 && (maxClearCntr == null || testCntr > maxClearCntr))
                 maxClearCntrs.put(part.id(), testCntr);

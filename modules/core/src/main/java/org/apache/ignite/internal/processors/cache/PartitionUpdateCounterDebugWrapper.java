@@ -273,13 +273,8 @@ public class PartitionUpdateCounterDebugWrapper implements PartitionUpdateCounte
     }
 
     /** {@inheritDoc} */
-    @Override public void finishTombstoneClearing() {
-        delegate.finishTombstoneClearing();
-    }
-
-    /** {@inheritDoc} */
-    @Override public long tombstoneClearingState() {
-        return delegate.tombstoneClearingState();
+    @Override public long tombstoneClearingCounter() {
+        return delegate.tombstoneClearingCounter();
     }
 
     /** {@inheritDoc} */

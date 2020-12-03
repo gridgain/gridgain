@@ -91,10 +91,7 @@ public interface GridCacheEntryEx {
     public boolean detached();
 
     /**
-     * Note: this method works only for cache configured in ATOMIC mode or for cache that is
-     * data center replication target.
-     *
-     * @return {@code True} if entry has been already deleted.
+     * @return {@code True} if entry is deleted (it is a tombstone).
      */
     public boolean deleted();
 

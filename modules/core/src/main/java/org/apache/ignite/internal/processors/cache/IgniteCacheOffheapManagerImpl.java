@@ -107,6 +107,7 @@ import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.GridStripedLock;
 import org.apache.ignite.internal.util.IgniteTree;
 import org.apache.ignite.internal.util.collection.ImmutableIntSet;
+import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.collection.IntRWHashMap;
 import org.apache.ignite.internal.util.collection.IntSet;
@@ -217,7 +218,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     protected void initPendingTree(GridCacheContext cctx) throws IgniteCheckedException {
         assert !cctx.group().persistenceEnabled();
 
-        if (cctx.affinityNode() && cctx.ttl().eagerTtlEnabled() && pendingEntries == null) {
+        if (cctx.affinityNode() && pendingEntries == null) {
             String pendingEntriesTreeName = cctx.name() + "##PendingEntries";
 
             long rootPage = allocateForTree();
@@ -623,7 +624,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isTombstone(CacheDataRow row) throws IgniteCheckedException {
+    @Override public boolean isTombstone(CacheDataRow row) {
         if (!grp.supportsTombstone())
             return false;
 
@@ -1353,26 +1354,36 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         assert pendingEntries != null;
 
-        int cleared = expireInternal(cctx, c, amount);
+        int cnt0 = expireInternal(cctx, c, amount, false);
 
-        return amount != -1 && cleared >= amount;
+        long tsCnt = grp.topology().localPartitions().stream().
+            filter(p -> p.state() == OWNING).mapToLong(p -> p.dataStore().tombstonesCount()).sum();
+
+        if (tsCnt > 10_000) // Force removal of tombstones beyond the limit.
+            amount = (int) (tsCnt - 10_000);
+
+        int cnt1 = expireInternal(cctx, c, amount, true);
+
+        return amount != -1 && (cnt0 >= amount || cnt1 >= amount);
     }
 
     /**
      * @param cctx Cache context.
      * @param c Closure.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     * @param tombstone {@code True} to clear tombstone.
      * @return cleared entries count.
      * @throws IgniteCheckedException If failed.
      */
     private int expireInternal(
         GridCacheContext cctx,
         IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion> c,
-        int amount
+        int amount,
+        boolean tombstone
     ) throws IgniteCheckedException {
         long now = U.currentTimeMillis();
 
-        GridCacheVersion obsoleteVer = null;
+        GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
         GridCursor<PendingRow> cur;
 
@@ -1380,15 +1391,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         try {
             if (grp.sharedGroup())
-                cur = pendingEntries.find(new PendingRow(cctx.cacheId()), new PendingRow(cctx.cacheId(), now, 0));
+                cur = pendingEntries.find(new PendingRow(cctx.cacheId(), tombstone, 0, 0), new PendingRow(cctx.cacheId(), tombstone, now, 0));
             else
-                cur = pendingEntries.find(null, new PendingRow(CU.UNDEFINED_CACHE_ID, now, 0));
+                cur = pendingEntries.find(new PendingRow(CU.UNDEFINED_CACHE_ID, tombstone, 0, 0), new PendingRow(CU.UNDEFINED_CACHE_ID, tombstone, now, 0));
 
             if (!cur.next())
                 return 0;
 
             if (!busyLock.enterBusy())
                 return 0;
+
+            // TODO reserve partitions.
+
+            IntMap<Boolean> parts = new IntHashMap<>();
 
             try {
                 int cleared = 0;
@@ -1402,16 +1417,25 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     if (row.key.partition() == -1)
                         row.key.partition(cctx.affinity().partition(row.key));
 
-                    assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
+                    assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone: row;
 
                     if (pendingEntries.removex(row)) {
-                        if (obsoleteVer == null)
-                            obsoleteVer = cctx.cache().nextVersion();
-
                         GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
-                        if (entry != null)
+                        if (entry != null) { // TODO comparison not needed.
                             c.apply(entry, obsoleteVer);
+
+                            // Update tombstone clear counter.
+                            if (tombstone) {
+                                assert entry.deleted() : entry;
+
+                                if (!parts.containsKey(row.key.partition())) {
+                                    dataStore(row.key.partition()).partUpdateCounter().startTombstoneClearing();
+
+                                    parts.put(row.key.partition(), TRUE);
+                                }
+                            }
+                        }
                     }
 
                     cleared++;
@@ -1792,11 +1816,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     // TODO FIXME assert isTombstone(c.oldRow()) ^ isTombstone(c.newRow()) : "old=" + c.oldRow() + ", new=" + c.newRow();
 
                     if (isTombstone(c.newRow()) && !isTombstone(c.oldRow())) {
+                        updatePendingEntries(cctx, c.newRow(), null);
+
                         tombstoneCreated();
 
                         decrementSize(cctx.cacheId());
                     }
                     else if (isTombstone(c.oldRow()) && !isTombstone(c.newRow())) {
+                        clearPendingEntries(cctx, c.oldRow());
+
                         tombstoneRemoved();
 
                         incrementSize(cctx.cacheId());
@@ -2765,11 +2793,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 assert oldRow.link() != 0 : oldRow;
 
                 if (pendingTree() != null && oldRow.expireTime() != 0)
-                    pendingTree().removex(new PendingRow(cacheId, oldRow.expireTime(), oldRow.link()));
+                    pendingTree().removex(new PendingRow(cacheId, oldRow.tombstone(), oldRow.expireTime(), oldRow.link()));
             }
 
             if (pendingTree() != null && expireTime != 0) {
-                pendingTree().putx(new PendingRow(cacheId, expireTime, newRow.link()));
+                pendingTree().putx(new PendingRow(cacheId, newRow.tombstone(), expireTime, newRow.link()));
 
                 if (!cctx.ttl().hasPendingEntries())
                     cctx.ttl().hasPendingEntries(true);
@@ -2841,7 +2869,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 this.oldRow = oldRow;
 
                 // Always write tombstone (overwrite with new version if it existed before)
-                newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver, 0, oldRow);
+                newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver, cctx.tombstoneExpireTime(), oldRow);
 
                 operationType = oldRow != null && oldRow.link() == newRow.link() ?
                     IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;
@@ -2920,11 +2948,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
 
             // TODO looks like oldTombstone chech is redundant because it's always should be true (can force remove only ts)
-            if (oldTombstone && tombstoneRow == null)
+            if (oldTombstone && tombstoneRow == null) {
                 tombstoneRemoved();
 
-            if (!oldTombstone && tombstoneRow != null)
+                clearPendingEntries(cctx, oldRow);
+            }
+
+            if (!oldTombstone && tombstoneRow != null) {
                 tombstoneCreated();
+
+                updatePendingEntries(cctx, tombstoneRow, null);
+            }
 
             if (isIncrementalDrEnabled(cctx)) {
                 if (oldRow != null) {
@@ -2955,7 +2989,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 "Incorrect cache ID [expected=" + cacheId + ", actual=" + oldRow.cacheId() + "].";
 
             if (pendingTree() != null && oldRow.expireTime() != 0)
-                pendingTree().removex(new PendingRow(cacheId, oldRow.expireTime(), oldRow.link()));
+                pendingTree().removex(new PendingRow(cacheId, oldRow.tombstone(), oldRow.expireTime(), oldRow.link()));
         }
 
         /**

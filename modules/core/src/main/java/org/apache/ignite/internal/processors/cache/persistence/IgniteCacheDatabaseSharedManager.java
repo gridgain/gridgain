@@ -213,7 +213,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @return {@code True} if given row is tombstone.
      * @throws IgniteCheckedException If failed.
      */
-    public boolean isTombstone(@Nullable CacheDataRow row) throws IgniteCheckedException {
+    public boolean isTombstone(@Nullable CacheDataRow row) {
         if (row == null)
             return false;
 
@@ -242,8 +242,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
 
                 int keySize = buf.getInt(buf.position());
 
-                int headOffset = (IncompleteCacheObject.HEAD_LEN + keySize) /* key */ +
-                    8 /* expire time */;
+                int headOffset = (IncompleteCacheObject.HEAD_LEN + keySize) /* key */ + 8 /* expire time */;
 
                 int requiredSize = headOffset + IncompleteCacheObject.HEAD_LEN; // Value header.
 

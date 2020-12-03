@@ -3020,7 +3020,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     continue;
 
                 long cntr = part.dataStore().partUpdateCounter() == null ? 0 :
-                    part.dataStore().partUpdateCounter().tombstoneClearingState();
+                    part.dataStore().partUpdateCounter().tombstoneClearingCounter();
 
                 if (cntr != 0)
                     map.put(part.id(), cntr);

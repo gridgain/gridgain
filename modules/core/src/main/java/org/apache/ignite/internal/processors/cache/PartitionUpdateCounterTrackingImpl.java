@@ -467,18 +467,13 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     @Override public synchronized long startTombstoneClearing() {
         long lwm = get();
 
-        clearingState = lwm; //  | 0x8000000000000000L; // Save LWM.
+        clearingState = lwm; // Save LWM.
 
         return lwm;
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized void finishTombstoneClearing() {
-        // clearingState &= ~0x8000000000000000L;
-    }
-
-    /** {@inheritDoc} */
-    @Override public synchronized long tombstoneClearingState() {
+    @Override public synchronized long tombstoneClearingCounter() {
         return clearingState;
     }
 }

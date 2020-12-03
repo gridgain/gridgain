@@ -710,7 +710,7 @@ public class CachePartitionDefragmentationManager {
                 tracker.complete(STORE_PK);
 
                 if (row.expireTime() != 0)
-                    newPendingTree.putx(new PendingRow(cacheId, row.expireTime(), newLink));
+                    newPendingTree.putx(new PendingRow(cacheId, row.tombstone(), row.expireTime(), newLink));
 
                 tracker.complete(STORE_PENDING);
 

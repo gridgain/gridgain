@@ -4016,7 +4016,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert obsoleteVer != null;
 
         boolean obsolete = false;
-        boolean deferred = false;
+        boolean deferred = false; // TODO remove.
         GridCacheVersion ver0 = null;
 
         lockEntry();
@@ -4033,9 +4033,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 return false;
 
             CacheObject expiredVal = this.val;
-
-            if (expiredVal == null)
-                return false;
 
             if (onExpired(expiredVal, obsoleteVer)) {
                 if (cctx.deferredDelete()) { // TODO remove.
@@ -4076,14 +4073,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * @param expiredVal Expired value.
+     * @param expiredVal Expired value, will be null if a tombstone has expired.
      * @param obsoleteVer Version.
      * @return {@code True} if entry was marked as removed.
      * @throws IgniteCheckedException If failed.
      */
-    private boolean onExpired(CacheObject expiredVal, GridCacheVersion obsoleteVer) throws IgniteCheckedException {
-        assert expiredVal != null;
-
+    private boolean onExpired(@Nullable CacheObject expiredVal, GridCacheVersion obsoleteVer) throws IgniteCheckedException {
         boolean rmvd = false;
 
         if (mvccExtras() != null)
@@ -6019,7 +6014,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             else {
                 // Create tombstone for preloaded removal.
                 newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(entry.cctx, entry.key(),
-                    TombstoneCacheObject.INSTANCE, ver, 0, oldRow);
+                    TombstoneCacheObject.INSTANCE, ver, entry.cctx.tombstoneExpireTime(), oldRow);
             }
 
             treeOp = oldRow != null && oldRow.link() == newRow.link() ?
@@ -6768,7 +6763,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (treeOp != IgniteTree.OperationType.NOOP) {
                 GridDhtLocalPartition part = entry.localPartition();
 
-                newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer, 0, oldRow);
+                newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer,
+                    cctx.tombstoneExpireTime(), oldRow);
 
                 if (oldRow != null && oldRow.link() == newRow.link())
                     treeOp = IgniteTree.OperationType.IN_PLACE;

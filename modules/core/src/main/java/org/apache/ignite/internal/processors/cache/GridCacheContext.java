@@ -143,6 +143,9 @@ public class GridCacheContext<K, V> implements Externalizable {
     /** Empty cache version array. */
     private static final GridCacheVersion[] EMPTY_VERSION = new GridCacheVersion[0];
 
+    /** */
+    private int tombstoneTtl = IgniteSystemProperties.getInteger("DEFAULT_TOMBSTONE_TTL", 30_000);
+
     /** Kernal context. */
     private GridKernalContext ctx;
 
@@ -2392,6 +2395,13 @@ public class GridCacheContext<K, V> implements Externalizable {
         finally {
             stash.remove();
         }
+    }
+
+    /**
+     * @return Tombstone expiration time.
+     */
+    public long tombstoneExpireTime() {
+        return U.currentTimeMillis() + tombstoneTtl;
     }
 
     /** {@inheritDoc} */

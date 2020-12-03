@@ -468,6 +468,13 @@ public class DiscoCache {
     }
 
     /**
+     * @return {@code True} if all baseline node are alive.
+     */
+    public boolean fullBaseline() {
+        return true; // TODO
+    }
+
+    /**
      * @param ver Topology version.
      * @param state Not {@code null} state if need override state, otherwise current state is used.
      * @return Copy of discovery cache with new version.

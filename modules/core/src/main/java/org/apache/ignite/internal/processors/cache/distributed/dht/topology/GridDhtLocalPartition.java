@@ -1198,8 +1198,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 //
 //                ((GridDhtPreloader) grp.preloader()).tryFinishEviction(this);
 //            }
-            if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE && dataStore().partUpdateCounter() != null)
-                dataStore().partUpdateCounter().finishTombstoneClearing();
+//            if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE && dataStore().partUpdateCounter() != null)
+//                dataStore().partUpdateCounter().finishTombstoneClearing();
         }
         catch (NodeStoppingException e) {
             if (log.isDebugEnabled())

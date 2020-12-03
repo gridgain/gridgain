@@ -284,33 +284,35 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
 
-        cctx.cache().context().exchange().registerExchangeAwareComponent(this);
+        //cctx.cache().context().exchange().registerExchangeAwareComponent(this);
 
         // TODO wait for cache groups start.
-        if (tsClearFreq >= 1_000)
-            scheduleTombstonesCleanup();
+//        if (tsClearFreq >= 1_000)
+//            scheduleTombstonesCleanup();
     }
 
     /**
      *
      */
-    private void scheduleTombstonesCleanup() {
-        GridKernalContext ctx = cctx.kernalContext();
+//    private void scheduleTombstonesCleanup() {
+//        GridKernalContext ctx = cctx.kernalContext();
+//
+//        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(tsClearFreq) {
+//            @Override public void onTimeout() {
+//                ctx.closure().runLocalSafe(new GridPlainRunnable() {
+//                    @Override public void run() {
+//                        clearTombstones();
+//
+//                        scheduleTombstonesCleanup();
+//                    }
+//                });
+//            }
+//        });
+//    }
 
-        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(tsClearFreq) {
-            @Override public void onTimeout() {
-                ctx.closure().runLocalSafe(new GridPlainRunnable() {
-                    @Override public void run() {
-                        clearTombstones();
-
-                        scheduleTombstonesCleanup();
-                    }
-                });
-            }
-        });
-    }
-
-    /** */
+    /**
+     * Clears tombstones locally using full scan approach.
+     */
     public void clearTombstones() {
         if (paused)
             return;

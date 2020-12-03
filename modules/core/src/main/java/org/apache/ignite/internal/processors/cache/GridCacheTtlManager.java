@@ -29,7 +29,6 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
 import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
@@ -94,26 +93,19 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
         dhtCtx = cctx.isNear() ? cctx.near().dht().context() : cctx;
 
         boolean cleanupDisabled = cctx.kernalContext().isDaemon() ||
-            !cctx.config().isEagerTtl() ||
-            CU.isUtilityCache(cctx.name()) ||
-            cctx.dataStructuresCache() ||
+//            !cctx.config().isEagerTtl() ||
+//            CU.isUtilityCache(cctx.name()) ||
+//            cctx.dataStructuresCache() ||
             (cctx.kernalContext().clientNode() && cctx.config().getNearConfiguration() == null);
 
         if (cleanupDisabled)
             return;
 
-        eagerTtlEnabled = true;
+        eagerTtlEnabled = cctx.config().isEagerTtl();
 
         cctx.shared().ttl().register(this);
 
         pendingEntries = (!cctx.isLocal() && cctx.config().getNearConfiguration() != null) ? new GridConcurrentSkipListSetEx() : null;
-    }
-
-    /**
-     * @return {@code True} if eager ttl is enabled for cache.
-     */
-    public boolean eagerTtlEnabled() {
-        return eagerTtlEnabled;
     }
 
     /** {@inheritDoc} */
@@ -211,7 +203,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (pendingEntries != null) {
                 GridNearCacheAdapter nearCache = cctx.near();
 
-                GridCacheVersion obsoleteVer = null;
+                GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
                 int limit = (-1 != amount) ? amount : pendingEntries.sizex();
 
@@ -222,9 +214,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                         break; // All expired entries are processed.
 
                     if (pendingEntries.remove(e)) {
-                        if (obsoleteVer == null)
-                            obsoleteVer = cctx.cache().nextVersion();
-
                         GridNearCacheEntry nearEntry = nearCache.peekExx(e.key);
 
                         if (nearEntry != null)
@@ -239,9 +228,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (!hasPendingEntries || nextCleanTime > U.currentTimeMillis())
                 return false;
 
-            boolean more = cctx.offheap().expire(dhtCtx, expireC, amount);
-
-            if (more)
+            if (cctx.offheap().expire(dhtCtx, expireC, amount))
                 return true;
 
             // There is nothing to clean, so the next clean up can be postponed.

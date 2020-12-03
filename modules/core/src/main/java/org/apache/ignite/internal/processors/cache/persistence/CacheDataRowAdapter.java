@@ -883,6 +883,11 @@ public class CacheDataRowAdapter implements CacheDataRow {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean tombstone() {
+        return value().cacheObjectType() == CacheObject.TOMBSTONE;
+    }
+
+    /** {@inheritDoc} */
     @Override public int hash() {
         throw new UnsupportedOperationException();
     }

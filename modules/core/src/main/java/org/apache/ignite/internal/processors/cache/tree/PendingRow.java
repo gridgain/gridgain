@@ -37,6 +37,9 @@ public class PendingRow {
     public int cacheId;
 
     /** */
+    public boolean tombstone;
+
+    /** */
     public KeyCacheObject key;
 
     /**
@@ -51,13 +54,13 @@ public class PendingRow {
 
     /**
      * @param cacheId Cache ID.
+     * @param tombstone
      * @param expireTime Expire time.
      * @param link Link
      */
-    public PendingRow(int cacheId, long expireTime, long link) {
-        assert expireTime != 0;
-
+    public PendingRow(int cacheId, boolean tombstone, long expireTime, long link) {
         this.cacheId = cacheId;
+        this.tombstone = tombstone;
         this.expireTime = expireTime;
         this.link = link;
     }

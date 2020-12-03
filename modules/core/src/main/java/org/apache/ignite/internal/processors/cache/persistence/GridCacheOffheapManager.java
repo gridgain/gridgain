@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,6 +39,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.encryption.ReencryptStateUtils;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -67,6 +69,7 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
+import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheTtlManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
@@ -77,6 +80,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Ign
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIteratorException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
@@ -114,6 +118,8 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
+import org.apache.ignite.internal.util.collection.IntHashMap;
+import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -124,6 +130,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.Boolean.TRUE;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -144,13 +151,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
      */
     private final long walAtomicCacheMargin = IgniteSystemProperties.getLong(
         "WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE", 5);
-
-    /**
-     * Throttling timeout in millis which avoid excessive PendingTree access on unwind
-     * if there is nothing to clean yet.
-     */
-    private final long unwindThrottlingTimeout = Long.getLong(
-        IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
 
     /** */
     private IndexStorage indexStorage;
@@ -935,7 +935,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 }
                 finally {
                     // Write full page
-                    pageMem.writeUnlock(grpId, curId, curPage, Boolean.TRUE, true);
+                    pageMem.writeUnlock(grpId, curId, curPage, TRUE, true);
                 }
             }
             finally {
@@ -1296,20 +1296,61 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             return false;
 
         try {
-            int cleared = 0;
+            int expCnt = 0;
+            int tsCnt = 0;
 
-            for (CacheDataStore store : cacheDataStores()) {
-                cleared += ((GridCacheDataStore)store).purgeExpired(cctx, c, unwindThrottlingTimeout, amount - cleared);
+            List<CacheDataStore> stores = new ArrayList<>();
+            cacheDataStores().forEach(stores::add);
 
-                if (amount != -1 && cleared >= amount)
-                    return true;
+            Collections.shuffle(stores); // Randomize partitions to clear.
+
+            for (CacheDataStore store : stores) {
+                expCnt += ((GridCacheDataStore)store).purgeExpired(cctx, c, amount - expCnt, false);
+
+                if (amount != -1 && expCnt >= amount)
+                    break;
             }
+
+            if (grp.isLocal())
+                return amount != -1 && expCnt >= amount;
+
+            DiscoCache discoCache = cctx.discovery().discoCache(grp.topology().readyTopologyVersion());
+
+            long totalTsCnt = grp.topology().localPartitions().stream().
+                filter(p -> p.state() == OWNING).mapToLong(p -> p.dataStore().tombstonesCount()).sum();
+
+            // Do not clear tombstones on full basiline and if the limit is not exceeded.
+            if (discoCache.fullBaseline() && totalTsCnt <= 10_000)
+                return false;
+
+            if (totalTsCnt > 10_000) // Force removal of tombstones beyond the limit.
+                amount = (int) (totalTsCnt - 10_000); // TODO configure limit.
+
+            // Sort by descending tombstones count.
+            stores.sort((o1, o2) -> {
+                GridDhtPartitionTopology top = grp.topology();
+
+                GridDhtLocalPartition p1 = top.localPartition(o1.partId());
+                GridDhtLocalPartition p2 = top.localPartition(o2.partId());
+
+                long c1 = p1 == null || p1.state() == EVICTED ? 0 : p1.dataStore().tombstonesCount();
+                long c2 = p2 == null || p2.state() == EVICTED ? 0 : p2.dataStore().tombstonesCount();
+
+                return Long.compare(c2, c1);
+            });
+
+            for (CacheDataStore store : stores) {
+                tsCnt += ((GridCacheDataStore)store).purgeExpired(cctx, c, amount - tsCnt, true);
+
+                if (amount != -1 && tsCnt >= amount)
+                    break;
+            }
+
+            return amount != -1 && (expCnt >= amount || tsCnt >= amount);
         }
         finally {
             busyLock.leaveBusy();
         }
-
-        return false;
     }
 
     /** {@inheritDoc} */
@@ -1881,6 +1922,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         @Override public byte newMvccTxState() {
             return 0; // TODO IGNITE-7384
         }
+
+        /** {@inheritDoc} */
+        @Override public boolean tombstone() {
+            return entry.op() == GridCacheOperation.DELETE;
+        }
     }
 
     /**
@@ -1948,18 +1994,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         /** */
         private volatile CacheDataStoreImpl delegate;
-
-        /**
-         * Cache id which should be throttled.
-         */
-        private volatile int lastThrottledCacheId;
-
-        /**
-         * Timestamp when next clean try will be allowed for the current partition
-         * in accordance with the value of {@code lastThrottledCacheId}.
-         * Used for fine-grained throttling on per-partition basis.
-         */
-        private volatile long nextStoreCleanTimeNanos;
 
         /** */
         private GridQueryRowCacheCleaner rowCacheCleaner;
@@ -3128,34 +3162,24 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @param cctx Cache context.
          * @param c Expiry closure that should be applied to expired entry. See {@link GridCacheTtlManager} for details.
          * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+         * @param tombstone {@code True} to clear tombstones.
          * @return cleared entries count.
          * @throws IgniteCheckedException If failed.
          */
         public int purgeExpired(
             GridCacheContext cctx,
             IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion> c,
-            long throttlingTimeout,
-            int amount
+            int amount,
+            boolean tombstone
         ) throws IgniteCheckedException {
             CacheDataStore delegate0 = init0(true);
 
-            long nowNanos = System.nanoTime();
-
-            if (delegate0 == null || (cctx.cacheId() == lastThrottledCacheId && nextStoreCleanTimeNanos - nowNanos > 0))
+            if (delegate0 == null)
                 return 0;
 
             assert pendingTree != null : "Partition data store was not initialized.";
 
-            int cleared = purgeExpiredInternal(cctx, c, amount);
-
-            // Throttle if there is nothing to clean anymore.
-            if (cleared < amount) {
-                lastThrottledCacheId = cctx.cacheId();
-
-                nextStoreCleanTimeNanos = nowNanos + U.millisToNanos(throttlingTimeout);
-            }
-
-            return cleared;
+            return purgeExpiredInternal(cctx, c, amount, tombstone);
         }
 
         /**
@@ -3164,13 +3188,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @param cctx Cache context.
          * @param c Expiry closure that should be applied to expired entry. See {@link GridCacheTtlManager} for details.
          * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+         * @param tombstone {@code True} if cleaning tombstones.
          * @return cleared entries count.
          * @throws IgniteCheckedException If failed.
          */
         private int purgeExpiredInternal(
             GridCacheContext cctx,
             IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion> c,
-            int amount
+            int amount,
+            boolean tombstone
         ) throws IgniteCheckedException {
             GridDhtLocalPartition part = null;
 
@@ -3181,6 +3207,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 if (part == null || part.state() != OWNING)
                     return 0;
             }
+
+            IntMap<Boolean> parts = new IntHashMap<>();
 
             cctx.shared().database().checkpointReadLock();
 
@@ -3197,14 +3225,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     GridCursor<PendingRow> cur;
 
                     if (grp.sharedGroup())
-                        cur = pendingTree.find(new PendingRow(cctx.cacheId()), new PendingRow(cctx.cacheId(), now, 0));
+                        cur = pendingTree.find(new PendingRow(cctx.cacheId(), tombstone, 0, 0), new PendingRow(cctx.cacheId(), tombstone, now, 0));
                     else
-                        cur = pendingTree.find(null, new PendingRow(CU.UNDEFINED_CACHE_ID, now, 0));
+                        cur = pendingTree.find(new PendingRow(CU.UNDEFINED_CACHE_ID, tombstone, 0, 0), new PendingRow(CU.UNDEFINED_CACHE_ID, tombstone, now, 0));
 
                     if (!cur.next())
                         return 0;
 
-                    GridCacheVersion obsoleteVer = null;
+                    GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
                     int cleared = 0;
 
@@ -3214,18 +3242,22 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         if (amount != -1 && cleared > amount)
                             return cleared;
 
-                        assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
+                        assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone: row;
 
                         row.key.partition(partId);
 
+                        GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
+
                         if (pendingTree.removex(row)) {
-                            if (obsoleteVer == null)
-                                obsoleteVer = cctx.cache().nextVersion();
+                            if (entry != null) {
+                                c.apply(entry, obsoleteVer);
 
-                            GridCacheEntryEx e1 = cctx.cache().entryEx(row.key);
+                                if (tombstone && !parts.containsKey(row.key.partition())) {
+                                    partUpdateCounter().startTombstoneClearing();
 
-                            if (e1 != null)
-                                c.apply(e1, obsoleteVer);
+                                    parts.put(row.key.partition(), TRUE);
+                                }
+                            }
                         }
 
                         cleared++;
