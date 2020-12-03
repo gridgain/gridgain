@@ -28,6 +28,7 @@ import org.junit.Test;
 public class ThinClientPartitionAwarenessResourceReleaseTest extends ThinClientAbstractAffinityAwarenessTest {
     /** Worker thread prefix. */
     private static final String THREAD_PREFIX = "thin-client-channel";
+
     /**
      * Test that resources are correctly released after closing client with partition awareness.
      */

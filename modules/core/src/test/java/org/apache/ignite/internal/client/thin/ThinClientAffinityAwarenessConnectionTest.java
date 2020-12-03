@@ -17,7 +17,6 @@
 
 package org.apache.ignite.internal.client.thin;
 
-import com.mchange.v2.c3p0.util.TestUtils;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.testframework.GridTestUtils;
