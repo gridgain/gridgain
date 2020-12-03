@@ -32,7 +32,7 @@ import static org.apache.ignite.internal.commandline.encryption.EncryptionSubcom
 import static org.apache.ignite.internal.commandline.encryption.EncryptionSubcommand.of;
 
 /**
- * Commands assosiated with encryption features.
+ * Commands associated with encryption features.
  *
  * @see EncryptionSubcommand
  */

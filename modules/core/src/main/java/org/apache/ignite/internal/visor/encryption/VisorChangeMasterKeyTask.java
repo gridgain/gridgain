@@ -18,9 +18,13 @@ package org.apache.ignite.internal.visor.encryption;
 
 import org.apache.ignite.IgniteEncryption;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.compute.ComputeJobContext;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
+import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.resources.JobContextResource;
 
 /**
  * The task for changing the master key.
@@ -42,6 +46,13 @@ public class VisorChangeMasterKeyTask extends VisorOneNodeTask<String, String> {
         /** Serial version uid. */
         private static final long serialVersionUID = 0L;
 
+        /** */
+        private IgniteFuture opFut;
+
+        /** Job context. */
+        @JobContextResource
+        private ComputeJobContext jobCtx;
+
         /**
          * Create job with specified argument.
          *
@@ -54,7 +65,23 @@ public class VisorChangeMasterKeyTask extends VisorOneNodeTask<String, String> {
 
         /** {@inheritDoc} */
         @Override protected String run(String masterKeyName) throws IgniteException {
-            ignite.encryption().changeMasterKey(masterKeyName).get();
+            if (opFut == null) {
+                opFut = ignite.encryption().changeMasterKey(masterKeyName);
+
+                if (opFut.isDone())
+                    opFut.get();
+                else {
+                    jobCtx.holdcc();
+
+                    opFut.listen(new IgniteInClosure<IgniteFuture>() {
+                        @Override public void apply(IgniteFuture f) {
+                            jobCtx.callcc();
+                        }
+                    });
+                }
+            }
+
+            opFut.get();
 
             return "The master key changed.";
         }
