@@ -25,10 +25,10 @@ public class PSUStatisticsTypesTest extends StatisticsTypesAbstractTest {
      * Run set of tests to select from specified column specified value.
      *
      * @param name Type name.
-     * @param comparator Comparator: >, <, =, is...
-     * @param value Value.
+     * @param comp Comparator: >, <, =, is...
+     * @param val Value.
      */
-    private void doColumnTests(String name, String comparator, String value) {
+    private void doColumnTests(String name, String comp, String val) {
         String[][] noHints = new String[1][];
 
         String[][] hints = new String[1][];
@@ -47,7 +47,7 @@ public class PSUStatisticsTypesTest extends StatisticsTypesAbstractTest {
 
         // TODO implement is not null check when optimizer will able to properly handle such condition
 
-        String sql = String.format("select * from dtypes i1 where col_%s %s %s", name, comparator, value);
+        String sql = String.format("select * from dtypes i1 where col_%s %s %s", name, comp, val);
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_" + name}, sql, noHints);
 
