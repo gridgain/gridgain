@@ -1228,6 +1228,10 @@ public class CachePartitionDefragmentationManager {
         private synchronized void onFinish() {
             finishTs = System.currentTimeMillis();
 
+            progressGroups.clear();
+
+            scheduledGroups.clear();
+
             log.info("Defragmentation process completed. Time: " + (finishTs - startTs) * 1e-3 + "s.");
         }
 
