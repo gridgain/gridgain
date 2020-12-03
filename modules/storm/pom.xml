@@ -74,6 +74,13 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
+            <artifactId>ignite-log4j</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
@@ -85,12 +92,6 @@
             <artifactId>ignite-tools</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.gridgain</groupId>
-            <artifactId>ignite-log4j</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
