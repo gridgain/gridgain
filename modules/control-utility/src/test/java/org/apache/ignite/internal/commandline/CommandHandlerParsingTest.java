@@ -1102,6 +1102,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
             cmd == CommandList.SET_STATE ||
+            cmd == CommandList.ENCRYPTION ||
             cmd == CommandList.METADATA ||
             cmd == CommandList.WARM_UP ||
             cmd == CommandList.PROPERTY ||
