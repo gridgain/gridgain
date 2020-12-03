@@ -1269,7 +1269,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             allocateForTree(),
             grp.reuseList(),
             true,
-            ctx.diagnostic().pageLockTracker().createPageLockTracker(logTreeName)
+            ctx.diagnostic().pageLockTracker().createPageLockTracker(logTreeName),
+            FLAG_IDX
         );
 
         return new CacheDataStoreImpl(p, rowStore, dataTree, logTree, () -> pendingEntries, grp, busyLock, log);
