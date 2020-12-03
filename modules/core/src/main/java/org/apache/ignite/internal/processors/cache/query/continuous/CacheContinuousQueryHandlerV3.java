@@ -101,7 +101,7 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteClosure<CacheEntryEvent<? extends K, ? extends V>, ?> getTransformer() {
+    @Override public IgniteClosure<CacheEntryEvent<? extends K, ? extends V>, ?> getTransformer0() {
         if (rmtTrans == null && rmtTransFactory != null)
             rmtTrans = rmtTransFactory.create();
 
@@ -143,22 +143,8 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
 
     /** {@inheritDoc} */
     @Override public void p2pUnmarshal(UUID nodeId, GridKernalContext ctx) throws IgniteCheckedException {
-        if (rmtTransFactoryDep != null) {
-            try {
-                rmtTransFactory = p2pUnmarshal(rmtTransFactoryDep, nodeId, ctx);
-
-                IgniteClosure trans = getTransformer();
-
-                if (trans != null)
-                    ctx.resource().injectGeneric(trans);
-            } catch (ExceptionInInitializerError e) {
-                IgniteCheckedException err = new IgniteCheckedException("Failed to initialize a remote transformer.", e);
-
-                ((GridFutureAdapter)p2pUnmarshalFut).onDone(err);
-
-                throw err;
-            }
-        }
+        if (rmtTransFactoryDep != null)
+            rmtTransFactory = p2pUnmarshal(rmtTransFactoryDep, nodeId, ctx);
 
         super.p2pUnmarshal(nodeId, ctx);
     }

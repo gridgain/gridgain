@@ -43,15 +43,21 @@ import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.GridTopic.TOPIC_CLASSLOAD;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for continuous deployment with client disconnection
  */
 public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonAbstractTest {
+    /** */
+    private ListeningTestLogger testLog;
+
     /** The resource name which is used in static initializer block. */
     private static final String P2P_TEST_OBJ_RSRC_NAME = "org/apache/ignite/tests/p2p/GridP2PTestObjectWithStaticInitializer$GridP2PTestObject.class";
 
@@ -79,6 +85,8 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
 
         cfg.setCacheConfiguration(defaultCacheConfiguration());
 
+        cfg.setGridLogger(testLog);
+
         cfg.setFailureHandler(new AbstractFailureHandler() {
             /** {@inheritDoc} */
             @Override protected boolean handle(Ignite ignite, FailureContext failureCtx) {
@@ -95,6 +103,8 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
+        testLog = new ListeningTestLogger(true, log);
+
         startGrid(0);
 
         startClientGrid(1);
@@ -105,6 +115,8 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
+
+        testLog.clearListeners();
 
         stopAllGrids();
     }
@@ -131,18 +143,17 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
 
         IgniteEx client = grid(1);
 
+        LogListener lsnr = LogListener.matches(
+            "Failed to initialize a continuous query."
+        ).build();
+
+        testLog.registerListener(lsnr);
+
         IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
-        CacheException err = null;
+        cache.query(qry);
 
-        try {
-            cache.query(qry);
-        } catch (CacheException e) {
-            err = e;
-        }
-
-        // Check that continuous query deployment failed.
-        assertNotNull(err);
+        assertTrue(lsnr.check());
 
         // Check that the failure handler was not called.
         assertFalse(failure.get());
@@ -163,18 +174,17 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
 
         IgniteEx client = grid(1);
 
+        LogListener lsnr = LogListener.matches(
+            "Failed to initialize a continuous query."
+        ).build();
+
+        testLog.registerListener(lsnr);
+
         IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
-        CacheException err = null;
+        cache.query(qry);
 
-        try {
-            cache.query(qry);
-        } catch (CacheException e) {
-            err = e;
-        }
-
-        // Check that continuous query deployment failed.
-        assertNotNull(err);
+        assertTrue(lsnr.check());
 
         // Check that the failure handler was not called.
         assertFalse(failure.get());
@@ -193,18 +203,17 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
             })
             .setRemoteTransformerFactory(rmtTransformerFactoryCls.newInstance());
 
+        LogListener lsnr = LogListener.matches(
+            "Failed to initialize a continuous query."
+        ).build();
+
+        testLog.registerListener(lsnr);
+
         IgniteCache<Integer, Integer> cache = grid(1).cache(DEFAULT_CACHE_NAME);
 
-        CacheException err = null;
+        cache.query(qry);
 
-        try {
-            cache.query(qry);
-        } catch (CacheException e) {
-            err = e;
-        }
-
-        // Check that continuous query deployment failed.
-        assertNotNull(err);
+        assertTrue(lsnr.check());
 
         // Check that the failure handler was not called.
         assertFalse(failure.get());

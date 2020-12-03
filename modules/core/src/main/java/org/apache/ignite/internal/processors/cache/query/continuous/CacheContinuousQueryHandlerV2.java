@@ -124,19 +124,8 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
 
     /** {@inheritDoc} */
     @Override public void p2pUnmarshal(UUID nodeId, GridKernalContext ctx) throws IgniteCheckedException {
-        if (rmtFilterFactoryDep != null) {
-            try {
-                rmtFilterFactory = p2pUnmarshal(rmtFilterFactoryDep, nodeId, ctx);
-
-                initRemoteFilter(getEventFilter0(), ctx);
-            } catch (ExceptionInInitializerError e) {
-                IgniteCheckedException err = new IgniteCheckedException("Failed to initialize remote filter.", e);
-
-                ((GridFutureAdapter)p2pUnmarshalFut).onDone(err);
-
-                throw err;
-            }
-        }
+        if (rmtFilterFactoryDep != null)
+            rmtFilterFactory = p2pUnmarshal(rmtFilterFactoryDep, nodeId, ctx);
 
         super.p2pUnmarshal(nodeId, ctx);
     }
