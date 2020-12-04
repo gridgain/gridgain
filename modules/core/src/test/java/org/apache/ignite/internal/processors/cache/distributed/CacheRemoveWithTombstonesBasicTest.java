@@ -1233,7 +1233,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PartitionUpdateCounter cntr = locPart.dataStore().partUpdateCounter();
 
-        long state = cntr.tombstoneClearingCounter();
+        long state = cntr.tombstoneClearCounter();
 
         assertFalse(TombstoneCacheObject.clearing(state));
         assertEquals(0, TombstoneCacheObject.counter(state));
@@ -1241,7 +1241,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         locPart.clearTombstonesAsync().get();
         validateCache(grpCtx, pk, 0, 0);
 
-        state = cntr.tombstoneClearingCounter();
+        state = cntr.tombstoneClearCounter();
 
         assertFalse(TombstoneCacheObject.clearing(state));
         assertEquals(1, TombstoneCacheObject.counter(state));
@@ -1267,7 +1267,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PartitionUpdateCounter cntr = locPart.dataStore().partUpdateCounter();
 
-        long state = cntr.tombstoneClearingCounter();
+        long state = cntr.tombstoneClearCounter();
 
         assertFalse(TombstoneCacheObject.clearing(state));
         assertEquals(0, TombstoneCacheObject.counter(state));
@@ -1275,7 +1275,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         locPart.clearTombstonesAsync().get();
         validateCache(grpCtx, pk, 0, 0);
 
-        state = cntr.tombstoneClearingCounter();
+        state = cntr.tombstoneClearCounter();
 
         assertFalse(TombstoneCacheObject.clearing(state));
         assertEquals(1, TombstoneCacheObject.counter(state));
@@ -1288,7 +1288,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PartitionUpdateCounter cntr1 = counter(pk, grid(0).name());
 
-        state = cntr1.tombstoneClearingCounter();
+        state = cntr1.tombstoneClearCounter();
 
         assertFalse(TombstoneCacheObject.clearing(state));
         assertEquals(1, TombstoneCacheObject.counter(state));
@@ -1314,7 +1314,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PartitionUpdateCounter cntr = locPart.dataStore().partUpdateCounter();
 
-        long state = cntr.tombstoneClearingCounter();
+        long state = cntr.tombstoneClearCounter();
 
         assertFalse(TombstoneCacheObject.clearing(state));
         assertEquals(0, TombstoneCacheObject.counter(state));
@@ -1322,7 +1322,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         locPart.clearTombstonesAsync().get();
         validateCache(grpCtx, pk, 0, 0);
 
-        state = cntr.tombstoneClearingCounter();
+        state = cntr.tombstoneClearCounter();
 
         assertFalse(TombstoneCacheObject.clearing(state));
         assertEquals(1, TombstoneCacheObject.counter(state));
@@ -1335,7 +1335,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PartitionUpdateCounter cntr1 = counter(pk, grid(0).name());
 
-        state = cntr1.tombstoneClearingCounter();
+        state = cntr1.tombstoneClearCounter();
 
         assertFalse(TombstoneCacheObject.clearing(state));
         assertEquals(1, TombstoneCacheObject.counter(state));
@@ -1403,53 +1403,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(0, rows2.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
     }
 
-    @Test
-    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "1000")
-    public void testTombstonesIndexedAtomic() throws Exception {
-        IgniteEx crd = startGrid(0);
-        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
-
-        int pk = 0;
-
-        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        PartitionUpdateCounter cntr = grpCtx.topology().localPartition(pk).dataStore().partUpdateCounter();
-        assertEquals(0, cntr.tombstoneClearingCounter());
-
-        cache.remove(pk);
-
-        validateCache(grpCtx, pk, 1, 0);
-
-        doSleep(3_000);
-
-        validateCache(grpCtx, pk, 0, 0);
-        assertEquals(1, cntr.tombstoneClearingCounter());
-    }
-
-    @Test
-    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "1000")
-    public void testTombstonesIndexedTx() throws Exception {
-        IgniteEx crd = startGrid(0);
-        crd.cluster().state(ClusterState.ACTIVE);
-
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
-
-        int pk = 0;
-
-        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        PartitionUpdateCounter cntr = grpCtx.topology().localPartition(pk).dataStore().partUpdateCounter();
-        assertEquals(0, cntr.tombstoneClearingCounter());
-
-        cache.remove(pk);
-
-        validateCache(grpCtx, pk, 1, 0);
-
-        doSleep(3_000);
-
-        validateCache(grpCtx, pk, 0, 0);
-        assertEquals(1, cntr.tombstoneClearingCounter());
-    }
 
     @Test // TODO !!!!!!
     public void testClearingAfterRestartCorrectVersionsAreRemoved() throws Exception {
@@ -1468,8 +1422,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 //        }
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
-    public void testClearingCountersAtomic() throws Exception {
+    public void testClearingCountersFullScanAtomic() throws Exception {
         IgniteEx crd = startGrid(0);
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
@@ -1487,6 +1444,33 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         grpCtx.topology().localPartition(pk).clearTombstonesAsync().get();
         validateCache(grpCtx, pk, 0, 0);
+
+        assertEquals(1, cntr.tombstoneClearCounter());
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClearingCountersCacheClearAtomic() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+
+        // Should create TS.
+        int pk = 0;
+        cache.remove(pk);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        validateCache(grpCtx, pk, 1, 0);
+
+        GridDhtLocalPartition locPart = grpCtx.topology().localPartition(0);
+
+        PartitionUpdateCounter cntr = locPart.dataStore().partUpdateCounter();
+
+        cache.clear();
+
+        assertEquals(1, cntr.tombstoneClearCounter());
     }
 
     /**

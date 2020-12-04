@@ -47,7 +47,8 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
     /** */
     private final CacheGroupContext grp;
 
-    private long clearingState;
+    /** */
+    private long clearCntr;
 
     /**
      * @param grp Group.
@@ -130,7 +131,7 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public synchronized @Nullable byte[] getBytes() {
-        if (clearingState == 0)
+        if (clearCntr == 0)
             return null;
 
         try {
@@ -140,7 +141,7 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
 
             dos.writeByte(VERSION);
 
-            dos.writeLong(clearingState);
+            dos.writeLong(clearCntr);
 
             bos.close();
 
@@ -200,18 +201,18 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
         return grp;
     }
 
-    /** {@inheritDoc} */
-    @Override public synchronized long startTombstoneClearing() {
-        long lwm = get();
-
-        clearingState = lwm; // Save LWM.
-
-        return lwm;
+    /** {@inheritDoc}
+     * @param cntr*/
+    @Override public synchronized void updateTombstoneClearCounter(long cntr) {
+        if (cntr > clearCntr) // TODO make non-blocking.
+            clearCntr = cntr;
+        else if (cntr == 0)
+            clearCntr = get(); // Pessimitic approach to handle compatibility.
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long tombstoneClearingCounter() {
-        return clearingState;
+    @Override public synchronized long tombstoneClearCounter() {
+        return clearCntr;
     }
 
     /**
@@ -230,7 +231,7 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
 
             dis.readByte();// Version.
 
-            clearingState = dis.readLong();
+            clearCntr = dis.readLong();
         }
         catch (IOException e) {
             throw new IgniteException(e);

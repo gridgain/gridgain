@@ -357,8 +357,8 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
         for (int c = 0; c < 500; c++)
             pc.update(c * 4, r.nextInt(3) + 1);
 
-        pc.startTombstoneClearing();
-        long state0 = pc.tombstoneClearingCounter();
+        pc.updateTombstoneClearCounter(0);
+        long state0 = pc.tombstoneClearCounter();
 
         assertTrue(state0 != 0);
 
@@ -371,7 +371,7 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
         NavigableMap q1 = U.field(pc2, "queue");
 
         assertEquals(q0, q1);
-        assertEquals(state0, pc2.tombstoneClearingCounter());
+        assertEquals(state0, pc2.tombstoneClearCounter());
     }
 
     /**
@@ -382,9 +382,10 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
         PartitionUpdateCounter pc = new PartitionUpdateCounterVolatileImpl(null);
 
         pc.update(10);
+        pc.update(11);
 
-        pc.startTombstoneClearing();
-        long state0 = pc.tombstoneClearingCounter();
+        pc.updateTombstoneClearCounter(11);
+        long state0 = pc.tombstoneClearCounter();
 
         assertTrue(state0 != 0);
 
@@ -393,7 +394,7 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
         PartitionUpdateCounter pc2 = new PartitionUpdateCounterVolatileImpl(null);
         pc2.init(0, bytes);
 
-        assertEquals(state0, pc2.tombstoneClearingCounter());
+        assertEquals(state0, pc2.tombstoneClearCounter());
     }
 
     /**

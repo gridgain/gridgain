@@ -1102,13 +1102,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         GridDhtPartitionState state0 = state();
 
         if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE) {
-            long lwm = dataStore().partUpdateCounter() == null ? 0 : dataStore().partUpdateCounter().startTombstoneClearing();
-
-            rowFilter = row -> {
-                assert row.value().cacheObjectType() == CacheObject.TOMBSTONE : row;
-
-                return row.version().updateCounter() > lwm;
-            };
+            rowFilter = r -> false;
 
             clearClo = this::clearUnderLock;
         }
@@ -1167,9 +1161,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                     if (grp.sharedGroup() && (cctx == null || cctx.cacheId() != row.cacheId()))
                         cctx = ctx.cacheContext(row.cacheId());
-
-                    if (cctx == null)
-                        System.out.println();
 
                     if (clearClo.apply(row, cctx, clearVer))
                         cleared++;

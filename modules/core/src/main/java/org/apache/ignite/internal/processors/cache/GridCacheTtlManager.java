@@ -27,7 +27,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCach
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
-import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
+import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -54,16 +54,13 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     /** Timestamp when next clean try will be allowed. Used for throttling on per-cache basis. */
     protected volatile long nextCleanTime;
 
-    /** See {@link CacheConfiguration#isEagerTtl()}. */
-    private volatile boolean eagerTtlEnabled;
-
     /** */
     private GridCacheContext dhtCtx;
 
-    /** */
-    private final IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion> expireC =
-        new IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion>() {
-            @Override public void applyx(GridCacheEntryEx entry, GridCacheVersion obsoleteVer) {
+    /** TODO retval not used, remove. */
+    private final IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> expireC =
+        new IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean>() {
+            @Override public Boolean applyx(GridCacheEntryEx entry, GridCacheVersion obsoleteVer) {
                 boolean touch = !entry.isNear();
 
                 while (true) {
@@ -72,7 +69,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                             log.trace("Trying to remove expired entry from cache: " + entry);
 
                         if (entry.onTtlExpired(obsoleteVer))
-                            touch = false;
+                            return true;
 
                         break;
                     }
@@ -85,6 +82,8 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
                 if (touch)
                     entry.touch();
+
+                return false;
             }
         };
 
@@ -100,8 +99,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
         if (cleanupDisabled)
             return;
-
-        eagerTtlEnabled = cctx.config().isEagerTtl();
 
         cctx.shared().ttl().register(this);
 
@@ -185,16 +182,13 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     }
 
     /**
-     * Processes specified amount of expired entries.
+     * Processes specified amount of expired entries. Both TTL cleanup (if TTL is configured and eager TTL is enabled)
+     * and tombstones cleanup is executed, so the real amount of deleted entries can be up to {@code amount * 2}.
      *
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
      * @return {@code True} if unprocessed expired entries remains.
      */
     public boolean expire(int amount) {
-        // TTL manager is not initialized or eagerTtl disabled for cache.
-        if (!eagerTtlEnabled)
-            return false;
-
         assert cctx != null;
 
         long now = U.currentTimeMillis();

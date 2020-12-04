@@ -114,7 +114,7 @@ import org.apache.ignite.internal.util.collection.IntSet;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
-import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
+import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -1347,17 +1347,20 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /** {@inheritDoc} */
     @Override public boolean expire(
         GridCacheContext cctx,
-        IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion> c,
+        IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
         int amount
     ) throws IgniteCheckedException {
         assert !cctx.isNear() : cctx.name();
 
         assert pendingEntries != null;
 
-        int cnt0 = expireInternal(cctx, c, amount, false);
+        int cnt0 = cctx.config().isEagerTtl() ? expireInternal(cctx, c, amount, false) : 0;
 
         long tsCnt = grp.topology().localPartitions().stream().
             filter(p -> p.state() == OWNING).mapToLong(p -> p.dataStore().tombstonesCount()).sum();
+
+        if (tsCnt == 0)
+            return false;
 
         if (tsCnt > 10_000) // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - 10_000);
@@ -1377,7 +1380,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      */
     private int expireInternal(
         GridCacheContext cctx,
-        IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion> c,
+        IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
         int amount,
         boolean tombstone
     ) throws IgniteCheckedException {
@@ -1401,15 +1404,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (!busyLock.enterBusy())
                 return 0;
 
-            // TODO reserve partitions.
-
-            IntMap<Boolean> parts = new IntHashMap<>();
-
             try {
                 int cleared = 0;
 
                 do {
-                    if (amount != -1 && cleared > amount)
+                    if (amount != -1 && cleared >= amount)
                         return cleared;
 
                     PendingRow row = cur.get();
@@ -1420,21 +1419,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone: row;
 
                     if (pendingEntries.removex(row)) {
-                        GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
+                        try {
+                            GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
-                        if (entry != null) { // TODO comparison not needed.
-                            c.apply(entry, obsoleteVer);
-
-                            // Update tombstone clear counter.
-                            if (tombstone) {
-                                assert entry.deleted() : entry;
-
-                                if (!parts.containsKey(row.key.partition())) {
-                                    dataStore(row.key.partition()).partUpdateCounter().startTombstoneClearing();
-
-                                    parts.put(row.key.partition(), TRUE);
-                                }
-                            }
+                            if (entry != null) // TODO comparison not needed.
+                                c.apply(entry, obsoleteVer);
+                        }
+                        catch (GridDhtInvalidPartitionException ignored) {
+                            // Skip renting or evicted partition.
                         }
                     }
 
@@ -2952,6 +2944,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 tombstoneRemoved();
 
                 clearPendingEntries(cctx, oldRow);
+
+                // TODO optimize.
+                grp.topology().localPartition(oldRow.partition()).dataStore().partUpdateCounter().updateTombstoneClearCounter(oldRow.version().updateCounter());
             }
 
             if (!oldTombstone && tombstoneRow != null) {

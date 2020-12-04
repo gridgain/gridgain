@@ -109,7 +109,7 @@ public class PendingEntriesTree extends BPlusTree<PendingRow, PendingRow> {
 
         if ((expireTime & 0x8000000000000000L) != 0) {
             tombstone = true;
-            expireTime &= 0x8000000000000000L;
+            expireTime &= ~0x8000000000000000L;
         }
 
         cmp = Boolean.compare(tombstone, row.tombstone);

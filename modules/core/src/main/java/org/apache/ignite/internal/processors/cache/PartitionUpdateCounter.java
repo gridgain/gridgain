@@ -144,14 +144,15 @@ public interface PartitionUpdateCounter extends Iterable<long[]> {
     public CacheGroupContext context();
 
     /**
-     * Callback on tombstone clearing start.
+     * Update tombstone clear counter. Should be called when a tombstone is removed.
+     * @param cntr New counter value.
      */
-    public long startTombstoneClearing();
+    public void updateTombstoneClearCounter(long cntr);
 
     /**
-     * Returns the clearing counter - all tombstones up to this counter are cleared, later tombstones are not cleared.
+     * Returns the clear counter - some tombstones up to this counter can be removed, later tombstones are not cleared.
      *
      * @return Counter value.
      */
-    public long tombstoneClearingCounter();
+    public long tombstoneClearCounter();
 }

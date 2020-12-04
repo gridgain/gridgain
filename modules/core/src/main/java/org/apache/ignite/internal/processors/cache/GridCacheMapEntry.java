@@ -2787,7 +2787,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
             else {
                 // TODO Really need to store in deferred if expired ?
-                if (cctx.deferredDelete() && !isStartVersion() && !detached()) {
+                if (cctx.deferredDelete() && !isStartVersion() && !detached()) { // TODO remove.
                     if (!deletedUnlocked()) {
                         update(null, 0L, 0L, ver, true);
 

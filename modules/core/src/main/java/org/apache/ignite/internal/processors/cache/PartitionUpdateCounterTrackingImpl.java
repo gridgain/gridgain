@@ -81,8 +81,8 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     /** */
     protected final CacheGroupContext grp;
 
-    /** Tombstones clearing state: cleared (1 bite) | counter (rest0 */
-    private long clearingState;
+    /** Tombstones clear counter. */
+    private long clearCntr;
 
     /**
      * Initial counter points to last sequential update after WAL recovery.
@@ -279,7 +279,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public synchronized @Nullable byte[] getBytes() {
-        if (queue.isEmpty() && clearingState == 0)
+        if (queue.isEmpty() && clearCntr == 0)
             return null;
 
         try {
@@ -298,7 +298,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
                 dos.writeLong(item.delta);
             }
 
-            dos.writeLong(clearingState);
+            dos.writeLong(clearCntr);
 
             bos.close();
 
@@ -336,7 +336,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
             }
 
             if (ver > 1)
-                clearingState = dis.readLong();
+                clearCntr = dis.readLong();
         }
         catch (IOException e) {
             throw new IgniteException(e);
@@ -463,17 +463,17 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
         return grp;
     }
 
-    /** {@inheritDoc} */
-    @Override public synchronized long startTombstoneClearing() {
-        long lwm = get();
-
-        clearingState = lwm; // Save LWM.
-
-        return lwm;
+    /** {@inheritDoc}
+     * @param cntr*/
+    @Override public synchronized void updateTombstoneClearCounter(long cntr) {
+        if (cntr > clearCntr) // TODO make non-blocking.
+            clearCntr = cntr;
+        else if (cntr == 0)
+            clearCntr = get(); // Pessimitic approach to handle compatibility.
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long tombstoneClearingCounter() {
-        return clearingState;
+    @Override public synchronized long tombstoneClearCounter() {
+        return clearCntr;
     }
 }

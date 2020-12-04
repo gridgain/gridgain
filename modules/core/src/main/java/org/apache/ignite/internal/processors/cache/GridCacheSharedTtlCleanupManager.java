@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -40,7 +41,8 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
  */
 public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdapter {
     /** Ttl cleanup worker thread sleep interval, ms. */
-    private static final long CLEANUP_WORKER_SLEEP_INTERVAL = 500;
+    private static final long CLEANUP_WORKER_SLEEP_INTERVAL =
+        IgniteSystemProperties.getLong("CLEANUP_WORKER_SLEEP_INTERVAL", 500);
 
     /** Limit of expired entries processed by worker for certain cache in one pass. */
     private static final int CLEANUP_WORKER_ENTRIES_PROCESS_LIMIT = 1000;
