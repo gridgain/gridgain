@@ -25,9 +25,9 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadW
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.jetbrains.annotations.NotNull;
 
-/** */
-class ReadWriteMetaStorageMock implements ReadWriteMetastorage {
-    /** */
+/** Simple inmemory implementation of ReadWriteMetastorage. */
+public class ReadWriteMetaStorageMock implements ReadWriteMetastorage {
+    /** Map based storage implementation. */
     public final Map<String, byte[]> cache = new ConcurrentSkipListMap<>();
 
     /** {@inheritDoc} */
