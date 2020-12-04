@@ -16,6 +16,14 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import io.opencensus.common.Functions;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.SpanId;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.export.SpanData;
+import io.opencensus.trace.export.SpanExporter;
+import io.opencensus.trace.samplers.Samplers;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,27 +34,19 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import io.opencensus.common.Functions;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.Span;
-import io.opencensus.trace.SpanId;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.export.SpanData;
-import io.opencensus.trace.export.SpanExporter;
-import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.SpanType;
-import org.apache.ignite.spi.tracing.TracingSpi;
-import org.apache.ignite.spi.tracing.TracingConfigurationManager;
-import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
-import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.tracing.Scope;
+import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
+import org.apache.ignite.spi.tracing.TracingConfigurationManager;
+import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
+import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -67,7 +67,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     static final int GRID_CNT = 3;
 
     /** Span buffer count - hardcode in open census. */
-    private static final int SPAN_BUFFER_COUNT = 32;
+    private static final int SPAN_BUFFER_COUNT = 2500;
 
     /** */
     protected static final String IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL = "10";
@@ -470,16 +470,19 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
          */
         void flush() throws IgniteInterruptedCheckedException {
             // There is hardcoded invariant, that ended spans will be passed to exporter in 2 cases:
-            // By 5 seconds timeout and if buffer size exceeds 32 spans.
+            // By 5 seconds timeout and if buffer size exceeds 2500 spans.
             // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
             // @see io.opencensus.implcore.trace.export.ExportComponentImpl.
             for (int i = 0; i < SPAN_BUFFER_COUNT; i++) {
                 Span span = Tracing.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
 
-                U.sleep(10); // See same hack in OpenCensusSpanAdapter#end() method.
+//                U.sleep(10); // See same hack in OpenCensusSpanAdapter#end() method.
 
                 span.end();
             }
+
+            // Give a chance for worker thread to flush all spans.
+            U.sleep(100);
         }
     }
 
