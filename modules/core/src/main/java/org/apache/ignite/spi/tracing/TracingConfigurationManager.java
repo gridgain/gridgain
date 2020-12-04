@@ -84,13 +84,6 @@ public interface TracingConfigurationManager {
             withIncludedScopes(Collections.emptySet()).
             build();
 
-    /** Default UNDEFINED tracing configuration. */
-    static final TracingConfigurationParameters DEFAULT_UNDEFINED_CONFIGURATION =
-        new TracingConfigurationParameters.Builder().
-            withSamplingRate(0d).
-            withIncludedScopes(Collections.emptySet()).
-            build();
-
     /**
      * Set new tracing configuration for the specific tracing coordinates (scope, label, etc.).
      * If tracing configuration with specified coordinates already exists it'll be overrided,
