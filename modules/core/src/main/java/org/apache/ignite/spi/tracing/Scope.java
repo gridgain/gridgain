@@ -42,7 +42,7 @@ public enum Scope {
     SQL((short)7),
 
     /**
-     * Undefined scope, that is used in case of exceptions during scope deserialization.
+     * Undefined scope is used in case of exceptions during scope deserialization.
      * It's possible if for example in heterogeneous cluster older node doesn't know about new Scope instance.
      */
     UNDEFINED((short)8);

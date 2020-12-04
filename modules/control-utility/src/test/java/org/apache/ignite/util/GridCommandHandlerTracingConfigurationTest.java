@@ -94,6 +94,10 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
         DFLT_CONFIG_MAP.put(
             new TracingConfigurationCoordinates.Builder(Scope.SQL).build(),
             TracingConfigurationManager.DEFAULT_SQL_CONFIGURATION);
+
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.UNDEFINED).build(),
+            TracingConfigurationManager.DEFAULT_UNDEFINED_CONFIGURATION);
     }
 
     /** */
@@ -149,7 +153,7 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
      * tracing configuration for all scopes will be returned.
      */
     @Test
-    public void testTracingConfigurationWithoutSubCommandsReturnsTracingConfiguratoinForAllScopes() {
+    public void testTracingConfigurationWithoutSubCommandsReturnsTracingConfigurationForAllScopes() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration"));
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> expTracingCfg =
@@ -171,7 +175,7 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
      * TX based tracing configuration will be returned: both scope specific and label specific.
      */
     @Test
-    public void testGetAllWithScopeReturnsOnlySpecifiedScopeSpecificConfiguratoin() {
+    public void testGetAllWithScopeReturnsOnlySpecifiedScopeSpecificConfiguration() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "get_all", "--scope", "TX"));
 
         VisorTracingConfigurationTaskResult expRes = new VisorTracingConfigurationTaskResult();
@@ -211,7 +215,7 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
      * TX-label specific configuration not expected.
      */
     @Test
-    public void testGetWithScopeReturnsScopeSpecificConfiguratoin() {
+    public void testGetWithScopeReturnsScopeSpecificConfiguration() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "get", "--scope", "TX"));
 
         // Check command result.
@@ -301,7 +305,7 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
      * Whole TX based configuration should be returned.
      */
     @Test
-    public void testResetWithScopeResetsScopeSpecificConfiguratoinAndReturnesScopeBasedConfiguration() {
+    public void testResetWithScopeResetsScopeSpecificConfigurationAndReturnsScopeBasedConfiguration() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "reset", "--scope", "TX"));
 
         // Check command result.
@@ -319,7 +323,7 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
      * Whole TX based configuration should be returned.
      */
     @Test
-    public void testResetWithScopeAndLabelResetsLabelSpecificConfiguratoinAndReturnesScopeBasedConfiguration() {
+    public void testResetWithScopeAndLabelResetsLabelSpecificConfigurationAndReturnsScopeBasedConfiguration() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "reset", "--scope", "TX",
             "--label", "label"));
 
@@ -338,7 +342,7 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
      * Whole TX based configuration should be returned.
      */
     @Test
-    public void testSetWithScopeSetsScopeSpecificConfiguratoinAndReturnesScopeBasedConfiguration() {
+    public void testSetWithScopeSetsScopeSpecificConfigurationAndReturnsScopeBasedConfiguration() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "set", "--scope", "TX",
             "--sampling-rate", "0.123", "--included-scopes", "COMMUNICATION,EXCHANGE"));
 
@@ -363,7 +367,7 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
      * Whole TX based configuration should be returned.
      */
     @Test
-    public void testSetWithScopeAndLabelSetsLabelSpecificConfiguratoinAndReturnsScopeBasedConfiguration() {
+    public void testSetWithScopeAndLabelSetsLabelSpecificConfigurationAndReturnsScopeBasedConfiguration() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "set", "--scope", "TX",
             "--label", "label", "--sampling-rate", "0.123", "--included-scopes", "COMMUNICATION,EXCHANGE"));
 

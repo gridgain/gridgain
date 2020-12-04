@@ -18,9 +18,11 @@ package org.apache.ignite.spi.tracing;
 
 import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,8 +34,9 @@ public class TracingConfigurationCoordinates implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Logger. */
-    private static final Logger LOG = Logger.getLogger(TracingConfigurationCoordinates.class.getName());
+    /** */
+    @LoggerResource
+    private IgniteLogger log;
 
     /**
      * Specifies the {@link Scope} of a trace's root span to which some specific tracing configuration will be applied.
@@ -156,7 +159,8 @@ public class TracingConfigurationCoordinates implements Serializable {
             in.defaultReadObject();
         }
         catch (Exception e) {
-            LOG.log(Level.WARNING, "Unable to deserialize tracing configuration coordinates: " + e.getMessage());
+            LT.warn(log, "Unable to deserialize tracing configuration coordinates: " + e.getMessage());
+
             scope = Scope.UNDEFINED;
             lb = null;
         }
