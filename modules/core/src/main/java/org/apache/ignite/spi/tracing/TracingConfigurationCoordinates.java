@@ -156,7 +156,7 @@ public class TracingConfigurationCoordinates implements Serializable {
             in.defaultReadObject();
         }
         catch (Exception e) {
-            LOG.log(Level.WARNING, "Unable to deserialize tracing configuration coordinates.", e);
+            LOG.log(Level.WARNING, "Unable to deserialize tracing configuration coordinates: " + e.getMessage());
             scope = Scope.UNDEFINED;
             lb = null;
         }
