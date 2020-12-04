@@ -161,7 +161,7 @@ public class TracingConfigurationCoordinates implements Serializable {
         catch (Exception e) {
             LT.warn(log, "Unable to deserialize tracing configuration coordinates: " + e.getMessage());
 
-            scope = Scope.UNDEFINED;
+            scope = null;
             lb = null;
         }
     }

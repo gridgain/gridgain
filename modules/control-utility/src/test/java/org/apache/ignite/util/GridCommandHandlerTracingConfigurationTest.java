@@ -94,10 +94,6 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
         DFLT_CONFIG_MAP.put(
             new TracingConfigurationCoordinates.Builder(Scope.SQL).build(),
             TracingConfigurationManager.DEFAULT_SQL_CONFIGURATION);
-
-        DFLT_CONFIG_MAP.put(
-            new TracingConfigurationCoordinates.Builder(Scope.UNDEFINED).build(),
-            TracingConfigurationManager.DEFAULT_UNDEFINED_CONFIGURATION);
     }
 
     /** */

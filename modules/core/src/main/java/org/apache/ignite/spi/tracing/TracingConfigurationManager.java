@@ -152,9 +152,6 @@ public interface TracingConfigurationManager {
             case SQL:
                 return DEFAULT_SQL_CONFIGURATION;
 
-            case UNDEFINED:
-                return DEFAULT_UNDEFINED_CONFIGURATION;
-
             default:
                 return NOOP_CONFIGURATION;
         }
