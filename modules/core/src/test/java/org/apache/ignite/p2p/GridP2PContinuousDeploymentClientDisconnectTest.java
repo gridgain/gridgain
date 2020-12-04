@@ -49,10 +49,10 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.GridTopic.TOPIC_CLASSLOAD;
-import static org.junit.Assert.assertTrue;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /**
- * Tests for continuous deployment with client disconnection
+ * Tests for client disconnection during continuous query deployment.
  */
 public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonAbstractTest {
     /** */
@@ -122,10 +122,11 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
     }
 
     /**
-     * Test starts 1 server node and 2 client nodes. The first client node deploys
-     * CQ for the cache {@link #DEFAULT_CACHE_NAME}.
-     * Expected that CQ won't be deployed to the second client, since the client doesn't
-     * store any data.
+     * Test starts 1 server node and 1 client node. Class-loading request for the {@link #P2P_TEST_OBJ_RSRC_NAME}
+     * resource blocks on the client node. The client node tries to deploy CQ with remote filter for
+     * the cache {@link #DEFAULT_CACHE_NAME}.
+     * Expected that exception with 'Failed to unmarshal deployable object.' error message will be thrown and
+     * the server node wouldn't be failed.
      *
      * @throws Exception If failed.
      */
@@ -144,14 +145,14 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
         IgniteEx client = grid(1);
 
         LogListener lsnr = LogListener.matches(
-            "Failed to initialize a continuous query."
+            "Failed to unmarshal deployable object."
         ).build();
 
         testLog.registerListener(lsnr);
 
         IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
-        cache.query(qry);
+        assertThrowsWithCause(() -> cache.query(qry), CacheException.class);
 
         assertTrue(lsnr.check());
 
@@ -159,7 +160,15 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
         assertFalse(failure.get());
     }
 
-    /** */
+    /**
+     * Test starts 1 server node and 1 client node. Class-loading request for the {@link #P2P_TEST_OBJ_RSRC_NAME}
+     * resource blocks on the client node. The client node tries to deploy CQ with remote filter factory for
+     * the cache {@link #DEFAULT_CACHE_NAME}.
+     * Expected that exception with 'Failed to initialize a continuous query.' error message will be thrown and
+     * the server node wouldn't be failed.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testContinuousQueryRemoteFilterFactory() throws Exception {
         final Class<Factory<? extends CacheEntryEventFilter<Integer, Integer>>> rmtFilterFactoryCls =
@@ -190,7 +199,15 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
         assertFalse(failure.get());
     }
 
-    /** */
+    /**
+     * Test starts 1 server node and 1 client node. Class-loading request for the {@link #P2P_TEST_OBJ_RSRC_NAME}
+     * resource blocks on the client node. The client node tries to deploy CQ with remote transformer for
+     * the cache {@link #DEFAULT_CACHE_NAME}.
+     * Expected that exception with 'Failed to unmarshal deployable object.' error message will be thrown and
+     * the server node wouldn't be failed.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testContinuousQueryRemoteTransformer() throws Exception {
         Class<Factory<IgniteClosure<CacheEntryEvent<? extends Integer, ? extends Integer>, String>>> rmtTransformerFactoryCls =
@@ -219,53 +236,81 @@ public class GridP2PContinuousDeploymentClientDisconnectTest extends GridCommonA
         assertFalse(failure.get());
     }
 
-    /** */
+    /**
+     * Test starts 1 server node and 1 client node. Class-loading request for the {@link #P2P_TEST_OBJ_RSRC_NAME}
+     * resource blocks on the client node. The client node tries to deploy remote event listener for
+     * the cache {@link #DEFAULT_CACHE_NAME}.
+     * Expected that exception with 'Failed to unmarshal deployable object.' error message will be thrown and
+     * the server node wouldn't be failed.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testEventRemoteFilter() throws Exception {
         final Class<IgnitePredicate<Event>> evtFilterCls =
             (Class<IgnitePredicate<Event>>) getExternalClassLoader().loadClass(EVT_REMOTE_FILTER_CLS_NAME);
 
-        IgniteException err = null;
+        LogListener lsnr = LogListener.matches(
+            "Failed to unmarshal deployable object."
+        ).build();
 
-        try {
-            grid(1).events().remoteListen(new IgniteBiPredicate<UUID, Event>() {
-                @Override public boolean apply(UUID uuid, Event evt) {
-                    return true;
-                }
-            }, evtFilterCls.newInstance(), EventType.EVT_NODE_JOINED);
-        } catch (IgniteException e) {
-            err = e;
-        }
+        testLog.registerListener(lsnr);
 
-        // Check that continuous query deployment failed.
-        assertNotNull(err);
+        assertThrowsWithCause(
+            () -> grid(1)
+                .events()
+                .remoteListen(
+                    (uuid, event) -> true,
+                    evtFilterCls.newInstance(),
+                    EventType.EVT_NODE_JOINED
+                ),
+            IgniteException.class
+        );
+
+        assertTrue(lsnr.check());
 
         // Check that the failure handler was not called.
         assertFalse(failure.get());
     }
 
-    /** */
+    /**
+     * Test starts 1 server node and 1 client node. Class-loading request for the {@link #P2P_TEST_OBJ_RSRC_NAME}
+     * resource blocks on the client node. The client node tries to deploy remote message listener for
+     * the cache {@link #DEFAULT_CACHE_NAME}.
+     * Expected that exception with 'Failed to unmarshal deployable object.' error message will be thrown and
+     * the server node wouldn't be failed.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testMessageRemoteListen() throws Exception {
         Class<IgniteBiPredicate<UUID, String>> rmtLsnrCls =
             (Class<IgniteBiPredicate<UUID, String>>) getExternalClassLoader().loadClass(MSG_REMOTE_LSNR_CLS_NAME);
 
-        IgniteException err = null;
+        LogListener lsnr = LogListener.matches(
+            "Failed to unmarshal deployable object."
+        ).build();
 
-        try {
-            grid(1).message().remoteListen("test", rmtLsnrCls.newInstance());
-        } catch (IgniteException e) {
-            err = e;
-        }
+        testLog.registerListener(lsnr);
 
-        // Check that continuous query deployment failed.
-        assertNotNull(err);
+        assertThrowsWithCause(
+            () -> grid(1)
+                .message()
+                .remoteListen("test", rmtLsnrCls.newInstance()),
+            IgniteException.class
+        );
+
+        assertTrue(lsnr.check());
 
         // Check that the failure handler was not called.
         assertFalse(failure.get());
     }
 
-    /** Blocks peer-class loading for {@link #P2P_TEST_OBJ_RSRC_NAME} resource. */
+    /**
+     * Blocks peer-class loading for {@link #P2P_TEST_OBJ_RSRC_NAME} resource.
+     *
+     * @param node The node where peer-class loading should be blocked.
+     */
     private void blockClassLoadingRequest(IgniteEx node) {
         GridKernalContext ctx = node.context();
 
