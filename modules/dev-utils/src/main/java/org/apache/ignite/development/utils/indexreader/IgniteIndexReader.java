@@ -182,7 +182,7 @@ public class IgniteIndexReader implements AutoCloseable {
     @Nullable private final Set<String> indexes;
 
     /** Output strean. */
-    private final PrintStream outStream;
+    protected final PrintStream outStream;
 
     /** Error output stream. */
     private final PrintStream outErrStream;
@@ -333,7 +333,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param pageId Page ID.
      * @param buf Buffer.
      */
-    private void readPage(FilePageStore store, long pageId, ByteBuffer buf) throws IgniteCheckedException {
+    protected void readPage(FilePageStore store, long pageId, ByteBuffer buf) throws IgniteCheckedException {
         try {
             store.read(pageId, buf, false);
         }
@@ -499,7 +499,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @return Result of closure.
      * @throws IgniteCheckedException If failed.
      */
-    private <T> T doWithBuffer(BufferClosure<T> c) throws IgniteCheckedException {
+    protected <T> T doWithBuffer(BufferClosure<T> c) throws IgniteCheckedException {
         ByteBuffer buf = allocateBuffer(pageSize);
 
         try {
@@ -665,7 +665,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @return Map of found pages. First page of this class that was found, is put to this map.
      * @throws IgniteCheckedException If failed.
      */
-    private Map<Class, Long> findPages(int partId, byte flag, FilePageStore store, Set<Class> pageTypes)
+    protected Map<Class, Long> findPages(int partId, byte flag, FilePageStore store, Set<Class> pageTypes)
         throws IgniteCheckedException {
         Map<Class, Long> res = new HashMap<>();
 
@@ -1095,7 +1095,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param itemStorage Items storage.
      * @return Tree traversal info.
      */
-    private TreeTraversalInfo horizontalTreeScan(
+    protected TreeTraversalInfo horizontalTreeScan(
         FilePageStore store,
         long rootPageId,
         String treeName,
@@ -1563,7 +1563,7 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      *
      */
-    private interface BufferClosure<T> {
+    protected interface BufferClosure<T> {
         /** */
         T apply(ByteBuffer buf, Long addr) throws IgniteCheckedException;
     }
