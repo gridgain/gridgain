@@ -1357,14 +1357,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         int cnt0 = cctx.config().isEagerTtl() ? expireInternal(cctx, c, amount, false) : 0;
 
+        if (grp.isLocal())
+            return amount != -1 && cnt0 >= amount;
+
         long tsCnt = grp.topology().localPartitions().stream().
             filter(p -> p.state() == OWNING).mapToLong(p -> p.dataStore().tombstonesCount()).sum();
 
         if (tsCnt == 0)
             return false;
 
-        if (tsCnt > 10_000) // Force removal of tombstones beyond the limit.
-            amount = (int) (tsCnt - 10_000);
+        long tsLimit = ctx.ttl().tombstonesLimit();
+
+        if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
+            amount = (int) (tsCnt - tsLimit);
 
         int cnt1 = expireInternal(cctx, c, amount, true);
 

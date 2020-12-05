@@ -28,6 +28,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -55,6 +56,24 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
 
     /** Map of registered ttl managers, where the cache id is used as the key. */
     private final Map<Integer, GridCacheTtlManager> mgrs = new ConcurrentHashMap<>();
+
+    /** Property for update policy of shutdown. */
+    private DistributedLongProperty tsLimit = DistributedLongProperty.detachedLongProperty("tombstones.limit");
+
+    /** */
+    private volatile long dfltTsLimit = 10_000; // TODO use failure detection.
+
+    /** {@inheritDoc} */
+    @Override protected void start0() throws IgniteCheckedException {
+        super.start0();
+
+        cctx.kernalContext().internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+            tsLimit.addListener((name, oldVal, newVal) ->
+                U.log(log, "Tombstones limit was updated [oldVal=" + oldVal + ", newVal=" + newVal + "]"));
+
+            dispatcher.registerProperty(tsLimit);
+        });
+    }
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -99,6 +118,13 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
         finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * @return Tombstones limit per cache group.
+     */
+    public long tombstonesLimit() {
+        return tsLimit.getOrDefault(dfltTsLimit);
     }
 
     /**

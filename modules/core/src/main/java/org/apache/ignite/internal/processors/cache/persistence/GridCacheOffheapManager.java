@@ -1321,13 +1321,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             long totalTsCnt = grp.topology().localPartitions().stream().
                 filter(p -> p.state() == OWNING).mapToLong(p -> p.dataStore().tombstonesCount()).sum();
 
+            long tsLimit = ctx.ttl().tombstonesLimit();
+
             // Do not clear tombstones on not full basiline and if the limit is not exceeded.
             // This will allow offline node to join faster using fast full rebalancing.
-            if (!discoCache.fullBaseline() && totalTsCnt <= 10_000)
+            if (!discoCache.fullBaseline() && totalTsCnt <= tsLimit)
                 return false;
 
-            if (totalTsCnt > 10_000) // Force removal of tombstones beyond the limit.
-                amount = (int) (totalTsCnt - 10_000); // TODO configurable limit.
+            if (totalTsCnt > tsLimit) // Force removal of tombstones beyond the limit.
+                amount = (int) (totalTsCnt - tsLimit); // TODO configurable limit.
 
             // Sort by descending tombstones count.
             stores.sort((o1, o2) -> {
