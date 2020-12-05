@@ -2681,6 +2681,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 return false;
 
             try {
+                if (isStartVersion())
+                    unswap(null, false);
+
+                if (deletedUnlocked()) // Skip tombstone.
+                    return false;
+
                 if ((!hasReaders() || readers)) {
                     // markObsolete will clear the value.
                     if (!(markObsolete0(ver, true, null))) {

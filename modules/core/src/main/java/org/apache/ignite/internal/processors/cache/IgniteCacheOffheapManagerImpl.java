@@ -725,9 +725,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     @Override public void clearCache(GridCacheContext cctx, boolean readers) {
         GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
+        // Local clearing should skip existing tombstones to avoid incorrect tombstone counter invariant.
         try (GridCloseableIterator<CacheDataRow> it = grp.isLocal() ?
-            iterator(cctx.cacheId(), cacheDataStores().iterator(), null, null, DATA_AND_TOMBSONES) :
-            evictionSafeIterator(cctx.cacheId(), cacheDataStores().iterator(), DATA_AND_TOMBSONES)) {
+            iterator(cctx.cacheId(), cacheDataStores().iterator(), null, null, DATA) :
+            evictionSafeIterator(cctx.cacheId(), cacheDataStores().iterator(), DATA)) {
             while (it.hasNext()) {
                 cctx.shared().database().checkpointReadLock();
 

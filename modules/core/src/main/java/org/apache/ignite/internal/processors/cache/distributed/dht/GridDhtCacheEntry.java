@@ -645,18 +645,13 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
     /**
      * Marks entry as obsolete and, if possible or required, removes it
-     * from swap storage.
-     *
-     * TODO get rid ?? Use .clear
+     * from swap storage. Forces physical removal of tombstone.
      *
      * @param ver Obsolete version.
      * @return {@code True} if entry was not being used, passed the filter and could be removed.
      * @throws IgniteCheckedException If failed to remove from swap.
      */
-    public boolean clearInternal(
-        GridCacheVersion ver,
-        GridCacheObsoleteEntryExtras extras
-    ) throws IgniteCheckedException {
+    public boolean clearInternal(GridCacheVersion ver) throws IgniteCheckedException {
         boolean rmv = false;
 
         lockEntry();
@@ -664,7 +659,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         try {
             // Call markObsolete0 to avoid recursive calls to clear if
             // we are clearing dht local partition (onMarkedObsolete should not be called).
-            if (!markObsolete0(ver, false, extras)) {
+            if (!markObsolete0(ver, false, null)) {
                 if (log.isDebugEnabled())
                     log.debug("Entry could not be marked obsolete (it is still used or has readers): " + this);
 

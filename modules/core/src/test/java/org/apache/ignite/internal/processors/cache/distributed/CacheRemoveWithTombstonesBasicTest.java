@@ -753,7 +753,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         // Test partition preloading retry in the middle after cancellation.
     }
 
-    // Test the removal with expiration produces tombstone.
+    // Test if the removal with expiration produces tombstone.
     @Test
     public void testRemoveWithExpiration() throws Exception {
         IgniteEx g0 = startGrid(0);
@@ -773,7 +773,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         validateCache(grpCtx, pk, 1, 0);
     }
 
-    // Test removing of non-existent row creates tombstone.
+    /** Test removing of non-existent row creates tombstone. */
     @Test
     public void testRemoveNonExistentRow() throws Exception {
         IgniteEx crd = startGrid(0);
@@ -791,7 +791,22 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         validateCache(grpCtx, pk, 0, 0);
     }
 
-    // Test removing of already existing tombstone is no-op.
+    /** Test removing of non-existent row locally doesn't creates tombstone. */
+    @Test
+    public void testRemoveNonExistentRowLocally() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+
+        // Should create TS.
+        int pk = 0;
+        cache.localClear(pk);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        validateCache(grpCtx, pk, 0, 0);
+    }
+
+    /** Test removing of already existing tombstone is no-op. */
     @Test
     public void testRemoveExpicitTombstoneRow() throws Exception {
         IgniteEx crd = startGrid(0);
@@ -807,6 +822,26 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         // Should be no-op.
         cache.remove(pk);
+
+        validateCache(grpCtx, pk, 1, 0);
+    }
+
+    /** Test locally removing of already existing tombstone is no-op. */
+    @Test
+    public void testRemoveExpicitTombstoneRowLocally() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+
+        // Should create TS.
+        int pk = 0;
+        cache.remove(pk);
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        validateCache(grpCtx, pk, 1, 0);
+
+        // Should be no-op.
+        cache.localClear(pk);
 
         validateCache(grpCtx, pk, 1, 0);
     }
@@ -1429,7 +1464,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     public void testClearingCountersFullScanAtomic() throws Exception {
         IgniteEx crd = startGrid(0);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
 
         // Should create TS.
         int pk = 0;
@@ -1455,22 +1490,49 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     public void testClearingCountersCacheClearAtomic() throws Exception {
         IgniteEx crd = startGrid(0);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
 
         // Should create TS.
-        int pk = 0;
-        cache.remove(pk);
+        int part = 0;
+
+        cache.put(part, 0);
+        cache.remove(part);
+        cache.put(part + PARTS, 0);
+        cache.remove(part + PARTS * 2);
+
+        cache.clear(); // Clear should skip already existing tombstones.
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateCache(grpCtx, pk, 1, 0);
+        validateCache(grpCtx, part, 2, 0);
 
         GridDhtLocalPartition locPart = grpCtx.topology().localPartition(0);
+        assertEquals("ts counter shouldn't move", 0, locPart.dataStore().partUpdateCounter().tombstoneClearCounter());
+    }
 
-        PartitionUpdateCounter cntr = locPart.dataStore().partUpdateCounter();
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClearingCountersRemoveAllAtomic() throws Exception {
+        IgniteEx crd = startGrid(0);
 
-        cache.clear();
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
 
-        assertEquals(1, cntr.tombstoneClearCounter());
+        // Should create TS.
+        int part = 0;
+
+        cache.put(part, 0);
+        cache.remove(part);
+        cache.put(part + PARTS, 0);
+        cache.remove(part + PARTS * 2);
+
+        cache.removeAll(); // Remove all should create tombstones and skip existing.
+
+        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        validateCache(grpCtx, part, 3, 0);
+
+        GridDhtLocalPartition locPart = grpCtx.topology().localPartition(0);
+        assertEquals("ts counter shouldn't move", 0, locPart.dataStore().partUpdateCounter().tombstoneClearCounter());
     }
 
     /**

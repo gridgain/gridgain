@@ -42,7 +42,6 @@ import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionMetaStateRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMapImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -77,6 +76,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
+import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
@@ -1097,6 +1097,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         // Defines rows excluded from clearing.
         final Predicate<CacheDataRow> rowFilter;
+        // Defines a method for clearing an entry.
         final GridClosure3<CacheDataRow, GridCacheContext, GridCacheVersion, Boolean> clearClo;
 
         GridDhtPartitionState state0 = state();
@@ -1104,14 +1105,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE) {
             rowFilter = r -> false;
 
-            clearClo = this::clearUnderLock;
+            clearClo = this::clearSafe;
         }
         else if (task.reason == PartitionsEvictManager.EvictReason.CLEARING) {
             long order0 = clearVer;
 
             rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || row.version().order() > order0);
 
-            clearClo = this::clearUnderLock;
+            clearClo = this::clearSafe;
         }
         else if (task.reason == PartitionsEvictManager.EvictReason.EVICTION) {
             rowFilter = r -> false;
@@ -1210,12 +1211,31 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @param cctx Cache context.
      * @param obsoleteVer Obsolete version.
      */
-    private boolean clearUnderLock(CacheDataRow row, GridCacheContext cctx, GridCacheVersion obsoleteVer) {
+    private boolean clearSafe(CacheDataRow row, GridCacheContext cctx, GridCacheVersion obsoleteVer) {
         try {
-            GridCacheEntryEx entry = cctx.cache().entryEx(row.key());
+            GridDhtCacheEntry entry = (GridDhtCacheEntry) cctx.cache().entryEx(row.key());
 
-            if (entry != null)
-                return entry.clear(obsoleteVer, true);
+            if (entry != null) {
+                boolean cleared = entry.clearInternal(obsoleteVer);
+
+                if (cleared && grp.eventRecordable(EVT_CACHE_REBALANCE_OBJECT_UNLOADED) && !cctx.config().isEventsDisabled()) {
+                    cctx.events().addEvent(entry.partition(),
+                        entry.key(),
+                        ctx.localNodeId(),
+                        null,
+                        null,
+                        null,
+                        EVT_CACHE_REBALANCE_OBJECT_UNLOADED,
+                        null,
+                        false,
+                        entry.rawGet(),
+                        entry.hasValue(),
+                        null,
+                        null,
+                        null,
+                        false);
+                }
+            }
         }
         catch (GridDhtInvalidPartitionException ignored) {
             // No-op.
