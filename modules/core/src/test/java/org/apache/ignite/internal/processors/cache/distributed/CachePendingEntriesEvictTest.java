@@ -62,7 +62,7 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 
 /**
- * TODO introduce abstract test.
+ *
  */
 @RunWith(Parameterized.class)
 public class CachePendingEntriesEvictTest extends GridCommonAbstractTest {

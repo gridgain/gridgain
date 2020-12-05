@@ -26,6 +26,7 @@ import org.apache.ignite.internal.metric.IoStatisticsCacheSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGetCustomCollectionsSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheLoadRebalanceEvictionSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheAtomicPrimarySyncBackPressureTest;
+import org.apache.ignite.internal.processors.cache.distributed.CachePendingEntriesEvictTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesBasicTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesPreloadingLoadTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesPreloadingTest;
@@ -124,6 +125,7 @@ public class IgniteCacheMvccTestSuite9 {
         ignoredTests.add(CacheRemoveWithTombstonesPreloadingLoadTest.class);
         ignoredTests.add(CacheRemoveWithTombstonesFailoverTest.class);
         ignoredTests.add(TombstoneClearingCountersTest.class);
+        ignoredTests.add(CachePendingEntriesEvictTest.class);
 
         return new ArrayList<>(IgniteCacheTestSuite9.suite(ignoredTests));
     }
