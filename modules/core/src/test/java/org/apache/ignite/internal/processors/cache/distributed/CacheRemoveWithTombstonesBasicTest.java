@@ -81,6 +81,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -1534,6 +1535,46 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         GridDhtLocalPartition locPart = grpCtx.topology().localPartition(0);
         assertEquals("ts counter shouldn't move", 0, locPart.dataStore().partUpdateCounter().tombstoneClearCounter());
     }
+
+    /**
+     * Tests if replacing the tombstone before it's removal doesn't produce TTL on new entry.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTombstoneUpdateNoTTLAtomic() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+
+        int part = 0;
+        cache.put(part, 0);
+        cache.remove(part);
+        cache.put(part, 1);
+
+        PendingEntriesTree tree =
+            crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part).dataStore().pendingTree();
+
+        assertTrue(tree.isEmpty());
+    }
+
+    @Test
+    public void testTombstoneUpdateNoTTLTx() throws Exception {
+        IgniteEx crd = startGrid(0);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+
+        int part = 0;
+        cache.put(part, 0);
+        cache.remove(part);
+        cache.put(part, 1);
+
+        PendingEntriesTree tree =
+            crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part).dataStore().pendingTree();
+
+        assertTrue(tree.isEmpty());
+    }
+
 
     /**
      * TODO validate cache size, add test for many caches in group.

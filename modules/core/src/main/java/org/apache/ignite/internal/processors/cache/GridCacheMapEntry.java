@@ -1541,7 +1541,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             else {
                 if (ttl == -1L) {
                     ttl = ttlExtras();
-                    expireTime = expireTimeExtras();
+                    expireTime = deletedUnlocked() ? 0 : expireTimeExtras();
                 }
                 else
                     expireTime = CU.toExpireTime(ttl);
@@ -6554,7 +6554,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (newSysTtl == CU.TTL_NOT_CHANGED) {
                         newSysExpireTime = CU.EXPIRE_TIME_CALCULATE;
                         newTtl = entry.ttlExtras();
-                        newExpireTime = entry.expireTimeExtras();
+                        newExpireTime = entry.deletedUnlocked() ? 0 : entry.expireTimeExtras();
                     }
                     else if (newSysTtl == CU.TTL_ZERO) {
                         op = DELETE;

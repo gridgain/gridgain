@@ -1527,7 +1527,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 CacheDataRowStore rowStore,
                 CacheDataTree dataTree,
                 PartitionLogTree logTree,
-            Supplier<PendingEntriesTree> pendingEntries,
+                Supplier<PendingEntriesTree> pendingEntries,
                 CacheGroupContext grp,
                 GridSpinBusyLock busyLock,
                 IgniteLogger log
@@ -2761,8 +2761,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
 
-            if (oldTombstone)
+            if (oldTombstone) {
                 tombstoneRemoved();
+
+                clearPendingEntries(cctx, oldRow);
+            }
 
             if (isIncrementalDrEnabled(cctx)) {
                 if (oldRow != null && oldRow.version().updateCounter() != 0)

@@ -81,6 +81,7 @@ public class PendingRow {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(PendingRow.class, this);
+        return S.toString(PendingRow.class, this, "expireTime", expireTime, "link", link, "cacheId", cacheId,
+            "tombstone", tombstone, "key", key);
     }
 }
