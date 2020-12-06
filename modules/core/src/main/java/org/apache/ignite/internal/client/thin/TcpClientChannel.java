@@ -386,12 +386,12 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             if (msgSize > hdrSize)
                 res = buf;
         }
-        else if (status == ClientStatus.SECURITY_VIOLATION)
-            err = new ClientAuthorizationException();
         else {
             String errMsg = ClientUtils.createBinaryReader(null, dataInput).readString();
 
-            err = new ClientServerError(errMsg, status, resId);
+            err = status == ClientStatus.SECURITY_VIOLATION
+                    ? new ClientAuthorizationException(errMsg)
+                    : new ClientServerError(errMsg, status, resId);
         }
 
         if (notificationOp == null) { // Respone received.
