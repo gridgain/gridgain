@@ -3249,13 +3249,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                         row.key.partition(partId);
 
-                        if (pendingTree.removex(row)) {
-                            // Can't throw GridDhtInvalidPartitionException because the partition is reserved.
-                            GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
+                        // Can't throw GridDhtInvalidPartitionException because the partition is reserved.
+                        GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
-                            if (entry != null)
-                                c.apply(entry, obsoleteVer);
-                        }
+                        if (entry != null)
+                            c.apply(entry, obsoleteVer);
 
                         cleared++;
 

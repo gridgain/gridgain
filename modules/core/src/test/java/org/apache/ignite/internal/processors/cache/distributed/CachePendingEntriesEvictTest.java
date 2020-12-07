@@ -167,7 +167,8 @@ public class CachePendingEntriesEvictTest extends GridCommonAbstractTest {
         doSleep(1);
         cache.remove(part + PARTS);
 
-        PartitionUpdateCounter cntr = grpCtx.topology().localPartition(part).dataStore().partUpdateCounter();
+        IgniteCacheOffheapManager.CacheDataStore store = grpCtx.topology().localPartition(part).dataStore();
+        PartitionUpdateCounter cntr = store.partUpdateCounter();
 
         doSleep(1000);
 
@@ -182,6 +183,8 @@ public class CachePendingEntriesEvictTest extends GridCommonAbstractTest {
 
         validateCache(grpCtx, part, 0, 0);
         assertEquals(2, cntr.tombstoneClearCounter());
+
+        assertTrue(store.pendingTree().isEmpty());
     }
 
     /**
