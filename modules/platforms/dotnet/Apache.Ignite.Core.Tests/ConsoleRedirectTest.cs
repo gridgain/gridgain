@@ -29,8 +29,10 @@ namespace Apache.Ignite.Core.Tests
     /// </summary>
     public class ConsoleRedirectTest
     {
+#if !NETCOREAPP
         /** */
         private const string PrintlnTask = "org.apache.ignite.platform.PlatformPrintlnTask";
+#endif
 
         /** */
         private StringBuilder _outSb;
@@ -84,7 +86,7 @@ namespace Apache.Ignite.Core.Tests
             {
                 Logger = null
             };
-            
+
             using (Ignition.Start(cfg))
             {
                 Assert.AreEqual(1, Regex.Matches(_outSb.ToString(), "ver=1, locNode=[a-fA-F0-9]{8,8}, servers=1, clients=0,").Count);
@@ -139,7 +141,7 @@ namespace Apache.Ignite.Core.Tests
                 {
                     Logger = null
                 };
-                
+
                 Assert.IsTrue(cfg.RedirectJavaConsoleOutput);
 
                 cfg.RedirectJavaConsoleOutput = false;
@@ -169,7 +171,7 @@ namespace Apache.Ignite.Core.Tests
             {
                 Logger = null
             };
-            
+
             using (var ignite = Ignition.Start(cfg))
             {
                 ignite.GetCompute().ExecuteJavaTask<string>(PrintlnTask, "[Primary Domain]");
