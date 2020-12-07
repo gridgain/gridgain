@@ -126,9 +126,6 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
                 }
                 catch (Throwable e) {
                     log.error("Could not execute durable background task: " + task.shortName(), e);
-
-                    if (e instanceof Error)
-                        ctx.failure().process(new FailureContext(CRITICAL_ERROR, e));
                 }
                 finally {
                     startedTasks.remove(task.shortName());
