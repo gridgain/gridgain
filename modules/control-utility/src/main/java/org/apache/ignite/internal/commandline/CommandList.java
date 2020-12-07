@@ -19,7 +19,9 @@ package org.apache.ignite.internal.commandline;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
 import org.apache.ignite.internal.commandline.dr.DrCommand;
+import org.apache.ignite.internal.commandline.encryption.EncryptionCommand;
 import org.apache.ignite.internal.commandline.meta.MetadataCommand;
+import org.apache.ignite.internal.commandline.property.PropertyCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
 /**
@@ -53,6 +55,9 @@ public enum CommandList {
     /** */
     DIAGNOSTIC("--diagnostic", new DiagnosticCommand()),
 
+    /** Encryption features command. */
+    ENCRYPTION("--encryption", new EncryptionCommand()),
+
     /** */
     ROLLING_UPGRADE("--rolling-upgrade", new RollingUpgradeCommand()),
 
@@ -72,7 +77,16 @@ public enum CommandList {
     METADATA("--meta", new MetadataCommand()),
 
     /** Warm-up command. */
-    WARM_UP("--warm-up", new WarmUpCommand());
+    WARM_UP("--warm-up", new WarmUpCommand()),
+
+    /** Commands to manage distributed properties. */
+    PROPERTY("--property", new PropertyCommand()),
+
+    /** */
+    PERSISTENCE("--persistence", new PersistenceCommand()),
+
+    /** Command to manage PDS defragmentation. */
+    DEFRAGMENTATION("--defragmentation", new DefragmentationCommand());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();

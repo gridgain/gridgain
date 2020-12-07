@@ -80,6 +80,11 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
     }
 
     /** {@inheritDoc} */
+    @Override public void state(ClusterState newState, boolean forceDeactivation) throws GridClientException {
+        withReconnectHandling((con, nodeId) -> con.changeState(newState, nodeId, forceDeactivation), nonSupportedNodes).get();
+    }
+
+    /** {@inheritDoc} */
     @Override public void state(ClusterState newState) throws GridClientException {
         withReconnectHandling((con, nodeId) -> con.changeState(newState, nodeId), nonSupportedNodes).get();
     }

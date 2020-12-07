@@ -26,6 +26,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.mxbean.MetricsMxBean;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_DATA_STORAGE_PAGE_SIZE;
@@ -176,6 +177,9 @@ public class DataStorageConfiguration implements Serializable {
     /** Default wal compaction level. */
     public static final int DFLT_WAL_COMPACTION_LEVEL = Deflater.BEST_SPEED;
 
+    /** Default defragmentation thread pool size. */
+    public static final int DFLT_DEFRAGMENTATION_THREAD_POOL_SIZE = 4;
+
     /** Default compression algorithm for WAL page snapshot records. */
     public static final DiskPageCompression DFLT_WAL_PAGE_COMPRESSION = DiskPageCompression.DISABLED;
 
@@ -310,6 +314,12 @@ public class DataStorageConfiguration implements Serializable {
 
     /** Default warm-up configuration. */
     @Nullable private WarmUpConfiguration dfltWarmUpCfg;
+
+    /** Encryption configuration. */
+    private EncryptionConfiguration encCfg = new EncryptionConfiguration();
+
+    /** Maximum number of partitions which can be defragmented at the same time. */
+    private int defragmentationThreadPoolSize = DFLT_DEFRAGMENTATION_THREAD_POOL_SIZE;
 
     /**
      * Creates valid durable memory configuration with all default values.
@@ -754,7 +764,9 @@ public class DataStorageConfiguration implements Serializable {
      * hits will be tracked. Default value is {@link #DFLT_RATE_TIME_INTERVAL_MILLIS}.
      *
      * @return Time interval in milliseconds.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public long getMetricsRateTimeInterval() {
         return metricsRateTimeInterval;
     }
@@ -764,7 +776,9 @@ public class DataStorageConfiguration implements Serializable {
      * hits will be tracked.
      *
      * @param metricsRateTimeInterval Time interval in milliseconds.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public DataStorageConfiguration setMetricsRateTimeInterval(long metricsRateTimeInterval) {
         this.metricsRateTimeInterval = metricsRateTimeInterval;
 
@@ -776,7 +790,9 @@ public class DataStorageConfiguration implements Serializable {
      * Default value is {@link #DFLT_SUB_INTERVALS}.
      *
      * @return The number of sub-intervals for history tracking.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public int getMetricsSubIntervalCount() {
         return metricsSubIntervalCnt;
     }
@@ -785,7 +801,9 @@ public class DataStorageConfiguration implements Serializable {
      * Sets the number of sub-intervals to split the {@link #getMetricsRateTimeInterval()} into to track the update history.
      *
      * @param metricsSubIntervalCnt The number of sub-intervals for history tracking.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public DataStorageConfiguration setMetricsSubIntervalCount(int metricsSubIntervalCnt) {
         this.metricsSubIntervalCnt = metricsSubIntervalCnt;
 
@@ -1116,6 +1134,27 @@ public class DataStorageConfiguration implements Serializable {
     }
 
     /**
+     * Gets encryyption configuration.
+     *
+     * @return Encryption configuration.
+     */
+    public EncryptionConfiguration getEncryptionConfiguration() {
+        return encCfg;
+    }
+
+    /**
+     * Sets encryption configuration.
+     *
+     * @param encCfg Encryption configuration.
+     * @return {@code this} for chaining.
+     */
+    public DataStorageConfiguration setEncryptionConfiguration(EncryptionConfiguration encCfg) {
+        this.encCfg = encCfg;
+
+        return this;
+    }
+
+    /**
      * Sets default warm-up configuration.
      *
      * @param dfltWarmUpCfg Default warm-up configuration. To assign a special
@@ -1136,6 +1175,30 @@ public class DataStorageConfiguration implements Serializable {
      */
     @Nullable public WarmUpConfiguration getDefaultWarmUpConfiguration() {
         return dfltWarmUpCfg;
+    }
+
+    /**
+     * Sets maximum number of partitions which can be defragmented at the same time.
+     *
+     * @param defragmentationThreadPoolSize Maximum number of partitions which can be defragmented at the same time.
+     *      Default is {@link DataStorageConfiguration#DFLT_DEFRAGMENTATION_THREAD_POOL_SIZE}.
+     * @return {@code this} for chaining.
+     */
+    public DataStorageConfiguration setDefragmentationThreadPoolSize(int defragmentationThreadPoolSize) {
+        A.ensure(defragmentationThreadPoolSize > 1, "Defragmentation thread pool size must be greater or equal to 1.");
+
+        this.defragmentationThreadPoolSize = defragmentationThreadPoolSize;
+
+        return this;
+    }
+
+    /**
+     * Maximum number of partitions which can be defragmented at the same time.
+     *
+     * @return Thread pool size for defragmentation.
+     */
+    public int getDefragmentationThreadPoolSize() {
+        return defragmentationThreadPoolSize;
     }
 
     /** {@inheritDoc} */

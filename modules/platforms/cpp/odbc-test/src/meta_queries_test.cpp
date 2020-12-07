@@ -151,7 +151,7 @@ struct MetaQueriesTestSuiteFixture : public odbc::OdbcTestSuite
         SQLSMALLINT scale;
         SQLSMALLINT nullability;
 
-        SQLRETURN ret = SQLDescribeCol(stmt, idx, &name[0], name.size(), &nameLen, &dataType, &size, &scale, &nullability);
+        SQLRETURN ret = SQLDescribeCol(stmt, idx, &name[0], (SQLSMALLINT)name.size(), &nameLen, &dataType, &size, &scale, &nullability);
         ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
         BOOST_CHECK_GE(nameLen, 0);
@@ -188,7 +188,7 @@ struct MetaQueriesTestSuiteFixture : public odbc::OdbcTestSuite
             "   dec3 decimal,"
             "   char1 char(3),"
             "   char2 char(42),"
-            "   char3 char,"
+            "   char3 char not null,"
             "   vchar varchar"
             ")");
 
@@ -217,14 +217,14 @@ struct MetaQueriesTestSuiteFixture : public odbc::OdbcTestSuite
 
         BOOST_CHECK_EQUAL(columnCount, 8);
 
-        CheckColumnMetaWithSQLDescribeCol(stmt, 1, "ID", SQL_INTEGER, 10, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLDescribeCol(stmt, 2, "DEC1", SQL_DECIMAL, 3, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLDescribeCol(stmt, 3, "DEC2", SQL_DECIMAL, 42, 12, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLDescribeCol(stmt, 4, "DEC3", SQL_DECIMAL, 65535, 32767, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLDescribeCol(stmt, 5, "CHAR1", SQL_VARCHAR, 3, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLDescribeCol(stmt, 6, "CHAR2", SQL_VARCHAR, 42, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLDescribeCol(stmt, 7, "CHAR3", SQL_VARCHAR, 2147483647, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLDescribeCol(stmt, 8, "VCHAR", SQL_VARCHAR, 2147483647, 0, SQL_NULLABLE_UNKNOWN);
+        CheckColumnMetaWithSQLDescribeCol(stmt, 1, "ID", SQL_INTEGER, 10, 0, SQL_NULLABLE);
+        CheckColumnMetaWithSQLDescribeCol(stmt, 2, "DEC1", SQL_DECIMAL, 3, 0, SQL_NULLABLE);
+        CheckColumnMetaWithSQLDescribeCol(stmt, 3, "DEC2", SQL_DECIMAL, 42, 12, SQL_NULLABLE);
+        CheckColumnMetaWithSQLDescribeCol(stmt, 4, "DEC3", SQL_DECIMAL, 65535, 32767, SQL_NULLABLE);
+        CheckColumnMetaWithSQLDescribeCol(stmt, 5, "CHAR1", SQL_VARCHAR, 3, 0, SQL_NULLABLE);
+        CheckColumnMetaWithSQLDescribeCol(stmt, 6, "CHAR2", SQL_VARCHAR, 42, 0, SQL_NULLABLE);
+        CheckColumnMetaWithSQLDescribeCol(stmt, 7, "CHAR3", SQL_VARCHAR, 2147483647, 0, SQL_NO_NULLS);
+        CheckColumnMetaWithSQLDescribeCol(stmt, 8, "VCHAR", SQL_VARCHAR, 2147483647, 0, SQL_NULLABLE);
     }
 
     /**
@@ -248,7 +248,7 @@ struct MetaQueriesTestSuiteFixture : public odbc::OdbcTestSuite
         SQLLEN scale;
         SQLLEN nullability;
 
-        SQLRETURN ret = SQLColAttribute(stmt, idx, SQL_DESC_NAME, &name[0], name.size(), &nameLen, 0);
+        SQLRETURN ret = SQLColAttribute(stmt, idx, SQL_DESC_NAME, &name[0], (SQLSMALLINT)name.size(), &nameLen, 0);
         ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
         ret = SQLColAttribute(stmt, idx, SQL_DESC_TYPE, 0, 0, 0, &dataType);
@@ -297,7 +297,7 @@ struct MetaQueriesTestSuiteFixture : public odbc::OdbcTestSuite
             "   dec3 decimal,"
             "   char1 char(3),"
             "   char2 char(42),"
-            "   char3 char,"
+            "   char3 char not null,"
             "   vchar varchar"
             ")");
 
@@ -326,14 +326,14 @@ struct MetaQueriesTestSuiteFixture : public odbc::OdbcTestSuite
 
         BOOST_CHECK_EQUAL(columnCount, 8);
 
-        CheckColumnMetaWithSQLColAttribute(stmt, 1, "ID", SQL_INTEGER, 10, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLColAttribute(stmt, 2, "DEC1", SQL_DECIMAL, 3, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLColAttribute(stmt, 3, "DEC2", SQL_DECIMAL, 42, 12, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLColAttribute(stmt, 4, "DEC3", SQL_DECIMAL, 65535, 32767, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLColAttribute(stmt, 5, "CHAR1", SQL_VARCHAR, 3, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLColAttribute(stmt, 6, "CHAR2", SQL_VARCHAR, 42, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLColAttribute(stmt, 7, "CHAR3", SQL_VARCHAR, 2147483647, 0, SQL_NULLABLE_UNKNOWN);
-        CheckColumnMetaWithSQLColAttribute(stmt, 8, "VCHAR", SQL_VARCHAR, 2147483647, 0, SQL_NULLABLE_UNKNOWN);
+        CheckColumnMetaWithSQLColAttribute(stmt, 1, "ID", SQL_INTEGER, 10, 0, SQL_NULLABLE);
+        CheckColumnMetaWithSQLColAttribute(stmt, 2, "DEC1", SQL_DECIMAL, 3, 0, SQL_NULLABLE);
+        CheckColumnMetaWithSQLColAttribute(stmt, 3, "DEC2", SQL_DECIMAL, 42, 12, SQL_NULLABLE);
+        CheckColumnMetaWithSQLColAttribute(stmt, 4, "DEC3", SQL_DECIMAL, 65535, 32767, SQL_NULLABLE);
+        CheckColumnMetaWithSQLColAttribute(stmt, 5, "CHAR1", SQL_VARCHAR, 3, 0, SQL_NULLABLE);
+        CheckColumnMetaWithSQLColAttribute(stmt, 6, "CHAR2", SQL_VARCHAR, 42, 0, SQL_NULLABLE);
+        CheckColumnMetaWithSQLColAttribute(stmt, 7, "CHAR3", SQL_VARCHAR, 2147483647, 0, SQL_NO_NULLS);
+        CheckColumnMetaWithSQLColAttribute(stmt, 8, "VCHAR", SQL_VARCHAR, 2147483647, 0, SQL_NULLABLE);
     }
 
     /**
@@ -364,6 +364,91 @@ BOOST_AUTO_TEST_CASE(TestGetTypeInfoAllTypes)
 
     if (!SQL_SUCCEEDED(ret))
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+}
+
+BOOST_AUTO_TEST_CASE(TestDateTypeColumnAttributeCurdate)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+
+    SQLCHAR req[] = "select CURDATE()";
+    SQLExecDirect(stmt, req, SQL_NTS);
+
+    SQLLEN intVal = 0;
+
+    SQLRETURN ret = SQLColAttribute(stmt, 1, SQL_DESC_TYPE, 0, 0, 0, &intVal);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(intVal, SQL_TYPE_DATE);
+}
+
+BOOST_AUTO_TEST_CASE(TestDateTypeColumnAttributeLiteral)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+
+    SQLCHAR req[] = "select DATE '2020-10-25'";
+    SQLExecDirect(stmt, req, SQL_NTS);
+
+    SQLLEN intVal = 0;
+
+    SQLRETURN ret = SQLColAttribute(stmt, 1, SQL_DESC_TYPE, 0, 0, 0, &intVal);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(intVal, SQL_TYPE_DATE);
+}
+
+BOOST_AUTO_TEST_CASE(TestDateTypeColumnAttributeField)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+
+    SQLCHAR req[] = "select CAST (dateField as DATE) from TestType";
+    SQLExecDirect(stmt, req, SQL_NTS);
+
+    SQLLEN intVal = 0;
+
+    SQLRETURN ret = SQLColAttribute(stmt, 1, SQL_DESC_TYPE, 0, 0, 0, &intVal);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(intVal, SQL_TYPE_DATE);
+}
+
+BOOST_AUTO_TEST_CASE(TestTimeTypeColumnAttributeLiteral)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+
+    SQLCHAR req[] = "select TIME '12:42:13'";
+    SQLExecDirect(stmt, req, SQL_NTS);
+
+    SQLLEN intVal = 0;
+
+    SQLRETURN ret = SQLColAttribute(stmt, 1, SQL_DESC_TYPE, 0, 0, 0, &intVal);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(intVal, SQL_TYPE_TIME);
+}
+
+BOOST_AUTO_TEST_CASE(TestTimeTypeColumnAttributeField)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+
+    SQLCHAR req[] = "select timeField from TestType";
+    SQLExecDirect(stmt, req, SQL_NTS);
+
+    SQLLEN intVal = 0;
+
+    SQLRETURN ret = SQLColAttribute(stmt, 1, SQL_DESC_TYPE, 0, 0, 0, &intVal);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(intVal, SQL_TYPE_TIME);
 }
 
 BOOST_AUTO_TEST_CASE(TestColAttributesColumnLength)
@@ -797,7 +882,7 @@ BOOST_AUTO_TEST_CASE(TestSQLNumResultColsAfterSQLPrepare)
  * 2. Connect to node using ODBC.
  * 3. Create table with decimal and char columns with specified size and scale.
  * 4. Prepare statement.
- * 5. Check presicion and scale of every column using SQLDescribeCol.
+ * 5. Check precision and scale of every column using SQLDescribeCol.
  */
 BOOST_AUTO_TEST_CASE(TestSQLDescribeColPrecisionAndScaleAfterPrepare)
 {
@@ -811,7 +896,7 @@ BOOST_AUTO_TEST_CASE(TestSQLDescribeColPrecisionAndScaleAfterPrepare)
  * 2. Connect to node using ODBC.
  * 3. Create table with decimal and char columns with specified size and scale.
  * 4. Execute statement.
- * 5. Check presicion and scale of every column using SQLDescribeCol. */
+ * 5. Check precision and scale of every column using SQLDescribeCol. */
 BOOST_AUTO_TEST_CASE(TestSQLDescribeColPrecisionAndScaleAfterExec)
 {
     CheckSQLDescribeColPrecisionAndScale(&OdbcTestSuite::ExecQuery);
@@ -824,7 +909,7 @@ BOOST_AUTO_TEST_CASE(TestSQLDescribeColPrecisionAndScaleAfterExec)
  * 2. Connect to node using ODBC.
  * 3. Create table with decimal and char columns with specified size and scale.
  * 4. Prepare statement.
- * 5. Check presicion and scale of every column using SQLColAttribute.
+ * 5. Check precision and scale of every column using SQLColAttribute.
  */
 BOOST_AUTO_TEST_CASE(TestSQLColAttributePrecisionAndScaleAfterPrepare)
 {
@@ -838,7 +923,7 @@ BOOST_AUTO_TEST_CASE(TestSQLColAttributePrecisionAndScaleAfterPrepare)
  * 2. Connect to node using ODBC.
  * 3. Create table with decimal and char columns with specified size and scale.
  * 4. Execute statement.
- * 5. Check presicion and scale of every column using SQLColAttribute. */
+ * 5. Check precision and scale of every column using SQLColAttribute. */
 BOOST_AUTO_TEST_CASE(TestSQLColAttributePrecisionAndScaleAfterExec)
 {
     CheckSQLColAttributePrecisionAndScale(&OdbcTestSuite::ExecQuery);

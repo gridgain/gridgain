@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-log4j</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
@@ -50,6 +50,20 @@
             <artifactId>ignite-core</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <version>${spring.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.version}</version>
             <scope>test</scope>
         </dependency>
 

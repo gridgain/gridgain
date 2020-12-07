@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -55,6 +56,7 @@ import org.apache.ignite.internal.SkipDaemon;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.discovery.CustomEventListener;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.managers.systemview.walker.ServiceViewWalker;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
 import org.apache.ignite.internal.processors.cache.DynamicCacheChangeRequest;
@@ -82,6 +84,7 @@ import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.systemview.view.ServiceView;
 import org.apache.ignite.thread.IgniteThreadFactory;
 import org.apache.ignite.thread.OomExceptionHandler;
 import org.jetbrains.annotations.NotNull;
@@ -106,6 +109,12 @@ import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType
 @SkipDaemon
 @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 public class IgniteServiceProcessor extends ServiceProcessorAdapter implements IgniteChangeGlobalStateSupport {
+    /** */
+    public static final String SVCS_VIEW = "services";
+
+    /** */
+    public static final String SVCS_VIEW_DESC = "Services";
+
     /** Local service instances. */
     private final ConcurrentMap<IgniteUuid, Collection<ServiceContextImpl>> locServices = new ConcurrentHashMap<>();
 
@@ -186,6 +195,11 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
      */
     public IgniteServiceProcessor(GridKernalContext ctx) {
         super(ctx);
+
+        ctx.systemView().registerView(SVCS_VIEW, SVCS_VIEW_DESC,
+            new ServiceViewWalker(),
+            registeredServices.values(),
+            ServiceView::new);
     }
 
     /** {@inheritDoc} */
@@ -1688,7 +1702,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
                 registeredServices.entrySet().removeIf(e -> {
                     ServiceInfo desc = e.getValue();
 
-                    if (desc.cacheName().equals(chReq.cacheName())) {
+                    if (Objects.equals(desc.cacheName(), chReq.cacheName())) {
                         toUndeploy.put(desc.serviceId(), desc);
 
                         return true;

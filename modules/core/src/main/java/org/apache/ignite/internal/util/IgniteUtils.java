@@ -139,6 +139,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.jar.JarFile;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
@@ -210,6 +211,7 @@ import org.apache.ignite.internal.compute.ComputeTaskTimeoutCheckedException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfo;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.mxbean.IgniteStandardMXBean;
@@ -217,6 +219,7 @@ import org.apache.ignite.internal.processors.cache.CacheClassLoaderMarker;
 import org.apache.ignite.internal.processors.cache.GridCacheAttributes;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.IgnitePeerToPeerClassLoadingException;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.transactions.IgniteTxAlreadyCompletedCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
@@ -1510,22 +1513,6 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Dumps stack trace of the thread to the given log at warning level.
-     *
-     * @param t Thread to be dumped.
-     * @param log Logger.
-     */
-    public static void dumpThread(Thread t, @Nullable IgniteLogger log) {
-        ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
-
-        GridStringBuilder sb = new GridStringBuilder();
-
-        printThreadInfo(mxBean.getThreadInfo(t.getId()), sb, Collections.emptySet());
-
-        warn(log, sb.toString());
-    }
-
-    /**
      * Get deadlocks from the thread bean.
      * @param mxBean the bean
      * @return the set of deadlocked threads (may be empty Set, but never null).
@@ -1762,6 +1749,22 @@ public abstract class IgniteUtils {
         finally {
             if (ctor != null && set)
                 ctor.setAccessible(false);
+        }
+    }
+
+    /**
+     * Check whether class is in classpath.
+     *
+     * @return {@code True} if in classpath.
+     */
+    public static boolean inClassPath(String clsName) {
+        try {
+            Class.forName(clsName);
+
+            return true;
+        }
+        catch (ClassNotFoundException ignore) {
+            return false;
         }
     }
 
@@ -5865,8 +5868,22 @@ public abstract class IgniteUtils {
      * @param e Enum value to write, possibly {@code null}.
      * @throws IOException If write failed.
      */
-    public static <E extends Enum> void writeEnum(DataOutput out, E e) throws IOException {
+    public static <E extends Enum<E>> void writeEnum(DataOutput out, E e) throws IOException {
         out.writeByte(e == null ? -1 : e.ordinal());
+    }
+
+    /** */
+    public static <E extends Enum<E>> E readEnum(DataInput in, Class<E> enumCls) throws IOException {
+        byte ordinal = in.readByte();
+
+        if (ordinal == (byte)-1)
+            return null;
+
+        int idx = ordinal & 0xFF;
+
+        E[] values = enumCls.getEnumConstants();
+
+        return idx < values.length ? values[idx] : null;
     }
 
     /**
@@ -7223,6 +7240,30 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Get string representation of an object properly catching all exceptions.
+     *
+     * @param obj Object.
+     * @return Result or {@code null}.
+     */
+    @Nullable public static String toStringSafe(@Nullable Object obj) {
+        if (obj == null)
+            return null;
+        else {
+            try {
+                return obj.toString();
+            }
+            catch (Exception e) {
+                try {
+                    return "Failed to convert object to string: " + e.getMessage();
+                }
+                catch (Exception e0) {
+                    return "Failed to convert object to string (error message is not available)";
+                }
+            }
+        }
+    }
+
+    /**
      * Converts collection of integers into array.
      *
      * @param c Collection of integers.
@@ -7742,6 +7783,72 @@ public abstract class IgniteUtils {
      */
     public static boolean p2pLoader(ClassLoader ldr) {
         return ldr instanceof GridDeploymentInfo;
+    }
+
+    /**
+     * Returns Deployment class loader id if method was invoked in the job context
+     * (it may be the context of a cache's operation which was triggered by the distributed job)
+     * or {@code null} if no context was found or Deployment is switched off.
+     *
+     * @param ctx Kernal context.
+     * @return Deployment class loader id or {@code null}.
+     */
+    public static IgniteUuid contextDeploymentClassLoaderId(GridKernalContext ctx) {
+        if (ctx == null || !ctx.deploy().enabled())
+            return null;
+
+        if (ctx.job() != null && ctx.job().currentDeployment() != null)
+            return ctx.job().currentDeployment().classLoaderId();
+
+        if (ctx.cache() != null && ctx.cache().context() != null)
+            return ctx.cache().context().deploy().locLoaderId();
+
+        return null;
+    }
+
+    /**
+     * Gets that deployment class loader matching by the specific id, or {@code null}
+     * if the class loader was not found.
+     *
+     * @param ctx Kernal context.
+     * @param ldrId Class loader id.
+     * @return Deployment class loader or {@code null}.
+     */
+    public static ClassLoader deploymentClassLoader(GridKernalContext ctx, IgniteUuid ldrId) {
+        if (ldrId == null || !ctx.deploy().enabled())
+            return null;
+
+        GridDeployment dep = ctx.deploy().getDeployment(ldrId);
+
+        return dep == null ? null : dep.classLoader();
+    }
+
+    /**
+     * Restores a deployment context for cache deployment.
+     *
+     * @param ctx Kernal context.
+     * @param ldrId Class loader id.
+     */
+    public static void restoreDeploymentContext(GridKernalContext ctx, IgniteUuid ldrId) {
+        if (ctx.deploy().enabled() && ldrId != null) {
+            GridDeployment dep = ctx.deploy().getDeployment(ldrId);
+
+            if (dep != null) {
+                try {
+                    ctx.cache().context().deploy().p2pContext(
+                        dep.classLoaderId().globalId(),
+                        dep.classLoaderId(),
+                        dep.userVersion(),
+                        dep.deployMode(),
+                        dep.participants()
+                    );
+                }
+                catch (IgnitePeerToPeerClassLoadingException e) {
+                    ctx.log(ctx.cache().context().deploy().getClass())
+                        .error("Could not restore P2P context [ldrId=" + ldrId + ']', e);
+                }
+            }
+        }
     }
 
     /**
@@ -11694,12 +11801,12 @@ public abstract class IgniteUtils {
 
         /**
          * @param delegate RWLock delegate.
-         * @param kctx Kernal context.
+         * @param log Ignite logger.
          * @param readLockThreshold ReadLock threshold timeout.
          *
          */
-        public ReentrantReadWriteLockTracer(ReentrantReadWriteLock delegate, GridKernalContext kctx, long readLockThreshold) {
-            log = kctx.cache().context().logger(getClass());
+        public ReentrantReadWriteLockTracer(ReentrantReadWriteLock delegate, IgniteLogger log, long readLockThreshold) {
+            this.log = log;
 
             readLock = new ReadLockTracer(delegate, log, readLockThreshold);
 
@@ -12351,6 +12458,27 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Notifies provided {@code lsnrs} with the value {@code t}.
+     *
+     * @param t Consumed object.
+     * @param lsnrs Listeners.
+     * @param <T> Type of consumed object.
+     */
+    public static <T> void notifyListeners(T t, Collection<Consumer<T>> lsnrs, IgniteLogger log) {
+        if (lsnrs == null)
+            return;
+
+        for (Consumer<T> lsnr : lsnrs) {
+            try {
+                lsnr.accept(t);
+            }
+            catch (Exception e) {
+                U.warn(log, "Listener error", e);
+            }
+        }
+    }
+
+    /**
      * Broadcasts given job to nodes that support ignite feature.
      *
      * @param kctx Kernal context.
@@ -12472,5 +12600,17 @@ public abstract class IgniteUtils {
     public interface InterfaceSupplier {
         /** Return collection of local network interfaces. */
         Enumeration<NetworkInterface> getInterfaces() throws SocketException;
+    }
+    
+    /**
+     * @param ctx Kernel context.
+     * @param depInfo Deployment info.
+     * @param clsName Class name.
+     * @return Whether the {@code depObj} is valid for the {@code clsName} in the current context.
+     */
+    public static boolean validateDeploymentInfo(GridKernalContext ctx, GridDeploymentInfo depInfo, String clsName) {
+        GridDeployment dep = ctx.deploy().getDeployment(clsName);
+
+        return dep == null || dep.classLoaderId().equals(depInfo.classLoaderId());
     }
 }

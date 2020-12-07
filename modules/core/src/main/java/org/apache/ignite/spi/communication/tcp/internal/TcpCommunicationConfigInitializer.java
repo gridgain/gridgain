@@ -44,10 +44,8 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.AddressResolver;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.tracing.NoopTracing;
 import org.apache.ignite.internal.processors.tracing.Tracing;
-import org.apache.ignite.internal.resources.MetricManagerResource;
 import org.apache.ignite.internal.util.ipc.shmem.IpcSharedMemoryServerEndpoint;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -138,15 +136,6 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
             setLocalAddress(ignite.configuration().getLocalHost());
             tracing = ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().tracing() : new NoopTracing();
         }
-    }
-
-    /**
-     * Injects dependency.
-     */
-    @MetricManagerResource
-    private void injectMetricManager(GridMetricManager mmgr) {
-        if (mmgr != null)
-            metricsLsnr = new TcpCommunicationMetricsListener(mmgr, ignite);
     }
 
     /**
@@ -569,7 +558,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * @return {@code this} for chaining.
      */
     @IgniteSpiConfiguration(optional = true)
-    public TcpCommunicationSpi setSelectorsCount(int selectorsCnt) { ;
+    public TcpCommunicationSpi setSelectorsCount(int selectorsCnt) {
         cfg.selectorsCount(selectorsCnt);
 
         return (TcpCommunicationSpi) this;

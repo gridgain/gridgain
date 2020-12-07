@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.lang.IgniteExperimental;
+import org.apache.ignite.mxbean.MetricsMxBean;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
@@ -350,6 +351,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_MARSHAL_BUFFERS_RECHECK = "IGNITE_MARSHAL_BUFFERS_RECHECK";
 
     /**
+     * System property to specify per thread binary allocator chunk pool size. Default value is {@code 32}.
+     */
+    public static final String IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE = "IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE";
+
+    /**
      * System property to disable {@link HostnameVerifier} for SSL connections.
      * Can be used for development with self-signed certificates. Default value is {@code false}.
      */
@@ -562,6 +568,14 @@ public final class IgniteSystemProperties {
     @Deprecated
     public static final String IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA = "IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA";
 
+    /**
+     * Enables subquery rewriting optimization.
+     * If enabled, subquery will be rewritten to JOIN where possible.
+     * Default is {@code true}.
+     */
+    @IgniteExperimental
+    public static final String IGNITE_ENABLE_SUBQUERY_REWRITE_OPTIMIZATION = "IGNITE_ENABLE_SUBQUERY_REWRITE_OPTIMIZATION";
+
     /** Maximum size for affinity assignment history. */
     public static final String IGNITE_AFFINITY_HISTORY_SIZE = "IGNITE_AFFINITY_HISTORY_SIZE";
 
@@ -741,7 +755,9 @@ public final class IgniteSystemProperties {
 
     /**
      * Time interval for calculating rebalance rate statistics, in milliseconds. Defaults to 60000.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public static final String IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL = "IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL";
 
     /**
@@ -1371,6 +1387,16 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING = "IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING";
 
     /**
+     * The master key name that the node will use during the recovery.
+     * <p>
+     * If a node was unavailable during a master key change process it won't be able to join to cluster with old the
+     * master key. Set up this property to re-encrypt cache keys on startup and join to cluster with the valid
+     * master key name.
+     */
+    public static final String IGNITE_MASTER_KEY_NAME_TO_CHANGE_BEFORE_STARTUP =
+        "IGNITE_MASTER_KEY_NAME_TO_CHANGE_BEFORE_STARTUP";
+
+    /**
      * Disable group state lazy store. It means that group state won't be cached for {@link CheckpointEntry} and will be
      * read from wal every time. Should be used for test purposes only.
      */
@@ -1397,8 +1423,9 @@ public final class IgniteSystemProperties {
      * .
      * The possible values:
      *         - "LAST",
+     *         - "COMPATIBLE_8_7_28"
      *         - "COMPATIBLE_8_7_12",
-     *         - COMPATIBLE_8_7_6
+     *         - "COMPATIBLE_8_7_6"
      *
      * The last cost function is used by default.
      */
@@ -1432,6 +1459,14 @@ public final class IgniteSystemProperties {
      * all system actions will be prohibited.
      */
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
+
+    /**
+     * Defragmentation region size percentage of configured region size.
+     * This percentage will be calculated from largest configured region size and then proportionally subtracted
+     * from all configured regions.
+     */
+    public static final String IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE =
+        "IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE";
 
     /**
      * Enforces singleton.

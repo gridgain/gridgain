@@ -26,7 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.management.InstanceNotFoundException;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsProvider;
@@ -45,11 +48,13 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.managers.systemview.walker.PagesListViewWalker;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.mem.file.MappedFileMemoryProvider;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
+import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -74,6 +79,7 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFre
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.warmup.WarmUpStrategy;
@@ -89,6 +95,7 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.mxbean.DataRegionMetricsMXBean;
+import org.apache.ignite.spi.systemview.view.PagesListView;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.isNull;
@@ -115,6 +122,12 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         new HashSet<>(Arrays.asList(SYSTEM_DATA_REGION_NAME, TX_LOG_CACHE_NAME, METASTORE_DATA_REGION_NAME,
         VOLATILE_DATA_REGION_NAME)));
 
+    /** System view name for page lists. */
+    public static final String DATA_REGION_PAGE_LIST_VIEW = "dataRegionPageLists";
+
+    /** System view description for page lists. */
+    public static final String DATA_REGION_PAGE_LIST_VIEW_DESC = "Data region page lists";
+
     /** Minimum size of memory chunk */
     private static final long MIN_PAGE_MEMORY_SIZE = 10L * 1024 * 1024;
 
@@ -137,7 +150,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     protected final Map<String, DataRegionMetrics> memMetricsMap = new ConcurrentHashMap<>();
 
     /** */
-    private volatile boolean dataRegionsInitialized;
+    protected volatile boolean dataRegionsInitialized;
 
     /** */
     private volatile boolean dataRegionsStarted;
@@ -172,6 +185,22 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         pageSize = memCfg.getPageSize();
 
         initDataRegions(memCfg);
+
+        cctx.kernalContext().systemView().registerView(
+            DATA_REGION_PAGE_LIST_VIEW,
+            DATA_REGION_PAGE_LIST_VIEW_DESC,
+            new PagesListViewWalker(),
+            () -> {
+                Map<String, CacheFreeList> freeLists = freeListMap;
+
+                if (freeLists == null)
+                    return Collections.emptyList();
+
+                return freeLists.values().stream().flatMap(fl -> IntStream.range(0, fl.bucketsCount()).mapToObj(
+                    bucket -> new PagesListView(fl, bucket))).collect(Collectors.toList());
+            },
+            Function.identity()
+        );
     }
 
     /**
@@ -290,7 +319,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                 true,
                 lsnr,
                 cctx.kernalContext(),
-                null
+                null,
+                PageIdAllocator.FLAG_IDX
             );
 
             freeListMap.put(memPlcCfg.getName(), freeList);
@@ -389,10 +419,25 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @param dataRegionCfg Data region config.
      * @throws IgniteCheckedException If failed to initialize swap path.
      */
-    public void addDataRegion(
+    public DataRegion addDataRegion(
         DataStorageConfiguration dataStorageCfg,
         DataRegionConfiguration dataRegionCfg,
         boolean trackable
+    ) throws IgniteCheckedException {
+        return addDataRegion(dataStorageCfg, dataRegionCfg, trackable, cctx.pageStore());
+    }
+
+    /**
+     * @param dataStorageCfg Database config.
+     * @param dataRegionCfg Data region config.
+     * @param pmPageMgr Page manager.
+     * @throws IgniteCheckedException If failed to initialize swap path.
+     */
+    protected DataRegion addDataRegion(
+        DataStorageConfiguration dataStorageCfg,
+        DataRegionConfiguration dataRegionCfg,
+        boolean trackable,
+        PageReadWriteManager pmPageMgr
     ) throws IgniteCheckedException {
         String dataRegionName = dataRegionCfg.getName();
 
@@ -406,7 +451,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             cctx.kernalContext().metric(),
             dataRegionMetricsProvider(dataRegionCfg));
 
-        DataRegion region = initMemory(dataStorageCfg, dataRegionCfg, memMetrics, trackable);
+        DataRegion region = initMemory(dataStorageCfg, dataRegionCfg, memMetrics, trackable, pmPageMgr);
 
         dataRegionMap.put(dataRegionName, region);
 
@@ -417,6 +462,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         else if (dataRegionName.equals(DFLT_DATA_REG_DEFAULT_NAME))
             U.warn(log, "Data Region with name 'default' isn't used as a default. " +
                     "Please, check Data Region configuration.");
+
+        return region;
     }
 
     /**
@@ -939,7 +986,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     }
 
     /**
-     * Clean checkpoint directory {@code GridCacheDatabaseSharedManager#cpDir}. The operation
+     * Clean checkpoint directory
+     * {@link CheckpointMarkersStorage#cpDir}. The operation
      * is necessary when local node joined to baseline topology with different consistentId.
      */
     public void cleanupCheckpointDirectory() throws IgniteCheckedException {
@@ -1054,13 +1102,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      */
     public void onCacheGroupsStopped(Collection<IgniteBiTuple<CacheGroupContext, Boolean>> stoppedGrps) {
         // No-op.
-    }
-
-    /**
-     * @return Future that will be completed when indexes for given cache are restored.
-     */
-    @Nullable public IgniteInternalFuture indexRebuildFuture(int cacheId) {
-        return null;
     }
 
     /**
@@ -1217,6 +1258,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @param memCfg memory configuration with common parameters.
      * @param plcCfg data region with PageMemory specific parameters.
      * @param memMetrics {@link DataRegionMetrics} object to collect memory usage metrics.
+     * @param pmPageMgr Page manager.
      * @return data region instance.
      *
      * @throws IgniteCheckedException If failed to initialize swap path.
@@ -1225,9 +1267,10 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         DataStorageConfiguration memCfg,
         DataRegionConfiguration plcCfg,
         DataRegionMetricsImpl memMetrics,
-        boolean trackable
+        boolean trackable,
+        PageReadWriteManager pmPageMgr
     ) throws IgniteCheckedException {
-        PageMemory pageMem = createPageMemory(createOrReuseMemoryProvider(plcCfg), memCfg, plcCfg, memMetrics, trackable);
+        PageMemory pageMem = createPageMemory(createOrReuseMemoryProvider(plcCfg), memCfg, plcCfg, memMetrics, trackable, pmPageMgr);
 
         return new DataRegion(pageMem, plcCfg, memMetrics, createPageEvictionTracker(plcCfg, pageMem));
     }
@@ -1326,6 +1369,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @param memCfg Memory configuartion.
      * @param memPlcCfg data region configuration.
      * @param memMetrics DataRegionMetrics to collect memory usage metrics.
+     * @param pmPageMgr Page manager.
      * @return PageMemory instance.
      */
     protected PageMemory createPageMemory(
@@ -1333,7 +1377,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         DataStorageConfiguration memCfg,
         DataRegionConfiguration memPlcCfg,
         DataRegionMetricsImpl memMetrics,
-        boolean trackable
+        boolean trackable,
+        PageReadWriteManager pmPageMgr
     ) {
         memMetrics.persistenceEnabled(false);
 

@@ -18,8 +18,7 @@ package org.apache.ignite.internal.processors.ru;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Set;
-import org.apache.ignite.internal.IgniteFeatures;
+import java.util.HashSet;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteProductVersion;
@@ -28,7 +27,9 @@ import org.apache.ignite.lang.IgniteProductVersion;
  * Represent cluster-wide status of Rolling Upgrade process.
  */
 public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject implements RollingUpgradeStatus {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** {@code true} if Rolling Upgrade is enabled. */
@@ -40,11 +41,11 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     /** Represents the version that is used as starting point for Rolling Upgrade. */
     private IgniteProductVersion initVer;
 
-    /** Represents the resulting version.*/
+    /** Represents the resulting version. */
     private IgniteProductVersion updateVer;
 
     /** Feature set that is supported by nodes. */
-    private Set<IgniteFeatures> supportedFeatures;
+    private byte[] supportedFeatures;
 
     /**
      * Creates a new instance of IgniteRollingUpgradeStatus.
@@ -66,7 +67,7 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
         boolean forcedModeEnabled,
         IgniteProductVersion initVer,
         IgniteProductVersion updateVer,
-        Set<IgniteFeatures> supportedFeatures
+        byte[] supportedFeatures
     ) {
         assert enabled || !forcedModeEnabled : "Forced mode cannot be enabled if Rolling Upgrade is disabled.";
 
@@ -97,8 +98,8 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
         return updateVer;
     }
 
-    /** {@inheritDoc} */
-    @Override public Set<IgniteFeatures> supportedFeatures() {
+    /** Returns list of supported ignite features. */
+    public byte[] supportedFeatures() {
         return supportedFeatures;
     }
 
@@ -108,6 +109,7 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
         out.writeBoolean(forcedModeEnabled);
         out.writeObject(initVer);
         out.writeObject(updateVer);
+        out.writeObject(new HashSet<>());
         out.writeObject(supportedFeatures);
     }
 
@@ -118,7 +120,15 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
         forcedModeEnabled = in.readBoolean();
         initVer = (IgniteProductVersion)in.readObject();
         updateVer = (IgniteProductVersion)in.readObject();
-        supportedFeatures = (Set)in.readObject();
+        in.readObject();
+
+        if (protoVer >= V2)
+            supportedFeatures = (byte[])in.readObject();
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
     }
 
     /** {@inheritDoc} */

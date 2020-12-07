@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategy;
+import org.jetbrains.annotations.Nullable;
 
 /**
  *
@@ -45,11 +47,15 @@ public class CacheObjectContext implements CacheObjectValueContext {
     /** */
     private final boolean addDepInfo;
 
-    /** Boinary enabled flag. */
+    /** Binary enabled flag. */
     private final boolean binaryEnabled;
+
+    /** Cache entry compression implementation. */
+    private volatile EntryCompressionStrategy compressionStrategy;
 
     /**
      * @param kernalCtx Kernal context.
+     * @param cacheName Cache name.
      * @param dfltAffMapper Default affinity mapper.
      * @param cpyOnGet Copy on get flag.
      * @param storeVal {@code True} if should store unmarshalled value in cache.
@@ -123,15 +129,35 @@ public class CacheObjectContext implements CacheObjectValueContext {
     }
 
     /**
+     * Internal method for setting compression strategy.
+     *
+     * @param compressionStrategy Compression strategy to use with this cache.
+     */
+    void compressionStrategy(EntryCompressionStrategy compressionStrategy) {
+        this.compressionStrategy = compressionStrategy;
+    }
+
+    /** {@inheritDoc} */
+    @Nullable @Override public EntryCompressionStrategy compressionStrategy() {
+        return compressionStrategy;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean compressKeys() {
+        return compressionStrategy != null && compressionStrategy.compressKeys();
+    }
+
+    /**
      * @param o Object to unwrap.
      * @param keepBinary Keep binary flag.
      * @param cpy Copy value flag.
+     * @param ldr Class loader, used for deserialization from binary representation.
      * @return Unwrapped object.
      */
-    public Object unwrapBinaryIfNeeded(Object o, boolean keepBinary, boolean cpy) {
+    public Object unwrapBinaryIfNeeded(Object o, boolean keepBinary, boolean cpy, @Nullable ClassLoader ldr) {
         if (o == null)
             return null;
 
-        return CacheObjectUtils.unwrapBinaryIfNeeded(this, o, keepBinary, cpy);
+        return CacheObjectUtils.unwrapBinaryIfNeeded(this, o, keepBinary, cpy, ldr);
     }
 }

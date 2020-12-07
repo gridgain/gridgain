@@ -276,22 +276,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         synchronized (sysLsnrsMux) {
             sysLsnrs = new GridMessageListener[GridTopic.values().length];
         }
-
-        MetricRegistry ioMetric = ctx.metric().registry(COMM_METRICS);
-
-        CommunicationSpi spi = ctx.config().getCommunicationSpi();
-
-        ioMetric.register(OUTBOUND_MSG_QUEUE_CNT, spi::getOutboundMessagesQueueSize,
-            "Outbound messages queue size.");
-
-        ioMetric.register(SENT_MSG_CNT, spi::getSentMessagesCount, "Sent messages count.");
-
-        ioMetric.register(SENT_BYTES_CNT, spi::getSentBytesCount, "Sent bytes count.");
-
-        ioMetric.register(RCVD_MSGS_CNT, spi::getReceivedMessagesCount,
-            "Received messages count.");
-
-        ioMetric.register(RCVD_BYTES_CNT, spi::getReceivedBytesCount, "Received bytes count.");
     }
 
     /**
@@ -321,31 +305,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
-        CommunicationSpi<Serializable> spi = getSpi();
-
-        if ((CommunicationSpi<?>)spi instanceof TcpCommunicationSpi)
-            getTcpCommunicationSpi().setConnectionRequestor(invConnHandler);
-
-        startSpi();
-
-        spi.setListener(commLsnr = new CommunicationListener<Serializable>() {
-            @Override public void onMessage(UUID nodeId, Serializable msg, IgniteRunnable msgC) {
-                try {
-                    onMessage0(nodeId, (GridIoMessage)msg, msgC);
-                }
-                catch (ClassCastException ignored) {
-                    U.error(log, "Communication manager received message of unknown type (will ignore): " +
-                        msg.getClass().getName() + ". Most likely GridCommunicationSpi is being used directly, " +
-                        "which is illegal - make sure to send messages only via GridProjection API.");
-                }
-            }
-
-            @Override public void onDisconnected(UUID nodeId) {
-                for (GridDisconnectListener lsnr : disconnectLsnrs)
-                    lsnr.onNodeDisconnected(nodeId);
-            }
-        });
-
         ctx.addNodeAttribute(DIRECT_PROTO_VER_ATTR, DIRECT_PROTO_VER);
 
         MessageFormatter[] formatterExt = ctx.plugins().extensions(MessageFormatter.class);
@@ -394,6 +353,45 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             msgs = F.concat(msgs, compMsgs.toArray(new MessageFactory[compMsgs.size()]));
 
         msgFactory = new IgniteMessageFactoryImpl(msgs);
+
+        CommunicationSpi<Serializable> spi = getSpi();
+
+        if ((CommunicationSpi<?>)spi instanceof TcpCommunicationSpi)
+            getTcpCommunicationSpi().setConnectionRequestor(invConnHandler);
+
+        startSpi();
+
+        MetricRegistry ioMetric = ctx.metric().registry(COMM_METRICS);
+
+        ioMetric.register(OUTBOUND_MSG_QUEUE_CNT, spi::getOutboundMessagesQueueSize,
+                "Outbound messages queue size.");
+
+        ioMetric.register(SENT_MSG_CNT, spi::getSentMessagesCount, "Sent messages count.");
+
+        ioMetric.register(SENT_BYTES_CNT, spi::getSentBytesCount, "Sent bytes count.");
+
+        ioMetric.register(RCVD_MSGS_CNT, spi::getReceivedMessagesCount,
+                "Received messages count.");
+
+        ioMetric.register(RCVD_BYTES_CNT, spi::getReceivedBytesCount, "Received bytes count.");
+
+        getSpi().setListener(commLsnr = new CommunicationListener<Serializable>() {
+            @Override public void onMessage(UUID nodeId, Serializable msg, IgniteRunnable msgC) {
+                try {
+                    onMessage0(nodeId, (GridIoMessage)msg, msgC);
+                }
+                catch (ClassCastException ignored) {
+                    U.error(log, "Communication manager received message of unknown type (will ignore): " +
+                            msg.getClass().getName() + ". Most likely GridCommunicationSpi is being used directly, " +
+                            "which is illegal - make sure to send messages only via GridProjection API.");
+                }
+            }
+
+            @Override public void onDisconnected(UUID nodeId) {
+                for (GridDisconnectListener lsnr : disconnectLsnrs)
+                    lsnr.onNodeDisconnected(nodeId);
+            }
+        });
 
         if (log.isDebugEnabled())
             log.debug(startInfo());
@@ -1793,12 +1791,12 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 if (commLsnr == null)
                     throw new IgniteCheckedException("Trying to send message when grid is not fully started.");
 
-            if (ordered)
-                processOrderedMessage(locNodeId, ioMsg, plc, null);
-            else if (async)
-                processRegularMessage(locNodeId, ioMsg, plc, NOOP);
-            else
-                processRegularMessage0(ioMsg, locNodeId);
+                if (ordered)
+                    processOrderedMessage(locNodeId, ioMsg, plc, null);
+                else if (async)
+                    processRegularMessage(locNodeId, ioMsg, plc, NOOP);
+                else
+                    processRegularMessage0(ioMsg, locNodeId);
 
                 if (ackC != null)
                     ackC.apply(null);
@@ -1861,9 +1859,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         if (ctx.security().enabled() &&
             !(msg instanceof GridDhtPartitionsAbstractMessage) && !(msg instanceof GridJobExecuteResponse)) {
             // We don't need enabled v1 to enable v2.
-            boolean v2 = allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR_V2);
+            boolean v2 = allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR_V2);
 
-            if (v2 || allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR)) {
+            if (v2 || allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR)) {
                 SecurityContext secCtx = ctx.security().securityContext();
                 UUID subjId = secCtx.subject().id();
 

@@ -108,6 +108,7 @@ import org.gridgain.internal.h2.value.ValueUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.sql.ResultSetMetaData.columnNullableUnknown;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_HASH_JOIN;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_HASH_JOIN_MAX_TABLE_SIZE;
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_COL;
@@ -138,7 +139,8 @@ public class H2Utils {
 
     /** Dummy metadata for update result. */
     public static final List<GridQueryFieldMetadata> UPDATE_RESULT_META =
-        Collections.singletonList(new H2SqlFieldMetadata(null, null, "UPDATED", Long.class.getName(), -1, -1));
+        Collections.singletonList(new H2SqlFieldMetadata(null, null, "UPDATED", Long.class.getName(), -1, -1,
+                columnNullableUnknown));
 
     /** */
     public static final IndexColumn[] EMPTY_COLUMNS = new IndexColumn[0];
@@ -379,11 +381,12 @@ public class H2Utils {
             String type = rsMeta.getColumnClassName(i);
             int precision = rsMeta.getPrecision(i);
             int scale = rsMeta.getScale(i);
+            int nullability = rsMeta.isNullable(i);
 
             if (type == null) // Expression always returns NULL.
                 type = Void.class.getName();
 
-            meta.add(new H2SqlFieldMetadata(schemaName, typeName, name, type, precision, scale));
+            meta.add(new H2SqlFieldMetadata(schemaName, typeName, name, type, precision, scale, nullability));
         }
 
         return meta;
@@ -521,6 +524,16 @@ public class H2Utils {
      */
     private H2Utils() {
         // No-op.
+    }
+
+    /**
+     * Test if specified value is null.
+     *
+     * @param v Value to test.
+     * @return {@code true} if value is null, {@code false} - otherwise.
+     */
+    public static boolean isNullValue(Value v) {
+        return v == null || v.getType().getValueType() == Value.NULL;
     }
 
     /**
@@ -1061,7 +1074,6 @@ public class H2Utils {
      *
      * @return Array of key and affinity columns. Key's, if it possible, splitted into simple components.
      */
-    @SuppressWarnings("ZeroLengthArrayAllocation")
     @NotNull public static IndexColumn[] unwrapKeyColumns(GridH2Table tbl, IndexColumn[] idxCols) {
         ArrayList<IndexColumn> keyCols = new ArrayList<>();
 

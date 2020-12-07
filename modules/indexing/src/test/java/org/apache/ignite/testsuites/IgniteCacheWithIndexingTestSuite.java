@@ -20,12 +20,14 @@ import org.apache.ignite.internal.processors.cache.BinaryTypeMismatchLoggingTest
 import org.apache.ignite.internal.processors.cache.BinaryTypeRegistrationTest;
 import org.apache.ignite.internal.processors.cache.CacheBinaryKeyConcurrentQueryTest;
 import org.apache.ignite.internal.processors.cache.CacheConfigurationP2PTest;
+import org.apache.ignite.internal.processors.cache.CacheGroupMetricsWithIndexBuildFailTest;
 import org.apache.ignite.internal.processors.cache.CacheGroupMetricsWithIndexTest;
 import org.apache.ignite.internal.processors.cache.CacheIndexStreamerTest;
 import org.apache.ignite.internal.processors.cache.CacheOperationsWithExpirationTest;
 import org.apache.ignite.internal.processors.cache.CacheQueryAfterDynamicCacheStartFailureTest;
 import org.apache.ignite.internal.processors.cache.CacheQueryFilterExpiredTest;
 import org.apache.ignite.internal.processors.cache.CacheRandomOperationsMultithreadedTest;
+import org.apache.ignite.internal.processors.cache.CacheRegisterMetadataLocallyTest;
 import org.apache.ignite.internal.processors.cache.ClientReconnectAfterClusterRestartTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeDoesNotBreakSqlSelectTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeSqlTest;
@@ -41,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.IgniteClientReconnectQueriesT
 import org.apache.ignite.internal.processors.cache.WrongIndexedTypesTest;
 import org.apache.ignite.internal.processors.cache.index.H2TreeCorruptedTreeExceptionTest;
 import org.apache.ignite.internal.processors.cache.persistence.RebuildIndexLogMessageTest;
+import org.apache.ignite.internal.processors.cache.ttl.CacheSizeTtlTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicPartitionedSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlReadOnlyModeSelfTest;
@@ -69,6 +72,7 @@ import org.junit.runners.Suite;
     CacheTtlAtomicLocalSelfTest.class,
     CacheTtlAtomicPartitionedSelfTest.class,
     CacheTtlReadOnlyModeSelfTest.class,
+    CacheSizeTtlTest.class,
 
     GridCacheOffheapIndexGetSelfTest.class,
     GridCacheOffheapIndexEntryEvictTest.class,
@@ -88,6 +92,8 @@ import org.junit.runners.Suite;
 
     CacheQueryAfterDynamicCacheStartFailureTest.class,
 
+    CacheRegisterMetadataLocallyTest.class,
+
     IgniteCacheGroupsSqlTest.class,
 
     IgniteDataStreamerTest.class,
@@ -102,6 +108,7 @@ import org.junit.runners.Suite;
     ClusterReadOnlyModeDoesNotBreakSqlSelectTest.class,
 
     CacheGroupMetricsWithIndexTest.class,
+    CacheGroupMetricsWithIndexBuildFailTest.class,
 
     RebuildIndexLogMessageTest.class,
 

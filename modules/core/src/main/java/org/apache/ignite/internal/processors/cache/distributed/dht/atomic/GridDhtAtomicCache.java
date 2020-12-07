@@ -63,6 +63,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult;
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.LockedEntriesInfo;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
@@ -165,6 +166,9 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 return new HashMap<>();
             }
         };
+
+    /** Locked entries info for each thread. */
+    private final LockedEntriesInfo lockedEntriesInfo = new LockedEntriesInfo();
 
     /** Update reply closure. */
     @GridToStringExclude
@@ -866,7 +870,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                         if (invokeRes.result() != null)
                             res = CacheInvokeResult.fromResult((T)ctx.unwrapBinaryIfNeeded(invokeRes.result(),
-                                keepBinary, false));
+                                keepBinary, false, null));
                     }
 
                     return res;
@@ -1490,7 +1494,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     row.version(),
                                     0,
                                     0,
-                                    needVer);
+                                    needVer,
+                                    U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())));
 
                                 if (evt) {
                                     ctx.events().readEvent(key,
@@ -1574,7 +1579,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                             ver,
                                             0,
                                             0,
-                                            needVer);
+                                            needVer,
+                                            U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())));
                                     }
                                 }
                                 else
@@ -2069,7 +2075,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
 
         if (retVal == null)
-            retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, true);
+            retVal = new GridCacheReturn(ctx, node.isLocal(), true, null, null, true);
 
         res.returnValue(retVal);
 
@@ -2396,7 +2402,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                             ctx.unwrapBinaryIfNeeded(
                                 updated,
                                 req.keepBinary(),
-                                false));
+                                false,
+                                null));
 
                         if (val == null)
                             continue;
@@ -2725,6 +2732,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         retVal = new GridCacheReturn(ctx,
                             nearNode.isLocal(),
                             req.keepBinary(),
+                            U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())),
                             req.returnValue() ? ret : null,
                             updRes.success());
                     }
@@ -3032,44 +3040,17 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             }
         }
         else {
-            List<GridDhtCacheEntry> locked = new ArrayList<>(req.size());
+            GridDhtCacheEntry[] locked = new GridDhtCacheEntry[req.size()];
 
             while (true) {
                 for (int i = 0; i < req.size(); i++) {
                     GridDhtCacheEntry entry = entryExx(req.key(i), topVer);
 
-                    locked.add(entry);
+                    locked[i] = entry;
                 }
 
-                boolean retry = false;
-
-                for (int i = 0; i < locked.size(); i++) {
-                    GridCacheMapEntry entry = locked.get(i);
-
-                    if (entry == null)
-                        continue;
-
-                    entry.lockEntry();
-
-                    if (entry.obsolete()) {
-                        // Unlock all locked.
-                        for (int j = 0; j <= i; j++) {
-                            if (locked.get(j) != null)
-                                locked.get(j).unlockEntry();
-                        }
-
-                        // Clear entries.
-                        locked.clear();
-
-                        // Retry.
-                        retry = true;
-
-                        break;
-                    }
-                }
-
-                if (!retry)
-                    return locked;
+                if (lockedEntriesInfo.tryLockEntries(locked))
+                    return Arrays.asList(locked);
             }
         }
     }

@@ -115,6 +115,30 @@ BOOST_AUTO_TEST_CASE(TestConnectionProtocolVersion_2_3_2)
     InsertTestBatch(11, 20, 9);
 }
 
+BOOST_AUTO_TEST_CASE(TestConnectionProtocolVersion_2_5_0)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache;PROTOCOL_VERSION=2.5.0");
+
+    InsertTestStrings(10, false);
+    InsertTestBatch(11, 20, 9);
+}
+
+BOOST_AUTO_TEST_CASE(TestConnectionProtocolVersion_2_7_0)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache;PROTOCOL_VERSION=2.7.0");
+
+    InsertTestStrings(10, false);
+    InsertTestBatch(11, 20, 9);
+}
+
+BOOST_AUTO_TEST_CASE(TestConnectionProtocolVersion_2_8_0)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache;PROTOCOL_VERSION=2.8.0");
+
+    InsertTestStrings(10, false);
+    InsertTestBatch(11, 20, 9);
+}
+
 BOOST_AUTO_TEST_CASE(TestConnectionRangeBegin)
 {
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110..11115;SCHEMA=cache");
@@ -228,7 +252,7 @@ BOOST_AUTO_TEST_CASE(ConnectionAttributeLoginTimeout)
     SQLRETURN ret = SQLGetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, &timeout, 0, 0);
 
     ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_DBC, dbc);
-    BOOST_REQUIRE_EQUAL(timeout, odbc::Connection::DEFAULT_CONNECT_TIMEOUT);
+    BOOST_REQUIRE_EQUAL(timeout, (SQLUINTEGER) odbc::Connection::DEFAULT_CONNECT_TIMEOUT);
 
     ret = SQLSetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, reinterpret_cast<SQLPOINTER>(42), 0);
 

@@ -16,12 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.version;
 
+import java.io.EOFException;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.nio.ByteBuffer;
 import java.util.UUID;
+import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
@@ -30,6 +32,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 /**
  * Grid unique version.
  */
+@IgniteCodeGeneratingFail
 public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, Externalizable {
     /** */
     private static final long serialVersionUID = 0L;
@@ -44,19 +47,32 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
     private static final int DR_ID_MASK = 0x1F;
 
     /** Topology version. */
-    private int topVer;
+    protected int topVer;
 
     /** Node order (used as global order) and DR ID. */
-    private int nodeOrderDrId;
+    protected int nodeOrderDrId;
 
     /** Order. */
-    private long order;
+    protected long order;
+
+    /** Update counter. */
+    protected long updateCounter;
 
     /**
      * Empty constructor required by {@link Externalizable}.
      */
     public GridCacheVersion() {
         /* No-op. */
+    }
+
+    /**
+     * Copying constructor.
+     */
+    public GridCacheVersion(GridCacheVersion ver) {
+        this.topVer = ver.topVer;
+        this.nodeOrderDrId = ver.nodeOrderDrId;
+        this.order = ver.order;
+        this.updateCounter = ver.updateCounter;
     }
 
     /**
@@ -136,6 +152,22 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
     }
 
     /**
+     * @return Update counter.
+     */
+    public long updateCounter() {
+        return updateCounter;
+    }
+
+    /**
+     * Sets update counter.
+     *
+     * @param updateCounter Update counter.
+     */
+    public void updateCounter(long updateCounter) {
+        this.updateCounter = updateCounter;
+    }
+
+    /**
      * @param ver Version.
      * @return {@code True} if this version is greater.
      */
@@ -181,16 +213,59 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
+        writeExternalV1(out);
+        writeExternalV2(out);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void readExternal(ObjectInput in) throws IOException {
+        readExternalV1(in);
+        readExternalV2(in);
+    }
+
+    /**
+     * Protocol version 1.
+     * @param out the stream to write the object to
+     * @exception IOException Includes any I/O exceptions that may occur
+     */
+    protected void writeExternalV1(ObjectOutput out) throws IOException {
         out.writeInt(topVer);
         out.writeLong(order);
         out.writeInt(nodeOrderDrId);
     }
 
-    /** {@inheritDoc} */
-    @Override public void readExternal(ObjectInput in) throws IOException {
+    /**
+     * Protocol version 1.
+     * @param in the stream to read data from in order to restore the object
+     * @throws IOException if I/O errors occur
+     */
+    protected void readExternalV1(ObjectInput in) throws IOException {
         topVer = in.readInt();
         order = in.readLong();
         nodeOrderDrId = in.readInt();
+    }
+
+    /**
+     * Protocol version 2.
+     * @param out the stream to write the object to
+     * @exception IOException Includes any I/O exceptions that may occur
+     */
+    protected void writeExternalV2(ObjectOutput out) throws IOException {
+        out.writeLong(updateCounter);
+    }
+
+    /**
+     * Protocol version 2.
+     * @param in the stream to read data from in order to restore the object
+     * @throws IOException if I/O errors occur
+     */
+    protected void readExternalV2(ObjectInput in) throws IOException {
+        try {
+            updateCounter = in.readLong();
+        }
+        catch (EOFException ignore) {
+            // Noop.
+        }
     }
 
     /** {@inheritDoc} */
@@ -262,6 +337,11 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
                 writer.incrementState();
 
+            case 3:
+                if (!writer.writeLong("updateCounter", updateCounter))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -299,6 +379,14 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
                 reader.incrementState();
 
+            case 3:
+                updateCounter = reader.readLong("updateCounter");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
         }
 
         return reader.afterMessageRead(GridCacheVersion.class);
@@ -311,7 +399,7 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 3;
+        return 4;
     }
 
     /** {@inheritDoc} */

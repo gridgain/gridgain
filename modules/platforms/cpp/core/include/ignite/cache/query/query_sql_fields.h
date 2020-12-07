@@ -69,7 +69,7 @@ namespace ignite
                     sql(sql),
                     schema(),
                     pageSize(1024),
-                    loc(false),
+                    loc(loc),
                     distributedJoins(false),
                     enforceJoinOrder(false),
                     lazy(false),
@@ -382,6 +382,9 @@ namespace ignite
                         writer.WriteNull();
                     else
                         writer.WriteString(schema);
+
+                    writer.WriteInt32Array(NULL, 0); // Partitions
+                    writer.WriteInt32(1);                // UpdateBatchSize
                 }
 
             private:

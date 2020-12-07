@@ -78,6 +78,7 @@ import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryEnumCache;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.managers.systemview.JmxSystemViewExporterSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -113,6 +114,7 @@ import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi;
+import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.config.GridTestProperties;
@@ -142,6 +144,9 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.FileSystemXmlApplicationContext;
 
 import static java.util.Collections.newSetFromMap;
 import static java.util.Objects.requireNonNull;
@@ -644,7 +649,12 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         cfg.setClientMode(false);
         cfg.setDiscoverySpi(new TcpDiscoverySpi() {
             @Override public void sendCustomEvent(DiscoverySpiCustomMessage msg) throws IgniteException {
-                //No-op
+                // No-op.
+            }
+        });
+        cfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi() {
+            @Override protected void register(SystemView<?> sysView) {
+                // No-op.
             }
         });
 
@@ -979,6 +989,26 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      */
     protected IgniteEx startGridWithCfg(int idx, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
         return startGrid(getTestIgniteInstanceName(idx), cfgOp);
+    }
+
+    /**
+     * Starts new grid with given index and overriding {@link DependencyResolver}.
+     *
+     * @param idx Index of the grid to start.
+     * @param cfgOp Configuration mutator. Can be used to avoid overcomplification of {@link #getConfiguration()}.
+     * @param rslvr Dependency provider.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGridWithCfg(int idx, UnaryOperator<IgniteConfiguration> cfgOp, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
+
+        try {
+            return startGrid(getTestIgniteInstanceName(idx), cfgOp);
+        }
+        finally {
+            IgnitionEx.dependencyResolver(null);
+        }
     }
 
     /**
@@ -1653,6 +1683,58 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             return G.start(cfg);
         else
             return startRemoteGrid(igniteInstanceName, cfg, null);
+    }
+
+    /**
+     * Loads configuration from the given Spring XML file.
+     * Do not remove this method as it is used in extensions tests.
+     *
+     * @param springCfgPath Path to file.
+     * @return Grid configuration.
+     * @throws IgniteCheckedException If load failed.
+     */
+    @SuppressWarnings("deprecation")
+    protected IgniteConfiguration loadConfiguration(String springCfgPath) throws IgniteCheckedException {
+        URL cfgLocation = U.resolveIgniteUrl(springCfgPath);
+
+        if (cfgLocation == null)
+            cfgLocation = U.resolveIgniteUrl(springCfgPath, false);
+
+        assert cfgLocation != null;
+
+        ApplicationContext springCtx;
+
+        try {
+            springCtx = new FileSystemXmlApplicationContext(cfgLocation.toString());
+        }
+        catch (BeansException e) {
+            throw new IgniteCheckedException("Failed to instantiate Spring XML application context.", e);
+        }
+
+        Map<?, ?> cfgMap;
+
+        try {
+            // Note: Spring is not generics-friendly.
+            cfgMap = springCtx.getBeansOfType(IgniteConfiguration.class);
+        }
+        catch (BeansException e) {
+            throw new IgniteCheckedException("Failed to instantiate bean [type=" + IgniteConfiguration.class + ", err=" +
+                e.getMessage() + ']', e);
+        }
+
+        if (cfgMap == null)
+            throw new IgniteCheckedException("Failed to find a single grid factory configuration in: " + springCfgPath);
+
+        if (cfgMap.isEmpty())
+            throw new IgniteCheckedException("Can't find grid factory configuration in: " + springCfgPath);
+        else if (cfgMap.size() > 1)
+            throw new IgniteCheckedException("More than one configuration provided for cache load test: " + cfgMap.values());
+
+        IgniteConfiguration cfg = (IgniteConfiguration)cfgMap.values().iterator().next();
+
+        cfg.setNodeId(UUID.randomUUID());
+
+        return cfg;
     }
 
     /**
@@ -2872,7 +2954,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
-     * Returns metric set.
+     * Returns metric registry.
      *
      * @param igniteInstanceName Ignite instance name.
      * @param grp Name of the group.

@@ -35,6 +35,7 @@ import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongListReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
@@ -256,7 +257,8 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
             IgniteLogger log,
             IoStatisticsHolder stats,
             InlineIndexColumnFactory factory,
-            int configuredInlineSize
+            int configuredInlineSize,
+            PageIoResolver pageIoRslvr
         ) throws IgniteCheckedException {
             super(
                 cctx,
@@ -284,7 +286,8 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
                 log,
                 stats,
                 factory,
-                configuredInlineSize
+                configuredInlineSize,
+                pageIoRslvr
             );
         }
 

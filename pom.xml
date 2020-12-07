@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>apache-ignite</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
@@ -54,6 +54,7 @@
         <module>modules/spring</module>
         <module>modules/spring-data</module>
         <module>modules/spring-data-2.0</module>
+        <module>modules/spring-data-2.2</module>
         <module>modules/web</module>
         <module>modules/aop</module>
         <module>modules/urideploy</module>
@@ -70,26 +71,16 @@
         <module>modules/gce</module>
         <module>modules/cloud</module>
         <module>modules/mesos</module>
-        <module>modules/kafka</module>
-        <module>modules/flume</module>
         <module>modules/yarn</module>
-        <module>modules/jms11</module>
-        <module>modules/twitter</module>
-        <module>modules/mqtt</module>
         <module>modules/zookeeper</module>
         <module>modules/hibernate-core</module>
-        <module>modules/camel</module>
-        <module>modules/storm</module>
         <module>modules/osgi-paxlogging</module>
         <module>modules/osgi-karaf</module>
         <module>modules/osgi</module>
         <module>modules/web/ignite-appserver-test</module>
         <module>modules/web/ignite-websphere-test</module>
         <module>modules/cassandra</module>
-        <module>modules/flink</module>
         <module>modules/kubernetes</module>
-        <module>modules/zeromq</module>
-        <module>modules/rocketmq</module>
         <module>modules/sqlline</module>
         <module>modules/ml</module>
         <module>modules/ml/spark-model-parser</module>
