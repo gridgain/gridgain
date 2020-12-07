@@ -476,17 +476,18 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
             // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
             // @see io.opencensus.implcore.trace.export.ExportComponentImpl.
 
-            int sz = collectedSpans.size();
+            String testSpanNamePrefix = "test-" + System.nanoTime() + '-';
+            String lastTestSpanName = testSpanNamePrefix + SPAN_BUFFER_COUNT;
 
-            for (int i = 0; i < SPAN_BUFFER_COUNT; i++) {
-                Span span = Tracing.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
+            for (int i = 1; i <= SPAN_BUFFER_COUNT; i++) {
+                Span span = Tracing.getTracer().spanBuilder(testSpanNamePrefix + i).setSampler(Samplers.alwaysSample()).startSpan();
 
                 span.end();
             }
 
             assertTrue(
                 "Failed to wait for exporting all traces. Please check span buffer size and exporter schedule delay.",
-                GridTestUtils.waitForCondition(() -> collectedSpans.size() >= sz + SPAN_BUFFER_COUNT, EXPORTER_SCHEDULE_DELAY * 2));
+                GridTestUtils.waitForCondition(() -> allSpans().anyMatch(span -> span.getName().equals(lastTestSpanName)), EXPORTER_SCHEDULE_DELAY * 2));
         }
     }
 
