@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 
 /**
  * Statistics manager.
@@ -28,6 +29,7 @@ public interface IgniteStatisticsManager {
      * @param objName Object to collect statistics by.
      * @param colNames Columns to collect statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
+     * @return future to get fini
      */
     public void collectObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
 
@@ -47,5 +49,5 @@ public interface IgniteStatisticsManager {
      * @param objName Object to collect statistics by.
      * @param colNames Columns to remove statistics by.
      */
-    public void clearObjectStatistics(String schemaName, String objName, String... colNames);
+    public void clearObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
 }

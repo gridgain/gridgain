@@ -88,4 +88,3 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
         return Objects.hash(rowsCnt, colNameToStat);
     }
 }
-

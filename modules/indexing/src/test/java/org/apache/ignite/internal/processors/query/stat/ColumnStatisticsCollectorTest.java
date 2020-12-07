@@ -44,6 +44,7 @@ import java.util.UUID;
  * Test different scenario with column statistics collection.
  */
 public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
+    /** Types with its comparators for tests.  */
     private static final Map<Value[], Comparator<Value>> types = new HashMap<>();
 
     static {
@@ -76,9 +77,9 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
      */
     @Test
     public void testZeroAggregation() {
-        Value[] zeroArray = new Value[0];
+        Value[] zeroArr = new Value[0];
         for (Map.Entry<Value[], Comparator<Value>> type : types.entrySet())
-            testAggregation(type.getValue(), type.getKey()[0].getType(), 0, zeroArray);
+            testAggregation(type.getValue(), type.getKey()[0].getType(), 0, zeroArr);
     }
 
     /**
@@ -97,9 +98,9 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMultipleNullsAggregation() {
-        Value[] zeroArray = new Value[0];
+        Value[] zeroArr = new Value[0];
         for (Map.Entry<Value[], Comparator<Value>> type : types.entrySet())
-            testAggregation(type.getValue(), type.getKey()[0].getType(), 1000, zeroArray);
+            testAggregation(type.getValue(), type.getKey()[0].getType(), 1000, zeroArr);
     }
 
     /**
@@ -141,16 +142,16 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
      * Test aggregation with specified values.
      * Check that statistics collected properly.
      *
-     * @param comparator Value comparator.
+     * @param comp Value comparator.
      * @param type Value type.
      * @param nulls Nulls count.
      * @param vals Values to aggregate where the first one is the smallest and the last one is the biggest one.
      */
-    private static void testAggregation(Comparator<Value> comparator, TypeInfo type, int nulls, Value... vals) {
-        Column intColumn = new Column("test", type);
+    private static void testAggregation(Comparator<Value> comp, TypeInfo type, int nulls, Value... vals) {
+        Column intCol = new Column("test", type);
 
-        ColumnStatisticsCollector collector = new ColumnStatisticsCollector(intColumn, comparator);
-        ColumnStatisticsCollector collectorInverted = new ColumnStatisticsCollector(intColumn, comparator);
+        ColumnStatisticsCollector collector = new ColumnStatisticsCollector(intCol, comp);
+        ColumnStatisticsCollector collectorInverted = new ColumnStatisticsCollector(intCol, comp);
 
         for (int i = 0; i < vals.length; i++) {
             collector.add(vals[i]);
@@ -161,37 +162,37 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
             collectorInverted.add(ValueNull.INSTANCE);
         }
 
-        ColumnStatistics result = collector.finish();
-        ColumnStatistics resultInverted = collectorInverted.finish();
+        ColumnStatistics res = collector.finish();
+        ColumnStatistics resInverted = collectorInverted.finish();
 
-        testAggregationResult(result, nulls, vals);
-        testAggregationResult(resultInverted, nulls, vals);
+        testAggregationResult(res, nulls, vals);
+        testAggregationResult(resInverted, nulls, vals);
     }
 
     /**
      * Check column statistics collection results.
      *
-     * @param result Column statistics to test.
+     * @param res Column statistics to test.
      * @param nulls Count of null values in statistics.
      * @param vals Values included into statistics where first one is the smallest one and the last one is the biggest.
      */
-    private static void testAggregationResult(ColumnStatistics result, int nulls, Value... vals) {
+    private static void testAggregationResult(ColumnStatistics res, int nulls, Value... vals) {
         if (vals.length == 0) {
-            assertNull(result.min());
-            assertNull(result.max());
+            assertNull(res.min());
+            assertNull(res.max());
         }
         else {
-            assertEquals(vals[0], result.min());
-            assertEquals(vals[vals.length - 1], result.max());
+            assertEquals(vals[0], res.min());
+            assertEquals(vals[vals.length - 1], res.max());
         }
         int nullsPercent = (nulls + vals.length == 0) ? 0 : (100 * nulls) / (nulls + vals.length);
 
-        assertEquals(nullsPercent, result.nulls());
+        assertEquals(nullsPercent, res.nulls());
 
         int card = (vals.length == 0) ? 0 : (100 * new HashSet<>(Arrays.asList(vals)).size()) / vals.length;
 
-        assertEquals(card, result.cardinality());
-        assertEquals(vals.length + nulls, result.total());
-        assertNotNull(result.raw());
+        assertEquals(card, res.cardinality());
+        assertEquals(vals.length + nulls, res.total());
+        assertNotNull(res.raw());
     }
 }

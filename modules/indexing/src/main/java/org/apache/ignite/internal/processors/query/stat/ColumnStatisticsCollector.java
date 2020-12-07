@@ -59,6 +59,9 @@ public class ColumnStatisticsCollector {
     /** Hasher. */
     private final Hasher hash = new Hasher();
 
+    /** Is column has complex type. */
+    private final boolean complexType;
+
     /**
      * Constructor.
      *
@@ -68,6 +71,11 @@ public class ColumnStatisticsCollector {
     public ColumnStatisticsCollector(Column col, Comparator<Value> comp) {
         this.col = col;
         this.comp = comp;
+
+        TypeInfo colTypeInfo = col.getType();
+        complexType = colTypeInfo == TypeInfo.TYPE_ARRAY || colTypeInfo == TypeInfo.TYPE_ENUM_UNDEFINED
+                || colTypeInfo == TypeInfo.TYPE_JAVA_OBJECT || colTypeInfo == TypeInfo.TYPE_RESULT_SET
+                || colTypeInfo == TypeInfo.TYPE_UNKNOWN;
     }
 
     /**
@@ -118,11 +126,13 @@ public class ColumnStatisticsCollector {
 
         hll.addRaw(hash.fastHash(bytes));
 
-        if (null == min || comp.compare(val, min) < 0)
-            min = val;
+        if (!complexType) {
+            if (null == min || comp.compare(val, min) < 0)
+                min = val;
 
-        if (null == max || comp.compare(val, max) > 0)
-            max = val;
+            if (null == max || comp.compare(val, max) > 0)
+                max = val;
+        }
     }
 
     /**
@@ -137,13 +147,6 @@ public class ColumnStatisticsCollector {
 
         int averageSize = averageSize(size, total, nullsCnt);
 
-        TypeInfo colTypeInfo = col.getType();
-
-        // Avoid serializing complex types.
-        if (colTypeInfo == TypeInfo.TYPE_ARRAY || colTypeInfo == TypeInfo.TYPE_ENUM_UNDEFINED
-                || colTypeInfo == TypeInfo.TYPE_JAVA_OBJECT || colTypeInfo == TypeInfo.TYPE_RESULT_SET
-                || colTypeInfo == TypeInfo.TYPE_UNKNOWN)
-            min = max = null;
         return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes());
     }
 

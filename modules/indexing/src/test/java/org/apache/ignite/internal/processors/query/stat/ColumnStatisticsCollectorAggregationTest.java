@@ -32,6 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * Test different scenarious with column statistics aggregation.
  */
 public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstractTest {
+    /** Decimal comparator. */
     private static final Comparator<Value> DECIMAL_VALUE_COMPARATOR = (v1, v2) ->
             v1.getBigDecimal().compareTo(v2.getBigDecimal());
 
@@ -46,9 +47,9 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
                 getHLL(-1).toBytes());
         statistics.add(stat1);
 
-        ColumnStatistics result = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
+        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
 
-        assertEquals(stat1, result);
+        assertEquals(stat1, res);
     }
 
     /**
@@ -66,15 +67,15 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
         statistics.add(stat1);
         statistics.add(stat2);
 
-        ColumnStatistics result = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
+        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
 
-        assertNull(result.min());
-        assertNull(result.max());
-        assertEquals(100, result.nulls());
-        assertEquals(0, result.cardinality());
-        assertEquals(110, result.total());
-        assertEquals(0, result.size());
-        assertNotNull(result.raw());
+        assertNull(res.min());
+        assertNull(res.max());
+        assertEquals(100, res.nulls());
+        assertEquals(0, res.cardinality());
+        assertEquals(110, res.total());
+        assertEquals(0, res.size());
+        assertNotNull(res.raw());
     }
 
     /**
@@ -92,29 +93,29 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
         statistics.add(stat1);
         statistics.add(stat2);
 
-        ColumnStatistics result = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
+        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
 
-        assertEquals(ValueDecimal.get(BigDecimal.ZERO), result.min());
-        assertEquals(ValueDecimal.get(BigDecimal.TEN), result.max());
-        assertEquals(49, result.nulls());
-        assertEquals(11, result.cardinality());
-        assertEquals(1010, result.total());
-        assertEquals(0, result.size());
-        assertNotNull(result.raw());
+        assertEquals(ValueDecimal.get(BigDecimal.ZERO), res.min());
+        assertEquals(ValueDecimal.get(BigDecimal.TEN), res.max());
+        assertEquals(49, res.nulls());
+        assertEquals(11, res.cardinality());
+        assertEquals(1010, res.total());
+        assertEquals(0, res.size());
+        assertNotNull(res.raw());
     }
 
     /**
      * Generate HLL with specified number of unique values.
      *
-     * @param uniq Desired uniq value count.
+     * @param uniq Desired unique value count.
      * @return HLL with specified (or near) cardinality.
      */
     private HLL getHLL(int uniq) {
-        HLL result = new HLL(13, 5);
+        HLL res = new HLL(13, 5);
         Random r = ThreadLocalRandom.current();
         for (int i = 0; i < uniq; i++)
-            result.addRaw(r.nextLong());
+            res.addRaw(r.nextLong());
 
-        return result;
+        return res;
     }
 }

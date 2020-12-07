@@ -38,7 +38,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
     private ReadWriteMetaStorageMock metastorage;
 
     /** Default statistics store. */
-    private IgniteStatisticsStoreImpl statStore;
+    private IgniteStatisticsPersistenceStoreImpl statStore;
 
     /** Default statistics repository mock. */
     private IgniteStatisticsRepositoryImpl statsRepos;
@@ -68,7 +68,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         Mockito.doAnswer(ans -> cacheArguments.add(ans.getArguments())).when(statsRepos)
                 .cacheLocalStatistics(Mockito.any(StatsKey.class), Mockito.anyCollection());
         metastorage = new ReadWriteMetaStorageMock();
-        statStore = new IgniteStatisticsStoreImpl(subscriptionProcessor,
+        statStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
                 new IgniteCacheDatabaseSharedManager(){}, statsRepos, cls -> log);
     }
 
@@ -89,7 +89,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         statStore.onReadyForReadWrite(metastorage);
 
         statStore.saveLocalPartitionStatistics(k1, stat1_1);
-        statStore.saveLocalPartitionsStatistics(k2, Arrays.asList(stat2_2, stat2_3));
+        statStore.replaceLocalPartitionsStatistics(k2, Arrays.asList(stat2_2, stat2_3));
 
         assertEquals(1, statStore.getLocalPartitionsStatistics(k1).size());
         assertEquals(stat1_1, statStore.getLocalPartitionStatistics(k1, 1));
@@ -97,7 +97,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         assertEquals(stat2_2, statStore.getLocalPartitionStatistics(k2, 2));
         assertEquals(stat2_3, statStore.getLocalPartitionStatistics(k2, 3));
 
-        IgniteStatisticsStoreImpl statStore2 = new IgniteStatisticsStoreImpl(subscriptionProcessor,
+        IgniteStatisticsPersistenceStoreImpl statStore2 = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
                 new IgniteCacheDatabaseSharedManager(){}, statsRepos, cls -> log);
 
         statStore2.onReadyForReadWrite(metastorage);
@@ -132,7 +132,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
     public void testUnreadableStatistics() throws IgniteCheckedException {
         statStore.onReadyForReadWrite(metastorage);
         statStore.saveLocalPartitionStatistics(k1, stat1_1);
-        statStore.saveLocalPartitionsStatistics(k2, Arrays.asList(stat2_2, stat2_3));
+        statStore.replaceLocalPartitionsStatistics(k2, Arrays.asList(stat2_2, stat2_3));
 
         String statKey = String.format("stats.%s.%s.%d", k1.schema(), k1.obj(), 1000);
         metastorage.write(statKey, new byte[2]);
@@ -141,7 +141,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         byte[] outerStatValue = new byte[] {1, 2};
         metastorage.write(outerStatKey, outerStatValue);
 
-        IgniteStatisticsStoreImpl statStore2 = new IgniteStatisticsStoreImpl(subscriptionProcessor,
+        IgniteStatisticsPersistenceStoreImpl statStore2 = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
                 new IgniteCacheDatabaseSharedManager(){}, statsRepos, cls -> log);
         statStore2.onReadyForReadWrite(metastorage);
 

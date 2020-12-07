@@ -23,12 +23,15 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
 
+/**
+ * Statistics by column (or by set of columns, if they collected together)
+ */
 public class StatsColumnData implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
-    public static final short TYPE_CODE = 177;
+    public static final short TYPE_CODE = 185;
 
     /** Min value in column. */
     private GridH2ValueMessage min;
@@ -70,13 +73,13 @@ public class StatsColumnData implements Message {
      * @param rawData Raw data to make statistics aggregate.
      */
     public StatsColumnData(
-            GridH2ValueMessage min,
-            GridH2ValueMessage max,
-            int nulls,
-            int cardinality,
-            long total,
-            int size,
-            byte[] rawData
+        GridH2ValueMessage min,
+        GridH2ValueMessage max,
+        int nulls,
+        int cardinality,
+        long total,
+        int size,
+        byte[] rawData
     ) {
         this.min = min;
         this.max = max;

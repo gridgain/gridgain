@@ -26,26 +26,22 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Statistics repository implementation.
  */
 public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepository {
     /** Logger. */
-    private IgniteLogger log;
+    private final IgniteLogger log;
 
     /** Statistics store. */
     private final IgniteStatisticsStore store;
 
     /** Statistics manager. */
-    private final IgniteStatisticsManagerImpl statisticsManager;
-
-    /** Table -> Partition -> Partition Statistics map, populated only on server nodes without persistence enabled. */
-    private final Map<StatsKey, Map<Integer, ObjectPartitionStatisticsImpl>> partsStats;
+    private final IgniteStatisticsManagerImpl statisticsMgr;
 
     /** Local (for current node) object statistics. */
-    private final Map<StatsKey, ObjectStatisticsImpl> localStats;
+    private final Map<StatsKey, ObjectStatisticsImpl> locStats;
 
     /** Global (for whole cluster) object statistics. */
     private final Map<StatsKey, ObjectStatisticsImpl> globalStats = new ConcurrentHashMap<>();
@@ -54,87 +50,46 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      * Constructor.
      *
      * @param storeData If {@code true} - node stores data locally, {@code false} - otherwise.
-     * @param persistence If {@code true} - node have persistence store, {@code false} - otherwise.
+     * @param db Database to use in storage if persistence enabled.
      * @param subscriptionProcessor Subscription processor.
-     * @param statisticsManager Ignite statistics manager.
-     * @param log Ignite logger to use.
+     * @param statisticsMgr Ignite statistics manager.
+     * @param logSupplier Ignite logger supplier to get logger from.
      */
     public IgniteStatisticsRepositoryImpl(
             boolean storeData,
-            boolean persistence,
-            IgniteCacheDatabaseSharedManager database,
+            IgniteCacheDatabaseSharedManager db,
             GridInternalSubscriptionProcessor subscriptionProcessor,
-            IgniteStatisticsManagerImpl statisticsManager,
+            IgniteStatisticsManagerImpl statisticsMgr,
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
         if (storeData) {
             // Persistence store
-            if (persistence) {
-                store = new IgniteStatisticsStoreImpl(subscriptionProcessor, database,this, logSupplier);
-                partsStats = null;
-            }
-            else {
-                store = null;
-                partsStats = new ConcurrentHashMap<>();
-            }
-            localStats = new ConcurrentHashMap<>();
+            store = (db == null) ? new IgniteStatisticsInMemoryStoreImpl(logSupplier) :
+                    new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db, this, logSupplier);
+
+            locStats = new ConcurrentHashMap<>();
         }
         else {
             // Cache only global statistics, no store
             store = null;
-            partsStats = null;
-            localStats = null;
+            locStats = null;
         }
-        this.statisticsManager = statisticsManager;
+        this.statisticsMgr = statisticsMgr;
         this.log = logSupplier.apply(IgniteStatisticsRepositoryImpl.class);
     }
-
-    /**
-     * Convert collection of partition level statistics into map(partId->partStatistics).
-     *
-     * @param key Object key.
-     * @param statistics Collection of tables partition statistics.
-     * @return Partition id to statistics map.
-     */
-    private Map<Integer, ObjectPartitionStatisticsImpl> buildStatisticsMap(
-            StatsKey key,
-            Collection<ObjectPartitionStatisticsImpl> statistics
-    ) {
-        Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = new ConcurrentHashMap<>();
-        for (ObjectPartitionStatisticsImpl s : statistics) {
-            if (statisticsMap.put(s.partId(), s) != null)
-                log.warning(String.format("Trying to save more than one %s.%s partition statistics for partition %d",
-                        key.schema(), key.obj(), s.partId()));
-        }
-        return statisticsMap;
-    }
-
 
     /** {@inheritDoc} */
     @Override public void saveLocalPartitionsStatistics(
             StatsKey key,
             Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
-        if (partsStats != null) {
-            Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = buildStatisticsMap(key, statistics);
+        if (store == null) {
+            log.warning("Unable to save partition level statistics on non server node.");
 
-            partsStats.put(key, statisticsMap);
+            return;
         }
-        if (store != null) {
-            Map<Integer, ObjectPartitionStatisticsImpl> oldStatistics = store.getLocalPartitionsStatistics(key).stream()
-                    .collect(Collectors.toMap(s -> s.partId(), s -> s));
-            Collection<ObjectPartitionStatisticsImpl> combinedStats = new ArrayList<>(statistics.size());
-            for (ObjectPartitionStatisticsImpl newPartStat : statistics) {
-                ObjectPartitionStatisticsImpl oldPartStat = oldStatistics.get(newPartStat.partId());
-                if (oldPartStat == null)
-                    combinedStats.add(newPartStat);
-                else {
-                    ObjectPartitionStatisticsImpl combinedPartStats = add(oldPartStat, newPartStat);
-                    combinedStats.add(combinedPartStats);
-                }
-            }
-            store.saveLocalPartitionsStatistics(key, combinedStats);
-        }
+
+        store.replaceLocalPartitionsStatistics(key, statistics);
     }
 
     /** {@inheritDoc} */
@@ -142,184 +97,165 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             StatsKey key,
             Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
-        if (partsStats != null) {
-            Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = buildStatisticsMap(key, statistics);
+        if (store == null) {
+            log.warning("Unable to save partition level statistics on non server node.");
 
-            partsStats.compute(key, (k, v) -> {
-                if (v != null) {
-                    for (Map.Entry<Integer, ObjectPartitionStatisticsImpl> partStat : v.entrySet()) {
-                        ObjectPartitionStatisticsImpl newStat = statisticsMap.get(partStat.getKey());
-                        if (newStat != null) {
-                            ObjectPartitionStatisticsImpl combinedStat = add(partStat.getValue(), newStat);
-                            statisticsMap.put(partStat.getKey(), combinedStat);
-                        }
-                    }
-                }
-                return statisticsMap;
-            });
+            return;
+        }
+
+        for (ObjectPartitionStatisticsImpl newStat : statistics) {
+            ObjectPartitionStatisticsImpl oldStat = store.getLocalPartitionStatistics(key, newStat.partId());
+            if (oldStat != null)
+                newStat = add(oldStat, newStat);
+
+            store.saveLocalPartitionStatistics(key, newStat);
         }
     }
 
-
     /** {@inheritDoc} */
     @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key) {
-        if (partsStats != null) {
-            Map<Integer, ObjectPartitionStatisticsImpl> objectStatisticsMap = partsStats.get(key);
+        if (store == null) {
+            log.warning("Unable to get local partition statistics by " + key + " on non server node.");
 
-            return (objectStatisticsMap == null) ? Collections.emptyList() : objectStatisticsMap.values();
+            return Collections.emptyList();
         }
 
-        if (store != null)
-            return store.getLocalPartitionsStatistics(key);
-
-        return Collections.emptyList();
+        return store.getLocalPartitionsStatistics(key);
     }
 
     /** {@inheritDoc} */
     @Override public void clearLocalPartitionsStatistics(StatsKey key, String... colNames) {
-        if (F.isEmpty(colNames)) {
-            if (partsStats != null)
-                partsStats.remove(key);
+        if (store == null) {
+            log.warning("Unable to clear local partitions by " + key + " on non server node.");
 
-            if (store != null)
-                store.clearLocalPartitionsStatistics(key);
+            return;
         }
+        if (F.isEmpty(colNames))
+            store.clearLocalPartitionsStatistics(key);
         else {
-            if (partsStats != null) {
-                partsStats.computeIfPresent(key, (tblKey, partMap) -> {
-                    partMap.replaceAll((partId, partStat) -> {
-                        ObjectPartitionStatisticsImpl partStatNew = subtract(partStat, colNames);
-                        return (partStatNew.columnsStatistics().isEmpty()) ? null : partStat;
+            Collection<ObjectPartitionStatisticsImpl> oldStatistics = store.getLocalPartitionsStatistics(key);
+            if (oldStatistics.isEmpty())
+                return;
 
-                    });
-                    partMap.entrySet().removeIf(e -> e.getValue() == null);
-                    return partMap.isEmpty() ? null : partMap;
-                });
+            Collection<ObjectPartitionStatisticsImpl> newStatistics = new ArrayList<>(oldStatistics.size());
+            Collection<Integer> partitionsToRmv = new ArrayList<>();
+            for (ObjectPartitionStatisticsImpl oldStat : oldStatistics) {
+                ObjectPartitionStatisticsImpl newStat = subtract(oldStat, colNames);
+                if (!newStat.columnsStatistics().isEmpty())
+                    newStatistics.add(newStat);
+                else
+                    partitionsToRmv.add(oldStat.partId());
             }
 
-            if (store != null) {
-                Collection<ObjectPartitionStatisticsImpl> oldStatistics = store.getLocalPartitionsStatistics(key);
-                if (oldStatistics.isEmpty())
-                    return;
+            if (newStatistics.isEmpty())
+                store.clearLocalPartitionsStatistics(key);
+            else {
+                if (!partitionsToRmv.isEmpty())
+                    store.clearLocalPartitionsStatistics(key, partitionsToRmv);
 
-                Collection<ObjectPartitionStatisticsImpl> newStatistics = new ArrayList<>(oldStatistics.size());
-                Collection<Integer> partitionsToRemove = new ArrayList<>();
-                for (ObjectPartitionStatisticsImpl oldStat : oldStatistics) {
-                    ObjectPartitionStatisticsImpl newStat = subtract(oldStat, colNames);
-                    if (!newStat.columnsStatistics().isEmpty())
-                        newStatistics.add(newStat);
-                    else
-                        partitionsToRemove.add(oldStat.partId());
-                }
-
-                if (newStatistics.isEmpty())
-                    store.clearLocalPartitionsStatistics(key);
-                else {
-                    if (!partitionsToRemove.isEmpty())
-                        store.clearLocalPartitionsStatistics(key, partitionsToRemove);
-
-                    store.saveLocalPartitionsStatistics(key, newStatistics);
-                }
+                store.replaceLocalPartitionsStatistics(key, newStatistics);
             }
+
         }
     }
 
     /** {@inheritDoc} */
     @Override public void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics) {
-        if (partsStats != null) {
-            partsStats.compute(key, (k,v) -> {
-                if (v == null)
-                    v = new ConcurrentHashMap<>();
-                ObjectPartitionStatisticsImpl oldPartStat = v.get(statistics.partId());
-                if (oldPartStat == null)
-                    v.put(statistics.partId(), statistics);
-                else {
-                    ObjectPartitionStatisticsImpl combinedStats = add(oldPartStat, statistics);
-                    v.put(statistics.partId(), combinedStats);
-                }
-                return v;
-            });
-        }
+        if (store == null) {
+            log.warning("Unable to save local partition statistics for " + key + " on non server node.");
 
-        if (store != null) {
-            ObjectPartitionStatisticsImpl oldPartStat = store.getLocalPartitionStatistics(key, statistics.partId());
-            if (oldPartStat == null)
-                store.saveLocalPartitionStatistics(key, statistics);
-            else {
-                ObjectPartitionStatisticsImpl combinedStats = add(oldPartStat, statistics);
-                store.saveLocalPartitionStatistics(key, combinedStats);
-            }
+            return;
+        }
+        ObjectPartitionStatisticsImpl oldPartStat = store.getLocalPartitionStatistics(key, statistics.partId());
+        if (oldPartStat == null)
+            store.saveLocalPartitionStatistics(key, statistics);
+        else {
+            ObjectPartitionStatisticsImpl combinedStats = add(oldPartStat, statistics);
+            store.saveLocalPartitionStatistics(key, combinedStats);
         }
     }
 
     /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId) {
-        if (partsStats != null) {
-            Map<Integer, ObjectPartitionStatisticsImpl> objectPartStats = partsStats.get(key);
-            return objectPartStats == null ? null : objectPartStats.get(partId);
+        if (store == null) {
+            log.warning("Unable to get local partition statistics for " + key + " on non server node.");
+
+            return null;
         }
 
-        if (store != null)
-            return store.getLocalPartitionStatistics(key, partId);
-
-        return null;
+        return store.getLocalPartitionStatistics(key, partId);
     }
 
     /** {@inheritDoc} */
     @Override public void clearLocalPartitionStatistics(StatsKey key, int partId) {
-        if (partsStats != null) {
-            partsStats.computeIfPresent(key, (k, v) -> {
-                v.remove(partId);
-                return v.isEmpty() ? null : v;
-            });
+        if (store == null) {
+            log.warning("Unable to clear local partition statistics for " + key + " on non server node.");
+
+            return;
         }
 
-        if (store != null)
-            store.clearLocalPartitionStatistics(key, partId);
+        store.clearLocalPartitionStatistics(key, partId);
     }
 
     /** {@inheritDoc} */
     @Override public void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
-        if (localStats != null)
-            localStats.put(key, statistics);
+        if (locStats == null) {
+            log.warning("Unable to save local statistics for " + key + " on non server node.");
+
+            return;
+        }
+
+        locStats.put(key, statistics);
     }
 
     /** {@inheritDoc} */
     @Override public void mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
-        if (localStats != null) {
-            localStats.compute(key, (k, v) -> {
-                if (v == null)
-                    return statistics;
-                return add(v, statistics);
-            });
+        if (locStats == null) {
+            log.warning("Unable to merge local statistics for " + key + " on non server node.");
+
+            return;
         }
+
+        locStats.compute(key, (k, v) -> (v == null) ? statistics : add(v, statistics));
     }
 
     /** {@inheritDoc} */
     @Override public void cacheLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics) {
-        if (localStats != null)
-            localStats.put(key, statisticsManager.aggregateLocalStatistics(key, statistics));
+        if (locStats == null) {
+            log.warning("Unable to cache local statistics for " + key + " on non server node.");
+
+            return;
+        }
+
+        locStats.put(key, statisticsMgr.aggregateLocalStatistics(key, statistics));
     }
 
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl getLocalStatistics(StatsKey key) {
-        return localStats == null ? null : localStats.get(key);
+        if (locStats == null) {
+            log.warning("Unable to get local statistics for " + key + " on non server node.");
+
+            return null;
+        }
+
+        return locStats.get(key);
     }
 
     /** {@inheritDoc} */
     @Override public void clearLocalStatistics(StatsKey key, String... colNames) {
-        if (F.isEmpty(colNames)) {
-            if (localStats != null)
-                localStats.remove(key);
+        if (locStats == null) {
+            log.warning("Unable to clear local statistics for " + key + " on non server node.");
+
+            return;
         }
-        else {
-            if (localStats != null) {
-                localStats.computeIfPresent(key, (k, v) -> {
-                    ObjectStatisticsImpl locStatNew = subtract(v, colNames);
-                    return locStatNew.columnsStatistics().isEmpty() ? null : locStatNew;
-                });
-            }
-        }
+
+        if (F.isEmpty(colNames))
+            locStats.remove(key);
+        else
+            locStats.computeIfPresent(key, (k, v) -> {
+                ObjectStatisticsImpl locStatNew = subtract(v, colNames);
+                return locStatNew.columnsStatistics().isEmpty() ? null : locStatNew;
+            });
     }
 
     /** {@inheritDoc} */
@@ -361,25 +297,25 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      * @return Combined statistics.
      */
     private <T extends ObjectStatisticsImpl> T add(T base, T add) {
-        T result = (T)add.clone();
+        T res = (T)add.clone();
         for (Map.Entry<String, ColumnStatistics> entry : base.columnsStatistics().entrySet())
-            result.columnsStatistics().putIfAbsent(entry.getKey(), entry.getValue());
+            res.columnsStatistics().putIfAbsent(entry.getKey(), entry.getValue());
 
-        return result;
+        return res;
     }
 
     /**
      * Remove specified columns from clone of base ObjectStatistics object.
      *
      * @param base ObjectStatistics to remove columns from.
-     * @param columns Columns to remove.
+     * @param cols Columns to remove.
      * @return Cloned object without specified columns statistics.
      */
-    private <T extends ObjectStatisticsImpl> T subtract(T base, String[] columns) {
-        T result = (T)base.clone();
-        for (String col : columns)
-            result.columnsStatistics().remove(col);
+    private <T extends ObjectStatisticsImpl> T subtract(T base, String[] cols) {
+        T res = (T)base.clone();
+        for (String col : cols)
+            res.columnsStatistics().remove(col);
 
-        return result;
+        return res;
     }
 }

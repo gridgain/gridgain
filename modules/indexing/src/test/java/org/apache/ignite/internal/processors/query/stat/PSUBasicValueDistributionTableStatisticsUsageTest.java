@@ -39,7 +39,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
      * @return Test parameters.
      */
     @Parameterized.Parameters(name = "cacheMode={0}")
-    public static Collection parameters() {
+    public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
                 { REPLICATED },
                 { PARTITIONED },
@@ -238,7 +238,8 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
      * Select with "less or equal" clause from empty table
      * and check that column index will be used.
      */
-    @Test public void selectFromEmptyTable() {
+    @Test
+    public void selectFromEmptyTable() {
         String sql = "select count(*) from empty_distribution i1 where col_a <= 1000";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql,
                 new String[1][]);

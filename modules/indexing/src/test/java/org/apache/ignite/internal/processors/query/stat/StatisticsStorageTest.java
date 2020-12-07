@@ -21,25 +21,24 @@ import org.junit.Test;
 /**
  * Tests for statistics storage.
  */
-public class StatisticsStorageTest extends StatisticsStorageAbstractTest {
+public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTest {
     /**
      * Test that statistics manager will return local statistics after cleaning of statistics repository.
      * @throws IgniteCheckedException In case of errors.
      */
     @Test
     public void clearAllTest() throws IgniteCheckedException {
-        IgniteStatisticsManager statsManager = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsRepositoryImpl statsRepository = (IgniteStatisticsRepositoryImpl)
-                ((IgniteStatisticsManagerImpl)statsManager).statisticsRepository();
-        IgniteStatisticsStoreImpl statsStore = (IgniteStatisticsStoreImpl)statsRepository.statisticsStore();
+        IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
+        IgniteStatisticsRepositoryImpl statsRepo = (IgniteStatisticsRepositoryImpl)
+                ((IgniteStatisticsManagerImpl) statsMgr).statisticsRepository();
+        IgniteStatisticsPersistenceStoreImpl statsStore = (IgniteStatisticsPersistenceStoreImpl) statsRepo.statisticsStore();
 
         statsStore.clearAllStatistics();
 
-        ObjectStatisticsImpl localStat = (ObjectStatisticsImpl) statsManager
-                .getLocalStatistics("PUBLIC", "SMALL");
-        assertNotNull(localStat);
+        ObjectStatistics locStat = statsMgr.getLocalStatistics("PUBLIC", "SMALL");
+        assertNotNull(locStat);
 
-        statsManager.collectObjectStatistics("PUBLIC", "SMALL");
+        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
     }
 
     /**
@@ -50,15 +49,15 @@ public class StatisticsStorageTest extends StatisticsStorageAbstractTest {
      */
     @Test
     public void testRecollection() throws Exception {
-        IgniteStatisticsManager statsManager = grid(0).context().query().getIndexing().statsManager();
-        statsManager.collectObjectStatistics("PUBLIC", "SMALL");
-        ObjectStatisticsImpl localStat = (ObjectStatisticsImpl) statsManager
+        IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
+        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
+        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
-        statsManager.collectObjectStatistics("PUBLIC", "SMALL");
-        ObjectStatisticsImpl localStat2 = (ObjectStatisticsImpl) statsManager
+        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
+        ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
 
-        assertEquals(localStat, localStat2);
+        assertEquals(locStat, locStat2);
     }
 
     /**
@@ -70,15 +69,15 @@ public class StatisticsStorageTest extends StatisticsStorageAbstractTest {
      */
     @Test
     public void testPartialRecollection() throws Exception {
-        IgniteStatisticsManager statsManager = grid(0).context().query().getIndexing().statsManager();
-        statsManager.collectObjectStatistics("PUBLIC", "SMALL", "B");
-        ObjectStatisticsImpl localStat = (ObjectStatisticsImpl) statsManager
+        IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
+        statsMgr.collectObjectStatistics("PUBLIC", "SMALL", "B");
+        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
-        statsManager.collectObjectStatistics("PUBLIC", "SMALL", "B");
-        ObjectStatisticsImpl localStat2 = (ObjectStatisticsImpl) statsManager
+        statsMgr.collectObjectStatistics("PUBLIC", "SMALL", "B");
+        ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
 
-        assertEquals(localStat, localStat2);
+        assertEquals(locStat, locStat2);
     }
 
     /**
@@ -86,19 +85,19 @@ public class StatisticsStorageTest extends StatisticsStorageAbstractTest {
      */
     @Test
     public void testDoubleDeletion() throws Exception {
-        IgniteStatisticsManager statsManager = grid(0).context().query().getIndexing().statsManager();
+        IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
 
-        statsManager.clearObjectStatistics("PUBLIC", "SMALL");
-        ObjectStatisticsImpl localStat = (ObjectStatisticsImpl) statsManager
+        statsMgr.clearObjectStatistics("PUBLIC", "SMALL");
+        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
-        assertNull(localStat);
+        assertNull(locStat);
 
-        statsManager.clearObjectStatistics("PUBLIC", "SMALL");
-        ObjectStatisticsImpl localStat2 = (ObjectStatisticsImpl) statsManager
+        statsMgr.clearObjectStatistics("PUBLIC", "SMALL");
+        ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
-        assertNull(localStat2);
+        assertNull(locStat2);
 
-        statsManager.collectObjectStatistics("PUBLIC", "SMALL");
+        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
     }
 
     /**
@@ -106,24 +105,24 @@ public class StatisticsStorageTest extends StatisticsStorageAbstractTest {
      */
     @Test
     public void testDoublePartialDeletion() throws Exception {
-        IgniteStatisticsManager statsManager = grid(0).context().query().getIndexing().statsManager();
+        IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
 
-        statsManager.clearObjectStatistics("PUBLIC", "SMALL", "B");
+        statsMgr.clearObjectStatistics("PUBLIC", "SMALL", "B");
 
-        ObjectStatisticsImpl localStat = (ObjectStatisticsImpl) statsManager
+        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
-        assertNotNull(localStat);
-        assertNotNull(localStat.columnsStatistics().get("A"));
-        assertNull(localStat.columnsStatistics().get("B"));
+        assertNotNull(locStat);
+        assertNotNull(locStat.columnsStatistics().get("A"));
+        assertNull(locStat.columnsStatistics().get("B"));
 
-        statsManager.clearObjectStatistics("PUBLIC", "SMALL", "B");
+        statsMgr.clearObjectStatistics("PUBLIC", "SMALL", "B");
 
-        ObjectStatisticsImpl localStat2 = (ObjectStatisticsImpl) statsManager
+        ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
-        assertNotNull(localStat2);
-        assertNotNull(localStat.columnsStatistics().get("A"));
-        assertNull(localStat.columnsStatistics().get("B"));
+        assertNotNull(locStat2);
+        assertNotNull(locStat.columnsStatistics().get("A"));
+        assertNull(locStat.columnsStatistics().get("B"));
 
-        statsManager.collectObjectStatistics("PUBLIC", "SMALL");
+        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
     }
 }

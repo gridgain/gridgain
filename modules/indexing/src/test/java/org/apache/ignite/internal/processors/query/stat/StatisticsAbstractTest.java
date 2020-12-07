@@ -188,7 +188,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         int scanCnt = 0;
 
         while (m.find())
-            scanCnt += Integer.valueOf(m.group(1));
+            scanCnt += Integer.parseInt(m.group(1));
 
         return scanCnt;
     }
@@ -267,15 +267,14 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected void updateStatistics(String table, String... tables) {
         List<String> allTbls = new ArrayList<>();
         allTbls.add(table);
-        if (null != tables) {
+        if (null != tables)
             allTbls.addAll(Arrays.asList(tables));
-        }
 
         try {
             for (String tbl : allTbls) {
                 for (Ignite node : G.allGrids()) {
-                    IgniteStatisticsManager statsManager = ((IgniteEx)node).context().query().getIndexing().statsManager();
-                    statsManager.collectObjectStatistics("PUBLIC", tbl.toUpperCase(), null);
+                    IgniteStatisticsManager statsMgr = ((IgniteEx)node).context().query().getIndexing().statsManager();
+                    statsMgr.collectObjectStatistics("PUBLIC", tbl.toUpperCase());
                 }
             }
         }
@@ -291,9 +290,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @return Object statistics.
      */
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
-        ColumnStatistics columnStatistics = new ColumnStatistics(null, null,100,0, 100,
+        ColumnStatistics colStatistics = new ColumnStatistics(null, null,100,0, 100,
                 0, new byte[0]);
-        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", columnStatistics));
+        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
     }
 
     /**
@@ -303,9 +302,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @return Object partition statistics with specified partition id.
      */
     protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
-        ColumnStatistics columnStatistics = new ColumnStatistics(null, null,100,0, 100,
-                0, new byte[0]);
+        ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
+                100, 0, new byte[0]);
         return new ObjectPartitionStatisticsImpl(partId, true, 0, 0,
-                Collections.singletonMap("col1", columnStatistics));
+                Collections.singletonMap("col1", colStatistics));
     }
 }

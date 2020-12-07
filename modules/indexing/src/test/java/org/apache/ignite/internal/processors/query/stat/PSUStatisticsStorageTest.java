@@ -38,31 +38,31 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
         String[][] noHints = new String[1][];
         IgniteEx grid0 = grid(0);
 
-        IgniteStatisticsManager statsManager = grid0.context().query().getIndexing().statsManager();
+        IgniteStatisticsManager statsMgr = grid0.context().query().getIndexing().statsManager();
 
         // 1) check that statistics used and optimal plan generated
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_B"}, lessSql, noHints);
 
         // 2) partially remove statistics for one extra column and check chat the rest statistics still can be used
-        statsManager.clearObjectStatistics("PUBLIC", "SMALL", "A");
+        statsMgr.clearObjectStatistics("PUBLIC", "SMALL", "A");
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_B"}, lessSql, noHints);
 
         // 3) partially remove necessarily for the query statistics and check that query plan will be changed
-        statsManager.clearObjectStatistics("PUBLIC", "SMALL", "B");
+        statsMgr.clearObjectStatistics("PUBLIC", "SMALL", "B");
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_C"}, lessSql, noHints);
 
         // 4) partially collect statistics for extra column and check that query plan still unable to get all statistics
         //      it wants
 
-        statsManager.collectObjectStatistics("PUBLIC", "SMALL", "A");
+        statsMgr.collectObjectStatistics("PUBLIC", "SMALL", "A");
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_C"}, lessSql, noHints);
 
         // 5) partially collect statistics for the necessarily column and check that the query plan will restore to optimal
 
-        statsManager.collectObjectStatistics("PUBLIC", "SMALL", "B");
+        statsMgr.collectObjectStatistics("PUBLIC", "SMALL", "B");
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_B"}, lessSql, noHints);
     }
