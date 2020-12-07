@@ -41,7 +41,6 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationManager;
@@ -68,6 +67,9 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
 
     /** Span buffer count - hardcode in open census. */
     private static final int SPAN_BUFFER_COUNT = 2500;
+
+    /** Enforces that trace export exports data at least once every 5 seconds (hardcoded in open census). */
+    private static final long EXPORTER_SCHEDULE_DELAY = 5_000;
 
     /** */
     protected static final String IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL = "10";
@@ -473,16 +475,18 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
             // By 5 seconds timeout and if buffer size exceeds 2500 spans.
             // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
             // @see io.opencensus.implcore.trace.export.ExportComponentImpl.
+
+            int sz = collectedSpans.size();
+
             for (int i = 0; i < SPAN_BUFFER_COUNT; i++) {
                 Span span = Tracing.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
-
-//                U.sleep(10); // See same hack in OpenCensusSpanAdapter#end() method.
 
                 span.end();
             }
 
-            // Give a chance for worker thread to flush all spans.
-            U.sleep(100);
+            assertTrue(
+                "Failed to wait for exporting all traces. Please check span buffer size and exporter schedule delay.",
+                GridTestUtils.waitForCondition(() -> collectedSpans.size() >= sz + SPAN_BUFFER_COUNT, EXPORTER_SCHEDULE_DELAY * 2));
         }
     }
 
