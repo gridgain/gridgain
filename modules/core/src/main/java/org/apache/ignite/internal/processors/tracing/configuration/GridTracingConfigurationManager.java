@@ -52,7 +52,7 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
     private final DistributedTracingConfiguration distributedTracingConfiguration =
         DistributedTracingConfiguration.detachedProperty();
 
-    /** Tracing configuration. */
+    /** Read-only tracing configuration. Do not update it directly. This map can only be updated via distributed property. */
     private volatile Map<TracingConfigurationCoordinates, TracingConfigurationParameters> tracingConfiguration =
         DEFAULT_CONFIGURATION_MAP;
 
@@ -116,7 +116,7 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
             distributedTracingConfiguration.addListener((name, oldVal, newVal) -> {
                 synchronized (mux) {
                     if (log.isDebugEnabled())
-                        log.debug("Tracing configuration was updated [oldVal= " + oldVal + ", newVal=" + newVal + "]");
+                        log.debug("Tracing configuration was updated [oldVal= " + oldVal + ", newVal=" + newVal + ']');
 
                     if (newVal != null && !newVal.isEmpty()) {
                         // The only place because of which it is possible to get null-valued scope is
@@ -129,8 +129,11 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
                         // and should be removed. Here we remove it.
                         newVal.keySet().removeIf(key -> key.scope() == null);
 
-                        tracingConfiguration = new HashMap<>(DEFAULT_CONFIGURATION_MAP);
-                        tracingConfiguration.putAll(newVal);
+                        Map<TracingConfigurationCoordinates, TracingConfigurationParameters> tmp =
+                            new HashMap<>(DEFAULT_CONFIGURATION_MAP);
+                        tmp.putAll(newVal);
+
+                        tracingConfiguration = tmp;
                     }
                 }
             });
