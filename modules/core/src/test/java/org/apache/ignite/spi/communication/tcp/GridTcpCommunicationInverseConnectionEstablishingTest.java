@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -42,7 +43,10 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.communication.IgniteIoTestMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicNearResponse;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.ssl.GridSslMeta;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -50,6 +54,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
+import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.TcpHandshakeExecutor;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
@@ -98,6 +103,12 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     /** */
     private CacheConfiguration ccfg;
 
+    /** */
+    private long failureDetectionTimeout = 8_000;
+
+    /** */
+    private IgniteInClosure killClientClo;
+
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -118,10 +129,10 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setFailureDetectionTimeout(8_000);
+        cfg.setFailureDetectionTimeout(failureDetectionTimeout);
 
         cfg.setCommunicationSpi(
-            new TestCommunicationSpi()
+            new TestCommunicationSpi(killClientClo)
                 .setForceClientToServerConnections(forceClientToSrvConnections)
         );
 
@@ -186,6 +197,72 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         RESPOND_TO_INVERSE_REQUEST.set(true);
 
         executeCacheTestWithUnreachableClient(false);
+    }
+
+    @Test
+    public void testClientFailureDuringInverseConnectionRequest() throws Exception {
+        UNREACHABLE_DESTINATION.set(UNREACHABLE_IP);
+        failureDetectionTimeout = 30_000;
+        killClientClo = new IgniteInClosure() {
+            @Override public void apply(Object o) {
+                ClusterNode client = grid(SRVS_NUM).localNode();
+
+                assert client.isClient();
+
+                GridTestUtils.runAsync(() -> {
+                    try {
+                        grid(0).context().discovery().failNode(client.id(), "Client node forcibly failed.");
+                    }
+                    catch (Exception ignored) {
+                        log.info(">>> Failed to fail client: " + client.id());
+                    }
+                });
+
+                GridTestUtils.runAsync(() -> {
+                    try {
+                        stopGrid(SRVS_NUM, true);
+                    }
+                    catch (Exception ignored) {
+                        log.info(">>> Failed to stop client: " + client.id());
+                    }
+                });
+            }
+        };
+
+        assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            @Override
+            public boolean apply() {
+                // executing cache operation to force server to open connection to the client
+                try {
+                    executeCacheTestWithUnreachableClient(true);
+                } catch (Exception ignored) {
+                    // catching exception is expected here as client will be failed during cache operation
+                }
+
+                // examining futures for inverse connection opening on the second server in topology
+                TcpCommunicationSpi commSpi = (TcpCommunicationSpi) grid(SRVS_NUM - 1).configuration().getCommunicationSpi();
+                ConnectionClientPool clientPool = U.field(commSpi, "clientPool");
+                Map<ConnectionKey, GridFutureAdapter<?>> clientFuts = U.field(clientPool, "clientFuts");
+
+                if (clientFuts != null && !clientFuts.isEmpty()) {
+                    // only one client and one operation, so number of futures should be one
+                    assertTrue(clientFuts.values().size() == 1);
+
+                    GridFutureAdapter fut = clientFuts.values().stream().findFirst().get();
+
+                    if (!fut.isDone()) {
+                        try {
+                            // give it a little bit of time to get completed because of client failure
+                            fut.get(5_000);
+                        } catch (IgniteCheckedException e) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+        }, 10_000));
     }
 
     /**
@@ -515,6 +592,14 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
     /** */
     private static class TestCommunicationSpi extends TcpCommunicationSpi {
+        /** */
+        private final IgniteInClosure killClientClo;
+
+        /** */
+        public TestCommunicationSpi(IgniteInClosure killClientClo) {
+            this.killClientClo = killClientClo;
+        }
+
         /** {@inheritDoc} */
         @Override protected GridCommunicationClient createTcpClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
             if (node.isClient()) {
@@ -543,6 +628,11 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             IgniteInClosure<IgniteException> ackC) throws IgniteSpiException {
             if (msg instanceof GridIoMessage) {
                 GridIoMessage msg0 = (GridIoMessage)msg;
+
+                // message type is because we use cache operation to trigger inverse connection request
+                // here I want the client to fail when it was requested to open inverse connection
+                if (killClientClo != null && node.isClient() && msg0.message() instanceof GridDhtAtomicNearResponse)
+                    killClientClo.apply(node);
 
                 if (msg0.message() instanceof TcpInverseConnectionResponseMessage && !RESPOND_TO_INVERSE_REQUEST.get()) {
                     log.info("Client skips inverse connection response to server: " + node);
