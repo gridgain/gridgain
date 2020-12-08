@@ -211,6 +211,7 @@ public class GridMapQueryExecutor {
         boolean explain = req.isFlagSet(GridH2QueryRequest.FLAG_EXPLAIN);
         boolean replicated = req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED);
         final boolean lazy = req.isFlagSet(GridH2QueryRequest.FLAG_LAZY);
+        boolean treatReplicatedAsPartitioned = req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED_AS_PARTITIONED);
 
         Boolean dataPageScanEnabled = req.isDataPageScanEnabled();
 
@@ -255,7 +256,8 @@ public class GridMapQueryExecutor {
                             req.mvccSnapshot(),
                             dataPageScanEnabled,
                             req.maxMemory(),
-                            req.runningQryId()
+                            req.runningQryId(),
+                            treatReplicatedAsPartitioned
                         );
                         return null;
                     }
@@ -283,7 +285,8 @@ public class GridMapQueryExecutor {
             req.mvccSnapshot(),
             dataPageScanEnabled,
             req.maxMemory(),
-            req.runningQryId()
+            req.runningQryId(),
+            treatReplicatedAsPartitioned
         );
     }
 
@@ -329,7 +332,8 @@ public class GridMapQueryExecutor {
         @Nullable final MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled,
         long maxMem,
-        @Nullable Long runningQryId
+        @Nullable Long runningQryId,
+        boolean treatReplicatedAsPartitioned
     ) {
         // Prepare to run queries.
         GridCacheContext<?, ?> mainCctx = mainCacheContext(cacheIds);
@@ -382,7 +386,7 @@ public class GridMapQueryExecutor {
 
             qctx = new QueryContext(
                 segmentId,
-                h2.backupFilter(topVer, parts),
+                h2.backupFilter(topVer, parts, treatReplicatedAsPartitioned),
                 distributedJoinCtx,
                 mvccSnapshot,
                 reserved,

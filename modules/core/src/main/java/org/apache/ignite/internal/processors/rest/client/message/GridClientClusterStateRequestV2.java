@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,18 +23,22 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- *
+ * Enhanced version of {@link GridClientClusterStateRequest}.
+ * Introduced to support forced version of the change state command and keep backward compatibility
+ * with nodes of old version that may occur in cluster at the rolling updates.
  */
-@Deprecated
-public class GridClientClusterStateRequest extends GridClientAbstractMessage {
+public class GridClientClusterStateRequestV2 extends GridClientAbstractMessage {
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** If {@code true}, cluster deactivation will be forced. */
+    private boolean forceDeactivation;
 
     /** Request current state. */
     private boolean reqCurrentState;
 
     /** New cluster state. */
-    protected ClusterState state;
+    private ClusterState state;
 
     /** */
     public boolean isReqCurrentState() {
@@ -47,10 +51,25 @@ public class GridClientClusterStateRequest extends GridClientAbstractMessage {
     }
 
     /**
+     * @param state New cluster state.
+     * @param forceDeactivation If {@code true}, cluster deactivation will be forced.
+     * @return Cluster state change request.
+     */
+    public static GridClientClusterStateRequestV2 state(ClusterState state, boolean forceDeactivation) {
+        GridClientClusterStateRequestV2 req = new GridClientClusterStateRequestV2();
+
+        req.state = state;
+
+        req.forceDeactivation = forceDeactivation;
+
+        return req;
+    }
+
+    /**
      * @return Current read-only mode request.
      */
-    public static GridClientClusterStateRequest currentState() {
-        GridClientClusterStateRequest msg = new GridClientClusterStateRequest();
+    public static GridClientClusterStateRequestV2 currentState() {
+        GridClientClusterStateRequestV2 msg = new GridClientClusterStateRequestV2();
 
         msg.reqCurrentState = true;
 
@@ -61,12 +80,17 @@ public class GridClientClusterStateRequest extends GridClientAbstractMessage {
      * @param state New cluster state.
      * @return Cluster state change request.
      */
-    public static GridClientClusterStateRequest state(ClusterState state) {
-        GridClientClusterStateRequest msg = new GridClientClusterStateRequest();
+    public static GridClientClusterStateRequestV2 state(ClusterState state) {
+        GridClientClusterStateRequestV2 msg = new GridClientClusterStateRequestV2();
 
         msg.state = state;
 
         return msg;
+    }
+
+    /** */
+    public boolean forceDeactivation() {
+        return forceDeactivation;
     }
 
     /** {@inheritDoc} */
@@ -75,6 +99,8 @@ public class GridClientClusterStateRequest extends GridClientAbstractMessage {
 
         out.writeBoolean(reqCurrentState);
         U.writeEnum(out, state);
+
+        out.writeBoolean(forceDeactivation);
     }
 
     /** {@inheritDoc} */
@@ -83,5 +109,7 @@ public class GridClientClusterStateRequest extends GridClientAbstractMessage {
 
         reqCurrentState = in.readBoolean();
         state = ClusterState.fromOrdinal(in.readByte());
+
+        forceDeactivation = in.readBoolean();
     }
 }

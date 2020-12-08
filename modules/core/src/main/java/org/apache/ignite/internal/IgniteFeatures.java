@@ -178,7 +178,10 @@ public enum IgniteFeatures {
     SPLITTED_CACHE_CONFIGURATIONS_V2(46),
 
     /** Snapshots upload via sftp. */
-    SNAPSHOT_SFTP_UPLOAD(47);
+    SNAPSHOT_SFTP_UPLOAD(47),
+
+    /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
+    SAFE_CLUSTER_DEACTIVATION(51);
 
     /**
      * Unique feature identifier.

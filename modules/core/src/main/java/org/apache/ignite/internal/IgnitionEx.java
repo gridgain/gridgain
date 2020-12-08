@@ -1482,6 +1482,11 @@ public class IgnitionEx {
         return dependencyResolver.get();
     }
 
+    /**
+     * @param name Grid name (possibly {@code null} for default grid).
+     * @return true when all managers, processors, and plugins have started and ignite kernal start method has fully
+     * completed.
+     */
     public static boolean hasKernalStarted(String name) {
         IgniteNamedInstance grid = name != null ? grids.get(name) : dfltGrid;
         return grid != null && grid.hasStartLatchCompleted();
