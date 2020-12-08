@@ -54,7 +54,7 @@ public class PendingRow {
 
     /**
      * @param cacheId Cache ID.
-     * @param tombstone
+     * @param tombstone {@code True} if the row for a tombstone.
      * @param expireTime Expire time.
      * @param link Link
      */

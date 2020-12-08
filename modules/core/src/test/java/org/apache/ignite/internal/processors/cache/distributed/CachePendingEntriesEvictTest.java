@@ -17,8 +17,11 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.LongAdder;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ModifiedExpiryPolicy;
@@ -44,9 +47,11 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -350,40 +355,83 @@ public class CachePendingEntriesEvictTest extends GridCommonAbstractTest {
     }
 
     /**
-     *
+     * Tests pending tree consistency in put remove scenario.
      */
     @Test
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500") // Reduce tombstone TTl
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "10000000") // Disable async clearing.
     @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable throttling
-    public void testExplicitTombstonesClearingWithCacheGroup() throws Exception {
-        IgniteEx crd = grid(0);
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "100")
+    public void testPutRemoveLoops() throws Exception {
+        long stop = U.currentTimeMillis() + 10_000;
 
-        List<CacheConfiguration> caches = Arrays.asList(
-            cacheConfiguration(atomicityMode).setGroupName("test"),
-            cacheConfiguration(atomicityMode).setName(DEFAULT_CACHE_NAME + 1).setGroupName("test"),
-            cacheConfiguration(atomicityMode).setName(DEFAULT_CACHE_NAME + 2).setGroupName("test")
-        );
-
-        IgniteCache<Object, Object> cache = crd.createCaches(caches).iterator().next();
-
-        int pk = 0;
-
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode);
+        IgniteCache<Object, Object> cache = grid(0).createCache(cacheCfg);
         GridCacheContext<Object, Object> ctx = grid(0).cachex(DEFAULT_CACHE_NAME).context();
-        CacheGroupContext grpCtx = ctx.group();
 
-        cache.remove(pk);
+        int part = 0;
 
-        PartitionUpdateCounter cntr = grpCtx.topology().localPartition(pk).dataStore().partUpdateCounter();
+        PendingEntriesTree tree = null;
+
+        Random r = new Random(0);
+
+        List<Integer> keys = partitionKeys(cache, part, 10, 0);
+
+        LongAdder puts = new LongAdder();
+        LongAdder removes = new LongAdder();
+
+        int c = 0;
+
+        Set<Integer> expTs = new HashSet<>();
+
+        while (U.currentTimeMillis() < stop) {
+            c++;
+
+            List<Integer> insertedKeys = new ArrayList<>();
+            List<Integer> rmvKeys = new ArrayList<>();
+
+            for (Integer key : keys) {
+                //if (!batch)
+                cache.put(key, key);
+
+                expTs.remove(key);
+
+                insertedKeys.add(key);
+
+                puts.increment();
+
+                boolean rmv = r.nextFloat() < 0.5;
+                if (rmv) {
+                    key = insertedKeys.get(r.nextInt(insertedKeys.size()));
+
+                    cache.remove(key);
+
+                    rmvKeys.add(key);
+
+                    expTs.add(key);
+
+                    removes.increment();
+                }
+            }
+
+            if (tree == null) // Ensure initialized.
+                tree = ctx.group().topology().localPartition(part).dataStore().pendingTree();
+
+            assertEquals(expTs.size(), tree.size());
+        }
+
+        log.info("Finished loops [puts=" + puts.sum() + ", removes=" + removes.sum() +
+            ", size=" + cache.size() + ", pending=" + tree.size() + ", cnt=" + c + ']');
 
         doSleep(1000);
 
-        validateCache(grpCtx, pk, 1, 0);
+        if (!tree.isEmpty()) {
+            log.info(tree.printTree());
 
-        ctx.ttl().expire(5);
+            assertFalse(ctx.ttl().expire(1000));
+        }
 
-        validateCache(grpCtx, pk, 0, 0);
-        assertEquals(1, cntr.tombstoneClearCounter());
+        assertTrue(tree.isEmpty());
     }
 
     /**

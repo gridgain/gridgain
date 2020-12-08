@@ -71,9 +71,6 @@ public class ConsistencyUtils {
 
         int part = first.partitionId();
 
-        log.info(">>>> Test node 0 [name=" + g0.name() + ", part=" + part + ']');
-        log.info(">>>> Test node 1 [name=" + g1.name() + ", part=" + part + ']');
-
         CacheGroupContext grpCtx0 = g0.context().cache().cacheGroup(first.groupId());
         List<CacheDataRow> dataRows0 = rows(grpCtx0, part);
 
@@ -103,7 +100,10 @@ public class ConsistencyUtils {
         CacheDataRow r1 = dataRows1.stream().filter(r -> r.key().equals(testRow.key())).findFirst().orElse(null);
 
         log.info(">>>> Test node 0 [name=" + g0.name() + ", part=" + part + ", row=" + r0 + ']');
-        log.info(">>>> Test node 0 [name=" + g0.name() + ", part=" + part + ", row=" + r1 + ']');
+        log.info(">>>> Test node 1 [name=" + g1.name() + ", part=" + part + ", row=" + r1 + ']');
+
+        log.info(">>>> Test node 0 [tree=" + grpCtx0.topology().localPartition(part).dataStore().pendingTree().printTree() + ']');
+        log.info(">>>> Test node 1 [tree=" + grpCtx1.topology().localPartition(part).dataStore().pendingTree().printTree() + ']');
 
         printKeyHistory(g0, log, testRow, grpCtx0);
         printKeyHistory(g1, log, testRow, grpCtx1);

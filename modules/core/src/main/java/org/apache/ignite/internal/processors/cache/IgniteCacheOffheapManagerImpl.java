@@ -107,7 +107,6 @@ import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.GridStripedLock;
 import org.apache.ignite.internal.util.IgniteTree;
 import org.apache.ignite.internal.util.collection.ImmutableIntSet;
-import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.collection.IntRWHashMap;
 import org.apache.ignite.internal.util.collection.IntSet;
@@ -1427,8 +1426,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     try {
                         GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
-                        if (entry != null) // TODO comparison not needed.
-                            c.apply(entry, obsoleteVer);
+                        c.apply(entry, obsoleteVer);
                     }
                     catch (GridDhtInvalidPartitionException ignored) {
                         // Skip renting or evicted partition.
@@ -2752,17 +2750,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             updatePendingEntries(cctx, newRow, oldNull ? null : oldRow);
 
+            if (oldTombstone) {
+                tombstoneRemoved();
+
+                clearPendingEntries(cctx, oldRow);
+            }
+
             if (oldRow != null) {
                 assert oldRow.link() != 0 : oldRow;
 
                 if (newRow.link() != oldRow.link())
                     rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
-            }
-
-            if (oldTombstone) {
-                tombstoneRemoved();
-
-                clearPendingEntries(cctx, oldRow);
             }
 
             if (isIncrementalDrEnabled(cctx)) {
@@ -2815,7 +2813,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheDataRow oldRow = dataTree.remove(new SearchRow(cacheId, key));
 
-                finishRemove(cctx, key, oldRow, null);
+                if (oldRow != null)
+                    finishRemove(cctx, key, oldRow, null);
             }
             finally {
                 busyLock.leaveBusy();
@@ -2930,9 +2929,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             @Nullable CacheDataRow tombstoneRow
         ) throws IgniteCheckedException {
             boolean oldTombstone = isTombstone(oldRow);
-            boolean oldNull = oldRow == null || oldTombstone;
+            boolean hasOldVal = oldRow != null && !oldTombstone;
 
-            if (!oldNull) {
+            if (hasOldVal) {
                 clearPendingEntries(cctx, oldRow);
 
                 decrementSize(cctx.cacheId());
@@ -2941,26 +2940,27 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             GridCacheQueryManager qryMgr = cctx.queries();
 
             if (qryMgr.enabled())
-                qryMgr.remove(key, oldNull ? null : oldRow);
+                qryMgr.remove(key, hasOldVal ? oldRow : null);
 
-            if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
-                rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
-
-            // TODO looks like oldTombstone chech is redundant because it's always should be true (can force remove only ts)
             if (oldTombstone && tombstoneRow == null) {
                 tombstoneRemoved();
 
                 clearPendingEntries(cctx, oldRow);
 
-                // TODO optimize.
-                grp.topology().localPartition(oldRow.partition()).dataStore().partUpdateCounter().updateTombstoneClearCounter(oldRow.version().updateCounter());
+                // On tombstone removal should adjust tombstone counter to avoid data desync. TODO pass partition inst ?
+                grp.topology().localPartition(oldRow.partition()).dataStore().partUpdateCounter().
+                    updateTombstoneClearCounter(oldRow.version().updateCounter());
             }
-
-            if (!oldTombstone && tombstoneRow != null) {
+            else if (!oldTombstone && tombstoneRow != null) {
                 tombstoneCreated();
 
                 updatePendingEntries(cctx, tombstoneRow, null);
             }
+            else if (oldTombstone && tombstoneRow != null)
+                updatePendingEntries(cctx, tombstoneRow, oldRow);
+
+            if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
+                rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
 
             if (isIncrementalDrEnabled(cctx)) {
                 if (oldRow != null) {

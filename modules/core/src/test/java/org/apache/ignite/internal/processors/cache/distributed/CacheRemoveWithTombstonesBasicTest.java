@@ -1575,7 +1575,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertTrue(tree.isEmpty());
     }
 
-
     /**
      * TODO validate cache size, add test for many caches in group.
      *

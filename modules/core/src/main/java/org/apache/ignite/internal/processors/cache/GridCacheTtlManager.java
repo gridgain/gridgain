@@ -68,7 +68,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                         if (log.isTraceEnabled())
                             log.trace("Trying to remove expired entry from cache: " + entry);
 
-                        if (entry.onTtlExpired(obsoleteVer))
+                        if (entry.onTtlExpired(obsoleteVer)) // A successful call will remove an entry from a heap.
                             return true;
 
                         break;
@@ -91,6 +91,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     @Override protected void start0() throws IgniteCheckedException {
         dhtCtx = cctx.isNear() ? cctx.near().dht().context() : cctx;
 
+        // TODO ensure sys caches are not processed for ttl.
         boolean cleanupDisabled = cctx.kernalContext().isDaemon() ||
 //            !cctx.config().isEagerTtl() ||
 //            CU.isUtilityCache(cctx.name()) ||
