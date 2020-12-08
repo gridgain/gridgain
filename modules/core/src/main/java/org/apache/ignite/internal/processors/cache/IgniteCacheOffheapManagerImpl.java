@@ -1847,7 +1847,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /**
-         * @param row Row.
+         * @param row Row. TODO get rid.
          */
         private boolean isTombstone(CacheDataRow row) throws IgniteCheckedException {
             if (!grp.supportsTombstone())
@@ -2942,22 +2942,24 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (qryMgr.enabled())
                 qryMgr.remove(key, hasOldVal ? oldRow : null);
 
-            if (oldTombstone && tombstoneRow == null) {
-                tombstoneRemoved();
+            if (oldTombstone) {
+                if (tombstoneRow == null) {
+                    tombstoneRemoved();
 
-                clearPendingEntries(cctx, oldRow);
+                    clearPendingEntries(cctx, oldRow);
 
-                // On tombstone removal should adjust tombstone counter to avoid data desync. TODO pass partition inst ?
-                grp.topology().localPartition(oldRow.partition()).dataStore().partUpdateCounter().
-                    updateTombstoneClearCounter(oldRow.version().updateCounter());
+                    // On tombstone removal should adjust tombstone counter to avoid data desync. TODO pass partition inst ?
+                    grp.topology().localPartition(oldRow.partition()).dataStore().partUpdateCounter().
+                        updateTombstoneClearCounter(oldRow.version().updateCounter());
+                }
+                else if (oldRow.expireTime() != tombstoneRow.expireTime())
+                    updatePendingEntries(cctx, tombstoneRow, oldRow); // Reindex by TTL.
             }
-            else if (!oldTombstone && tombstoneRow != null) {
+            else if (tombstoneRow != null) {
                 tombstoneCreated();
 
                 updatePendingEntries(cctx, tombstoneRow, null);
             }
-            else if (oldTombstone && tombstoneRow != null)
-                updatePendingEntries(cctx, tombstoneRow, oldRow);
 
             if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
