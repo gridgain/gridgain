@@ -39,6 +39,8 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.util.IgniteUtils.awaitForWorkersStop;
 
 /**
@@ -142,7 +144,8 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        asyncDurableBackgroundTasksExecution();
+        if (executeTasksOnNodeStartOrActivate())
+            asyncDurableBackgroundTasksExecution();
     }
 
     /** {@inheritDoc} */
@@ -175,7 +178,8 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
         if (msg.state() != ClusterState.INACTIVE) {
             forbidStartingNewTasks = false;
 
-            asyncDurableBackgroundTasksExecution();
+            if (executeTasksOnNodeStartOrActivate())
+                asyncDurableBackgroundTasksExecution();
         }
     }
 
@@ -320,5 +324,12 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     /** {@inheritDoc} */
     @Override public void beforeCheckpointBegin(Context ctx) {
         /* No op. */
+    }
+
+    /**
+     * @return Whether execute background tasks on node start or cluster activate, {@code true} by default.
+     */
+    private boolean executeTasksOnNodeStartOrActivate() {
+        return getBoolean(IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE, true);
     }
 }
