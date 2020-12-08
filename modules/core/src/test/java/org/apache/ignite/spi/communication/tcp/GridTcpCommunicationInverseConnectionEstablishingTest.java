@@ -199,6 +199,12 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         executeCacheTestWithUnreachableClient(false);
     }
 
+    /**
+     *  Verifies that server threads don't wait for full failure detection timeout
+     *  for client that failed right after requesting inverse comm connection.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testClientFailureDuringInverseConnectionRequest() throws Exception {
         UNREACHABLE_DESTINATION.set(UNREACHABLE_IP);
@@ -230,8 +236,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         };
 
         assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
-            @Override
-            public boolean apply() {
+            @Override public boolean apply() {
                 // executing cache operation to force server to open connection to the client
                 try {
                     executeCacheTestWithUnreachableClient(true);
