@@ -116,7 +116,8 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
                 catch (Exception e) {
                     fail("Unable to create cache.");
                 }
-            }
+            },
+            GRID_CNT
         );
 
         assertTrue(
@@ -160,7 +161,8 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
                 catch (Exception e) {
                     fail("Unable to create cache.");
                 }
-            });
+            },
+            GRID_CNT);
 
         assertTrue(
             checkSpanExistences(
@@ -217,7 +219,9 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
                 catch (Exception e) {
                     fail("Unable to create cache.");
                 }
-            });
+            },
+            GRID_CNT
+        );
 
         assertTrue(
             checkSpanExistences(
@@ -262,7 +266,9 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
                 catch (Exception e) {
                     fail("Unable to create cache.");
                 }
-            });
+            },
+            GRID_CNT
+        );
 
         assertTrue(
             checkSpanExistences(
@@ -286,8 +292,25 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
      */
     private void performClientBasedOperation(
         @Nullable Runnable preparationOperations,
-        @NotNull Runnable operationToCheck) throws Exception
-    {
+        @NotNull Runnable operationToCheck
+    ) throws Exception {
+        performClientBasedOperation(preparationOperations, operationToCheck, 0);
+    }
+
+    /**
+     * Perform preparation operations and operation to trigger span creation.
+     *
+     * @param preparationOperations Operations to run without tracing.
+     * @param operationToCheck Operations to run with tracing.
+     * @param nodeIdx Node id that that is used for changing tracing configuration.
+     *                It makes sense to use the same node that initiates tracing operation, see {@code operatioToCheck}.
+     * @throws Exception If failed.
+     */
+    private void performClientBasedOperation(
+        @Nullable Runnable preparationOperations,
+        @NotNull Runnable operationToCheck,
+        int nodeIdx
+    ) throws Exception {
         if (preparationOperations != null) {
             try {
                 preparationOperations.run();
@@ -298,7 +321,7 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
         }
 
         // Enable discovery tracing.
-        grid(0).tracingConfiguration().set(
+        grid(nodeIdx).tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());
@@ -313,7 +336,7 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
         handler().flush();
 
         // Disable discovery tracing in order not to mess with un-relevant spans.
-        grid(0).tracingConfiguration().set(
+        grid(nodeIdx).tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_NEVER).build());
