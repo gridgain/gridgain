@@ -16,9 +16,9 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
-import com.google.common.collect.ImmutableMap;
 import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
@@ -266,9 +266,7 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
                 catch (Exception e) {
                     fail("Unable to create cache.");
                 }
-            },
-            GRID_CNT
-        );
+            });
 
         assertTrue(
             checkSpanExistences(
