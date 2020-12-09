@@ -63,7 +63,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoRes
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongListReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.InsertLast;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
@@ -153,6 +152,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /** Failure processor. */
     private final FailureProcessor failureProcessor;
+
+    /** Flag for enabling single-threaded append-only tree creation. */
+    private boolean sequentialWriteOptsEnabled;
 
     /** */
     private final GridTreePrinter<Long> treePrinter = new GridTreePrinter<Long>() {
@@ -882,6 +884,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      */
     public final String getName() {
         return name;
+    }
+
+    /** Flag for enabling single-threaded append-only tree creation. */
+    public void enableSequentialWriteMode() {
+        sequentialWriteOptsEnabled = true;
     }
 
     /**
@@ -2714,11 +2721,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         long pageId, long page, long pageAddr, BPlusIO io, long fwdId, long fwdBuf, int idx
     ) throws IgniteCheckedException {
         int cnt = io.getCount(pageAddr);
-        int mid = cnt >>> 1;
+
+        int mid = sequentialWriteOptsEnabled ? (int)(cnt * 0.85) : cnt >>> 1;
 
         boolean res = false;
 
-        if (idx > mid) { // If insertion is going to be to the forward page, keep more in the back page.
+        if (idx > mid && cnt - mid != 1) { // If insertion is going to be to the forward page, keep more in the back page.
             mid++;
 
             res = true;
@@ -2770,7 +2778,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return Result code.
      * @throws IgniteCheckedException If failed.
      */
-    private Result putDown(final Put p, final long pageId, final long fwdId, final int lvl)
+    private Result putDown(final Put p, final long pageId, final long fwdId, int lvl)
         throws IgniteCheckedException {
         assert lvl >= 0 : lvl;
 
@@ -5305,7 +5313,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         throws IgniteCheckedException {
         assert row != null;
 
-        if (row instanceof InsertLast)
+        if (sequentialWriteOptsEnabled)
             return -cnt - 1;
 
         int high = cnt - 1;
