@@ -57,6 +57,9 @@ public class VisorPersistenceMetrics extends VisorDataTransferObject {
     private long lastCpDuration;
 
     /** */
+    private long lastCpStart;
+
+    /** */
     private long lastCpLockWaitDuration;
 
     /** */
@@ -135,6 +138,7 @@ public class VisorPersistenceMetrics extends VisorDataTransferObject {
         cpTotalTm = m.getCheckpointTotalTime();
 
         lastCpDuration = m.getLastCheckpointDuration();
+        lastCpStart = m.getLastCheckpointStarted();
         lastCpLockWaitDuration = m.getLastCheckpointLockWaitDuration();
         lastCpMmarkDuration = m.getLastCheckpointMarkDuration();
         lastCpPagesWriteDuration = m.getLastCheckpointPagesWriteDuration();
@@ -222,6 +226,15 @@ public class VisorPersistenceMetrics extends VisorDataTransferObject {
      */
     public long getLastCheckpointingDuration() {
         return lastCpDuration;
+    }
+
+    /**
+     * Returns time when the last checkpoint was started.
+     *
+     * @return Time when the last checkpoint was started.
+     * */
+    public long getLastCheckpointStarted() {
+        return lastCpStart;
     }
 
     /**
@@ -359,7 +372,7 @@ public class VisorPersistenceMetrics extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V3;
+        return V4;
     }
 
     /** {@inheritDoc} */
@@ -396,6 +409,9 @@ public class VisorPersistenceMetrics extends VisorDataTransferObject {
         // V3
         out.writeLong(storageSize);
         out.writeLong(sparseStorageSize);
+
+        //V4
+        out.writeLong(lastCpStart);
     }
 
     /** {@inheritDoc} */
@@ -434,6 +450,9 @@ public class VisorPersistenceMetrics extends VisorDataTransferObject {
             storageSize = in.readLong();
             sparseStorageSize = in.readLong();
         }
+
+        if (protoVer > V3)
+            lastCpStart = in.readLong();
     }
 
     /** {@inheritDoc} */

@@ -43,6 +43,9 @@ public class DataStorageMetricsSnapshot implements DataStorageMetrics {
     private long lastCpDuration;
 
     /** */
+    private long lastCpStart;
+
+    /** */
     private long lastCpLockWaitDuration;
 
     /** */
@@ -118,6 +121,7 @@ public class DataStorageMetricsSnapshot implements DataStorageMetrics {
         walFsyncTimeAvg = metrics.getWalFsyncTimeAverage();
         walBuffPollSpinsNum = metrics.getWalBuffPollSpinsRate();
         lastCpDuration = metrics.getLastCheckpointDuration();
+        lastCpStart = metrics.getLastCheckpointStarted();
         lastCpLockWaitDuration = metrics.getLastCheckpointLockWaitDuration();
         lastCpMmarkDuration = metrics.getLastCheckpointMarkDuration();
         lastCpPagesWriteDuration = metrics.getLastCheckpointPagesWriteDuration();
@@ -170,6 +174,11 @@ public class DataStorageMetricsSnapshot implements DataStorageMetrics {
     /** {@inheritDoc} */
     @Override public long getLastCheckpointDuration() {
         return lastCpDuration;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getLastCheckpointStarted() {
+        return lastCpStart;
     }
 
     /** {@inheritDoc} */

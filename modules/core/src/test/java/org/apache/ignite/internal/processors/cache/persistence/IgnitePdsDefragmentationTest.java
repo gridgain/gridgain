@@ -204,6 +204,19 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         waitForDefragmentation(0);
 
+        assertEquals(ClusterState.INACTIVE, grid(0).context().state().clusterState().state());
+
+        GridTestUtils.assertThrowsAnyCause(
+            log,
+            () -> {
+                grid(0).cluster().state(ClusterState.ACTIVE);
+
+                return null;
+            },
+            IgniteCheckedException.class,
+            "Failed to activate cluster (node is in maintenance mode)"
+        );
+
         long[] newPartLen = partitionSizes(workDir);
 
         for (int p = 0; p < PARTS; p++)
@@ -497,9 +510,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         stopGrid(0);
 
-        IgniteEx ex = startGrid(0);
-
-        ex.cluster().state(ClusterState.ACTIVE);
+        startGrid(0);
 
         waitForDefragmentation(0);
 
