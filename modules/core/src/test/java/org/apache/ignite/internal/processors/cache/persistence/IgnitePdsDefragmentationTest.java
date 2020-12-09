@@ -508,7 +508,9 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         stopGrid(0);
 
-        startGrid(0);
+        IgniteEx ex = startGrid(0);
+
+        ex.cluster().state(ClusterState.ACTIVE);
 
         waitForDefragmentation(0);
 
