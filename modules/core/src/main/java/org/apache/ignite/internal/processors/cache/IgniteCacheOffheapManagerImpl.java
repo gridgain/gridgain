@@ -3149,7 +3149,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                         // TODO implement fast removal mode.
                         // If request cursor with RowData.TOMBSTONES, then for non-tombtones all fields are null.
-                        if (isTombstone(next)) {
+                        if (next.tombstone()) {
                             this.next = next;
 
                             return true;
@@ -3188,7 +3188,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     while (cur.next()) {
                         CacheDataRow next = cur.get();
 
-                        if (!isTombstone(next)) {
+                        if (!next.tombstone()) {
                             this.next = next;
 
                             return true;

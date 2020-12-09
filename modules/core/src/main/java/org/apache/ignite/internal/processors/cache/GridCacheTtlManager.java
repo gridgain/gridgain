@@ -190,9 +190,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * @return {@code True} if unprocessed expired entries remains.
      */
     public boolean expire(int amount) {
-        if (cctx == null)
-            System.out.println();
-
         assert cctx != null;
 
         long now = U.currentTimeMillis();

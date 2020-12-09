@@ -300,7 +300,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     private volatile HistogramMetricImpl blockingDurationHistogram;
 
     /** Delay before rebalancing code is start executing after exchange completion. For tests only. */
-    private volatile long rebalanceDelay;
+    private volatile long rebalanceDelay = IgniteSystemProperties.getLong("REBALANCE_DELAY", 0);
 
     /** Metric that shows whether cluster is in fully rebalanced state. */
     private volatile BooleanMetricImpl rebalanced;

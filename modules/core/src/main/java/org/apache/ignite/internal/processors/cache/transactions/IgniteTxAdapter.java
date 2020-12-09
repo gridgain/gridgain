@@ -1843,7 +1843,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                 newTtl = CU.TTL_ETERNAL;
             else {
                 newTtl = old.rawTtl();
-                newExpireTime = old.rawExpireTime();
+                newExpireTime = old.deleted() ? CU.TTL_ETERNAL : old.rawExpireTime();
             }
         }
 

@@ -1576,6 +1576,58 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     }
 
     /**
+     *
+     */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500") // Reduce tombstone TTL
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "1") // Disable timeout for async clearing.
+    @WithSystemProperty(key = "REBALANCE_DELAY", value = "1000") // Wait one second before generating assignments.
+    public void testOutdatedTombstoneNotExpired() throws Exception {
+        persistence = true;
+
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        int part = 0;
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        GridCacheContext<Object, Object> ctx = grid(0).cachex(DEFAULT_CACHE_NAME).context();
+        CacheGroupContext grpCtx = ctx.group();
+
+        cache.put(part, 0);
+
+        stopGrid(1);
+
+        cache.remove(part);
+
+        doSleep(1000);
+
+        validateCache(grpCtx, part, 1, 0);
+
+        doSleep(1000);
+
+        validateCache(grpCtx, part, 1, 0);
+
+        assertNull(cache.get(part));
+
+        doSleep(1000);
+
+        validateCache(grpCtx, part, 1, 0);
+
+        GridDhtLocalPartition locPart = grpCtx.topology().localPartition(part);
+
+        PartitionUpdateCounter cntr = locPart.dataStore().partUpdateCounter();
+
+        assertEquals(0, cntr.tombstoneClearCounter());
+
+        startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
      * TODO validate cache size, add test for many caches in group.
      *
      * @param grpCtx ctx.

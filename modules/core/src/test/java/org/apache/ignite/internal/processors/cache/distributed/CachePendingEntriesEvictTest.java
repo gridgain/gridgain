@@ -358,7 +358,7 @@ public class CachePendingEntriesEvictTest extends GridCommonAbstractTest {
      * Tests pending tree consistency in put remove scenario.
      */
     @Test
-    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500") // Reduce tombstone TTl
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500") // Reduce tombstone TTL
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "10000000") // Disable async clearing.
     @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable throttling
     @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "100")

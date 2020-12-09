@@ -2618,12 +2618,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         }
 
         // 3. If TTL is still not changed, then either use old entry TTL or set it to "ETERNAL".
+        // If a tombstone value is replaced with a new, use "ETERNAL".
         if (ttl == CU.TTL_NOT_CHANGED) {
             if (isStartVersion())
                 ttl = CU.TTL_ETERNAL;
             else {
                 ttl = ttlExtras();
-                expireTime = expireTimeExtras();
+                expireTime = deletedUnlocked() ? CU.TTL_ETERNAL : expireTimeExtras();
             }
         }
 
