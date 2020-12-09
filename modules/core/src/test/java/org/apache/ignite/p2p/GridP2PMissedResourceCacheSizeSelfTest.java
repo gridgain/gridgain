@@ -17,15 +17,25 @@
 package org.apache.ignite.p2p;
 
 import java.net.URL;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.managers.deployment.GridDeployment;
+import org.apache.ignite.internal.managers.deployment.GridDeploymentManager;
+import org.apache.ignite.internal.managers.deployment.GridDeploymentStore;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestExternalClassLoader;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
@@ -288,5 +298,85 @@ public class GridP2PMissedResourceCacheSizeSelfTest extends GridCommonAbstractTe
     @Test
     public void testSize2SharedMode() throws Exception {
 //        processSize2Test(GridDeploymentMode.SHARED);
+    }
+
+    /**
+     * Test GridDeploymentMode.SHARED mode.
+     *
+     * @throws Exception if error occur.
+     */
+    @Test
+    public void testCheckTaskClassloaderCacheSharedMode() throws Exception {
+        testCheckTaskClassloaderCache(DeploymentMode.SHARED);
+    }
+
+    /**
+     * Test GridDeploymentMode.PRIVATE mode.
+     *
+     * @throws Exception if error occur.
+     */
+    @Test
+    public void testCheckTaskClassloaderCachePrivateMode() throws Exception {
+        testCheckTaskClassloaderCache(DeploymentMode.PRIVATE);
+    }
+
+    /**
+     * Test GridDeploymentMode.ISOLATED mode.
+     *
+     * @throws Exception if error occur.
+     */
+    @Test
+    public void testCheckTaskClassloaderCacheIsolatedMode() throws Exception {
+        testCheckTaskClassloaderCache(DeploymentMode.ISOLATED);
+    }
+
+    /**
+     * Test GridDeploymentMode.CONTINUOUS mode.
+     *
+     * @throws Exception if error occur.
+     */
+    @Test
+    public void testCheckTaskClassloaderCacheContinuousMode() throws Exception {
+        testCheckTaskClassloaderCache(DeploymentMode.CONTINUOUS);
+    }
+
+    /** */
+    public void testCheckTaskClassloaderCache(DeploymentMode depMode) throws Exception {
+        this.depMode = depMode;
+
+        IgniteEx server = startGrid(0);
+
+        IgniteEx client = startClientGrid(1);
+
+        ClassLoader clsLdr1 = getExternalClassLoader();
+
+        ClassLoader clsLdr2 = getExternalClassLoader();
+
+        Class<ComputeTask> taskCls1 = (Class<ComputeTask>) clsLdr1.loadClass(TASK_NAME1);
+        Class<ComputeTask> taskCls2 = (Class<ComputeTask>) clsLdr2.loadClass(TASK_NAME1);
+
+        client.compute().execute(taskCls1.newInstance(), server.localNode().id());
+        client.compute().execute(taskCls2.newInstance(), server.localNode().id());
+        client.compute().execute(taskCls1.newInstance(), server.localNode().id());
+
+        GridDeploymentManager deploymentMgr = client.context().deploy();
+
+        GridDeploymentStore store = GridTestUtils.getFieldValue(deploymentMgr, "locStore");
+
+        ConcurrentMap<String, Deque<GridDeployment>> cache = GridTestUtils.getFieldValue(store, "cache");
+
+        assertEquals(2, cache.get(TASK_NAME1).size());
+
+        deploymentMgr = server.context().deploy();
+
+        GridDeploymentStore verStore = GridTestUtils.getFieldValue(deploymentMgr, "verStore");
+
+        // deployments per userVer map.
+        Map<String, List<Object>> varCache = GridTestUtils.getFieldValue(verStore, "cache");
+
+        if (depMode == DeploymentMode.CONTINUOUS || depMode == DeploymentMode.SHARED) {
+            for (List<Object> deps : varCache.values())
+                assertEquals(2, deps.size());
+        }
     }
 }

@@ -184,19 +184,6 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
 
         Map<String, String> newRsrcs = addResource(ldr, clsLdrRsrcs, rsrc);
 
-        Collection<ClassLoader> rmvClsLdrs = null;
-
-        if (!F.isEmpty(newRsrcs)) {
-            rmvClsLdrs = new LinkedList<>();
-
-            removeResources(ldr, newRsrcs, rmvClsLdrs);
-        }
-
-        if (rmvClsLdrs != null) {
-            for (ClassLoader cldLdr : rmvClsLdrs)
-                onClassLoaderReleased(cldLdr);
-        }
-
         return !F.isEmpty(newRsrcs);
     }
 
