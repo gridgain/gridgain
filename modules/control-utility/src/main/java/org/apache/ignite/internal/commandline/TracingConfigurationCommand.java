@@ -203,12 +203,12 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
 
             switch (arg) {
                 case SCOPE: {
-                    String peekedNextArg = argIter.peekNextArg();
+                    String peekedNextArg = argIter.peekNextArg().toUpperCase();
 
                     if (!TracingConfigurationCommandArg.args().contains(peekedNextArg)) {
                         strVal = argIter.nextArg(
                             "The scope should be specified. The following " +
-                                "values can be used: " + Arrays.toString(Scope.values()) + '.');
+                                "values can be used: " + Arrays.toString(Scope.values()) + '.').toUpperCase();
 
                         try {
                             scope = Scope.valueOf(strVal);
