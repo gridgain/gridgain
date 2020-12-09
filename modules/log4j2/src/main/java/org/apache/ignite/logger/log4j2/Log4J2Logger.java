@@ -116,6 +116,10 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
     @GridToStringExclude
     private volatile UUID nodeId;
 
+    static {
+        System.setProperty("java.util.logging.manager", "org.apache.logging.log4j.jul.LogManager");
+    }
+
     /**
      * Creates new logger with default implementation.
      */

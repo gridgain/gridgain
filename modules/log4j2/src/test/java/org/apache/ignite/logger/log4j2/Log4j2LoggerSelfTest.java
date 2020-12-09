@@ -20,6 +20,9 @@ import java.io.File;
 import java.net.URL;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.logging.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -33,6 +36,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -153,13 +157,76 @@ public class Log4j2LoggerSelfTest {
     }
 
     /**
+     * Check that JUL is redirected to Log4j2 .
+     *
+     * Start the local node and check presence of log file.
+     * Check that this is really a log of a started node.
+     * Log something using JUL logging.
+     * Check that logs present in log file.
+     * Log something in INFO level from package that is blocked in log4j2 configuration using JUL logging.
+     * Check that logs aren’t present in log file.
+     *
+     * @throws Exception If error occurs.
+     */
+    @Test
+    public void testJULIsRedirectedToLog4j2() throws Exception {
+        File logFile = checkOneNode(0);
+
+        Logger log1 = Logger.getLogger(this.getClass().getName());
+        log1.info("Text that should be presence in logs");
+
+        Logger log2 = Logger.getLogger("org.springframework.context.ApplicationContext");
+        log2.info("INFO logs from org.springframework package should be excluded from logs");
+
+        String logContent = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
+
+        assertTrue("Logs from JUL logger should be present in log file",
+            logContent.contains("[INFO ][main][Log4j2LoggerSelfTest] Text that should be presence in logs"));
+
+        assertFalse("JUL INFO logs for org.springframework package are present in log file",
+            logContent.contains("INFO logs from org.springframework package should be excluded from logs"));
+    }
+
+    /**
+     * Check that Apache Commons Logging is redirected to Log4j2.
+     *
+     * Start the local node and check for presence of log file.
+     * Check that this is really a log of a started node.
+     * Log something using Apache Commons Logging.
+     * Check that logs present in log file.
+     * Log something in INFO level from package that is blocked in log4j2 configuration using Apache Commons Logging.
+     * Check that logs aren’t present in log file.
+     *
+     * @throws Exception If error occurs.
+     */
+    @Test
+    public void testJCLIsRedirectedToLog4j2() throws Exception {
+        File logFile = checkOneNode(0);
+
+        Log log1 = LogFactory.getLog(this.getClass());
+        log1.info("Text that should be presence in logs");
+
+        Log log2 = LogFactory.getLog("org.springframework.context.ApplicationContext");
+        log2.info("INFO logs from org.springframework package should be excluded from logs");
+
+        String logContent = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
+
+        assertTrue("Logs from JCL logger should be present in log file",
+            logContent.contains("[INFO ][main][Log4j2LoggerSelfTest] Text that should be presence in logs"));
+
+        assertFalse("JCL INFO logs for org.springframework package are present in log file",
+            logContent.contains("INFO logs from org.springframework package should be excluded from logs"));
+    }
+
+    /**
      * Starts the local node and checks for presence of log file.
      * Also checks that this is really a log of a started node.
      *
      * @param id Test-local node ID.
+     * @return Log file.
      * @throws Exception If error occurred.
      */
-    private void checkOneNode(int id) throws Exception {
+    private File checkOneNode(int id) throws Exception {
         String id8;
         File logFile;
 
@@ -180,6 +247,7 @@ public class Log4j2LoggerSelfTest {
         assertTrue("Log file does not contain it's node ID: " + logFile,
             logContent.contains(">>> Local node [ID=" + id8.toUpperCase()));
 
+        return logFile;
     }
 
     /**
