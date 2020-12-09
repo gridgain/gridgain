@@ -18,7 +18,9 @@ package org.apache.ignite.logger.slf4j;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.ignite.Ignite;
@@ -31,6 +33,7 @@ import org.apache.logging.log4j.LogManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -50,13 +53,13 @@ public class Slf4jLoggerSelfTest {
     @Before
     public void setUp() {
         deleteLogs();
+
+        LogManager.shutdown();
     }
 
     /** */
     @After
     public void tearDown() {
-        LogManager.shutdown();
-
         deleteLogs();
     }
 
@@ -135,7 +138,7 @@ public class Slf4jLoggerSelfTest {
         }});
 
         return new IgniteConfiguration()
-            .setGridLogger(new Slf4jLogger())
+            .setGridLogger(new Slf4jLogger(LoggerFactory.getLogger(Slf4jLoggerSelfTest.class)))
             .setConnectorConfiguration(null)
             .setDiscoverySpi(disco);
     }
@@ -170,7 +173,9 @@ public class Slf4jLoggerSelfTest {
     /** Delete existing logs, if any */
     @SuppressWarnings("ResultOfMethodCallIgnored")
     private void deleteLogs() {
-        new File(LOG_ALL).delete();
-        new File(LOG_FILTERED).delete();
+        Stream.of(LOG_ALL, LOG_FILTERED)
+            .map(U::resolveIgnitePath)
+            .filter(Objects::nonNull)
+            .forEach(File::delete);
     }
 }
