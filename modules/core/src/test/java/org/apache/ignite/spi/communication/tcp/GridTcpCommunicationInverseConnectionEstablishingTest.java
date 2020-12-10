@@ -43,10 +43,8 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.communication.IgniteIoTestMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicNearResponse;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.ssl.GridSslMeta;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -106,9 +104,6 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     /** */
     private long failureDetectionTimeout = 8_000;
 
-    /** */
-    private IgniteInClosure killClientClo;
-
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -132,7 +127,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         cfg.setFailureDetectionTimeout(failureDetectionTimeout);
 
         cfg.setCommunicationSpi(
-            new TestCommunicationSpi(killClientClo)
+            new TestCommunicationSpi()
                 .setForceClientToServerConnections(forceClientToSrvConnections)
         );
 
@@ -207,67 +202,37 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      */
     @Test
     public void testClientFailureDuringInverseConnectionRequest() throws Exception {
-        UNREACHABLE_DESTINATION.set(UNREACHABLE_IP);
+        UNREACHABLE_DESTINATION.set(UNRESOLVED_HOST);
         failureDetectionTimeout = 30_000;
-        killClientClo = new IgniteInClosure() {
-            @Override public void apply(Object o) {
-                ClusterNode client = grid(SRVS_NUM).localNode();
+        RESPOND_TO_INVERSE_REQUEST.set(false);
+        forceClientToSrvConnections = true;
 
-                assert client.isClient();
+        startGrids(SRVS_NUM);
 
-                GridTestUtils.runAsync(() -> {
-                    try {
-                        grid(0).context().discovery().failNode(client.id(), "Client node forcibly failed.");
-                    }
-                    catch (Exception ignored) {
-                        log.info(">>> Failed to fail client: " + client.id());
-                    }
-                });
+        IgniteEx srv = grid(SRVS_NUM - 1);
 
-                GridTestUtils.runAsync(() -> {
-                    try {
-                        stopGrid(SRVS_NUM, true);
-                    }
-                    catch (Exception ignored) {
-                        log.info(">>> Failed to stop client: " + client.id());
-                    }
-                });
-            }
-        };
 
-        assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
-            @Override public boolean apply() {
-                // executing cache operation to force server to open connection to the client
-                try {
-                    executeCacheTestWithUnreachableClient(true);
-                } catch (Exception ignored) {
-                    // catching exception is expected here as client will be failed during cache operation
-                }
+        IgniteEx client = startClientGrid(SRVS_NUM);
 
-                // examining futures for inverse connection opening on the second server in topology
-                TcpCommunicationSpi commSpi = (TcpCommunicationSpi) grid(SRVS_NUM - 1).configuration().getCommunicationSpi();
-                ConnectionClientPool clientPool = U.field(commSpi, "clientPool");
-                Map<ConnectionKey, GridFutureAdapter<?>> clientFuts = U.field(clientPool, "clientFuts");
+        GridTestUtils.runAsync(() -> {
+            srv.context().io().sendIoTest(client.localNode(), new byte[10], false);
+        });
 
-                if (clientFuts != null && !clientFuts.isEmpty()) {
-                    // only one client and one operation, so number of futures should be one
-                    assertTrue(clientFuts.values().size() == 1);
+        TcpCommunicationSpi commSpi = (TcpCommunicationSpi) srv.configuration().getCommunicationSpi();
+        ConnectionClientPool clientPool = U.field(commSpi, "clientPool");
+        Map<ConnectionKey, GridFutureAdapter<?>> clientFuts = U.field(clientPool, "clientFuts");
 
-                    GridFutureAdapter fut = clientFuts.values().stream().findFirst().get();
+        assertTrue(GridTestUtils.waitForCondition(() -> clientFuts.size() == 1, 10_000));
 
-                    if (!fut.isDone()) {
-                        try {
-                            // give it a little bit of time to get completed because of client failure
-                            fut.get(5_000);
-                        } catch (IgniteCheckedException e) {
-                            return false;
-                        }
-                    }
-                }
+        UUID clientId = grid(SRVS_NUM).localNode().id();
 
-                return true;
-            }
-        }, 10_000));
+        ConnectionKey key = clientFuts.keySet().stream().findFirst().get();
+
+        assertTrue(clientId.equals(key.nodeId()));
+
+        stopGrid(SRVS_NUM, true);
+
+        assertTrue(GridTestUtils.waitForCondition(clientFuts::isEmpty, 10_000));
     }
 
     /**
@@ -497,6 +462,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         assertTrue(lsnr.check());
     }
 
+
+
     /**
      * No server threads hang even if client doesn't respond to inverse connection request.
      *
@@ -597,14 +564,6 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
     /** */
     private static class TestCommunicationSpi extends TcpCommunicationSpi {
-        /** */
-        private final IgniteInClosure killClientClo;
-
-        /** */
-        public TestCommunicationSpi(IgniteInClosure killClientClo) {
-            this.killClientClo = killClientClo;
-        }
-
         /** {@inheritDoc} */
         @Override protected GridCommunicationClient createTcpClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
             if (node.isClient()) {
@@ -633,11 +592,6 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             IgniteInClosure<IgniteException> ackC) throws IgniteSpiException {
             if (msg instanceof GridIoMessage) {
                 GridIoMessage msg0 = (GridIoMessage)msg;
-
-                // message type is because we use cache operation to trigger inverse connection request
-                // here I want the client to fail when it was requested to open inverse connection
-                if (killClientClo != null && node.isClient() && msg0.message() instanceof GridDhtAtomicNearResponse)
-                    killClientClo.apply(node);
 
                 if (msg0.message() instanceof TcpInverseConnectionResponseMessage && !RESPOND_TO_INVERSE_REQUEST.get()) {
                     log.info("Client skips inverse connection response to server: " + node);
