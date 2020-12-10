@@ -120,6 +120,9 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
 
     /** {@inheritDoc} */
     @Nullable @Override public GridDeployment getDeployment(IgniteUuid ldrId) {
+        if (log.isDebugEnabled())
+            log.debug("Try to obain deployment for ldrId=" + ldrId);
+
         synchronized (mux) {
             for (Deque<GridDeployment> deps : cache.values())
                 for (GridDeployment dep : deps)
@@ -144,7 +147,7 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
         // Validate metadata.
         assert alias != null : "Meta is invalid: " + meta;
 
-        GridDeployment dep = deployment(alias);
+        GridDeployment dep = deployment(alias, meta.classLoader());
 
         if (dep != null) {
             if (log.isDebugEnabled())
@@ -231,22 +234,32 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
 
     /** {@inheritDoc} */
     @Override public GridDeployment searchDeploymentCache(GridDeploymentMetadata meta) {
-        return deployment(meta.alias());
+        return deployment(meta.alias(), meta.classLoader());
     }
 
     /**
      * @param alias Class alias.
+     * @param clsLdr ClassLoader.
      * @return Deployment.
      */
-    @Nullable private GridDeployment deployment(String alias) {
+    @Nullable private GridDeployment deployment(String alias, ClassLoader clsLdr) {
         Deque<GridDeployment> deps = cache.get(alias);
 
         if (deps != null) {
-            GridDeployment dep = deps.peekFirst();
+            for (GridDeployment dep : deps) {
+                if (dep.classLoader() == clsLdr) {
+                    if (log.isTraceEnabled())
+                        log.trace("Deployment was found for class with specific class loader [alias=" + alias +
+                            ", clsLdr=" + clsLdr + "]");
 
-            if (dep != null && !dep.undeployed())
-                return dep;
+                    return dep;
+                }
+            }
         }
+
+        if (log.isDebugEnabled())
+            log.debug("Deployment was not found for class with specific class loader [alias=" + alias +
+                ", clsLdr=" + clsLdr + "]");
 
         return null;
     }
@@ -317,17 +330,6 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
                     ConcurrentLinkedDeque::new
                 );
 
-                if (!deps.isEmpty()) {
-                    for (GridDeployment d : deps) {
-                        if (!d.undeployed()) {
-                            U.error(log, "Found more than one active deployment for the same resource " +
-                                "[cls=" + cls + ", depMode=" + depMode + ", dep=" + d + ']');
-
-                            return null;
-                        }
-                    }
-                }
-
                 // Add at the beginning of the list for future fast access.
                 deps.addFirst(dep);
 
@@ -360,7 +362,7 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
             while (dep == null) {
                 spi.register(clsLdr, cls);
 
-                dep = deployment(cls.getName());
+                dep = deployment(cls.getName(), clsLdr);
 
                 if (dep == null) {
                     DeploymentResource rsrc = spi.findResource(cls.getName());
