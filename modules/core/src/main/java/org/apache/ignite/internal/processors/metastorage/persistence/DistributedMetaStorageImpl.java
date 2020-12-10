@@ -56,6 +56,7 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageL
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -63,6 +64,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteProducer;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
+import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData;
@@ -286,7 +288,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         finally {
             lock.writeLock().unlock();
 
-            cancelUpdateFutures(new NodeStoppingException("Node is stopping."), true);
+            cancelUpdateFutures(nodeStoppingException(), true);
         }
     }
 
@@ -925,6 +927,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         }
     }
 
+    /** */
+    private static NodeStoppingException nodeStoppingException() {
+        return new NodeStoppingException("Node is stopping.");
+    }
+
+
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
         assert isClient;
@@ -1045,10 +1053,10 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      * @throws IgniteCheckedException If there was an error while sending discovery message.
      */
     private GridFutureAdapter<?> startWrite(String key, byte[] valBytes) throws IgniteCheckedException {
-        if (!isSupported(ctx))
-            throw new IgniteCheckedException(NOT_SUPPORTED_MSG);
+        GridFutureAdapter<?> validationRes = validateBeforeWrite(key);
 
-        checkMaxKeyLengthExceeded(key);
+        if (validationRes != null)
+            return validationRes;
 
         UUID reqId = UUID.randomUUID();
 
@@ -1058,7 +1066,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
         try {
             if (stopped) {
-                fut.onDone(new NodeStoppingException("Node is stopping."));
+                fut.onDone(nodeStoppingException());
 
                 return fut;
             }
@@ -1081,10 +1089,10 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      */
     private GridFutureAdapter<Boolean> startCas(String key, byte[] expValBytes, byte[] newValBytes)
         throws IgniteCheckedException {
-        if (!isSupported(ctx))
-            throw new IgniteCheckedException(NOT_SUPPORTED_MSG);
+        GridFutureAdapter<Boolean> validationRes = validateBeforeWrite(key);
 
-        checkMaxKeyLengthExceeded(key);
+        if (validationRes != null)
+            return validationRes;
 
         UUID reqId = UUID.randomUUID();
 
@@ -1094,7 +1102,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
         try {
             if (stopped) {
-                fut.onDone(new NodeStoppingException("Node is stopping."));
+                fut.onDone(nodeStoppingException());
 
                 return fut;
             }
@@ -1110,6 +1118,33 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         ctx.discovery().sendCustomEvent(msg);
 
         return fut;
+    }
+
+    /** */
+    private GridFutureAdapter<Boolean> validateBeforeWrite(String key) throws IgniteCheckedException {
+        boolean supported;
+
+        try {
+            supported = isSupported(ctx);
+        }
+        catch (Exception e) {
+            if (X.hasCause(e, IgniteSpiException.class) && e.getMessage() != null && e.getMessage().contains("Node stopped.")) {
+                GridFutureAdapter<Boolean> fut = new GridFutureAdapter<>();
+
+                fut.onDone(nodeStoppingException());
+
+                return fut;
+            }
+
+            throw e;
+        }
+
+        if (!supported)
+            throw new IgniteCheckedException(NOT_SUPPORTED_MSG);
+
+        checkMaxKeyLengthExceeded(key);
+
+        return null;
     }
 
     /**
