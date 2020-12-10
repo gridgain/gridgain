@@ -729,18 +729,15 @@ public class ConnectionClientPool {
         ClusterTopologyCheckedException topE = new ClusterTopologyCheckedException("Failed to wait for " +
             "establishing inverse connection (node left topology): " + nodeId);
 
-        clientFuts.entrySet().removeIf(e -> {
-            if (e.getKey().nodeId().equals(nodeId)) {
+        clientFuts.entrySet().stream()
+            .filter(e -> e.getKey().nodeId().equals(nodeId))
+            .forEach(e -> {
                 if (log.isDebugEnabled())
                     log.debug("Cancelling inverse connection request (node left topology): " + e.getKey());
 
                 e.getValue().onDone(topE);
-
-                return true;
             }
-            else
-                return false;
-        });
+        );
     }
 
     /**
