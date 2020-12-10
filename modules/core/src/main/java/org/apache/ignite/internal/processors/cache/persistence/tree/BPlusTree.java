@@ -1408,6 +1408,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      */
     private void doFind(Get g) throws IgniteCheckedException {
+        assert !sequentialWriteOptsEnabled;
+
         for (;;) { // Go down with retries.
             g.init();
 
@@ -2064,6 +2066,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      */
     private T doRemove(L row, boolean needOld) throws IgniteCheckedException {
+        assert !sequentialWriteOptsEnabled;
+
         checkDestroyed();
 
         Remove r = new Remove(row, needOld);
@@ -5313,8 +5317,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         throws IgniteCheckedException {
         assert row != null;
 
-        if (sequentialWriteOptsEnabled)
+        if (sequentialWriteOptsEnabled) {
+            assert io.getForward(buf) == 0L;
+
             return -cnt - 1;
+        }
 
         int high = cnt - 1;
 
