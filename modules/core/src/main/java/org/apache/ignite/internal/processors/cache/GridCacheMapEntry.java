@@ -4050,9 +4050,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     obsolete = true;
             }
         }
-        catch (NodeStoppingException ignore) {
+        catch (NodeStoppingException e) {
             if (log.isDebugEnabled())
-                log.warning("Node is stopping while removing expired value.", ignore);
+                log.warning("Node is stopping while removing expired value.", e);
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to clean up expired cache entry: " + this, e);

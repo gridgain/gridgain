@@ -167,7 +167,8 @@ public interface IgniteCacheOffheapManager {
     /**
      * @param cctx Cache context.
      * @param c Closure.
-     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
+     *               amount can be greater if a limit has been exceeded.
      * @return {@code True} if unprocessed expired entries remains.
      * @throws IgniteCheckedException If failed.
      */

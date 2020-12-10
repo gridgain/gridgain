@@ -1354,25 +1354,26 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         assert pendingEntries != null;
 
-        int cnt0 = cctx.config().isEagerTtl() ? expireInternal(cctx, c, amount, false) : 0;
+        int expRmvCnt = cctx.config().isEagerTtl() ? expireInternal(cctx, c, amount, false) : 0;
 
         if (grp.isLocal())
-            return amount != -1 && cnt0 >= amount;
+            return amount != -1 && expRmvCnt >= amount;
 
         long tsCnt = grp.topology().localPartitions().stream().
             filter(p -> p.state() == OWNING).mapToLong(p -> p.dataStore().tombstonesCount()).sum();
 
         if (tsCnt == 0)
-            return false;
+            return amount != -1 && expRmvCnt >= amount;
 
         long tsLimit = ctx.ttl().tombstonesLimit();
 
         if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
 
-        int cnt1 = expireInternal(cctx, c, amount, true);
+        // Always clear tombstones for volatile cache group.
+        int tsRmvCnt = expireInternal(cctx, c, amount, true);
 
-        return amount != -1 && (cnt0 >= amount || cnt1 >= amount);
+        return amount != -1 && (expRmvCnt >= amount || tsRmvCnt >= amount);
     }
 
     /**
@@ -1398,10 +1399,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         cctx.shared().database().checkpointReadLock();
 
         try {
-            if (grp.sharedGroup())
-                cur = pendingEntries.find(new PendingRow(cctx.cacheId(), tombstone, 0, 0), new PendingRow(cctx.cacheId(), tombstone, now, 0));
-            else
-                cur = pendingEntries.find(new PendingRow(CU.UNDEFINED_CACHE_ID, tombstone, 0, 0), new PendingRow(CU.UNDEFINED_CACHE_ID, tombstone, now, 0));
+            int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+
+            cur = pendingEntries.find(new PendingRow(cacheId, tombstone, 0, 0),
+                new PendingRow(cacheId, tombstone, now, 0));
 
             if (!cur.next())
                 return 0;
@@ -1409,12 +1410,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (!busyLock.enterBusy())
                 return 0;
 
+            log.info("Started processing expired batch [cleared=" + 0 +
+                ", remaining=" + pendingEntries.size() + ", tombstone=" + tombstone +
+                ", grp=" + grp.cacheOrGroupName() + ", cacheId=" + 0 + ']');
+
             try {
                 int cleared = 0;
 
                 do {
                     if (amount != -1 && cleared >= amount)
-                        return cleared;
+                        break;
 
                     PendingRow row = cur.get();
 
@@ -1435,6 +1440,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     cleared++;
                 }
                 while (cur.next());
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Finished processing expired batch [cleared=" + cleared +
+                        ", remaining=" + pendingEntries.size() + ", tombstone=" + tombstone +
+                        ", grp=" + grp.cacheOrGroupName() + ", cacheId=" + cacheId + ']');
+                }
 
                 return cleared;
             }

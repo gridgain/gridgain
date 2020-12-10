@@ -1316,20 +1316,23 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             if (grp.isLocal()) // Local groups doesn't contain tombstones.
                 return amount != -1 && expRmvCnt >= amount;
 
-            DiscoCache discoCache = cctx.discovery().discoCache();
-
-            long totalTsCnt = grp.topology().localPartitions().stream().
+            long tsCnt = grp.topology().localPartitions().stream().
                 filter(p -> p.state() == OWNING).mapToLong(p -> p.dataStore().tombstonesCount()).sum();
+
+            if (tsCnt == 0)
+                return amount != -1 && expRmvCnt >= amount;
+
+            DiscoCache discoCache = cctx.discovery().discoCache();
 
             long tsLimit = ctx.ttl().tombstonesLimit();
 
-            // Do not clear tombstones if not full basiline or while rebalancing going and if the limit is not exceeded.
+            // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
             // This will allow offline node to join faster using fast full rebalancing.
-            if ((!discoCache.fullBaseline() || !ctx.exchange().lastFinishedFuture().rebalanced()) && totalTsCnt <= tsLimit)
-                return false;
+            if (tsCnt <= tsLimit && (!discoCache.fullBaseline() || !ctx.exchange().lastFinishedFuture().rebalanced()))
+                return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
 
-            if (totalTsCnt > tsLimit) // Force removal of tombstones beyond the limit.
-                amount = (int) (totalTsCnt - tsLimit); // TODO configurable limit.
+            if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
+                amount = (int) (tsCnt - tsLimit);
 
             // Sort by descending tombstones count.
             stores.sort((o1, o2) -> {
@@ -3227,10 +3230,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     GridCursor<PendingRow> cur;
 
-                    if (grp.sharedGroup())
-                        cur = pendingTree.find(new PendingRow(cctx.cacheId(), tombstone, 0, 0), new PendingRow(cctx.cacheId(), tombstone, now, 0));
-                    else
-                        cur = pendingTree.find(new PendingRow(CU.UNDEFINED_CACHE_ID, tombstone, 0, 0), new PendingRow(CU.UNDEFINED_CACHE_ID, tombstone, now, 0));
+                    int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+
+                    cur = pendingTree.find(new PendingRow(cacheId, tombstone, 0, 0),
+                        new PendingRow(cacheId, tombstone, now, 0));
 
                     if (!cur.next())
                         return 0;
@@ -3263,6 +3266,12 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         }
                     }
                     while (cur.next());
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("Finished processing expired batch [cleared=" + cleared +
+                            ", remaining=" + pendingTree.size() + ", part=" + partId +
+                            ", grp=" + grp.cacheOrGroupName() + ", cacheId=" + cacheId + ']');
+                    }
 
                     return cleared;
                 }

@@ -57,7 +57,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     /** Map of registered ttl managers, where the cache id is used as the key. */
     private final Map<Integer, GridCacheTtlManager> mgrs = new ConcurrentHashMap<>();
 
-    /** Property for update policy of shutdown. */
+    /** Tombstones limit per cache group. */
     private DistributedLongProperty tsLimit = DistributedLongProperty.detachedLongProperty("tombstones.limit");
 
     /** */

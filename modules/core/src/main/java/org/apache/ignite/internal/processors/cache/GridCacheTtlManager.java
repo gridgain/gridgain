@@ -57,7 +57,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     /** */
     private GridCacheContext dhtCtx;
 
-    /** TODO retval not used, remove. */
+    /** TODO try to get rid. */
     private final IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> expireC =
         new IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean>() {
             @Override public Boolean applyx(GridCacheEntryEx entry, GridCacheVersion obsoleteVer) {

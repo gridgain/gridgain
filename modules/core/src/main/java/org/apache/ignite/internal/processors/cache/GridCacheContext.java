@@ -113,6 +113,9 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.plugin.security.SecurityPermission;
+import org.apache.ignite.spi.ExponentialBackoffTimeoutStrategy;
+import org.apache.ignite.spi.communication.CommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_TRIGGERING_CACHE_INTERCEPTOR_ON_CONFLICT;
@@ -146,7 +149,7 @@ public class GridCacheContext<K, V> implements Externalizable {
     private static final GridCacheVersion[] EMPTY_VERSION = new GridCacheVersion[0];
 
     /** */
-    private int tombstoneTtl = IgniteSystemProperties.getInteger("DEFAULT_TOMBSTONE_TTL", 30_000);
+    private static final String DEFAULT_TOMBSTONE_TTL = "DEFAULT_TOMBSTONE_TTL";
 
     /** Kernal context. */
     private GridKernalContext ctx;
@@ -293,6 +296,9 @@ public class GridCacheContext<K, V> implements Externalizable {
     /** Last remove all job future. */
     private AtomicReference<IgniteInternalFuture<Boolean>> lastRmvAllJobFut = new AtomicReference<>();
 
+    /** */
+    private long tombstoneTtl;
+
     /**
      * Empty constructor required for {@link Externalizable}.
      */
@@ -435,6 +441,30 @@ public class GridCacheContext<K, V> implements Externalizable {
 
             assert locMacs != null;
         }
+
+        tombstoneTtl = IgniteSystemProperties.getLong(DEFAULT_TOMBSTONE_TTL, defaultTombstoneTtl());
+    }
+
+    /**
+     * @return Tombstone TTL in millisecond, based on failure detection timeout.
+     */
+    private long defaultTombstoneTtl() {
+        CommunicationSpi cfg0 = ctx.config().getCommunicationSpi();
+
+        long totalTimeout = 0;
+
+        if (cfg0 instanceof TcpCommunicationSpi) {
+            TcpCommunicationSpi cfg = (TcpCommunicationSpi) cfg0;
+
+            totalTimeout = cfg.failureDetectionTimeoutEnabled() ? cfg.failureDetectionTimeout() :
+                ExponentialBackoffTimeoutStrategy.totalBackoffTimeout(
+                    cfg.getConnectTimeout(),
+                    cfg.getMaxConnectTimeout(),
+                    cfg.getReconnectCount()
+                );
+        }
+
+        return Math.max((long)(totalTimeout * 1.5), 30_000);
     }
 
     /**
