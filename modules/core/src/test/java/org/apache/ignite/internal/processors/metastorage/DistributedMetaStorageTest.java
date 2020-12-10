@@ -35,6 +35,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -171,7 +172,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
             fail("Exception is expected");
         }
         catch (Exception e) {
-            assertTrue(X.hasCause(e, IgniteCheckedException.class) || X.hasCause(e, IgniteSpiException.class));
+            assertTrue(X.hasCause(e, NodeStoppingException.class) || X.hasCause(e, IgniteSpiException.class));
 
             assertTrue(e.getMessage().contains("Node is stopping.") || e.getMessage().contains("Node stopped."));
         }
