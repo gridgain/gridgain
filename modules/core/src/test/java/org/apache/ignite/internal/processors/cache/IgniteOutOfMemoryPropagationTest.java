@@ -41,6 +41,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -273,7 +274,7 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testIgniteOOM() throws Exception {
+    public void testIgniteOOMWithoutNodeFailure() throws Exception {
         atomicityMode = CacheAtomicityMode.ATOMIC;
         mode = CacheMode.PARTITIONED;
         writeSyncMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
@@ -282,96 +283,59 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
 
         IgniteEx sn = startGrids(1);
 
-        //IgniteEx cn = startClientGrid(2);
-
         awaitPartitionMapExchange();
 
         IgniteCache<Object, Object> cache = sn.cache(DEFAULT_CACHE_NAME);
 
         List<IgniteInternalFuture<Object>> futures = new ArrayList<>();
 
-        AtomicInteger k = new AtomicInteger(102);
-
-        Function<ThreadLocalRandom, byte[]> function = random -> new byte[/*random.nextInt(3) * k.get()*/500 * 1024];
+        Function<ThreadLocalRandom, byte[]> function = random -> new byte[random.nextInt(3) * 100 * 1024];
 
         AtomicInteger exceptionsCnt = new AtomicInteger();
 
         AtomicInteger successfulOpCountAfterException = new AtomicInteger();
 
-        final int exceptionsLimit = 1;
+        final int exceptionsLimit = 2;
+
+        IgniteInClosure<IgniteInClosure<ThreadLocalRandom>> task = op -> {
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+
+            while (true) {
+                if (exceptionsCnt.get() >= exceptionsLimit)
+                    break;
+
+                try {
+                    op.apply(random);
+
+                    if (exceptionsCnt.get() > 0)
+                        successfulOpCountAfterException.incrementAndGet();
+                }
+                catch (CachePartialUpdateException e) {
+                    exceptionsCnt.incrementAndGet();
+
+                    break;
+                }
+            }
+        };
 
         for (int i = 0; i < 3; i++) {
             IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
-                ThreadLocalRandom random = ThreadLocalRandom.current();
-
-                while (true) {
-                    if (exceptionsCnt.get() >= exceptionsLimit)
-                        break;
-
-                    try {
-                        cache.put(random.nextInt(), function.apply(random));
-
-                        if (exceptionsCnt.get() > 0)
-                            successfulOpCountAfterException.incrementAndGet();
-                    }
-                    catch (CachePartialUpdateException e) {
-                        exceptionsCnt.incrementAndGet();
-
-                        e.printStackTrace();
-
-                        break;
-                    }
-                }
+                task.apply(random -> cache.put(random.nextInt(), function.apply(random)));
             });
 
             futures.add(fut);
         }
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
-                ThreadLocalRandom random = ThreadLocalRandom.current();
-
-                while (true) {
-                    cache.get(random.nextInt());
-
-                    if (exceptionsCnt.get() >= exceptionsLimit)
-                        break;
-                }
+                task.apply(random -> cache.replace(random.nextInt(), function.apply(random)));
             });
 
             futures.add(fut);
         }
 
-        for (int i = 0; i < 2; i++) {
-            IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
-                ThreadLocalRandom random = ThreadLocalRandom.current();
-
-                while (true) {
-                    if (exceptionsCnt.get() >= exceptionsLimit)
-                        break;
-
-                    try {
-                        cache.replace(random.nextInt(), function.apply(random));
-
-                        if (exceptionsCnt.get() > 0)
-                            successfulOpCountAfterException.incrementAndGet();
-                    }
-                    catch (CachePartialUpdateException e) {
-                        exceptionsCnt.incrementAndGet();
-
-                        e.printStackTrace();
-
-                        break;
-                    }
-                }
-            });
-
-            futures.add(fut);
-        }
-
-        for (IgniteInternalFuture<Object> future : futures) {
+        for (IgniteInternalFuture<Object> future : futures)
             future.get();
-        }
 
         assertTrue(exceptionsCnt.get() >= exceptionsLimit);
         assertTrue(successfulOpCountAfterException.get() > 0);
