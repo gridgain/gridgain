@@ -54,7 +54,18 @@ public class VisorConnectivityTask
     /** {@inheritDoc} */
     @Nullable @Override protected Map<ClusterNode, VisorConnectivityResult> reduce0(
         List<ComputeJobResult> results) throws IgniteException {
-        return results.stream().collect(Collectors.toMap(ComputeJobResult::getNode, ComputeJobResult::getData));
+        Map<ClusterNode, VisorConnectivityResult> map = new HashMap<>();
+
+        results.forEach(result -> {
+            if (result.getException() != null)
+                return;
+
+            final ClusterNode node = result.getNode();
+            final VisorConnectivityResult data = result.getData();
+            map.put(node, data);
+        });
+
+        return map;
     }
 
     /** {@inheritDoc} */

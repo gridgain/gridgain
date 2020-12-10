@@ -76,8 +76,6 @@ public class DatasetAffinityFunctionWrapperTest {
     /** Tests {@code partition} method. */
     @Test
     public void testPartition() {
-        doReturn(0).when(affinityFunction).partition(eq(42));
-
         int part = wrapper.partition(42);
 
         assertEquals(42, part);

@@ -59,6 +59,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -138,7 +139,7 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     private static final int NEW_JDBC_PORT = 10802;
 
     /** */
-    private static final long BENCHMARK_TIMEOUT = 60 * 1000;
+    private static final long BENCHMARK_TIMEOUT = SF.applyLB(60 * 60 * 1000, 60 * 1000);
 
     /** */
     private static final long WARM_UP_TIMEOUT = 5_000;
