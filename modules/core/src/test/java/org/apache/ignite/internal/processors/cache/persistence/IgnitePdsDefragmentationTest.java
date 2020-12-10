@@ -238,6 +238,8 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
         assertFalse(completionMarkerFile.exists());
 
         validateCache(grid(0).cache(DEFAULT_CACHE_NAME));
+
+        validateLeftovers(workDir);
     }
 
     /**
