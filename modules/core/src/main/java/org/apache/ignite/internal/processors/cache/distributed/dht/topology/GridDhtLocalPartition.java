@@ -1256,6 +1256,24 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         try {
             dataStore().remove(cctx, row.key(), id());
 
+            if (grp.eventRecordable(EVT_CACHE_REBALANCE_OBJECT_UNLOADED) && !cctx.config().isEventsDisabled()) {
+                cctx.events().addEvent(row.partition(),
+                    row.key(),
+                    ctx.localNodeId(),
+                    null,
+                    null,
+                    null,
+                    EVT_CACHE_REBALANCE_OBJECT_UNLOADED,
+                    null,
+                    false,
+                    row.value(),
+                    row.value() != null,
+                    null,
+                    null,
+                    null,
+                    false);
+            }
+
             return true;
         }
         catch (IgniteCheckedException e) {

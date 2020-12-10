@@ -4133,7 +4133,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 true);
         }
 
-        cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
+        if (expiredVal != null) // Do not trigger events for tombstones.
+            cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
 
         updatePlatformCache(null, null);
 
