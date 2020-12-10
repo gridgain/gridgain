@@ -393,12 +393,12 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
 
         IgniteEx qryInitiator = reducer();
 
-        CountDownLatch failResponseLatch  = new CountDownLatch(mapNodesCount());
+        CountDownLatch failResponseLatch = new CountDownLatch(mapNodesCount());
         qryInitiator.context().io().addMessageListener(
             GridTopic.TOPIC_QUERY,
             (nodeId, msg, plc) -> {
                 if (msg instanceof GridQueryFailResponse)
-                    failResponseLatch .countDown();
+                    failResponseLatch.countDown();
             });
 
         spi(qryInitiator).blockMessages((node, msg) -> msg instanceof GridQueryNextPageRequest);
