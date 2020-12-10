@@ -28,8 +28,8 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CachePartialUpdateException;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataPageEvictionMode;
@@ -69,6 +69,9 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
 
     /** */
     private CacheWriteSynchronizationMode writeSyncMode;
+
+    /** */
+    private long maxDataRegionSize = 10L * 1024 * 1024 + 1;
 
     /** */
     private IgniteEx client;
@@ -172,6 +175,7 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
         this.mode = mode;
         this.backupsCnt = backupsCnt;
         this.writeSyncMode = writeSyncMode;
+        this.maxDataRegionSize = 10L * 1024 * 1024;
 
         Ignition.setClientMode(false);
 
@@ -242,8 +246,7 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
 
         memCfg.setDefaultDataRegionConfiguration(
             new DataRegionConfiguration()
-                .setMaxSize(1024L * 1024 * 1024)
-                .setPersistenceEnabled(false)
+                .setMaxSize(maxDataRegionSize)
                 .setPageEvictionMode(DataPageEvictionMode.RANDOM_2_LRU)
         );
 
@@ -251,12 +254,14 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
 
         CacheConfiguration<Object, Object> baseCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
-        baseCfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
+        baseCfg.setAtomicityMode(this.atomicityMode);
+        baseCfg.setCacheMode(this.mode);
+        baseCfg.setBackups(this.backupsCnt);
+        baseCfg.setWriteSynchronizationMode(this.writeSyncMode);
 
-        cfg.setCacheConfiguration(baseCfg);
         cfg.setMetricsLogFrequency(1_000);
         cfg.setFailureHandler(new StopNodeOrHaltFailureHandler(false, 0));
-
+        cfg.setCacheConfiguration(baseCfg);
 
         return cfg;
     }
@@ -269,13 +274,19 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
      */
     @Test
     public void testIgniteOOM() throws Exception {
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        mode = CacheMode.PARTITIONED;
+        writeSyncMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        backupsCnt = 0;
+        maxDataRegionSize = 1024L * 1024 * 1024;
+
         IgniteEx sn = startGrids(1);
 
-        IgniteEx cn = startClientGrid(2);
+        //IgniteEx cn = startClientGrid(2);
 
         awaitPartitionMapExchange();
 
-        IgniteCache<Object, Object> cache = cn.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Object, Object> cache = sn.cache(DEFAULT_CACHE_NAME);
 
         List<IgniteInternalFuture<Object>> futures = new ArrayList<>();
 
@@ -303,7 +314,7 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
                         if (exceptionsCnt.get() > 0)
                             successfulOpCountAfterException.incrementAndGet();
                     }
-                    catch (Exception e) {
+                    catch (CachePartialUpdateException e) {
                         exceptionsCnt.incrementAndGet();
 
                         e.printStackTrace();
@@ -345,7 +356,7 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
                         if (exceptionsCnt.get() > 0)
                             successfulOpCountAfterException.incrementAndGet();
                     }
-                    catch (Exception e) {
+                    catch (CachePartialUpdateException e) {
                         exceptionsCnt.incrementAndGet();
 
                         e.printStackTrace();

@@ -322,6 +322,9 @@ public class PageMemoryNoStoreImpl implements PageMemory {
                 "  ^-- Enable eviction or expiration policies"
             );
 
+            //if (ctx != null)
+            //    ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, oom));
+
             throw oom;
         }
 
