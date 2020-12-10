@@ -2192,6 +2192,8 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
                             updated = true;
                         }
                         catch (CacheException e) {
+                            log.warning("GG-31007 CacheException!", e);
+
                             assertTrue(e.getCause() instanceof TransactionSerializationException);
                             assertSame(atomicityMode(), CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT);
                         }
