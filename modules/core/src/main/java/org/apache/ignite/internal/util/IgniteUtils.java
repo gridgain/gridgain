@@ -12623,4 +12623,12 @@ public abstract class IgniteUtils {
 
         return dep == null || dep.classLoaderId().equals(depInfo.classLoaderId());
     }
+
+    /**
+     * @param enabled Parameter.
+     * @return Returns "enabled" or "disabled" string.
+     */
+    public static String enabledString(boolean enabled) {
+        return enabled ? "enabled" : "disabled";
+    }
 }
