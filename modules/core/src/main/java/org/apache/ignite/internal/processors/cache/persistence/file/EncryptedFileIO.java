@@ -233,7 +233,7 @@ public class EncryptedFileIO implements FileIO {
         assert encrypted.remaining() >= pageSize;
         assert encrypted.limit() >= pageSize;
 
-        int keyId = encrypted.get(encryptedDataSize() + 4 /* CRC size. */ + 1 /* key identifier. */) & 0xff;
+        int keyId = encrypted.get(encryptedDataSize() + 4 /* CRC size. */) & 0xff;
 
         GroupKey grpKey = encMgr.groupKey(groupId, keyId);
 
