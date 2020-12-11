@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,17 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence.tree.util;
+package org.apache.ignite.internal.client.thin.io;
+
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Rows with this marker interface will always be inserted in the very end of the tree.
+ * Handles thin client connection state.
  */
-public interface InsertLast {
+public interface ClientConnectionStateHandler {
+    /**
+     * Handles connection loss.
+     * @param e Exception that caused the disconnect, can be null.
+     */
+    void onDisconnected(@Nullable Exception e);
 }
