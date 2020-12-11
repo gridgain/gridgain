@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.apache.ignite.IgniteCache;
@@ -311,9 +312,11 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
                         successfulOpCountAfterException.incrementAndGet();
                 }
                 catch (CachePartialUpdateException e) {
-                    exceptionsCnt.incrementAndGet();
+                    if (X.hasCause(e, IgniteOutOfMemoryException.class)) {
+                        exceptionsCnt.incrementAndGet();
 
-                    break;
+                        break;
+                    }
                 }
             }
         };
@@ -335,7 +338,7 @@ public class IgniteOutOfMemoryPropagationTest extends GridCommonAbstractTest {
         }
 
         for (IgniteInternalFuture<Object> future : futures)
-            future.get();
+            future.get(2, TimeUnit.MINUTES);
 
         assertTrue(exceptionsCnt.get() >= exceptionsLimit);
         assertTrue(successfulOpCountAfterException.get() > 0);
