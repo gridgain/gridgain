@@ -4117,7 +4117,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         else
             removeExpiredValue(obsoleteVer);
 
-        if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
+        if (expiredVal != null && cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) { // TODO check all places.
             cctx.events().addEvent(partition(),
                 key,
                 cctx.localNodeId(),
