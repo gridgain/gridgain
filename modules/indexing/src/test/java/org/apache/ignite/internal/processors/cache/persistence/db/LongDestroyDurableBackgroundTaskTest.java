@@ -661,6 +661,8 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
 
         stopAllGrids();
 
+        assertTrue(pendingDelLatch.getCount() > 0);
+
         startGrid(RESTARTED_NODE_NUM);
 
         awaitPartitionMapExchange();
