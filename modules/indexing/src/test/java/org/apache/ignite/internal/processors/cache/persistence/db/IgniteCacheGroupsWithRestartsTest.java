@@ -108,7 +108,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
      * @param i Cache index number.
      * @return Cache configuration with the given number in name.
      */
-    private CacheConfiguration<Object, Object> getCacheConfiguration(int i) {
+    protected CacheConfiguration<Object, Object> getCacheConfiguration(int i) {
         CacheConfiguration ccfg = new CacheConfiguration();
 
         LinkedHashMap<String, String> fields = new LinkedHashMap<>();

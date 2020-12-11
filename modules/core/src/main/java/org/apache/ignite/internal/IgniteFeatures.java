@@ -193,8 +193,11 @@ public enum IgniteFeatures {
     /** Cache encryption key change. See {@link IgniteEncryption#changeCacheGroupKey(Collection)}. */
     CACHE_GROUP_KEY_CHANGE(50),
 
+    /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
+    SAFE_CLUSTER_DEACTIVATION(51),
+
     /** Point-in-time distributed property. */
-    POINT_IN_TIME_DISTRIBUTED_PROPERTY(51);
+    POINT_IN_TIME_DISTRIBUTED_PROPERTY(52);
 
     /**
      * Unique feature identifier.

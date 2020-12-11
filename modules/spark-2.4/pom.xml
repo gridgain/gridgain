@@ -147,12 +147,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.gridgain</groupId>
-            <artifactId>ignite-log4j</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.scalatest</groupId>

@@ -17,9 +17,9 @@
 package org.apache.ignite.maintenance;
 
 import java.util.List;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.lang.IgniteExperimental;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -103,8 +103,9 @@ public interface MaintenanceRegistry {
      * Deletes {@link MaintenanceTask} of given ID from maintenance registry.
      *
      * @param maintenanceTaskName name of {@link MaintenanceTask} to be deleted.
+     * @return {@code true} if existing task has been deleted.
      */
-    public void unregisterMaintenanceTask(String maintenanceTaskName);
+    public boolean unregisterMaintenanceTask(String maintenanceTaskName);
 
     /**
      * Returns active {@link MaintenanceTask} by its name.
@@ -141,7 +142,7 @@ public interface MaintenanceRegistry {
      *
      * @throws IgniteException if no Maintenance Tasks are registered for provided name.
      */
-    public List<MaintenanceAction> actionsForMaintenanceTask(String maintenanceTaskName);
+    public List<MaintenanceAction<?>> actionsForMaintenanceTask(String maintenanceTaskName);
 
     /**
      * Examine all components if they need to execute maintenance actions.
@@ -153,4 +154,22 @@ public interface MaintenanceRegistry {
      * and their {@link MaintenanceAction maintenance actions} are not executed.
      */
     public void prepareAndExecuteMaintenance();
+
+    /**
+     * Call the {@link #registerWorkflowCallback(String, MaintenanceWorkflowCallback)} if the active maintenance task
+     * with given name exists.
+     *
+     * @param maintenanceTaskName name of {@link MaintenanceTask} this callback is registered for.
+     * @param workflowCalProvider provider of {@link MaintenanceWorkflowCallback} which construct the callback by given
+     * task.
+     */
+    public default void registerWorkflowCallbackIfTaskExists(
+        @NotNull String maintenanceTaskName,
+        @NotNull IgniteThrowableFunction<MaintenanceTask, MaintenanceWorkflowCallback> workflowCalProvider
+    ) throws IgniteCheckedException {
+        MaintenanceTask task = activeMaintenanceTask(maintenanceTaskName);
+
+        if (task != null)
+            registerWorkflowCallback(maintenanceTaskName, workflowCalProvider.apply(task));
+    }
 }

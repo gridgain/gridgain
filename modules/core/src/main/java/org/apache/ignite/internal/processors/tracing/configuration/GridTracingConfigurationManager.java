@@ -118,8 +118,20 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
                     if (log.isDebugEnabled())
                         log.debug("Tracing configuration was updated [oldVal= " + oldVal + ", newVal=" + newVal + "]");
 
-                    if (newVal != null && !newVal.isEmpty())
-                        tracingConfiguration = newVal;
+                    if (newVal != null && !newVal.isEmpty()) {
+                        // The only place because of which it is possible to get null-valued scope is
+                        // {@code org.apache.ignite.spi.tracing.TracingConfigurationCoordinates.readObject}
+                        //
+                        // In heterogeneous cluster older node may not know about new {@code Scope} enum instance
+                        // that is available on newer node.
+                        // So during deserialization such older node temporally marks unknown scope as null
+                        // in order to signal that such tracing configuration line is irrelevant for that node
+                        // and should be removed. Here we remove it.
+                        newVal.keySet().removeIf(key -> key.scope() == null);
+
+                        tracingConfiguration = new HashMap<>(DEFAULT_CONFIGURATION_MAP);
+                        tracingConfiguration.putAll(newVal);
+                    }
                 }
             });
 
