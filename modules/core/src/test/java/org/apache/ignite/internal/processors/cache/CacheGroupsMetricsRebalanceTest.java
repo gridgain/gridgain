@@ -67,8 +67,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL;
 import static org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction.DFLT_PARTITION_COUNT;
-import static org.apache.ignite.internal.processors.cache.CacheGroupMetricsImpl.CACHE_GROUP_METRICS_PREFIX;
-import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheGroupMetricsRegistryName;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
@@ -264,7 +263,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
         TestRecordingCommunicationSpi.spi(ignite0).waitForBlocked();
 
         MetricRegistry mreg = ignite1.context().metric()
-            .registry(metricName(CACHE_GROUP_METRICS_PREFIX, GROUP2));
+            .registry(cacheGroupMetricsRegistryName(GROUP2));
 
         LongMetric startTime = mreg.findMetric("RebalancingStartTime");
         LongMetric lastCancelledTime = mreg.findMetric("RebalancingLastCancelledTime");
@@ -382,7 +381,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
 
         TestRecordingCommunicationSpi.spi(ignite0).waitForBlocked();
 
-        MetricRegistry mreg = ignite1.context().metric().registry(metricName(CACHE_GROUP_METRICS_PREFIX, GROUP2));
+        MetricRegistry mreg = ignite1.context().metric().registry(cacheGroupMetricsRegistryName(GROUP2));
 
         LongMetric startTime = mreg.findMetric("RebalancingStartTime");
         LongMetric lastCancelledTime = mreg.findMetric("RebalancingLastCancelledTime");

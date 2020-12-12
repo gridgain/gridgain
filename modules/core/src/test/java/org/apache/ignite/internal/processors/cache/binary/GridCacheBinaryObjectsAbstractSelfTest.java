@@ -51,6 +51,7 @@ import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
@@ -146,6 +147,7 @@ public abstract class GridCacheBinaryObjectsAbstractSelfTest extends GridCommonA
         cacheCfg.setLoadPreviousValue(true);
         cacheCfg.setBackups(1);
         cacheCfg.setOnheapCacheEnabled(false);
+        cacheCfg.setEntryCompressionConfiguration(entryCompressionConfiguration());
 
         return cacheCfg;
     }
@@ -194,6 +196,13 @@ public abstract class GridCacheBinaryObjectsAbstractSelfTest extends GridCommonA
      * @return Distribution mode.
      */
     protected abstract NearCacheConfiguration nearConfiguration();
+
+    /**
+     * @return Compression configuration or {@code null} if none is needed.
+     */
+    protected EntryCompressionConfiguration entryCompressionConfiguration() {
+        return null;
+    }
 
     /**
      * @return Grid count.

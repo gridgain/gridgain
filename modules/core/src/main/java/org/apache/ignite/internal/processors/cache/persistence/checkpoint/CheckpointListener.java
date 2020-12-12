@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
 import java.util.concurrent.Executor;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.PartitionAllocationMap;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,6 +39,11 @@ public interface CheckpointListener {
          * @return {@code True} if a snapshot have to be created after.
          */
         public boolean nextSnapshot();
+
+        /**
+         * @return Checkpoint future which will be completed when checkpoint ends.
+         */
+        public IgniteInternalFuture<?> finishedStateFut();
 
         /**
          * @return Partition allocation statistic map

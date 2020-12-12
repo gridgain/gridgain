@@ -41,11 +41,13 @@ import org.apache.ignite.internal.metric.IoStatisticsType;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
@@ -108,14 +110,14 @@ import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
-import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
-import static org.gridgain.internal.h2.result.Row.MEMORY_CALCULATE;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_IDX;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_IDX_RANGE_ROWS;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_TABLE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_IDX_RANGE_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_IDX_RANGE_RESP;
+import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
+import static org.gridgain.internal.h2.result.Row.MEMORY_CALCULATE;
 
 /**
  * H2 Index over {@link BPlusTree}.
@@ -258,6 +260,31 @@ public class H2TreeIndex extends H2TreeIndexBase {
         int segmentsCnt,
         IgniteLogger log
     ) throws IgniteCheckedException {
+        return createIndex(cctx, rowCache, tbl, idxName, pk, affinityKey, unwrappedCols, wrappedCols, inlineSize,
+            segmentsCnt, cctx.dataRegion().pageMemory(),
+            cctx.offheap(),
+            PageIoResolver.DEFAULT_PAGE_IO_RESOLVER,
+            log
+        );
+    }
+
+    /** */
+    public static H2TreeIndex createIndex(
+        GridCacheContext<?, ?> cctx,
+        @Nullable H2RowCache rowCache,
+        GridH2Table tbl,
+        String idxName,
+        boolean pk,
+        boolean affinityKey,
+        List<IndexColumn> unwrappedCols,
+        List<IndexColumn> wrappedCols,
+        int inlineSize,
+        int segmentsCnt,
+        PageMemory pageMemory,
+        IgniteCacheOffheapManager offheap,
+        PageIoResolver pageIoRslvr,
+        IgniteLogger log
+    ) throws IgniteCheckedException {
         assert segmentsCnt > 0 : segmentsCnt;
 
         GridQueryTypeDescriptor typeDesc = tbl.rowDescriptor().type();
@@ -295,7 +322,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
             db.checkpointReadLock();
 
             try {
-                RootPage page = getMetaPage(cctx, treeName, i);
+                RootPage page = getMetaPage(offheap, cctx, treeName, i);
 
                 segments[i] = h2TreeFactory.create(
                     cctx,
@@ -304,12 +331,12 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     idxName,
                     tbl.getName(),
                     tbl.cacheName(),
-                    cctx.offheap().reuseListForIndex(treeName),
+                    offheap.reuseListForIndex(treeName),
                     cctx.groupId(),
                     cctx.group().name(),
-                    cctx.dataRegion().pageMemory(),
+                    pageMemory,
                     cctx.shared().wal(),
-                    cctx.offheap().globalRemoveId(),
+                    offheap.globalRemoveId(),
                     page.pageId().pageId(),
                     page.isAllocated(),
                     unwrappedCols,
@@ -323,7 +350,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     log,
                     stats,
                     idxHelperFactory,
-                    inlineSize
+                    inlineSize,
+                    pageIoRslvr
                 );
             }
             finally {
@@ -406,7 +434,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
     /** */
     private boolean isSingleRowLookup(SearchRow lower, SearchRow upper, H2Tree tree) {
         return !cctx.mvccEnabled() && indexType.isPrimaryKey() && lower != null && upper != null &&
-            tree.compareRows((H2Row)lower, (H2Row)upper) == 0 && hasAllIndexColumns(lower);
+            tree.checkRowsTheSame((H2Row)lower, (H2Row)upper) && hasAllIndexColumns(lower);
     }
 
     /** */
@@ -606,7 +634,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @param segment Segment Id.
      * @return Snapshot for requested segment if there is one.
      */
-    private H2Tree treeForRead(int segment) {
+    public H2Tree treeForRead(int segment) {
         return segments[segment];
     }
 
@@ -640,9 +668,9 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @return RootPage for meta page.
      * @throws IgniteCheckedException If failed.
      */
-    private static RootPage getMetaPage(GridCacheContext<?, ?> cctx, String treeName, int segIdx)
+    private static RootPage getMetaPage(IgniteCacheOffheapManager offheap, GridCacheContext<?, ?> cctx, String treeName, int segIdx)
         throws IgniteCheckedException {
-        return cctx.offheap().rootPageForIndex(cctx.cacheId(), treeName, segIdx);
+        return offheap.rootPageForIndex(cctx.cacheId(), treeName, segIdx);
     }
 
     /**
@@ -1033,7 +1061,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             IgniteLogger log,
             IoStatisticsHolder stats,
             InlineIndexColumnFactory factory,
-            int configuredInlineSize
+            int configuredInlineSize,
+            PageIoResolver pageIoRslvr
         ) throws IgniteCheckedException;
     }
 }

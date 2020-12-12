@@ -30,7 +30,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.MetricsMxBean;
 import org.apache.ignite.spi.metric.Metric;
 
-import static org.apache.ignite.internal.processors.cache.CacheGroupMetricsImpl.CACHE_GROUP_METRICS_PREFIX;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheGroupMetricsRegistryName;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
@@ -438,7 +438,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      */
     public LongAdderMetric getOrAllocateGroupPageAllocationTracker(String grpName) {
         return grpAllocationTrackers.computeIfAbsent(grpName,
-            id -> mmgr.registry(metricName(CACHE_GROUP_METRICS_PREFIX, grpName)).longAdderMetric(
+            id -> mmgr.registry(cacheGroupMetricsRegistryName(grpName)).longAdderMetric(
                 "TotalAllocatedPages",
                 totalAllocatedPages::add,
                 "Cache group total allocated pages."));

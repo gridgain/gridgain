@@ -1515,22 +1515,6 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Dumps stack trace of the thread to the given log at warning level.
-     *
-     * @param t Thread to be dumped.
-     * @param log Logger.
-     */
-    public static void dumpThread(Thread t, @Nullable IgniteLogger log) {
-        ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
-
-        GridStringBuilder sb = new GridStringBuilder();
-
-        printThreadInfo(mxBean.getThreadInfo(t.getId()), sb, Collections.emptySet());
-
-        warn(log, sb.toString());
-    }
-
-    /**
      * Get deadlocks from the thread bean.
      * @param mxBean the bean
      * @return the set of deadlocked threads (may be empty Set, but never null).
@@ -5886,8 +5870,22 @@ public abstract class IgniteUtils {
      * @param e Enum value to write, possibly {@code null}.
      * @throws IOException If write failed.
      */
-    public static <E extends Enum> void writeEnum(DataOutput out, E e) throws IOException {
+    public static <E extends Enum<E>> void writeEnum(DataOutput out, E e) throws IOException {
         out.writeByte(e == null ? -1 : e.ordinal());
+    }
+
+    /** */
+    public static <E extends Enum<E>> E readEnum(DataInput in, Class<E> enumCls) throws IOException {
+        byte ordinal = in.readByte();
+
+        if (ordinal == (byte)-1)
+            return null;
+
+        int idx = ordinal & 0xFF;
+
+        E[] values = enumCls.getEnumConstants();
+
+        return idx < values.length ? values[idx] : null;
     }
 
     /**

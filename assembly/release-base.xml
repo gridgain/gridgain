@@ -67,7 +67,6 @@
             <directory>config</directory>
             <outputDirectory>/config</outputDirectory>
             <includes>
-                <include>ignite-log4j.xml</include>
                 <include>ignite-log4j2.xml</include>
                 <include>java.util.logging.properties</include>
             </includes>
