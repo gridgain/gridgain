@@ -226,7 +226,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         cache.put(1, 1);
 
-        applyJmxParameters(1000L, 0.0, 6);
+        applyJmxParameters(1000L, 0.0, 5);
     }
 
     /** */
@@ -254,7 +254,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
             TransactionsMXBeanImpl.class
         );
 
-        return applyJmxParameters(threshold, coefficient, limit, tmMxBean, (IgniteEx) client);
+        return applyJmxParameters(threshold, coefficient, limit, tmMxBean, client);
     }
 
     /**
@@ -270,14 +270,16 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
      * @throws InterruptedException If the current thread is interrupted while waiting.
      */
     private TransactionsMXBean applyJmxParameters(Long threshold, Double coefficient, Integer limit,
-                                                  TransactionsMXBean tmMxBean, IgniteEx ignite
+                                                  TransactionsMXBean tmMxBean, Ignite ignite
     ) throws InterruptedException {
+        IgniteEx igniteEx = (IgniteEx)ignite;
+
         CountDownLatch thresholdLatch = new CountDownLatch(1);
         CountDownLatch coefficientLatch = new CountDownLatch(1);
         CountDownLatch limitLatch = new CountDownLatch(1);
 
         if (threshold != null) {
-            ignite.context().distributedMetastorage().listen(
+            igniteEx.context().distributedMetastorage().listen(
                     (key) -> key.startsWith(DIST_CONF_PREFIX),
                     (String key, Serializable oldVal, Serializable newVal) -> {
                         if (key.endsWith("longTransactionTimeDumpThreshold") && (long) newVal == threshold)
@@ -288,7 +290,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         }
 
         if (coefficient != null) {
-            ignite.context().distributedMetastorage().listen(
+            igniteEx.context().distributedMetastorage().listen(
                     (key) -> key.startsWith(DIST_CONF_PREFIX),
                     (String key, Serializable oldVal, Serializable newVal) -> {
                         if (key.endsWith("transactionTimeDumpSamplesCoefficient") && (double) newVal == coefficient)
@@ -299,7 +301,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         }
 
         if (limit != null) {
-            ignite.context().distributedMetastorage().listen(
+            igniteEx.context().distributedMetastorage().listen(
                     (key) -> key.startsWith(DIST_CONF_PREFIX),
                     (String key, Serializable oldVal, Serializable newVal) -> {
                         if (key.endsWith("longTransactionTimeDumpSamplesPerSecondLimit") && (int) newVal == limit)

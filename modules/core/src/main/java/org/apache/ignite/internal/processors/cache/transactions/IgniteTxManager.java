@@ -3095,9 +3095,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     nodeFilter
             );
 
-            if (fut != null) {
+            if (fut != null)
                 fut.get();
-            }
 
             computeFut.get();
         } catch (IgniteCheckedException e) {

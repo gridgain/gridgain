@@ -18,7 +18,6 @@ package org.apache.ignite.internal.cluster;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
@@ -32,6 +31,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_T
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getFloat;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
@@ -71,11 +71,11 @@ public class DistributedTransactionConfiguration {
 
     /** Default value of {@link #collisionsDumpInterval}. */
     private final int dfltCollisionsDumpInterval =
-        IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, 1000);
+        getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, 1000);
 
     /** Default value of {@link #txOwnerDumpRequestsAllowed}. */
     private final boolean dfltTxOwnerDumpRequestsAllowed =
-        IgniteSystemProperties.getBoolean(IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, true);
+        getBoolean(IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, true);
 
     /**
      * Shows if dump requests from local node to near node are allowed, when long running transaction
@@ -225,7 +225,9 @@ public class DistributedTransactionConfiguration {
      * @return Future for {@link #transactionTimeDumpSamplesCoefficient} update operation.
      * @throws IgniteCheckedException If failed during cluster wide update.
      */
-    public GridFutureAdapter<?> updateTransactionTimeDumpSamplesCoefficientAsync(double transactionTimeDumpSamplesCoefficient) throws IgniteCheckedException {
+    public GridFutureAdapter<?> updateTransactionTimeDumpSamplesCoefficientAsync(
+        double transactionTimeDumpSamplesCoefficient
+    ) throws IgniteCheckedException {
         return this.transactionTimeDumpSamplesCoefficient.propagateAsync(transactionTimeDumpSamplesCoefficient);
     }
 
