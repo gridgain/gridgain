@@ -161,7 +161,7 @@ public class Checkpointer extends GridWorker {
     private volatile CheckpointProgressImpl scheduledCp;
 
     /** Current checkpoint. This field is updated only by checkpoint thread. */
-    private volatile CheckpointProgressImpl curCpProgress;
+    @Nullable private volatile CheckpointProgressImpl curCpProgress;
 
     /** Shutdown now. */
     private volatile boolean shutdownNow;
@@ -459,12 +459,10 @@ public class Checkpointer extends GridWorker {
                     String walSegsCoveredMsg = chp.walSegsCoveredRange == null ? "" : prepareWalSegsCoveredMsg(chp.walSegsCoveredRange);
 
                     log.info(String.format("Checkpoint finished [cpId=%s, pages=%d, markPos=%s, " +
-                            "walSegmentsCleared=%d, walSegmentsCovered=%s, markDuration=%dms, pagesWrite=%dms, fsync=%dms, " +
-                            "total=%dms]",
+                            "walSegmentsCovered=%s, markDuration=%dms, pagesWrite=%dms, fsync=%dms, total=%dms]",
                         chp.cpEntry != null ? chp.cpEntry.checkpointId() : "",
                         chp.pagesSize,
                         chp.cpEntry != null ? chp.cpEntry.checkpointMark() : "",
-                        chp.walFilesDeleted,
                         walSegsCoveredMsg,
                         tracker.markDuration(),
                         tracker.pagesWriteDuration(),
@@ -999,7 +997,7 @@ public class Checkpointer extends GridWorker {
     /**
      * @return Progress of current chekpoint, last finished one or {@code null}, if checkpoint has never started.
      */
-    public CheckpointProgress currentProgress() {
+    @Nullable public CheckpointProgress currentProgress() {
         return curCpProgress;
     }
 

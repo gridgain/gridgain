@@ -270,7 +270,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private FilePageStoreManager storeMgr;
 
     /** */
-    CheckpointManager checkpointManager;
+    @Nullable CheckpointManager checkpointManager;
 
     /** Database configuration. */
     private final DataStorageConfiguration persistenceCfg;
@@ -293,7 +293,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private final long lockWaitTime;
 
     /** This is the earliest WAL pointer that was reserved during exchange and would release after exchange completed. */
-    private WALPointer reservedForExchange;
+    private volatile WALPointer reservedForExchange;
 
     /** This is the earliest WAL pointer that was reserved during preloading. */
     private volatile WALPointer reservedForPreloading;
@@ -338,6 +338,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Data regions which should be checkpointed. */
     protected final Set<DataRegion> checkpointedDataRegions = new GridConcurrentHashSet<>();
 
+    /** Counter transactions, which have acquired checkpoint read lock. */
+    private final AtomicInteger txCheckpointReadLockCnt = new AtomicInteger();
+
     /**
      * @param ctx Kernal context.
      */
@@ -380,8 +383,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /**
      *
      */
-    public Checkpointer getCheckpointer() {
-        return checkpointManager.getCheckpointer();
+    @Nullable public Checkpointer getCheckpointer() {
+        CheckpointManager cpMgr = checkpointManager;
+
+        return cpMgr != null ? cpMgr.getCheckpointer() : null;
     }
 
     /**
@@ -1660,12 +1665,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         assert cctx.wal().reserved(reservedForExchange)
             : "Earliest checkpoint WAL pointer is not reserved for exchange: " + reservedForExchange;
 
-        try {
-            cctx.wal().release(reservedForExchange);
-        }
-        catch (IgniteCheckedException e) {
-            log.error("Failed to release earliest checkpoint WAL pointer: " + reservedForExchange, e);
-        }
+        cctx.wal().release(reservedForExchange);
 
         reservedForExchange = null;
     }
@@ -1709,11 +1709,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 reservedForPreloading = null;
             }
-        }
-        catch (IgniteCheckedException ex) {
-            U.error(log, "Could not release WAL reservation", ex);
-
-            throw new IgniteException(ex);
         }
         finally {
             releaseHistForPreloadingLock.unlock();
@@ -2872,7 +2867,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @param highBound WALPointer.
      */
     public void onWalTruncated(WALPointer highBound) throws IgniteCheckedException {
-        checkpointManager.removeCheckpointsUntil(highBound);
+        CheckpointManager cpMgr = checkpointManager;
+
+        if (cpMgr != null)
+            cpMgr.removeCheckpointsUntil(highBound);
     }
 
     /**
@@ -3699,5 +3697,37 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         public Map<GroupPartitionId, Integer> partitionRecoveryStates() {
             return Collections.unmodifiableMap(partitionRecoveryStates);
         }
+    }
+
+    /**
+     * Callback when a checkpoint read lock is acquired by a transaction.
+     */
+    @Override public void onTxAcquireCheckpointReadLock() {
+        txCheckpointReadLockCnt.incrementAndGet();
+    }
+
+    /**
+     * Callback when a checkpoint read lock is released by a transaction.
+     */
+    @Override public void onTxReleaseCheckpointReadLock() {
+        txCheckpointReadLockCnt.decrementAndGet();
+    }
+
+    /**
+     * Return count of acquired checkpoint read locks by transactions.
+     *
+     * @return Count of acquired checkpoint read locks by transactions.
+     */
+    public int txAcquireCheckpointReadLockCount() {
+        return txCheckpointReadLockCnt.get();
+    }
+
+    /**
+     * Getting earliest WAL pointer that was reserved during exchange and would release after exchange completed.
+     *
+     * @return Earliest WAL pointer for exchange.
+     */
+    @Nullable public WALPointer earliestReservedWalPointerForExchange() {
+        return reservedForExchange;
     }
 }

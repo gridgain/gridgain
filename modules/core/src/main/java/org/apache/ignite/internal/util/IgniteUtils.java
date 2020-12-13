@@ -11035,34 +11035,21 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Calculates maximum WAL archive size based on maximum checkpoint buffer size, if the default value of
-     * {@link DataStorageConfiguration#getMaxWalArchiveSize()} is not overridden.
+     * Calculating maximum WAL archive size if it is unlimited is based on maximum checkpoint buffer size.
      *
-     * @return User-set max WAL archive size of triple size of the maximum checkpoint buffer.
+     * @return User-set max WAL archive size or quadruple size of the maximum checkpoint buffer.
      */
     public static long adjustedWalHistorySize(DataStorageConfiguration dsCfg, @Nullable IgniteLogger log) {
-        if (dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE &&
-            dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE)
+        if (dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE)
             return dsCfg.getMaxWalArchiveSize();
+
+        List<DataRegionConfiguration> regionConfigs = new ArrayList<>(F.asList(dsCfg.getDataRegionConfigurations()));
+        regionConfigs.add(dsCfg.getDefaultDataRegionConfiguration());
 
         // Find out the maximum checkpoint buffer size.
         long maxCpBufSize = 0;
 
-        if (dsCfg.getDataRegionConfigurations() != null) {
-            for (DataRegionConfiguration regCfg : dsCfg.getDataRegionConfigurations()) {
-                long cpBufSize = checkpointBufferSize(regCfg);
-
-                if (cpBufSize > regCfg.getMaxSize())
-                    cpBufSize = regCfg.getMaxSize();
-
-                if (cpBufSize > maxCpBufSize)
-                    maxCpBufSize = cpBufSize;
-            }
-        }
-
-        {
-            DataRegionConfiguration regCfg = dsCfg.getDefaultDataRegionConfiguration();
-
+        for (DataRegionConfiguration regCfg : regionConfigs) {
             long cpBufSize = checkpointBufferSize(regCfg);
 
             if (cpBufSize > regCfg.getMaxSize())
@@ -11072,18 +11059,16 @@ public abstract class IgniteUtils {
                 maxCpBufSize = cpBufSize;
         }
 
-        long adjustedWalArchiveSize = maxCpBufSize * 256;
+        long adjustedWalArchiveSize =
+            (maxCpBufSize > 0 ? maxCpBufSize : DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE) * 4;
 
-        if (adjustedWalArchiveSize > dsCfg.getMaxWalArchiveSize()) {
-            if (log != null)
-                U.quietAndInfo(log, "Automatically adjusted max WAL archive size to " +
-                    U.readableSize(adjustedWalArchiveSize, false) +
-                    " (to override, use DataStorageConfiguration.setMaxWalArhiveSize)");
-
-            return adjustedWalArchiveSize;
+        if (log != null) {
+            U.quietAndInfo(log, "Automatically adjusted max WAL archive size to " +
+                U.readableSize(adjustedWalArchiveSize, false) +
+                " (to override, use DataStorageConfiguration.setMaxWalArhiveSize)");
         }
 
-        return dsCfg.getMaxWalArchiveSize();
+        return adjustedWalArchiveSize;
     }
 
     /**
@@ -12612,5 +12597,23 @@ public abstract class IgniteUtils {
         GridDeployment dep = ctx.deploy().getDeployment(clsName);
 
         return dep == null || dep.classLoaderId().equals(depInfo.classLoaderId());
+    }
+
+    /**
+     * Getting size of uncompressed data in zip.
+     *
+     * @param zip Zip file.
+     * @return Total uncompressed size in bytes.
+     * @throws IOException If an I/O error has occurred.
+     */
+    public static long uncompressedSize(File zip) throws IOException {
+        long size = 0;
+
+        try (ZipFile zipFile = new ZipFile(zip)) {
+            for (Enumeration<? extends ZipEntry> enumeration = zipFile.entries(); enumeration.hasMoreElements(); )
+                size += enumeration.nextElement().getSize();
+        }
+
+        return size;
     }
 }

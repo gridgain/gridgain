@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -27,6 +28,7 @@ import org.junit.Test;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -126,7 +128,7 @@ public class SegmentAwareTest {
         assertFutureIsNotFinish(future);
 
         //when: trigger next segment.
-        aware.nextAbsoluteSegmentIndex();
+        aware.nextAbsoluteSegmentIndex(null);
 
         //then: waiting should finish immediately
         future.get(20);
@@ -163,7 +165,7 @@ public class SegmentAwareTest {
         IgniteInternalFuture future = awaitThread(aware::waitNextSegmentForArchivation);
 
         //when: next work segment triggered.
-        aware.nextAbsoluteSegmentIndex();
+        aware.nextAbsoluteSegmentIndex(null);
 
         //then: waiting should finish immediately.
         future.get(20);
@@ -220,7 +222,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(5);
 
         //when: request next work segment.
-        long segmentIndex = aware.nextAbsoluteSegmentIndex();
+        long segmentIndex = aware.nextAbsoluteSegmentIndex(null);
 
         //then:
         assertThat(segmentIndex, is(6L));
@@ -237,7 +239,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(1);
         aware.setLastArchivedAbsoluteIndex(-1);
 
-        IgniteInternalFuture future = awaitThread(aware::nextAbsoluteSegmentIndex);
+        IgniteInternalFuture future = awaitThread(() -> aware.nextAbsoluteSegmentIndex(null));
 
         //when: mark first segment as moved.
         aware.markAsMovedToArchive(0);
@@ -257,7 +259,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(1);
         aware.setLastArchivedAbsoluteIndex(-1);
 
-        IgniteInternalFuture future = awaitThread(aware::nextAbsoluteSegmentIndex);
+        IgniteInternalFuture future = awaitThread(() -> aware.nextAbsoluteSegmentIndex(null));
 
         //when: mark first segment as moved.
         aware.setLastArchivedAbsoluteIndex(0);
@@ -277,7 +279,7 @@ public class SegmentAwareTest {
         aware.curAbsWalIdx(2);
         aware.setLastArchivedAbsoluteIndex(-1);
 
-        IgniteInternalFuture future = awaitThread(aware::nextAbsoluteSegmentIndex);
+        IgniteInternalFuture future = awaitThread(() -> aware.nextAbsoluteSegmentIndex(null));
 
         //when: interrupt waiting.
         aware.interrupt();
@@ -289,7 +291,7 @@ public class SegmentAwareTest {
         aware.forceInterrupt();
 
         //then: IgniteInterruptedCheckedException should be throw.
-        assertTrue(future.get(20) instanceof IgniteInterruptedCheckedException);
+        assertTrue(future.get(1_000) instanceof IgniteInterruptedCheckedException);
     }
 
     /**
@@ -499,6 +501,7 @@ public class SegmentAwareTest {
         for (int i = 0; i < 5; i++) {
             aware.setLastArchivedAbsoluteIndex(i);
             aware.waitNextSegmentToCompress();
+            aware.onStartCompression(i);
         }
 
         aware.onSegmentCompressed(0);
@@ -629,6 +632,62 @@ public class SegmentAwareTest {
         }
 
         fail("Should fail with AssertError because this segment have not reserved");
+    }
+
+    /**
+     * Checking whether the minimum reserved segment is observed correctly.
+     */
+    @Test
+    public void testObserverMinReservedSegment() {
+        SegmentAware aware = new SegmentAware(10, false, new NullLogger());
+
+        AtomicReference<Long> observer = new AtomicReference<>();
+        aware.addObserverMinReservedSegment(observer::set);
+
+        aware.reserve(1);
+        assertEquals(1, observer.get().longValue());
+
+        aware.reserve(2);
+        assertEquals(1, observer.get().longValue());
+
+        aware.reserve(0);
+        assertEquals(0, observer.get().longValue());
+
+        aware.release(0);
+        assertEquals(1, observer.get().longValue());
+
+        aware.release(1);
+        assertEquals(2, observer.get().longValue());
+
+        aware.release(2);
+        assertNull(observer.get());
+    }
+
+    /**
+     * Checking correctness of {@link SegmentAware#compressionInProgress}.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCompressionInProgress() throws Exception {
+        SegmentAware aware = new SegmentAware(10, true, new NullLogger());
+
+        assertFalse(aware.compressionInProgress());
+
+        aware.markAsMovedToArchive(0);
+        assertFalse(aware.compressionInProgress());
+
+        assertEquals(0, aware.waitNextSegmentToCompress());
+        assertFalse(aware.compressionInProgress());
+
+        aware.onStartCompression(0);
+        assertTrue(aware.compressionInProgress());
+
+        aware.onSegmentCompressed(1);
+        assertTrue(aware.compressionInProgress());
+
+        aware.onSegmentCompressed(0);
+        assertFalse(aware.compressionInProgress());
     }
 
     /**

@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Implementation of observer-observable pattern. For handling specific changes of segment.
@@ -39,7 +40,7 @@ public abstract class SegmentObservable {
      *
      * @param segmentId Segment which was been changed.
      */
-    void notifyObservers(long segmentId) {
+    void notifyObservers(@Nullable Long segmentId) {
         observers.forEach(observer -> observer.accept(segmentId));
     }
 }

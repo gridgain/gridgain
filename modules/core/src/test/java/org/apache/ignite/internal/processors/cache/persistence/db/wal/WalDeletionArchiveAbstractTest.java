@@ -16,10 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -31,7 +35,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkpointer;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -140,8 +144,6 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
 
         GridCacheDatabaseSharedManager dbMgr = gridDatabase(ignite);
 
-        long allowedThresholdWalArchiveSize = maxWalArchiveSize / 2;
-
         IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(cacheConfiguration());
 
         //when: put to cache more than 2 MB
@@ -160,7 +162,7 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
             .reduce(0L, Long::sum);
 
         assertTrue(files.length >= 1);
-        assertTrue(totalSize <= allowedThresholdWalArchiveSize);
+        assertTrue(totalSize <= maxWalArchiveSize);
         assertFalse(Stream.of(files).anyMatch(desc -> desc.file().getName().endsWith("00001.wal")));
 
         CheckpointHistory hist = dbMgr.checkpointHistory();
@@ -174,23 +176,36 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
     @Test
     public void testCheckpointStarted_WhenWalHasTooBigSizeWithoutCheckpoint() throws Exception {
         //given: configured grid with max wal archive size = 1MB, wal segment size = 512KB
-        Ignite ignite = startGrid(dbCfg -> {
-            dbCfg.setMaxWalArchiveSize(1 * 1024 * 1024);// 1 Mbytes
-        });
+        Ignite ignite = startGrid(dbCfg -> dbCfg.setMaxWalArchiveSize(U.MB));
 
         GridCacheDatabaseSharedManager dbMgr = gridDatabase(ignite);
 
-        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(cacheConfiguration());
+        Set<String> cpReasons = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-        for (int i = 0; i < 500; i++)
-            cache.put(i, i);
+        dbMgr.addCheckpointListener(new CheckpointListener() {
+            /** {@inheritDoc} */
+            @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                cpReasons.add(ctx.progress().reason());
+            }
+
+            /** {@inheritDoc} */
+            @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                // No-op.
+            }
+
+            /** {@inheritDoc} */
+            @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                // No-op.
+            }
+        });
 
         //then: checkpoint triggered by size limit of wall without checkpoint
-        Checkpointer checkpointer = dbMgr.getCheckpointer();
+        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(cacheConfiguration());
 
-        String checkpointReason = U.field((Object)U.field(checkpointer, "curCpProgress"), "reason");
+        for (int i = 0; i < 100; i++)
+            cache.put(i, i);
 
-        assertEquals("too big size of WAL without checkpoint", checkpointReason);
+        assertTrue(cpReasons.toString(), cpReasons.contains("too big size of WAL without checkpoint"));
     }
 
     /**

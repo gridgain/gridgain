@@ -25,6 +25,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -59,6 +60,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import java.util.stream.IntStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -67,6 +72,8 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
@@ -1484,6 +1491,63 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         assertEquals("1.0 MB", U.humanReadableByteCount(1024 * 1024));
         assertEquals("6.0 MB", U.humanReadableByteCount(6 * 1024 * 1024));
         assertEquals("6.1 MB", U.humanReadableByteCount(6 * 1024 * 1024 + 130 * 1024));
+    }
+
+    /**
+     * Testing the correctness of {@link IgniteUtils#uncompressedSize}.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testUncompressedSize() throws Exception {
+        File tmpDir = new File(System.getProperty("java.io.tmpdir"));
+        assertTrue(tmpDir.exists());
+
+        GridTestUtils.assertThrows(log, () -> U.uncompressedSize(new File("test")), IOException.class, null);
+        GridTestUtils.assertThrows(log, () -> U.uncompressedSize(tmpDir), IOException.class, null);
+
+        File txt = new File(tmpDir, "test.txt");
+        File zip = new File(tmpDir, "test.zip");
+
+        try {
+            U.writeStringToFile(txt, IntStream.range(0, 10_000).mapToObj(String::valueOf).collect(joining(",")));
+
+            GridTestUtils.assertThrows(log, () -> U.uncompressedSize(txt), IOException.class, null);
+
+            try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zip))) {
+                zos.putNextEntry(new ZipEntry(txt.getName()));
+                zos.write(FileUtils.readFileToByteArray(txt));
+                zos.flush();
+            }
+
+            assertEquals(txt.length(), U.uncompressedSize(zip));
+        }
+        finally {
+            assertTrue(txt.delete());
+            assertTrue(zip.delete());
+        }
+    }
+
+    /**
+     * Testing the correctness of {@link IgniteUtils#adjustedWalHistorySize}.
+     */
+    @Test
+    public void testAdjustedWalHistorySize() {
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration().setMaxWalArchiveSize(10);
+        assertEquals(10, U.adjustedWalHistorySize(dsCfg, log));
+
+        dsCfg.setMaxWalArchiveSize(DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE);
+        assertEquals(DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE, U.adjustedWalHistorySize(dsCfg, log));
+
+        dsCfg.setMaxWalArchiveSize(DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE);
+        assertEquals(4 * DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE, U.adjustedWalHistorySize(dsCfg, log));
+
+        dsCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(true).setCheckpointPageBufferSize(10);
+        assertEquals(40, U.adjustedWalHistorySize(dsCfg, log));
+
+        dsCfg.setDataRegionConfigurations(
+            new DataRegionConfiguration().setPersistenceEnabled(true).setCheckpointPageBufferSize(20));
+        assertEquals(80, U.adjustedWalHistorySize(dsCfg, log));
     }
 
     /**

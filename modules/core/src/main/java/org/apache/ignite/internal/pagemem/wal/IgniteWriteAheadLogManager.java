@@ -139,9 +139,8 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * Invoke this method to release WAL history since provided pointer that was previously reserved.
      *
      * @param start WAL pointer.
-     * @throws IgniteException If failed to release.
      */
-    public void release(WALPointer start) throws IgniteCheckedException;
+    public void release(WALPointer start);
 
     /**
      * Gives a hint to WAL manager to clear entries logged before the given pointer. Some entries before the
@@ -152,7 +151,7 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @param high Pointer for which it is safe to clear the log.
      * @return Number of deleted WAL segments.
      */
-    public int truncate(WALPointer low, WALPointer high);
+    public int truncate(@Nullable WALPointer low, @Nullable WALPointer high);
 
     /**
      * Notifies {@code this} about latest checkpoint pointer.
@@ -183,11 +182,6 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @return Last compacted segment index.
      */
     public long lastCompactedSegment();
-
-    /**
-     * @return Max allowed index of archived segment to delete or -1 if it does not exist.
-     */
-    public long maxArchivedSegmentToDelete();
 
     /**
      * Checks if WAL segment is under lock or reserved
@@ -227,4 +221,11 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @return Last written pointer.
      */
     WALPointer lastWritePointer();
+
+    /**
+     * Heuristic: Check that the archive will not be overflow.
+     *
+     * @return {@code True} if the archive will not overflow.
+     */
+    boolean isArchiveOverflow();
 }

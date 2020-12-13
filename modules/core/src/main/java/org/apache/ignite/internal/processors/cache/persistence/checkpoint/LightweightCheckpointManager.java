@@ -176,7 +176,8 @@ public class LightweightCheckpointManager {
             dataRegions,
             lock,
             checkpointer,
-            checkpointReadLockTimeout
+            checkpointReadLockTimeout,
+            cacheProcessor.context().wal()
         );
     }
 

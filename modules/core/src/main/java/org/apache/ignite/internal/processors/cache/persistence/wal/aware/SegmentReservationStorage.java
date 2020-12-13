@@ -15,24 +15,27 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 
+import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 
 /**
  * Segment reservations storage: Protects WAL segments from deletion during WAL log cleanup.
  */
-class SegmentReservationStorage {
+class SegmentReservationStorage extends SegmentObservable {
     /**
      * Maps absolute segment index to reservation counter. If counter > 0 then we wouldn't delete all segments which has
      * index >= reserved segment index. Guarded by {@code this}.
      */
-    private NavigableMap<Long, Integer> reserved = new TreeMap<>();
+    private final NavigableMap<Long, Integer> reserved = new TreeMap<>();
 
     /**
      * @param absIdx Index for reservation.
      */
     synchronized void reserve(long absIdx) {
-        reserved.merge(absIdx, 1, (a, b) -> a + b);
+        trackingMinReservedSegment(reserved -> reserved.merge(absIdx, 1, Integer::sum));
     }
 
     /**
@@ -49,13 +52,35 @@ class SegmentReservationStorage {
      * @param absIdx Reserved index.
      */
     synchronized void release(long absIdx) {
-        Integer cur = reserved.get(absIdx);
+        trackingMinReservedSegment(reserved -> {
+            Integer cur = reserved.get(absIdx);
 
-        assert cur != null && cur >= 1 : "cur=" + cur + ", absIdx=" + absIdx;
+            assert cur != null && cur >= 1 : "cur=" + cur + ", absIdx=" + absIdx;
 
-        if (cur == 1)
-            reserved.remove(absIdx);
-        else
-            reserved.put(absIdx, cur - 1);
+            if (cur == 1)
+                reserved.remove(absIdx);
+            else
+                reserved.put(absIdx, cur - 1);
+        });
+    }
+
+    /**
+     * Tracking changes to minimum reserved segment.
+     * Notifies observers when a change occurs.
+     *
+     * @param updateFun {@link #reserved} update function.
+     */
+    private synchronized void trackingMinReservedSegment(Consumer<NavigableMap<Long, Integer>> updateFun) {
+        Map.Entry<Long, Integer> oldMin = reserved.firstEntry();
+
+        updateFun.accept(reserved);
+
+        Map.Entry<Long, Integer> newMin = reserved.firstEntry();
+
+        Long oldMinIdx = oldMin == null ? null : oldMin.getKey();
+        Long newMinIdx = newMin == null ? null : newMin.getKey();
+
+        if (!Objects.equals(oldMinIdx, newMinIdx))
+            notifyObservers(newMinIdx);
     }
 }

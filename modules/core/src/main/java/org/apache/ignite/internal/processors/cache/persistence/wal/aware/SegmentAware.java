@@ -16,8 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.lang.IgniteAbsClosure;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.persistence.wal.aware.SegmentArchivedStorage.buildArchivedStorage;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.aware.SegmentCompressStorage.buildCompressStorage;
@@ -64,10 +67,13 @@ public class SegmentAware {
     /**
      * Calculate next segment index or wait if needed.
      *
+     * @param beforeWaitC Closure before wait.
      * @return Next absolute segment index.
      */
-    public long nextAbsoluteSegmentIndex() throws IgniteInterruptedCheckedException {
-        return segmentCurrStateStorage.nextAbsoluteSegmentIndex();
+    public long nextAbsoluteSegmentIndex(
+        @Nullable IgniteAbsClosure beforeWaitC
+    ) throws IgniteInterruptedCheckedException {
+        return segmentCurrStateStorage.nextAbsoluteSegmentIndex(beforeWaitC);
     }
 
     /**
@@ -274,5 +280,43 @@ public class SegmentAware {
         segmentCompressStorage.interrupt();
 
         segmentCurrStateStorage.forceInterrupt();
+    }
+
+    /**
+     * Add an observer for minimum reserved segment.
+     * {@code null} will be passed if there are no reserved segments.
+     *
+     * @param observer Observer.
+     */
+    public void addObserverMinReservedSegment(Consumer<Long> observer) {
+        reservationStorage.addObserver(observer);
+    }
+
+    /**
+     * Checking if segments are being compressed now.
+     *
+     * @return {@code True} if in progress.
+     */
+    public boolean compressionInProgress() {
+        return segmentCompressStorage.compressionInProgress();
+    }
+
+    /**
+     * Callback at the beginning of segment compression.
+     *
+     * @param idx Absolut segment index.
+     */
+    public void onStartCompression(long idx) {
+        segmentCompressStorage.onStartCompression(idx);
+    }
+
+    /**
+     * Check if archiving is needed to get next segment.
+     *
+     * @return {@code True} if required.
+     * @see #nextAbsoluteSegmentIndex
+     */
+    public boolean archivingSegmentRequired() {
+        return segmentCurrStateStorage.archivingSegmentRequired();
     }
 }

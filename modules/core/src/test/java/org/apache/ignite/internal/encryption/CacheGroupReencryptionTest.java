@@ -54,6 +54,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.configuration.EncryptionConfiguration.DFLT_REENCRYPTION_RATE_MBPS;
@@ -73,7 +74,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     private static final String GRID_3 = "grid-3";
 
     /** Timeout. */
-    private static final long MAX_AWAIT_MILLIS = 15_000;
+    private static final long MAX_AWAIT_MILLIS = 30_000;
 
     /** File IO fail flag. */
     private final AtomicBoolean failFileIO = new AtomicBoolean();
@@ -107,7 +108,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
             .setPageSize(4 * 1024)
             .setWalSegmentSize(10 * 1024 * 1024)
             .setWalSegments(4)
-            .setMaxWalArchiveSize(100 * 1024 * 1024L)
+            .setMaxWalArchiveSize(2 * 1024 * 1024 * 1024L)
             .setCheckpointFrequency(30 * 1000L)
             .setWalMode(LOG_ONLY)
             .setFileIOFactory(new FailingFileIOFactory(new RandomAccessFileIOFactory(), failFileIO))
@@ -137,6 +138,11 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     /** {@inheritDoc} */
     @Override protected Object generateValue(long id) {
         return new IndexedObject(id, "string-" + id);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void stopGrid(@Nullable String igniteInstanceName) {
+        stopGrid(igniteInstanceName, false);
     }
 
     /**
@@ -306,7 +312,9 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         createEncryptedCache(node0, node1, cacheName(), null);
 
-        loadData(100_000);
+        loadData(200_000);
+
+        forceCheckpoint();
 
         IgniteCache<?, ?> cache = node0.cache(cacheName());
 
@@ -436,12 +444,12 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         long walSegment = nodes.get1().context().cache().context().wal().currentSegment();
 
         for (long n = 0; n <= walSegment; n++)
-            nodes.get1().context().encryption().onWalSegmentRemoved(n);
+            nodes.get1().context().encryption().onWalSegmentRemoved(n).get();
 
         walSegment = nodes.get2().context().cache().context().wal().currentSegment();
 
         for (long n = 0; n <= walSegment; n++)
-            nodes.get2().context().encryption().onWalSegmentRemoved(n);
+            nodes.get2().context().encryption().onWalSegmentRemoved(n).get();
 
         // Force checkpoint to prevent logical recovery after key rotation.
         forceCheckpoint();
@@ -515,12 +523,12 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         // Simulate that wal was removed.
         for (long segment = startIdx1; segment <= endIdx1; segment++)
-            grid(GRID_0).context().encryption().onWalSegmentRemoved(segment);
+            grid(GRID_0).context().encryption().onWalSegmentRemoved(segment).get();
 
         assertEquals(1, grid(GRID_0).context().encryption().groupKeyIds(grpId).size());
 
         for (long segment = startIdx2; segment <= endIdx2; segment++)
-            grid(GRID_1).context().encryption().onWalSegmentRemoved(segment);
+            grid(GRID_1).context().encryption().onWalSegmentRemoved(segment).get();
 
         assertEquals(1, grid(GRID_1).context().encryption().groupKeyIds(grpId).size());
     }
@@ -593,6 +601,8 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         loadData(cacheName(), 100_000);
         loadData(cache2, 100_000);
 
+        forceCheckpoint();
+
         List<String> cacheGroups = Arrays.asList(cacheName(), cache2);
 
         node0.encryption().changeCacheGroupKey(cacheGroups).get();
@@ -637,7 +647,9 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         createEncryptedCache(node0, node1, cacheName(), null);
 
-        loadData(100_000);
+        loadData(200_000);
+
+        forceCheckpoint();
 
         node0.encryption().changeCacheGroupKey(Collections.singleton(cacheName())).get();
 
@@ -702,7 +714,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         // Simulate that wal was removed.
         for (long segment = startIdx; segment <= endIdx; segment++)
-            node1.context().encryption().onWalSegmentRemoved(segment);
+            node1.context().encryption().onWalSegmentRemoved(segment).get();
 
         stopGrid(GRID_1);
 
