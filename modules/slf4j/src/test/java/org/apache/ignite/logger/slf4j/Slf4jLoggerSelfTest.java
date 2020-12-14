@@ -43,6 +43,9 @@ public class Slf4jLoggerSelfTest {
     /** Path to full log. */
     private static final String LOG_ALL = "work/log/all.log";
 
+    /** Path to filtered log. */
+    private static final String LOG_FILTERED = "work/log/filtered.log";
+
     /** */
     @Before
     public void setUp() {
@@ -168,5 +171,6 @@ public class Slf4jLoggerSelfTest {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     private void deleteLogs() {
         new File(LOG_ALL).delete();
+        new File(LOG_FILTERED).delete();
     }
 }

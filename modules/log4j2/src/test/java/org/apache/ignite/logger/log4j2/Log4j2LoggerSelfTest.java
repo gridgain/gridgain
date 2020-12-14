@@ -20,6 +20,7 @@ import java.io.File;
 import java.net.URL;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -170,6 +171,8 @@ public class Log4j2LoggerSelfTest {
      */
     @Test
     public void testJULIsRedirectedToLog4j2() throws Exception {
+        assertEquals("org.apache.logging.log4j.jul.LogManager", LogManager.getLogManager().getClass().getName());
+        
         File logFile = checkOneNode(0);
 
         Logger log1 = Logger.getLogger(this.getClass().getName());
