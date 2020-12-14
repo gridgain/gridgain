@@ -44,62 +44,72 @@ import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.Sensi
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.NONE;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
+/** */
 public class SensitiveDataToStringTest extends GridCommonAbstractTest {
-    /** Id organization. */
+    /** Random int. */
     int rndInt0 = 54321;
 
-    /** Partition. */
+    /** Random int. */
     int rndInt1 = 112233;
 
-    /** Partition. */
+    /** Random int. */
     int rndInt2 = 334455;
 
+    /** Random byte array. */
     byte[] rndArray = new byte[] { (byte) 22, (byte) 111};
 
-    /** Person name. */
+    /** Random string. */
     String rndString = "qwer";
 
+    /** */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         super.afterTest();
     }
 
+    /** */
     @Test
     public void testSensitivePropertiesResolving0() {
         assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == HASH);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testSensitivePropertiesResolving1() {
         assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == PLAIN);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testSensitivePropertiesResolving2() {
         assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == HASH);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testSensitivePropertiesResolving3() {
         assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == NONE);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
     public void testSensitivePropertiesResolving4() {
         assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == PLAIN);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
     public void testSensitivePropertiesResolving5() {
         assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == NONE);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
@@ -107,24 +117,28 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == NONE);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testCacheObjectImplWithSensitive() {
         testCacheObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.contains(object.toString())));
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testCacheObjectImplWithHashSensitive() {
         testCacheObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals(String.valueOf(object.hashCode()))));
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testCacheObjectImplWithoutSensitive() {
         testCacheObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals("CacheObject")));
     }
 
+    /** */
     private void testCacheObjectImpl(BiConsumer<String, Object> checker) {
         Person person = new Person(rndInt0, rndString);
 
@@ -135,24 +149,28 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         checker.accept(testObject.toString(), person);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testKeyCacheObjectImplWithSensitive() {
         testKeyCacheObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.contains(object.toString())));
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testKeyCacheObjectImplWithHashSensitive() {
         testKeyCacheObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals(String.valueOf(object.hashCode()))));
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testKeyCacheObjectImplWithoutSensitive() {
         testKeyCacheObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals("KeyCacheObject")));
     }
 
+    /** */
     private void testKeyCacheObjectImpl(BiConsumer<String, Object> checker) {
         Person person = new Person(rndInt0, rndString);
 
@@ -163,6 +181,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         checker.accept(testObject.toString(), person);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testBinaryEnumObjectImplWithSensitive() {
@@ -172,23 +191,27 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         });
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testBinaryEnumObjectImplWithHashSensitive() {
         testBinaryEnumObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals(String.valueOf(object.hashCode()))));
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testBinaryEnumObjectImplWithoutSensitive() {
         testBinaryEnumObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals("BinaryEnum")));
     }
 
+    /** */
     private void testBinaryEnumObjectImpl(BiConsumer<String, Object> checker) {
         BinaryEnumObjectImpl testObject = new BinaryEnumObjectImpl();
         checker.accept(testObject.toString(), testObject);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testBinaryObjectImplWithSensitive() throws Exception {
@@ -198,18 +221,21 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         });
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testBinaryObjectImplWithHashSensitive() throws Exception {
         testBinaryObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals(String.valueOf(object.hashCode()))));
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testBinaryObjectImplWithoutSensitive() throws Exception {
         testBinaryObjectImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals("BinaryObject")));
     }
 
+    /** */
     private void testBinaryObjectImpl(BiConsumer<String, Object> checker) throws Exception {
         IgniteEx grid = startGrid(0);
         IgniteBinary binary = grid.binary();
@@ -218,17 +244,20 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         checker.accept(binPerson.toString(), binPerson);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testBinaryObjectOffheapImplWithoutSensitive() {
         testBinaryObjectOffheapImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals("BinaryObject")));
     }
 
+    /** */
     private void testBinaryObjectOffheapImpl(BiConsumer<String, Object> checker) {
         BinaryObjectOffheapImpl testObject = new BinaryObjectOffheapImpl(null, rndInt0, rndInt1, rndInt2);
         checker.accept(testObject.toString(), testObject);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testCacheObjectByteArrayImplWithSensitive() {
@@ -237,18 +266,21 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         });
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testCacheObjectByteArrayImplWithHashSensitive() {
         testCacheObjectByteArrayImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals(String.valueOf(rndArray.hashCode()))));
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testCacheObjectByteArrayImplWithoutSensitive() {
         testCacheObjectByteArrayImpl((strToCheck, object) -> assertTrue(strToCheck, strToCheck.equals("CacheObject")));
     }
 
+    /** */
     private void testCacheObjectByteArrayImpl(BiConsumer<String, Object> checker) {
         CacheObjectByteArrayImpl testObject = new CacheObjectByteArrayImpl(rndArray);
         checker.accept(testObject.toString(), testObject);
@@ -257,6 +289,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         checker.accept(testObject.toString(), testObject);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testIgniteTxKeyWithSensitive() {
@@ -266,12 +299,14 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         });
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testIgniteTxKeyWithHashSensitive() {
         testIgniteTxKey((strToCheck, object) -> assertTrue(strToCheck, strToCheck.contains("key=" + object.hashCode())));
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testIgniteTxKeyWithoutSensitive() {
@@ -282,12 +317,14 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         ));
     }
 
+    /** */
     private void testIgniteTxKey(BiConsumer<String, Object> checker) {
         KeyCacheObjectImpl keyCacheObject = new KeyCacheObjectImpl(new Person(rndInt0, rndString), null, rndInt1);
         IgniteTxKey txKey = new IgniteTxKey(keyCacheObject, rndInt2);
         checker.accept(txKey.toString(), keyCacheObject);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testTxEntryValueHolderWithSensitive() {
@@ -297,12 +334,14 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         });
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testTxEntryValueHolderWithHashSensitive() {
         testTxEntryValueHolder((strToCheck, object) -> assertTrue(strToCheck, strToCheck.contains("val=" + object.hashCode())));
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     public void testTxEntryValueHolderWithoutSensitive() {
@@ -313,6 +352,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         ));
     }
 
+    /** */
     private void testTxEntryValueHolder(BiConsumer<String, Object> checker) {
         final TxEntryValueHolder txEntryValue = new TxEntryValueHolder();
         final Person person = new Person(rndInt0, rndString);
@@ -321,6 +361,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         checker.accept(txEntryValue.toString(), person);
     }
 
+    /** */
     static class Person {
         /** Id organization. */
         int orgId;
@@ -339,10 +380,12 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
             this.name = name;
         }
 
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(orgId, name);
         }
 
+        /** {@inheritDoc} */
         @Override public String toString() {
             return "Person{" +
                     "orgId=" + orgId +
