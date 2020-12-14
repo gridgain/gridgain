@@ -151,6 +151,12 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
 
         pSize = ctx.ttl().pendingSize();
 
+        if (ctx.isLocal()) {
+            assertEquals(0, pSize);
+
+            return;
+        }
+
         assertEquals("A tombstone is expected", 1, pSize);
 
         int part = grid(0).affinity(DEFAULT_CACHE_NAME).partition(key);
