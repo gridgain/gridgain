@@ -118,8 +118,6 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
-import org.apache.ignite.internal.util.collection.IntHashMap;
-import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -1316,8 +1314,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             if (grp.isLocal()) // Local groups doesn't contain tombstones.
                 return amount != -1 && expRmvCnt >= amount;
 
-            long tsCnt = grp.topology().localPartitions().stream().
-                filter(p -> p.state() == OWNING).mapToLong(p -> p.dataStore().tombstonesCount()).sum();
+            long tsCnt = grp.topology().localPartitions().stream().mapToLong(p -> p.dataStore().tombstonesCount()).sum();
 
             if (tsCnt == 0)
                 return amount != -1 && expRmvCnt >= amount;
@@ -3223,7 +3220,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 part = cctx.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
 
                 // Skip non-owned partitions.
-                if (part == null || part.state() != OWNING)
+                if (part == null || part.state() != OWNING || part.state() != MOVING)
                     return 0;
             }
 
@@ -3234,7 +3231,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     return 0;
 
                 try {
-                    if (part != null && part.state() != OWNING)
+                    if (part != null && part.state() != OWNING || part.state() != MOVING)
                         return 0;
 
                     long now = U.currentTimeMillis();

@@ -510,8 +510,7 @@ public class CacheGroupMetricsImpl {
 
     /** */
     public long getTombstones() {
-        return ctx.topology().localPartitions().stream()
-            .map(part -> part.dataStore().tombstonesCount()).reduce(Long::sum).orElse(0L);
+        return ctx.topology().localPartitions().stream().mapToLong(part -> part.dataStore().tombstonesCount()).sum();
     }
 
     /** */

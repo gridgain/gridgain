@@ -101,11 +101,6 @@ public class CachePendingEntriesEvictTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        cfg.setTransactionConfiguration(new TransactionConfiguration().setDefaultTxTimeout(1000));
-
-        cfg.setFailureDetectionTimeout(100000);
-        cfg.setClientFailureDetectionTimeout(100000);
-
         TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
 
         cfg.setConsistentId(gridName);

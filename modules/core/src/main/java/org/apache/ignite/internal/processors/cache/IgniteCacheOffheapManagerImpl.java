@@ -1359,8 +1359,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (grp.isLocal())
             return amount != -1 && expRmvCnt >= amount;
 
-        long tsCnt = grp.topology().localPartitions().stream().
-            filter(p -> p.state() == OWNING).mapToLong(p -> p.dataStore().tombstonesCount()).sum();
+        long tsCnt = grp.topology().localPartitions().stream().mapToLong(p -> p.dataStore().tombstonesCount()).sum();
 
         if (tsCnt == 0)
             return amount != -1 && expRmvCnt >= amount;

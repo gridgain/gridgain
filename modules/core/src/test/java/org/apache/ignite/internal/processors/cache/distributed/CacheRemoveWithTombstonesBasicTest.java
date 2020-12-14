@@ -16,16 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.cache.Cache;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ModifiedExpiryPolicy;
@@ -38,10 +33,7 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -49,8 +41,6 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
-import org.apache.ignite.configuration.TransactionConfiguration;
-import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -59,11 +49,11 @@ import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMap;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -73,7 +63,6 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
 import org.apache.ignite.internal.processors.cache.MapCacheStoreStrategy;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
-import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -82,10 +71,10 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtom
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
+import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
-import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -96,8 +85,9 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.util.deque.FastSizeDeque;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -105,23 +95,48 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CachePeekMode.ONHEAP;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
+import static org.junit.Assume.assumeTrue;
 
 /** */
+@RunWith(Parameterized.class)
 public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** */
     public static final int PARTS = 64;
 
     /** */
-    private boolean persistence;
+    private static final int WAIT_FOR_EAGER_TTL_CLEANUP = 1100;
+
+    /** */
+    private static final String TS_METRIC_NAME = "Tombstones";
+
+    /** */
+    @Parameterized.Parameter(value = 0)
+    public CacheAtomicityMode atomicityMode;
+
+    /** */
+    @Parameterized.Parameter(value = 1)
+    public boolean persistence;
+
+    /**
+     * @return List of test parameters.
+     */
+    @Parameterized.Parameters(name = "mode={0} persistence={1}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>();
+
+        params.add(new Object[]{ATOMIC, false});
+        params.add(new Object[]{ATOMIC, true});
+        params.add(new Object[]{TRANSACTIONAL, false});
+        params.add(new Object[]{TRANSACTIONAL, true});
+
+        return params;
+    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        cfg.setTransactionConfiguration(new TransactionConfiguration().setDefaultTxTimeout(1000));
-
-        cfg.setFailureDetectionTimeout(100000);
-        cfg.setClientFailureDetectionTimeout(100000);
+        cfg.setClusterStateOnStart(ClusterState.INACTIVE);
 
         TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
 
@@ -129,18 +144,15 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         cfg.setCommunicationSpi(commSpi);
 
-        if (persistence) {
-            DataStorageConfiguration dsCfg = new DataStorageConfiguration().setWalSegmentSize(4 * 1024 * 1024)
-                .setDefaultDataRegionConfiguration(
-                    new DataRegionConfiguration()
-                        .setInitialSize(256L * 1024 * 1024)
-                        .setMaxSize(256L * 1024 * 1024)
-                        .setPersistenceEnabled(true)
-                )
-                .setWalMode(WALMode.LOG_ONLY);
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration().setWalSegmentSize(4 * 1024 * 1024)
+            .setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration()
+                    .setInitialSize(256L * 1024 * 1024)
+                    .setMaxSize(256L * 1024 * 1024)
+                    .setPersistenceEnabled(persistence)
+            );
 
-            cfg.setDataStorageConfiguration(dsCfg);
-        }
+        cfg.setDataStorageConfiguration(dsCfg);
 
         return cfg;
     }
@@ -150,8 +162,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
-
-        persistence = false;
     }
 
     /** {@inheritDoc} */
@@ -161,11 +171,13 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
+    /** */
     @Test
-    public void testSimple() throws Exception {
+    public void testSimpleRemove() throws Exception {
         IgniteEx crd = startGrids(3);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(atomicityMode));
 
         final int part = 0;
         List<Integer> keys = loadDataToPartition(part, crd.name(), DEFAULT_CACHE_NAME, 100, 0);
@@ -175,19 +187,19 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         for (Integer key : keys)
             cache0.remove(key);
 
-        final LongMetric tombstoneMetric0 = crd.context().metric().registry(
-            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
+        final LongMetric tsMetric = crd.context().metric().registry(
+            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);
 
-        long value = tombstoneMetric0.value();
-
-        assertEquals(100, value);
+        assertEquals(100, tsMetric.value());
     }
 
+    /** */
     @Test
     public void testIterator() throws Exception {
         IgniteEx crd = startGrids(3);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(atomicityMode));
 
         final int part = 0;
         final int cnt = 100;
@@ -207,10 +219,10 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             }
         }
 
-        final LongMetric tombstoneMetric0 = crd.context().metric().registry(
+        final LongMetric tsMetric = crd.context().metric().registry(
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
 
-        assertEquals(cnt/2, tombstoneMetric0.value());
+        assertEquals(cnt/2, tsMetric.value());
 
         CacheGroupContext grp = crd.cachex(DEFAULT_CACHE_NAME).context().group();
 
@@ -224,7 +236,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         crd.cache(DEFAULT_CACHE_NAME).put(tsKeys.get(0), 0);
 
-        assertEquals(cnt/2 - 1, tombstoneMetric0.value());
+        assertEquals(cnt/2 - 1, tsMetric.value());
 
         List<CacheDataRow> dataRows0 = new ArrayList<>();
         grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA).forEach(dataRows0::add);
@@ -232,9 +244,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         List<CacheDataRow> tsRows0 = new ArrayList<>();
         grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.TOMBSTONES).forEach(tsRows0::add);
 
-        GridDhtLocalPartition part0 = grp.topology().localPartition(part);
-
-        part0.clearTombstonesAsync().get();
+        grp.topology().localPartition(part).clearTombstonesAsync().get();
 
         List<CacheDataRow> dataRows1 = new ArrayList<>();
         grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA).forEach(dataRows1::add);
@@ -242,30 +252,43 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         List<CacheDataRow> tsRows1 = new ArrayList<>();
         grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.TOMBSTONES).forEach(tsRows1::add);
 
-        assertEquals(0, tombstoneMetric0.value());
+        assertEquals(0, tsMetric.value());
     }
 
-    // TODO org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest.forceTransformBackups
+    /** */
     @Test
-    public void testRemoveValueUsingInvoke() {
-        // TODO
-    }
+    public void testRemoveValueUsingInvoke() throws Exception {
+        IgniteEx crd = startGrids(3);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-    @Test
-    public void testPartitionHavingTombstonesIsRented() {
-        // TODO Data and tombstones must be cleared.
+        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(atomicityMode));
+
+        final int part = 0;
+        List<Integer> keys = loadDataToPartition(part, crd.name(), DEFAULT_CACHE_NAME, 100, 0);
+
+        assertEquals(100, cache0.size());
+
+        for (Integer key : keys)
+            cache0.invoke(key, new RemoveClosure());
+
+        final LongMetric tsMetric = crd.context().metric().registry(
+            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);
+
+        assertEquals(100, tsMetric.value());
     }
 
     /**
-     * Tests put-remove on primary reordered to remove-put on backup.
+     * Tests put-remove on primary reordered to remove-put on backup for atomic cache.
      * @throws Exception If failed.
      */
     @Test
     public void testAtomicReorderPutRemove() throws Exception {
-        IgniteEx crd = startGrids(2);
-        awaitPartitionMapExchange();
+        assumeTrue(atomicityMode == ATOMIC);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
         Integer pk = primaryKey(crd.cache(DEFAULT_CACHE_NAME));
 
@@ -316,8 +339,10 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
      */
     @Test
     public void testAtomicReorderPutRemoveInvoke() throws Exception {
+        assumeTrue(atomicityMode == ATOMIC);
+
         IgniteEx crd = startGrids(2);
-        awaitPartitionMapExchange();
+        crd.cluster().state(ClusterState.ACTIVE);
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
 
@@ -364,89 +389,164 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
 
-    // TODO not needed ?
+    /**
+     * Tests if tombstones are transferred during rebalancing.
+     */
     @Test
     public void testTombstonesArePreloaded() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
-        int pk = 0;
-        cache.put(pk, 0);
-        cache.remove(pk);
+        int part = 0;
+        cache.put(part, 0);
+        cache.remove(part);
 
         List<CacheDataRow> rows = new ArrayList<>();
-        IgniteRebalanceIterator iter = grid(0).cachex(DEFAULT_CACHE_NAME).context().group().offheap().rebalanceIterator(
-            new IgniteDhtDemandedPartitionsMap(null, Collections.singleton(pk)), new AffinityTopologyVersion(2, 1));
+        CacheGroupContext grpCtx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        IgniteRebalanceIterator iter = grpCtx0.offheap().rebalanceIterator(
+            new IgniteDhtDemandedPartitionsMap(null, Collections.singleton(part)), new AffinityTopologyVersion(2, 1));
         iter.forEach(rows::add);
 
         assertEquals("Expecting ts row " + rows.toString(), 1, rows.size());
 
-        IgniteEx g1 = startGrid(1);
-        awaitPartitionMapExchange();
+        startGrid(1);
 
-        List<CacheDataRow> rows2 = new ArrayList<>();
-        GridIterator<CacheDataRow> iter2 = g1.cachex(DEFAULT_CACHE_NAME).context().group().offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
-        iter2.forEach(rows2::add);
+        if (persistence)
+            resetBaselineTopology();
+
+        awaitPartitionMapExchange();
 
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
 
-        cache.put(pk, 1);
+        CacheGroupContext grpCtx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context().group();
 
-        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
-        validateCache(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+        validateCache(grpCtx0, part, 1, 0);
+        validateCache(grpCtx1, part, 1, 0);
+
+        PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
+        PendingEntriesTree t1 = grpCtx1.topology().localPartition(part).dataStore().pendingTree();
+
+        PendingRow r0 = t0.findFirst();
+        PendingRow r1 = t1.findFirst();
+
+        assertTrue(r1.expireTime > r0.expireTime); // Tombstone TTL is refreshed after preloading.
+
+        cache.put(part, 1);
+
+        validateCache(grpCtx0, part, 0, 1);
+        validateCache(grpCtx1, part, 0, 1);
     }
 
-    // Test an entry deleted by lazy TTL eviction is not producing tombstone.
+    /**
+     * Tests if tombstones are transferred during rebalancing if a TTL has expired while a node was offline.
+     */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500")
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "500")
+    public void testTombstonesArePreloadedAfterExpiration() throws Exception {
+        assumeTrue(persistence);
+
+        IgniteEx crd = startGrids(2); // Create baseline.
+        crd.cluster().baselineAutoAdjustEnabled(false);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        stopGrid(1);
+
+        final int part = 0;
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
+
+        CacheGroupContext grpCtx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+
+        cache.put(part, 0);
+        cache.remove(part);
+
+        PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
+        PendingRow r0 = t0.findFirst();
+
+        doSleep(WAIT_FOR_EAGER_TTL_CLEANUP);
+
+        assertEquals(1, t0.size()); // Tobstones are not cleared if a baseline is not complete.
+
+        startGrid(1);
+        awaitPartitionMapExchange();
+
+        CacheGroupContext grpCtx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context().group();
+        PendingEntriesTree t1 = grpCtx1.topology().localPartition(part).dataStore().pendingTree();
+
+        PendingRow r1 = t1.findFirst();
+
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+
+        doSleep(WAIT_FOR_EAGER_TTL_CLEANUP);
+
+        validateCache(grpCtx0, part, 0, 0);
+        validateCache(grpCtx1, part, 0, 0);
+
+        assertTrue(r1.expireTime > r0.expireTime);
+    }
+
+    /**
+     * Tests if an entry deleted by lazy TTL eviction is not keeping tombstone.
+     */
     @Test
     public void testWithTTLNoNear() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode);
         cacheCfg.setEagerTtl(false);
         cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
 
-        int pk = 0;
-        cache.put(pk, 0);
+        int part = 0;
+        cache.put(part, 0);
 
-        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 0, 1);
 
-        doSleep(1500);
+        doSleep(600);
 
-        assertNull(cache.get(pk));
+        assertNull(cache.get(part));
 
-        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 0);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 0, 0);
     }
 
-    // Test an entry deleted by eager TTL worker is not producing tombstone.
+    /**
+     * Test an entry deleted by cleanup worker is not keeping tombstone.
+     */
     @Test
     public void testWithTTLNoNear_EagerTTL() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode);
         cacheCfg.setEagerTtl(true);
         cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
 
-        int pk = 0;
-        cache.put(pk, 0);
+        int part = 0;
+        cache.put(part, 0);
 
-        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 1);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 0, 1);
 
-        // Default eager cleanup delay 500ms.
-        doSleep(1500);
+        doSleep(WAIT_FOR_EAGER_TTL_CLEANUP);
 
-        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 0, 0);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 0, 0);
     }
 
+    /** */
     @Test
-    public void testWithCacheStore() throws Exception {
-        IgniteEx crd = startGrid(0);
+    public void testRemoveWithCacheStore() throws Exception {
+        assumeTrue(!persistence);
 
-        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode);
         cacheCfg.setCacheStoreFactory(new MapCacheStoreStrategy.MapStoreFactory());
 
         // TODO with invokes, first put optional
@@ -462,16 +562,37 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
     }
 
-    // Test reordering on atomic near cache.
+    /** */
+    @Test
+    public void testRemoveWithCacheStore_2() throws Exception {
+        assumeTrue(!persistence);
+
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode);
+        cacheCfg.setCacheStoreFactory(new MapCacheStoreStrategy.MapStoreFactory());
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+
+        int pk = 0;
+        cache.remove(pk);
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), pk, 1, 0);
+    }
+
+    /**
+     * Tests reordering on atomic near cache.
+     */
     @Test
     public void testAtomicReorderPutRemoveNearCache() throws Exception {
+        assumeTrue(atomicityMode == ATOMIC);
+
         IgniteEx crd = startGrids(4);
-        awaitPartitionMapExchange();
+        crd.cluster().state(ClusterState.ACTIVE);
 
         CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
         cacheCfg.setNearConfiguration(new NearCacheConfiguration<>());
-        //cacheCfg.setEagerTtl(true);
-        //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
         awaitPartitionMapExchange();
@@ -491,8 +612,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         IgniteEx near = (IgniteEx) grid(nearNode);
 
-        GridDhtPartitionTopology topology = near.cachex(DEFAULT_CACHE_NAME).context().near().dht().topology();
-        assertNull(topology.localPartition(part));
+        GridDhtPartitionTopology top = near.cachex(DEFAULT_CACHE_NAME).context().near().dht().topology();
+        assertNull(top.localPartition(part));
 
         // Create reader
         near.cache(DEFAULT_CACHE_NAME).put(part, 0);
@@ -556,19 +677,17 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
     /**
      * Tests if removed values are cleared if rmv queue is overflowed for atomic cache.
-     * TODO add test with near eviction ?
-     * @throws Exception
      */
     @Test
     @WithSystemProperty(key = "ATOMIC_NEAR_CACHE_RMV_HISTORY_SIZE", value = "100")
     public void testTombstonesExpirationOnRmvQueueOverflow() throws Exception {
+        assumeTrue(atomicityMode == ATOMIC);
+
         IgniteEx crd = startGrids(4);
-        awaitPartitionMapExchange();
+        crd.cluster().state(ClusterState.ACTIVE);
 
         CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
         cacheCfg.setNearConfiguration(new NearCacheConfiguration<>());
-        //cacheCfg.setEagerTtl(true);
-        //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
         awaitPartitionMapExchange();
@@ -648,193 +767,101 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Tests if removed values are cleared if rmv queue is overflowed for atomic cache.
-     * TODO add test with near eviction ?
-     * @throws Exception
+     * Test if the removal with expiration produces tombstone.
      */
     @Test
-    @WithSystemProperty(key = "ATOMIC_NEAR_CACHE_RMV_HISTORY_SIZE", value = "100")
-    public void testTombstonesExpirationOnRmvQueueOverflowOnNear() throws Exception {
-        IgniteEx crd = startGrids(4);
-        awaitPartitionMapExchange();
-
-        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
-        cacheCfg.setNearConfiguration(new NearCacheConfiguration<>());
-        //cacheCfg.setEagerTtl(true);
-        //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
-
-        IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
-        awaitPartitionMapExchange();
-
-        int part = 0;
-        Collection<ClusterNode> nodes = crd.affinity(DEFAULT_CACHE_NAME).mapPartitionToPrimaryAndBackups(part);
-
-        ClusterNode nearNode = null;
-
-        for (Ignite grid : G.allGrids()) {
-            if (!nodes.contains(grid.cluster().localNode())) {
-                nearNode = grid.cluster().localNode();
-
-                break;
-            }
-        }
-
-        IgniteEx near = (IgniteEx) grid(nearNode);
-
-        int keysCnt = 200;
-
-        List<Integer> nearKeys = partitionKeys(cache, part, keysCnt, 0);
-
-        for (Integer nearKey : nearKeys)
-            near.cache(DEFAULT_CACHE_NAME).put(nearKey, nearKey);
-
-        GridNearAtomicCache<Object, Object> nearCache =
-            (GridNearAtomicCache<Object, Object>) near.cachex(DEFAULT_CACHE_NAME).context().near();
-
-        GridCacheConcurrentMap map = nearCache.map();
-
-        assertEquals(keysCnt, nearKeys.size());
-        assertEquals(keysCnt, map.internalSize());
-        assertEquals(keysCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
-
-        cache = near.cache(DEFAULT_CACHE_NAME);
-
-        int rmvCnt = 100;
-
-        for (int i = 0; i < rmvCnt; i++)
-            cache.remove(nearKeys.get(i));
-
-        // Expecting entries are not removed from map.
-        assertEquals(rmvCnt, near.cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.ALL));
-        assertEquals(keysCnt, map.internalSize());
-        assertEquals(rmvCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
-
-        for (int i = 0; i < rmvCnt; i++)
-            nearCache.put(nearKeys.get(i), nearKeys.get(i));
-
-        assertEquals(keysCnt, nearKeys.size());
-        assertEquals(keysCnt, map.internalSize());
-        assertEquals(keysCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
-
-        for (int i = 0; i < rmvCnt; i++)
-            cache.remove(nearKeys.get(i));
-
-        assertEquals(rmvCnt, near.cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.ALL));
-        assertEquals(keysCnt, map.internalSize());
-        assertEquals(rmvCnt, map.publicSize(CU.cacheId(DEFAULT_CACHE_NAME)));
-
-        // Expecting values are deleted.
-        Iterable<GridCacheMapEntry> entries = map.entries(CU.cacheId(DEFAULT_CACHE_NAME));
-
-        int cnt = 0;
-
-        for (GridCacheMapEntry ignored : entries)
-            cnt++;
-
-        assertEquals(keysCnt, cnt);
-
-        // Expecting rmv queue to be full.
-        FastSizeDeque q = U.field(nearCache, "rmvQueue");
-
-        assertEquals(rmvCnt, q.size());
-    }
-
-//    @Test
-//    public void testAddReaderOnExpiredDhtEntry() {
-//
-//    }
-
-    @Test
-    public void testRemoveOnSupplierAppliedOnDemander() {
-        // TODO
-    }
-
-    @Test
-    public void testPreloadingCancelledUnderLoadPutRemove() {
-        // Test partition preloading retry in the middle after cancellation.
-    }
-
-    // Test if the removal with expiration produces tombstone.
-    @Test
     public void testRemoveWithExpiration() throws Exception {
-        IgniteEx g0 = startGrid(0);
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(ATOMIC);
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(atomicityMode);
         ccfg.setEagerTtl(true);
 
-        int pk = 0;
+        int part = 0;
 
-        IgniteCache<Object, Object> cache = g0.createCache(ccfg);
-        cache.put(pk, 0);
-        cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))).remove(pk);
+        IgniteCache<Object, Object> cache = crd.createCache(ccfg);
+        cache.put(part, 0);
+        cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))).remove(part);
 
-        doSleep(1500);
+        doSleep(WAIT_FOR_EAGER_TTL_CLEANUP);
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateCache(grpCtx, pk, 1, 0);
+        validateCache(grpCtx, part, 1, 0);
     }
 
-    /** Test removing of non-existent row creates tombstone. */
+    /**
+     * Test removing of non-existent row creates tombstone.
+     */
     @Test
     public void testRemoveNonExistentRow() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
-        // Should create TS.
-        int pk = 0;
-        cache.remove(pk);
+        // Should create tombstone.
+        int part = 0;
+        cache.remove(part);
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateCache(grpCtx, pk, 1, 0);
+        validateCache(grpCtx, part, 1, 0);
 
-        grpCtx.topology().localPartition(pk).clearTombstonesAsync().get();
-        validateCache(grpCtx, pk, 0, 0);
+        grpCtx.topology().localPartition(part).clearTombstonesAsync().get();
+        validateCache(grpCtx, part, 0, 0);
     }
 
-    /** Test removing of non-existent row locally doesn't creates tombstone. */
+    /**
+     * Test removing of non-existent row locally doesn't creates tombstone.
+     */
     @Test
     public void testRemoveNonExistentRowLocally() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
         // Should create TS.
-        int pk = 0;
-        cache.localClear(pk);
+        int part = 0;
+        cache.localClear(part);
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateCache(grpCtx, pk, 0, 0);
+        validateCache(grpCtx, part, 0, 0);
     }
 
-    /** Test removing of already existing tombstone is no-op. */
+    /**
+     * Test removing of already existing tombstone is no-op.
+     */
     @Test
     public void testRemoveExpicitTombstoneRow() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
         // Should create TS.
-        int pk = 0;
-        cache.remove(pk);
+        int part = 0;
+        cache.remove(part);
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateCache(grpCtx, pk, 1, 0);
+        validateCache(grpCtx, part, 1, 0);
 
         // Should be no-op.
-        cache.remove(pk);
+        cache.remove(part);
 
-        validateCache(grpCtx, pk, 1, 0);
+        validateCache(grpCtx, part, 1, 0);
     }
 
-    /** Test locally removing of already existing tombstone is no-op. */
+    /**
+     * Test locally removing of already existing tombstone is no-op.
+     */
     @Test
     public void testRemoveExpicitTombstoneRowLocally() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
-        // Should create TS.
+        // Should create tombstone.
         int pk = 0;
         cache.remove(pk);
 
@@ -847,13 +874,15 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         validateCache(grpCtx, pk, 1, 0);
     }
 
+    /** */
     @Test
     public void testRemoveExpicitTombstoneRowAndReplace() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
-        // Should create TS.
+        // Should create tombstone.
         int pk = 0;
         cache.remove(pk);
 
@@ -866,14 +895,15 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertNull(prev);
     }
 
-    // TODO test for many keys for each node, various tx types.
+    /** */
     @Test
     public void testTombstoneReplaceWithInvoke() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
-        // Should create TS.
+        // Should create tombstone.
         int pk = 0;
         cache.remove(pk);
 
@@ -886,11 +916,13 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         validateCache(grpCtx, pk, 0, 1);
     }
 
+    /** */
     @Test
     public void testInPlaceTombstoneRow() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
 
         // Should create ts.
@@ -906,40 +938,13 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         validateCache(grpCtx, pk, 0, 1);
     }
 
-    // in-place not possible with indexes.
-    // TODO move to indexing
-    @Test
-    @Ignore
-    public void testInPlaceUpdateWithIndexes() throws Exception {
-        IgniteEx crd = startGrid(0);
-
-        QueryEntity qe = new QueryEntity();
-        qe.setKeyType(Integer.class.getName()).
-            setKeyFieldName("id").
-            setValueType(Integer.class.getName()).
-            setValueFieldName("val").
-            setFields(Stream.of(
-                new AbstractMap.SimpleEntry<>("id", Integer.class.getName()),
-                new AbstractMap.SimpleEntry<>("val", Integer.class.getName())
-            ).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue, (a, b) -> a, LinkedHashMap::new)))
-            .setIndexes(Collections.singletonList(new QueryIndex("val")));
-
-        CacheConfiguration<Object, Object> cfg = cacheConfiguration(ATOMIC);
-        cfg.setQueryEntities(Collections.singleton(qe));
-        IgniteCache<Object, Object> cache = crd.createCache(cfg);
-
-        cache.put(0, 1);
-        cache.put(0, 2);
-
-        List<Cache.Entry<Integer, Integer>> rows = cache.query(new SqlQuery<Integer, Integer>(Integer.class, "val = 2")).getAll();
-
-        assertEquals(2, cache.get(0));
-    }
-
+    /** */
     @Test
     public void testAtomicReorderRemovePut() throws Exception {
+        assumeTrue(atomicityMode == ATOMIC);
+
         IgniteEx crd = startGrids(2);
-        awaitPartitionMapExchange();
+        crd.cluster().state(ClusterState.ACTIVE);
 
         IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
 
@@ -985,14 +990,14 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test the entry explicitely removed after expiration produces no leak on heap map.
+     * Tests if an entry is explicitely removed after expiration it doesn't produces leaks on heap map.
      */
-    // TODO add tx test.
     @Test
     public void testNoLeakOnExpiredEntryRemoval() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(ATOMIC);
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(atomicityMode);
         ccfg.setEagerTtl(false);
 
         IgniteCache<Object, Object> cache = crd.createCache(ccfg);
@@ -1013,14 +1018,15 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals("Cache entry is leaked", 0, cache.localSize(ONHEAP));
     }
 
+    /** */
     @Test
     public void testTombstoneLoggedToWALAsNull() throws Exception {
-        persistence = true;
+        assumeTrue(persistence);
 
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(TRANSACTIONAL);
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(atomicityMode);
         IgniteCache<Object, Object> cache = crd.createCache(ccfg);
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
@@ -1048,19 +1054,20 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         }
 
         assertEquals(2, tmp.size());
-        assertEquals(GridCacheOperation.CREATE, tmp.get(0).writeEntries().get(0).op());
-        assertEquals(GridCacheOperation.DELETE, tmp.get(1).writeEntries().get(0).op());
+        DataEntry dataEntry = tmp.get(1).writeEntries().get(0);
+        assertEquals(GridCacheOperation.DELETE, dataEntry.op());
+        assertNull(dataEntry.value());
     }
 
-    // TODO atomic test.
+    /** */
     @Test
-    public void testTombstoneLoggedForEachRemoveTx() throws Exception {
-        persistence = true;
+    public void testTombstoneLoggedForEachRemove() throws Exception {
+        assumeTrue(persistence);
 
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(TRANSACTIONAL);
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(atomicityMode);
         IgniteCache<Object, Object> cache = crd.createCache(ccfg);
 
         CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
@@ -1096,56 +1103,15 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(tmp.get(2).writeEntries().get(0).writeVersion(), dataRows0.get(0).version());
     }
 
-    // TODO atomic test.
-    @Test
-    public void testTombstoneLoggedForEachRemoveAtomic() throws Exception {
-        persistence = true;
-
-        IgniteEx crd = startGrid(0);
-        crd.cluster().state(ClusterState.ACTIVE);
-
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(ATOMIC);
-        IgniteCache<Object, Object> cache = crd.createCache(ccfg);
-
-        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-
-        int key = 0;
-        assertFalse(cache.remove(key));
-        assertFalse(cache.remove(key));
-        assertFalse(cache.remove(key));
-
-        IgniteWriteAheadLogManager walMgr = crd.context().cache().context().wal();
-
-        WALIterator iter = walMgr.replay(null);
-
-        List<DataRecord> tmp = new ArrayList<>();
-
-        while (iter.hasNext()) {
-            IgniteBiTuple<WALPointer, WALRecord> tup = iter.next();
-
-            if (tup.get2() instanceof DataRecord) {
-                DataRecord rec = (DataRecord) tup.get2();
-
-                tmp.add(rec);
-            }
-        }
-
-        validateCache(grpCtx, key, 1, 0);
-
-        assertEquals(3, tmp.size());
-
-        List<CacheDataRow> dataRows0 = new ArrayList<>();
-        grpCtx.offheap().partitionIterator(key, IgniteCacheOffheapManager.TOMBSTONES).forEach(dataRows0::add);
-
-        assertEquals(tmp.get(2).writeEntries().get(0).writeVersion(), dataRows0.get(0).version());
-    }
-
+    /**
+     * Tests if unswap operation produces valid entry in heap for tombstone.
+     */
     @Test
     public void testUnswapTombstone() throws Exception {
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(ATOMIC);
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(atomicityMode);
         IgniteCache<Object, Object> cache = crd.createCache(ccfg);
         GridCacheContext<Object, Object> ctx = grid(0).cachex(DEFAULT_CACHE_NAME).context();
         CacheGroupContext grpCtx = ctx.group();
@@ -1162,18 +1128,15 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertTrue(entryEx.toString(), entryEx.version().order() != 0);
     }
 
-    @Test
-    public void testNoopUpdatesAndHistoricalRebalance() {
-        // TODO
-    }
-
-    // Test if updating concurrently with clearing tombstones doesn't produce inconsistency.
+    /**
+     * Test if updating concurrently with clearing tombstones doesn't produce inconsistency.
+     */
     @Test
     public void testPutRemoveWithExpirationEagerTTL() throws Exception {
         IgniteEx crd = startGrids(3);
-        awaitPartitionMapExchange();
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode);
         cacheCfg.setBackups(1);
         cacheCfg.setEagerTtl(true);
         //cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))));
@@ -1230,10 +1193,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             }
         });
 
-//        assertEquals(0, grid(idx0).cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.PRIMARY, CachePeekMode.BACKUP));
-//        assertEquals(0, grid(idx1).cache(DEFAULT_CACHE_NAME).localSize(CachePeekMode.PRIMARY, CachePeekMode.BACKUP));
-//
-
         int pk = -1;
 
         for (Integer part : parts) {
@@ -1241,56 +1200,20 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
                 pk = part;
         }
 
-
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
-
-        GridCacheVersion last01 = grid(idx0).context().cache().context().versions().last();
-        GridCacheVersion last11 = grid(idx1).context().cache().context().versions().last();
 
         cache.put(pk, -1);
 
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
 
+    /** */
     @Test
-    public void testClearingCountersTx() throws Exception {
-        IgniteEx crd = startGrid(0);
-
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
-
-        // Should create TS.
-        int pk = 0;
-        cache.remove(pk);
-
-        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateCache(grpCtx, pk, 1, 0);
-
-        GridDhtLocalPartition locPart = grpCtx.topology().localPartition(pk);
-
-        PartitionUpdateCounter cntr = locPart.dataStore().partUpdateCounter();
-
-        long state = cntr.tombstoneClearCounter();
-
-        assertFalse(TombstoneCacheObject.clearing(state));
-        assertEquals(0, TombstoneCacheObject.counter(state));
-
-        locPart.clearTombstonesAsync().get();
-        validateCache(grpCtx, pk, 0, 0);
-
-        state = cntr.tombstoneClearCounter();
-
-        assertFalse(TombstoneCacheObject.clearing(state));
-        assertEquals(1, TombstoneCacheObject.counter(state));
-    }
-
-    @Test // TODO copypaste
-    public void testClearingCountersTxPersistence() throws Exception {
-        persistence = true;
-
+    public void testScanClearingMovesCounters() throws Exception {
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
         // Should create TS.
         int pk = 0;
@@ -1303,171 +1226,22 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PartitionUpdateCounter cntr = locPart.dataStore().partUpdateCounter();
 
-        long state = cntr.tombstoneClearCounter();
-
-        assertFalse(TombstoneCacheObject.clearing(state));
-        assertEquals(0, TombstoneCacheObject.counter(state));
+        assertEquals(0, cntr.tombstoneClearCounter());
 
         locPart.clearTombstonesAsync().get();
         validateCache(grpCtx, pk, 0, 0);
 
-        state = cntr.tombstoneClearCounter();
-
-        assertFalse(TombstoneCacheObject.clearing(state));
-        assertEquals(1, TombstoneCacheObject.counter(state));
-
-        forceCheckpoint();
-
-        crd.close();
-
-        crd = startGrid(0);
-
-        PartitionUpdateCounter cntr1 = counter(pk, grid(0).name());
-
-        state = cntr1.tombstoneClearCounter();
-
-        assertFalse(TombstoneCacheObject.clearing(state));
-        assertEquals(1, TombstoneCacheObject.counter(state));
+        assertEquals(1, cntr.tombstoneClearCounter());
     }
 
-    @Test // TODO copypaste
-    public void testClearingCountersTxPersistenceAtomic() throws Exception {
-        persistence = true;
-
+    /** */
+    @Test
+    public void testClearingCountersFullScan() throws Exception {
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
-        // Should create TS.
-        int pk = 0;
-        cache.remove(pk);
-
-        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateCache(grpCtx, pk, 1, 0);
-
-        GridDhtLocalPartition locPart = grpCtx.topology().localPartition(pk);
-
-        PartitionUpdateCounter cntr = locPart.dataStore().partUpdateCounter();
-
-        long state = cntr.tombstoneClearCounter();
-
-        assertFalse(TombstoneCacheObject.clearing(state));
-        assertEquals(0, TombstoneCacheObject.counter(state));
-
-        locPart.clearTombstonesAsync().get();
-        validateCache(grpCtx, pk, 0, 0);
-
-        state = cntr.tombstoneClearCounter();
-
-        assertFalse(TombstoneCacheObject.clearing(state));
-        assertEquals(1, TombstoneCacheObject.counter(state));
-
-        forceCheckpoint();
-
-        crd.close();
-
-        crd = startGrid(0);
-
-        PartitionUpdateCounter cntr1 = counter(pk, grid(0).name());
-
-        state = cntr1.tombstoneClearCounter();
-
-        assertFalse(TombstoneCacheObject.clearing(state));
-        assertEquals(1, TombstoneCacheObject.counter(state));
-    }
-
-    @Test
-    @WithSystemProperty(key = "TOMBSTONES_EVICTION_FREQ", value = "10000000")
-    public void testTombstonesClearingTimeout() throws Exception {
-        IgniteEx crd = startGrid(0);
-
-        IgniteCache<Object, Object> cache1Grp1 = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName("cache11").setGroupName("g1"));
-        IgniteCache<Object, Object> cache2Grp1 = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName("cache12").setGroupName("g1"));
-        IgniteCache<Object, Object> cache1Grp2 = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName("cache21").setGroupName("g2"));
-        IgniteCache<Object, Object> cache2Grp2 = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName("cache22").setGroupName("g2"));
-
-        int pk = 0;
-        cache1Grp1.put(pk, 0);
-        cache1Grp2.put(pk, 0);
-        cache2Grp1.put(pk, 0);
-        cache2Grp2.put(pk, 0);
-
-        CacheGroupContext grpCtx1 = grid(0).cachex("cache11").context().group();
-        List<CacheDataRow> rows1 = new ArrayList<>();
-        grpCtx1.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows1::add);
-        assertEquals(0, rows1.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
-        assertEquals(2, rows1.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
-
-        CacheGroupContext grpCtx2 = grid(0).cachex("cache21").context().group();
-        List<CacheDataRow> rows2 = new ArrayList<>();
-        grpCtx2.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows2::add);
-        assertEquals(0, rows2.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
-        assertEquals(2, rows2.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
-
-        //crd.context().cache().context().evict().clearTombstones();
-
-        cache1Grp1.remove(pk);
-        cache1Grp2.remove(pk);
-        cache2Grp1.remove(pk);
-        cache2Grp2.remove(pk);
-
-        grpCtx1 = grid(0).cachex("cache11").context().group();
-        rows1 = new ArrayList<>();
-        grpCtx1.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows1::add);
-        assertEquals(2, rows1.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
-        assertEquals(0, rows1.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
-
-        grid(0).cachex("cache21").context().group();
-        rows2 = new ArrayList<>();
-        grpCtx2.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows2::add);
-        assertEquals(2, rows2.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
-        assertEquals(0, rows2.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
-
-        crd.context().cache().context().evict().clearTombstones();
-
-        grpCtx1 = grid(0).cachex("cache11").context().group();
-        rows1 = new ArrayList<>();
-        grpCtx1.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows1::add);
-        assertEquals(0, rows1.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
-        assertEquals(0, rows1.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
-
-        grid(0).cachex("cache21").context().group();
-        rows2 = new ArrayList<>();
-        grpCtx2.offheap().partitionIterator(pk, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows2::add);
-        assertEquals(0, rows2.stream().filter(r -> r.value().cacheObjectType() == CacheObject.TOMBSTONE).count());
-        assertEquals(0, rows2.stream().filter(r -> r.value().cacheObjectType() != CacheObject.TOMBSTONE).count());
-    }
-
-
-
-    @Test // TODO !!!!!!
-    public void testClearingAfterRestartCorrectVersionsAreRemoved() throws Exception {
-//        IgniteEx crd = startGrids(2);
-//
-//        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL).setName(DEFAULT_CACHE_NAME).setNearConfiguration(new NearCacheConfiguration<>()));
-//
-//        Integer pk = primaryKey(cache);
-//
-//        IgniteCache<Object, Object> cache1 = grid(1).cache(DEFAULT_CACHE_NAME);
-//
-//        try(Transaction tx = grid(1).transactions().txStart()) {
-//            cache1.put(pk, 0);
-//
-//            tx.commit();
-//        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testClearingCountersFullScanAtomic() throws Exception {
-        IgniteEx crd = startGrid(0);
-
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
-
-        // Should create TS.
         int pk = 0;
         cache.remove(pk);
 
@@ -1484,16 +1258,14 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(1, cntr.tombstoneClearCounter());
     }
 
-    /**
-     * @throws Exception If failed.
-     */
+    /** */
     @Test
-    public void testClearingCountersCacheClearAtomic() throws Exception {
+    public void testClearingCountersCacheClear() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
-        // Should create TS.
         int part = 0;
 
         cache.put(part, 0);
@@ -1510,16 +1282,14 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals("ts counter shouldn't move", 0, locPart.dataStore().partUpdateCounter().tombstoneClearCounter());
     }
 
-    /**
-     * @throws Exception If failed.
-     */
+    /** */
     @Test
-    public void testClearingCountersRemoveAllAtomic() throws Exception {
+    public void testClearingCountersRemoveAll() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
-        // Should create TS.
         int part = 0;
 
         cache.put(part, 0);
@@ -1538,14 +1308,13 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
     /**
      * Tests if replacing the tombstone before it's removal doesn't produce TTL on new entry.
-     *
-     * @throws Exception If failed.
      */
     @Test
-    public void testTombstoneUpdateNoTTLAtomic() throws Exception {
+    public void testTombstoneUpdateNoTTL() throws Exception {
         IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
 
         int part = 0;
         cache.put(part, 0);
@@ -1558,39 +1327,20 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertTrue(tree.isEmpty());
     }
 
-    @Test
-    public void testTombstoneUpdateNoTTLTx() throws Exception {
-        IgniteEx crd = startGrid(0);
-
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(TRANSACTIONAL));
-
-        int part = 0;
-        cache.put(part, 0);
-        cache.remove(part);
-        cache.put(part, 1);
-
-        PendingEntriesTree tree =
-            crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part).dataStore().pendingTree();
-
-        assertTrue(tree.isEmpty());
-    }
-
-    /**
-     *
-     */
+    /** */
     @Test
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500") // Reduce tombstone TTL
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "1") // Disable timeout for async clearing.
     @WithSystemProperty(key = "REBALANCE_DELAY", value = "1000") // Wait one second before generating assignments.
     public void testOutdatedTombstoneNotExpired() throws Exception {
-        persistence = true;
+        assumeTrue(persistence);
 
         IgniteEx crd = startGrids(2);
         crd.cluster().state(ClusterState.ACTIVE);
 
         int part = 0;
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(ATOMIC));
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
         GridCacheContext<Object, Object> ctx = grid(0).cachex(DEFAULT_CACHE_NAME).context();
         CacheGroupContext grpCtx = ctx.group();
 
@@ -1628,27 +1378,26 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     }
 
     /**
-     * TODO validate cache size, add test for many caches in group.
-     *
      * @param grpCtx ctx.
      * @param part Partition.
      * @param expTsCnt Expected timestamp count.
      * @param expDataCnt Expected data count.
      */
     private void validateCache(CacheGroupContext grpCtx, int part, int expTsCnt, int expDataCnt) throws IgniteCheckedException {
-        List<CacheDataRow> dataRows0 = new ArrayList<>();
-        List<CacheDataRow> dataRows1 = new ArrayList<>();
+        List<CacheDataRow> tsRows = new ArrayList<>();
+        grpCtx.offheap().partitionIterator(part, IgniteCacheOffheapManager.TOMBSTONES).forEach(tsRows::add);
 
-        grpCtx.offheap().partitionIterator(part, IgniteCacheOffheapManager.TOMBSTONES).forEach(dataRows0::add);
-        grpCtx.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA).forEach(dataRows1::add);
+        List<CacheDataRow> dataRows = new ArrayList<>();
+        grpCtx.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA).forEach(dataRows::add);
 
-        final LongMetric tombstoneMetric0 = grpCtx.cacheObjectContext().kernalContext().metric().registry(
-            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
+        final LongMetric tsMetric = grpCtx.cacheObjectContext().kernalContext().metric().registry(
+            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);
 
-        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expTsCnt, dataRows0.size());
-        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt, dataRows1.size());
-        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt, grpCtx.topology().localPartition(part).dataStore().cacheSize(CU.cacheId(DEFAULT_CACHE_NAME)));
-        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expTsCnt, tombstoneMetric0.value());
+        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expTsCnt, tsRows.size());
+        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt, dataRows.size());
+        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt,
+            grpCtx.topology().localPartition(part).dataStore().cacheSize(CU.cacheId(DEFAULT_CACHE_NAME)));
+        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expTsCnt, tsMetric.value());
     }
 
     /**
@@ -1662,18 +1411,23 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             .setBackups(2)
             .setRebalanceMode(ASYNC)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-            .setAffinity(new RendezvousAffinityFunction(false, 64));
+            .setAffinity(new RendezvousAffinityFunction(false, PARTS));
     }
 
     /** Insert new value into cache. */
-    private static class InsertClosure implements CacheEntryProcessor {
+    private static class InsertClosure implements CacheEntryProcessor<Object, Object, Object> {
+        /** */
         private final Object newVal;
 
+        /**
+         * @param newVal New value.
+         */
         public InsertClosure(Object newVal) {
             this.newVal = newVal;
         }
 
-        @Override public Object process(MutableEntry entry, Object... arguments) throws EntryProcessorException {
+        /** {@inheritDoc} */
+        @Override public Object process(MutableEntry<Object, Object> entry, Object... arguments) throws EntryProcessorException {
             assert entry.getValue() == null : entry;
 
             entry.setValue(newVal);
@@ -1682,8 +1436,10 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         }
     }
 
-    private static class RemoveClosure implements CacheEntryProcessor {
-        @Override public Object process(MutableEntry entry, Object... arguments) throws EntryProcessorException {
+    /** */
+    private static class RemoveClosure implements CacheEntryProcessor<Object, Object, Object> {
+        /** {@inheritDoc} */
+        @Override public Object process(MutableEntry<Object, Object> entry, Object... arguments) throws EntryProcessorException {
             entry.remove();
 
             return null;
