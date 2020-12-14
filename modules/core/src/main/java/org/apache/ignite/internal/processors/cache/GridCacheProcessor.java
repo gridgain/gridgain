@@ -79,6 +79,7 @@ import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.managers.encryption.GroupKeyEncrypted;
 import org.apache.ignite.internal.managers.systemview.walker.CachePagesListViewWalker;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -3708,7 +3709,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean checkThreadTx,
         boolean disabledAfterStart,
         IgniteUuid restartId,
-        @Nullable Map<Integer, byte[]> keys,
+        @Nullable Map<Integer, GroupKeyEncrypted> keys,
         boolean isKeysGenerationRequired
     ) {
         if (checkThreadTx) {
@@ -3800,7 +3801,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 for (StoredCacheData ccfg : storedCacheDataList)
                     if (ccfg.config().isEncryptionEnabled())
-                        cacheKeys.add(keys.get(CU.cacheGroupId(ccfg.config().getName(), ccfg.config().getGroupName())));
+                        cacheKeys.add(keys.get(CU.cacheGroupId(ccfg.config().getName(), ccfg.config().getGroupName())).key());
 
                 return receiveEncryptionKeysAndStartCacheAfter(cacheKeys, startCacheClsr);
             }
