@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -79,6 +80,7 @@ public class PSUStatisticsTypesTest extends StatisticsTypesAbstractTest {
     /**
      * Test that optimizer will use boolean column index.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-32021")
     @Test
     public void compareSelectWithBooleanConditions() {
         doColumnTests("BOOLEAN", "=", "true");

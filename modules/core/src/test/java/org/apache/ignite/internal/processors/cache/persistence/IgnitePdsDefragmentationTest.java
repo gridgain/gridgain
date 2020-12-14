@@ -79,7 +79,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
     public static final int PARTS = 5;
 
     /** */
-    public static final int ADDED_KEYS_COUNT = 150;
+    public static final int ADDED_KEYS_COUNT = 1500;
 
     /** */
     protected static final String GRP_NAME = "group";
@@ -238,6 +238,8 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
         assertFalse(completionMarkerFile.exists());
 
         validateCache(grid(0).cache(DEFAULT_CACHE_NAME));
+
+        validateLeftovers(workDir);
     }
 
     /**
