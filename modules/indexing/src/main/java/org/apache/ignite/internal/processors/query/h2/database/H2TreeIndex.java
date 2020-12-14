@@ -612,7 +612,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 DurableBackgroundTask task = new DurableBackgroundCleanupIndexTreeTask(
                         rootPages,
                         trees,
-                        cctx.group().name(),
+                        cctx.group().name() == null ? cctx.cache().name() : cctx.group().name(),
                         cctx.cache().name(),
                         table.getSchema().getName(),
                         idxName
