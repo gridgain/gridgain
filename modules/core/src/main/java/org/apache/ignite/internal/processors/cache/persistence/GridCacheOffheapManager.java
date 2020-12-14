@@ -3220,7 +3220,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 part = cctx.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
 
                 // Skip non-owned partitions.
-                if (part == null || part.state() != OWNING || part.state() != MOVING)
+                if (part == null || part.state() != OWNING && part.state() != MOVING)
                     return 0;
             }
 
@@ -3231,7 +3231,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     return 0;
 
                 try {
-                    if (part != null && part.state() != OWNING || part.state() != MOVING)
+                    if (part == null || part.state() != OWNING && part.state() != MOVING)
                         return 0;
 
                     long now = U.currentTimeMillis();
