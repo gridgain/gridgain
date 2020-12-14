@@ -3481,7 +3481,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 if (ctx.encryption().groupKey(grpId) != null) {
                     log.warning("Encryption key for this cache has already existed," +
                         " the new key was ignored [gepId=" + grpId +
-                        ", cache=" + cacheName +']');
+                        ", cache=" + cacheName + ']');
 
                     encCacheKey = null;
                 }
