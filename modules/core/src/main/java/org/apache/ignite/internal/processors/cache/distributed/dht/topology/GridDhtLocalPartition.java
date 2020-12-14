@@ -1117,7 +1117,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         else if (task.reason == PartitionsEvictManager.EvictReason.EVICTION) {
             rowFilter = r -> false;
 
-            clearClo = this::clearDirect;
+            clearClo = grp.mvccEnabled() ? this::clearSafe : this::clearDirect;
         }
         else {
             assert false : "Unsupported eviction reason " + task;

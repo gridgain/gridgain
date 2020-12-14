@@ -1410,10 +1410,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (!busyLock.enterBusy())
                 return 0;
 
-            log.info("Started processing expired batch [cleared=" + 0 +
-                ", remaining=" + pendingEntries.size() + ", tombstone=" + tombstone +
-                ", grp=" + grp.cacheOrGroupName() + ", cacheId=" + 0 + ']');
-
             try {
                 int cleared = 0;
 
