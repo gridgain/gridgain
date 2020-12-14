@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -405,7 +405,7 @@ public class CheckpointHistory {
         List<CheckpointEntry> deletedCheckpoints = removeCheckpoints(removeCount);
 
         if (isWalTruncationEnabled) {
-            int deleted = wal.truncate(null, firstCheckpointPointer());
+            int deleted = wal.truncate(firstCheckpointPointer());
 
             chp.walFilesDeleted(deleted);
         }
