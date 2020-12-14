@@ -275,23 +275,12 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "false");
 
         S.setIncludeSensitiveSupplier(() -> {
-            GridToStringBuilder.SensitiveDataLogging sensitiveRes = null;
-
             String sysStrToStringIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
 
-            if (sysStrToStringIncludeSensitive != null) {
-                boolean sysToStringIncludeSensitive = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
-
-                if (sysToStringIncludeSensitive)
-                    sensitiveRes = PLAIN;
-                else
-                    sensitiveRes = NONE;
-            }
-
-            if (sensitiveRes == null)
-                sensitiveRes = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
-
-            return sensitiveRes;
+            if (sysStrToStringIncludeSensitive != null)
+                return getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE) ? PLAIN : NONE;
+            else
+                return convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
         });
 
         if (GridTestClockTimer.startTestTimer()) {

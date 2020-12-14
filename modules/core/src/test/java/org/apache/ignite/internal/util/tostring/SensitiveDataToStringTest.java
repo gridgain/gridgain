@@ -44,7 +44,7 @@ import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.Sensi
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.NONE;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
-public class SensitiveDataToStringTest extends GridCommonAbstractTest/*extends GridAbstractTest*/ {
+public class SensitiveDataToStringTest extends GridCommonAbstractTest {
     /** Id organization. */
     int rndInt0 = 54321;
 

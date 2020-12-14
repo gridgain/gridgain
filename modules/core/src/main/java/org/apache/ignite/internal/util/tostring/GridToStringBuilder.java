@@ -107,26 +107,15 @@ public class GridToStringBuilder {
     private static final AtomicReference<Supplier<SensitiveDataLogging>> INCL_SENS_SUP_REF =
         new AtomicReference<>(new Supplier<SensitiveDataLogging>() {
             /** Value of "IGNITE_SENSITIVE_DATA_LOGGING". */
-            SensitiveDataLogging SENSITIVE_DATA_LOGGING;
+            final SensitiveDataLogging SENSITIVE_DATA_LOGGING;
 
             {
-                SensitiveDataLogging sensitiveRes = null;
-
                 String sysStrToStringIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
 
-                if (sysStrToStringIncludeSensitive != null) {
-                    boolean sysToStringIncludeSensitive = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
-
-                    if (sysToStringIncludeSensitive)
-                        sensitiveRes = PLAIN;
-                    else
-                        sensitiveRes = NONE;
-                }
-
-                if (sensitiveRes == null)
-                    sensitiveRes = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
-
-                SENSITIVE_DATA_LOGGING = sensitiveRes;
+                if (sysStrToStringIncludeSensitive != null)
+                    SENSITIVE_DATA_LOGGING = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE) ? PLAIN : NONE;
+                else
+                    SENSITIVE_DATA_LOGGING = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
             }
 
             /** {@inheritDoc} */
@@ -169,7 +158,20 @@ public class GridToStringBuilder {
 
     /** Log levels for sensitive data */
     public enum SensitiveDataLogging {
-        PLAIN, HASH, NONE;
+        /**
+         * Write sensitive information in {@code toString()} output.
+         */
+        PLAIN,
+
+        /**
+         * Write hash of sensitive information in {@code toString()} output.
+         */
+        HASH,
+
+        /**
+         * Don't write sensitive information in {@code toString()} output.
+         */
+        NONE;
 
         /** */
         public static SensitiveDataLogging convertSensitiveDataLogging(String strDataLogging) {
