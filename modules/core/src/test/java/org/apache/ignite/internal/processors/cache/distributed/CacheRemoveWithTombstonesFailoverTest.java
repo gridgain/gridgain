@@ -16,171 +16,206 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 
 /**
- * Tests to check failover scenarios over tombstones. TODO
+ * Tests to check failover scenarios over tombstones.
  */
-@Ignore
+@WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "5000")
+@RunWith(Parameterized.class)
 public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTest {
-//    /** {@inheritDoc} */
-//    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
-//        IgniteConfiguration cfg = super.getConfiguration(gridName);
-//
-//        TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
-//
-//        cfg.setConsistentId(gridName);
-//
-//        cfg.setCommunicationSpi(commSpi);
-//
-//        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
-//            .setDefaultDataRegionConfiguration(
-//                new DataRegionConfiguration()
-//                    .setInitialSize(256L * 1024 * 1024)
-//                    .setMaxSize(256L * 1024 * 1024)
-//                    .setPersistenceEnabled(true)
-//            )
-//            .setCheckpointFrequency(1024 * 1024 * 1024)
-//            .setWalMode(WALMode.LOG_ONLY);
-//
-//        cfg.setDataStorageConfiguration(dsCfg);
-//
-//        cfg.setCacheConfiguration(cacheConfiguration());
-//
-//        return cfg;
-//    }
-//
-//    /**
-//     * Test check that tombstones reside in persistent partition will be cleared after node restart.
-//     */
-//    @Test
-//    public void testTombstonesClearedAfterRestart() throws Exception {
-//        IgniteEx crd = startGrid(0);
-//
-//        crd.cluster().active(true);
-//
-//        final int KEYS = 1024;
-//
-//        for (int k = 0; k < KEYS; k++)
-//            crd.cache(DEFAULT_CACHE_NAME).put(k, k);
-//
-//        blockRebalance(crd);
-//
-//        IgniteEx node = startGrid(1);
-//
-//        // Do not run clear tombsones task.
-//        instrumentEvictionQueue(node, task -> {
-//            if (task instanceof PartitionsEvictManager.ClearTombstonesTask)
-//                return null;
-//
-//            return task;
-//        });
-//
-//        resetBaselineTopology();
-//
-//        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
-//
-//        Set<Integer> keysWithTombstone = new HashSet<>();
-//
-//        // Do removes while rebalance is in progress.
-//        for (int i = 0; i < KEYS; i += 2) {
-//            keysWithTombstone.add(i);
-//
-//            crd.cache(DEFAULT_CACHE_NAME).remove(i);
-//        }
-//
-//        final LongMetric tombstoneMetric = node.context().metric().registry(
-//            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
-//
-//        Assert.assertEquals(keysWithTombstone.size(), tombstoneMetric.value());
-//
-//        // Resume rebalance.
-//        TestRecordingCommunicationSpi.spi(crd).stopBlock();
-//
-//        // Partitions should be in OWNING state.
-//        awaitPartitionMapExchange();
-//
-//        // But tombstones removal should be skipped.
-//        Assert.assertEquals(keysWithTombstone.size(), tombstoneMetric.value());
-//
-//        // Stop node with tombstones.
-//        stopGrid(1);
-//
-//        // Stop coordinator.
-//        stopGrid(0);
-//
-//        // Startup node with tombstones in inactive state.
-//        node = startGrid(1);
-//
-//        final int grpId = groupIdForCache(node, DEFAULT_CACHE_NAME);
-//
-//        // Tombstone metrics are unavailable before join to topology, using internal api.
-//        long tombstonesBeforeActivation = node.context().cache().cacheGroup(grpId).topology().localPartitions()
-//            .stream().map(part -> part.dataStore().tombstonesCount()).reduce(Long::sum).orElse(0L);
-//
-//        Assert.assertEquals(keysWithTombstone.size(), tombstonesBeforeActivation);
-//
-//        crd = startGrid(0);
-//
-//        crd.cluster().active(true);
-//
-//        awaitPartitionMapExchange();
-//
-//        final LongMetric tombstoneMetric1 = node.context().metric().registry(
-//            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
-//
-//        // Tombstones should be removed after join to topology.
-//        GridTestUtils.waitForCondition(() -> tombstoneMetric1.value() == 0, 30_000);
-//
-//        assertEquals(0, tombstoneMetric1.value());
-//    }
-//
-//    /**
-//     *
-//     */
-//    private static void blockRebalance(IgniteEx node) {
-//        final int grpId = groupIdForCache(node, DEFAULT_CACHE_NAME);
-//
-//        TestRecordingCommunicationSpi.spi(node).blockMessages((node0, msg) ->
-//            (msg instanceof GridDhtPartitionSupplyMessage)
-//                && ((GridCacheGroupIdMessage)msg).groupId() == grpId
-//        );
-//    }
-//
-//    /**
-//     * @return Cache configuration.
-//     */
-//    private CacheConfiguration<Object, Object> cacheConfiguration() {
-//        return new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-//            .setAtomicityMode(TRANSACTIONAL)
-//            .setCacheMode(PARTITIONED)
-//            .setBackups(1)
-//            .setRebalanceMode(ASYNC)
-//            .setReadFromBackup(true)
-//            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-//            .setAffinity(new RendezvousAffinityFunction(false, 64));
-//    }
+    /** */
+    private static final String TS_METRIC_NAME = "Tombstones";
+
+    /** */
+    @Parameterized.Parameter(value = 0)
+    public CacheAtomicityMode atomicityMode;
+
+    /**
+     * @return List of test parameters.
+     */
+    @Parameterized.Parameters(name = "mode={0}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>();
+
+        params.add(new Object[]{ATOMIC});
+        params.add(new Object[]{TRANSACTIONAL});
+
+        return params;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
+
+        cfg.setConsistentId(gridName);
+
+        cfg.setCommunicationSpi(commSpi);
+
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration()
+                    .setInitialSize(256L * 1024 * 1024)
+                    .setMaxSize(256L * 1024 * 1024)
+                    .setPersistenceEnabled(true)
+            )
+            .setCheckpointFrequency(1024 * 1024 * 1024)
+            .setWalSegmentSize(4 * 1024 * 1024);
+
+        cfg.setDataStorageConfiguration(dsCfg);
+
+        cfg.setCacheConfiguration(cacheConfiguration());
+
+        return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    /**
+     * Test check that tombstones reside in persistent partition will be cleared after node restart.
+     */
+    @Test
+    public void testTombstonesClearedAfterRestart() throws Exception {
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        final int KEYS = 1024;
+
+        for (int k = 0; k < KEYS; k++)
+            crd.cache(DEFAULT_CACHE_NAME).put(k, k);
+
+        blockRebalance(crd);
+
+        IgniteEx demander = startGrid(1);
+        resetBaselineTopology();
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+        Set<Integer> keysWithTombstone = new HashSet<>();
+
+        // Do removes while rebalance is in progress.
+        for (int i = 0; i < KEYS; i += 2) {
+            keysWithTombstone.add(i);
+
+            crd.cache(DEFAULT_CACHE_NAME).remove(i); // Should create tombstones on both nodes.
+        }
+
+        // Cache group context is not initialized properly on demander while calculating metric. TODO FIXME
+        long tsCnt = demander.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME))
+            .topology().localPartitions().stream().mapToLong(part -> part.dataStore().tombstonesCount()).sum();
+
+        Assert.assertEquals(keysWithTombstone.size(), tsCnt);
+
+        // Resume rebalance.
+        TestRecordingCommunicationSpi.spi(crd).stopBlock();
+
+        // Partitions should be in OWNING state.
+        awaitPartitionMapExchange();
+
+        tsCnt = demander.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME))
+            .topology().localPartitions().stream().mapToLong(part -> part.dataStore().tombstonesCount()).sum();
+
+        // Tombstones shouldn't yet be removed.
+        Assert.assertEquals(keysWithTombstone.size(), tsCnt);
+
+        stopGrid(1);
+        stopGrid(0);
+
+        // Startup demander with tombstones in inactive state.
+        demander = startGrid(1);
+
+        final int grpId = groupIdForCache(demander, DEFAULT_CACHE_NAME);
+
+        // Tombstone metrics are unavailable before join to topology, using internal api.
+        tsCnt = demander.context().cache().cacheGroup(grpId).topology().localPartitions()
+            .stream().mapToLong(part -> part.dataStore().tombstonesCount()).sum();
+
+        Assert.assertEquals(keysWithTombstone.size(), tsCnt);
+
+        crd = startGrid(0);
+
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        awaitPartitionMapExchange();
+
+        final LongMetric tombstoneMetric1 = demander.context().metric().registry(
+            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);
+
+        // Tombstones should be removed after join to topology.
+        GridTestUtils.waitForCondition(() -> tombstoneMetric1.value() == 0, 30_000);
+
+        assertEquals(0, tombstoneMetric1.value());
+    }
+
+    /**
+     *
+     */
+    private static void blockRebalance(IgniteEx node) {
+        final int grpId = groupIdForCache(node, DEFAULT_CACHE_NAME);
+
+        TestRecordingCommunicationSpi.spi(node).blockMessages((node0, msg) ->
+            (msg instanceof GridDhtPartitionSupplyMessage)
+                && ((GridCacheGroupIdMessage)msg).groupId() == grpId
+        );
+    }
+
+    /**
+     * @return Cache configuration.
+     */
+    private CacheConfiguration<Object, Object> cacheConfiguration() {
+        return new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(TRANSACTIONAL)
+            .setCacheMode(PARTITIONED)
+            .setBackups(1)
+            .setRebalanceMode(ASYNC)
+            .setReadFromBackup(true)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
+            .setAffinity(new RendezvousAffinityFunction(false, 64));
+    }
 }

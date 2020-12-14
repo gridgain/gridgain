@@ -41,7 +41,6 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheLoadRebalanceEvict
 import org.apache.ignite.internal.processors.cache.distributed.CacheAtomicPrimarySyncBackPressureTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheOperationsInterruptTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesBasicTest;
-import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesPreloadingLoadTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesPreloadingTest;
 import org.apache.ignite.internal.processors.cache.distributed.FailBackupOnAtomicOperationTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePrimarySyncTest;
@@ -162,9 +161,8 @@ public class IgniteCacheTestSuite9 {
         GridTestUtils.addTestIfNeeded(suite, HistoricalRebalanceRemovesConsistencyTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesBasicTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesPreloadingTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesPreloadingLoadTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesFailoverTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesPreloadingTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, TombstoneClearingCountersTest.class, ignoredTests);
 
