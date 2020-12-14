@@ -55,6 +55,7 @@ public class EncryptionUtil {
     /**
      * @param srcBuf Source buffer.
      * @param res Destination buffer.
+     * @param grpKey Encryption key.
      */
     public void encrypt(ByteBuffer srcBuf, ByteBuffer res, GroupKey grpKey) {
         assert srcBuf.remaining() >= pageSize;
@@ -135,7 +136,9 @@ public class EncryptionUtil {
         return pageSize - encryptionOverhead;
     }
 
-    /** */
+    /**
+     * Checks that bytes for encryptionOverhead equal to zero.
+     */
     private boolean tailIsEmpty(ByteBuffer src, int pageType) {
         int srcPos = src.position();
 
