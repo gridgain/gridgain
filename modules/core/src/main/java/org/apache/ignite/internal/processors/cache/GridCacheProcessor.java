@@ -3473,6 +3473,20 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             (grpKeys, masterKeyDigest) -> {
             assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
 
+            byte[] encCacheKey = ccfg != null && ccfg.isEncryptionEnabled() ? grpKeys.iterator().next() : null;
+
+            if (encCacheKey != null) {
+                int grpId = CU.cacheGroupId(cacheName, ccfg == null ? null : ccfg.getGroupName());
+
+                if (ctx.encryption().groupKey(grpId) != null) {
+                    log.warning("Encryption key for this cache has already existed," +
+                        " the new key was ignored [gepId=" + grpId +
+                        ", cache=" + cacheName +']');
+
+                    encCacheKey = null;
+                }
+            }
+
             DynamicCacheChangeRequest req = prepareCacheChangeRequest(
                 ccfg,
                 cacheName,
@@ -3484,7 +3498,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 null,
                 false,
                 null,
-                ccfg != null && ccfg.isEncryptionEnabled() ? grpKeys.iterator().next() : null,
+                encCacheKey,
                 ccfg != null && ccfg.isEncryptionEnabled() ? masterKeyDigest : null);
 
             if (req != null) {
