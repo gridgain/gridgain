@@ -79,7 +79,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
     public static final int PARTS = 5;
 
     /** */
-    public static final int ADDED_KEYS_COUNT = 150;
+    public static final int ADDED_KEYS_COUNT = 1500;
 
     /** */
     protected static final String GRP_NAME = "group";
@@ -204,6 +204,19 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         waitForDefragmentation(0);
 
+        assertEquals(ClusterState.INACTIVE, grid(0).context().state().clusterState().state());
+
+        GridTestUtils.assertThrowsAnyCause(
+            log,
+            () -> {
+                grid(0).cluster().state(ClusterState.ACTIVE);
+
+                return null;
+            },
+            IgniteCheckedException.class,
+            "Failed to activate cluster (node is in maintenance mode)"
+        );
+
         long[] newPartLen = partitionSizes(workDir);
 
         for (int p = 0; p < PARTS; p++)
@@ -225,6 +238,8 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
         assertFalse(completionMarkerFile.exists());
 
         validateCache(grid(0).cache(DEFAULT_CACHE_NAME));
+
+        validateLeftovers(workDir);
     }
 
     /**
@@ -495,9 +510,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         stopGrid(0);
 
-        IgniteEx ex = startGrid(0);
-
-        ex.cluster().state(ClusterState.ACTIVE);
+        startGrid(0);
 
         waitForDefragmentation(0);
 

@@ -35,6 +35,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -182,11 +183,11 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
      * @param chIdxs Channels to wait for initialization.
      */
     protected void initClient(ClientConfiguration clientCfg, int... chIdxs) throws IgniteInterruptedCheckedException {
-        client = new TcpIgniteClient(cfg -> {
+        client = new TcpIgniteClient((cfg, hnd) -> {
             try {
                 log.info("Establishing connection to " + cfg.getAddress());
 
-                TcpClientChannel ch = new TestTcpClientChannel(cfg);
+                TcpClientChannel ch = new TestTcpClientChannel(cfg, hnd);
 
                 log.info("Channel initialized: " + ch);
 
@@ -320,8 +321,8 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
         /**
          * @param cfg Config.
          */
-        public TestTcpClientChannel(ClientChannelConfiguration cfg) {
-            super(cfg);
+        public TestTcpClientChannel(ClientChannelConfiguration cfg, ClientConnectionMultiplexer hnd) {
+            super(cfg, hnd);
 
             this.cfg = cfg;
 

@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.ignite.internal.processors.query.stat.hll.HLL;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.isNullValue;
@@ -55,6 +56,9 @@ public class ColumnStatisticsCollector {
     /** Null values counter. */
     private long nullsCnt;
 
+    /** Is column has complex type. */
+    private final boolean complexType;
+
     /** Hasher. */
     private final Hasher hash = new Hasher();
 
@@ -67,6 +71,12 @@ public class ColumnStatisticsCollector {
     public ColumnStatisticsCollector(Column col, Comparator<Value> comp) {
         this.col = col;
         this.comp = comp;
+
+        TypeInfo colTypeInfo = col.getType();
+        complexType = colTypeInfo == TypeInfo.TYPE_ARRAY || colTypeInfo == TypeInfo.TYPE_ENUM_UNDEFINED
+                || colTypeInfo == TypeInfo.TYPE_JAVA_OBJECT || colTypeInfo == TypeInfo.TYPE_RESULT_SET
+                || colTypeInfo == TypeInfo.TYPE_UNKNOWN;
+
     }
 
     /**
@@ -117,11 +127,13 @@ public class ColumnStatisticsCollector {
 
         hll.addRaw(hash.fastHash(bytes));
 
-        if (null == min || comp.compare(val, min) < 0)
-            min = val;
+        if (!complexType) {
+            if (null == min || comp.compare(val, min) < 0)
+                min = val;
 
-        if (null == max || comp.compare(val, max) > 0)
-            max = val;
+            if (null == max || comp.compare(val, max) > 0)
+                max = val;
+        }
     }
 
     /**

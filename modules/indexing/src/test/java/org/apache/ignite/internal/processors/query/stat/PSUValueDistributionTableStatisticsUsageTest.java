@@ -42,7 +42,7 @@ public class PSUValueDistributionTableStatisticsUsageTest extends StatisticsAbst
      * @return Test parameters.
      */
     @Parameterized.Parameters(name = "cacheMode={0}")
-    public static Collection parameters() {
+    public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
                 { REPLICATED },
                 { PARTITIONED },
@@ -68,7 +68,7 @@ public class PSUValueDistributionTableStatisticsUsageTest extends StatisticsAbst
         runSql("CREATE INDEX sized_big ON sized(big)");
         runSql("CREATE INDEX sized_big_nulls ON sized(big_nulls)");
 
-        String bigValue = "someBigLongValueWithTheSameTextAtFirst";
+        String bigVal = "someBigLongValueWithTheSameTextAtFirst";
         String smallNulls, bigNulls;
         int valAdd;
         for (int i = 0; i < BIG_SIZE; i++) {
@@ -78,11 +78,11 @@ public class PSUValueDistributionTableStatisticsUsageTest extends StatisticsAbst
                 valAdd = 0;
             } else {
                 smallNulls = String.format("'small%d'", i);
-                bigNulls = String.format("'%s%d'", bigValue, i);
+                bigNulls = String.format("'%s%d'", bigVal, i);
                 valAdd = 1;
             }
             String sql = String.format("INSERT INTO sized(id, small, small_nulls, big, big_nulls)" +
-                    " VALUES(%d,'small%d', %s, '%s%d', %s)", i, i + valAdd, smallNulls, bigValue, i + valAdd, bigNulls);
+                    " VALUES(%d,'small%d', %s, '%s%d', %s)", i, i + valAdd, smallNulls, bigVal, i + valAdd, bigNulls);
             runSql(sql);
         }
         runSql("INSERT INTO sized(id, small, big) VALUES(" + BIG_SIZE + ", null, null)");

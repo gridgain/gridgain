@@ -162,6 +162,27 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     */
+    @Test
+    public void testCastIntToInterval() {
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS TIMESTAMP)");
+
+        int rows = 100;
+        for (int i = 0; i < rows; ++i) {
+            sql("INSERT INTO TEST VALUES " +
+                    "(?, ?, ?)",
+                i, i, new Timestamp(System.currentTimeMillis() + 3600 * 24 + 3600 * i));
+        }
+
+        List<List<?>> res0 = sql("SELECT CASE WHEN (VAL_TS - SYSDATE) > 0 THEN 'A' END FROM TEST").getAll();
+
+        assertEquals(rows, res0.size());
+
+        res0.forEach(r -> assertEquals("Invalid result type: " +
+            r.get(0) + ",\n at results: " + res0, "A", r.get(0)));
+    }
+
+    /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.

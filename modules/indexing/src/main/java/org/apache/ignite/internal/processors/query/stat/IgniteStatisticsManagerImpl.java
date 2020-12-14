@@ -31,6 +31,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
@@ -47,7 +48,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  */
 public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Logger. */
-    private IgniteLogger log;
+    private final IgniteLogger log;
 
     /** Kernal context. */
     private final GridKernalContext ctx;
@@ -71,9 +72,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         log = ctx.log(IgniteStatisticsManagerImpl.class);
 
         boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
-        boolean persistence = GridCacheUtils.isPersistenceEnabled(ctx.config());
-        IgniteLogger repositoryLogger = ctx.log(IgniteStatisticsRepositoryImpl.class);
-        statsRepos = new IgniteStatisticsRepositoryImpl(storeData, persistence, this, repositoryLogger);
+        IgniteCacheDatabaseSharedManager db = (GridCacheUtils.isPersistenceEnabled(ctx.config())) ?
+                ctx.cache().context().database() : null;
+        statsRepos = new IgniteStatisticsRepositoryImpl(storeData, db, ctx.internalSubscriptionProcessor(), this,
+                ctx::log);
     }
 
     /**
@@ -99,22 +101,22 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Filter columns by specified names.
      *
-     * @param columns Columns to filter.
+     * @param cols Columns to filter.
      * @param colNames Column names.
      * @return Column with specified names.
      */
-    private Column[] filterColumns(Column[] columns, String... colNames) {
+    private Column[] filterColumns(Column[] cols, String... colNames) {
         if (F.isEmpty(colNames))
-            return columns;
+            return cols;
 
         Set<String> colNamesSet = new HashSet(Arrays.asList(colNames));
-        List<Column> resultList = new ArrayList<>(colNames.length);
+        List<Column> resList = new ArrayList<>(colNames.length);
 
-        for (Column col : columns)
+        for (Column col : cols)
             if (colNamesSet.contains(col.getName()))
-                resultList.add(col);
+                resList.add(col);
 
-        return resultList.toArray(new Column[resultList.size()]);
+        return resList.toArray(new Column[resList.size()]);
     }
 
     /** {@inheritDoc} */
@@ -127,25 +129,18 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         if (log.isDebugEnabled())
             log.debug(String.format("Starting statistics collection by %s.%s object", schemaName, objName));
 
-        Column[] selectedColumns;
-        boolean fullStat;
-        if (F.isEmpty(colNames)) {
-            fullStat = true;
-            selectedColumns = tbl.getColumns();
-        }
-        else {
-            fullStat = false;
-            selectedColumns = filterColumns(tbl.getColumns(), colNames);
-        }
+        Column[] selectedCols;
+        boolean fullStat = F.isEmpty(colNames);
+        selectedCols = filterColumns(tbl.getColumns(), colNames);
 
-        Collection<ObjectPartitionStatisticsImpl> partsStats = collectPartitionStatistics(tbl, selectedColumns);
+        Collection<ObjectPartitionStatisticsImpl> partsStats = collectPartitionStatistics(tbl, selectedCols);
         StatsKey key = new StatsKey(tbl.identifier().schema(), tbl.identifier().table());
         if (fullStat)
             statsRepos.saveLocalPartitionsStatistics(key, partsStats);
         else
             statsRepos.mergeLocalPartitionsStatistics(key, partsStats);
 
-        ObjectStatisticsImpl objStats = aggregateLocalStatistics(tbl, selectedColumns, partsStats);
+        ObjectStatisticsImpl objStats = aggregateLocalStatistics(tbl, selectedCols, partsStats);
         if (fullStat)
             statsRepos.saveLocalStatistics(key, objStats);
         else
@@ -158,12 +153,14 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * Collect partition level statistics.
      *
      * @param tbl Table to collect statistics by.
-     * @param selectedColumns Columns to collect statistics by.
+     * @param selectedCols Columns to collect statistics by.
      * @return Collection of partition level statistics by local primary partitions.
      * @throws IgniteCheckedException in case of error.
      */
-    private Collection<ObjectPartitionStatisticsImpl> collectPartitionStatistics(GridH2Table tbl, Column[] selectedColumns)
-            throws IgniteCheckedException {
+    private Collection<ObjectPartitionStatisticsImpl> collectPartitionStatistics(
+            GridH2Table tbl,
+            Column[] selectedCols
+    ) throws IgniteCheckedException {
         List<ObjectPartitionStatisticsImpl> tblPartStats = new ArrayList<>();
         GridH2RowDescriptor desc = tbl.rowDescriptor();
         String tblName = tbl.getName();
@@ -181,9 +178,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
                 long rowsCnt = 0;
 
-                List<ColumnStatisticsCollector> colStatsCollectors = new ArrayList<>(selectedColumns.length);
+                List<ColumnStatisticsCollector> colStatsCollectors = new ArrayList<>(selectedCols.length);
 
-                for (Column col : selectedColumns)
+                for (Column col : selectedCols)
                     colStatsCollectors.add(new ColumnStatisticsCollector(col, tbl::compareValues));
 
                 for (CacheDataRow row : tbl.cacheContext().offheap().cachePartitionIterator(tbl.cacheId(), locPart.id(),
@@ -225,38 +222,41 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @param tblPartStats Collection of all local partition level statistics by specified key.
      * @return Local level aggregated statistics.
      */
-    public ObjectStatisticsImpl aggregateLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> tblPartStats) {
+    public ObjectStatisticsImpl aggregateLocalStatistics(
+            StatsKey key,
+            Collection<ObjectPartitionStatisticsImpl> tblPartStats
+    ) {
         // For now there can be only tables
-        GridH2Table table = schemaMgr.dataTable(key.schema(), key.obj());
+        GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
 
-        if (table == null) {
+        if (tbl == null) {
             // remove all loaded statistics.
             log.info("Removing statistics for object " + key + " cause table doesn't exists.");
             statsRepos.clearLocalPartitionsStatistics(key);
         }
-        return aggregateLocalStatistics(table, table.getColumns(), tblPartStats);
+        return aggregateLocalStatistics(tbl, tbl.getColumns(), tblPartStats);
     }
 
     /**
      * Aggregate partition level statistics to local level one.
      *
      * @param tbl Table to aggregate statistics by.
-     * @param selectedColumns Columns to aggregate statistics by.
+     * @param selectedCols Columns to aggregate statistics by.
      * @param tblPartStats Collection of partition level statistics.
      * @return Local level statistics.
      */
     private ObjectStatisticsImpl aggregateLocalStatistics(
             GridH2Table tbl,
-            Column[] selectedColumns,
+            Column[] selectedCols,
             Collection<ObjectPartitionStatisticsImpl> tblPartStats
     ) {
-        Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedColumns.length);
+        Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedCols.length);
         long rowCnt = 0;
-        for (Column col : selectedColumns)
+        for (Column col : selectedCols)
             colPartStats.put(col, new ArrayList<>());
 
         for (ObjectPartitionStatisticsImpl partStat : tblPartStats) {
-            for (Column col : selectedColumns) {
+            for (Column col : selectedCols) {
                 ColumnStatistics colPartStat = partStat.columnStatistics(col.getName());
                 if (colPartStat != null) {
                     colPartStats.compute(col, (k, v) -> {
@@ -268,8 +268,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             rowCnt += partStat.rowCount();
         }
 
-        Map<String, ColumnStatistics> colStats = new HashMap<>(selectedColumns.length);
-        for (Column col : selectedColumns) {
+        Map<String, ColumnStatistics> colStats = new HashMap<>(selectedCols.length);
+        for (Column col : selectedCols) {
             ColumnStatistics stat = ColumnStatisticsCollector.aggregate(tbl::compareValues, colPartStats.get(col));
             colStats.put(col.getName(), stat);
         }

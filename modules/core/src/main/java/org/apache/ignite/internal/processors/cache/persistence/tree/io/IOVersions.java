@@ -16,25 +16,26 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Registry for IO versions.
  */
 public final class IOVersions<V extends PageIO> {
-    /** */
-    private final PageIO[] vers;
+    /** Defines an offset from which GG versions are assigned. */
+    public static final int GG_VERSION_OFFSET = Short.MAX_VALUE;
 
     /** */
-    private final PageIO[] ggVers;
+    private final V[] vers;
 
     /** */
     private final int type;
 
     /** */
     private final V latest;
+
+    /** */
+    private final int ggOff;
 
     /**
      * @param vers Versions.
@@ -44,28 +45,22 @@ public final class IOVersions<V extends PageIO> {
         assert vers != null;
         assert vers.length > 0;
 
-        this.type = vers[0].getType();
+        this.vers = vers;
+        type = vers[0].getType();
+
+        int tmp = vers.length;
+
+        for (int i = 0; i < vers.length; i++) {
+            if (vers[i].getVersion() >= GG_VERSION_OFFSET) {
+                tmp = i;
+
+                break;
+            }
+        }
+
+        ggOff = tmp;
 
         latest = vers[vers.length - 1];
-
-        List<PageIO> ignVers = new ArrayList<>();
-        List<PageIO> ggVers = new ArrayList<>();
-
-        for (PageIO v : vers) {
-            if ((short)v.getVersion() > 0)
-                ignVers.add(v);
-            else
-                ggVers.add(v);
-        }
-
-        if (ggVers.isEmpty()) {
-            this.vers = vers;
-            this.ggVers = null;
-        }
-        else {
-            this.vers = ignVers.toArray(new PageIO[]{});
-            this.ggVers = ggVers.toArray(new PageIO[]{});
-        }
 
         assert checkVersions();
     }
@@ -81,20 +76,17 @@ public final class IOVersions<V extends PageIO> {
      * @return {@code true} If versions are correct.
      */
     private boolean checkVersions() {
-        for (int i = 0; i < vers.length; i++) {
+        for (int i = 0; i < ggOff; i++) {
             PageIO v = vers[i];
 
             if (v.getType() != type || v.getVersion() != i + 1)
                 return false;
         }
 
-        if (ggVers == null)
-            return true;
+        for (int i = ggOff, j = 0; i < vers.length; i++, j++) {
+            PageIO v = vers[i];
 
-        for (int i = 0; i < ggVers.length; i++) {
-            PageIO v = ggVers[i];
-
-            if (v.getType() != type || (-(short)v.getVersion()) != i + 1)
+            if (v.getType() != type || v.getVersion() - GG_VERSION_OFFSET != j)
                 return false;
         }
 
@@ -113,17 +105,10 @@ public final class IOVersions<V extends PageIO> {
      * @return IO.
      */
     public V forVersion(int ver) {
-        assert ver > 0 && ver <= 65535 : ver;
-
-        short v = (short)ver;
-
-        if (v == 0)
+        if (ver == 0)
             throw new IllegalStateException("Failed to get page IO instance (page content is corrupted)");
 
-        if (v < 0)
-            return (V)ggVers[-v - 1];
-
-        return (V)vers[v - 1];
+        return ver >= GG_VERSION_OFFSET ? vers[ggOff + ver - GG_VERSION_OFFSET] : vers[ver - 1];
     }
 
     /**
