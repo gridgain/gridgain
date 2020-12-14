@@ -484,7 +484,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
     /**
      * Loads a master key by name, or gets current key.
-     * If key name is empty, {@code null} or equals current master key name, this method returns the current master key.
+     * If a key name is empty, {@code null} or equals to the current master key name, this method returns the current master key.
      *
      * @param masterKeyName Master key name.
      * @return Master key.

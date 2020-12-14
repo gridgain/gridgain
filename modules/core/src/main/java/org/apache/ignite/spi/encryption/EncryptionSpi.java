@@ -115,7 +115,7 @@ public interface EncryptionSpi extends IgniteSpi {
     Serializable decryptKey(byte[] key);
 
     /**
-     * Decrypts key and checks it integrity using the specific master key by name.
+     * Decrypts key and checks its integrity using the master key specified by name.
      *
      * @param key Key to decrypt.
      * @param masterKeyName Master key name.
