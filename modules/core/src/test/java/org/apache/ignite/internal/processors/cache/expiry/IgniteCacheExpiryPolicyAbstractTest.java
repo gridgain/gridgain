@@ -45,11 +45,14 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheTestStore;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAbstractTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
+import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
+import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -138,15 +141,27 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
             info("PUT DONE");
         }
 
-        long pSize = grid(0).context().cache().internalCache(DEFAULT_CACHE_NAME).context().ttl().pendingSize();
+        GridCacheContext<Object, Object> ctx = grid(0).context().cache().internalCache(DEFAULT_CACHE_NAME).context();
+
+        long pSize = ctx.ttl().pendingSize();
 
         assertTrue("Too many pending entries: " + pSize, pSize <= 1);
 
         cache.remove(key);
 
-        pSize = grid(0).context().cache().internalCache(DEFAULT_CACHE_NAME).context().ttl().pendingSize();
+        pSize = ctx.ttl().pendingSize();
 
-        assertEquals(0, pSize);
+        assertEquals("A tombstone is expected", 1, pSize);
+
+        int part = grid(0).affinity(DEFAULT_CACHE_NAME).partition(key);
+
+        assertEquals(1, ctx.topology().localPartition(part).dataStore().tombstonesCount());
+
+        PendingEntriesTree tree = ctx.topology().localPartition(part).dataStore().pendingTree();
+
+        PendingRow first = tree.findFirst();
+
+        assertTrue(first.tombstone);
     }
 
     /**

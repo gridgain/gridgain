@@ -92,13 +92,8 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
         dhtCtx = cctx.isNear() ? cctx.near().dht().context() : cctx;
 
         // TODO ensure sys caches are not processed for ttl.
-        boolean cleanupDisabled = cctx.kernalContext().isDaemon() ||
-//            !cctx.config().isEagerTtl() ||
-//            CU.isUtilityCache(cctx.name()) ||
-//            cctx.dataStructuresCache() ||
-            (cctx.kernalContext().clientNode() && cctx.config().getNearConfiguration() == null);
-
-        if (cleanupDisabled)
+        if (cctx.kernalContext().isDaemon() ||
+            (cctx.kernalContext().clientNode() && cctx.config().getNearConfiguration() == null))
             return;
 
         cctx.shared().ttl().register(this);
