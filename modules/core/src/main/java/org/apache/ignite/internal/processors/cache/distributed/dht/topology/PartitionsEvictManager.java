@@ -123,9 +123,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
     /**
      * @param grp Group context.
-     * @param part Partition to clear tombstones.
+     * @param part Partition to clear tombstones for.
      */
     public PartitionEvictionTask clearTombstonesAsync(CacheGroupContext grp, GridDhtLocalPartition part) {
+        assert grp.supportsTombstone() : grp;
+
         PartitionEvictionTask task = scheduleEviction(grp, part, EvictReason.TOMBSTONE);
 
         task.start();

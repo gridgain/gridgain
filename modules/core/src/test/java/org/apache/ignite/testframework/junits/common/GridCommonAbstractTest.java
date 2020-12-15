@@ -2823,17 +2823,18 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
     /**
      * Clears tombstones on a DHT node.
-     * TODO can use cache clear. Must write counter on cache clear.
      *
      * @param cache Cache.
      */
     protected void clearTombstones(IgniteCache<?, ?> cache) throws IgniteCheckedException {
-        if (cache.getConfiguration(CacheConfiguration.class).getCacheMode() == CacheMode.LOCAL)
-            return;
-
         IgniteEx ignite = cache.unwrap(IgniteEx.class);
 
-        List<GridDhtLocalPartition> locParts = ignite.cachex(cache.getName()).context().topology().localPartitions();
+        GridCacheContext<Object, Object> grpCtx = ignite.cachex(cache.getName()).context();
+
+        if (!grpCtx.group().supportsTombstone())
+            return;
+
+        List<GridDhtLocalPartition> locParts = grpCtx.topology().localPartitions();
 
         for (GridDhtLocalPartition locPart : locParts)
             locPart.clearTombstonesAsync().get();
