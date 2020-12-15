@@ -53,6 +53,15 @@ class QueryHistoryMetricsValue {
     /** Maximum bytes written on disk in total by query. */
     private final long maxTotalBytesWrittenOnDisk;
 
+    /** Distributed joins. */
+    private final boolean distributedJoins;
+
+    /** Enforce join order. */
+    private final boolean enforceJoinOrder;
+
+    /** Lazy. */
+    private final boolean lazy;
+
     /**
      * @param execs Number of executions.
      * @param failures Number of failure.
@@ -65,10 +74,15 @@ class QueryHistoryMetricsValue {
      * @param maxBytesAllocatedOnDisk Maximum bytes on disk required by query.
      * @param minTotalBytesWrittenOnDisk Minimum bytes written on disk in total by query.
      * @param maxTotalBytesWrittenOnDisk Maximum bytes written on disk in total by query.
+     * @param distributedJoins Distributed joins flag.
+     * @param enforceJoinOrder Enforce join order flag.
+     * @param lazy Lazy flag.
      */
     public QueryHistoryMetricsValue(long execs, long failures, long minTime, long maxTime, long lastStartTime,
         long minMemory, long maxMemory, long minBytesAllocatedOnDisk, long maxBytesAllocatedOnDisk,
-        long minTotalBytesWrittenOnDisk, long maxTotalBytesWrittenOnDisk) {
+        long minTotalBytesWrittenOnDisk, long maxTotalBytesWrittenOnDisk,
+        boolean distributedJoins, boolean enforceJoinOrder, boolean lazy
+        ) {
         this.execs = execs;
         this.failures = failures;
         this.minTime = minTime;
@@ -80,6 +94,9 @@ class QueryHistoryMetricsValue {
         this.maxBytesAllocatedOnDisk = maxBytesAllocatedOnDisk;
         this.minTotalBytesWrittenOnDisk = minTotalBytesWrittenOnDisk;
         this.maxTotalBytesWrittenOnDisk = maxTotalBytesWrittenOnDisk;
+        this.distributedJoins = distributedJoins;
+        this.enforceJoinOrder = enforceJoinOrder;
+        this.lazy = lazy;
     }
 
    /**
@@ -179,5 +196,26 @@ class QueryHistoryMetricsValue {
      */
     public long maxTotalBytesWrittenOnDisk() {
         return maxTotalBytesWrittenOnDisk;
+    }
+
+    /**
+     * @return Distributed joins.
+     */
+    public boolean distributedJoins() {
+        return distributedJoins;
+    }
+
+    /**
+     * @return Enforce join order.
+     */
+    public boolean enforceJoinOrder() {
+        return enforceJoinOrder;
+    }
+
+    /**
+     * @return Lazy.
+     */
+    public boolean lazy() {
+        return lazy;
     }
 }

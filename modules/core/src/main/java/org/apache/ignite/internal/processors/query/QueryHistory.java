@@ -50,8 +50,13 @@ public class QueryHistory {
         long allocatedOnDisk = info.memoryMetricProvider().maxWrittenOnDisk();
         long totalWrittenOnDisk = info.memoryMetricProvider().totalWrittenOnDisk();
 
+        boolean distributedJoins = info.distributedJoins();
+        boolean enforceJoinOrder = info.enforceJoinOrder();
+        boolean lazy = info.lazy();
+
         val = new QueryHistoryMetricsValue(1, failures, duration, duration, info.startTime(),
-            reserved, reserved, allocatedOnDisk, allocatedOnDisk, totalWrittenOnDisk, totalWrittenOnDisk);
+            reserved, reserved, allocatedOnDisk, allocatedOnDisk, totalWrittenOnDisk, totalWrittenOnDisk,
+            distributedJoins, enforceJoinOrder, lazy);
 
         linkRef = new AtomicReference<>();
     }
@@ -81,7 +86,10 @@ public class QueryHistory {
             Math.min(val.minBytesAllocatedOnDisk(), m.minBytesAllocatedOnDisk()),
             Math.max(val.maxBytesAllocatedOnDisk(), m.maxBytesAllocatedOnDisk()),
             Math.min(val.minTotalBytesWrittenOnDisk(), m.minTotalBytesWrittenOnDisk()),
-            Math.max(val.maxTotalBytesWrittenOnDisk(), m.maxTotalBytesWrittenOnDisk())
+            Math.max(val.maxTotalBytesWrittenOnDisk(), m.maxTotalBytesWrittenOnDisk()),
+            val.distributedJoins(),
+            val.enforceJoinOrder(),
+            val.lazy()
         );
 
         return this;
@@ -205,6 +213,27 @@ public class QueryHistory {
      */
     public long lastStartTime() {
         return val.lastStartTime();
+    }
+
+    /**
+     * @return Distributed joins.
+     */
+    public boolean distributedJoins() {
+        return val.distributedJoins();
+    }
+
+    /**
+     * @return Enforce join order.
+     */
+    public boolean enforceJoinOrder() {
+        return val.enforceJoinOrder();
+    }
+
+    /**
+     * @return Lazy flag.
+     */
+    public boolean lazy() {
+        return val.lazy();
     }
 
     /**
