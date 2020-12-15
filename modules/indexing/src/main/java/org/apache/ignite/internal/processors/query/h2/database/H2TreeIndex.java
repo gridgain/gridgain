@@ -434,7 +434,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
     /** */
     private boolean isSingleRowLookup(SearchRow lower, SearchRow upper, H2Tree tree) {
         return !cctx.mvccEnabled() && indexType.isPrimaryKey() && lower != null && upper != null &&
-            tree.compareRows((H2Row)lower, (H2Row)upper) == 0 && hasAllIndexColumns(lower);
+            tree.checkRowsTheSame((H2Row)lower, (H2Row)upper) && hasAllIndexColumns(lower);
     }
 
     /** */
@@ -612,7 +612,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 DurableBackgroundTask task = new DurableBackgroundCleanupIndexTreeTask(
                         rootPages,
                         trees,
-                        cctx.group().name(),
+                        cctx.group().name() == null ? cctx.cache().name() : cctx.group().name(),
                         cctx.cache().name(),
                         table.getSchema().getName(),
                         idxName

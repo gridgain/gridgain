@@ -39,7 +39,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
      * @return Test parameters.
      */
     @Parameterized.Parameters(name = "cacheMode={0}")
-    public static Collection parameters() {
+    public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
                 { REPLICATED },
                 { PARTITIONED },

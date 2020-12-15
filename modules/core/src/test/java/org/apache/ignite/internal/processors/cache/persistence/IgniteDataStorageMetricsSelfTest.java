@@ -25,6 +25,7 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -181,6 +182,46 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
                         pMetrics.getLastCheckpointDataPagesNumber() != 0;
                 }
             }, 10_000));
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    /**
+     * Test for metric lastCheckpointStarted
+     *
+     * @throws Exception if failed.
+     * */
+    @Test
+    public void testLastCheckpointStarted() throws Exception {
+        IgniteEx ex = startGrid(0);
+        ex.cluster().state(ClusterState.ACTIVE);
+
+        try {
+            IgniteCache<Object, Object> cache = ex.cache("cache");
+            GridCacheDatabaseSharedManager dbMgr =
+                    (GridCacheDatabaseSharedManager)ex.context().cache().context().database();
+            DataStorageMetrics dsm;
+            long prevLastStart = 0;
+
+            for (int i = 0; i < 10; i++) {
+                ex.context().cache().context().database().waitForCheckpoint("test");
+                cache.put(i, "VALUE_" + i);
+
+                dsm = dbMgr.persistentStoreMetrics();
+                long lastStart = dsm.getLastCheckpointStarted();
+
+                assertTrue(lastStart > 0);
+                assertTrue(lastStart - prevLastStart > 0);
+
+                try {
+                    Thread.sleep(10);
+                }
+                catch (InterruptedException e) { }
+
+                prevLastStart = lastStart;
+            }
         }
         finally {
             stopAllGrids();
