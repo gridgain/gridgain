@@ -211,8 +211,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         startGrids(SRVS_NUM);
 
         IgniteEx srv = grid(SRVS_NUM - 1);
-
-
+        
         IgniteEx client = startClientGrid(SRVS_NUM);
 
         GridTestUtils.runAsync(() -> {
