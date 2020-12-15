@@ -107,20 +107,20 @@ public class GridToStringBuilder {
     private static final AtomicReference<Supplier<SensitiveDataLogging>> INCL_SENS_SUP_REF =
         new AtomicReference<>(new Supplier<SensitiveDataLogging>() {
             /** Value of "IGNITE_SENSITIVE_DATA_LOGGING". */
-            final SensitiveDataLogging SENSITIVE_DATA_LOGGING;
+            final SensitiveDataLogging sensitiveDataLogging;
 
             {
                 String sysStrToStringIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
 
                 if (sysStrToStringIncludeSensitive != null)
-                    SENSITIVE_DATA_LOGGING = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE) ? PLAIN : NONE;
+                    sensitiveDataLogging = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE) ? PLAIN : NONE;
                 else
-                    SENSITIVE_DATA_LOGGING = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
+                    sensitiveDataLogging = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
             }
 
             /** {@inheritDoc} */
             @Override public SensitiveDataLogging get() {
-                return SENSITIVE_DATA_LOGGING;
+                return sensitiveDataLogging;
             }
         });
 
