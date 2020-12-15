@@ -77,7 +77,10 @@ struct ComputeTestSuiteFixtureAffinity
      */
     bool IsRebalanceComplete()
     {
-        return node2.GetAffinity<int32_t>("partitioned").MapKeyToNode(6).IsLocal();
+        return
+            node0.GetAffinity<int32_t>("partitioned").MapKeyToNode(0).IsLocal() &&
+            node1.GetAffinity<int32_t>("partitioned").MapKeyToNode(1).IsLocal() &&
+            node2.GetAffinity<int32_t>("partitioned").MapKeyToNode(6).IsLocal();
     }
 
     /**
