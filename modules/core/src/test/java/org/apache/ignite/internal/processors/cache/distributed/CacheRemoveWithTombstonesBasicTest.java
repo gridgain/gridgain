@@ -174,6 +174,30 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testSimpleRemove() throws Exception {
+        IgniteEx crd = startGrids(1);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Object, Object> cache0 = crd.createCache(cacheConfiguration(atomicityMode));
+
+        final int part = 0;
+        List<Integer> keys = loadDataToPartition(part, crd.name(), DEFAULT_CACHE_NAME, 100, 0);
+
+        assertEquals(100, cache0.size());
+
+        for (Integer key : keys)
+            cache0.remove(key);
+
+        final LongMetric tsMetric = crd.context().metric().registry(
+            MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);
+
+        assertEquals(100, tsMetric.value());
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 100, 0);
+    }
+
+    /** */
+    @Test
+    public void testSimpleRemove2() throws Exception {
         IgniteEx crd = startGrids(3);
         crd.cluster().state(ClusterState.ACTIVE);
 
@@ -191,6 +215,10 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);
 
         assertEquals(100, tsMetric.value());
+
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 100, 0);
+        validateCache(grid(1).cachex(DEFAULT_CACHE_NAME).context().group(), part, 100, 0);
+        validateCache(grid(2).cachex(DEFAULT_CACHE_NAME).context().group(), part, 100, 0);
     }
 
     /** */
@@ -444,9 +472,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500")
-    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "500")
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000")
     public void testTombstonesArePreloadedAfterExpiration() throws Exception {
-        assumeTrue(persistence);
+        assumeTrue(persistence); // In volatile mode tombstones cleanup is never blocked.
 
         IgniteEx crd = startGrids(2); // Create baseline.
         crd.cluster().baselineAutoAdjustEnabled(false);
@@ -465,22 +493,28 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
         PendingRow r0 = t0.findFirst();
+        assertNotNull(r0);
 
-        doSleep(WAIT_FOR_EAGER_TTL_CLEANUP);
+        doSleep(700); // Wait a bit until tombstone is expired.
 
-        assertEquals(1, t0.size()); // Tobstones are not cleared if a baseline is not complete.
+        CU.unwindEvicts(grpCtx0.singleCacheContext()); // Should be no-op.
+
+        assertEquals(1, t0.size()); // Tombstones are not cleared if a baseline is not complete.
 
         startGrid(1);
         awaitPartitionMapExchange();
 
         CacheGroupContext grpCtx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context().group();
         PendingEntriesTree t1 = grpCtx1.topology().localPartition(part).dataStore().pendingTree();
-
         PendingRow r1 = t1.findFirst();
+        assertNotNull(r1);
 
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
 
-        doSleep(WAIT_FOR_EAGER_TTL_CLEANUP);
+        doSleep(700);
+
+        CU.unwindEvicts(grpCtx0.singleCacheContext());
+        CU.unwindEvicts(grpCtx1.singleCacheContext());
 
         validateCache(grpCtx0, part, 0, 0);
         validateCache(grpCtx1, part, 0, 0);

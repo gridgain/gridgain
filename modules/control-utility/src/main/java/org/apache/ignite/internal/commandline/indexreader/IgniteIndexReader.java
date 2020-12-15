@@ -614,7 +614,7 @@ public class IgniteIndexReader implements AutoCloseable {
                             if (cacheId != cacheAwareLink.cacheId)
                                 continue; // It's index for other cache, don't check.
 
-                            // Tombstones are not indexed and shoouldn't be tested.
+                            // Tombstones are not indexed and shouldn't be tested.
                             if (!tree.itemStorage.contains(cacheAwareLink) && !cacheAwareLink.tombstone)
                                 errors.add(new IgniteException(cacheDataTreeEntryMissingError(name, cacheAwareLink)));
                         }

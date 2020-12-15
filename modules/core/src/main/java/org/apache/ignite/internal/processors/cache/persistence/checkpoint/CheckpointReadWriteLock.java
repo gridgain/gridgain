@@ -93,9 +93,9 @@ public class CheckpointReadWriteLock {
     }
 
     /**
-     * Try to get checkpoint read lock.
+     * Try to get a checkpoint read lock.
      *
-     * @return {@code True} if checkpoint read lock is acquired.
+     * @return {@code True} if the checkpoint read lock is acquired.
      */
     public boolean tryReadLock() {
         if (checkpointLock.writeLock().isHeldByCurrentThread())

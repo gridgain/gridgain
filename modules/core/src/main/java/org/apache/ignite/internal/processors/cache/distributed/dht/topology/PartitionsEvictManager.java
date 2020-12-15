@@ -34,7 +34,6 @@ import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -42,11 +41,7 @@ import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
-import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -70,18 +65,12 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  *     <li>The partition tombstones must be wiped out.</li>
  * </ul>
  */
-public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implements PartitionsExchangeAware {
+public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /** Default eviction progress show frequency. */
     private static final int DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS = 2 * 60 * 1000;
 
-    /** Default tombstone clearing frequency. */
-    private static final int DEFAULT_TOMBSTONE_EVICTION_FREQ = 60 * 60 * 1000;
-
     /** Eviction progress frequency property name. */
     private static final String SHOW_EVICTION_PROGRESS_FREQ = "SHOW_EVICTION_PROGRESS_FREQ";
-
-    /** */
-    private static final String TOMBSTONES_EVICTION_FREQ = "TOMBSTONES_EVICTION_FREQ";
 
     /** Eviction progress frequency in ms. */
     private final long evictionProgressFreqMs =
@@ -106,15 +95,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
 
     /** */
     private final ConcurrentMap<PartitionKey, PartitionEvictionTask> futs = new ConcurrentHashMap<>();
-
-    /** */
-    private final long tsClearFreq = getLong(TOMBSTONES_EVICTION_FREQ, DEFAULT_TOMBSTONE_EVICTION_FREQ);
-
-    /** */
-    private volatile boolean paused;
-
-    /** Current tombstone clearing task. */
-    private volatile @Nullable PartitionEvictionTask clearTask;
 
     /**
      * Callback on cache group start.
@@ -284,40 +264,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
         super.start0();
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
-
-        //cctx.cache().context().exchange().registerExchangeAwareComponent(this);
-
-        // TODO wait for cache groups start.
-//        if (tsClearFreq >= 1_000)
-//            scheduleTombstonesCleanup();
     }
-
-    /**
-     *
-     */
-//    private void scheduleTombstonesCleanup() {
-//        GridKernalContext ctx = cctx.kernalContext();
-//
-//        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(tsClearFreq) {
-//            @Override public void onTimeout() {
-//                ctx.closure().runLocalSafe(new GridPlainRunnable() {
-//                    @Override public void run() {
-//                        clearTombstones();
-//
-//                        scheduleTombstonesCleanup();
-//                    }
-//                });
-//            }
-//        });
-//    }
 
     /**
      * Clears tombstones locally using full scan approach.
      */
     public void clearTombstones() {
-        if (paused)
-            return;
-
         if (log.isInfoEnabled()) {
             log.info("Start clearing tombstones for groups [" +
                 evictionGroupsMap.values().stream().map(g -> g.grp.cacheOrGroupName() +
@@ -344,13 +296,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                     if (ts == 0) // Avoid clearing partitions without tombstones.
                         continue;
 
-                    if (cctx.kernalContext().isStopping() || paused)
+                    if (cctx.kernalContext().isStopping())
                         return;
 
                     try {
-                        clearTask = clearTombstonesAsync(ctx0.grp, part);
-
-                        clearTask.finishFut.get();
+                        clearTombstonesAsync(ctx0.grp, part).finishFut.get();
                     }
                     catch (IgniteCheckedException e) {
                         log.error("Failed to clear tombstones [grp=" + ctx0.grp.cacheOrGroupName() +
@@ -359,36 +309,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter implem
                 }
             }
         }
-    }
-
-    /**
-     * Pauses clearing.
-     */
-    public synchronized void pause() {
-        paused = true;
-
-        if (clearTask != null) {
-            clearTask.cancel();
-            clearTask = null;
-        }
-    }
-
-    /**
-     * Resume clearing.
-     */
-    public void resume() {
-        paused = false;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-        // Clearing should be cancelled before sending partition maps.
-        pause();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
-        resume();
     }
 
     /** {@inheritDoc} */

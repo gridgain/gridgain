@@ -419,8 +419,6 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
                 grid(0).context().cache().context().database().wakeupForCheckpoint("Forced checkpoint");
 
                 doSleep(500);
-
-                System.out.println();
             }
         });
 

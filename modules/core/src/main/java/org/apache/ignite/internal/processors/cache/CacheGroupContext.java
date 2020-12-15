@@ -1354,14 +1354,6 @@ public class CacheGroupContext {
     }
 
     /**
-     * @param part Partition.
-     * @return {@code True} if need create tombstone for remove in given partition.
-     */
-    public boolean shouldCreateTombstone(@Nullable GridDhtLocalPartition part) {
-        return part != null && supportsTombstone() && part.state() == GridDhtPartitionState.MOVING;
-    }
-
-    /**
      * @return Metrics.
      */
     public CacheGroupMetricsImpl metrics() {

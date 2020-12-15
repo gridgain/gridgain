@@ -46,7 +46,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ConsistencyUtils {
     /**
-     * Prints key divergence details.
+     * Prints key divergence details for the first inconsistent partition.
      *
      * @param res Verification result.
      * @param log Logger.
@@ -65,9 +65,10 @@ public class ConsistencyUtils {
             }
         });
 
-        IgniteEx g0 = grid(list.get(0).consistentId());
-        final IgniteEx g1 =
-            list.stream().skip(1).filter(r -> r.partitionHash() != list.get(0).partitionHash()).map(l -> grid(l.consistentId())).findFirst().get();
+        final IgniteEx g0 = grid(list.get(0).consistentId());
+        final IgniteEx g1 = list.stream().skip(1).filter(r -> r.partitionHash() != list.get(0).partitionHash()).
+            map(l -> grid(l.consistentId())).findFirst().
+            orElseThrow(() -> new IgniteCheckedException("Failed to find a node by consistent id"));
 
         int part = first.partitionId();
 

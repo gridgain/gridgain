@@ -37,8 +37,6 @@ import org.apache.ignite.internal.managers.communication.IgniteCommunicationSslB
 import org.apache.ignite.internal.managers.communication.IgniteIoTestMessagesTest;
 import org.apache.ignite.internal.managers.communication.IgniteVariousConnectionNumberTest;
 import org.apache.ignite.internal.processors.cache.CacheAffinityCallSelfTest;
-import org.apache.ignite.internal.processors.cache.CacheDeferredDeleteQueueTest;
-import org.apache.ignite.internal.processors.cache.CacheDeferredDeleteSanitySelfTest;
 import org.apache.ignite.internal.processors.cache.CacheMvccTxFastFinishTest;
 import org.apache.ignite.internal.processors.cache.CacheTxFastFinishTest;
 import org.apache.ignite.internal.processors.cache.DataStorageConfigurationValidationTest;
@@ -136,8 +134,6 @@ public class IgniteCacheMvccTestSuite1 {
         ignoredTests.add(IgniteCacheMessageRecoveryIdleConnectionTest.class);
         ignoredTests.add(IgniteCacheConnectionRecoveryTest.class);
         ignoredTests.add(IgniteCacheConnectionRecovery10ConnectionsTest.class);
-        ignoredTests.add(CacheDeferredDeleteSanitySelfTest.class);
-        ignoredTests.add(CacheDeferredDeleteQueueTest.class);
         ignoredTests.add(GridCacheStopSelfTest.class);
         ignoredTests.add(GridCacheBinariesNearPartitionedByteArrayValuesSelfTest.class);
         ignoredTests.add(GridCacheBinariesPartitionedOnlyByteArrayValuesSelfTest.class);

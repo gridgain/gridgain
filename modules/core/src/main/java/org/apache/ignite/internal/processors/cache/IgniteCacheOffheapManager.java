@@ -57,10 +57,14 @@ import org.jetbrains.annotations.Nullable;
  */
 @SuppressWarnings("WeakerAccess")
 public interface IgniteCacheOffheapManager {
+    /** Scan data. */
     public static final int DATA = 1;
+
+    /** Scan tombstones. */
     public static final int TOMBSTONES = 2;
+
+    /** Scan both. */
     public static final int DATA_AND_TOMBSONES = DATA | TOMBSTONES;
-    public static final int PAGESCAN = 4;
 
     /**
      * @param ctx Context.
@@ -418,12 +422,6 @@ public interface IgniteCacheOffheapManager {
     ) throws IgniteCheckedException;
 
     /**
-     * @param row Data row.
-     * @return {@code True} if give row is tombstone. TODO remove
-     */
-    public boolean isTombstone(@Nullable CacheDataRow row);
-
-    /**
      * @param ldr Class loader.
      * @return Number of undeployed entries.
      */
@@ -597,6 +595,11 @@ public interface IgniteCacheOffheapManager {
      * @return Number of entries.
      */
     public long totalPartitionEntriesCount(int part);
+
+    /**
+     * @return Total tombstones count for all partitions.
+     */
+    public long tombstonesCount();
 
     /**
      * Preload a partition. Must be called under partition reservation for DHT caches.
@@ -932,7 +935,7 @@ public interface IgniteCacheOffheapManager {
         ) throws IgniteCheckedException;
 
         /**
-         * TODO can be used for atomic cache. forces removes of tombstones.
+         * Removes row without writing a tombstone (physical removal).
          *
          * @param cctx Cache context.
          * @param key Key.
@@ -942,8 +945,7 @@ public interface IgniteCacheOffheapManager {
         public void remove(GridCacheContext cctx, KeyCacheObject key, int partId) throws IgniteCheckedException;
 
         /**
-         * TODO not needed, all removes with TS. Direct remove used only for tx. TODO refactor atomic update closure to put/remove ?
-         * TODO rename to logicalRemove.
+         * Replaces a row with a a tombstone - empty value with remove version and update counter.
          *
          * @param cctx Cache context.
          * @param key Key.

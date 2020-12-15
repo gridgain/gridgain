@@ -1311,10 +1311,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 }
             }
 
-            if (grp.isLocal()) // Local groups doesn't contain tombstones.
-                return amount != -1 && expRmvCnt >= amount;
-
-            long tsCnt = grp.topology().localPartitions().stream().mapToLong(p -> p.dataStore().tombstonesCount()).sum();
+            long tsCnt = tombstonesCount();
 
             if (tsCnt == 0)
                 return amount != -1 && expRmvCnt >= amount;

@@ -47,11 +47,9 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.of;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
 /**
  * Class checks the presence of evicted partitions in log.
- * TODO reduce copypaste.
  */
 @WithSystemProperty(key = "SHOW_EVICTION_PROGRESS_FREQ", value = "10")
 public class EvictPartitionInLogTest extends GridCommonAbstractTest {

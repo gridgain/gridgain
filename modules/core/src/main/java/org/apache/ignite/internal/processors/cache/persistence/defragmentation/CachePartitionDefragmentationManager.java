@@ -841,7 +841,8 @@ public class CachePartitionDefragmentationManager {
                         newPartMetaIo.setEncryptedPageCount(newPartMetaPageAddr, 0);
                         newPartMetaIo.setEncryptedPageIndex(newPartMetaPageAddr, 0);
 
-                        newPartMetaIo.setTombstonesCount(newPartMetaPageAddr, oldPartMetaIo.getTombstonesCount(oldPartMetaPageAddr));
+                        newPartMetaIo.setTombstonesCount(newPartMetaPageAddr,
+                            oldPartMetaIo.getTombstonesCount(oldPartMetaPageAddr));
                     }
                     finally {
                         partCtx.partPageMemory.writeUnlock(partCtx.grpId, partMetaPageId, newPartMetaPage, null, true);

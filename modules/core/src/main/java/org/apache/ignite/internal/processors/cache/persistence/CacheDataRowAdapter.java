@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
 import org.apache.ignite.internal.processors.cache.IncompleteObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTreeRuntimeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CacheVersionIO;
@@ -51,7 +52,6 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_CR
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_OP_COUNTER_NA;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.KEY_ONLY;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.LINK_WITH_HEADER;
-import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.TOMBSTONES;
 
 /**
  * Cache data row adapter.
@@ -393,8 +393,6 @@ public class CacheDataRowAdapter implements CacheDataRow {
         IncompleteObject<?> incomplete,
         boolean skipVer
     ) throws IgniteCheckedException {
-        boolean tombstones = rowData == TOMBSTONES;
-
         if (readCacheId && cacheId == 0) {
             incomplete = readIncompleteCacheId(buf, incomplete);
 
@@ -416,12 +414,6 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
         // Read key.
         if (key == null) {
-            if (tombstones && sharedCtx.database().isTombstone(buf, key, (IncompleteCacheObject)incomplete) == Boolean.FALSE) {
-                verReady = true;
-
-                return null;
-            }
-
             incomplete = readIncompleteKey(coctx, buf, (IncompleteCacheObject)incomplete);
 
             if (key == null) {
@@ -448,13 +440,6 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
         // Read value.
         if (val == null) {
-            if (tombstones && sharedCtx.database().isTombstone(buf, key, (IncompleteCacheObject)incomplete) == Boolean.FALSE) {
-                key = null;
-                verReady = true;
-
-                return null;
-            }
-
             incomplete = readIncompleteValue(coctx, buf, (IncompleteCacheObject)incomplete);
 
             if (val == null) {
@@ -463,14 +448,6 @@ public class CacheDataRowAdapter implements CacheDataRow {
             }
 
             incomplete = null;
-        }
-
-        if (tombstones && !sharedCtx.database().isTombstone(this)) {
-            key = null;
-            val = null;
-            verReady = true;
-
-            return null;
         }
 
         // Read version.
@@ -519,14 +496,6 @@ public class CacheDataRowAdapter implements CacheDataRow {
         int len = PageUtils.getInt(addr, off);
         off += 4;
 
-        boolean tombstones = rowData == RowData.TOMBSTONES;
-
-        if (tombstones && !sharedCtx.database().isTombstone(addr + off + len + 1)) {
-            verReady = true; // Mark as ready, no need to read any data.
-
-            return;
-        }
-
         if (rowData != RowData.NO_KEY && rowData != RowData.NO_KEY_WITH_HINTS) {
             byte type = PageUtils.getByte(addr, off);
             off++;
@@ -548,11 +517,9 @@ public class CacheDataRowAdapter implements CacheDataRow {
         byte type = PageUtils.getByte(addr, off);
         off++;
 
-        if (!tombstones) {
-            byte[] bytes = PageUtils.getBytes(addr, off, len);
+        byte[] bytes = PageUtils.getBytes(addr, off, len);
 
-            val = coctx.kernalContext().cacheObjects().toCacheObject(coctx, type, bytes);
-        }
+        val = coctx.kernalContext().cacheObjects().toCacheObject(coctx, type, bytes);
 
         off += len;
 
@@ -884,7 +851,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
     /** {@inheritDoc} */
     @Override public boolean tombstone() {
-        return value().cacheObjectType() == CacheObject.TOMBSTONE;
+        return value() == TombstoneCacheObject.INSTANCE;
     }
 
     /** {@inheritDoc} */
@@ -969,13 +936,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
         FULL_WITH_HINTS,
 
         /** Force instant hints actualization for update operation with history (to avoid races with vacuum). */
-        NO_KEY_WITH_HINTS,
-
-        /** Do not read row data for non-tombstone entries. */
-        TOMBSTONES,
-
-        /** Used for rebalancing. */
-        FULL_WITH_TOMBSTONES;
+        NO_KEY_WITH_HINTS;
     }
 
     /** {@inheritDoc} */

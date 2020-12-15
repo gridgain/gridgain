@@ -80,7 +80,6 @@ public class CacheGroupMetricsImpl {
     private final AtomicLongMetric initLocalPartitionsNumber;
 
     /** Interface describing a predicate of two integers. */
-    @FunctionalInterface
     private interface IntBiPredicate {
         /**
          * Predicate body.
@@ -510,7 +509,7 @@ public class CacheGroupMetricsImpl {
 
     /** */
     public long getTombstones() {
-        return ctx.topology().localPartitions().stream().mapToLong(part -> part.dataStore().tombstonesCount()).sum();
+        return ctx.offheap().tombstonesCount();
     }
 
     /** */

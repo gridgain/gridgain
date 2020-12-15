@@ -41,16 +41,6 @@ public class GGPageIoTest {
 
     /** */
     @Test
-    public void testCheckVersions1() {
-        new IOVersions<>(
-            new TestPageIO(1),
-            new TestPageIO(2),
-            new TestPageIO(GG_VERSION_OFFSET),
-            new TestPageIO(GG_VERSION_OFFSET + 1));
-    }
-
-    /** */
-    @Test
     public void testGGVersionsCovered() {
         List<Integer> knownVers = Arrays.asList(1, 2, 3, 4, GG_VERSION_OFFSET, GG_VERSION_OFFSET + 1);
 
@@ -61,6 +51,16 @@ public class GGPageIoTest {
 
             assertTrue(String.valueOf(ver.getVersion()), knownVers.contains(ver.getVersion()));
         }
+    }
+
+    /** */
+    @Test
+    public void testCheckVersions1() {
+        new IOVersions<>(
+            new TestPageIO(1),
+            new TestPageIO(2),
+            new TestPageIO(GG_VERSION_OFFSET),
+            new TestPageIO(GG_VERSION_OFFSET + 1));
     }
 
     /** */

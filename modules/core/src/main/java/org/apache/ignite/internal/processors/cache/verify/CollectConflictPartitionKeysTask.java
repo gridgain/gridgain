@@ -48,6 +48,7 @@ import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.DATA;
 import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 
 /**
@@ -180,7 +181,7 @@ public class CollectConflictPartitionKeysTask extends ComputeTaskAdapter<Partiti
 
                 partSize = part.dataStore().fullSize();
 
-                GridIterator<CacheDataRow> it = grpCtx.offheap().partitionIterator(part.id(), IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
+                GridIterator<CacheDataRow> it = grpCtx.offheap().partitionIterator(part.id(), DATA);
 
                 partEntryHashRecords = new ArrayList<>();
 

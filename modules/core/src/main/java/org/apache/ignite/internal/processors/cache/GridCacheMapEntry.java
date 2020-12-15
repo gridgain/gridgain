@@ -570,8 +570,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (read != null) {
                     CacheObject val = read.value();
 
-                    // TODO FIXME remove.
-                    if (cctx.offheap().isTombstone(read))
+                    if (read.tombstone())
                         val = null;
 
                     update(val, read.expireTime(), 0, read.version(), false);
@@ -4564,12 +4563,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             CacheDataRow row = cctx.offheap().read(this);
 
-            // TODO ask row ?
-            if (cctx.offheap().isTombstone(row))
+            if (row == null || row.tombstone())
                 return;
 
-            if (row != null)
-                clo.apply(row);
+            clo.apply(row);
         }
         finally {
             unlockEntry();
@@ -5932,7 +5929,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * TODO use closure for remove ?
+     *
      */
     private static class UpdateClosure implements IgniteCacheOffheapManager.OffheapInvokeClosure {
         /** */
@@ -5958,9 +5955,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         /** */
         private IgniteTree.OperationType treeOp = IgniteTree.OperationType.PUT;
-
-        /** */
-        //private boolean filtered;
 
         /**
          * @param entry Entry.
@@ -5995,15 +5989,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 GridCacheVersion ver = entry.ver;
 
                 if (oldRow != null) {
-                    if (!entry.checkRowExpired(oldRow) && !entry.context().offheap().isTombstone(oldRow))
+                    if (!entry.checkRowExpired(oldRow) && !oldRow.tombstone())
                         val = oldRow.value();
 
                     ver = oldRow.version();
                 }
 
                 if (!p.apply(val, ver)) {
-                    //filtered = true;
-
                     treeOp = IgniteTree.OperationType.NOOP;
 
                     return;
@@ -6225,9 +6217,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 oldRow.key(entry.key());
 
                 // Tombstone must be treated as empty value, same as expired row.
-                oldVal = !cctx.offheap().isTombstone(oldRow) && !entry.checkRowExpired(oldRow) ? oldRow.value() : null;
+                oldVal = !oldRow.tombstone() && !entry.checkRowExpired(oldRow) ? oldRow.value() : null;
 
-                // unswap TODO need to set oldrow value if expired or ts, or use null ?
                 entry.update(oldVal, oldRow.expireTime(), 0, oldRow.version(), false);
 
                 if (oldVal == null)
