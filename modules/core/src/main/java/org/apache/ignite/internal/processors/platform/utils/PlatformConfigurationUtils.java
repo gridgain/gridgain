@@ -54,7 +54,6 @@ import org.apache.ignite.cache.eviction.EvictionPolicy;
 import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.configuration.*;
-import org.apache.ignite.configuration.PlatformCacheConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.NoOpFailureHandler;
@@ -739,6 +738,8 @@ public class PlatformConfigurationUtils {
             cfg.setSystemWorkerBlockedTimeout(in.readLong());
         if (in.readBoolean())
             cfg.setSqlQueryHistorySize(in.readInt());
+        if (in.readBoolean())
+            cfg.setPeerClassLoadingEnabled(in.readBoolean());
 
         int sqlSchemasCnt = in.readInt();
 
@@ -1343,6 +1344,8 @@ public class PlatformConfigurationUtils {
         }
         w.writeBoolean(true);
         w.writeInt(cfg.getSqlConfiguration().getSqlQueryHistorySize());
+        w.writeBoolean(true);
+        w.writeBoolean(cfg.isPeerClassLoadingEnabled());
 
         if (cfg.getSqlSchemas() == null)
             w.writeInt(0);
