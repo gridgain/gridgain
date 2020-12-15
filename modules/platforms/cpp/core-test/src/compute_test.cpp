@@ -70,6 +70,25 @@ struct ComputeTestSuiteFixtureAffinity
     {
         Ignition::StopAll(true);
     }
+
+    /**
+     * Check whether rebalance is complete for the cluster.
+     * @return true if complete.
+     */
+    bool IsRebalanceComplete()
+    {
+        return node2.GetAffinity<int32_t>("partitioned").MapKeyToNode(6).IsLocal();
+    }
+
+    /**
+     * Wait for rebalance.
+     * @param timeout Timeout to wait.
+     * @return True if condition was met, false if timeout has been reached.
+     */
+    bool WaitForRebalance(int32_t timeout = 5000)
+    {
+        return WaitForCondition(boost::bind(&ComputeTestSuiteFixtureAffinity::IsRebalanceComplete, this), timeout);
+    }
 };
 
 /*
@@ -529,6 +548,8 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCall)
 
     cache.Put(key, value);
 
+    BOOST_REQUIRE(WaitForRebalance());
+
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
     Compute compute = node0.GetCompute();
 
@@ -560,12 +581,12 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCallAsync)
     const int32_t key = 100;
     const int32_t value = 500;
 
-    Sleep(10000);
-
     std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
     Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("partitioned");
 
     cache.Put(key, value);
+
+    BOOST_REQUIRE(WaitForRebalance());
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
     Compute compute = node0.GetCompute();
@@ -606,6 +627,8 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRun)
 
     cache.Put(key, value);
 
+    BOOST_REQUIRE(WaitForRebalance());
+
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
     Compute compute = node0.GetCompute();
 
@@ -644,6 +667,8 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRunAsync)
     Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("partitioned");
 
     cache.Put(key, value);
+
+    BOOST_REQUIRE(WaitForRebalance());
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
     Compute compute = node0.GetCompute();
