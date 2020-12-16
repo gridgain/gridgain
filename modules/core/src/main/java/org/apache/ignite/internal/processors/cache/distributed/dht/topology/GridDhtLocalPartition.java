@@ -79,6 +79,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELET
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.DATA_AND_TOMBSONES;
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.TOMBSTONES;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
@@ -631,7 +633,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.EVICTION);
 
         if (task.start()) {
-            task.finishFut.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
+            task.finishFuture().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut0) {
                     if (fut0.error() == null) {
                         ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
@@ -667,7 +669,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (clearTask != null) {
             clearTask.start();
 
-            return clearTask.finishFut;
+            return clearTask.finishFuture();
         }
         else // No clearing required.
             return new GridFinishedFuture<>();
@@ -697,8 +699,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * Clear tombstone entries from partition using partition scan.
      */
-    public IgniteInternalFuture<?> clearTombstonesAsync() {
-        return grp.shared().evict().clearTombstonesAsync(grp, this).finishFut;
+    public IgniteInternalFuture<Void> clearTombstonesAsync() {
+        return grp.shared().evict().clearTombstonesAsync(grp, this).finishFuture();
     }
 
     /**
@@ -897,19 +899,19 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         GridDhtPartitionState state0 = state();
 
-        if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE) {
+        if (task.reason() == PartitionsEvictManager.EvictReason.TOMBSTONE) {
             rowFilter = r -> false;
 
             clearClo = this::clearSafe;
         }
-        else if (task.reason == PartitionsEvictManager.EvictReason.CLEARING) {
+        else if (task.reason() == PartitionsEvictManager.EvictReason.CLEARING) {
             long order0 = clearVer;
 
             rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || row.version().order() > order0);
 
             clearClo = this::clearSafe;
         }
-        else if (task.reason == PartitionsEvictManager.EvictReason.EVICTION) {
+        else if (task.reason() == PartitionsEvictManager.EvictReason.EVICTION) {
             rowFilter = r -> false;
 
             clearClo = grp.mvccEnabled() ? this::clearSafe : this::clearDirect;
@@ -921,22 +923,21 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             clearClo = null;
         }
 
-        if (state0 == EVICTED && task.reason == PartitionsEvictManager.EvictReason.EVICTION)
+        if (state0 == EVICTED && task.reason() == PartitionsEvictManager.EvictReason.EVICTION)
             return 0;
 
         GridCacheVersion clearVer = ctx.versions().startVersion();
         GridCacheContext cctx = grp.sharedGroup() ? null : singleCacheEntryMap.cctx;
 
         try {
-            GridIterator<CacheDataRow> it0 = task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE ?
-                grp.offheap().partitionIterator(id, IgniteCacheOffheapManager.TOMBSTONES) :
-                grp.offheap().partitionIterator(id, IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
+            GridIterator<CacheDataRow> it0 = task.reason() == PartitionsEvictManager.EvictReason.TOMBSTONE ?
+                grp.offheap().partitionIterator(id, TOMBSTONES) :
+                grp.offheap().partitionIterator(id, DATA_AND_TOMBSONES);
 
             while (it0.hasNext()) {
                 if (stopClo.getAsBoolean() || state0 != state())
                     return cleared;
 
-                // TODO batch cp read locks on removal.
                 if (!ctx.database().tryCheckpointReadLock()) { // Avoid a deadlock with a checkpointer.
                     if (stopClo.getAsBoolean()) // Check if waiting for clearing cancellation.
                         return cleared;

@@ -619,16 +619,22 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         return histParts;
     }
 
+    /** */
     private static class TrackingResolver implements DependencyResolver {
+        /** Reason. */
         public volatile PartitionsEvictManager.EvictReason reason;
 
         /** */
         private final int testId;
 
+        /**
+         * @param testId Test id.
+         */
         public TrackingResolver(int testId) {
             this.testId = testId;
         }
 
+        /** {@inheritDoc} */
         @Override public <T> T resolve(T instance) {
             if (instance instanceof GridDhtPartitionTopologyImpl) {
                 GridDhtPartitionTopologyImpl top = (GridDhtPartitionTopologyImpl) instance;
@@ -643,7 +649,7 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
                         return new GridDhtLocalPartition(ctx, grp, id, recovery) {
                             @Override protected long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.PartitionEvictionTask task) throws NodeStoppingException {
                                 if (testId == id)
-                                    reason = task.reason;
+                                    reason = task.reason();
 
                                 return super.clearAll(stopClo, task);
                             }

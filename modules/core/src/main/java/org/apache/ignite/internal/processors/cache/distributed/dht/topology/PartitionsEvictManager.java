@@ -34,6 +34,7 @@ import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
@@ -402,7 +403,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private final GridDhtLocalPartition part;
 
         /** Reason for eviction. */
-        public final EvictReason reason;
+        private final EvictReason reason;
 
         /** Eviction context. */
         @GridToStringExclude
@@ -410,11 +411,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         /** */
         @GridToStringExclude
-        public final GridFutureAdapter<Void> finishFut; // TODO fix public field
+        private final GridFutureAdapter<Void> finishFut;
 
         /** */
         @GridToStringExclude
-        public AtomicReference<Boolean> state = new AtomicReference<>(null); // TODO fix public field
+        private final AtomicReference<Boolean> state = new AtomicReference<>(null);
 
         /**
          * @param part Partition.
@@ -485,6 +486,20 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             finally {
                 grpEvictionCtx.busyLock.readLock().unlock();
             }
+        }
+
+        /**
+         * @return Eviction reason.
+         */
+        public EvictReason reason() {
+            return reason;
+        }
+
+        /**
+         * @return Finish future.
+         */
+        public IgniteInternalFuture<Void> finishFuture() {
+            return finishFut;
         }
 
         /**

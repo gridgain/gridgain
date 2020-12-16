@@ -29,6 +29,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -151,7 +152,7 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
         PartitionsEvictManager.PartitionEvictionTask task =
             g2.context().cache().context().evict().clearingTask(CU.cacheId(DEFAULT_CACHE_NAME), clearingPart);
 
-        GridFutureAdapter clearFut = task.finishFut;
+        IgniteInternalFuture<Void> clearFut = task.finishFuture();
 
         assertFalse(clearFut.isDone());
 

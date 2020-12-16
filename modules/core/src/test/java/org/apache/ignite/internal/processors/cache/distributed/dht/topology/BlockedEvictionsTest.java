@@ -393,7 +393,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         PartitionsEvictManager.PartitionEvictionTask task =
             g0.context().cache().context().evict().clearingTask(CU.cacheId(DEFAULT_CACHE_NAME), p0);
 
-        GridFutureAdapter<?> finishFut = task.finishFut;
+        IgniteInternalFuture<Void> finishFut = task.finishFuture();
 
         IgniteInternalFuture fut = runAsync(g0::close);
 
