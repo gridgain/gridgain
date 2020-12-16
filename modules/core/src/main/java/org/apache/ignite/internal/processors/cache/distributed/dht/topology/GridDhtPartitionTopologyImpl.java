@@ -1674,7 +1674,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             GridDhtPartitionState prevState = locPart.state();
 
-                            rebalancePartition(p, exchFut);
+                            rebalancePartition(p);
 
                             changed = prevState != locPart.state();
                         }
@@ -2394,7 +2394,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                     // Partition state should be mutated only on joining nodes if they are exists for the exchange.
                     if (joinedNodes.isEmpty() && !maxCntrPartOwners.contains(locNodeId)) {
-                        rebalancePartition(part, exchFut);
+                        rebalancePartition(part);
 
                         res.computeIfAbsent(locNodeId, n -> new HashSet<>()).add(part);
                     }
@@ -2487,9 +2487,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * Changes partition state to MOVING and starts clearing if needed.
      * Prevents ongoing renting if required.
      * @param p Partition id.
-     * @param exchFut Future related to partition state change. TODO remove.
+     *
+     * @return Partition instance.
      */
-    private GridDhtLocalPartition rebalancePartition(int p, GridDhtPartitionsExchangeFuture exchFut) {
+    private GridDhtLocalPartition rebalancePartition(int p) {
         GridDhtLocalPartition part = getOrCreatePartition(p);
 
         if (part.state() == LOST)

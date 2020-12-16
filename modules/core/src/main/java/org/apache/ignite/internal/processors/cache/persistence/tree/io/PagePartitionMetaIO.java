@@ -64,7 +64,7 @@ public class PagePartitionMetaIO extends PageMetaIO {
         setUpdateCounter(pageAddr, 0);
         setGlobalRemoveId(pageAddr, 0);
         setPartitionState(pageAddr, (byte)-1);
-        setSizesPageId(pageAddr, 0);
+        setCacheSizesPageId(pageAddr, 0);
     }
 
     /**
@@ -177,12 +177,11 @@ public class PagePartitionMetaIO extends PageMetaIO {
 
     /**
      * Sets new reference to page with logical cache sizes in cache group.
-     * // TODO FIXME name.
      *
      * @param pageAddr Partition metadata page address.
      * @param cntrsPageId New cache sizes page ID.
      */
-    public void setSizesPageId(long pageAddr, long cntrsPageId) {
+    public void setCacheSizesPageId(long pageAddr, long cntrsPageId) {
         PageUtils.putLong(pageAddr, NEXT_PART_META_PAGE_OFF, cntrsPageId);
     }
 

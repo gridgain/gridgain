@@ -95,12 +95,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** Maximum size for delete queue. */
     public static final int MAX_DELETE_QUEUE_SIZE = Integer.getInteger(IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, 200_000);
 
-    /** ONLY FOR TEST PURPOSES: force test checkpoint on partition eviction. */
-    private static boolean forceTestCheckpointOnEviction = IgniteSystemProperties.getBoolean("TEST_CHECKPOINT_ON_EVICTION", false);
-
-    /** ONLY FOR TEST PURPOSES: partition id where test checkpoint was enforced during eviction. */
-    static volatile Integer partWhereTestCheckpointEnforced;
-
     /** Static logger to avoid re-creation. */
     private static final AtomicReference<IgniteLogger> logRef = new AtomicReference<>();
 
@@ -976,23 +970,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     ctx.database().checkpointReadUnlock();
                 }
             }
-
-            // Attempt to destroy.
-//            if (reason == PartitionsEvictManager.EvictReason.EVICTION && !stopClo.getAsBoolean()) {
-//                if (forceTestCheckpointOnEviction) {
-//                    if (partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
-//                        ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
-//
-//                        log.warning("Forced checkpoint by test reasons for partition: " + this);
-//
-//                        partWhereTestCheckpointEnforced = id;
-//                    }
-//                }
-//
-//                ((GridDhtPreloader) grp.preloader()).tryFinishEviction(this);
-//            }
-//            if (task.reason == PartitionsEvictManager.EvictReason.TOMBSTONE && dataStore().partUpdateCounter() != null)
-//                dataStore().partUpdateCounter().finishTombstoneClearing();
         }
         catch (NodeStoppingException e) {
             if (log.isDebugEnabled())

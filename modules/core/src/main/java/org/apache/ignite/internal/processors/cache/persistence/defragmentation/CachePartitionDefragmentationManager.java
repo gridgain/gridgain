@@ -822,7 +822,7 @@ public class CachePartitionDefragmentationManager {
                                 sizes
                             );
 
-                            newPartMetaIo.setSizesPageId(newPartMetaPageAddr, newCountersPageId);
+                            newPartMetaIo.setCacheSizesPageId(newPartMetaPageAddr, newCountersPageId);
                         }
 
                         // Copy counter gaps.

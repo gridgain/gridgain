@@ -128,7 +128,7 @@ public class MetaPageUpdatePartitionDataRecord extends PageDeltaRecord {
         io.setUpdateCounter(pageAddr, updateCntr);
         io.setGlobalRemoveId(pageAddr, globalRmvId);
         io.setSize(pageAddr, partSize);
-        io.setSizesPageId(pageAddr, cacheSizesPageId);
+        io.setCacheSizesPageId(pageAddr, cacheSizesPageId);
         io.setPartitionState(pageAddr, state);
         io.setCandidatePageCount(pageAddr, allocatedIdxCandidate);
     }

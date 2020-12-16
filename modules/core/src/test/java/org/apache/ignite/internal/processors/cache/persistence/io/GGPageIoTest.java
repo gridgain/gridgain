@@ -178,7 +178,7 @@ public class GGPageIoTest {
         io.setUpdateCounter(addr, 2);
         io.setGlobalRemoveId(addr, 3);
         io.setPartitionState(addr, (byte) 4);
-        io.setSizesPageId(addr, 5);
+        io.setCacheSizesPageId(addr, 5);
 
         if (io.getVersion() >= 2) {
             io.setPendingTreeRoot(addr, 6);

@@ -205,16 +205,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     }
 
     /**
-     * @param addr Row address.
-     * @return {@code True} if stored value is tombstone.
-     */
-    public boolean isTombstone(long addr) {
-        byte type = PageUtils.getByte(addr, 4);
-
-        return type == CacheObject.TOMBSTONE;
-    }
-
-    /**
      * @param cfg Ignite configuration.
      * @param groupName Name of group.
      * @param dataRegionName Metrics MBean name.

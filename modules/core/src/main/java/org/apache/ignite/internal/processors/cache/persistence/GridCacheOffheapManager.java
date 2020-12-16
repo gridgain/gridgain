@@ -565,14 +565,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     store.partId(), newSizes);
 
                 if (oldCacheSizesPageId == 0 && cacheSizesPageId != 0) {
-                    io.setSizesPageId(partMetaPageAddr, cacheSizesPageId);
+                    io.setCacheSizesPageId(partMetaPageAddr, cacheSizesPageId);
 
                     return true;
                 }
             }
         }
         else
-            io.setSizesPageId(partMetaPageAddr, 0);
+            io.setCacheSizesPageId(partMetaPageAddr, 0);
 
         return false;
     }
