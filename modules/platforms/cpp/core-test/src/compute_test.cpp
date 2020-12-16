@@ -77,10 +77,11 @@ struct ComputeTestSuiteFixtureAffinity
      */
     bool IsRebalanceComplete()
     {
+        const char* cacheName = "partitioned";
         return
-            node0.GetAffinity<int32_t>("partitioned").MapKeyToNode(0).IsLocal() &&
-            node1.GetAffinity<int32_t>("partitioned").MapKeyToNode(1).IsLocal() &&
-            node2.GetAffinity<int32_t>("partitioned").MapKeyToNode(6).IsLocal();
+            node0.GetAffinity<int32_t>(cacheName).MapKeyToNode(0).IsLocal() &&
+            node1.GetAffinity<int32_t>(cacheName).MapKeyToNode(1).IsLocal() &&
+            node2.GetAffinity<int32_t>(cacheName).MapKeyToNode(6).IsLocal();
     }
 
     /**
