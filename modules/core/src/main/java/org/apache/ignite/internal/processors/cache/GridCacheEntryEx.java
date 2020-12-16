@@ -91,7 +91,7 @@ public interface GridCacheEntryEx {
     public boolean detached();
 
     /**
-     * @return {@code True} if entry is deleted (it is a tombstone).
+     * @return {@code True} if entry is a tombstone.
      */
     public boolean deleted();
 

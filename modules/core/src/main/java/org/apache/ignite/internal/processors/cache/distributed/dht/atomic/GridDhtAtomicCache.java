@@ -1933,16 +1933,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 if (locked != null)
                     unlockEntries(locked, req.topologyVersion());
 
-                // Enqueue if necessary after locks release.
-                // TODO remove deleted
-//                if (deleted != null) {
-//                    assert !deleted.isEmpty();
-//                    assert ctx.deferredDelete() : this;
-//
-//                    for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
-//                        ctx.onDeferredDelete(e.get1(), e.get2());
-//                }
-
                 // TODO handle failure: probably drop the node from topology
                 // TODO fire events only after successful fsync
                 if (ctx.shared().wal() != null)
@@ -3065,47 +3055,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
     private void unlockEntries(List<GridDhtCacheEntry> locked, AffinityTopologyVersion topVer) {
         MTC.span().addLog(() -> "unlock.entries");
 
-        // Process deleted entries before locks release.
-        //assert ctx.deferredDelete() : this;
-
-        // Entries to skip eviction manager notification for.
-        // Enqueue entries while holding locks.
-//        int size = locked.size();
-//
-//        for (int i = 0; i < size; i++) {
-//            GridCacheMapEntry entry = locked.get(i);
-//            if (entry != null) {
-//                entry.unlockEntry();
-//                entry.onUnlock();
-//                entry.touch();
-//            }
-//        }
-
-//        Collection<KeyCacheObject> skip = null;
-
         int size = locked.size();
-
-//        try {
-//            for (int i = 0; i < size; i++) {
-//                GridCacheMapEntry entry = locked.get(i);
-//                if (entry != null && entry.deleted()) {
-//                    if (skip == null)
-//                        skip = U.newHashSet(locked.size());
-//
-//                    skip.add(entry.key());
-//                }
-//            }
-//        }
-//        finally {
-//            // At least RuntimeException can be thrown by the code above when GridCacheContext is cleaned and there is
-//            // an attempt to use cleaned resources.
-//            // That's why releasing locks in the finally block..
-//            for (int i = 0; i < size; i++) {
-//                GridCacheMapEntry entry = locked.get(i);
-//                if (entry != null)
-//                    entry.unlockEntry();
-//            }
-//        }
 
         // It's important to unlock in separate loop, otherwise eviction policy can try to evict locked entry.
         for (int i = 0; i < size; i++) {
@@ -3413,8 +3363,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     req.transformOperation());
 
                                 assert !ctx.deferredDelete();
-//                                if (updRes.removeVersion() != null)
-//                                    ctx.onDeferredDelete(entry, updRes.removeVersion());
 
                                 entry.onUnlock();
 

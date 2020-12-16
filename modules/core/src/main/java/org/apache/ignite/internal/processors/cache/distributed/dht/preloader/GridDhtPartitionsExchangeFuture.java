@@ -3516,13 +3516,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         top.globalPartSizes(partSizes);
         top.resetOwners(ownersByUpdCounters, haveHist, this);
-
-//        for (Map.Entry<UUID, Set<Integer>> e : partitionsToRebalance.entrySet()) {
-//            UUID nodeId = e.getKey();
-//            Set<Integer> parts = e.getValue();
-//
-//             partsToReload.put(nodeId, top.groupId(), part);
-//        }
     }
 
     /**
@@ -5669,8 +5662,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Marks a partition for clearing before rebalance.
      * Fully cleared partitions should never be historically rebalanced.
      *
-     * @param grp Group.
-     * @param part Partition.
+     * @param grpId Group id.
+     * @param part Partition id.
      */
     public void addClearingPartition(int grpId, int part) {
         synchronized (mux) {

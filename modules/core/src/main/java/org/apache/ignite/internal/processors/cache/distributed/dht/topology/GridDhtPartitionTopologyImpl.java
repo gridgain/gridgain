@@ -809,27 +809,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         if (partitionLocalNode(p, topVer)) {
                             assert locPart != null && locPart.state() != RENTING && locPart.state() != EVICTED : locPart;
-
-                            // Prepare partition to rebalance if it's not happened on full map update phase.
-//                            if (locPart == null || locPart.state() == RENTING || locPart.state() == EVICTED)
-//                                locPart = rebalancePartition(p, exchFut);
-//
-//                            GridDhtPartitionState state = locPart.state();
-//
-//                            if (state == MOVING) {
-//                                if (grp.rebalanceEnabled()) {
-//                                    Collection<ClusterNode> owners = owners(p);
-//
-//                                    // If an owner node left during exchange, then new exchange should be started with detecting lost partitions.
-//                                    if (!F.isEmpty(owners)) {
-//                                        if (log.isDebugEnabled())
-//                                            log.debug("Will not own partition (there are owners to rebalance from) " +
-//                                                "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", owners = " + owners + ']');
-//                                    }
-//                                }
-//                                else
-//                                    updateSeq = updateLocal(p, locPart.state(), updateSeq, topVer);
-//                            }
                         }
                         else {
                             if (locPart != null) {
@@ -854,7 +833,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 AffinityAssignment aff = grp.affinity().readyAffinity(topVer);
 
-                // TODO need this ?
                 if (node2part != null && node2part.valid())
                     changed |= checkEvictions(updateSeq, aff);
 
@@ -2833,8 +2811,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 catch (IgniteCheckedException e) {
                     log.error("Unable to destroy cache data store on partition eviction [id=" + part.id() + "]", e);
                 }
-
-                //part.clearDeferredDeletes();
 
                 List<GridDhtLocalPartition> parts = localPartitions();
 

@@ -204,9 +204,7 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
 
     /** {@inheritDoc} */
     @Override public boolean tombstone() {
-        assert false;
-
-        return false;
+        return row.tombstone();
     }
 
     /** {@inheritDoc} */

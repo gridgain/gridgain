@@ -289,7 +289,6 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
 
         CacheMapHolder hld = entriesMapIfExists(ctx.cacheIdBoxed());
 
-        // TODO get rid of suspicious call.
         boolean rmv = hld != null && hld.map.remove(entry.key(), entry);
 
         if (rmv) {

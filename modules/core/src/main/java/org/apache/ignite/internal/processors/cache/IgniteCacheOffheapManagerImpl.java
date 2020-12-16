@@ -732,7 +732,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     @Override public void clearCache(GridCacheContext cctx, boolean readers) {
         GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
-        // Local clearing should skip existing tombstones to avoid incorrect tombstone counter invariant.
+        // Local clearing should skip existing tombstones to avoid unexpected tombstone removal.
         try (GridCloseableIterator<CacheDataRow> it = grp.isLocal() ?
             iterator(cctx.cacheId(), cacheDataStores().iterator(), null, null, DATA) :
             evictionSafeIterator(cctx.cacheId(), cacheDataStores().iterator(), DATA)) {
@@ -905,7 +905,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param dataIt Data store iterator.
      * @param mvccSnapshot Mvcc snapshot.
      * @param dataPageScanEnabled Flag to enable data page scan.
-     * @param flags Flags.
+     * @param flags Scan flags.
      * @return Rows iterator
      */
     private GridCloseableIterator<CacheDataRow> iterator(final int cacheId,
@@ -987,7 +987,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /**
      * @param cacheId Cache ID.
      * @param dataIt Data store iterator.
-     * @param flags Flags.
+     * @param flags Scan flags.
      * @return Rows iterator
      */
     private GridCloseableIterator<CacheDataRow> evictionSafeIterator(
@@ -1373,7 +1373,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
 
-        // Always clear tombstones for volatile cache group.
+        // Tombstones for volatile cache group are always cleared.
         int tsRmvCnt = expireInternal(cctx, c, amount, true);
 
         return amount != -1 && (expRmvCnt >= amount || tsRmvCnt >= amount);

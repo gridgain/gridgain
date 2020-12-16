@@ -1297,7 +1297,7 @@ public class GridDhtPartitionDemander {
                 assert v.partitions() != null :
                     "Partitions are null [grp=" + grp.cacheOrGroupName() + ", fromNode=" + k.id() + "]";
 
-                remaining.put(k.id(), v.partitions()); // We do not create copy, so assignments will be destroyed.
+                remaining.put(k.id(), v.partitions()); // We do not create copy, so assignment will be destroyed.
 
                 partitionsLeft.addAndGet(v.partitions().size());
 
@@ -1424,10 +1424,6 @@ public class GridDhtPartitionDemander {
 
                     for (Integer partId : d.partitions().fullSet()) {
                         GridDhtLocalPartition part = grp.topology().localPartition(partId);
-
-                        // Due to rebalance cancellation it's possible for a group to be already partially rebalanced,
-                        // so the partition could be in OWNING state.
-                        // Due to async eviction it's possible for the partition to be in RENTING/EVICTED state.
 
                         // Reset the initial update counter value to prevent historical rebalancing on this partition.
                         part.dataStore().resetInitialUpdateCounter();

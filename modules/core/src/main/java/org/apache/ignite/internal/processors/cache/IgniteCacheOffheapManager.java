@@ -57,13 +57,13 @@ import org.jetbrains.annotations.Nullable;
  */
 @SuppressWarnings("WeakerAccess")
 public interface IgniteCacheOffheapManager {
-    /** Scan data. */
+    /** Scan for data. */
     public static final int DATA = 1;
 
-    /** Scan tombstones. */
+    /** Scan for tombstones. */
     public static final int TOMBSTONES = 2;
 
-    /** Scan both. */
+    /** Scan for both. */
     public static final int DATA_AND_TOMBSONES = DATA | TOMBSTONES;
 
     /**
@@ -458,7 +458,7 @@ public interface IgniteCacheOffheapManager {
 
     /**
      * @param part Partition number.
-     * @param flags Flags.
+     * @param flags Scan flags.
      * @return Iterator for given partition.
      * @throws IgniteCheckedException If failed.
      */
@@ -935,7 +935,7 @@ public interface IgniteCacheOffheapManager {
         ) throws IgniteCheckedException;
 
         /**
-         * Removes row without writing a tombstone (physical removal).
+         * Removes row without writing a tombstone (physical remove).
          *
          * @param cctx Cache context.
          * @param key Key.
@@ -945,7 +945,7 @@ public interface IgniteCacheOffheapManager {
         public void remove(GridCacheContext cctx, KeyCacheObject key, int partId) throws IgniteCheckedException;
 
         /**
-         * Replaces a row with a a tombstone - empty value with remove version and update counter.
+         * Replaces a row with a a tombstone (empty value with remove version and update counter).
          *
          * @param cctx Cache context.
          * @param key Key.
@@ -1009,7 +1009,7 @@ public interface IgniteCacheOffheapManager {
         }
 
         /**
-         * @param flags Flags.
+         * @param flags Scan flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
@@ -1031,7 +1031,7 @@ public interface IgniteCacheOffheapManager {
 
         /**
          * @param cacheId Cache ID.
-         * @param flags Flags.
+         * @param flags Scan flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
@@ -1073,7 +1073,7 @@ public interface IgniteCacheOffheapManager {
          * @param upper Upper bound.
          * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
          * @param snapshot Mvcc snapshot.
-         * @param flags Flags.
+         * @param flags Scan flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
@@ -1169,10 +1169,14 @@ public interface IgniteCacheOffheapManager {
          */
         public long tombstonesCount();
 
-        /** */
+        /**
+         * Callback for tombstone removal.
+         */
         public void tombstoneRemoved();
 
-        /** */
+        /**
+         * Callback for tombstone creation.
+         */
         public void tombstoneCreated();
     }
 }

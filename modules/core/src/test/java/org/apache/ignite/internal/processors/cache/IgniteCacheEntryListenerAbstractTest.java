@@ -933,7 +933,7 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
         expirePlcCache1.put(key(key), value(20));
 
         // Give enought time for TTL worker to trigger expiration event if eagerTtl=true.
-        U.sleep(1100); // TODO reliable way to wait for expire and event trigger ?
+        U.sleep(1100);
 
         if (!eagerTtl())
             assertNull(primaryCache(key(key), cache.getName()).get(key(key))); // Provoke expire event if eager ttl is disabled.

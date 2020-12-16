@@ -204,7 +204,7 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
     /** {@inheritDoc}
      * @param cntr*/
     @Override public synchronized void updateTombstoneClearCounter(long cntr) {
-        if (cntr > clearCntr) // TODO make non-blocking.
+        if (cntr > clearCntr)
             clearCntr = cntr;
         else if (cntr == 0)
             clearCntr = get(); // Pessimitic approach to handle compatibility.

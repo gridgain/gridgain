@@ -62,7 +62,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  *     <li>The local node is no longer an owner for a partition (partition is evicted) </li>
  *     <li>The partition should be cleared before rebalancing to avoid desync, because supplying node
  *     not guaranties having history for all required keys.</li>
- *     <li>The partition tombstones must be wiped out.</li>
+ *     <li>The partition tombstones must be cleaned.</li>
  * </ul>
  */
 public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
@@ -123,7 +123,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
     /**
      * @param grp Group context.
-     * @param part Partition to clear tombstones for.
+     * @param part Partition.
      */
     public PartitionEvictionTask clearTombstonesAsync(CacheGroupContext grp, GridDhtLocalPartition part) {
         assert grp.supportsTombstone() : grp;
@@ -617,9 +617,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * Partition evicted after changing to
          * {@link GridDhtPartitionState#MOVING MOVING} state.
          */
-        CLEARING, // TODO remove ?
+        CLEARING,
 
-        /** */
+        /** Partition tombstones must be cleaned. */
         TOMBSTONE;
     }
 

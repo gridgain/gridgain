@@ -936,7 +936,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
         FULL_WITH_HINTS,
 
         /** Force instant hints actualization for update operation with history (to avoid races with vacuum). */
-        NO_KEY_WITH_HINTS;
+        NO_KEY_WITH_HINTS
     }
 
     /** {@inheritDoc} */

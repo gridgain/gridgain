@@ -48,6 +48,9 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     /** Limit of expired entries processed by worker for certain cache in one pass. */
     private static final int CLEANUP_WORKER_ENTRIES_PROCESS_LIMIT = 1000;
 
+    /** Default tombstone limit per cache group. */
+    private static final long DEFAULT_TOMBSTONE_LIMIT = 10_000;
+
     /** Cleanup worker. */
     private CleanupWorker cleanupWorker;
 
@@ -60,16 +63,13 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     /** Tombstones limit per cache group. */
     private DistributedLongProperty tsLimit = DistributedLongProperty.detachedLongProperty("tombstones.limit");
 
-    /** */
-    private volatile long dfltTsLimit = 10_000; // TODO use failure detection.
-
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
         super.start0();
 
         cctx.kernalContext().internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
             tsLimit.addListener((name, oldVal, newVal) ->
-                U.log(log, "Tombstones limit was updated [oldVal=" + oldVal + ", newVal=" + newVal + "]"));
+                U.log(log, "Tombstones limit was updated [oldVal=" + oldVal + ", newVal=" + newVal + ']'));
 
             dispatcher.registerProperty(tsLimit);
         });
@@ -124,7 +124,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
      * @return Tombstones limit per cache group.
      */
     public long tombstonesLimit() {
-        return tsLimit.getOrDefault(dfltTsLimit);
+        return tsLimit.getOrDefault(DEFAULT_TOMBSTONE_LIMIT);
     }
 
     /**

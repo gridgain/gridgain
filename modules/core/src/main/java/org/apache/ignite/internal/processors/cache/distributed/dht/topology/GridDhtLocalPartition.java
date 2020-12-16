@@ -101,12 +101,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** ONLY FOR TEST PURPOSES: partition id where test checkpoint was enforced during eviction. */
     static volatile Integer partWhereTestCheckpointEnforced;
 
-    /** Maximum size for {@link #rmvQueue}. */
-    //private final int rmvQueueMaxSize;
-
-    /** Removed items TTL. */
-    //private final long rmvdEntryTtl;
-
     /** Static logger to avoid re-creation. */
     private static final AtomicReference<IgniteLogger> logRef = new AtomicReference<>();
 
@@ -143,10 +137,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** */
     @GridToStringExclude
     private final CacheMapHolder singleCacheEntryMap;
-
-    /** Remove queue. */
-    //@GridToStringExclude
-    //private final FastSizeDeque<RemovedEntryHolder> rmvQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
 
     /** Group reservations. */
     @GridToStringExclude
@@ -208,13 +198,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 return "PartitionRentFuture [part=" + GridDhtLocalPartition.this + ", done=" + isDone() + ']';
             }
         };
-
-        int delQueueSize = grp.systemCache() ? 100 :
-            Math.max(MAX_DELETE_QUEUE_SIZE / grp.affinity().partitions(), 20);
-
-        //rmvQueueMaxSize = U.ceilPow2(delQueueSize);
-
-        //rmvdEntryTtl = Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000);
 
         try {
             store = grp.offheap().createCacheDataStore(id);
@@ -402,56 +385,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * TODO FIXME Get rid of deferred delete queue https://issues.apache.org/jira/browse/IGNITE-11704
-     */
-//    void cleanupRemoveQueue() {
-//        if (state() == MOVING) {
-//            if (rmvQueue.sizex() >= rmvQueueMaxSize) {
-//                LT.warn(log, "Deletion queue cleanup for moving partition was delayed until rebalance is finished. " +
-//                    "[grpId=" + this.grp.groupId() +
-//                    ", partId=" + id() +
-//                    ", grpParts=" + this.grp.affinity().partitions() +
-//                    ", maxRmvQueueSize=" + rmvQueueMaxSize + ']');
-//            }
-//
-//            return;
-//        }
-//
-//        while (rmvQueue.sizex() >= rmvQueueMaxSize) {
-//            RemovedEntryHolder item = rmvQueue.pollFirst();
-//
-//            if (item != null)
-//                removeVersionedEntry(item.cacheId(), item.key(), item.version());
-//        }
-//
-//        if (!grp.isDrEnabled()) {
-//            RemovedEntryHolder item = rmvQueue.peekFirst();
-//
-//            while (item != null && item.expireTime() < U.currentTimeMillis()) {
-//                item = rmvQueue.pollFirst();
-//
-//                if (item == null)
-//                    break;
-//
-//                removeVersionedEntry(item.cacheId(), item.key(), item.version());
-//
-//                item = rmvQueue.peekFirst();
-//            }
-//        }
-//    }
-
-//    /**
-//     * @param cacheId cacheId Cache ID.
-//     * @param key Removed key.
-//     * @param ver Removed version.
-//     */
-//    public void onDeferredDelete(int cacheId, KeyCacheObject key, GridCacheVersion ver) {
-//        cleanupRemoveQueue();
-//
-//        rmvQueue.add(new RemovedEntryHolder(cacheId, key, ver, rmvdEntryTtl));
-//    }
-
-    /**
      * Reserves the partition so it won't be cleared or evicted.
      * Only MOVING, OWNING and LOST partitions can be reserved.
      *
@@ -618,12 +551,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             assert partState == MOVING || partState == LOST;
 
-            if (casState(state, OWNING)) {
-//                if (hasTombstones())
-//                    clearTombstonesAsync();
-
+            if (casState(state, OWNING))
                 return true;
-            }
         }
     }
 
@@ -712,7 +641,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 @Override public void apply(IgniteInternalFuture<?> fut0) {
                     if (fut0.error() == null) {
                         ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
-                            @Override public void run() { // TODO submit to timer for batch.
+                            @Override public void run() {
                                 if (grp.topology().tryFinishEviction(GridDhtLocalPartition.this)) {
                                     if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_UNLOADED))
                                         grp.addUnloadEvent(id());
@@ -772,8 +701,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * Adds async task that will clear tombstone entries from partition.
-     * TODO must use compact iterator form, use ts indexes or PendingTree ?
+     * Clear tombstone entries from partition using partition scan.
      */
     public IgniteInternalFuture<?> clearTombstonesAsync() {
         return grp.shared().evict().clearTombstonesAsync(grp, this).finishFut;
@@ -1167,14 +1095,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         return false;
     }
 
-    /**
-     * Removes all deferred delete requests from {@code rmvQueue}.
-     */
-//    public void clearDeferredDeletes() {
-//        for (RemovedEntryHolder e : rmvQueue)
-//            removeVersionedEntry(e.cacheId(), e.key(), e.version());
-//    }
-
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return 31 * id + grp.groupId();
@@ -1274,13 +1194,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      */
     public void onCacheStopped(int cacheId) {
         assert grp.sharedGroup() : grp.cacheOrGroupName();
-
-//        for (Iterator<RemovedEntryHolder> it = rmvQueue.iterator(); it.hasNext();) {
-//            RemovedEntryHolder e = it.next();
-//
-//            if (e.cacheId() == cacheId)
-//                it.remove();
-//        }
 
         cacheMaps.remove(cacheId);
     }

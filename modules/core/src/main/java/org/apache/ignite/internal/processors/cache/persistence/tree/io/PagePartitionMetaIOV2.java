@@ -31,7 +31,7 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     private static final int PART_META_REUSE_LIST_ROOT_OFF = PENDING_TREE_ROOT_OFF + 8;
 
     /** */
-    public static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
+    protected static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
 
     /**
      * @param ver Version.

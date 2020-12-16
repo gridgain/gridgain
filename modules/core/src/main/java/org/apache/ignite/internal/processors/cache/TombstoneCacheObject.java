@@ -29,7 +29,7 @@ public class TombstoneCacheObject extends CacheObjectAdapter {
     private static final long serialVersionUID = 2106775575127797257L;
 
     /** Empty. */
-    private static final byte[] EMPTY = new byte[] { }; // TODO byte[0] ?
+    private static final byte[] EMPTY = new byte[0];
 
     /** */
     public static final short TYPE_CODE = 179;

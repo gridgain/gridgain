@@ -2319,10 +2319,11 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
-     * TODO how to handle ts by default ?
      * Compares checksums between primary and backup partitions of specified caches.
      * Works properly only on idle cluster - there may be false positive conflict reports if data in cluster is being
      * concurrently updated.
+     * <p>
+     * Note: tombstones are excluded from validation due to it's volatile nature.
      *
      * @param ig Ignite instance.
      * @param caches Cache names (if null, all user caches will be verified).

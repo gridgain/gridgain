@@ -27,7 +27,7 @@ public class PagePartitionMetaIOV3 extends PagePartitionMetaIOV2 {
     private static final int ENCRYPT_PAGE_IDX_OFF = GAPS_LINK + 8;
 
     /** Total pages to be reencrypted offset. */
-    public static final int ENCRYPT_PAGE_MAX_OFF = ENCRYPT_PAGE_IDX_OFF + 4;
+    protected static final int ENCRYPT_PAGE_MAX_OFF = ENCRYPT_PAGE_IDX_OFF + 4;
 
     /**
      * @param ver Version.

@@ -57,23 +57,15 @@ import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
-import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
-import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
-import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2;
-import org.apache.ignite.internal.processors.cache.verify.PartitionKeyV2;
-import org.apache.ignite.internal.processors.query.CacheQueryObjectValueContext;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
@@ -88,7 +80,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
@@ -100,7 +91,6 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 
 /**
  * Test partitions consistency in various scenarios.
- * TODO replace put/get with invokes.
  */
 public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterStateAbstractTest {
     /** */
@@ -115,10 +105,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        // TODO remove.
-        cfg.setFailureDetectionTimeout(100000);
-        cfg.setClientFailureDetectionTimeout(100000);
 
         if (customDiscoSpi != null) {
             cfg.setDiscoverySpi(customDiscoSpi);
@@ -286,9 +272,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         doRandomUpdates(r, prim, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get();
         fut.get();
 
-        IdleVerifyResultV2 res = idleVerify(prim, DEFAULT_CACHE_NAME);
-
-        assertPartitionsSame(res);
+        assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
     }
 
     /**
@@ -368,14 +352,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
-     * TODO queue no longer used, test should be adapted.
-     * May be actual for modes with deferredDelete=true.
-     * Tests reproduces the problem: deferred removal queue should never be cleared during rebalance OR rebalanced
-     * entries could undo deletion causing inconsistency.
+     *
      */
     @Test
-    @WithSystemProperty(key = "IGNITE_CACHE_REMOVED_ENTRIES_TTL", value = "500")
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_RemoveQueueCleared() throws Exception {
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates() throws Exception {
         backups = 2;
 
         Ignite prim = startGridsMultiThreaded(SERVER_NODES);
@@ -411,9 +391,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
 
             prim.cache(DEFAULT_CACHE_NAME).remove(keys.get(0));
-
-            // Ensure queue cleanup is triggered before releasing supply message.
-            doSleep(2000); // TODO seems incorrect, because queue cleanup not called.
 
             spiPrim.stopBlock();
             spiBack.stopBlock();

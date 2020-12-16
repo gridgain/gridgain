@@ -81,8 +81,7 @@ public class GridDhtDetachedCacheEntry extends GridDistributedCacheEntry {
         return null;
     }
 
-    /** {@inheritDoc}
-     * @param clearVer*/
+    /** {@inheritDoc} */
     @Override protected void removeValue(GridCacheVersion clearVer) throws IgniteCheckedException {
         // No-op for detached entries, index is updated on primary or backup nodes.
     }

@@ -57,7 +57,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     /** */
     private GridCacheContext dhtCtx;
 
-    /** TODO try to get rid. */
+    /** */
     private final IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> expireC =
         new IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean>() {
             @Override public Boolean applyx(GridCacheEntryEx entry, GridCacheVersion obsoleteVer) {
@@ -91,7 +91,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     @Override protected void start0() throws IgniteCheckedException {
         dhtCtx = cctx.isNear() ? cctx.near().dht().context() : cctx;
 
-        // TODO ensure sys caches are not processed for ttl.
         if (cctx.kernalContext().isDaemon() ||
             (cctx.kernalContext().clientNode() && cctx.config().getNearConfiguration() == null))
             return;
@@ -178,7 +177,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     }
 
     /**
-     * Processes specified amount of expired entries. Both TTL cleanup (if TTL is configured and eager TTL is enabled)
+     * Processes specified amount of expired entries.
+     * <p>
+     * Both TTL cleanup (if TTL is configured and eager TTL is enabled)
      * and tombstones cleanup is executed, so the real amount of deleted entries can be up to {@code amount * 2}.
      *
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.

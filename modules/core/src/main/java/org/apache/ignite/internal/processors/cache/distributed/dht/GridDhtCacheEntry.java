@@ -127,11 +127,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         }
     }
 
-    /**
-     * Logical remove.
-     *
-     * @param clearVer Clear version.
-     */
+    /** {@inheritDoc} */
     @Override protected void removeValue(GridCacheVersion clearVer) throws IgniteCheckedException {
         cctx.offheap().removeWithTombstone(cctx, key, clearVer, localPartition());
     }
