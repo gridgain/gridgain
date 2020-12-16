@@ -4481,13 +4481,9 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
                     // Get "cache" field from GridCacheProxyImpl.
                     GridCacheAdapter c0 = cacheFromCtx(c);
 
-                    if (!c0.context().deferredDelete()) {
-                        GridCacheEntryEx e0 = c0.peekEx(key);
+                    GridCacheEntryEx e0 = c0.peekEx(key);
 
-                        return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
-                    }
-                    else
-                        return true;
+                    return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
                 }
                 catch (GridCacheEntryRemovedException e) {
                     throw new RuntimeException(e);
@@ -6716,12 +6712,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
                 GridCacheEntryEx entry = ctx.cache().peekEx(key);
 
-                if (ctx.deferredDelete() && ignite.affinity(DEFAULT_CACHE_NAME).mapKeyToPrimaryAndBackups(key).contains(((IgniteKernal)ignite).localNode())) {
-                    assertNotNull(entry);
-                    assertTrue(entry.deleted());
-                }
-                else
-                    assertNull(entry);
+                assertNull(entry);
             }
         }
     }

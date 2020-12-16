@@ -265,9 +265,6 @@ public class GridCacheContext<K, V> implements Externalizable {
     /** Deployment enabled flag for this specific cache */
     private boolean depEnabled;
 
-    /** */
-    private boolean deferredDel;
-
     /** Whether {@link EventType#EVT_CACHE_REBALANCE_STARTED} was sent (used only for REPLICATED cache). */
     private volatile boolean rebalanceStartedEvtSent;
 
@@ -667,9 +664,6 @@ public class GridCacheContext<K, V> implements Externalizable {
      */
     public void cache(GridCacheAdapter<K, V> cache) {
         this.cache = cache;
-
-        // TODO remove deferredDel.
-        deferredDel = false;
     }
 
     /**
@@ -740,13 +734,6 @@ public class GridCacheContext<K, V> implements Externalizable {
      */
     public boolean isQueryEnabled() {
         return !F.isEmpty(config().getQueryEntities());
-    }
-
-    /**
-     * @return {@code True} if entries should not be deleted from cache immediately.
-     */
-    public boolean deferredDelete() {
-        return deferredDel;
     }
 
     /**
@@ -1730,19 +1717,6 @@ public class GridCacheContext<K, V> implements Externalizable {
             drMgr.onReceiveCacheConflictResolved(ctx.isUseNew(), ctx.isUseOld(), ctx.isMerge());
 
         return ctx;
-    }
-
-    /**
-     * @param entry Entry.
-     * @param ver Version.
-     */
-    public void onDeferredDelete(GridCacheEntryEx entry, GridCacheVersion ver) {
-        assert entry != null;
-        assert !entry.lockedByCurrentThread() : entry;
-        assert ver != null;
-        assert deferredDelete() : cache;
-
-        cache.onDeferredDelete(entry, ver);
     }
 
     /**
