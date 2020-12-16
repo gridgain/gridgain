@@ -387,8 +387,10 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     private int soLinger = DFLT_SO_LINGER;
 
     /**
-     * The frequency with which coordinator cleans IP finder and keeps it in the correct state, unregistering addresses of the
-     * nodes that have left the topology.
+     * The frequency with which coordinator cleans IP finder and keeps it in the correct state, which means that
+     * coordinator unregisters addresses of the nodes that have left the topology and re-registries missing addresses.
+     *
+     * @see org.apache.ignite.spi.discovery.tcp.ServerImpl.IpFinderCleaner
      */
     protected long ipFinderCleanFreq = DFLT_IP_FINDER_CLEAN_FREQ;
 
