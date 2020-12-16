@@ -73,7 +73,7 @@ public class MetaPageUpdatePartitionDataRecordV2 extends MetaPageUpdatePartition
     @Override public void applyDelta(PageMemory pageMem, long pageAddr) throws IgniteCheckedException {
         super.applyDelta(pageMem, pageAddr);
 
-        PagePartitionMetaIOV2 io = (PagePartitionMetaIOV2)PagePartitionMetaIO.VERSIONS.forPage(pageAddr);
+        PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(pageAddr);
 
         io.setGapsLink(pageAddr, gapsLink);
     }

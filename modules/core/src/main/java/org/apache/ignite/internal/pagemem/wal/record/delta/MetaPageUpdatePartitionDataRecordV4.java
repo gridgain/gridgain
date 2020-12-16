@@ -26,14 +26,11 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageParti
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * Partition meta page delta record includes encryption status data.
+ * Partition meta page delta record includes tombstone count for a partition.
  */
-public class MetaPageUpdatePartitionDataRecordV3 extends MetaPageUpdatePartitionDataRecordV2 {
-    /** Index of the last reencrypted page. */
-    private int encryptedPageIdx;
-
-    /** Total pages to be reencrypted. */
-    private int encryptedPageCnt;
+public class MetaPageUpdatePartitionDataRecordV4 extends MetaPageUpdatePartitionDataRecordV3 {
+    /** Tombstones count. */
+    private long tombstonesCnt;
 
     /**
      * @param grpId Group id.
@@ -47,8 +44,9 @@ public class MetaPageUpdatePartitionDataRecordV3 extends MetaPageUpdatePartition
      * @param link Link.
      * @param encryptedPageIdx Index of the last reencrypted page.
      * @param encryptedPageCnt Total pages to be reencrypted.
+     * @param tombstonesCnt Tombstones count.
      */
-    public MetaPageUpdatePartitionDataRecordV3(
+    public MetaPageUpdatePartitionDataRecordV4(
         int grpId,
         long pageId,
         long updateCntr,
@@ -59,22 +57,21 @@ public class MetaPageUpdatePartitionDataRecordV3 extends MetaPageUpdatePartition
         int allocatedIdxCandidate,
         long link,
         int encryptedPageIdx,
-        int encryptedPageCnt
+        int encryptedPageCnt,
+        long tombstonesCnt
     ) {
-        super(grpId, pageId, updateCntr, globalRmvId, partSize, cntrsPageId, state, allocatedIdxCandidate, link);
+        super(grpId, pageId, updateCntr, globalRmvId, partSize, cntrsPageId, state, allocatedIdxCandidate, link, encryptedPageIdx, encryptedPageCnt);
 
-        this.encryptedPageIdx = encryptedPageIdx;
-        this.encryptedPageCnt = encryptedPageCnt;
+        this.tombstonesCnt = tombstonesCnt;
     }
 
     /**
      * @param in Input.
      */
-    public MetaPageUpdatePartitionDataRecordV3(DataInput in) throws IOException {
+    public MetaPageUpdatePartitionDataRecordV4(DataInput in) throws IOException {
         super(in);
 
-        encryptedPageIdx = in.readInt();
-        encryptedPageCnt = in.readInt();
+        tombstonesCnt = in.readLong();
     }
 
     /** {@inheritDoc} */
@@ -83,40 +80,31 @@ public class MetaPageUpdatePartitionDataRecordV3 extends MetaPageUpdatePartition
 
         PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(pageAddr);
 
-        io.setEncryptedPageIndex(pageAddr, encryptedPageIdx);
-        io.setEncryptedPageCount(pageAddr, encryptedPageCnt);
+        io.setTombstonesCount(pageAddr, tombstonesCnt);
     }
 
     /**
-     * @return Index of the last reencrypted page.
+     * @return Tombstones count.
      */
-    public int encryptedPageIndex() {
-        return encryptedPageIdx;
-    }
-
-    /**
-     * @return Total pages to be reencrypted.
-     */
-    public int encryptedPageCount() {
-        return encryptedPageCnt;
+    public long tombstonesCount() {
+        return tombstonesCnt;
     }
 
     /** {@inheritDoc} */
     @Override public void toBytes(ByteBuffer buf) {
         super.toBytes(buf);
 
-        buf.putInt(encryptedPageIndex());
-        buf.putInt(encryptedPageCount());
+        buf.putLong(tombstonesCnt);
     }
 
     /** {@inheritDoc} */
     @Override public RecordType type() {
-        return RecordType.PARTITION_META_PAGE_DELTA_RECORD_V3;
+        return RecordType.PARTITION_META_PAGE_DELTA_RECORD_V4;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(MetaPageUpdatePartitionDataRecordV3.class, this, "partId",
+        return S.toString(MetaPageUpdatePartitionDataRecordV4.class, this, "partId",
             PageIdUtils.partId(pageId()), "super", super.toString());
     }
 }

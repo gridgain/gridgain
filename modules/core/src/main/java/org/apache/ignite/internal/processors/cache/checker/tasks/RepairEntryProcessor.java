@@ -124,7 +124,6 @@ public class RepairEntryProcessor implements EntryProcessor {
             if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
                 long recheckStartTime = minValue(VersionedValue::recheckStartTime);
 
-                // TODO fixme logic.
                 boolean inEntryTTLBounds =
                     (System.currentTimeMillis() - recheckStartTime) < Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000);
 
