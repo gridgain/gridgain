@@ -75,12 +75,11 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public GridCacheMapEntry putEntryIfObsoleteOrAbsent(
+    @Override public GridCacheMapEntry putEntryIfObsoleteOrAbsent(
         GridCacheContext ctx,
         final AffinityTopologyVersion topVer,
         KeyCacheObject key,
-        final boolean create,
-        final boolean touch) {
+        final boolean create) {
         return putEntryIfObsoleteOrAbsent(null, ctx, topVer, key, create);
     }
 

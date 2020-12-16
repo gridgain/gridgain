@@ -43,17 +43,15 @@ public interface GridCacheConcurrentMap {
      * @param topVer Topology version.
      * @param key Key.
      * @param create Create flag.
-     * @param touch TODO get rid!!!
      * @return Existing or new GridCacheMapEntry. Will return {@code null} if entry is obsolete or absent and create
      * flag is set to {@code false}. Will also return {@code null} if create flag is set to {@code true}, but entry
      * couldn't be created.
      */
-    @Nullable public GridCacheMapEntry putEntryIfObsoleteOrAbsent(
+    public GridCacheMapEntry putEntryIfObsoleteOrAbsent(
         GridCacheContext ctx,
         AffinityTopologyVersion topVer,
         KeyCacheObject key,
-        boolean create,
-        boolean touch);
+        boolean create);
 
     /**
      * Removes passed in entry if it presents in the map.

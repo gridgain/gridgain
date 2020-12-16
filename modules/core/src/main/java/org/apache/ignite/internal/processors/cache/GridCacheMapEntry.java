@@ -546,8 +546,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     @Nullable protected CacheDataRow unswap(@Nullable CacheDataRow row, boolean checkExpire)
         throws IgniteCheckedException, GridCacheEntryRemovedException {
         boolean obsolete = false;
-        GridCacheVersion ver0 = null;
-
         cctx.shared().database().checkpointReadLock();
 
         lockEntry();
@@ -3050,15 +3048,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (val == null && offheap)
                     unswap(null, false);
 
-                if (checkExpired()) { // TODO call onExpired ?
-                    GridCacheVersion obsoleteVer = nextVersion();
-
-                    rmv = markObsolete0(obsoleteVer, true, null);
-
-                    if (cctx.mvccEnabled())
-                        cctx.offheap().mvccRemoveAll(this);
-                    else
-                        removeExpiredValue(obsoleteVer); // TODO fire expired event ?
+                if (checkExpired()) {
+                    rmv = onExpired(val, null);
 
                     return null;
                 }
@@ -4539,15 +4530,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (obsoleteOrDeleted())
                     return false;
 
-                if (checkExpired()) { // TODO call onExpired ?
-                    GridCacheVersion obsoleteVer = nextVersion();
-
-                    rmv = markObsolete0(obsoleteVer, true, null);
-
-                    if (cctx.mvccEnabled())
-                        cctx.offheap().mvccRemoveAll(this);
-                    else
-                        removeExpiredValue(obsoleteVer);
+                if (checkExpired()) {
+                    rmv = onExpired(val, null);
 
                     return false;
                 }
