@@ -25,6 +25,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
@@ -51,17 +52,6 @@ public class StatisticsUtils {
     }
 
     /**
-     * Build stats propagation message.
-     *
-     * @param reqId Original request id or {@code null} if message shouldn't response to any request.
-     * @param stat List of Statistics object data.
-     * @return Statistics propagation message.
-     */
-    public static StatsPropagationMessage toMessage(UUID reqId, List<StatsObjectData> stat) {
-        return new StatsPropagationMessage(reqId, stat);
-    }
-
-    /**
      * Convert statistics column data message to column statistics object.
      *
      * @param ctx Kernal context.
@@ -79,13 +69,13 @@ public class StatisticsUtils {
     /**
      * Build statistics object data from values.
      *
-     * @param key Statistics key.
+     * @param keyMsg Statistics key.
      * @param type Statistics type.
      * @param stat Object statistics to convert.
      * @return Converted StatsObjectData message.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static StatsObjectData toMessage(StatsKey key, StatsType type, ObjectStatisticsImpl stat)
+    public static StatsObjectData toObjectData(StatsKeyMessage keyMsg, StatsType type, ObjectStatisticsImpl stat)
             throws IgniteCheckedException {
         Map<String, StatsColumnData> colData = new HashMap<>(stat.columnsStatistics().size());
 
@@ -93,7 +83,6 @@ public class StatisticsUtils {
             colData.put(ts.getKey(), toMessage(ts.getValue()));
 
         StatsObjectData data;
-        StatsKeyMessage keyMsg = new StatsKeyMessage(key.schema(), key.obj(), null);
         if (stat instanceof ObjectPartitionStatisticsImpl) {
             ObjectPartitionStatisticsImpl partStats = (ObjectPartitionStatisticsImpl) stat;
             data = new StatsObjectData(keyMsg, stat.rowCount(), type, partStats.partId(),
@@ -119,21 +108,19 @@ public class StatisticsUtils {
     /**
      * Convert object statistics to StatsPropagationMessage.
      *
-     * @param reqId Request id.
-     * @param key Statistics key.
+     * @param keyMsg Statistics key.
      * @param type Statistics type.
      * @param stat ObjectStatistics to convert.
      * @return Converted StatsPropagationMessage.
      * @throws IgniteCheckedException In case of errors.
      */
     public static StatsPropagationMessage toMessage(
-            UUID reqId,
-            StatsKey key,
+            StatsKeyMessage keyMsg,
             StatsType type,
             ObjectStatisticsImpl stat
     ) throws IgniteCheckedException {
-        StatsObjectData data = toMessage(key, type, stat);
-        return new StatsPropagationMessage(reqId, Collections.singletonList(data));
+        StatsObjectData data = toObjectData(keyMsg, type, stat);
+        return new StatsPropagationMessage(Collections.singletonList(data));
     }
 
     /**

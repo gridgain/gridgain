@@ -15,117 +15,88 @@
  */
 package org.apache.ignite.internal.processors.query.stat.messages;
 
+import org.apache.ignite.internal.GridDirectMap;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * Request to cancel statistics collection.
+ * Request to collect statistics message.
  */
-public class StatsCollectionCancelRequestMessage implements Message {
+public class StatsCollectionRequest implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
-    public static final short TYPE_CODE = 180;
+    public static final short TYPE_CODE = 179;
+
+    /** Collection id. */
+    private UUID colId;
 
     /** Request id. */
     private UUID reqId;
 
-    /** Local or cluster wide cancellation. */
-    private boolean loc;
+    /** Keys to partitions to collect statistics by. */
+    @GridDirectMap(keyType = StatsKeyMessage.class, valueType = int[].class)
+    private Map<StatsKeyMessage, int[]> keys;
 
     /**
      * {@link Externalizable} support.
      */
-    public StatsCollectionCancelRequestMessage() {
+    public StatsCollectionRequest() {
         // No-op.
     }
 
     /**
      * Constructor.
      *
-     * @param reqId id of request to cancel.
+     * @param colId Collection id.
+     * @param reqId Request id.
+     * @param keys Keys to partitions to collect statistics by.
      */
-    public StatsCollectionCancelRequestMessage(UUID reqId) {
+    public StatsCollectionRequest(UUID colId, UUID reqId, Map<StatsKeyMessage, int[]> keys) {
+        this.colId = colId;
         this.reqId = reqId;
+        this.keys = keys;
     }
 
     /**
-     * @return id of request to cancel.
+     * @return Collection id.
+     */
+    public UUID colId() {
+        return colId;
+    }
+
+    /**
+     * @return Request id.
      */
     public UUID reqId() {
         return reqId;
     }
 
     /**
-     * @return if {@code true} - cancel only local stats collection by specified task,
-     *                              otherwise - cancel cluster wide process.
+     * @return Map of keys to partitions to collect statistics by.
      */
-    public boolean local() {
-        return loc;
+    public Map<StatsKeyMessage, int[]> keys() {
+        return keys;
     }
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeBoolean("local", loc))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeUuid("reqId", reqId))
-                    return false;
-
-                writer.incrementState();
-
-        }
-
         return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
 
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                loc = reader.readBoolean("local");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                reqId = reader.readUuid("reqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(StatsCollectionCancelRequestMessage.class);
+        return reader.afterMessageRead(StatsCollectionRequest.class);
     }
 
     /** {@inheritDoc} */
@@ -135,11 +106,16 @@ public class StatsCollectionCancelRequestMessage implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 2;
+        return 3;
     }
 
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte policy() {
+        return GridIoPolicy.QUERY_POOL;
     }
 }

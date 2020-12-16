@@ -197,6 +197,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         store.clearLocalPartitionStatistics(key, partId);
     }
 
+    // TODO
     /** {@inheritDoc} */
     @Override public void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
         if (locStats == null) {
@@ -208,6 +209,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         locStats.put(key, statistics);
     }
 
+    // TODO
     /** {@inheritDoc} */
     @Override public void mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
         if (locStats == null) {

@@ -15,74 +15,86 @@
  */
 package org.apache.ignite.internal.processors.query.stat.messages;
 
-import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.UUID;
 
 /**
- * Message to send statistics.
+ * Request to cancel statistics collection.
  */
-public class StatsPropagationMessage implements Message {
+public class CancelStatsCollectionRequest implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
-    public static final short TYPE_CODE = 181;
+    public static final short TYPE_CODE = 180;
 
-    /** */
-    @GridDirectCollection(StatsObjectData.class)
-    private List<StatsObjectData> data;
+    /** Request id. */
+    private UUID colId;
 
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
+    /** Request id. */
+    private UUID reqId;
 
     /**
      * {@link Externalizable} support.
      */
-    public StatsPropagationMessage() {
+    public CancelStatsCollectionRequest() {
         // No-op.
     }
 
     /**
      * Constructor.
      *
-     * @param data List of objects statistics.
+     * @param colId Id of collection to cancel.
+     * @param reqId Request id.
      */
-    public StatsPropagationMessage(List<StatsObjectData> data) {
-        this.data = data;
+    public CancelStatsCollectionRequest(UUID colId, UUID reqId) {
+        this.colId = colId;
+        this.reqId = reqId;
     }
 
     /**
-     * @return List of objects statistics.
+     * @return Id of collection to cancel.
      */
-    public List<StatsObjectData> data() {
-        return data;
+    public UUID colId() {
+        return colId;
+    }
+
+    /**
+     * @return Request id.
+     */
+    public UUID reqId() {
+        return reqId;
     }
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-         return true;
+
+        return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-         return reader.afterMessageRead(StatsPropagationMessage.class);
+
+        return reader.afterMessageRead(CancelStatsCollectionRequest.class);
     }
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return TYPE_CODE;
+        return 0;
     }
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
         return 2;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onAckReceived() {
+        // No-op.
     }
 }

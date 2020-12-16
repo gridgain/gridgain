@@ -39,8 +39,12 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
     /** Test statistics key2. */
     private static final StatsKey KEY2 = new StatsKey("schema", "obj2");
 
-    /** Test store. */
+    /** Test against storage of such type. */
     @Parameterized.Parameter(0)
+    public String testLb;
+
+    /** Test store. */
+    @Parameterized.Parameter(1)
     public IgniteStatisticsStore store;
 
     /**
@@ -64,8 +68,9 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
         IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
 
         return Arrays.asList(new Object[][] {
-                { new IgniteStatisticsInMemoryStoreImpl(cls -> log) },
-                { new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, dbMgr, statsRepos, cls -> log) },
+                { "IgniteStatisticsInMemoryStoreImpl", new IgniteStatisticsInMemoryStoreImpl(cls -> log) },
+                { "IgniteStatisticsPersistenceStoreImpl",
+                        new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, dbMgr, statsRepos, cls -> log) },
         });
     }
 

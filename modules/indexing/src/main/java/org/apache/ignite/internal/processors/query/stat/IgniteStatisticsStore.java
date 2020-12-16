@@ -27,7 +27,7 @@ public interface IgniteStatisticsStore {
     public void clearAllStatistics();
 
     /**
-     * Replace all table statistics with specified ones.
+     * Replace all tables partition statistics with specified ones.
      *
      * @param key Statistics key to replace statistics by.
      * @param statistics Collection of partition level statistics.

@@ -27,7 +27,7 @@ public class StatsKeyMessage implements Message {
     private String obj;
 
     /** Optional list of columns to collect statistics by.
-     * Each string can contain list of comma separated columns to represent multicolumns stats. */
+     * Each string can contain list of comma separated columns to represent multicolumn stats. */
     @GridDirectCollection(String.class)
     private List<String> colNames;
 

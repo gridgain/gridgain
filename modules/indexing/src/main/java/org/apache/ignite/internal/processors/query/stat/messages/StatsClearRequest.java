@@ -30,7 +30,7 @@ import java.util.UUID;
 /**
  * Request to clean existing statistics message.
  */
-public class StatsClearRequestMessage implements Message {
+public class StatsClearRequest implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -40,9 +40,6 @@ public class StatsClearRequestMessage implements Message {
     /** Request id. */
     private UUID reqId;
 
-    /** Is request is local (need to clean only local statistics) or global (need to start cluster wide process). */
-    private boolean loc;
-
     /** Keys to which statistics need to be cleaned. */
     @GridDirectCollection(StatsKeyMessage.class)
     private List<StatsKeyMessage> keys;
@@ -51,13 +48,10 @@ public class StatsClearRequestMessage implements Message {
      * Constructor.
      *
      * @param reqId id of request.
-     * @param loc if {@code true} - need to collect statistics only by local primary partitions,
-     *              otherwise need starts cluster wide statistics collection.
      * @param keys keys what statistics should be collected.
      */
-    public StatsClearRequestMessage(UUID reqId, boolean loc, List<StatsKeyMessage> keys) {
+    public StatsClearRequest(UUID reqId, List<StatsKeyMessage> keys) {
         this.reqId = reqId;
-        this.loc = loc;
         this.keys = keys;
     }
 
@@ -69,13 +63,6 @@ public class StatsClearRequestMessage implements Message {
     }
 
     /**
-     * @return local collection flag.
-     */
-    public boolean local() {
-        return loc;
-    }
-
-    /**
      * @return List of keys to collect statistics by.
      */
     public List<StatsKeyMessage> keys() {
@@ -84,74 +71,15 @@ public class StatsClearRequestMessage implements Message {
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeCollection("keys", keys, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeBoolean("local", loc))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeUuid("reqId", reqId))
-                    return false;
-
-                writer.incrementState();
-
-        }
 
         return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
 
-        if (!reader.beforeMessageRead())
-            return false;
 
-        switch (reader.state()) {
-            case 0:
-                keys = reader.readCollection("keys", MessageCollectionItemType.MSG);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                loc = reader.readBoolean("local");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                reqId = reader.readUuid("reqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
-
-        return reader.afterMessageRead(StatsClearRequestMessage.class);
+        return reader.afterMessageRead(StatsClearRequest.class);
     }
 
     /** {@inheritDoc} */
@@ -177,7 +105,7 @@ public class StatsClearRequestMessage implements Message {
     /**
      * {@link Externalizable} support.
      */
-    public StatsClearRequestMessage() {
+    public StatsClearRequest() {
         // No-op.
     }
 }

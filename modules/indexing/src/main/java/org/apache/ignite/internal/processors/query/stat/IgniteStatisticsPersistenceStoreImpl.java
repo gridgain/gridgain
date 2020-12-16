@@ -21,6 +21,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 
@@ -200,7 +201,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
         if (!checkMetastore("Unable to save local partitions statistics: %s.%s for %d partitions", key.schema(),
                 key.obj(), statistics.size()))
             return;
-
+        StatsKeyMessage keyMsg = new StatsKeyMessage(key.schema(), key.obj(), null);
         Map<Integer, ObjectPartitionStatisticsImpl> partStatistics = statistics.stream().collect(
                 Collectors.toMap(ObjectPartitionStatisticsImpl::partId, s -> s));
 
@@ -218,8 +219,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
                         if (log.isTraceEnabled())
                             log.trace("Rewriting statistics by key " + k);
 
-                        metastore.write(k, StatisticsUtils.toMessage(key, StatsType.PARTITION,
-                                newStats));
+                        metastore.write(k, StatisticsUtils.toMessage(keyMsg, StatsType.PARTITION, newStats));
                     }
                 }
                 catch (IgniteCheckedException e) {
@@ -229,7 +229,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
             }, false);
             if (!partStatistics.isEmpty()) {
                 for (Map.Entry<Integer, ObjectPartitionStatisticsImpl> entry : partStatistics.entrySet())
-                    writeMeta(objPrefix + entry.getKey(), StatisticsUtils.toMessage(key, StatsType.PARTITION,
+                    writeMeta(objPrefix + entry.getKey(), StatisticsUtils.toMessage(keyMsg, StatsType.PARTITION,
                             entry.getValue()));
             }
         }
@@ -292,7 +292,8 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
         String partKey = getPartKeyPrefix(key) + statistics.partId();
 
         try {
-            StatsObjectData statsMsg = StatisticsUtils.toMessage(key, StatsType.PARTITION, statistics);
+            //TODO!!!
+            StatsObjectData statsMsg = null;//StatisticsUtils.toMessage(key, StatsType.PARTITION, statistics);
             if (log.isTraceEnabled())
                 log.trace("Writing statistics by key " + partKey);
             writeMeta(partKey, statsMsg);

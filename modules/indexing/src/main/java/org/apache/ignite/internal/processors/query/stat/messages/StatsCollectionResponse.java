@@ -16,27 +16,37 @@
 package org.apache.ignite.internal.processors.query.stat.messages;
 
 import org.apache.ignite.internal.GridDirectCollection;
+import org.apache.ignite.internal.GridDirectMap;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Message to send statistics.
  */
-public class StatsPropagationMessage implements Message {
+public class StatsCollectionResponse implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
-    public static final short TYPE_CODE = 181;
+    public static final short TYPE_CODE = 186;
 
-    /** */
-    @GridDirectCollection(StatsObjectData.class)
-    private List<StatsObjectData> data;
+    /** Collection id. */
+    private UUID colId;
+
+    /** Request id. */
+    private UUID reqId;
+
+    /** Map of collected local object statistics with array of included partitions. */
+    @GridDirectMap(keyType = StatsObjectData.class, valueType = int[].class)
+    private Map<StatsObjectData, int[]> data;
 
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
@@ -46,34 +56,54 @@ public class StatsPropagationMessage implements Message {
     /**
      * {@link Externalizable} support.
      */
-    public StatsPropagationMessage() {
+    public StatsCollectionResponse() {
         // No-op.
     }
 
     /**
      * Constructor.
      *
-     * @param data List of objects statistics.
+     * @param colId Collection id.
+     * @param reqId Request id.
+     * @param data Map of objects statistics with array of included partitions.
      */
-    public StatsPropagationMessage(List<StatsObjectData> data) {
+    public StatsCollectionResponse(UUID colId, UUID reqId, Map<StatsObjectData, int[]> data) {
+        this.colId = colId;
+        this.reqId = reqId;
         this.data = data;
     }
 
     /**
-     * @return List of objects statistics.
+     * @return Collection id.
      */
-    public List<StatsObjectData> data() {
+    public UUID colId() {
+        return colId;
+    }
+
+    /**
+     * @return Request id.
+     */
+    public UUID reqId() {
+        return reqId;
+    }
+
+    /**
+     * @return Map of object statistics with array of included partitions.
+     */
+    public Map<StatsObjectData, int[]> data() {
         return data;
     }
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-         return true;
+
+        return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-         return reader.afterMessageRead(StatsPropagationMessage.class);
+
+        return reader.afterMessageRead(StatsCollectionResponse.class);
     }
 
     /** {@inheritDoc} */

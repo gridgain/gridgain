@@ -22,13 +22,13 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionCancelRequestMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequestMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.CancelStatsCollectionRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsPropagationMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsRequestMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsGetRequest;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
@@ -72,10 +72,10 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
         factory.register((short)-57, GridH2SelectForUpdateTxDetails::new);
 
         // Statistics related messages.
-        factory.register(StatsCollectionRequestMessage.TYPE_CODE, StatsCollectionRequestMessage::new);
-        factory.register(StatsCollectionCancelRequestMessage.TYPE_CODE, StatsCollectionCancelRequestMessage::new);
+        factory.register(StatsCollectionRequest.TYPE_CODE, StatsCollectionRequest::new);
+        factory.register(CancelStatsCollectionRequest.TYPE_CODE, CancelStatsCollectionRequest::new);
         factory.register(StatsPropagationMessage.TYPE_CODE, StatsPropagationMessage::new);
-        factory.register(StatsRequestMessage.TYPE_CODE, StatsRequestMessage::new);
+        factory.register(StatsGetRequest.TYPE_CODE, StatsGetRequest::new);
         factory.register(StatsKeyMessage.TYPE_CODE, StatsKeyMessage::new);
         factory.register(StatsObjectData.TYPE_CODE, StatsObjectData::new);
         factory.register(StatsColumnData.TYPE_CODE, StatsColumnData::new);
