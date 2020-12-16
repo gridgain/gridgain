@@ -31,7 +31,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
@@ -52,7 +51,6 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
 /**
  * Class that serves asynchronous partition clearing process.
@@ -266,51 +264,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         super.start0();
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
-    }
-
-    /**
-     * Clears tombstones locally using full scan approach.
-     */
-    public void clearTombstones() {
-        if (log.isInfoEnabled()) {
-            log.info("Start clearing tombstones for groups [" +
-                evictionGroupsMap.values().stream().map(g -> g.grp.cacheOrGroupName() +
-                    "(" + g.grp.topology().localPartitions().stream().mapToLong(
-                        p -> p.dataStore().tombstonesCount()).sum() + ")").collect(Collectors.joining(",")) + ']');
-        }
-
-        for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
-            int grpId = ctx0.grp.groupId();
-
-            if (cctx.cache().cacheGroup(grpId) != null) {
-                assert !ctx0.grp.isLocal();
-
-                if (ctx0.grp.topology().hasMovingPartitions())
-                    continue; // Skipping rebalancing group.
-
-                for (GridDhtLocalPartition part : ctx0.grp.topology().currentLocalPartitions()) {
-                    assert part.state() == OWNING : part;
-
-                    long ts = part.dataStore().tombstonesCount();
-
-                    assert ts >= 0 : part;
-
-                    if (ts == 0) // Avoid clearing partitions without tombstones.
-                        continue;
-
-                    if (cctx.kernalContext().isStopping())
-                        return;
-
-                    try {
-                        clearTombstonesAsync(ctx0.grp, part).finishFut.get();
-                    }
-                    catch (IgniteCheckedException e) {
-                        log.error("Failed to clear tombstones [grp=" + ctx0.grp.cacheOrGroupName() +
-                            ", part=" + part + ']', e);
-                    }
-                }
-            }
-        }
     }
 
     /** {@inheritDoc} */
