@@ -382,7 +382,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
         StatsCollectionFutureAdapter doneFut = new StatsCollectionFutureAdapter();
         StatsKeyMessage keyMsg = new StatsKeyMessage(schemaName, objName, Arrays.asList(colNames));
         UUID colId = UUID.randomUUID();
-        StatCollectionStatus status = new StatCollectionStatus(colId, Collections.emptyMap(), doneFut);
+        StatCollectionStatus status = new StatCollectionStatus(colId, Collections.singletonList(keyMsg),
+            Collections.emptyMap(), doneFut);
         synchronized (status) {
             currCollections.updateCollection(colId, s -> status);
             Map<StatsKeyMessage, int[]> failedPartitions = null;
@@ -391,10 +392,11 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
                 Collection<StatsCollectionAddrRequest> reqs = currCollections.generateCollectionRequests(colId,
                     Collections.singletonList(keyMsg), failedPartitions);
                 Map<UUID, StatsCollectionRequest> msgs = reqs.stream().collect(Collectors.toMap(
-                        StatsCollectionAddrRequest::nodeId, StatsCollectionAddrRequest::req));
+                    StatsCollectionAddrRequest::nodeId, StatsCollectionAddrRequest::req));
 
                 Map<UUID, StatsCollectionRequest> failedMsgs = sendLocalRequests(msgs);
-                failedPartitions = currCollections.extractFailed(failedMsgs.values());
+                failedPartitions = currCollections.extractFailed(failedMsgs.values()
+                    .toArray(new StatsCollectionRequest[0]));
                 if (cnt++ > 10)
                     throw new IgniteCheckedException(String.format(
                             "Unable to send all messages to collect statistics by key %s.%s", schemaName, objName));
@@ -963,7 +965,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
     private void handleCollectionRequest(UUID nodeId, StatsCollectionRequest msg) {
         assert msg.reqId() != null : "Got statistics collection request without request id";
         StatsCollectionFutureAdapter doneFut = new StatsCollectionFutureAdapter();
-        currCollections.addCollection(new StatCollectionStatus(msg.colId(), /* TODO!!!!!!!!!!!!!!!!! */null,null, doneFut));
+        currCollections.addCollection(new StatCollectionStatus(msg.colId(), msg.keys().keySet(), null, doneFut));
 
         statMgmtPool.submit(() -> processLocal(nodeId, msg));
     }
