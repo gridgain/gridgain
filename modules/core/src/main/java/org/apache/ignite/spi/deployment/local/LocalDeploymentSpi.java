@@ -45,6 +45,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jsr166.ConcurrentLinkedHashMap;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEPLOYMENT_PRESERVE_LOCAL;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+
 /**
  * Local deployment SPI that implements only within VM deployment on local
  * node via {@link #register(ClassLoader, Class)} method. This SPI requires
@@ -184,17 +187,19 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
 
         Map<String, String> newRsrcs = addResource(ldr, clsLdrRsrcs, rsrc);
 
-        Collection<ClassLoader> rmvClsLdrs = null;
+        if (!getBoolean(IGNITE_DEPLOYMENT_PRESERVE_LOCAL)) {
+            Collection<ClassLoader> rmvClsLdrs = null;
 
-        if (!F.isEmpty(newRsrcs)) {
-            rmvClsLdrs = new LinkedList<>();
+            if (!F.isEmpty(newRsrcs)) {
+                rmvClsLdrs = new LinkedList<>();
 
-            removeResources(ldr, newRsrcs, rmvClsLdrs);
-        }
+                removeResources(ldr, newRsrcs, rmvClsLdrs);
+            }
 
-        if (rmvClsLdrs != null) {
-            for (ClassLoader cldLdr : rmvClsLdrs)
-                onClassLoaderReleased(cldLdr);
+            if (rmvClsLdrs != null) {
+                for (ClassLoader cldLdr : rmvClsLdrs)
+                    onClassLoaderReleased(cldLdr);
+            }
         }
 
         return !F.isEmpty(newRsrcs);

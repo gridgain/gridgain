@@ -19,7 +19,7 @@ This utility can do the following commands:
     control.(sh|bat) --state
 
   Change cluster state:
-    control.(sh|bat) --set-state INACTIVE|ACTIVE|ACTIVE_READ_ONLY [--yes]
+    control.(sh|bat) --set-state INACTIVE|ACTIVE|ACTIVE_READ_ONLY [--force] [--yes]
 
     Parameters:
       ACTIVE            - Activate cluster. Cache updates are allowed.
@@ -61,6 +61,12 @@ This utility can do the following commands:
 
   View diagnostic information in a cluster:
     control.(sh|bat) --diagnostic
+
+  Print the current master key name:
+    control.(sh|bat) --encryption get_master_key_name
+
+  Change the master key:
+    control.(sh|bat) --encryption change_master_key newMasterKeyName
 
   Enable rolling upgrade:
     control.(sh|bat) --rolling-upgrade start [--yes]

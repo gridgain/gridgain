@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,15 +144,14 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
     public void release(WALPointer start) throws IgniteCheckedException;
 
     /**
-     * Gives a hint to WAL manager to clear entries logged before the given pointer. Some entries before the
-     * the given pointer will be kept because there is a configurable WAL history size. Those entries may be used
-     * for partial partition rebalancing.
+     * Gives a hint to WAL manager to clear entries logged before the given pointer.
+     * If entries are needed for binary recovery, they will not be affected.
+     * Some entries may be reserved eg for historical rebalance and they also will not be affected.
      *
-     * @param low Pointer since which WAL will be truncated. If null, WAL will be truncated from the oldest segment.
-     * @param high Pointer for which it is safe to clear the log.
+     * @param high Upper border to which WAL segments will be deleted.
      * @return Number of deleted WAL segments.
      */
-    public int truncate(WALPointer low, WALPointer high);
+    public int truncate(@Nullable WALPointer high);
 
     /**
      * Notifies {@code this} about latest checkpoint pointer.
