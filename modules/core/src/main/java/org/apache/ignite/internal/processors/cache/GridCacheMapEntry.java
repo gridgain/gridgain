@@ -4860,11 +4860,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public void onUnlock() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
     @Override public void lockEntry() {
         lock.lock();
     }

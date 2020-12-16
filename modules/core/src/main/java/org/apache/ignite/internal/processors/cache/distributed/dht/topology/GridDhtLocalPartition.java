@@ -731,14 +731,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * On partition unlock callback.
-     * Tries to continue delayed partition clearing.
-     */
-    public void onUnlock() {
-        // No-op. // TODO remove
-    }
-
-    /**
      * @param topVer Topology version.
      * @return {@code True} if local node is primary for this partition.
      */

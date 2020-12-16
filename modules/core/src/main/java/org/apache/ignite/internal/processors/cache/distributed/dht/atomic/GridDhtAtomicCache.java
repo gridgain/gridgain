@@ -3064,13 +3064,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 entry.unlockEntry();
         }
 
-        // Try evict partitions. // TODO remove
-        for (int i = 0; i < size; i++) {
-            GridDhtCacheEntry entry = locked.get(i);
-            if (entry != null)
-                entry.onUnlock();
-        }
-
         // Must touch all entries since update may have deleted entries.
         // Eviction manager will remove empty entries.
         for (int i = 0; i < size; i++) {
@@ -3361,8 +3354,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     updateIdx,
                                     null,
                                     req.transformOperation());
-
-                                entry.onUnlock();
 
                                 break; // While.
                             }

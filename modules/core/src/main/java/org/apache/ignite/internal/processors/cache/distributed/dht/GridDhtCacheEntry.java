@@ -37,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.extras.GridCacheObsoleteEntryExtras;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -363,29 +362,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
             return false;
         }
-    }
-
-    /** {@inheritDoc} */
-    @Override public GridCacheMvccCandidate removeLock() {
-        GridCacheMvccCandidate ret = super.removeLock();
-
-        locPart.onUnlock();
-
-        return ret;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean removeLock(GridCacheVersion ver) throws GridCacheEntryRemovedException {
-        boolean ret = super.removeLock(ver);
-
-        locPart.onUnlock();
-
-        return ret;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onUnlock() {
-        locPart.onUnlock();
     }
 
     /**

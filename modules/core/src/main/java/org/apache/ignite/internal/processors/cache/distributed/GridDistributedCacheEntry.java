@@ -284,11 +284,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
                 refreshRemotes();
 
-                if (emptyAfter) {
+                if (emptyAfter)
                     mvccExtras(null);
-
-                    onUnlock();
-                }
             }
         }
         finally {
