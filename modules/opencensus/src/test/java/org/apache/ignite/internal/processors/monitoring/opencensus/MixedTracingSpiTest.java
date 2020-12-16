@@ -30,7 +30,6 @@ import java.util.ArrayList;
  * Tests for mixed tracing spi instances.
  */
 public class MixedTracingSpiTest extends GridCommonAbstractTest {
-
     /** */
     private ListeningTestLogger testLog = new ListeningTestLogger(false, log);
 

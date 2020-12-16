@@ -32,6 +32,7 @@ public class StatusMatchTable {
         table.put(SpanStatus.OK, io.opencensus.trace.Status.OK);
         table.put(SpanStatus.CANCELLED, io.opencensus.trace.Status.CANCELLED);
         table.put(SpanStatus.ABORTED, io.opencensus.trace.Status.ABORTED);
+        table.put(SpanStatus.UNAVAILABLE, io.opencensus.trace.Status.UNAVAILABLE);
     }
 
     /**
