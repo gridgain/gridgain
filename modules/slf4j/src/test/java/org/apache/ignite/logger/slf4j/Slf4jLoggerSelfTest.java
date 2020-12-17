@@ -70,7 +70,7 @@ public class Slf4jLoggerSelfTest {
      * Check that this is really a log of a started node.
      * Log something using JUL logging.
      * Check that logs present in log file.
-     * Log something in INFO level from package that is blocked in log4j2 configuration using JUL logging.
+     * Log something in INFO level from package that is blocked in slf4j configuration using JUL logging.
      * Check that logs aren’t present in log file.
      *
      * @throws Exception If error occurs.
@@ -101,7 +101,7 @@ public class Slf4jLoggerSelfTest {
      * Check that this is really a log of a started node.
      * Log something using Apache Commons Logging.
      * Check that logs present in log file.
-     * Log something in INFO level from package that is blocked in log4j2 configuration using Apache Commons Logging.
+     * Log something in INFO level from package that is blocked in slf4j configuration using Apache Commons Logging.
      * Check that logs aren’t present in log file.
      *
      * @throws Exception If error occurs.
