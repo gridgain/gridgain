@@ -642,6 +642,36 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
     }
 
     /**
+     * Check that index deletion tasks are executed successfully when corresponding cache group is deleted.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIrrelevantTasksAreCleared() throws Exception {
+        taskLifecycleListener.reset();
+
+        IgniteEx ignite = prepareAndPopulateCluster(1, false, false);
+
+        IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
+
+        // Drop table faster than index deletion task completes.
+        query(cache, "drop table t");
+
+        awaitPartitionMapExchange();
+
+        stopAllGrids();
+
+        assertTrue(pendingDelLatch.getCount() > 0);
+
+        startGrid(RESTARTED_NODE_NUM);
+
+        awaitPartitionMapExchange();
+
+        // Task should complete without errors despite the cache has been deleted.
+        awaitLatch(pendingDelLatch, "Test timed out: failed to await for durable background task completion.");
+    }
+
+    /**
      * Tests that index is correctly deleted when corresponding SQL table is deleted.
      *
      * @throws Exception If failed.
