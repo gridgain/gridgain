@@ -45,7 +45,6 @@ public class OpenCensusTracingConfigurationResetAllTest extends AbstractTracingT
         return new OpenCensusTracingSpi();
     }
 
-
     /**
      * Ensure that resetAll() default tracing configuration doesn't effect it.
      */

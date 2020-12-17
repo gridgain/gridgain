@@ -124,6 +124,7 @@ import org.junit.Test;
 
 import static java.io.File.separatorChar;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE;
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -2835,7 +2836,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true")
+    @SystemPropertiesList(value = {
+        @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true"),
+        @WithSystemProperty(key = IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE, value = "false"),
+    })
     public void testCleaningGarbageAfterCacheDestroyedAndNodeStop_ControlConsoleUtil() throws Exception {
         new IgniteCacheGroupsWithRestartsTest().testFindAndDeleteGarbage(this::executeTaskViaControlConsoleUtil);
     }
