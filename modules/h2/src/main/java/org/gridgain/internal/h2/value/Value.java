@@ -801,7 +801,7 @@ public abstract class Value extends VersionedValue {
             case Value.INTERVAL_YEAR:
             case Value.INTERVAL_MONTH:
             case Value.INTERVAL_YEAR_TO_MONTH:
-                return convertToIntervalYearMonth(targetType);
+                return convertToIntervalYearMonth(targetType, column);
             case Value.INTERVAL_DAY:
             case Value.INTERVAL_HOUR:
             case Value.INTERVAL_MINUTE:
@@ -812,7 +812,7 @@ public abstract class Value extends VersionedValue {
             case Value.INTERVAL_HOUR_TO_MINUTE:
             case Value.INTERVAL_HOUR_TO_SECOND:
             case Value.INTERVAL_MINUTE_TO_SECOND:
-                return convertToIntervalDayTime(targetType);
+                return convertToIntervalDayTime(targetType, column);
             case ARRAY:
                 return convertToArray();
             case ROW:
@@ -1352,57 +1352,144 @@ public abstract class Value extends VersionedValue {
         return extTypeInfo != null ? extTypeInfo.cast(result) : result;
     }
 
-    private ValueInterval convertToIntervalYearMonth(int targetType) {
+    private ValueInterval convertToIntervalYearMonth(int targetType, Object column) {
+        long leading;
         switch (getValueType()) {
-        case Value.STRING:
-        case Value.STRING_IGNORECASE:
-        case Value.STRING_FIXED: {
-            String s = getString();
-            try {
-                return (ValueInterval) IntervalUtils
-                        .parseFormattedInterval(IntervalQualifier.valueOf(targetType - Value.INTERVAL_YEAR), s)
+            case BYTE:
+            case SHORT:
+            case INT:
+                leading = getInt();
+                break;
+            case LONG:
+                leading = getLong();
+                break;
+            case FLOAT:
+            case DOUBLE:
+                if (targetType == INTERVAL_YEAR_TO_MONTH) {
+                    return IntervalUtils.intervalFromAbsolute(IntervalQualifier.YEAR_TO_MONTH, getBigDecimal()
+                        .multiply(BigDecimal.valueOf(12)).setScale(0, RoundingMode.HALF_UP).toBigInteger());
+                }
+                leading = convertToLong(getDouble(), column);
+                break;
+            case DECIMAL:
+                if (targetType == INTERVAL_YEAR_TO_MONTH) {
+                    return IntervalUtils.intervalFromAbsolute(IntervalQualifier.YEAR_TO_MONTH, getBigDecimal()
+                        .multiply(BigDecimal.valueOf(12)).setScale(0, RoundingMode.HALF_UP).toBigInteger());
+                }
+                leading = convertToLong(getBigDecimal(), column);
+                break;
+            case STRING:
+            case STRING_IGNORECASE:
+            case STRING_FIXED: {
+                String s = getString();
+                try {
+                    return (ValueInterval) IntervalUtils
+                        .parseFormattedInterval(IntervalQualifier.valueOf(targetType - INTERVAL_YEAR), s)
                         .convertTo(targetType);
-            } catch (Exception e) {
-                throw DbException.get(ErrorCode.INVALID_DATETIME_CONSTANT_2, e, "INTERVAL", s);
+                } catch (Exception e) {
+                    throw DbException.get(ErrorCode.INVALID_DATETIME_CONSTANT_2, e, "INTERVAL", s);
+                }
             }
-        }
-        case Value.INTERVAL_YEAR:
-        case Value.INTERVAL_MONTH:
-        case Value.INTERVAL_YEAR_TO_MONTH:
-            return IntervalUtils.intervalFromAbsolute(IntervalQualifier.valueOf(targetType - Value.INTERVAL_YEAR),
+            case INTERVAL_YEAR:
+            case INTERVAL_MONTH:
+            case INTERVAL_YEAR_TO_MONTH:
+                return IntervalUtils.intervalFromAbsolute(IntervalQualifier.valueOf(targetType - INTERVAL_YEAR),
                     IntervalUtils.intervalToAbsolute((ValueInterval) this));
+            default:
+                throw getDataConversionError(targetType);
         }
-        throw getDataConversionError(targetType);
+        boolean negative = false;
+        if (leading < 0) {
+            negative = true;
+            leading = -leading;
+        }
+        return ValueInterval.from(IntervalQualifier.valueOf(targetType - INTERVAL_YEAR), negative, leading,
+            0L);
     }
 
-    private ValueInterval convertToIntervalDayTime(int targetType) {
+    private ValueInterval convertToIntervalDayTime(int targetType, Object column) {
+        long leading;
         switch (getValueType()) {
-        case Value.STRING:
-        case Value.STRING_IGNORECASE:
-        case Value.STRING_FIXED: {
-            String s = getString();
-            try {
-                return (ValueInterval) IntervalUtils
-                        .parseFormattedInterval(IntervalQualifier.valueOf(targetType - Value.INTERVAL_YEAR), s)
+            case BYTE:
+            case SHORT:
+            case INT:
+                leading = getInt();
+                break;
+            case LONG:
+                leading = getLong();
+                break;
+            case FLOAT:
+            case DOUBLE:
+                if (targetType > INTERVAL_MINUTE) {
+                    return convertToIntervalDayTime(getBigDecimal(), targetType);
+                }
+                leading = convertToLong(getDouble(), column);
+                break;
+            case DECIMAL:
+                if (targetType > INTERVAL_MINUTE) {
+                    return convertToIntervalDayTime(getBigDecimal(), targetType);
+                }
+                leading = convertToLong(getBigDecimal(), column);
+                break;
+            case STRING:
+            case STRING_IGNORECASE:
+            case STRING_FIXED: {
+                String s = getString();
+                try {
+                    return (ValueInterval) IntervalUtils
+                        .parseFormattedInterval(IntervalQualifier.valueOf(targetType - INTERVAL_YEAR), s)
                         .convertTo(targetType);
-            } catch (Exception e) {
-                throw DbException.get(ErrorCode.INVALID_DATETIME_CONSTANT_2, e, "INTERVAL", s);
+                } catch (Exception e) {
+                    throw DbException.get(ErrorCode.INVALID_DATETIME_CONSTANT_2, e, "INTERVAL", s);
+                }
             }
-        }
-        case Value.INTERVAL_DAY:
-        case Value.INTERVAL_HOUR:
-        case Value.INTERVAL_MINUTE:
-        case Value.INTERVAL_SECOND:
-        case Value.INTERVAL_DAY_TO_HOUR:
-        case Value.INTERVAL_DAY_TO_MINUTE:
-        case Value.INTERVAL_DAY_TO_SECOND:
-        case Value.INTERVAL_HOUR_TO_MINUTE:
-        case Value.INTERVAL_HOUR_TO_SECOND:
-        case Value.INTERVAL_MINUTE_TO_SECOND:
-            return IntervalUtils.intervalFromAbsolute(IntervalQualifier.valueOf(targetType - Value.INTERVAL_YEAR),
+            case INTERVAL_DAY:
+            case INTERVAL_HOUR:
+            case INTERVAL_MINUTE:
+            case INTERVAL_SECOND:
+            case INTERVAL_DAY_TO_HOUR:
+            case INTERVAL_DAY_TO_MINUTE:
+            case INTERVAL_DAY_TO_SECOND:
+            case INTERVAL_HOUR_TO_MINUTE:
+            case INTERVAL_HOUR_TO_SECOND:
+            case INTERVAL_MINUTE_TO_SECOND:
+                return IntervalUtils.intervalFromAbsolute(IntervalQualifier.valueOf(targetType - INTERVAL_YEAR),
                     IntervalUtils.intervalToAbsolute((ValueInterval) this));
+            default:
+                throw getDataConversionError(targetType);
         }
-        throw getDataConversionError(targetType);
+        boolean negative = false;
+        if (leading < 0) {
+            negative = true;
+            leading = -leading;
+        }
+        return ValueInterval.from(IntervalQualifier.valueOf(targetType - INTERVAL_YEAR), negative, leading,
+            0L);
+    }
+
+    private ValueInterval convertToIntervalDayTime(BigDecimal bigDecimal, int targetType) {
+        long multiplier;
+        switch (targetType) {
+            case INTERVAL_SECOND:
+                multiplier = DateTimeUtils.NANOS_PER_SECOND;
+                break;
+            case INTERVAL_DAY_TO_HOUR:
+            case INTERVAL_DAY_TO_MINUTE:
+            case INTERVAL_DAY_TO_SECOND:
+                multiplier = DateTimeUtils.NANOS_PER_DAY;
+                break;
+            case INTERVAL_HOUR_TO_MINUTE:
+            case INTERVAL_HOUR_TO_SECOND:
+                multiplier = DateTimeUtils.NANOS_PER_HOUR;
+                break;
+            case INTERVAL_MINUTE_TO_SECOND:
+                multiplier = DateTimeUtils.NANOS_PER_MINUTE;
+                break;
+            default:
+                throw getDataConversionError(targetType);
+        }
+        return IntervalUtils.intervalFromAbsolute(IntervalQualifier.valueOf(targetType - INTERVAL_YEAR),
+            bigDecimal.multiply(BigDecimal.valueOf(multiplier)).setScale(0, RoundingMode.HALF_UP).toBigInteger());
     }
 
     private ValueArray convertToArray() {
