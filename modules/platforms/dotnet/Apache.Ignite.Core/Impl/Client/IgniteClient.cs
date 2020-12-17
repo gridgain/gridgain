@@ -229,6 +229,12 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
+        public CacheAffinityManager GetAffinityManager(string cacheName)
+        {
+            throw GetClientNotSupportedException();
+        }
+
+        /** <inheritDoc /> */
         public CacheConfiguration GetCacheConfiguration(int cacheId)
         {
             throw GetClientNotSupportedException();

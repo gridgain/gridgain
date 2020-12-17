@@ -16,14 +16,16 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
-import com.google.common.collect.ImmutableMap;
-import org.apache.ignite.spi.tracing.Scope;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -31,6 +33,7 @@ import org.junit.Test;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_CUSTOM_EVENT;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_REQUEST;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_LEFT;
+import static org.apache.ignite.spi.tracing.Scope.DISCOVERY;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 
@@ -116,8 +119,7 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
                 catch (Exception e) {
                     fail("Unable to create cache.");
                 }
-            }
-        );
+            });
 
         assertTrue(
             checkSpanExistences(
@@ -286,8 +288,8 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
      */
     private void performClientBasedOperation(
         @Nullable Runnable preparationOperations,
-        @NotNull Runnable operationToCheck) throws Exception
-    {
+        @NotNull Runnable operationToCheck
+    ) throws Exception {
         if (preparationOperations != null) {
             try {
                 preparationOperations.run();
@@ -299,9 +301,27 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
 
         // Enable discovery tracing.
         grid(0).tracingConfiguration().set(
-            new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
+            new TracingConfigurationCoordinates.Builder(DISCOVERY).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());
+
+        // Due to "async" nature of metastore data propagation to the client nodes,
+        // need to be sure that the configuration change is available on all nodes.
+        boolean isAvailable = GridTestUtils.waitForCondition(
+            () -> {
+                TracingConfigurationCoordinates p = new TracingConfigurationCoordinates.Builder(DISCOVERY).build();
+
+                for (Ignite ign : G.allGrids()) {
+                    if (ign.tracingConfiguration().get(p).samplingRate() < SAMPLING_RATE_ALWAYS)
+                        return false;
+                }
+
+                return true;
+            },
+            5_000
+        );
+
+        assertTrue("The update of tracing configuration was not propagated to all nodes.", isAvailable);
 
         try {
             operationToCheck.run();
@@ -314,7 +334,7 @@ public class OpenCensusDiscoveryTracingTest extends AbstractTracingTest {
 
         // Disable discovery tracing in order not to mess with un-relevant spans.
         grid(0).tracingConfiguration().set(
-            new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
+            new TracingConfigurationCoordinates.Builder(DISCOVERY).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_NEVER).build());
     }

@@ -155,7 +155,7 @@ namespace Apache.Ignite.Core
         private bool? _isDaemon;
 
         /** */
-        private bool? _clientMode;
+        private bool? _javaPeerClassLoadingEnabled;
 
         /** */
         private TimeSpan? _failureDetectionTimeout;
@@ -216,6 +216,9 @@ namespace Apache.Ignite.Core
 
         /** SQL query history size. */
         private int? _sqlQueryHistorySize;
+
+        /** */
+        private bool? _clientMode;
 
         /// <summary>
         /// Default network retry count.
@@ -337,6 +340,7 @@ namespace Apache.Ignite.Core
             writer.WriteIntNullable(_mvccVacuumThreadCnt);
             writer.WriteTimeSpanAsLongNullable(_sysWorkerBlockedTimeout);
             writer.WriteIntNullable(_sqlQueryHistorySize);
+            writer.WriteBooleanNullable(_javaPeerClassLoadingEnabled);
 
             if (SqlSchemas == null)
                 writer.WriteInt(0);
@@ -741,6 +745,7 @@ namespace Apache.Ignite.Core
             _mvccVacuumThreadCnt = r.ReadIntNullable();
             _sysWorkerBlockedTimeout = r.ReadTimeSpanNullable();
             _sqlQueryHistorySize = r.ReadIntNullable();
+            _javaPeerClassLoadingEnabled = r.ReadBooleanNullable();
 
             int sqlSchemasCnt = r.ReadInt();
 
@@ -1711,5 +1716,22 @@ namespace Apache.Ignite.Core
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public ICollection<ExecutorConfiguration> ExecutorConfiguration { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether peer class loading is enabled for <b>Java</b> side.
+        /// <para/>
+        /// When peer class loading is enabled and task is not deployed on local node,
+        /// local node will try to load classes from the node that initiated task execution.
+        /// <para/>
+        /// <b>Important!</b>
+        /// <see cref="PeerAssemblyLoadingMode"/>
+        /// and peer class loading in Java are two distinct and independent features.
+        /// <para />
+        /// </summary>
+        public bool JavaPeerClassLoadingEnabled 
+        {
+            get { return _javaPeerClassLoadingEnabled ?? default(bool); }
+            set { _javaPeerClassLoadingEnabled = value; }
+        }
     }
 }

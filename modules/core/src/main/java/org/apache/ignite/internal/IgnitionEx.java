@@ -1485,6 +1485,11 @@ public class IgnitionEx {
         return dependencyResolver.get();
     }
 
+    /**
+     * @param name Grid name (possibly {@code null} for default grid).
+     * @return true when all managers, processors, and plugins have started and ignite kernal start method has fully
+     * completed.
+     */
     public static boolean hasKernalStarted(String name) {
         IgniteNamedInstance grid = name != null ? grids.get(name) : dfltGrid;
         return grid != null && grid.hasStartLatchCompleted();
@@ -1860,11 +1865,16 @@ public class IgnitionEx {
 
             WorkersRegistry workerRegistry = new WorkersRegistry(
                 new IgniteBiInClosure<GridWorker, FailureType>() {
-                    @Override public void apply(GridWorker deadWorker, FailureType failureType) {
+                    @Override public void apply(GridWorker worker, FailureType failureType) {
+                        IgniteException ex = new IgniteException(S.toString(GridWorker.class, worker));
+
+                        Thread runner = worker.runner();
+
+                        if (runner != null && runner != Thread.currentThread())
+                            ex.setStackTrace(runner.getStackTrace());
+
                         if (grid != null)
-                            grid.context().failure().process(new FailureContext(
-                                failureType,
-                                new IgniteException(S.toString(GridWorker.class, deadWorker))));
+                            grid.context().failure().process(new FailureContext(failureType, ex));
                     }
                 },
                 getLong(IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT, cfg.getSystemWorkerBlockedTimeout()),
@@ -1908,6 +1918,7 @@ public class IgnitionEx {
             // Note, that we do not pre-start threads here as class loading pool may
             // not be needed.
             validateThreadPoolSize(cfg.getPeerClassLoadingThreadPoolSize(), "peer class loading");
+
             p2pExecSvc = new IgniteThreadPoolExecutor(
                 "p2p",
                 cfg.getIgniteInstanceName(),
@@ -2532,7 +2543,7 @@ public class IgnitionEx {
                     Class<?> log4jCls;
 
                     try {
-                        log4jCls = Class.forName("org.apache.ignite.logger.log4j.Log4JLogger");
+                        log4jCls = Class.forName("org.apache.ignite.logger.log4j2.Log4J2Logger");
                     }
                     catch (ClassNotFoundException | NoClassDefFoundError ignored) {
                         log4jCls = null;
@@ -2540,13 +2551,13 @@ public class IgnitionEx {
 
                     if (log4jCls != null) {
                         try {
-                            URL url = U.resolveIgniteUrl("config/ignite-log4j.xml");
+                            URL url = U.resolveIgniteUrl("config/ignite-log4j2.xml");
 
                             if (url == null) {
-                                File cfgFile = new File("config/ignite-log4j.xml");
+                                File cfgFile = new File("config/ignite-log4j2.xml");
 
                                 if (!cfgFile.exists())
-                                    cfgFile = new File("../config/ignite-log4j.xml");
+                                    cfgFile = new File("../config/ignite-log4j2.xml");
 
                                 if (cfgFile.exists()) {
                                     try {
@@ -2556,13 +2567,6 @@ public class IgnitionEx {
                                         // No-op.
                                     }
                                 }
-                            }
-
-                            if (url != null) {
-                                boolean configured = (Boolean)log4jCls.getMethod("isConfigured").invoke(null);
-
-                                if (configured)
-                                    url = null;
                             }
 
                             if (url != null) {
@@ -2591,12 +2595,13 @@ public class IgnitionEx {
                     ((LoggerNodeIdAware)cfgLog).setNodeId(nodeId);
 
                 if (log4jInitErr != null)
-                    U.warn(cfgLog, "Failed to initialize Log4JLogger (falling back to standard java logging): "
+                    U.warn(cfgLog, "Failed to initialize Log4J2Logger (falling back to standard java logging): "
                         + log4jInitErr.getCause());
 
                 return cfgLog;
             }
             catch (Exception e) {
+
                 throw new IgniteCheckedException("Failed to create logger.", e);
             }
         }

@@ -46,6 +46,12 @@
             <destName>Makefile.am</destName>
         </file>
 
+        <file>
+            <source>modules/platforms/cpp/CMakeLists.txt</source>
+            <outputDirectory>/platforms/cpp</outputDirectory>
+            <destName>CMakeLists.txt</destName>
+        </file>
+
         <!-- Other files. -->
         <file>
             <source>assembly/LICENSE_IGNITE</source>
@@ -138,6 +144,12 @@
         <fileSet>
             <directory>modules/platforms/cpp/thin-client</directory>
             <outputDirectory>/platforms/cpp/thin-client</outputDirectory>
+        </fileSet>
+		
+        <!-- Move CPP "cmake" module. -->
+        <fileSet>
+            <directory>modules/platforms/cpp/cmake</directory>
+            <outputDirectory>/platforms/cpp/cmake</outputDirectory>
         </fileSet>
 
         <!-- Move CPP licenses. -->

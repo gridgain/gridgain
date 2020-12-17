@@ -31,8 +31,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
     internal sealed class PlatformCache<TK, TV> : IPlatformCache
     {
         /** Affinity. */
-        private readonly CacheAffinityImpl _affinity;
-        
+        private readonly CacheAffinityManager _affinity;
+
         /** Keep binary flag. */
         private readonly bool _keepBinary;
 
@@ -43,7 +43,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
         private readonly Func<object> _affinityTopologyVersionFunc;
 
         /** Underlying map. */
-        private readonly ConcurrentDictionary<TK, PlatformCacheEntry<TV>> _map = 
+        private readonly ConcurrentDictionary<TK, PlatformCacheEntry<TV>> _map =
             new ConcurrentDictionary<TK, PlatformCacheEntry<TV>>();
 
         /** Stopped flag. */
@@ -51,9 +51,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PlatformCache{TK,TV}"/> class.
-        /// Called via reflection from <see cref="PlatformCacheManager.CreatePlatformCache"/>. 
+        /// Called via reflection from <see cref="PlatformCacheManager.CreatePlatformCache"/>.
         /// </summary>
-        public PlatformCache(Func<object> affinityTopologyVersionFunc, CacheAffinityImpl affinity, bool keepBinary)
+        public PlatformCache(Func<object> affinityTopologyVersionFunc, CacheAffinityManager affinity, bool keepBinary)
         {
             _affinityTopologyVersionFunc = affinityTopologyVersionFunc;
             _affinity = affinity;
@@ -77,7 +77,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
 
             PlatformCacheEntry<TV> entry;
             var key0 = (TK) (object) key;
-            
+
             if (_map.TryGetValue(key0, out entry))
             {
                 if (IsValid(entry))
@@ -105,7 +105,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
             }
 
             var count = 0;
-            
+
             foreach (var e in _map)
             {
                 if (!IsValid(e.Value))
@@ -117,7 +117,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
                 {
                     continue;
                 }
-                
+
                 count++;
             }
 
@@ -178,7 +178,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
             _stopped = true;
             Clear();
         }
-        
+
         /** <inheritdoc /> */
         public void Clear()
         {
@@ -226,19 +226,19 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
         /// When primary node changes for a key, GridNearCacheEntry stops receiving updates for that key,
         /// because reader ("subscription") on new primary is not yet established.
         /// <para />
-        /// This method is similar to GridNearCacheEntry.valid(). 
+        /// This method is similar to GridNearCacheEntry.valid().
         /// </summary>
         /// <param name="entry">Entry to validate.</param>
         /// <typeparam name="TVal">Value type.</typeparam>
         /// <returns>True if entry is valid and can be returned to the user; false otherwise.</returns>
         private bool IsValid<TVal>(PlatformCacheEntry<TVal> entry)
         {
-            // See comments on _affinityTopologyVersionFunc about boxed copy approach. 
+            // See comments on _affinityTopologyVersionFunc about boxed copy approach.
             var currentVerBoxed = _affinityTopologyVersionFunc();
             var entryVerBoxed = entry.Version;
-            
+
             Debug.Assert(currentVerBoxed != null);
-            
+
             if (ReferenceEquals(currentVerBoxed, entryVerBoxed))
             {
                 // Happy path: true on stable topology.
@@ -266,7 +266,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
 
             return valid;
         }
-        
+
         /// <summary>
         /// Gets boxed affinity version. Reuses existing boxing copy to reduce allocations.
         /// </summary>

@@ -20,11 +20,14 @@ import org.apache.ignite.internal.client.thin.CacheAsyncTest;
 import org.apache.ignite.internal.client.thin.ClusterApiTest;
 import org.apache.ignite.internal.client.thin.ClusterGroupTest;
 import org.apache.ignite.internal.client.thin.ComputeTaskTest;
+import org.apache.ignite.internal.client.thin.ReliableChannelTest;
 import org.apache.ignite.internal.client.thin.ServicesTest;
+import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessDiscoveryTest;
 import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessConnectionTest;
 import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessStableTopologyTest;
 import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessUnstableTopologyTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessResourceReleaseTest;
+import org.apache.ignite.internal.client.thin.TimeoutTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -59,7 +62,10 @@ import org.junit.runners.Suite;
     ThinClientAffinityAwarenessStableTopologyTest.class,
     ThinClientAffinityAwarenessUnstableTopologyTest.class,
     ThinClientPartitionAwarenessResourceReleaseTest.class,
-    CacheAsyncTest.class
+    ThinClientPartitionAwarenessDiscoveryTest.class,
+    ReliableChannelTest.class,
+    CacheAsyncTest.class,
+    TimeoutTest.class
 })
 public class ClientTestSuite {
     // No-op.

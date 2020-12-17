@@ -57,6 +57,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.configuration.WarmUpConfiguration;
@@ -69,6 +70,8 @@ import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.LocalAffinityFunction;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategy;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategySupplier;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
@@ -87,6 +90,7 @@ import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
+import org.apache.ignite.internal.processors.query.schema.operation.SchemaAddQueryEntityOperation;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.IgniteInClosureX;
@@ -2119,6 +2123,66 @@ public class GridCacheUtils {
         }
 
         return strategies;
+    }
+
+    /**
+     * Getting available cache entry compression strategies.
+     *
+     * @param kernalCtx Kernal context.
+     * @return Mapping of configuration class to strategy class.
+     */
+    public static Map<Class<? extends EntryCompressionConfiguration>,
+        IgniteClosure<EntryCompressionConfiguration, EntryCompressionStrategy>>
+        entryCompressionStrategies(GridKernalContext kernalCtx) {
+        Map strategies = new HashMap<>();
+
+        // Adding strategies from plugins.
+        EntryCompressionStrategySupplier[] suppliers = kernalCtx.plugins()
+            .extensions(EntryCompressionStrategySupplier.class);
+
+        if (suppliers != null) {
+            for (EntryCompressionStrategySupplier supplier : suppliers)
+                strategies.putAll(supplier.strategies());
+        }
+
+        return strategies;
+    }
+
+    /**
+     * Patch cache configuration with {@link SchemaAddQueryEntityOperation}.
+     *
+     * @param oldCfg Old cache config.
+     * @param op Schema add query entity operation.
+     */
+    public static <K, V> CacheConfiguration<K, V> patchCacheConfiguration(
+        CacheConfiguration<K, V> oldCfg,
+        SchemaAddQueryEntityOperation op
+    ) {
+        return patchCacheConfiguration(oldCfg, op.entities(), op.schemaName(), op.isSqlEscape(),
+                op.queryParallelism());
+    }
+
+    /**
+     * Patch cache configuration with {@link SchemaAddQueryEntityOperation}.
+     *
+     * @param oldCfg Old cache config.
+     * @param entities New query entities.
+     * @param sqlSchema Sql schema name.
+     * @param isSqlEscape Sql escape flag.
+     * @param qryParallelism Query parallelism parameter.
+     */
+    public static <K, V> CacheConfiguration<K, V> patchCacheConfiguration(
+        CacheConfiguration<K, V> oldCfg,
+        Collection<QueryEntity> entities,
+        String sqlSchema,
+        boolean isSqlEscape,
+        int qryParallelism
+    ) {
+        return new CacheConfiguration<>(oldCfg)
+                .setQueryEntities(entities)
+                .setSqlSchema(sqlSchema)
+                .setSqlEscapeAll(isSqlEscape)
+                .setQueryParallelism(qryParallelism);
     }
 
     /**
