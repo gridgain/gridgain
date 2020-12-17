@@ -3591,40 +3591,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Execute {@code after} closure with specifeid {@code keys}
-     *
-     * @param after Closure to execute.
-     */
-    private IgniteInternalFuture<Boolean> receiveEncryptionKeysAndStartCacheAfter(
-        GridPlainClosure2<Collection<byte[]>, byte[], IgniteInternalFuture<Boolean>> after
-    ) {
-
-        GridFutureAdapter<Boolean> res = new GridFutureAdapter<>();
-
-        try {
-            byte[] masterKeyDigest = context().kernalContext().config().getEncryptionSpi().masterKeyDigest();
-
-            IgniteInternalFuture<Boolean> dynStartCacheFut = after.apply(null, masterKeyDigest);
-
-            dynStartCacheFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
-                @Override public void apply(IgniteInternalFuture<Boolean> fut) {
-                    try {
-                        res.onDone(fut.get(), fut.error());
-                    }
-                    catch (IgniteCheckedException e) {
-                        res.onDone(false, e);
-                    }
-                }
-            });
-        }
-        catch (Exception e) {
-            res.onDone(false, e);
-        }
-
-        return res;
-    }
-
-    /**
      * Send {@code GenerateEncryptionKeyRequest} and execute {@code after} closure if succeed.
      *
      * @param keyCnt Count of keys to generate.
@@ -3754,7 +3720,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             // Keys had to be generated before in that case
             assert !((grpKeys == null) && (isKeysGenerationRequired));
 
-            Iterator<byte[]> grpKeysIter = grpKeys != null ? grpKeys.iterator() : null;
+            Iterator<byte[]> grpKeysIter = F.isEmpty(grpKeys) ? null : grpKeys.iterator();
 
             for (StoredCacheData ccfg : storedCacheDataList) {
                 assert grpKeysIter == null || !ccfg.config().isEncryptionEnabled() || grpKeysIter.hasNext();
@@ -3815,18 +3781,16 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             return compoundFut;
         };
 
-        if (isKeysGenerationRequired) {
-            int encGrpCnt = 0;
+        int encGrpCnt = 0;
 
+        if (isKeysGenerationRequired) {
             for (StoredCacheData ccfg : storedCacheDataList) {
                 if (ccfg.config().isEncryptionEnabled())
                     encGrpCnt++;
             }
-
-            return generateEncryptionKeysAndStartCacheAfter(encGrpCnt, startCacheClsr);
         }
 
-        return receiveEncryptionKeysAndStartCacheAfter(startCacheClsr);
+        return generateEncryptionKeysAndStartCacheAfter(encGrpCnt, startCacheClsr);
     }
 
     /**
