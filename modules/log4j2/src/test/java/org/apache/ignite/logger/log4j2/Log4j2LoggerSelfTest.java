@@ -176,7 +176,7 @@ public class Log4j2LoggerSelfTest {
         File logFile = checkOneNode(0);
 
         Logger log1 = Logger.getLogger(this.getClass().getName());
-        log1.info("Text that should be presence in logs");
+        log1.info("Text that should be present in logs");
 
         Logger log2 = Logger.getLogger("org.springframework.context.ApplicationContext");
         log2.info("INFO logs from org.springframework package should be excluded from logs");
@@ -184,7 +184,7 @@ public class Log4j2LoggerSelfTest {
         String logContent = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
 
         assertTrue("Logs from JUL logger should be present in log file",
-            logContent.contains("[INFO ][main][Log4j2LoggerSelfTest] Text that should be presence in logs"));
+            logContent.contains("[INFO ][main][Log4j2LoggerSelfTest] Text that should be present in logs"));
 
         assertFalse("JUL INFO logs for org.springframework package are present in log file",
             logContent.contains("INFO logs from org.springframework package should be excluded from logs"));
@@ -207,7 +207,7 @@ public class Log4j2LoggerSelfTest {
         File logFile = checkOneNode(0);
 
         Log log1 = LogFactory.getLog(this.getClass());
-        log1.info("Text that should be presence in logs");
+        log1.info("Text that should be present in logs");
 
         Log log2 = LogFactory.getLog("org.springframework.context.ApplicationContext");
         log2.info("INFO logs from org.springframework package should be excluded from logs");
@@ -215,7 +215,7 @@ public class Log4j2LoggerSelfTest {
         String logContent = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
 
         assertTrue("Logs from JCL logger should be present in log file",
-            logContent.contains("[INFO ][main][Log4j2LoggerSelfTest] Text that should be presence in logs"));
+            logContent.contains("[INFO ][main][Log4j2LoggerSelfTest] Text that should be present in logs"));
 
         assertFalse("JCL INFO logs for org.springframework package are present in log file",
             logContent.contains("INFO logs from org.springframework package should be excluded from logs"));

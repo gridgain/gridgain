@@ -88,7 +88,7 @@ public class Slf4jLoggerSelfTest {
         String logContent = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
 
         assertTrue("Logs from JUL logger should be present in log file",
-            logContent.contains("[INFO ][main][Slf4jLoggerSelfTest] Text that should be presence in logs"));
+            logContent.contains("[INFO ][main][Slf4jLoggerSelfTest] Text that should be present in logs"));
 
         assertFalse("JUL INFO logs for org.springframework package are present in log file",
             logContent.contains("INFO logs from org.springframework package should be excluded from logs"));
