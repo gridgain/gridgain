@@ -3230,8 +3230,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             Exception ex = null;
 
+            // Tombstones require value, this can be optimized to avoid full row for non-tombstones.
             GridCursor<? extends CacheDataRow> cur =
-                cursor(cacheId, null, null, CacheDataRowAdapter.RowData.KEY_ONLY, null, DATA_AND_TOMBSONES);
+                cursor(cacheId, null, null, CacheDataRowAdapter.RowData.FULL, null, DATA_AND_TOMBSONES);
 
             int rmv = 0;
 
