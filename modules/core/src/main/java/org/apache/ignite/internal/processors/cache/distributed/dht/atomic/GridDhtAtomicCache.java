@@ -1843,6 +1843,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                                 + req.topologyVersion() + ']';
                                         }
                                         else {
+                                            U.sleep(2000);
+
                                             affFut.listen(f -> updateAllAsyncInternal0(
                                                 node,
                                                 req,

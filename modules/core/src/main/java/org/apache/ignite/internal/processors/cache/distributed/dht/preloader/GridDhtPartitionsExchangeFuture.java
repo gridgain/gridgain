@@ -2547,6 +2547,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             err = t;
         }
 
+        if (exchangeType == ExchangeType.NONE) {
+            try {
+                U.sleep(2000);
+            } catch (IgniteInterruptedCheckedException e) {
+                e.printStackTrace();
+            }
+        }
+
         final Throwable err0 = err;
 
         // Should execute this listener first, before any external listeners.
