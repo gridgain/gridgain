@@ -121,30 +121,7 @@ public class RepairEntryProcessor implements EntryProcessor {
                 return RepairStatus.CONCURRENT_MODIFICATION;
         }
         else {
-            if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
-                long recheckStartTime = minValue(VersionedValue::recheckStartTime);
-
-                boolean inEntryTTLBounds =
-                    (System.currentTimeMillis() - recheckStartTime) < Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000);
-
-                // Min available update counter for the key at all nodes.
-                // It just fast solution for null value problem. We should use other way to fix it (versionedVal.updateCounter()).
-                long minUpdateCntr = minValue(VersionedValue::updateCounter);
-                long currUpdateCntr = updateCounter(cctx, entry.getKey());
-
-                boolean inDeferredDelQueueBounds = ((currUpdateCntr - minUpdateCntr) < rmvQueueMaxSize);
-
-                //TODO Remove it after fixes: https://ggsystems.atlassian.net/browse/GG-27419
-                if (cctx.config().getAtomicityMode() != CacheAtomicityMode.ATOMIC || inEntryTTLBounds && inDeferredDelQueueBounds) {
-                    if (val == null)
-                        entry.remove();
-                    else
-                        entry.setValue(val);
-
-                    return RepairStatus.SUCCESS;
-                }
-            }
-            else
+            if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) != 0)
                 return RepairStatus.CONCURRENT_MODIFICATION;
 
             if (forceRepair) {
