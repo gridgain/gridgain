@@ -3252,7 +3252,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         if (amount != -1 && cleared >= amount)
                             return cleared;
 
-                        assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone: row;
+                        assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone : row;
 
                         row.key.partition(partId);
 

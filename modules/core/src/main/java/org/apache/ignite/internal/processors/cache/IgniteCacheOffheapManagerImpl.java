@@ -1425,7 +1425,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     if (row.key.partition() == -1)
                         row.key.partition(cctx.affinity().partition(row.key));
 
-                    assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone: row;
+                    assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone : row;
 
                     try {
                         GridCacheEntryEx entry = cctx.cache().entryEx(row.key);

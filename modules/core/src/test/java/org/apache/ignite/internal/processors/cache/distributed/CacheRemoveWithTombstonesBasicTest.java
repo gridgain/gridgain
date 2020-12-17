@@ -250,7 +250,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         final LongMetric tsMetric = crd.context().metric().registry(
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
 
-        assertEquals(cnt/2, tsMetric.value());
+        assertEquals(cnt / 2, tsMetric.value());
 
         CacheGroupContext grp = crd.cachex(DEFAULT_CACHE_NAME).context().group();
 
@@ -264,7 +264,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         crd.cache(DEFAULT_CACHE_NAME).put(tsKeys.get(0), 0);
 
-        assertEquals(cnt/2 - 1, tsMetric.value());
+        assertEquals(cnt / 2 - 1, tsMetric.value());
 
         List<CacheDataRow> dataRows0 = new ArrayList<>();
         grp.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA).forEach(dataRows0::add);

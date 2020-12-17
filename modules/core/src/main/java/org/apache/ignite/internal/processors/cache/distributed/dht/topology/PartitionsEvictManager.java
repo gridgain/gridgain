@@ -358,7 +358,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             });
         }
 
-        /** {@inheritDoc} */
+        /** */
         public boolean shouldStop() {
             return stopExRef.get() != null;
         }
@@ -544,7 +544,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         /** */
         public void awaitCompletion() {
-            while(true) {
+            while (true) {
                 try {
                     finishFut.get(5_000);
 

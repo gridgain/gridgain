@@ -22,14 +22,11 @@ import javax.cache.processor.MutableEntry;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
-import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
 
 /** Entry processor to repair inconsistent entries. */
 public class RepairEntryProcessor implements EntryProcessor {

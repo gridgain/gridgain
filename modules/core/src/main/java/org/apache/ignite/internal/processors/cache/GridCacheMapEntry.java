@@ -4265,7 +4265,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         cctx.offheap().remove(cctx, key, partition(), localPartition());
     }
 
-
     /**
      * Removes expired value or tombstone.
      *
