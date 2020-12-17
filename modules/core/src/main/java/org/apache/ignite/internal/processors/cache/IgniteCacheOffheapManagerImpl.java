@@ -619,7 +619,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         int partId,
         GridDhtLocalPartition part
     ) throws IgniteCheckedException {
-        assert part != null;
+        // part can be null for local cache.
         assert !cctx.isNear();
 
         dataStore(part).remove(cctx, key, partId);
@@ -632,7 +632,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         GridCacheVersion ver,
         GridDhtLocalPartition part
     ) throws IgniteCheckedException {
-        assert part != null;
+        assert part != null; // Tombstones are not written for local cache.
         assert !cctx.isNear();
         assert !cctx.isLocal();
 
