@@ -120,11 +120,11 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testPessimisticSerializableTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.commit();
+            tx.commit();
+        }
 
         handler().flush();
 
@@ -273,11 +273,11 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testOptimisticSerializableTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, SERIALIZABLE);
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, SERIALIZABLE)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.commit();
+            tx.commit();
+        }
 
         handler().flush();
 
@@ -421,11 +421,11 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testPessimisticReadCommittedTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, READ_COMMITTED);
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, READ_COMMITTED)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.commit();
+            tx.commit();
+        }
 
         handler().flush();
 
@@ -574,11 +574,11 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testOptimisticReadCommittedTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, READ_COMMITTED);
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, READ_COMMITTED)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.commit();
+            tx.commit();
+        }
 
         handler().flush();
 
@@ -722,11 +722,11 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testPessimisticRepeatableReadTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, REPEATABLE_READ);
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, REPEATABLE_READ)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.commit();
+            tx.commit();
+        }
 
         handler().flush();
 
@@ -875,11 +875,11 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testOptimisticRepeatableReadTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ);
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.commit();
+            tx.commit();
+        }
 
         handler().flush();
 
@@ -1008,11 +1008,11 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testRollbackTransaction() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ);
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.rollback();
+            tx.rollback();
+        }
 
         handler().flush();
 
@@ -1073,11 +1073,9 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testCloseTransaction() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ);
-
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.close();
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
+        }
 
         handler().flush();
 
@@ -1119,19 +1117,19 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testTxCacheApiWriteIncludedScope() throws Exception {
         IgniteEx client = startGrid("client");
 
-        grid(0).tracingConfiguration().set(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
             new TracingConfigurationParameters.Builder().
                 withIncludedScopes(Collections.singleton(Scope.CACHE_API_WRITE)).
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
+            client.cache(DEFAULT_CACHE_NAME).put(2, 2);
 
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
-
-        tx.commit();
+            tx.commit();
+        }
 
         handler().flush();
 
@@ -1166,11 +1164,11 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     public void testTXCachePutLogPoint() throws Exception {
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
+        try (Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.commit();
+            tx.commit();
+        }
 
         handler().flush();
 
@@ -1197,11 +1195,11 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
 
         IgniteEx client = startGrid("client");
 
-        Transaction tx = client.transactions().withLabel("label1").withTracing().txStart(PESSIMISTIC, SERIALIZABLE);
+        try (Transaction tx = client.transactions().withLabel("label1").withTracing().txStart(PESSIMISTIC, SERIALIZABLE)) {
+            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
 
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.commit();
+            tx.commit();
+        }
 
         handler().flush();
 

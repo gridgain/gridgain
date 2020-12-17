@@ -56,7 +56,6 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
  * </ul>
  */
 public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
-
     /** Client node. */
     private IgniteEx client;
 
@@ -78,7 +77,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
 
         awaitPartitionMapExchange();
 
-        grid(0).tracingConfiguration().set(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(Scope.CACHE_API_READ).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());
@@ -317,7 +316,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
     public void testCacheAtomicGetAsyncTracing() throws Exception {
         client.cache(ATOMIC_CACHE).put("One",1);
 
-        client.cache(ATOMIC_CACHE).getAsync("One");
+        client.cache(ATOMIC_CACHE).getAsync("One").get();
 
         handler().flush();
 
@@ -418,7 +417,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
                 add("One");
                 add("Two");
                 add("Three");
-            }});
+            }}).get();
 
         handler().flush();
 
