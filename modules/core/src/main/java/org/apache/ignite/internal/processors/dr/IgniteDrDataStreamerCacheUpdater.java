@@ -45,7 +45,7 @@ import org.apache.ignite.stream.StreamReceiver;
  */
 public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCacheObject, CacheObject>,
     DataStreamerCacheUpdaters.InternalUpdater {
-    /** Serial verion uid. */
+    /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
@@ -70,7 +70,7 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
             CacheObjectContext cacheObjCtx = cache.context().cacheObjectContext();
 
             for (Map.Entry<KeyCacheObject, CacheObject> entry0 : col) {
-                GridCacheRawVersionedEntry entry = (GridCacheRawVersionedEntry)entry0;
+                GridCacheRawVersionedEntry<KeyCacheObject, CacheObject> entry = (GridCacheRawVersionedEntry<KeyCacheObject, CacheObject>)entry0;
 
                 entry.unmarshal(cacheObjCtx, ctx.config().getMarshaller());
 
