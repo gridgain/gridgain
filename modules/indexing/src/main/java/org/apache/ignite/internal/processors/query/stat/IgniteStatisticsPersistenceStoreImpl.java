@@ -219,7 +219,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
                         if (log.isTraceEnabled())
                             log.trace("Rewriting statistics by key " + k);
 
-                        metastore.write(k, StatisticsUtils.toMessage(keyMsg, StatsType.PARTITION, newStats));
+                        metastore.write(k, StatisticsUtils.toObjectData(keyMsg, StatsType.PARTITION, newStats));
                     }
                 }
                 catch (IgniteCheckedException e) {
@@ -229,7 +229,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
             }, false);
             if (!partStatistics.isEmpty()) {
                 for (Map.Entry<Integer, ObjectPartitionStatisticsImpl> entry : partStatistics.entrySet())
-                    writeMeta(objPrefix + entry.getKey(), StatisticsUtils.toMessage(keyMsg, StatsType.PARTITION,
+                    writeMeta(objPrefix + entry.getKey(), StatisticsUtils.toObjectData(keyMsg, StatsType.PARTITION,
                             entry.getValue()));
             }
         }
@@ -290,10 +290,9 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
             return;
 
         String partKey = getPartKeyPrefix(key) + statistics.partId();
-
+        StatsKeyMessage keyMsg = new StatsKeyMessage(key.schema(), key.obj(), null);
         try {
-            //TODO!!!
-            StatsObjectData statsMsg = null;//StatisticsUtils.toMessage(key, StatsType.PARTITION, statistics);
+            StatsObjectData statsMsg = StatisticsUtils.toObjectData(keyMsg, StatsType.PARTITION, statistics);
             if (log.isTraceEnabled())
                 log.trace("Writing statistics by key " + partKey);
             writeMeta(partKey, statsMsg);

@@ -81,12 +81,58 @@ public class StatsGetRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
+        writer.setBuffer(buf);
+
+        if (!writer.isHeaderWritten()) {
+            if (!writer.writeHeader(directType(), fieldsCount()))
+                return false;
+
+            writer.onHeaderWritten();
+        }
+
+        switch (writer.state()) {
+            case 0:
+                if (!writer.writeCollection("keys", keys, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
+            case 1:
+                if (!writer.writeUuid("reqId", reqId))
+                    return false;
+
+                writer.incrementState();
+
+        }
 
         return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
+        reader.setBuffer(buf);
+
+        if (!reader.beforeMessageRead())
+            return false;
+
+        switch (reader.state()) {
+            case 0:
+                keys = reader.readCollection("keys", MessageCollectionItemType.MSG);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 1:
+                reqId = reader.readUuid("reqId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+        }
 
         return reader.afterMessageRead(StatsGetRequest.class);
     }
@@ -98,6 +144,6 @@ public class StatsGetRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 3;
+        return 2;
     }
 }

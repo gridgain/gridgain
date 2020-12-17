@@ -17,15 +17,12 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
@@ -150,6 +147,23 @@ public class StatisticsUtils {
     }
 
     /**
+     * Convert statistics object data message to object statistics impl.
+     *
+     * @param ctx Kernal context to use during conversion.
+     * @param data Statistics object data message to convert.
+     * @return Converted object statistics.
+     * @throws IgniteCheckedException  In case of errors.
+     */
+    public static ObjectStatisticsImpl toObjectStatistics(GridKernalContext ctx, StatsObjectData data) throws IgniteCheckedException {
+        Map<String, ColumnStatistics> colNameToStat = new HashMap<>(data.data().size());
+
+        for (Map.Entry<String, StatsColumnData> cs : data.data().entrySet())
+            colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
+
+        return new ObjectStatisticsImpl(data.rowsCnt(), colNameToStat);
+    }
+
+    /**
      * Convert statistics propagation message to ObjectStatisticsImpl.
      *
      * @param ctx Kernal context to use during conversion.
@@ -165,11 +179,7 @@ public class StatisticsUtils {
         assert data.data().size() == 1;
 
         StatsObjectData objData = data.data().get(0);
-        Map<String, ColumnStatistics> colNameToStat = new HashMap<>(objData.data().size());
 
-        for (Map.Entry<String, StatsColumnData> cs : objData.data().entrySet())
-            colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
-
-        return new ObjectStatisticsImpl(objData.rowsCnt(), colNameToStat);
+        return toObjectStatistics(ctx, objData);
     }
 }

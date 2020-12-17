@@ -20,6 +20,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 
 import java.util.List;
 
+
 /**
  * Command execution result.
  */

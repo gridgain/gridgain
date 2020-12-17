@@ -11,6 +11,7 @@ import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
+import org.apache.ignite.internal.util.GridArrays;
 import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -156,20 +157,6 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     }
 
     /**
-     * Test array intersection (with and without intersection of parameters).
-     */
-    @Test
-    public void testIntersect() {
-        int[] res = IgniteStatisticsRequestCollection.intersect(new int[]{1, 2, 3}, new int[]{2, 3, 4, 5});
-
-        assertTrue(Arrays.equals(new int[]{2, 3}, res));
-
-        int[] res2 = IgniteStatisticsRequestCollection.intersect(new int[]{1, 3}, new int[]{4, 5, 6});
-
-        assertEquals(0, res2.length);
-    }
-
-    /**
      * Simple test to generate statistics collection requests for single key on single node.
      *
      * @throws IgniteCheckedException In case of errors.
@@ -183,12 +170,13 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
             Collections.singletonMap(cgc1, Collections.singletonList(k1));
 
 
-        Collection<StatsCollectionAddrRequest> reqs = IgniteStatisticsRequestCollection.generateCollectionRequests(
-            colId, Collections.singletonList(k1), null, grpContexts);
+        Collection<StatsAddrRequest<StatsCollectionRequest>> reqs = IgniteStatisticsRequestCollection
+                .generateCollectionRequests(colId, Collections.singletonList(k1), null, grpContexts);
 
         assertEquals(1, reqs.size());
 
-        StatsCollectionAddrRequest req = reqs.stream().filter(r -> node1.equals(r.nodeId())).findAny().orElse(null);
+        StatsAddrRequest<StatsCollectionRequest> req = reqs.stream().filter(r -> node1.equals(r.nodeId()))
+                .findAny().orElse(null);
 
         assertNotNull(req);
         assertTrue(Arrays.equals(new int[]{0, 1, 2, 3}, req.req().keys().get(k1)));
@@ -202,12 +190,14 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
      */
     @Test
     public void testGenerateCollectionRequests() throws IgniteCheckedException {
-        Collection<StatsCollectionAddrRequest> reqs = testGenerateCollectionRequests(null);
+        Collection<StatsAddrRequest<StatsCollectionRequest>> reqs = testGenerateCollectionRequests(null);
 
         assertEquals(2, reqs.size());
 
-        StatsCollectionAddrRequest req1 = reqs.stream().filter(req -> node1.equals(req.nodeId())).findAny().orElse(null);
-        StatsCollectionAddrRequest req2 = reqs.stream().filter(req -> node2.equals(req.nodeId())).findAny().orElse(null);
+        StatsAddrRequest<StatsCollectionRequest> req1 = reqs.stream().filter(req -> node1.equals(req.nodeId()))
+                .findAny().orElse(null);
+        StatsAddrRequest<StatsCollectionRequest> req2 = reqs.stream().filter(req -> node2.equals(req.nodeId()))
+                .findAny().orElse(null);
         assertNotNull(req1);
         assertNotNull(req2);
         assertTrue(reqs.stream().allMatch(req -> req.req().keys().size() == 2));
@@ -225,11 +215,12 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     public void testGenerateCollectionRequestsFailedPartitions() throws IgniteCheckedException {
         Map<StatsKeyMessage, int[]> failedPartitions = Collections.singletonMap(k1, new int[]{1});
 
-        Collection<StatsCollectionAddrRequest> reqs = testGenerateCollectionRequests(failedPartitions);
+        Collection<StatsAddrRequest<StatsCollectionRequest>> reqs = testGenerateCollectionRequests(failedPartitions);
 
         assertEquals(1, reqs.size());
 
-        StatsCollectionAddrRequest req = reqs.stream().filter(r -> node2.equals(r.nodeId())).findAny().orElse(null);
+        StatsAddrRequest<StatsCollectionRequest> req = reqs.stream().filter(r -> node2.equals(r.nodeId())).findAny()
+                .orElse(null);
 
         assertNotNull(req);
 
@@ -245,7 +236,7 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
      * @return Collection of statistics collection requests.
      * @throws IgniteCheckedException In case of errors.
      */
-    private Collection<StatsCollectionAddrRequest> testGenerateCollectionRequests(
+    private Collection<StatsAddrRequest<StatsCollectionRequest>> testGenerateCollectionRequests(
         Map<StatsKeyMessage, int[]> failedPartitions
     ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts = new HashMap<>();

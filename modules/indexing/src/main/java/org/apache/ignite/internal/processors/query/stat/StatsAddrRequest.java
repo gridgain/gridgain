@@ -15,17 +15,40 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.lang.IgniteFuture;
-
 import java.util.UUID;
 
 /**
- * Future to track statistics collection task. Allows to get request id immediately.
- * @param <T>
+ * Statistics request with target node id.
  */
-public interface StatsCollectionFuture<T> extends IgniteFuture<T> {
+public class StatsAddrRequest<T> {
+    /** Wrapped request. */
+    private final T req;
+
+    /** Destination node id. */
+    private final UUID targetNodeId;
+
     /**
-     * @return statistics collection request id.
+     * Constructor.
+     *
+     * @param req Wrapped request.
+     * @param targetNodeId Target node id.
      */
-    public UUID requestId();
+    public StatsAddrRequest(T req, UUID targetNodeId) {
+        this.req = req;
+        this.targetNodeId = targetNodeId;
+    }
+
+    /**
+     * @return Wrapped request.
+     */
+    public T req() {
+        return req;
+    }
+
+    /**
+     * @return Target node id.
+     */
+    public UUID nodeId() {
+        return targetNodeId;
+    }
 }

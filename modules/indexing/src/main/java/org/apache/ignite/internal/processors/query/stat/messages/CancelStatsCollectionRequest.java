@@ -73,12 +73,58 @@ public class CancelStatsCollectionRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
+        writer.setBuffer(buf);
+
+        if (!writer.isHeaderWritten()) {
+            if (!writer.writeHeader(directType(), fieldsCount()))
+                return false;
+
+            writer.onHeaderWritten();
+        }
+
+        switch (writer.state()) {
+            case 0:
+                if (!writer.writeUuid("colId", colId))
+                    return false;
+
+                writer.incrementState();
+
+            case 1:
+                if (!writer.writeUuid("reqId", reqId))
+                    return false;
+
+                writer.incrementState();
+
+        }
 
         return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
+        reader.setBuffer(buf);
+
+        if (!reader.beforeMessageRead())
+            return false;
+
+        switch (reader.state()) {
+            case 0:
+                colId = reader.readUuid("colId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 1:
+                reqId = reader.readUuid("reqId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+        }
 
         return reader.afterMessageRead(CancelStatsCollectionRequest.class);
     }

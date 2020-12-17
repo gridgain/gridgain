@@ -91,8 +91,9 @@ public interface IgniteStatisticsRepository {
      *
      * @param key Object key.
      * @param statistics Statistics to merge.
+     * @return Merged statistics.
      */
-    public void mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics);
+    public ObjectStatisticsImpl mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics);
 
     /**
      * Calculate and cache saved local statistics.
@@ -131,8 +132,9 @@ public interface IgniteStatisticsRepository {
      *
      * @param key Object key.
      * @param statistics Statistics to merge.
+     * @return Merged statistics.
      */
-    public void mergeGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics);
+    public ObjectStatisticsImpl mergeGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics);
 
     /**
      * Get global statistics by object.

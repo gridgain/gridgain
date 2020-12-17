@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
@@ -6,16 +21,20 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsClearRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
+import org.apache.ignite.internal.util.GridArrays;
+import org.apache.ignite.internal.util.lang.GridFunc;
 import org.apache.ignite.internal.util.typedef.F;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -178,21 +197,21 @@ public class IgniteStatisticsRequestCollection {
      * @return Collection of statistics collection addressed request.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static Collection<StatsCollectionAddrRequest> generateCollectionRequests(
+    public static Collection<StatsAddrRequest<StatsCollectionRequest>> generateCollectionRequests(
             UUID colId,
             Collection<StatsKeyMessage> keys,
             Map<StatsKeyMessage, int[]> failedPartitions,
             Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts
     ) throws IgniteCheckedException {
-        Map<StatsKeyMessage, CacheGroupContext> keyGroups = new HashMap<>();
+        /*Map<StatsKeyMessage, CacheGroupContext> keyGroups = new HashMap<>();
         for (Map.Entry<CacheGroupContext, Collection<StatsKeyMessage>> grpKeys : grpContexts.entrySet())
             for(StatsKeyMessage key : grpKeys.getValue())
                 keyGroups.put(key, grpKeys.getKey());
-
+*/
         // NodeId to <Key to partitions on node> map
         Map<UUID, Map<StatsKeyMessage, int[]>> reqMap = new HashMap<>();
         for (Map.Entry<CacheGroupContext, Collection<StatsKeyMessage>> grpEntry : grpContexts.entrySet()) {
-            Map<UUID, int[]> reqNodes = nodePartitions(grpEntry.getKey(), null);
+            Map<UUID, int[]> reqNodes = nodePartitions(grpEntry.getKey(), null); // TODO Null?
             for (Map.Entry<UUID, int[]> nodeParts : reqNodes.entrySet())
                 reqMap.compute(nodeParts.getKey(), (k, v) -> {
                     if (v == null)
@@ -202,7 +221,7 @@ public class IgniteStatisticsRequestCollection {
 
                     for (StatsKeyMessage key : grpKeys) {
                         int[] keyNodeParts = (failedPartitions == null) ? nodeParts.getValue() :
-                                intersect(nodeParts.getValue(), failedPartitions.get(key));
+                                GridArrays.intersect(nodeParts.getValue(), failedPartitions.get(key));
 
                         if (keyNodeParts.length > 0)
                             v.put(key, keyNodeParts);
@@ -212,16 +231,68 @@ public class IgniteStatisticsRequestCollection {
                 });
         }
 
-        Collection<StatsCollectionAddrRequest> reqs = new ArrayList<>();
+        Collection<StatsAddrRequest<StatsCollectionRequest>> reqs = new ArrayList<>();
         for (Map.Entry<UUID, Map<StatsKeyMessage, int[]>> nodeGpsParts: reqMap.entrySet()) {
             if (nodeGpsParts.getValue().isEmpty())
                 continue;
             StatsCollectionRequest req = prepareRequest(colId, nodeGpsParts.getValue());
-            reqs.add(new StatsCollectionAddrRequest(req, nodeGpsParts.getKey()));
+            reqs.add(new StatsAddrRequest(req, nodeGpsParts.getKey()));
         }
 
         return reqs;
     }
+
+    /**
+     * Calculate node id to stats key map.
+     *
+     * @param groupKeys Cache group to stats key map.
+     * @return Node id to stats key map.
+     */
+    public static Map<UUID, Set<StatsKeyMessage>> nodeKeys(
+        Map<CacheGroupContext, Collection<StatsKeyMessage>> groupsKeys
+    ) {
+        Map<UUID, Set<StatsKeyMessage>> res = new HashMap<>();
+        for (Map.Entry<CacheGroupContext, Collection<StatsKeyMessage>> groupKeys : groupsKeys.entrySet()) {
+            CacheGroupContext grp = groupKeys.getKey();
+
+            AffinityTopologyVersion grpTopVer = grp.shared().exchange().readyAffinityVersion();
+            List<List<ClusterNode>> assignments = grp.affinity().assignments(grpTopVer);
+
+            for (List<ClusterNode> partNodes : assignments) {
+                for (ClusterNode node : partNodes) {
+                    res.compute(node.id(), (k, v) -> {
+                        if (v == null)
+                            v = new HashSet<>();
+
+                        v.addAll(groupKeys.getValue());
+
+                        return v;
+                    });
+                }
+            }
+        }
+        return res;
+    }
+
+    /**
+     * Generate statistics clear requests.
+     *
+     * @param keys Keys to clean statistics by.
+     * @return Collection of addressed statistics clear requests.
+     * @throws IgniteCheckedException In case of errors.
+     */
+    protected Collection<StatsAddrRequest<StatsClearRequest>> generateClearRequests(
+        Collection<StatsKeyMessage> keys
+    ) throws IgniteCheckedException {
+        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts = extractGroups(keys);
+        Map<UUID, Set<StatsKeyMessage>> nodeKeys = nodeKeys(grpContexts);
+        List<StatsAddrRequest<StatsClearRequest>> res = new ArrayList<>(nodeKeys.size());
+
+        return nodeKeys.entrySet().stream().map(e -> new StatsAddrRequest<StatsClearRequest>(
+                new StatsClearRequest(UUID.randomUUID(), new ArrayList<>(e.getValue())), e.getKey()))
+                .collect(Collectors.toList());
+    }
+
 
     /**
      * Generate statistics collection requests by given keys.
@@ -231,47 +302,13 @@ public class IgniteStatisticsRequestCollection {
      * @return Collection of statistics collection addressed request.
      * @throws IgniteCheckedException In case of errors.
      */
-    protected Collection<StatsCollectionAddrRequest> generateCollectionRequests(
+    protected Collection<StatsAddrRequest<StatsCollectionRequest>> generateCollectionRequests(
         UUID colId,
         Collection<StatsKeyMessage> keys,
         Map<StatsKeyMessage, int[]> failedPartitions
     ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts = extractGroups(keys);
         return generateCollectionRequests(colId, keys, failedPartitions, grpContexts);
-    }
-
-    /**
-     * Intersect two specified arrays.
-     *
-     * @param a First array.
-     * @param b Second array.
-     * @return Arrays intersection.
-     */
-    protected static int[] intersect(int[] a, int[] b) {
-        if (a == null || b == null)
-            return new int[0];
-        Set<Integer> aSet = Arrays.stream(a).boxed().collect(Collectors.toSet());
-        List<Integer> res = new ArrayList<>();
-        for (int bVal : b)
-            if (aSet.contains(bVal))
-                res.add(bVal);
-        return res.stream().mapToInt(Integer::intValue).toArray();
-    }
-
-    /**
-     * Subtract b array from a array.
-     *
-     * @param a Base array.
-     * @param b Array to substract from the base one.
-     * @return Substraction result.
-     */
-    protected static int[] subtract(int[] a, int[] b) {
-        Set<Integer> bSet = Arrays.stream(b).boxed().collect(Collectors.toSet());
-        List<Integer> res = new ArrayList<>();
-        for (int aVal : a)
-            if (!bSet.contains(aVal))
-                res.add(aVal);
-        return res.stream().mapToInt(Integer::intValue).toArray();
     }
 
     /**
@@ -322,7 +359,7 @@ public class IgniteStatisticsRequestCollection {
 
         Map<StatsKeyMessage, int[]> res = new HashMap<>();
         for (Map.Entry<StatsKeyMessage, int[]> keyEntry : req.keys().entrySet()) {
-            int[] failed = subtract(keyEntry.getValue(), collected.get(keyEntry.getKey()));
+            int[] failed = GridArrays.subtract(keyEntry.getValue(), collected.get(keyEntry.getKey()));
 
             if (failed.length > 0)
                 res.put(keyEntry.getKey(), failed);

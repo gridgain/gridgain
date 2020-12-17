@@ -13,16 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.util;
 
 import java.util.Arrays;
+
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.GridArrays.clearTail;
 import static org.apache.ignite.internal.util.GridArrays.remove;
 import static org.apache.ignite.internal.util.GridArrays.set;
+import static org.apache.ignite.internal.util.GridArrays.intersect;
+import static org.apache.ignite.internal.util.GridArrays.subtract;
 
 /**
  */
@@ -129,5 +131,83 @@ public class GridArraysSelfTest extends GridCommonAbstractTest {
         assertTrue(Arrays.equals(new Integer[]{0,1,2,3,5,6}, remove(arr, 4)));
         assertTrue(Arrays.equals(new Integer[]{0,1,2,3,4,5}, remove(arr, 6)));
         assertTrue(Arrays.equals(new Integer[0], remove(new Integer[]{1}, 0)));
+    }
+
+    /**
+     * Test array intersection.
+     *
+     * 1) One of arrays as null array.
+     * 2) Both null arrays.
+     * 3) One empty array.
+     * 4) Empty with null.
+     * 5) Single element arrays.
+     * 6) Pass arrays with the same elements.
+     * 6) Normal arrays without intersection (all elements are differ).
+     * 7) Normal array arrays with intersection.
+     * 8) Intersect array with its own
+     */
+    @Test
+    public void intersectTest() {
+        int[] z = new int[0];
+        int[] a1 = new int[]{1};
+        int[] a123 = new int[]{1, 2, 3};
+        int[] b1 = new int[]{1};
+        int[] b123 = new int[]{1, 2, 3};
+        int[] b23 = new int[]{2, 3};
+        int[] b234 = new int []{2, 3, 4};
+        int[] b456 = new int[]{4, 5, 6};
+
+        // 1) One of arrays as null array.
+        assertEquals(0, intersect(null, b1).length);
+        assertEquals(0, intersect(a1, null).length);
+
+        // 2) Both null arrays.
+        assertEquals(0, intersect(null, null).length);
+
+        // 3) One empty array.
+        assertEquals(0, intersect(z, z).length);
+
+        // 4) Empty with null.
+        assertEquals(0, intersect(z, null).length);
+
+        // 5) Single element arrays.
+        assertTrue(Arrays.equals(a1, intersect(a1, b1)));
+
+        // 6) Pass arrays with the same elements.
+        assertTrue(Arrays.equals(a123, intersect(a123, b123)));
+
+        // 6) Normal arrays without intersection (all elements are differ).
+        assertEquals(0, intersect(a123, b456).length);
+
+        // 7) Normal array arrays with intersection.
+        assertTrue(Arrays.equals(b23, intersect(a123, b234)));
+
+        // 8) Intersect array with its own
+        assertTrue(Arrays.equals(a123, intersect(a123, a123)));
+    }
+
+    /**
+     * Test array intersection.
+     *
+     * 1) Subtract empty array.
+     * 2) Subtract all elements.
+     * 3) Subtract some elements.
+     */
+    @Test
+    public void subtractTest() {
+        int[] a123 = new int[]{1, 2, 3};
+        int[] a13 = new int[]{1, 3};
+        int[] b123 = new int[]{1, 2, 3};
+        int[] b2 = new int[]{2};
+        int[] z = new int[0];
+
+        // 1) Subtract empty array.
+        assertTrue(Arrays.equals(a123, subtract(a123, z)));
+
+        // 2) Subtract all elements.
+        assertEquals(0, subtract(a123, b123).length);
+
+        // 3) Subtract some elements.
+        assertTrue(Arrays.equals(a13, subtract(a123, b2)));
     }
 }

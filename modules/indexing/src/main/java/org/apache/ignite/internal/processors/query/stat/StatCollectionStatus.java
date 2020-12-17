@@ -24,7 +24,7 @@ public class StatCollectionStatus {
     private Collection<StatsKeyMessage> keys;
 
     /** Map request id to collection request. */
-    private final ConcurrentMap<UUID, StatsCollectionAddrRequest> remainingColReqs;
+    private final ConcurrentMap<UUID, StatsAddrRequest<StatsCollectionRequest>> remainingColReqs;
 
     /** Collected local statistics. */
     private final List<StatsCollectionResponse> locStatistics;
@@ -43,7 +43,7 @@ public class StatCollectionStatus {
     public StatCollectionStatus(
             UUID colId,
             Collection<StatsKeyMessage> keys,
-            Map<UUID, StatsCollectionAddrRequest> remainingColReqs,
+            Map<UUID, StatsAddrRequest<StatsCollectionRequest>> remainingColReqs,
             StatsCollectionFutureAdapter doneFut
     ) {
         this.colId = colId;
@@ -87,7 +87,7 @@ public class StatCollectionStatus {
      */
     public void replaceStatsCollectionRequest(
         UUID oldReqId,
-        Map<UUID, StatsCollectionAddrRequest> newReqs,
+        Map<UUID, StatsAddrRequest<StatsCollectionRequest>> newReqs,
         StatsCollectionResponse resp
     ) {
         locStatistics.add(resp);
@@ -126,7 +126,7 @@ public class StatCollectionStatus {
     /**
      * @return Map request id to collection request.
      */
-    public Map<UUID, StatsCollectionAddrRequest> remainingCollectionReqs() {
+    public Map<UUID, StatsAddrRequest<StatsCollectionRequest>> remainingCollectionReqs() {
         return remainingColReqs;
     }
 

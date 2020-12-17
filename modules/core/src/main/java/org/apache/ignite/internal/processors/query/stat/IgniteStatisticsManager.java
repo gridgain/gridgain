@@ -16,7 +16,13 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
+import org.apache.ignite.internal.util.lang.GridTriple;
+import org.apache.ignite.internal.util.lang.GridTuple3;
+
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Statistics manager.
@@ -32,6 +38,25 @@ public interface IgniteStatisticsManager {
      * @return future to get fini
      */
     public void collectObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
+
+    /**
+     * Collect objects statistics.
+     *
+     * @param keys Collection of keys to collect statistics by (schema, obj, columns).
+     * @return Future to track progress and cancel collection.
+     * @throws IgniteCheckedException In case of errors.
+     */
+    public StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>> collectObjectStatisticsAsync(
+        GridTuple3<String, String, String[]>... keys
+    ) throws IgniteCheckedException;
+
+    /**
+     * Cancel object statistics collection.
+     *
+     * @param colId Collection id.
+     * @return {@code true} if collection was cancelled, {@code false} if specified collection wasn't found.
+     */
+    public boolean cancelObjectStatisticsCollection(UUID colId);
 
     /**
      * Get local statistics by object.

@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 
@@ -211,14 +212,21 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
     // TODO
     /** {@inheritDoc} */
-    @Override public void mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
+    @Override public ObjectStatisticsImpl mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
         if (locStats == null) {
             log.warning("Unable to merge local statistics for " + key + " on non server node.");
 
-            return;
+            return null;
         }
+        ObjectStatisticsImpl[] res = new ObjectStatisticsImpl[1];
+        locStats.compute(key, (k, v) -> {
+            v = (v == null) ? statistics : add(v, statistics);
 
-        locStats.compute(key, (k, v) -> (v == null) ? statistics : add(v, statistics));
+            res[0] = v;
+
+            return v;
+        });
+        return res[0];
     }
 
     /** {@inheritDoc} */
@@ -228,8 +236,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
             return;
         }
-
-        locStats.put(key, statisticsMgr.aggregateLocalStatistics(key, statistics));
+        StatsKeyMessage keyMsg = new StatsKeyMessage(key.schema(), key.obj(), null);
+        locStats.put(key, statisticsMgr.aggregateLocalStatistics(keyMsg, statistics));
     }
 
     /** {@inheritDoc} */
@@ -266,8 +274,16 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public void mergeGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
-        globalStats.compute(key, (k,v) -> (v == null) ? statistics : add(v, statistics));
+    @Override public ObjectStatisticsImpl mergeGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
+        ObjectStatisticsImpl[] res = new ObjectStatisticsImpl[1];
+        globalStats.compute(key, (k,v) -> {
+            v = (v == null) ? statistics : add(v, statistics);
+
+            res[0] = v;
+
+            return v;
+        });
+        return res[0];
     }
 
     /** {@inheritDoc} */

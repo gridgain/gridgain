@@ -96,12 +96,72 @@ public class StatsCollectionResponse implements Message {
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
+        writer.setBuffer(buf);
+
+        if (!writer.isHeaderWritten()) {
+            if (!writer.writeHeader(directType(), fieldsCount()))
+                return false;
+
+            writer.onHeaderWritten();
+        }
+
+        switch (writer.state()) {
+            case 0:
+                if (!writer.writeUuid("colId", colId))
+                    return false;
+
+                writer.incrementState();
+
+            case 1:
+                if (!writer.writeMap("data", data, MessageCollectionItemType.MSG, MessageCollectionItemType.INT_ARR))
+                    return false;
+
+                writer.incrementState();
+
+            case 2:
+                if (!writer.writeUuid("reqId", reqId))
+                    return false;
+
+                writer.incrementState();
+
+        }
 
         return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
+        reader.setBuffer(buf);
+
+        if (!reader.beforeMessageRead())
+            return false;
+
+        switch (reader.state()) {
+            case 0:
+                colId = reader.readUuid("colId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 1:
+                data = reader.readMap("data", MessageCollectionItemType.MSG, MessageCollectionItemType.INT_ARR, false);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 2:
+                reqId = reader.readUuid("reqId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+        }
 
         return reader.afterMessageRead(StatsCollectionResponse.class);
     }
@@ -113,6 +173,6 @@ public class StatsCollectionResponse implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 2;
+        return 3;
     }
 }

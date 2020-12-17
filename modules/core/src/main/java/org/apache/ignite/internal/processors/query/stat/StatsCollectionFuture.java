@@ -16,27 +16,17 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 
 import java.util.UUID;
 
 /**
- * Implementation of statistics collection future.
+ * Future to track statistics collection task. Allows to get collection id immediately.
+ * @param <T>
  */
-public class StatsCollectionFutureImpl<T> extends IgniteFutureImpl<T> implements StatsCollectionFuture<T> {
-    /** Request id. */
-    private UUID reqId;
-
+public interface StatsCollectionFuture<T> extends IgniteInternalFuture<T> {
     /**
-     * @param fut Future.
+     * @return Statistics collection id.
      */
-    public StatsCollectionFutureImpl(IgniteInternalFuture<T> fut, UUID reqId) {
-        super(fut);
-        this.reqId = reqId;
-    }
-
-    /** {@inheritDoc} */
-    @Override public UUID requestId() {
-        return reqId;
-    }
+    public UUID colId();
 }
+
