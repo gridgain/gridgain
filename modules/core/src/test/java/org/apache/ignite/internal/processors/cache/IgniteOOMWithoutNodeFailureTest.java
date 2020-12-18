@@ -54,7 +54,7 @@ public class IgniteOOMWithoutNodeFailureTest extends GridCommonAbstractTest {
 
         memCfg.setDefaultDataRegionConfiguration(
             new DataRegionConfiguration()
-                .setMaxSize(50L * 1024 * 1024)
+                .setMaxSize(30L * 1024 * 1024)
                 .setPageEvictionMode(DataPageEvictionMode.RANDOM_2_LRU)
         );
 
