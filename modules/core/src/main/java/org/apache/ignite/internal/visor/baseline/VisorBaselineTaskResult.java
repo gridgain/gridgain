@@ -192,7 +192,7 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         this.active = active;
         this.topVer = topVer;
         this.baseline = toMap(baseline);
-        this.servers = toMap(servers);
+        this.servers = toMapWithResolvedAddresses(servers);
         this.autoAdjustEnabled = autoAdjustEnabled;
         this.autoAdjustAwaitingTime = autoAdjustAwaitingTime;
         this.remainingTimeToBaselineAdjust = remainingTimeToBaselineAdjust;
