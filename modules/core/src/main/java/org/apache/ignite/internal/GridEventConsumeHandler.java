@@ -428,6 +428,11 @@ class GridEventConsumeHandler implements GridContinuousHandler {
 
                 throw e;
             }
+            catch (ExceptionInInitializerError e) {
+                ((GridFutureAdapter)p2pUnmarshalFut).onDone(e);
+
+                throw new IgniteCheckedException("Failed to unmarshal deployable object.", e);
+            }
         }
     }
 

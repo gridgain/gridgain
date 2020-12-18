@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,17 @@
  * limitations under the License.
  */
 
-module ignite_modules_test {
-    requires ignite.core;
-    requires junit;
+package org.apache.ignite.tests.p2p;
+
+import javax.cache.configuration.Factory;
+import javax.cache.event.CacheEntryEventFilter;
+
+/**
+ * Event filter factory for deployment.
+ */
+public class GridP2PRemoteFilterWithStaticInitializerFactory implements Factory<CacheEntryEventFilter<Integer, Integer>> {
+    /** {@inheritDoc} */
+    @Override public CacheEntryEventFilter<Integer, Integer> create() {
+        return new GridP2PRemoteFilterWithStaticInitializer();
+    }
 }
