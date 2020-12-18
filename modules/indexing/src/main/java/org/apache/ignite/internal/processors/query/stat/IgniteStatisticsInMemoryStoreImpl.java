@@ -16,8 +16,11 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.collection.IntHashMap;
+import org.apache.ignite.internal.util.collection.IntMap;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,7 +37,7 @@ import java.util.stream.Collectors;
  */
 public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore {
     /** Table -> Partition -> Partition Statistics map, populated only on server nodes without persistence enabled. */
-    private final Map<StatsKey, Map<Integer, ObjectPartitionStatisticsImpl>> partsStats = new ConcurrentHashMap<>();
+    private final Map<StatsKey, IntMap<ObjectPartitionStatisticsImpl>> partsStats = new ConcurrentHashMap<>();
 
     /** Logger. */
     private final IgniteLogger log;
@@ -64,8 +67,8 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     /** {@inheritDoc} */
     @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key) {
         Collection<ObjectPartitionStatisticsImpl>[] res = new Collection[1];
-        partsStats.computeIfPresent(key, (k,v) -> {
-            res[0] = new ArrayList<>(v.values());
+        partsStats.computeIfPresent(key, (k, v) -> {
+            res[0] = Arrays.asList(v.values());
 
             return v;
         });
@@ -82,7 +85,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     @Override public void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics) {
         partsStats.compute(key, (k, v) -> {
             if (v == null)
-                v = new HashMap<>();
+                v = new IntHashMap<>();
 
             v.put(statistics.partId(), statistics);
 
@@ -127,11 +130,11 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
      * @param statistics Collection of tables partition statistics.
      * @return Partition id to statistics map.
      */
-    private Map<Integer, ObjectPartitionStatisticsImpl> buildStatisticsMap(
+    private IntMap<ObjectPartitionStatisticsImpl> buildStatisticsMap(
         StatsKey key,
         Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
-        Map<Integer, ObjectPartitionStatisticsImpl> statisticsMap = new ConcurrentHashMap<>();
+        IntMap<ObjectPartitionStatisticsImpl> statisticsMap = new IntHashMap<ObjectPartitionStatisticsImpl>();
         for (ObjectPartitionStatisticsImpl s : statistics) {
             if (statisticsMap.put(s.partId(), s) != null)
                 log.warning(String.format("Trying to save more than one %s.%s partition statistics for partition %d",

@@ -46,7 +46,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Statistics collection routine.
+ * Current statistics collections with methods to work with it's messages.
  */
 public class IgniteStatisticsRequestCollection {
     /** Current collections, collection id to collection status map. */
@@ -70,15 +70,15 @@ public class IgniteStatisticsRequestCollection {
      * @param id Id to save status by.
      * @param status status to add.
      */
-    public void addCollection(UUID id, StatCollectionStatus status) {
+    public void addActiveCollectionStatus(UUID id, StatCollectionStatus status) {
         currColls.put(id, status);
     }
 
     /**
-     * Thread safe update of statistics collection.
+     * Update status of statistics gathering task.
      *
-     * @param id statistics collection.
-     * @param transformation transformation, if return {@code null} - status will be removed.
+     * @param id Statistics collection task id.
+     * @param transformation Transformation to apply, if it returns {@code null} - status will be removed.
      */
     public void updateCollection(UUID id, Function<StatCollectionStatus, StatCollectionStatus> transformation) {
         currColls.compute(id, (k, v) -> transformation.apply(v));

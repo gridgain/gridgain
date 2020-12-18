@@ -166,7 +166,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
         Collection<StatsAddrRequest<StatsClearRequest>> reqs = currCollections
                 .generateClearRequests(Collections.singletonList(keyMsg));
 
-        sendLocalRequests(reqs);
+        sendRequests(reqs);
         Map<UUID, List<Integer>> requestNodes = null;
         /*try {
             requestNodes = nodePartitions(extractGroups(Collections.singletonList(keyMsg)), null);
@@ -224,7 +224,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
             return null;
         }
 
-        sendPartStatsToBU(tbl, partsStats);
+        sendPartitionStatisticsToBackupNodes(tbl, partsStats);
 
         StatsKey key = new StatsKey(keyMsg.schema(), keyMsg.obj());
         statsRepos.saveLocalPartitionsStatistics(key, partsStats);
@@ -242,11 +242,11 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
      * @param objStats Collection of partition statistics to send.
      * @throws IgniteCheckedException In case of errors.
      */
-    private void sendPartStatsToBU(
+    private void sendPartitionStatisticsToBackupNodes(
             GridH2Table tbl,
             Collection<ObjectPartitionStatisticsImpl> objStats
     ) throws IgniteCheckedException {
-        UUID locNode = ctx.discovery().localNode().id();
+        UUID locNode = ctx.localNodeId();
         StatsKeyMessage keyMsg = new StatsKeyMessage(tbl.identifier().schema(), tbl.identifier().table(), null);
         GridDhtPartitionTopology topology = tbl.cacheContext().topology();
         Map<UUID, List<StatsObjectData>> statsByNodes = new HashMap<>();
@@ -275,84 +275,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
     }
 
     /**
-     * Group local statistics by table and columns.
-     *
-     * @param status statistics collection status with all necessary local statistics.
-     * @return map of tables to columns to list of local column statistics.
-     */
-    private Map<GridH2Table, Map<String, List<ColumnStatistics>>> groupColumnStatistics(StatCollectionStatus status) {
-        /*Map<GridH2Table, Map<String, List<ColumnStatistics>>> result = new HashMap<>();
-        for (StatsPropagationMessage msg : status.locStatistics) {
-            for (StatsObjectData msgData : msg.data()) {
-                GridH2Table dataTable = schemaMgr.dataTable(msgData.key().schema(), msgData.key().obj());
-                if (dataTable == null) {
-                    log.warning(String.format("Can't find table for received statistics: %s %s", msgData.key().schema(),
-                            msgData.key().obj()));
-
-                    continue;
-                }
-
-                result.compute(dataTable, (table, columns) -> {
-                    if (columns == null)
-                        columns = new HashMap<>();
-
-                    for (Map.Entry<String, StatsColumnData> colData : msgData.data().entrySet())
-                        columns.compute(colData.getKey(), (colName, colStatistics) -> {
-                            if (colStatistics == null)
-                                colStatistics = new ArrayList<>();
-
-                            ColumnStatistics colStat;
-                            try {
-                                colStat = StatisticsUtils.toColumnStatistics(ctx, colData.getValue());
-                                colStatistics.add(colStat);
-                            }
-                            catch (IgniteCheckedException e) {
-                                log.warning(String. format("Error while converting column statistics %s.%s - %s",
-                                        msgData.key().schema(), msgData.key().obj(), colName));
-                            }
-                            return colStatistics;
-                        });
-                    return columns;
-                });
-            }
-        }
-        return result;
-        */
-        return null;
-    }
-
-    /**
-     * Will aggregate all received local statistics and save it.
-     *
-     * @param request aggregation request with id only.
-     */
-    private void aggregateCollected(StatCollectionStatus status) {
-        /*// Table -> Column -> List of local column stats
-        Map<GridH2Table, Map<String, List<ColumnStatistics>>> tablesData = groupColumnStatistics(status);
-
-        Map<ClusterNode, List<StatsObjectData>> dataByNodes = new HashMap<>();
-        for (Map.Entry<GridH2Table, Map<String, List<ColumnStatistics>>> tableStats : tablesData.entrySet()) {
-            GridH2Table table = tableStats.getKey();
-            long rowCount = 0L;
-            Map<String, ColumnStatistics> columnStatistics = new HashMap<>();
-            for (Map.Entry<String, List<ColumnStatistics>> columnStats : tableStats.getValue().entrySet()) {
-                ColumnStatistics globalStatistics = ColumnStatisticsCollector
-                        .aggregate(table::compareValues, columnStats.getValue());
-                if (rowCount < globalStatistics.total())
-                    rowCount = globalStatistics.total();
-                columnStatistics.put(columnStats.getKey(), globalStatistics);
-            }
-
-            ObjectStatisticsImpl objectStatistics = new ObjectStatisticsImpl(rowCount, columnStatistics);
-            statsRepos.saveGlobalStatistics(new StatsKey(table.identifier().schema(), table.identifier().table()),
-                    objectStatistics);
-        }
-        status.doneFut.onDone();
-        */
-
-    }
-
-    /**
      * Filter columns by specified names.
      *
      * @param cols Columns to filter.
@@ -364,13 +286,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
             return cols;
 
         Set<String> colNamesSet = new HashSet(Arrays.asList(colNames));
-        List<Column> resList = new ArrayList<>(colNames.size());
 
-        for (Column col : cols)
-            if (colNamesSet.contains(col.getName()))
-                resList.add(col);
-
-        return resList.toArray(new Column[resList.size()]);
+        return Arrays.stream(cols).filter(c -> colNamesSet.contains(c.getName())).toArray(Column[]::new);
     }
 
     /**
@@ -391,7 +308,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
                 //Map<UUID, StatsCollectionRequest> msgs = reqs.stream().collect(Collectors.toMap(
                 //    StatsAddrRequest::nodeId, StatsAddrRequest::req));
 
-                Collection<StatsAddrRequest<StatsCollectionRequest>> failedMsgs = sendLocalRequests(reqs);
+                Collection<StatsAddrRequest<StatsCollectionRequest>> failedMsgs = sendRequests(reqs);
                 Map<UUID, StatsAddrRequest<StatsCollectionRequest>> sendedMsgs;
                 if (failedMsgs == null) {
                     sendedMsgs = reqs.stream().collect(Collectors.toMap(r -> r.req().reqId(), r -> r));
@@ -417,11 +334,11 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
             while (failedPartitions != null);
         }
 
-        UUID locNode = ctx.discovery().localNode().id();
+        UUID locNode = ctx.localNodeId();
         StatsAddrRequest<StatsCollectionRequest> locReq = status.remainingCollectionReqs().values().stream()
                 .filter(r -> locNode.equals(r.nodeId())).findAny().orElse(null);
         if (locReq != null)
-            statMgmtPool.submit(() -> processLocal(ctx.discovery().localNode().id(), locReq.req()));
+            statMgmtPool.submit(() -> processLocal(locNode, locReq.req()));
     }
 
     /** {@inheritDoc} */
@@ -431,14 +348,13 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
             String... colNames
     ) throws IgniteCheckedException {
         UUID colId = UUID.randomUUID();
-        StatsCollectionFutureAdapter doneFut = new StatsCollectionFutureAdapter(colId);
         StatsKeyMessage keyMsg = new StatsKeyMessage(schemaName, objName, Arrays.asList(colNames));
         StatCollectionStatus status = new StatCollectionStatus(colId, Collections.singletonList(keyMsg),
-            Collections.emptyMap(), doneFut);
+            Collections.emptyMap());
 
         collectObjectStatistics(status);
 
-        doneFut.get();
+        status.doneFut().get();
     }
 
     /** {@inheritDoc} */
@@ -447,11 +363,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
         GridTuple3<String, String, String[]>... keys
     ) throws IgniteCheckedException {
         UUID colId = UUID.randomUUID();
-        StatsCollectionFutureAdapter doneFut = new StatsCollectionFutureAdapter(colId);
         Collection<StatsKeyMessage> keysMsg = Arrays.stream(keys).map(
                 k -> new StatsKeyMessage(k.get1(), k.get2(), Arrays.asList(k.get3()))).collect(Collectors.toList());
 
-        StatCollectionStatus status = new StatCollectionStatus(colId, keysMsg, Collections.emptyMap(), doneFut);
+        StatCollectionStatus status = new StatCollectionStatus(colId, keysMsg, Collections.emptyMap());
 
         collectObjectStatistics(status);
 
@@ -488,7 +403,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
                             targetNode.getKey()))
                     .collect(Collectors.toList());
 
-            Collection<StatsAddrRequest<CancelStatsCollectionRequest>> failed = sendLocalRequests(cancelReqs);
+            Collection<StatsAddrRequest<CancelStatsCollectionRequest>> failed = sendRequests(cancelReqs);
             if (failed != null)
                 if (log.isDebugEnabled())
                     log.debug(String.format("Unable to cancel all statistics collections requests (%d failed) by colId %s",
@@ -532,67 +447,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
     }
 
     /**
-     * Group request by target node id. REMOVE!!!!
-     *
-     * @param reqsByGrps Requests to compress, map.
-     * @return Grouped requests.
-     */
-    protected Map<UUID, StatsAddrRequest<StatsCollectionRequest>> compressRequests(
-        List<Map<UUID, StatsAddrRequest<StatsCollectionRequest>>> reqsByGrps) {
-        // NodeId to base request map
-        Map<UUID, StatsAddrRequest<StatsCollectionRequest>> reqByNode = new HashMap<>();
-        for (Map<UUID, StatsAddrRequest<StatsCollectionRequest>> grpReqs : reqsByGrps)
-            for (StatsAddrRequest<StatsCollectionRequest> addReq : grpReqs.values())
-                reqByNode.compute(addReq.nodeId(), (k, v) -> (v == null) ? addReq : addKey(v, addReq));
-
-        return reqByNode.entrySet().stream().collect(Collectors.toMap(e -> e.getValue().req().reqId(),
-            Map.Entry::getValue));
-    }
-
-    /**
-     * Add keys from add request to the base one and return it.
-     *
-     * @param base Base request to add to.
-     * @param add Add request to add.
-     * @return Request with all keys from both specified.
-     */
-    protected StatsAddrRequest<StatsCollectionRequest> addKey(
-        StatsAddrRequest<StatsCollectionRequest> base,
-        StatsAddrRequest<StatsCollectionRequest> add
-    ) {
-        assert base.nodeId().equals(add.nodeId());
-
-        base.req().keys().putAll(add.req().keys());
-        return base;
-    }
-
-
-    /**
-     * Prepare statistics collection request for each nodes. MOVED!!!!
-     *
-     * @param colId Collection id.
-     * @param keyMsg Key to collect statistics by.
-     * @param reqNodes Map of node id to array of partition ids to be collected on that node.
-     * @return Map: request id to statistics collection addressed request.
-     */
-    protected Map<UUID, StatsAddrRequest<StatsCollectionRequest>> _____prepareRequests(
-            UUID colId,
-            StatsKeyMessage keyMsg,
-            Map<UUID, List<Integer>> reqNodes
-    ) {
-        Map<UUID, StatsAddrRequest<StatsCollectionRequest>> res = new HashMap<>(reqNodes.size());
-        for (Map.Entry<UUID, List<Integer>> reqNode : reqNodes.entrySet()) {
-            UUID reqId = UUID.randomUUID();
-            StatsCollectionRequest colReq = new StatsCollectionRequest(colId, reqId, Collections.singletonMap(keyMsg,
-                    reqNode.getValue().stream().mapToInt(Integer::intValue).toArray()));
-            StatsAddrRequest<StatsCollectionRequest> addrReq = new StatsAddrRequest(colReq, reqNode.getKey());
-            res.put(reqId, addrReq);
-        }
-        return res;
-    }
-
-    /**
-     * TODO
+     * Stop statistics manager.
      */
     public void stop() {
         if (statMgmtPool != null) {
@@ -768,7 +623,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
      * @throws IgniteCheckedException In case of errors.
      */
     private void receivePartitionsStatistics(UUID nodeId, StatsPropagationMessage msg) throws IgniteCheckedException {
-        UUID locNode = ctx.discovery().localNode().id();
+        UUID locNode = ctx.localNodeId();
         for (StatsObjectData partData : msg.data()) {
             StatsKey key = new StatsKey(partData.key().schema(), partData.key().obj());
 
@@ -851,35 +706,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
             }
             return stat;
         });
-        /**currCollections.compute(msg.reqId(), (k, v) -> {
-            if (v == null) {
-                if (log.isInfoEnabled())
-                    log.info(String.format("Ignoring outdated local statistics collection response from node %s to req %s",
-                            nodeId, msg.reqId()));
-
-                return null;
-            }
-
-            assert msg.reqId().equals(v.reqId);
-
-            boolean rmv = v.remainingNodes.remove(nodeId);
-            if (!rmv) {
-                log.warning(String.format("Ignoring statistics propagation message from unexpected node %s by request %s.",
-                        nodeId, v.reqId));
-
-                return v;
-            }
-
-            v.locStatistics.add(msg);
-
-            if (v.remainingNodes.isEmpty()) {
-                aggregateCollected(v);
-
-                return null;
-            }
-
-            return v;
-        });**/
     }
 
     /**
@@ -946,22 +772,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
         }
         StatsPropagationMessage res = new StatsPropagationMessage(data);
         ctx.io().sendToCustomTopic(nodeId, TOPIC, res, GridIoPolicy.QUERY_POOL);
-
-        /**List<StatsObjectData> data = new ArrayList<>();
-        for (StatsKeyMessage key : msg.keys()) {
-            StatsKey statsKey = new StatsKey(key.schema(), key.obj());
-            ObjectStatisticsImpl objStats = statsRepos.getGlobalStatistics(statsKey);
-
-            if (objStats != null)
-                data.add(StatisticsUtils.toMessage(statsKey, StatsType.GLOBAL, objStats));
-        }
-
-        StatsPropagationMessage res = new StatsPropagationMessage(msg.reqId(), data);
-        ctx.io().sendToCustomTopic(nodeId, TOPIC, res, GridIoPolicy.QUERY_POOL);**/
     }
 
     /**
-     * Cacel local statistics collection task.
+     * Cancel local statistics collection task.
      *
      * @param nodeId Sender node id.
      * @param msg Cancel request.
@@ -1032,10 +846,13 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
      * @param req request to collect statistics by.
      */
     private void processLocal(UUID nodeId, StatsCollectionRequest req) {
-        UUID locNode = ctx.discovery().localNode().id();
+        UUID locNode = ctx.localNodeId();
 
         StatCollectionStatus stat = (nodeId.equals(locNode)) ? currCollections.getCollection(req.colId()) :
             currCollections.getCollection(req.reqId());
+
+        if (stat == null)
+            return;
 
         Map<StatsObjectData, int[]> collected = new HashMap<>(req.keys().size());
         for (Map.Entry<StatsKeyMessage, int[]> keyEntry : req.keys().entrySet()) {
@@ -1085,9 +902,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
      */
     private void handleCollectionRequest(UUID nodeId, StatsCollectionRequest msg) {
         assert msg.reqId() != null : "Got statistics collection request without request id";
-        StatsCollectionFutureAdapter doneFut = new StatsCollectionFutureAdapter(msg.colId());
 
-        currCollections.addCollection(msg.reqId(), new StatCollectionStatus(msg.colId(), msg.keys().keySet(), null, doneFut));
+        currCollections.addActiveCollectionStatus(msg.reqId(), new StatCollectionStatus(msg.colId(), msg.keys().keySet(), null));
 
         statMgmtPool.submit(() -> processLocal(nodeId, msg));
     }
@@ -1099,8 +915,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
      * @return Collection of addressed requests that has errors while sending or {@code null} if all requests was send
      * successfully.
      */
-    private <T extends Message> Collection<StatsAddrRequest<T>> sendLocalRequests(Collection<StatsAddrRequest<T>> reqs) {
-        UUID locNode = ctx.discovery().localNode().id();
+    private <T extends Message> Collection<StatsAddrRequest<T>> sendRequests(Collection<StatsAddrRequest<T>> reqs) {
+        UUID locNode = ctx.localNodeId();
         Collection<StatsAddrRequest<T>> res = null;
 
         for (StatsAddrRequest<T> req : reqs) {
@@ -1142,7 +958,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
                     //Map<UUID, StatsCollectionRequest> msgs = reqs.stream().collect(Collectors.toMap(
                     //        StatsAddrRequest::nodeId, StatsAddrRequest::req));
                     // TODO: resend it
-                    sendLocalRequests(reqs);
+                    sendRequests(reqs);
                 } catch (IgniteCheckedException e) {
                     // TODO
                     e.printStackTrace();
@@ -1151,45 +967,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
             }
             return null;
         });
-        /*
-        currCollections.entrySet().forEach(entry -> {
-            StatCollectionStatus stat = entry.getValue();
-            // Single node can had multiple request in case of resending due to previous node left events.
-            Collection<StatsCollectionRequest> removedReqs = entry.getValue().removeNodeRequest(nodeId);
-            rescheduleFailedPartitions();
-            List<StatsCollectionAddressedRequest> removedRequests = new ArrayList<>();
-
-            entry.getValue().remainingCollectionReqs().entrySet().removeIf(colReqEntry -> {
-                if (nodeId.equals(colReqEntry.getValue().targetNodeId)) {
-                    removedRequests.add(colReqEntry.getValue());
-
-                    return true;
-                }
-
-                return false;
-            });
-
-            if (!removedRequests.isEmpty()) {
-                // Reshedule all partitions, which was on left node.
-                nodePartitions()
-            }
-
-
-
-
-            if (stat.remainingCollectionReqs().entrySet().stream().anyMatch(rNode -> nodeId.equals(rNode))) {
-                stat.doneFut.cancel();
-
-                if (log.isInfoEnabled())
-                    log.info(String.format("Statistics collection by request %s cancelled due to node %d left.",
-                            stat.reqId(), nodeId));
-
-                return true;
-            }
-            return false;
-        });
-
-         */
     }
 
     /**

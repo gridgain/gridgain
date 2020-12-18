@@ -15,16 +15,12 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Statistics key.
  */
-public class StatsKey implements Serializable {
-    /** */
-    private static final long serialVersionUID = 0L;
-
+public class StatsKey {
     /** Object schema. */
     private final String schema;
 

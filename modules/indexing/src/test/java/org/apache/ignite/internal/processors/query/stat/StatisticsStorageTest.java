@@ -31,7 +31,7 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsRepositoryImpl statsRepo = (IgniteStatisticsRepositoryImpl)
                 ((IgniteStatisticsManagerImpl) statsMgr).statisticsRepository();
-        IgniteStatisticsPersistenceStoreImpl statsStore = (IgniteStatisticsPersistenceStoreImpl) statsRepo.statisticsStore();
+        IgniteStatisticsStore statsStore = statsRepo.statisticsStore();
 
         statsStore.clearAllStatistics();
 

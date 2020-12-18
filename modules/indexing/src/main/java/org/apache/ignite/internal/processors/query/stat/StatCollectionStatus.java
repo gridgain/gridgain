@@ -38,20 +38,18 @@ public class StatCollectionStatus {
      * @param colId Collection id.
      * @param keys Keys to collect statistics by.
      * @param remainingColReqs Collection of remaining requests. If {@code null} - it's local collection task.
-     * @param doneFut Done future adapter for collection.
      */
     public StatCollectionStatus(
             UUID colId,
             Collection<StatsKeyMessage> keys,
-            Map<UUID, StatsAddrRequest<StatsCollectionRequest>> remainingColReqs,
-            StatsCollectionFutureAdapter doneFut
+            Map<UUID, StatsAddrRequest<StatsCollectionRequest>> remainingColReqs
     ) {
         this.colId = colId;
         this.keys = keys;
         this.remainingColReqs = new ConcurrentHashMap<>(remainingColReqs);
         locStatistics = (remainingColReqs == null) ? null : Collections.synchronizedList(
                 new ArrayList<>(remainingColReqs.size()));
-        this.doneFut = doneFut;
+        this.doneFut = new StatsCollectionFutureAdapter(colId);;
     }
 
     /**
