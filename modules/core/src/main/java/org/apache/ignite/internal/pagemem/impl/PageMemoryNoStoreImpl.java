@@ -27,17 +27,15 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.failure.FailureContext;
-import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.metric.IoStatisticsHolder;
-import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -163,9 +161,6 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     /** */
     private final boolean trackAcquiredPages;
 
-    /** Shared context. */
-    private final GridCacheSharedContext<?, ?> ctx;
-
     /**
      * {@code False} if memory was not started or already stopped and is not supposed for any usage.
      */
@@ -197,7 +192,6 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         this.trackAcquiredPages = trackAcquiredPages;
         this.totalAllocatedPagesMetric = totalAllocatedPagesMetric;
         this.dataRegionCfg = dataRegionCfg;
-        this.ctx = sharedCtx;
 
         sysPageSize = pageSize + PAGE_OVERHEAD;
 
@@ -321,9 +315,6 @@ public class PageMemoryNoStoreImpl implements PageMemory {
                 "  ^-- Enable Ignite persistence (DataRegionConfiguration.persistenceEnabled)" + U.nl() +
                 "  ^-- Enable eviction or expiration policies"
             );
-
-            if (ctx != null)
-                ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, oom));
 
             throw oom;
         }
