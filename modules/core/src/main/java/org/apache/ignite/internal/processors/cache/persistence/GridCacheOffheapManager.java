@@ -1328,14 +1328,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 amount = (int) (tsCnt - tsLimit);
 
             // Sort by descending tombstones count.
+            GridDhtPartitionTopology top = grp.topology();
+
+            Map<Integer, Long> cntCache = U.newHashMap(top.localPartitions().size());
+
             stores.sort((o1, o2) -> {
-                GridDhtPartitionTopology top = grp.topology();
-
-                GridDhtLocalPartition p1 = top.localPartition(o1.partId());
-                GridDhtLocalPartition p2 = top.localPartition(o2.partId());
-
-                long c1 = p1 == null || p1.state() == EVICTED ? 0 : p1.dataStore().tombstonesCount();
-                long c2 = p2 == null || p2.state() == EVICTED ? 0 : p2.dataStore().tombstonesCount();
+                long c1 = cntCache.computeIfAbsent(o1.partId(), k -> tombstoneCount(top.localPartition(o1.partId())));
+                long c2 = cntCache.computeIfAbsent(o2.partId(), k -> tombstoneCount(top.localPartition(o2.partId())));
 
                 return Long.compare(c2, c1);
             });
@@ -1352,6 +1351,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         finally {
             busyLock.leaveBusy();
         }
+    }
+
+    /**
+     * @param part Partition.
+     * @return Tombstones count.
+     */
+    private long tombstoneCount(@Nullable GridDhtLocalPartition part) {
+        return part == null || part.state() == EVICTED ? 0 : part.dataStore().tombstonesCount();
     }
 
     /** {@inheritDoc} */
