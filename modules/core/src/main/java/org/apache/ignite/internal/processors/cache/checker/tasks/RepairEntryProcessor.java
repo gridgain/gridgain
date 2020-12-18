@@ -22,6 +22,7 @@ import javax.cache.processor.MutableEntry;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -118,7 +119,18 @@ public class RepairEntryProcessor implements EntryProcessor {
                 return RepairStatus.CONCURRENT_MODIFICATION;
         }
         else {
-            if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) != 0)
+            if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
+                // TODO https://ggsystems.atlassian.net/browse/GG-27419
+                if (cctx.config().getAtomicityMode() != CacheAtomicityMode.ATOMIC) {
+                    if (val == null)
+                        entry.remove();
+                    else
+                        entry.setValue(val);
+
+                    return RepairStatus.SUCCESS;
+                }
+            }
+            else
                 return RepairStatus.CONCURRENT_MODIFICATION;
 
             if (forceRepair) {
