@@ -161,9 +161,6 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     /** */
     private final boolean trackAcquiredPages;
 
-    /** Shared context. */
-    private final GridCacheSharedContext<?, ?> ctx;
-
     /**
      * {@code False} if memory was not started or already stopped and is not supposed for any usage.
      */
@@ -195,7 +192,6 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         this.trackAcquiredPages = trackAcquiredPages;
         this.totalAllocatedPagesMetric = totalAllocatedPagesMetric;
         this.dataRegionCfg = dataRegionCfg;
-        this.ctx = sharedCtx;
 
         sysPageSize = pageSize + PAGE_OVERHEAD;
 
