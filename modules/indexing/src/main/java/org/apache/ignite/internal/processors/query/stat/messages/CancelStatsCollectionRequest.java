@@ -37,7 +37,7 @@ public class CancelStatsCollectionRequest implements Message {
     private UUID colId;
 
     /** Request id. */
-    private UUID reqId;
+    private UUID[] reqIds;
 
     /**
      * {@link Externalizable} support.
@@ -50,11 +50,11 @@ public class CancelStatsCollectionRequest implements Message {
      * Constructor.
      *
      * @param colId Id of collection to cancel.
-     * @param reqId Request id.
+     * @param reqIds Request ids to cancel.
      */
-    public CancelStatsCollectionRequest(UUID colId, UUID reqId) {
+    public CancelStatsCollectionRequest(UUID colId, UUID[] reqIds) {
         this.colId = colId;
-        this.reqId = reqId;
+        this.reqIds = reqIds;
     }
 
     /**
@@ -67,64 +67,18 @@ public class CancelStatsCollectionRequest implements Message {
     /**
      * @return Request id.
      */
-    public UUID reqId() {
-        return reqId;
+    public UUID[] reqIds() {
+        return reqIds;
     }
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeUuid("colId", colId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeUuid("reqId", reqId))
-                    return false;
-
-                writer.incrementState();
-
-        }
 
         return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
-
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                colId = reader.readUuid("colId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                reqId = reader.readUuid("reqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
 
         return reader.afterMessageRead(CancelStatsCollectionRequest.class);
     }

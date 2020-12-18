@@ -67,30 +67,31 @@ public class IgniteStatisticsRequestCollection {
     /**
      * Add new statistics collection status.
      *
+     * @param id Id to save status by.
      * @param status status to add.
      */
-    public void addCollection(StatCollectionStatus status) {
-        currColls.put(status.colId(), status);
+    public void addCollection(UUID id, StatCollectionStatus status) {
+        currColls.put(id, status);
     }
 
     /**
      * Thread safe update of statistics collection.
      *
-     * @param colId statistics collection.
+     * @param id statistics collection.
      * @param transformation transformation, if return {@code null} - status will be removed.
      */
-    public void updateCollection(UUID colId, Function<StatCollectionStatus, StatCollectionStatus> transformation) {
-        currColls.compute(colId, (k, v) -> transformation.apply(v));
+    public void updateCollection(UUID id, Function<StatCollectionStatus, StatCollectionStatus> transformation) {
+        currColls.compute(id, (k, v) -> transformation.apply(v));
     }
 
     /**
      * Get collection status.
      *
-     * @param colId Collection id.
+     * @param id Id to get status by.
      * @return Collection status.
      */
-    public StatCollectionStatus getCollection(UUID colId) {
-        return currColls.get(colId);
+    public StatCollectionStatus getCollection(UUID id) {
+        return currColls.get(id);
     }
 
 

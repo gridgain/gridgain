@@ -471,10 +471,21 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
 
             s.doneFut().cancel();
 
-            Collection<StatsAddrRequest<CancelStatsCollectionRequest>> cancelReqs = s.remainingCollectionReqs()
-                .values().stream().map(r ->
-                    new StatsAddrRequest<CancelStatsCollectionRequest>(
-                            new CancelStatsCollectionRequest(colId, UUID.randomUUID()), r.nodeId()))
+            Map<UUID, List<UUID>> nodeRequests = new HashMap<>();
+            for (StatsAddrRequest<StatsCollectionRequest> req : s.remainingCollectionReqs().values()) {
+                nodeRequests.compute(req.nodeId(), (k, v) -> {
+                   if (v == null)
+                       v = new ArrayList();
+                   v.add(req.req().reqId());
+
+                   return v;
+                });
+            }
+
+            Collection<StatsAddrRequest<CancelStatsCollectionRequest>> cancelReqs = nodeRequests.entrySet().stream().map(
+                        targetNode -> new StatsAddrRequest<CancelStatsCollectionRequest>(
+                            new CancelStatsCollectionRequest(colId, targetNode.getValue().toArray(new UUID[0])),
+                            targetNode.getKey()))
                     .collect(Collectors.toList());
 
             Collection<StatsAddrRequest<CancelStatsCollectionRequest>> failed = sendLocalRequests(cancelReqs);
@@ -956,23 +967,25 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
      * @param msg Cancel request.
      */
     private void cancelStatisticsCollection(UUID nodeId, CancelStatsCollectionRequest msg) {
-        currCollections.updateCollection(msg.colId(), stat -> {
-            if (stat == null) {
+        for (UUID reqId : msg.reqIds()) {
+            currCollections.updateCollection(reqId, stat -> {
+                if (stat == null) {
+                    if (log.isDebugEnabled())
+                        log.debug(String.format("Unable to cancel statistics collection %s by req %s from node %s",
+                                msg.colId(), reqId, nodeId));
+
+                    return null;
+                }
+
+                stat.doneFut().cancel();
+
                 if (log.isDebugEnabled())
-                    log.debug(String.format("Unable to cancel statistics collection %s by req %s from node %s",
-                            msg.colId(), msg.reqId(), nodeId));
+                    log.debug(String.format("Cancelling statistics collection by colId = %s, reqId = %s from node %s",
+                            msg.colId(), reqId, nodeId));
 
                 return null;
-            }
-
-            stat.doneFut().cancel();
-
-            if (log.isDebugEnabled())
-                log.debug(String.format("Cancelling statistics collection by reqId = %s from node %s", msg.reqId(),
-                        nodeId));
-
-            return null;
-        });
+            });
+        }
     }
 
     /** {@inheritDoc} */
@@ -1019,7 +1032,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
      * @param req request to collect statistics by.
      */
     private void processLocal(UUID nodeId, StatsCollectionRequest req) {
-        StatCollectionStatus stat = currCollections.getCollection(req.colId());
+        UUID locNode = ctx.discovery().localNode().id();
+
+        StatCollectionStatus stat = (nodeId.equals(locNode)) ? currCollections.getCollection(req.colId()) :
+            currCollections.getCollection(req.reqId());
 
         Map<StatsObjectData, int[]> collected = new HashMap<>(req.keys().size());
         for (Map.Entry<StatsKeyMessage, int[]> keyEntry : req.keys().entrySet()) {
@@ -1043,7 +1059,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
 
         StatsCollectionResponse res = new StatsCollectionResponse(req.colId(), req.reqId(), collected);
 
-        UUID locNode = ctx.discovery().localNode().id();
         if (locNode.equals(nodeId))
             receiveLocalStatistics(nodeId, res);
         else {
@@ -1056,7 +1071,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
                             "Unable to send statistics collection result to node %s in response to colId %s, reqId %s",
                         nodeId, req.colId(), req.reqId()));
             }
-            currCollections.updateCollection(req.colId(), s -> null);
+
+            // Not local collection - remove by its reqId.
+            currCollections.updateCollection(req.reqId(), s -> null);
         }
     }
 
@@ -1070,7 +1087,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager, Gri
         assert msg.reqId() != null : "Got statistics collection request without request id";
         StatsCollectionFutureAdapter doneFut = new StatsCollectionFutureAdapter(msg.colId());
 
-        currCollections.addCollection(new StatCollectionStatus(msg.colId(), msg.keys().keySet(), null, doneFut));
+        currCollections.addCollection(msg.reqId(), new StatCollectionStatus(msg.colId(), msg.keys().keySet(), null, doneFut));
 
         statMgmtPool.submit(() -> processLocal(nodeId, msg));
     }
