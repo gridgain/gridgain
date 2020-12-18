@@ -301,7 +301,7 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         IgniteCache<Object, Object> cache3 = ignite.cache(CACHE_NAME3);
 
-        try(IgniteDataStreamer<Object, Object> s = ignite.dataStreamer(CACHE_NAME2)) {
+        try (IgniteDataStreamer<Object, Object> s = ignite.dataStreamer(CACHE_NAME2)) {
             for (int i = 0; i < 100_000; i++) {
                 Long id = (long)i;
 
@@ -318,7 +318,7 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         cache3.query(new SqlFieldsQuery(addColSql)).getAll();
 
-        try(IgniteDataStreamer<Object, Object> s = ignite.dataStreamer(CACHE_NAME3)) {
+        try (IgniteDataStreamer<Object, Object> s = ignite.dataStreamer(CACHE_NAME3)) {
             for (long id = 100_000; id < 200_000; id++) {
                 BinaryObjectBuilder o2 = ignite.binary().builder(OBJECT_NAME3)
                     .setField(KEY_NAME, id * 3)
