@@ -1631,6 +1631,21 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertFalse(grid().context().isStopping());
     }
 
+    /** */
+    @Test
+    public void testOpenRangePredicateOnCompoundPk() throws Exception {
+        inlineSize = 10;
+
+        startGrid();
+
+        sql("create table test (id1 int, id2 int, val int, constraint pk primary key (id1, id2))");
+
+        for (int i = 1; i <= 5; i++)
+            sql("insert into test (id1, id2, val) values (?, ?, ?)", 0, i, i);
+
+        assertEquals(5, sql("select * from test where id1 = 0 and id2 > 0").getAll().size());
+    }
+
     /**
      * Checks index creation does not affect used index.
      *

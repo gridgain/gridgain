@@ -17,10 +17,12 @@
 package org.apache.ignite.spi.metric.jmx;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 import javax.management.JMException;
 import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -33,6 +35,7 @@ import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.parse;
+import static org.apache.ignite.internal.util.IgniteUtils.makeMBeanName;
 
 /**
  * This SPI implementation exports metrics as JMX beans.
@@ -45,13 +48,14 @@ public class JmxMetricExporterSpi extends IgniteSpiAdapter implements MetricExpo
     private @Nullable Predicate<MetricRegistry> filter;
 
     /** Registered beans. */
-    private final List<ObjectName> mBeans = new ArrayList<>();
+    private final List<ObjectName> mBeans = Collections.synchronizedList(new ArrayList<>());
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
         mreg.forEach(this::register);
 
         mreg.addMetricRegistryCreationListener(this::register);
+        mreg.addMetricRegistryRemoveListener(this::unregister);
     }
 
     /** @param grp Metric group to register as JMX bean. */
@@ -85,6 +89,31 @@ public class JmxMetricExporterSpi extends IgniteSpiAdapter implements MetricExpo
         }
     }
 
+    /**
+     * Unregister JMX bean for specific metric registry.
+     *
+     * @param grp Metric group to unregister.
+     */
+    private void unregister(MetricRegistry grp) {
+        if (filter != null && !filter.test(grp))
+            return;
+
+        MetricUtils.MetricName n = parse(grp.name());
+
+        try {
+            ObjectName mbeanName = makeMBeanName(igniteInstanceName, n.root(), n.subName());
+
+            boolean rmv = mBeans.remove(mbeanName);
+
+            assert rmv : "Failed to remove: " + mbeanName;
+
+            unregBean(ignite, mbeanName);
+        }
+        catch (MalformedObjectNameException e) {
+            log.error("MBean for metric registry '" + n.root() + ',' + n.subName() + "' can't be unregistered.", e);
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
         Ignite ignite = ignite();
@@ -92,24 +121,31 @@ public class JmxMetricExporterSpi extends IgniteSpiAdapter implements MetricExpo
         if (ignite == null)
             return;
 
+        for (ObjectName bean : mBeans)
+            unregBean(ignite, bean);
+    }
+
+    /**
+     * @param ignite Ignite instance.
+     * @param bean Bean name to unregister.
+     */
+    private void unregBean(Ignite ignite, ObjectName bean) {
         MBeanServer jmx = ignite.configuration().getMBeanServer();
 
-        for (ObjectName bean : mBeans) {
-            try {
-                jmx.unregisterMBean(bean);
+        try {
+            jmx.unregisterMBean(bean);
 
-                if (log.isDebugEnabled())
-                    log.debug("Unregistered SPI MBean: " + bean);
-            }
-            catch (JMException e) {
-                log.error("Failed to unregister SPI MBean: " + bean, e);
-            }
+            if (log.isDebugEnabled())
+                log.debug("Unregistered SPI MBean: " + bean);
+        }
+        catch (JMException e) {
+            log.error("Failed to unregister SPI MBean: " + bean, e);
         }
     }
 
     /** {@inheritDoc} */
     @Override public void setMetricRegistry(ReadOnlyMetricRegistry reg) {
-        this.mreg = reg;
+        mreg = reg;
     }
 
     /** {@inheritDoc} */

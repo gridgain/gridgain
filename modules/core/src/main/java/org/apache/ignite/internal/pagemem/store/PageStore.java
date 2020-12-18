@@ -24,6 +24,12 @@ import org.apache.ignite.internal.processors.cache.persistence.StorageException;
  * Persistent store of pages.
  */
 public interface PageStore {
+    /** Type for regular affinity partitions. */
+    public static byte TYPE_DATA = 1;
+
+    /** Type for index partition. */
+    public static byte TYPE_IDX = 2;
+
     /**
      * Checks if page exists.
      *

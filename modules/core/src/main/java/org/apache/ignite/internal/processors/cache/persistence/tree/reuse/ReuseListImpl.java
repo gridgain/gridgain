@@ -24,6 +24,7 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.PagesList;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 
 /**
@@ -47,6 +48,7 @@ public class ReuseListImpl extends PagesList implements ReuseList {
      * @param wal       Write ahead log manager.
      * @param metaPageId Metadata page ID.
      * @param initNew {@code True} if new metadata should be initialized.
+     * @param pageFlag Default flag value for allocated pages.
      * @throws IgniteCheckedException If failed.
      */
     public ReuseListImpl(
@@ -58,7 +60,8 @@ public class ReuseListImpl extends PagesList implements ReuseList {
         boolean initNew,
         PageLockListener lockLsnr,
         GridKernalContext ctx,
-        AtomicLong pageListCacheLimit
+        AtomicLong pageListCacheLimit,
+        byte pageFlag
     ) throws IgniteCheckedException {
         super(
             cacheId,
@@ -68,7 +71,8 @@ public class ReuseListImpl extends PagesList implements ReuseList {
             wal,
             metaPageId,
             lockLsnr,
-            ctx
+            ctx,
+            pageFlag
         );
 
         bucketCache = new PagesCache(pageListCacheLimit);
@@ -93,6 +97,11 @@ public class ReuseListImpl extends PagesList implements ReuseList {
     /** {@inheritDoc} */
     @Override public long takeRecycledPage() throws IgniteCheckedException {
         return takeEmptyPage(0, null, IoStatisticsHolderNoOp.INSTANCE);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long initRecycledPage(long pageId, byte flag, PageIO initIO) throws IgniteCheckedException {
+        return initRecycledPage0(pageId, flag, initIO);
     }
 
     /** {@inheritDoc} */

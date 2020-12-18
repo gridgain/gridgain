@@ -53,6 +53,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.ShutdownPolicy;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -116,6 +117,7 @@ import org.junit.Test;
 
 import static java.io.File.separatorChar;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE;
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -798,6 +800,71 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--diagnostic", "connectivity"));
 
         assertContains(log, testOut.toString(), "There are no connectivity problems.");
+    }
+
+    /**
+     * Test that if node exits topology during connectivity check, the command will not fail.
+     *
+     * Description:
+     * 1. Start three nodes.
+     * 2. Execute connectivity check.
+     * 3. When 3-rd node receives connectivity check compute task, it must stop itself.
+     * 4. The command should exit with code OK.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConnectivityCommandWithNodeExit() throws Exception {
+        IgniteEx[] node3 = new IgniteEx[1];
+
+        class KillNode3CommunicationSpi extends TcpCommunicationSpi {
+            /** Fail check connection request and stop third node */
+            boolean fail;
+
+            public KillNode3CommunicationSpi(boolean fail) {
+                this.fail = fail;
+            }
+
+            /** {@inheritDoc} */
+            @Override public IgniteFuture<BitSet> checkConnection(List<ClusterNode> nodes) {
+                if (fail) {
+                    runAsync(node3[0]::close);
+                    return null;
+                }
+
+                return super.checkConnection(nodes);
+            }
+        }
+
+        IgniteEx node1 = startGridWithCfg(1, configuration -> {
+            configuration.setCommunicationSpi(new KillNode3CommunicationSpi(false));
+            return configuration;
+        });
+
+        IgniteEx node2 = startGridWithCfg(2, configuration -> {
+            configuration.setCommunicationSpi(new KillNode3CommunicationSpi(false));
+            return configuration;
+        });
+
+        node3[0] = startGridWithCfg(3, configuration -> {
+            configuration.setCommunicationSpi(new KillNode3CommunicationSpi(true));
+            return configuration;
+        });
+
+        assertFalse(ClusterState.active(node1.cluster().state()));
+
+        node1.cluster().state(ACTIVE);
+
+        assertEquals(3, node1.cluster().nodes().size());
+
+        injectTestSystemOut();
+
+        final IgniteInternalFuture<?> connectivity = runAsync(() -> {
+            final int result = execute("--diagnostic", "connectivity");
+            assertEquals(EXIT_CODE_OK, result);
+        });
+
+        connectivity.get();
     }
 
     /**
@@ -1592,6 +1659,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         IgniteCache cache = node.createCache(new CacheConfiguration<>()
             .setAffinity(new RendezvousAffinityFunction(false, 32))
             .setBackups(1)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_ASYNC)
             .setName(DEFAULT_CACHE_NAME)
         );
 
@@ -2338,7 +2406,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true")
+    @SystemPropertiesList(value = {
+        @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true"),
+        @WithSystemProperty(key = IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE, value = "false"),
+    })
     public void testCleaningGarbageAfterCacheDestroyedAndNodeStop_ControlConsoleUtil() throws Exception {
         new IgniteCacheGroupsWithRestartsTest().testFindAndDeleteGarbage(this::executeTaskViaControlConsoleUtil);
     }
