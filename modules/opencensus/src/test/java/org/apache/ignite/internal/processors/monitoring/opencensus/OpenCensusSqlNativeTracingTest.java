@@ -16,12 +16,16 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import com.google.common.collect.ImmutableMap;
 import io.opencensus.trace.SpanId;
+import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracing;
+import io.opencensus.trace.export.SpanData;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheMode;
@@ -29,10 +33,12 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryFailResponse;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageRequest;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -293,6 +299,13 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
             List<SpanId> distrLookupReqSpans = findChildSpans(SQL_IDX_RANGE_REQ, execSpan);
 
             for (SpanId span : distrLookupReqSpans) {
+                SpanData data = handler().spanById(span);
+
+                // Query context was not available and span was closed with UNAVAILABLE status.
+                // The request itself was repeated and a new span was created.
+                if (Status.UNAVAILABLE == data.getStatus())
+                    continue;
+
                 idxRangeReqRows += getAttribute(span, SQL_IDX_RANGE_ROWS);
 
                 checkChildSpan(SQL_IDX_RANGE_RESP, span);
@@ -380,6 +393,14 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
 
         IgniteEx qryInitiator = reducer();
 
+        CountDownLatch failResponseLatch = new CountDownLatch(mapNodesCount());
+        qryInitiator.context().io().addMessageListener(
+            GridTopic.TOPIC_QUERY,
+            (nodeId, msg, plc) -> {
+                if (msg instanceof GridQueryFailResponse)
+                    failResponseLatch.countDown();
+            });
+
         spi(qryInitiator).blockMessages((node, msg) -> msg instanceof GridQueryNextPageRequest);
 
         IgniteInternalFuture<?> iterFut = runAsync(() ->
@@ -389,9 +410,15 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
 
         qryInitiator.context().query().runningQueries(-1).iterator().next().cancel();
 
+        GridTestUtils.assertThrowsWithCause(() -> iterFut.get(), IgniteCheckedException.class);
+
         spi(qryInitiator).stopBlock();
 
-        GridTestUtils.assertThrowsWithCause(() -> iterFut.get(), IgniteCheckedException.class);
+        // Make sure that all required GridQueryFailResponse messages are processed on the initiator node
+        // and corresponding spans are closed as well.
+        assertTrue(
+            "Failed to wait for all required GridQueryFailResponse messages.",
+            failResponseLatch.await(30, TimeUnit.SECONDS));
 
         handler().flush();
 

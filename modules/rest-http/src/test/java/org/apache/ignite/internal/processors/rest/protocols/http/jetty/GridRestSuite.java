@@ -23,8 +23,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    RestSetupSimpleTest.class,
-    GridProbeCommandTest.class
+    RestSetupSimpleTest.class
 })
 public class GridRestSuite {
 }

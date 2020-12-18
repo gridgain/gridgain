@@ -33,12 +33,12 @@ import org.apache.ignite.internal.commandline.cache.CacheValidateIndexes;
 import org.apache.ignite.internal.commandline.cache.FindAndDeleteGarbage;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
-import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.visor.tx.VisorTxOperation;
 import org.apache.ignite.internal.visor.tx.VisorTxProjection;
 import org.apache.ignite.internal.visor.tx.VisorTxSortOrder;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskArg;
+import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -1015,6 +1015,18 @@ public class CommandHandlerParsingTest {
 
         assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
             + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set");
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "DISCOVERY"));
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "discovery"));
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "Discovery"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "TX"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "tx"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "Tx"));
     }
 
     /**
@@ -1102,8 +1114,10 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
             cmd == CommandList.SET_STATE ||
+            cmd == CommandList.ENCRYPTION ||
             cmd == CommandList.METADATA ||
             cmd == CommandList.WARM_UP ||
-            cmd == CommandList.PROPERTY;
+            cmd == CommandList.PROPERTY ||
+            cmd == CommandList.DEFRAGMENTATION;
     }
 }

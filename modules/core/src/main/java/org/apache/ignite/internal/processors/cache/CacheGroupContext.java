@@ -209,7 +209,7 @@ public class CacheGroupContext {
      * @param persistenceGroup {@code true} if this group was configured as persistence in despite of data region.
      * @param compressionStrategy Entry compression strategy to use, or {@code null}
      */
-    CacheGroupContext(
+    public CacheGroupContext(
         GridCacheSharedContext ctx,
         int grpId,
         UUID rcvdFrom,
@@ -1139,6 +1139,13 @@ public class CacheGroupContext {
      */
     public boolean persistenceEnabled() {
         return persistenceEnabled;
+    }
+
+    /**
+     * @return {@code true} if this group was configured as persistence in despite of data region.
+     */
+    public boolean persistenceGroup() {
+        return persistenceGroup;
     }
 
     /**

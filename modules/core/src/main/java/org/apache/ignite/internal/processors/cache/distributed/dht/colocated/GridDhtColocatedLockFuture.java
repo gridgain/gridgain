@@ -38,6 +38,8 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.internal.processors.cache.CacheOperationContext;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
@@ -52,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockMapping;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockResponse;
@@ -801,20 +804,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                     }
                 }
 
-                for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
-                    if (fut.exchangeDone() && fut.topologyVersion().equals(lastChangeVer)) {
-                        Throwable err = fut.validateCache(cctx, recovery, read, null, keys);
-
-                        if (err != null) {
-                            onDone(err);
-
-                            return;
-                        }
-
-                        break;
-                    }
-                }
-
                 // Continue mapping on the same topology version as it was before.
                 synchronized (this) {
                     if (this.topVer == null)
@@ -1388,6 +1377,15 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
             lockLocally(distributedKeys, topVer);
         }
+
+        GridDhtPartitionsExchangeFuture lastFinishedFut = cctx.shared().exchange().lastFinishedFuture();
+
+        CacheOperationContext opCtx = cctx.operationContextPerCall();
+
+        CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(cctx, opCtx != null && opCtx.recovery(), read, null, keys);
+
+        if (validateCacheE != null)
+            onDone(validateCacheE);
 
         return true;
     }

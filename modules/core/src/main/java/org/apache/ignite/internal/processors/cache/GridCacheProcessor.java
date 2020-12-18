@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -150,7 +151,6 @@ import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.IgniteCollectors;
 import org.apache.ignite.internal.util.InitializationProtector;
-import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -932,14 +932,22 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 reconnected.add(cache);
 
                 if (cache.context().userCache()) {
-                    // Re-create cache structures inside indexing in order to apply recent schema changes.
-                    GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cache.context(), false);
+                    DynamicCacheDescriptor desc = cacheDescriptor(cache.name());
 
-                    DynamicCacheDescriptor desc = cacheDescriptor(cacheInfo.name());
+                    assert desc != null : cache.name();
 
-                    assert desc != null : cacheInfo.name();
+                    if (!QueryUtils.isEnabled(cache.context().config())
+                            && QueryUtils.isEnabled(desc.cacheConfiguration())) {
+                        CacheConfiguration newCfg = desc.cacheConfiguration();
+
+                        cache.context().onSchemaAddQueryEntity(newCfg.getQueryEntities(), newCfg.getSqlSchema(),
+                                newCfg.isSqlEscapeAll(), newCfg.getQueryParallelism());
+                    }
 
                     boolean rmvIdx = !cache.context().group().persistenceEnabled();
+
+                    // Re-create cache structures inside indexing in order to apply recent schema changes.
+                    GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cache.context(), false);
 
                     ctx.query().onCacheStop0(cacheInfo, rmvIdx);
                     ctx.query().onCacheStart0(cacheInfo, desc.schema(), desc.sql());
@@ -5356,12 +5364,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             AtomicReference<IgniteCheckedException> restoreStateError = new AtomicReference<>();
 
-            StripedExecutor stripedExec = ctx.getStripedExecutorService();
+            ExecutorService sysPool = ctx.getSystemExecutorService();
 
-            int roundRobin = 0;
+            CountDownLatch completionLatch = new CountDownLatch(forGroups.size());
 
             for (CacheGroupContext grp : forGroups) {
-                stripedExec.execute(roundRobin % stripedExec.stripesCount(), () -> {
+                sysPool.execute(() -> {
                     try {
                         long processed = grp.offheap().restorePartitionStates(partitionStates);
 
@@ -5378,14 +5386,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                                 : new IgniteCheckedException(e)
                         );
                     }
+                    finally {
+                        completionLatch.countDown();
+                    }
                 });
-
-                roundRobin++;
             }
 
             try {
                 // Await completion restore state tasks in all stripes.
-                stripedExec.awaitComplete();
+                completionLatch.await();
             }
             catch (InterruptedException e) {
                 throw new IgniteInterruptedException(e);
