@@ -112,6 +112,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_DHT_PREPARE;
+import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
 import static org.apache.ignite.transactions.TransactionState.PREPARED;
 
 /**
@@ -1078,6 +1079,15 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             }
 
             this.req = req;
+
+            GridDhtTopologyFuture topFut = cctx.exchange().lastFinishedFuture();
+
+            if (topFut != null) {
+                IgniteCheckedException err = tx.txState().validateTopology(cctx, isEmpty(req.writes()), topFut);
+
+                if (err != null)
+                    onDone(null, err);
+            }
 
             boolean ser = tx.serializable() && tx.optimistic();
 
