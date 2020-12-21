@@ -3083,4 +3083,13 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return name != null && (WAL_NAME_PATTERN.matcher(name).matches() ||
             WAL_SEGMENT_FILE_COMPACTED_PATTERN.matcher(name).matches());
     }
+
+    /**
+     * Getting last truncated segment.
+     *
+     * @return Absolut segment index.
+     */
+    public long lastTruncatedSegment() {
+        return segmentAware.lastTruncatedArchiveIdx();
+    }
 }
