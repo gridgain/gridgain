@@ -7,15 +7,14 @@ import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCach
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
-import org.apache.ignite.internal.util.GridArrays;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
 import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -315,8 +314,8 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
         Mockito.when(cgc.shared()).thenReturn(csCtxt);
 
         GridAffinityAssignmentCache aaCache = Mockito.mock(GridAffinityAssignmentCache.class);
-        List<List<ClusterNode>> partitionAssignment = makeAssignment(assignment, backups);
-        Mockito.when(aaCache.assignments(Mockito.any(AffinityTopologyVersion.class))).thenReturn(partitionAssignment);
+        List<List<ClusterNode>> partAssignment = makeAssignment(assignment, backups);
+        Mockito.when(aaCache.assignments(Mockito.any(AffinityTopologyVersion.class))).thenReturn(partAssignment);
 
         Mockito.when(cgc.affinity()).thenReturn(aaCache);
         return cgc;
@@ -350,16 +349,79 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     }
 
     /**
-     * Test failed partition extraction by response and request.
+     * Test failed partition extraction by response and request:
+     *
+     * 1) All keys collected.
+     * 2) Some partition lack.
+     * 3) Some keys lack.
+     * 4) Some partition and keys lack.
+     * 5) All keys lack.
      */
     @Test
     public void testExtractFailedByResponse() {
-        StatsCollectionRequest req = new StatsCollectionRequest();
-        StatsCollectionResponse resp = new StatsCollectionResponse();
-        // TODO: fill req and resp
+        //UUID colId, UUID reqId, Map<StatsKeyMessage, int[]> keys
+        Map<StatsKeyMessage, int[]> keys = new HashMap<>();
+        keys.put(k1, new int[]{1, 2, 3});
+        keys.put(k2, new int[]{1, 2, 3});
 
-        Map<StatsKeyMessage, int[]> failedParts = IgniteStatisticsRequestCollection.extractFailed(req, resp);
+        StatsCollectionRequest req = new StatsCollectionRequest(c1, r1_1, keys);
 
-        assertTrue(failedParts.isEmpty());
+        // 1) All keys collected
+        StatsObjectData sod1 = new StatsObjectData(k1, 0,StatsType.LOCAL, 0, 0, Collections.emptyMap());
+        StatsObjectData sod2 = new StatsObjectData(k2, 0,StatsType.LOCAL, 0, 0, Collections.emptyMap());
+        Map<StatsObjectData, int[]> collectedKeys1 = new HashMap<>();
+        collectedKeys1.put(sod1, new int[]{1, 2, 3});
+        collectedKeys1.put(sod2, new int[]{1, 2, 3});
+
+        StatsCollectionResponse resp1 = new StatsCollectionResponse(c1, r1_1, collectedKeys1);
+
+        Map<StatsKeyMessage, int[]> failed1 = IgniteStatisticsRequestCollection.extractFailed(req, resp1);
+
+        assertTrue(failed1.isEmpty());
+
+        // 2) Some partition lack.
+        Map<StatsObjectData, int[]> collectedKeys2 = new HashMap<>(collectedKeys1);
+        collectedKeys2.put(sod1, new int[]{1, 3});
+        StatsCollectionResponse resp2 = new StatsCollectionResponse(c1, r1_2, collectedKeys2);
+
+
+        Map<StatsKeyMessage, int[]> failed2 = IgniteStatisticsRequestCollection.extractFailed(req, resp2);
+
+        assertTrue(Arrays.equals(failed2.get(k1), new int[]{2}));
+
+        // 3) Some keys lack.
+        Map<StatsObjectData, int[]> collectedKeys3 = new HashMap<>(collectedKeys1);
+        collectedKeys3.put(sod2, new int[0]);
+        StatsCollectionResponse resp3 = new StatsCollectionResponse(c1, r1_3, collectedKeys3);
+
+
+        Map<StatsKeyMessage, int[]> failed3 = IgniteStatisticsRequestCollection.extractFailed(req, resp3);
+
+        assertTrue(Arrays.equals(failed3.get(k2), new int[]{1, 2, 3}));
+
+        // 4) Some partition and keys lack.
+        Map<StatsObjectData, int[]> collectedKeys4 = new HashMap<>();
+        collectedKeys4.put(sod1, new int[]{1, 2});
+        collectedKeys4.put(sod2, new int[0]);
+        StatsCollectionResponse resp4 = new StatsCollectionResponse(c1, r1_1, collectedKeys4);
+
+
+        Map<StatsKeyMessage, int[]> failed4 = IgniteStatisticsRequestCollection.extractFailed(req, resp4);
+
+        assertTrue(Arrays.equals(failed4.get(k1), new int[]{3}));
+        assertTrue(Arrays.equals(failed4.get(k2), new int[]{1, 2, 3}));
+
+
+        // 5) All keys lack.
+        Map<StatsObjectData, int[]> collectedKeys5 = new HashMap<>();
+        collectedKeys5.put(sod1, new int[0]);
+        collectedKeys5.put(sod2, new int[0]);
+        StatsCollectionResponse resp5 = new StatsCollectionResponse(c1, r1_2, collectedKeys5);
+
+
+        Map<StatsKeyMessage, int[]> failed5 = IgniteStatisticsRequestCollection.extractFailed(req, resp5);
+
+        assertTrue(Arrays.equals(failed5.get(k1), new int[]{1, 2, 3}));
+        assertTrue(Arrays.equals(failed5.get(k2), new int[]{1, 2, 3}));
     }
 }
