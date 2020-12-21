@@ -596,17 +596,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         populateTable(qryProc, TEST_TBL_NAME, 2, "FIRST_NAME", "LAST_NAME",
             "ADDRESS", "LANG");
 
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LANG"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME"));
-
-        assertFalse(checkIdxUsed(qryProc,null, TEST_TBL_NAME, "FIRST_NAME"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME",
-                "LAST_NAME", "LANG", "ADDRESS"));
-
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LANG");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "LANG");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "LAST_NAME");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG", "ADDRESS");
 
@@ -638,15 +629,15 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx), true).getAll();
 
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "LAST_NAME");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "ADDRESS");
         checkIdxIsUsed(qryProc,"idx1", TEST_TBL_NAME, "LANG");
 
         // first idx fields not belongs to request fields.
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "ADDRESS", "LAST_NAME");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "ADDRESS", "ADDRESS");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "ADDRESS", "LAST_NAME");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "ADDRESS", "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "ADDRESS");
     }
 
     /**
@@ -666,8 +657,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         populateTable(qryProc, TEST_TBL_NAME, 2, "FIRST_NAME", "LAST_NAME",
             "ADDRESS", "LANG", "GENDER");
 
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LANG");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG", "ADDRESS");
 
@@ -720,8 +709,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         populateTable(qryProc, TEST_TBL_NAME, 3, "c1", "c2", "c3", "c4", "c5", "c6");
 
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "c1");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "c2");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "c3");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "c2");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "c3");
     }
 
     /**
@@ -1075,13 +1064,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
 
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
-
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
     }
 
     /**
@@ -1105,7 +1090,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         checkIdxIsUsed(qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS");
-        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
     }
 
     /** */
