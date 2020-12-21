@@ -3525,7 +3525,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (proposedKey != null) {
             int grpId = CU.cacheGroupId(cacheName, ccfg == null ? null : ccfg.getGroupName());
 
-            if (ctx.encryption().groupKey(grpId) != null) {
+            if (ctx.encryption().getActiveKey(grpId) != null) {
                 U.warn(log, "Encryption key for this cache has already existed," +
                     " the new key was ignored [grpId=" + grpId + ", cache=" + cacheName + ']');
 

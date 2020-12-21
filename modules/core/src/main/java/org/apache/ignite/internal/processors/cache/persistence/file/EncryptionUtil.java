@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,9 +35,7 @@ public class EncryptionUtil {
     /** Extra bytes added by encryption. */
     private final int encryptionOverhead;
 
-    /**
-     * Array of zeroes to fulfill tail of decrypted page.
-     */
+    /** Array of zeroes to fulfill tail of decrypted page. */
     private final byte[] zeroes;
 
     /**
@@ -58,7 +56,9 @@ public class EncryptionUtil {
      * @param grpKey Encryption key.
      */
     public void encrypt(ByteBuffer srcBuf, ByteBuffer res, GroupKey grpKey) {
-        assert srcBuf.remaining() >= pageSize;
+        assert srcBuf.remaining() >= pageSize :
+            "The number of elements remaining in buffer should be more or equal to page size " +
+                "[srcBuf.remaining() = " + srcBuf.remaining() + ", pageSize = " + pageSize + "]";
         assert tailIsEmpty(srcBuf, PageIO.getType(srcBuf));
 
         int srcLimit = srcBuf.limit();
@@ -82,8 +82,12 @@ public class EncryptionUtil {
      * @param destBuf Destination buffer.
      */
     public void decrypt(ByteBuffer encrypted, ByteBuffer destBuf, GroupKey grpKey) throws IOException {
-        assert encrypted.remaining() >= pageSize;
-        assert encrypted.limit() >= pageSize;
+        assert encrypted.remaining() >= pageSize :
+            "The number of elements remaining in encrypted buffer should be more or equal to page size " +
+                "[encrypted.remaining() = " + encrypted.remaining() + ", pageSize = " + pageSize + "]";
+        assert encrypted.limit() >= pageSize :
+            "The limit of the encrypted buffer should be more or equal to page size " +
+                "[encrypted.limit() = " + encrypted.limit() + ", pageSize = " + pageSize + "]";
 
         int crc = FastCrc.calcCrc(encrypted, encryptedDataSize());
 

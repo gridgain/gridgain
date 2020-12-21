@@ -270,7 +270,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
         GridEncryptionManager encMgr = cctx.kernalContext().encryption();
 
-        return encMgr != null && encMgr.groupKey(grpId) != null;
+        return encMgr != null && encMgr.getActiveKey(grpId) != null;
     }
 
     /**
@@ -353,7 +353,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         if (plainRecType != null)
             putRecordType(dst, plainRecType);
 
-        GroupKey grpKey = encMgr.groupKey(grpId);
+        GroupKey grpKey = encMgr.getActiveKey(grpId);
 
         dst.put(grpKey.id());
 

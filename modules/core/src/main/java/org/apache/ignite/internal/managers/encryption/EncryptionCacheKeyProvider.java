@@ -23,15 +23,15 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface EncryptionCacheKeyProvider {
     /**
-     * Returns group encryption key.
+     * Returns group encryption key, that was set for writing.
      *
      * @param grpId Cache group ID.
-     * @return Group encryption key with identifier, that was set for writing.
+     * @return Group encryption key with ID, that was set for writing.
      */
-    @Nullable GroupKey groupKey(int grpId);
+    @Nullable GroupKey getActiveKey(int grpId);
 
     /**
-     * Returns group encryption key with specified identifier.
+     * Returns group encryption key with specified ID.
      *
      * @param grpId Cache group ID.
      * @param keyId Encryption key ID.

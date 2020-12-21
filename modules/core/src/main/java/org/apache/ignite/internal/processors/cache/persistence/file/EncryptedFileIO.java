@@ -220,7 +220,7 @@ public class EncryptedFileIO implements FileIO {
     private void encrypt(ByteBuffer srcBuf, ByteBuffer res) throws IOException {
         assert position() != 0;
 
-        GroupKey grpKey = encMgr.groupKey(groupId);
+        GroupKey grpKey = encMgr.getActiveKey(groupId);
 
         encUtil.encrypt(srcBuf, res, grpKey);
     }
@@ -230,9 +230,6 @@ public class EncryptedFileIO implements FileIO {
      * @param destBuf Destination buffer.
      */
     private void decrypt(ByteBuffer encrypted, ByteBuffer destBuf) throws IOException {
-        assert encrypted.remaining() >= pageSize;
-        assert encrypted.limit() >= pageSize;
-
         int keyId = encrypted.get(encryptedDataSize() + 4 /* CRC size. */) & 0xff;
 
         GroupKey grpKey = encMgr.groupKey(groupId, keyId);

@@ -471,7 +471,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         for (Map.Entry<Integer, List<GroupKeyEncrypted>> entry : nodeEncKeys.knownKeysWithIds.entrySet()) {
             int grpId = entry.getKey();
 
-            GroupKey locEncKey = groupKey(grpId);
+            GroupKey locEncKey = getActiveKey(grpId);
 
             if (locEncKey == null)
                 continue;
@@ -543,7 +543,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
             return;
 
         for (Map.Entry<Integer, byte[]> entry : nodeEncryptionKeys.newKeys.entrySet()) {
-            if (groupKey(entry.getKey()) == null) {
+            if (getActiveKey(entry.getKey()) == null) {
                 U.quietAndInfo(log, "Store group key received from joining node [node=" +
                     data.joiningNodeId() + ", grp=" + entry.getKey() + "]");
 
@@ -601,7 +601,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
             else
                 rmtKey = new GroupKeyEncrypted(INITIAL_KEY_ID, (byte[])entry.getValue());
 
-            GroupKey locGrpKey = groupKey(grpId);
+            GroupKey locGrpKey = getActiveKey(grpId);
 
             if (locGrpKey != null && locGrpKey.unsignedId() == rmtKey.id()) {
                 U.quietAndInfo(log, "Skip group key received from coordinator. Already exists. [grp=" +
@@ -628,7 +628,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     }
 
     /** {@inheritDoc} */
-    @Override @Nullable public GroupKey groupKey(int grpId) {
+    @Override @Nullable public GroupKey getActiveKey(int grpId) {
         return grpKeys.getActiveKey(grpId);
     }
 
@@ -886,7 +886,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      * @param grpId Cache group ID.
      */
     public void onCacheGroupDestroyed(int grpId) {
-        if (groupKey(grpId) == null)
+        if (getActiveKey(grpId) == null)
             return;
 
         removeGroupKey(grpId);
@@ -1052,7 +1052,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
             if (reencryptGroups.containsKey(grpId))
                 continue;
 
-            if (entry.getValue() != groupKey(grpId).unsignedId())
+            if (entry.getValue() != getActiveKey(grpId).unsignedId())
                 continue;
 
             CacheGroupContext grp = ctx.cache().cacheGroup(grpId);
@@ -1611,13 +1611,13 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     }
 
     /**
-     * Tries change master key and returns it digest.
-     * As if it was be installed as a default.
+     * Tries to change the active master key with the given one and returns its digest.
      *
      * @param masterKeyName Master key name.
      * @return Master key digest.
+     * @throws IgniteCheckedException If the master key cannot be changed for some reason.
      */
-    private byte[] tryChangeMasterKey(String masterKeyName) {
+    private byte[] tryChangeMasterKey(String masterKeyName) throws IgniteCheckedException {
         byte[] digest;
 
         masterKeyChangeLock.writeLock().lock();
@@ -1630,7 +1630,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
                 digest = getSpi().masterKeyDigest();
             } catch (Exception e) {
-                throw new IgniteException("Unable to set master key locally [masterKeyName=" + masterKeyName + ']', e);
+                throw new IgniteCheckedException("Unable to set master key locally [masterKeyName=" + masterKeyName + ']', e);
             } finally {
                 getSpi().setMasterKeyName(curName);
             }
