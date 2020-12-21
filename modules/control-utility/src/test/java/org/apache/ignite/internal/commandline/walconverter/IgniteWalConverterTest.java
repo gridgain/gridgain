@@ -215,7 +215,6 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testIgniteWalConverterWithOutBinaryMeta() throws Exception {
         final List<Person> list = new LinkedList<>();
 
