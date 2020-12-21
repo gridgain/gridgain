@@ -240,13 +240,18 @@ public class GridRunningQueryInfo {
         return span;
     }
 
+    /**
+     * @return Enforce join order flag.
+     */
     public boolean enforceJoinOrder() {
         return enforceJoinOrder;
     }
 
+    /**
+     * @return Lazy flag.
+     */
     public boolean lazy() {
         return lazy;
     }
-
 
 }
