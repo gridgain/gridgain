@@ -3361,6 +3361,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             boolean update;
 
+            final GridCacheVersion finalVersion = ver;
             IgnitePredicate<CacheDataRow> p = new IgnitePredicate<CacheDataRow>() {
                 @Override public boolean apply(@Nullable CacheDataRow row) {
                     boolean update0;
@@ -3372,9 +3373,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (cctx.group().persistenceEnabled()) {
                         if (!isStartVer) {
                             if (cctx.atomic())
-                                update0 = ATOMIC_VER_COMPARATOR.compare(currVer, ver) < 0;
+                                update0 = ATOMIC_VER_COMPARATOR.compare(currVer, finalVersion) < 0;
                             else
-                                update0 = currVer.compareTo(ver) < 0;
+                                update0 = currVer.compareTo(finalVersion) < 0;
                         }
                         else
                             update0 = true;
@@ -3387,6 +3388,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return update0;
                 }
             };
+
+            long updateCntr = 0;
 
             if (unswapped) {
                 update = p.apply(null);
@@ -3411,8 +3414,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                         cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
                     }
-                    else
+                    else {
+                        ver = nextVersion(ver, null);
+
+                        updateCntr = nextPartitionCounter(topVer, true, true, null);
+                        ver.updateCounter(updateCntr);
+
                         storeValue(val, expTime, ver);
+                    }
                 }
             }
             else {
@@ -3442,6 +3451,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     }
                 }
                 else {
+                    ver = nextVersion(ver, null);
+
+                    updateCntr = nextPartitionCounter(topVer, true, true, null);
+                    ver.updateCounter(updateCntr);
+
                     // Optimization to access storage only once.
                     UpdateClosure c = storeValue(val, expTime, ver, p);
 
@@ -3470,9 +3484,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 else if (deletedUnlocked())
                     deletedUnlocked(false);
 
-                long updateCntr = 0;
 
-                if (!preload)
+                if (!preload && updateCntr == 0)
                     updateCntr = nextPartitionCounter(topVer, true, true, null);
 
                 if (walEnabled) {

@@ -2677,11 +2677,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (oldRow != null && oldRow.version().updateCounter() != 0)
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
-                // Ignore entry initial value. See DataStreamer.allowOverwrite option.
+                // Ignore entry initial value.
                 if (newRow.version().updateCounter() != 0)
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
-                else
-                    assert newRow.version().updateCounter() == 0;
             }
         }
 
