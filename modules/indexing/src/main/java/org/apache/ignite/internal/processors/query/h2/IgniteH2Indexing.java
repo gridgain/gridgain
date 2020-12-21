@@ -986,6 +986,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
     }
 
+    /** */
+    public H2MemoryTracker memTracker(H2QueryInfo qryInfo, long maxMem) {
+        assert qryInfo.runningQueryId() != null;
+
+        GridRunningQueryInfo runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
+
+        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() != null
+            && !(runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker))
+            return null;
+
+        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
+            return ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
+
+        return (H2MemoryTracker)memoryMgr.createQueryMemoryTracker(maxMem);
+    }
+
     /**
      * @param conn Connection.
      * @param qryInfo Query info.

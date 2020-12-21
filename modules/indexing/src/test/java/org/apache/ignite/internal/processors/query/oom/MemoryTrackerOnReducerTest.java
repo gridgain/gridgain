@@ -19,10 +19,14 @@ package org.apache.ignite.internal.processors.query.oom;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -30,6 +34,9 @@ import org.junit.Test;
 public class MemoryTrackerOnReducerTest extends GridCommonAbstractTest {
     /** Big table size. */
     private static final int BIG_TBL_SIZE = 20_000;
+
+    /** */
+    private static AtomicLong maxReserved = new AtomicLong();
 
     /** */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -40,6 +47,27 @@ public class MemoryTrackerOnReducerTest extends GridCommonAbstractTest {
         createSchema();
 
         populateData();
+
+        GridTestUtils.setFieldValue(
+            grid(0).context().query().getIndexing(),
+            "memoryMgr",
+            new QueryMemoryManager(grid(0).context()) {
+                @Override public boolean reserve(long size) {
+                    boolean res = super.reserve(size);
+
+                    maxReserved.set(Math.max(maxReserved.get(), reserved()));
+
+                    return res;
+                }
+            }
+        );
+    }
+
+    /** */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        maxReserved.set(0);
     }
 
     /**
@@ -55,6 +83,8 @@ public class MemoryTrackerOnReducerTest extends GridCommonAbstractTest {
             cnt++;
         }
 
+        assertEquals(0, maxReserved.get());
+
         assertEquals(BIG_TBL_SIZE, cnt);
     }
 
@@ -66,14 +96,22 @@ public class MemoryTrackerOnReducerTest extends GridCommonAbstractTest {
         Iterator<List<?>> it = query(
             "select * from TEST T0, " +
                 "(SELECT DISTINCT id, name from TEST) T1 " +
-                "WHERE T0.id = T1.id "
-            , true).iterator();
+                "WHERE T0.id = T1.id",
+             true).iterator();
 
+        QueryMemoryManager memMgr = ((IgniteH2Indexing)grid(0).context().query().getIndexing()).memoryManager();
         int cnt = 0;
         while (it.hasNext()) {
             it.next();
             cnt++;
+
+            if (cnt > 1 && cnt < BIG_TBL_SIZE - 1)
+                assertTrue(memMgr.reserved() > 0);
         }
+
+        assertTrue(maxReserved.get() > 0);
+
+        assertEquals(0L, memMgr.reserved());
 
         assertEquals(BIG_TBL_SIZE, cnt);
     }
@@ -107,7 +145,7 @@ public class MemoryTrackerOnReducerTest extends GridCommonAbstractTest {
      * @return Results set.
      */
     FieldsQueryCursor<List<?>> query(String sql, boolean lazy) {
-        return grid(1).context().query().querySqlFields(
+        return grid(0).context().query().querySqlFields(
             new SqlFieldsQueryEx(sql, null)
                 .setLazy(lazy)
                 .setEnforceJoinOrder(true)
