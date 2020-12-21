@@ -29,6 +29,7 @@ import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshallerInaccessibleClassException;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -207,7 +208,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
             }
         }
         if (sensitiveDataLogging == HASH)
-            return String.valueOf(hashCode());
+            return String.valueOf(IgniteUtils.hash(this));
         else
             return "BinaryObject";
     }

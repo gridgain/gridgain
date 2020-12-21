@@ -22,6 +22,7 @@ import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -122,8 +123,8 @@ public class UnwrapDataEntry extends DataEntry implements UnwrappedDataEntry {
         if (sensitiveDataLogging == PLAIN)
             sb.a("k = ").a(unwrappedKey()).a(", v = [ ").a(unwrappedValue()).a("], ");
         else if (sensitiveDataLogging == HASH)
-            sb.a("k = ").a(unwrappedKey() == null ? "null" : unwrappedKey().hashCode())
-                    .a(", v = [ ").a(unwrappedValue() == null ? "null" : unwrappedValue().hashCode()).a("], ");
+            sb.a("k = ").a(unwrappedKey() == null ? "null" : IgniteUtils.hash(unwrappedKey()))
+                    .a(", v = [ ").a(unwrappedValue() == null ? "null" : IgniteUtils.hash(unwrappedKey())).a("], ");
 
         return sb.a("super = [").a(super.toString()).a("]]").toString();
     }

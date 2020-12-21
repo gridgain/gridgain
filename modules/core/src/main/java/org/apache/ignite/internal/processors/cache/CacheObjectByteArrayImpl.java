@@ -23,6 +23,7 @@ import java.io.ObjectOutput;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -204,7 +205,7 @@ public class CacheObjectByteArrayImpl implements CacheObject, Externalizable {
         if (sensitiveDataLogging == PLAIN)
             return "CacheObjectByteArrayImpl [arrLen=" + (val != null ? val.length : 0) + ']';
         else if (sensitiveDataLogging == HASH)
-            return val == null ? "null" : String.valueOf(val.hashCode());
+            return val == null ? "null" : String.valueOf(IgniteUtils.hash(val));
         else
             return "CacheObject";
     }

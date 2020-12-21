@@ -30,6 +30,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -209,7 +210,7 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
                     }
                     else if (S.getSensitiveDataLogging() == HASH) {
                         msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " +
-                                "key=" + key0 + "\\]");
+                                "key=" + IgniteUtils.hash(key0) + "\\]");
                     }
                     else {
                         msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " +

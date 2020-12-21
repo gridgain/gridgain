@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.pagemem.PageUtils;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -196,7 +197,7 @@ public abstract class CacheObjectAdapter implements CacheObject, Externalizable 
                         "hasValBytes", valBytes != null, false);
         }
         else if (sensitiveDataLogging == HASH)
-            return val == null ? "null" : String.valueOf(val.hashCode());
+            return val == null ? "null" : String.valueOf(IgniteUtils.hash(val));
         else
             return "CacheObject";
     }

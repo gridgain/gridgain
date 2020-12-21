@@ -86,6 +86,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisito
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
 import org.apache.ignite.internal.util.IgniteTree;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.GridCursor;
@@ -5216,7 +5217,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (sensitiveDataLogging == PLAIN)
                 keySens = ", key=" + key;
             else if (sensitiveDataLogging == HASH)
-                keySens = ", key=" + (key == null ? "null" : String.valueOf(key.hashCode()));
+                keySens = ", key=" + (key == null ? "null" : String.valueOf(IgniteUtils.hash(key)));
             else
                 keySens = "";
 

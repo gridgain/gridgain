@@ -23,6 +23,7 @@ import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -153,7 +154,7 @@ public class TxDeadlock {
                 }
                 else if (sensitiveDataLogging == HASH) {
                     sb.append("key=")
-                            .append(val == null ? "null" : val.hashCode())
+                            .append(val == null ? "null" : IgniteUtils.hash(val))
                             .append(", ");
                 }
 
@@ -181,5 +182,10 @@ public class TxDeadlock {
             map.put(id, lb = prefix + (map.size() + 1));
 
         return lb;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(IgniteUtils.hash(1));
+        System.out.println(IgniteUtils.hash(-1));
     }
 }

@@ -41,6 +41,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -369,9 +370,9 @@ public class TxPessimisticDeadlockDetectionTest extends AbstractDeadlockDetectio
 
         for (Object key : involvedKeys) {
             if (involvedLockedKeys.contains(key))
-                assertTrue(msg, msg.contains("[key=" + key.hashCode() + ", cache=" + CACHE_NAME + ']'));
+                assertTrue(msg, msg.contains("[key=" + IgniteUtils.hash(key) + ", cache=" + CACHE_NAME + ']'));
             else
-                assertFalse(msg, msg.contains("[key=" + key.hashCode()));
+                assertFalse(msg, msg.contains("[key=" + IgniteUtils.hash(key)));
         }
     }
 

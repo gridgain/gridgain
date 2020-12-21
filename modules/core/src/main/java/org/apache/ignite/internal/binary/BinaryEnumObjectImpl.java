@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.CacheObjectAdapter;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -303,7 +304,7 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
             }
         }
         if (sensitiveDataLogging == HASH)
-            return String.valueOf(hashCode());
+            return String.valueOf(IgniteUtils.hash(this));
         else
             return ord >= 0 ? "BinaryEnum" : "null";
     }

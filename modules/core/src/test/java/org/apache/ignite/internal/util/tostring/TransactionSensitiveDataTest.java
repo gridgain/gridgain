@@ -27,6 +27,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareFutureAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -233,9 +234,9 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
             Pattern patternVal;
 
             if (S.getSensitiveDataLogging() == HASH) {
-                patternKey = Pattern.compile("(IgniteTxKey \\[key=" + binKey.hashCode() + ", cacheId=\\d+\\])");
+                patternKey = Pattern.compile("(IgniteTxKey \\[key=" + IgniteUtils.hash(binKey) + ", cacheId=\\d+\\])");
 
-                patternVal = Pattern.compile("(TxEntryValueHolder \\[val=" + binPerson.hashCode() + ", op=\\D+\\])");
+                patternVal = Pattern.compile("(TxEntryValueHolder \\[val=" + IgniteUtils.hash(binPerson) + ", op=\\D+\\])");
             }
             else {
                 patternKey = Pattern.compile("(IgniteTxKey \\[cacheId=\\d+\\])");
@@ -328,13 +329,14 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
             Pattern patternVal;
             
             if (S.getSensitiveDataLogging() == HASH) {
-                patternKey = Pattern.compile("(IgniteTxKey \\[key=" + binKey.hashCode() + ", cacheId=\\d+\\])");
-                patternVal = Pattern.compile("(TxEntryValueHolder \\[val=" + binPerson.hashCode() + ", op=\\D+\\])");
+                patternKey = Pattern.compile("(IgniteTxKey \\[key=" + IgniteUtils.hash(binKey) + ", cacheId=\\d+\\])");
+                patternVal = Pattern.compile("(TxEntryValueHolder \\[val=" + IgniteUtils.hash(binPerson) + ", op=\\D+\\])");
             }
             else {
                 patternKey = Pattern.compile("(IgniteTxKey \\[cacheId=\\d+\\])");
                 patternVal = Pattern.compile("(TxEntryValueHolder \\[op=\\D+\\])");
             }
+
             final Matcher matcherKeySnd = patternKey.matcher(strFailedSndStr);
             final Matcher matcherKeyReceived = patternKey.matcher(strReceivedErrorStr);
 
