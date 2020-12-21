@@ -1080,13 +1080,17 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             this.req = req;
 
-            GridDhtTopologyFuture topFut = cctx.exchange().lastFinishedFuture();
+            ClusterNode node = cctx.discovery().node(tx.topologyVersion(), tx.nearNodeId());
 
-            if (topFut != null) {
-                IgniteCheckedException err = tx.txState().validateTopology(cctx, isEmpty(req.writes()), topFut);
+            if (node != null) {
+                GridDhtTopologyFuture topFut = cctx.exchange().lastFinishedFuture();
 
-                if (err != null)
-                    onDone(null, err);
+                if (topFut != null) {
+                    IgniteCheckedException err = tx.txState().validateTopology(cctx, isEmpty(req.writes()), topFut);
+
+                    if (err != null)
+                        onDone(null, err);
+                }
             }
 
             boolean ser = tx.serializable() && tx.optimistic();
