@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.timeout;
+package org.apache.ignite.tests.p2p;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.apache.ignite.events.Event;
+import org.apache.ignite.lang.IgnitePredicate;
 
 /**
- *
+ * Event remote filter with static initializer.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    DefaultQueryTimeoutConfigurationTest.class,
-    DefaultQueryTimeoutThickJavaTest.class,
-    DefaultQueryTimeoutThinJavaTest.class,
-    DefaultQueryTimeoutThinJdbcTest.class
-})
-public class DefaultQueryTimeoutTestSuite {
+public class GridP2PEventRemoteFilterWithStaticInitializer implements IgnitePredicate<Event> {
+    /** */
+    private final GridP2PTestObjectWithStaticInitializer testObj = new GridP2PTestObjectWithStaticInitializer();
+
+    /** {@inheritDoc} */
+    @Override public boolean apply(Event event) {
+        return false;
+    }
 }

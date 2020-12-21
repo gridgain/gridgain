@@ -98,10 +98,6 @@ public class IndexingQueryFilterImpl implements IndexingQueryFilter {
         if (cache.context().isReplicated() && !treatReplicatedAsPartitioned)
             return null;
 
-        // No backups and explicit partitions -> nothing to filter.
-        if (cache.configuration().getBackups() == 0 && parts == null)
-            return null;
-
         return new IndexingQueryCacheFilter(cache.context().affinity(), parts, topVer,
             ctx.discovery().localNode());
     }

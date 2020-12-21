@@ -106,7 +106,6 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_READ;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_LOADED;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_VALIDATE_CACHE_REQUESTS;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOOP;
@@ -1087,9 +1086,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             ClusterNode node = cctx.discovery().node(tx.topologyVersion(), tx.nearNodeId());
 
-            boolean validateCache = needCacheValidation(node);
-
-            if (validateCache) {
+            if (node != null) {
                 GridDhtTopologyFuture topFut = cctx.exchange().lastFinishedFuture();
 
                 if (topFut != null) {
@@ -1130,22 +1127,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             mapIfLocked();
         }
-    }
-
-    /**
-     * Returns {@code true} if cache validation needed.
-     *
-     * @param node Originating node.
-     * @return {@code True} if cache should be validated, {@code false} - otherwise.
-     */
-    private boolean needCacheValidation(ClusterNode node) {
-        if (node == null) {
-            // The originating (aka near) node has left the topology
-            // and therefore the cache validation doesn't make sense.
-            return false;
-        }
-
-        return Boolean.TRUE.equals(node.attribute(ATTR_VALIDATE_CACHE_REQUESTS));
     }
 
     /**
