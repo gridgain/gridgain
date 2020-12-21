@@ -67,9 +67,9 @@ public class Hasher {
         this.len = 0;
 
         ByteBuffer bb = ByteBuffer.wrap(arr, off, len).order(ByteOrder.LITTLE_ENDIAN);
-        while (bb.remaining() >= CHUNK_SIZE) {
+        while (bb.remaining() >= CHUNK_SIZE)
             process(bb);
-        }
+
         if (bb.remaining() > 0)
             processRemaining(bb);
 

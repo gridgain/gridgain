@@ -21,7 +21,6 @@ import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemTy
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -45,7 +44,7 @@ public class StatsPropagationMessage implements Message {
     }
 
     /**
-     * {@link Externalizable} support.
+     * Default constructor.
      */
     public StatsPropagationMessage() {
         // No-op.

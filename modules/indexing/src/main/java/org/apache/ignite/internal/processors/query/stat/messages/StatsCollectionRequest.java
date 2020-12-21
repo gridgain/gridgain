@@ -22,9 +22,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemTy
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-import java.io.Externalizable;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -49,7 +47,7 @@ public class StatsCollectionRequest implements Message {
     private Map<StatsKeyMessage, int[]> keys;
 
     /**
-     * {@link Externalizable} support.
+     * Default constructor.
      */
     public StatsCollectionRequest() {
         // No-op.

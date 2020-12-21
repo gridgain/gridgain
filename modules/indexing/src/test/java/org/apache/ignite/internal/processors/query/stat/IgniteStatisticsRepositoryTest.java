@@ -120,7 +120,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         assertEquals(2, repo.getLocalPartitionsStatistics(K1).size());
         assertEquals(1, repo.getLocalPartitionsStatistics(K2).size());
 
-        repo.saveLocalPartitionsStatistics(K1, Arrays.asList(new ObjectPartitionStatisticsImpl[]{stat10, stat100}));
+        repo.saveLocalPartitionsStatistics(K1, Arrays.asList(stat10, stat100));
 
         assertEquals(2, repo.getLocalPartitionsStatistics(K1).size());
     }

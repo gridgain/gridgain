@@ -121,7 +121,7 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
     @Test
     public void testMultipleAggregation() {
         for (Map.Entry<Value[], Comparator<Value>> type : types.entrySet()) {
-            Value vals[] = type.getKey();
+            Value[] vals = type.getKey();
             testAggregation(type.getValue(), vals[0].getType(),0, vals);
         }
     }
@@ -133,7 +133,7 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
     @Test
     public void testMultipleWithNullsAggregation() {
         for (Map.Entry<Value[], Comparator<Value>> type : types.entrySet()) {
-            Value vals[] = type.getKey();
+            Value[] vals = type.getKey();
             testAggregation(type.getValue(), vals[0].getType(),vals.length, vals);
         }
     }

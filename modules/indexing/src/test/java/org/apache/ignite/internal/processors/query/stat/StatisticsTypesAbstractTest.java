@@ -56,7 +56,8 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
         Calendar cal = Calendar.getInstance();
         try {
             cal.setTime(SDF.parse(START_DATE));
-        } catch (ParseException e) {
+        }
+        catch (ParseException e) {
             // No-op.
         }
         TIMESTART = cal.getTimeInMillis();
@@ -141,10 +142,10 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
                 return "'" + DATE_FORMATTER.format(dateCalendar.getTime()) + "'";
 
             case "TIMESTAMP":
-                Calendar timestampCalendar = Calendar.getInstance();
-                timestampCalendar.setTimeInMillis(TIMESTART);
-                timestampCalendar.add(Calendar.SECOND, (int) cntr);
-                return "'" + TIMESTAMP_FORMATTER.format(timestampCalendar.getTime()) + "'";
+                Calendar tsCalendar = Calendar.getInstance();
+                tsCalendar.setTimeInMillis(TIMESTART);
+                tsCalendar.add(Calendar.SECOND, (int) cntr);
+                return "'" + TIMESTAMP_FORMATTER.format(tsCalendar.getTime()) + "'";
 
             case "VARCHAR":
                 return "'varchar" + cntr + "'";

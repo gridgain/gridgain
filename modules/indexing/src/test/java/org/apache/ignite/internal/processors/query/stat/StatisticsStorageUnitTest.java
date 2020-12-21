@@ -24,7 +24,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
-
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -80,7 +79,6 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
 
         store = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
     }
-
 
     /**
      * Test clear all method:

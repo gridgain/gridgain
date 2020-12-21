@@ -162,5 +162,4 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
 
         return sql;
     }
-
 }

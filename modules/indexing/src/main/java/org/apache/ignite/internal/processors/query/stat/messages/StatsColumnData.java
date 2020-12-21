@@ -20,7 +20,6 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-import java.io.Externalizable;
 import java.nio.ByteBuffer;
 
 /**
@@ -55,10 +54,9 @@ public class StatsColumnData implements Message {
     private byte[] rawData;
 
     /**
-     * {@link Externalizable} support.
+     * Default constructor.
      */
     public StatsColumnData() {
-        // No-op.
     }
 
     /**

@@ -22,12 +22,12 @@ import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemTy
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-import java.io.Externalizable;
 import java.nio.ByteBuffer;
+
 import java.util.Map;
 
 /**
- * Statistics for some object (index or table) in database,
+ * Statistics for some object (index or table) in database.
  */
 public class StatsObjectData implements Message {
     /** */
@@ -54,6 +54,32 @@ public class StatsObjectData implements Message {
     /** Columns key to statistic map. */
     @GridDirectMap(keyType = String.class, valueType = StatsColumnData.class)
     private Map<String, StatsColumnData> data;
+
+    /**
+     * Constructor.
+     *
+     * @param key Statistics key.
+     * @param rowsCnt Total row count.
+     * @param type Statistics type.
+     * @param partId Partition id.
+     * @param updCnt Partition update counter.
+     * @param data Map of statistics column data.
+     */
+    public StatsObjectData(
+            StatsKeyMessage key,
+            long rowsCnt,
+            StatsType type,
+            int partId,
+            long updCnt,
+            Map<String, StatsColumnData> data
+    ) {
+        this.key = key;
+        this.rowsCnt = rowsCnt;
+        this.type = type;
+        this.partId = partId;
+        this.updCnt = updCnt;
+        this.data = data;
+    }
 
     /**
      * @return Statistics key.
@@ -98,36 +124,10 @@ public class StatsObjectData implements Message {
     }
 
     /**
-     * {@link Externalizable} support.
+     * Default constructor.
      */
     public StatsObjectData() {
         // No-op.
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param key Statistics key.
-     * @param rowsCnt Total row count.
-     * @param type Statistics type.
-     * @param partId Partition id.
-     * @param updCnt Partition update counter.
-     * @param data Map of statistics column data.
-     */
-    public StatsObjectData(
-        StatsKeyMessage key,
-        long rowsCnt,
-        StatsType type,
-        int partId,
-        long updCnt,
-        Map<String, StatsColumnData> data
-    ) {
-        this.key = key;
-        this.rowsCnt = rowsCnt;
-        this.type = type;
-        this.partId = partId;
-        this.updCnt = updCnt;
-        this.data = data;
     }
 
     /** {@inheritDoc} */

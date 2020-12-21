@@ -79,7 +79,7 @@
         <hamcrest.version>1.2</hamcrest.version>
         <httpclient.version>4.5.10</httpclient.version>
         <httpcore.version>4.4.3</httpcore.version>
-        <jackson.version>2.10.1</jackson.version>
+        <jackson.version>2.11.0</jackson.version>
         <jackson1.version>1.9.13</jackson1.version>
         <jaxb.api.version>2.1</jaxb.api.version>
         <jaxb.impl.version>2.1.14</jaxb.impl.version>
@@ -89,7 +89,7 @@
         <javax.cache.version>1.0.0</javax.cache.version>
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
-        <jetty.version>9.4.33.v20201020</jetty.version>
+        <jetty.version>9.4.35.v20201120</jetty.version>
         <jmh.version>1.13</jmh.version>
         <jms.spec.version>1.1.1</jms.spec.version>
         <jna.version>4.5.2</jna.version>
@@ -102,7 +102,7 @@
         <jtidy.version>r938</jtidy.version>
         <kafka.version>2.2.2</kafka.version>
         <karaf.version>4.0.2</karaf.version>
-        <log4j.version>2.13.3</log4j.version>
+        <log4j.version>2.14.0</log4j.version>
         <lucene.bundle.version>7.4.0_1</lucene.bundle.version>
         <lucene.version>7.4.0</lucene.version>
         <lz4.version>1.5.0</lz4.version>
@@ -145,7 +145,7 @@
         <zkclient.version>0.5</zkclient.version>
         <zookeeper.version>3.4.14</zookeeper.version>
         <zstd.version>1.4.5-7</zstd.version>
-        <opencensus.version>0.22.0</opencensus.version>
+        <opencensus.version>0.28.2</opencensus.version>
         <!--Spark 2.4 version support -->
         <spark24.hadoop.version>2.7.7</spark24.hadoop.version>
         <spark24.version>2.4.4</spark24.version>

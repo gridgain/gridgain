@@ -290,7 +290,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @return Object statistics.
      */
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
-        ColumnStatistics colStatistics = new ColumnStatistics(null, null,100,0, 100,
+        ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0, 100,
                 0, new byte[0]);
         return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
     }

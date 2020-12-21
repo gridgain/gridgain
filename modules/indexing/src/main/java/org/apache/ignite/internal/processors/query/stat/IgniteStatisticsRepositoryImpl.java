@@ -156,7 +156,6 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
                 store.replaceLocalPartitionsStatistics(key, newStatistics);
             }
-
         }
     }
 
@@ -210,7 +209,6 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         locStats.put(key, statistics);
     }
 
-    // TODO
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
         if (locStats == null) {
@@ -242,11 +240,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl getLocalStatistics(StatsKey key) {
-        if (locStats == null) {
-            log.warning("Unable to get local statistics for " + key + " on non server node.");
-
+        if (locStats == null)
             return null;
-        }
 
         return locStats.get(key);
     }

@@ -36,6 +36,7 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         statsStore.clearAllStatistics();
 
         ObjectStatistics locStat = statsMgr.getLocalStatistics("PUBLIC", "SMALL");
+
         assertNotNull(locStat);
 
         statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
@@ -53,7 +54,9 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
         ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
+
         statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
+
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
                 .getLocalStatistics("PUBLIC", "SMALL");
 

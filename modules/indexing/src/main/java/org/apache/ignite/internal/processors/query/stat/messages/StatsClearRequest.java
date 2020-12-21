@@ -18,11 +18,9 @@ package org.apache.ignite.internal.processors.query.stat.messages;
 import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
@@ -103,7 +101,7 @@ public class StatsClearRequest implements Message {
     }
 
     /**
-     * {@link Externalizable} support.
+     * Default constructor.
      */
     public StatsClearRequest() {
         // No-op.

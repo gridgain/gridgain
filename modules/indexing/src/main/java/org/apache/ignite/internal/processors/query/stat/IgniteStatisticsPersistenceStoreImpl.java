@@ -24,7 +24,6 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadW
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -202,6 +201,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
                 key.obj(), statistics.size()))
             return;
         StatsKeyMessage keyMsg = new StatsKeyMessage(key.schema(), key.obj(), null);
+
         Map<Integer, ObjectPartitionStatisticsImpl> partStatistics = statistics.stream().collect(
                 Collectors.toMap(ObjectPartitionStatisticsImpl::partId, s -> s));
 

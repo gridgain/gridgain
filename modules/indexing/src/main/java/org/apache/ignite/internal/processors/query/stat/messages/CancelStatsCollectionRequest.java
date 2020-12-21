@@ -19,7 +19,6 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
@@ -40,7 +39,7 @@ public class CancelStatsCollectionRequest implements Message {
     private UUID[] reqIds;
 
     /**
-     * {@link Externalizable} support.
+     * Default constructor.
      */
     public CancelStatsCollectionRequest() {
         // No-op.

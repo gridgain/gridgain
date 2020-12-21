@@ -117,6 +117,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_TABLE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_IDX_RANGE_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_IDX_RANGE_RESP;
 import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
+import static org.apache.ignite.spi.tracing.SpanStatus.UNAVAILABLE;
 import static org.gridgain.internal.h2.result.Row.MEMORY_CALCULATE;
 
 /**
@@ -434,7 +435,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
     /** */
     private boolean isSingleRowLookup(SearchRow lower, SearchRow upper, H2Tree tree) {
         return !cctx.mvccEnabled() && indexType.isPrimaryKey() && lower != null && upper != null &&
-            tree.compareRows((H2Row)lower, (H2Row)upper) == 0 && hasAllIndexColumns(lower);
+            tree.checkRowsTheSame((H2Row)lower, (H2Row)upper) && hasAllIndexColumns(lower);
     }
 
     /** */
@@ -612,7 +613,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 DurableBackgroundTask task = new DurableBackgroundCleanupIndexTreeTask(
                         rootPages,
                         trees,
-                        cctx.group().name(),
+                        cctx.group().name() == null ? cctx.cache().name() : cctx.group().name(),
                         cctx.cache().name(),
                         table.getSchema().getName(),
                         idxName
@@ -798,8 +799,11 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 msg.originSegmentId()
             );
 
-            if (qctx == null)
+            if (qctx == null) {
                 res.status(STATUS_NOT_FOUND);
+
+                span.setStatus(UNAVAILABLE);
+            }
             else {
                 DistributedJoinContext joinCtx = qctx.distributedJoinContext();
 

@@ -30,6 +30,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+
 /**
  * Sql statistics storage in metastore.
  * Will store all statistics related objects with prefix "stats."
@@ -95,7 +103,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
 
     /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId) {
-        ObjectPartitionStatisticsImpl res[] = new ObjectPartitionStatisticsImpl[1];
+        ObjectPartitionStatisticsImpl[] res = new ObjectPartitionStatisticsImpl[1];
         partsStats.computeIfPresent(key, (k, v) -> {
             res[0] = v.get(partId);
 
