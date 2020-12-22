@@ -976,7 +976,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         // Segment presence check.
         if (reserved && !hasIndex(((FileWALPointer)start).index())) {
-            segmentAware.reserve(((FileWALPointer)start).index());
+            segmentAware.release(((FileWALPointer)start).index());
 
             reserved = false;
         }
