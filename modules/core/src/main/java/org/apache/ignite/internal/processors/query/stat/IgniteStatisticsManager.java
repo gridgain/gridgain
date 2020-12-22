@@ -73,6 +73,15 @@ public interface IgniteStatisticsManager {
      * @param schemaName Schema name.
      * @param objName Object to collect statistics by.
      * @param colNames Columns to remove statistics by.
+     * @throws IgniteCheckedException In case of errors.
      */
     public void clearObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
+
+    /**
+     * Clear object statistics.
+     *
+     * @param keys Collection of keys to collect statistics by (schema, obj, columns).
+     * @throws IgniteCheckedException In case of errors.
+     */
+    public void clearObjectStatistics(GridTuple3<String, String, String[]>... keys) throws IgniteCheckedException;
 }

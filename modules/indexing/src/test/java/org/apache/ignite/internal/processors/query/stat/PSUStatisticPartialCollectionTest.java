@@ -81,7 +81,11 @@ public class PSUStatisticPartialCollectionTest extends StatisticsAbstractTest {
                 String.format(lo_med_select, 7, 7), noHints);
 
         statsMgr.collectObjectStatistics("PUBLIC", "TBL_SELECT", "LO_SELECT");
-
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_LO_IDX"},
                 String.format(lo_med_select, 8, 8), noHints);
     }

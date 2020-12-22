@@ -9,7 +9,6 @@ import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeMan
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
 import org.apache.ignite.testframework.GridTestNode;
@@ -62,6 +61,9 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     private static final StatsKeyMessage k2 = keyMsg(2, 1, 2);
 
     /** */
+    private static final StatsKeyMessage k3 = keyMsg(3, 1, 2);
+
+    /** */
     private static final Map<UUID, int[]> nodeParts;
 
     /** */
@@ -69,6 +71,9 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
 
     /** */
     private static final CacheGroupContext cgc2;
+
+    /** */
+    private static final CacheGroupContext cgc3;
 
     static {
         nodeParts = new HashMap<>();
@@ -79,6 +84,7 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
 
         cgc1 = cgc(nodeParts, 0);
         cgc2 = cgc(nodeParts, 3);
+        cgc3 = cgc(nodeParts, 0);
     }
 
     /**
@@ -331,21 +337,22 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     private static List<List<ClusterNode>> makeAssignment(Map<UUID, int[]> assignment, int backups) {
         int partCnt = assignment.values().stream().map(arr -> Arrays.stream(arr).max().getAsInt())
                 .max(Integer::compareTo).orElse(null) + 1;
-        List<List<ClusterNode>> partitionAssignment = Arrays.asList(new List[partCnt]);
+        List<List<ClusterNode>> partAssignment = Arrays.asList(new List[partCnt]);
 
         for (Map.Entry<UUID, int[]> nodeParts : assignment.entrySet()) {
             for (int partId : nodeParts.getValue()) {
-                assert !partitionAssignment.contains(partId);
+                assert partAssignment.get(partId) == null;
+
                 List<ClusterNode> partNodes = new ArrayList<>(backups + 1);
                 partNodes.add(new GridTestNode(nodeParts.getKey()));
                 for (int i = 0; i < backups; i++)
                     partNodes.add(new GridTestNode(UUID.randomUUID()));
 
-                partitionAssignment.set(partId, partNodes);
+                partAssignment.set(partId, partNodes);
             }
         }
 
-        return partitionAssignment;
+        return partAssignment;
     }
 
     /**
@@ -423,5 +430,52 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
 
         assertTrue(Arrays.equals(failed5.get(k1), new int[]{1, 2, 3}));
         assertTrue(Arrays.equals(failed5.get(k2), new int[]{1, 2, 3}));
+    }
+
+    /**
+     * Test groups keys to node distribution:
+     *
+     * 1) Single group with single key to two nodes -> 2 req with 2 keys.
+     * 2) Single group with two keys to two node -> 2 req with 2 keys.
+     * 3) Two groups with single key to two separate nodes -> 2 req with differs key.
+     */
+    @Test
+    public void nodesTest() {
+        // 1) Single group with single key to two nodes.
+        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpKeys1 = Collections.singletonMap(cgc1, Collections.singleton(k1));
+
+        Map<UUID, Collection<StatsKeyMessage>> nodeKeys1 = IgniteStatisticsRequestCollection.nodeKeys(grpKeys1);
+
+        assertEquals(2, nodeKeys1.size());
+        assertTrue(nodeKeys1.get(node1).contains(k1));
+        assertTrue(nodeKeys1.get(node2).contains(k1));
+
+        // 2) Single group with two keys to two node.
+        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpKeys2 = new HashMap<>();
+        grpKeys2.put(cgc1, Collections.singleton(k1));
+        grpKeys2.put(cgc3, Arrays.asList(k2, k3));
+
+        Map<UUID, Collection<StatsKeyMessage>> nodeKeys2 = IgniteStatisticsRequestCollection.nodeKeys(grpKeys2);
+
+        assertEquals(2, nodeKeys2.size());
+        assertEquals(3, nodeKeys2.get(node1).size());
+        assertEquals(3, nodeKeys2.get(node2).size());
+
+        // 3) Two groups with single key to two separate nodes.
+        Map<UUID, int[]> nodeParts1 = Collections.singletonMap(node1, new int[]{0, 1, 2, 3});
+        Map<UUID, int[]> nodeParts2 = Collections.singletonMap(node2, new int[]{0, 1, 2, 3});
+        CacheGroupContext cgc1d = cgc(nodeParts1, 0);
+        CacheGroupContext cgc2d = cgc(nodeParts2, 0);
+        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpKeys3 = new HashMap<>();
+        grpKeys3.put(cgc1d, Collections.singleton(k1));
+        grpKeys3.put(cgc2d, Collections.singleton(k2));
+
+        Map<UUID, Collection<StatsKeyMessage>> nodeKeys3 = IgniteStatisticsRequestCollection.nodeKeys(grpKeys3);
+
+        assertEquals(2, nodeKeys3.size());
+        assertEquals(1, nodeKeys3.get(node1).size());
+        assertTrue(nodeKeys3.get(node1).contains(k1));
+        assertEquals(1, nodeKeys3.get(node2).size());
+        assertTrue(nodeKeys3.get(node2).contains(k2));
     }
 }

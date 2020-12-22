@@ -46,7 +46,7 @@ public class StatCollectionStatus {
     ) {
         this.colId = colId;
         this.keys = keys;
-        this.remainingColReqs = new ConcurrentHashMap<>(remainingColReqs);
+        this.remainingColReqs = (remainingColReqs == null) ? null : new ConcurrentHashMap<>(remainingColReqs);
         locStatistics = (remainingColReqs == null) ? null : Collections.synchronizedList(
                 new ArrayList<>(remainingColReqs.size()));
         this.doneFut = new StatsCollectionFutureAdapter(colId);;

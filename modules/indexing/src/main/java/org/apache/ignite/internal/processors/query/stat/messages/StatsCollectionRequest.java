@@ -161,7 +161,7 @@ public class StatsCollectionRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return 0;
+        return TYPE_CODE;
     }
 
     /** {@inheritDoc} */

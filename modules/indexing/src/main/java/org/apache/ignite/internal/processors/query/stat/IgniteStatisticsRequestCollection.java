@@ -27,21 +27,16 @@ import org.apache.ignite.internal.processors.query.stat.messages.StatsCollection
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
 import org.apache.ignite.internal.util.GridArrays;
-import org.apache.ignite.internal.util.lang.GridFunc;
 import org.apache.ignite.internal.util.typedef.F;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -129,8 +124,7 @@ public class IgniteStatisticsRequestCollection {
      * @param partIds Partition to collect information by
      * @return Map nodeId to array of partitions, related to node.
      */
-    public static Map<UUID, int[]> nodePartitions(CacheGroupContext grp, Collection<Integer> partIds)
-            throws IgniteCheckedException {
+    public static Map<UUID, int[]> nodePartitions(CacheGroupContext grp, Collection<Integer> partIds) {
         AffinityTopologyVersion grpTopVer = grp.shared().exchange().readyAffinityVersion();
         // На какой ноде на какой таблице какие партиции собирать
         List<List<ClusterNode>> assignments = grp.affinity().assignments(grpTopVer);
@@ -166,7 +160,7 @@ public class IgniteStatisticsRequestCollection {
 
         res.compute(partNodes.get(0).id(), (k, v) -> {
             if (v == null)
-                v = new ArrayList<Integer>();
+                v = new ArrayList<>();
 
             v.add(partId);
 
@@ -199,16 +193,12 @@ public class IgniteStatisticsRequestCollection {
      * @throws IgniteCheckedException In case of errors.
      */
     public static Collection<StatsAddrRequest<StatsCollectionRequest>> generateCollectionRequests(
-            UUID colId,
-            Collection<StatsKeyMessage> keys,
-            Map<StatsKeyMessage, int[]> failedPartitions,
-            Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts
-    ) throws IgniteCheckedException {
-        /*Map<StatsKeyMessage, CacheGroupContext> keyGroups = new HashMap<>();
-        for (Map.Entry<CacheGroupContext, Collection<StatsKeyMessage>> grpKeys : grpContexts.entrySet())
-            for(StatsKeyMessage key : grpKeys.getValue())
-                keyGroups.put(key, grpKeys.getKey());
-*/
+        UUID colId,
+        Collection<StatsKeyMessage> keys,
+        Map<StatsKeyMessage, int[]> failedPartitions,
+        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts
+    ) {
+
         // NodeId to <Key to partitions on node> map
         Map<UUID, Map<StatsKeyMessage, int[]>> reqMap = new HashMap<>();
         for (Map.Entry<CacheGroupContext, Collection<StatsKeyMessage>> grpEntry : grpContexts.entrySet()) {
@@ -228,7 +218,7 @@ public class IgniteStatisticsRequestCollection {
                             v.put(key, keyNodeParts);
                     }
 
-                    return v.size() > 0 ? v : null;
+                    return v.isEmpty() ? null : v;
                 });
         }
 
@@ -236,41 +226,36 @@ public class IgniteStatisticsRequestCollection {
         for (Map.Entry<UUID, Map<StatsKeyMessage, int[]>> nodeGpsParts: reqMap.entrySet()) {
             if (nodeGpsParts.getValue().isEmpty())
                 continue;
+
             StatsCollectionRequest req = prepareRequest(colId, nodeGpsParts.getValue());
-            reqs.add(new StatsAddrRequest(req, nodeGpsParts.getKey()));
+            reqs.add(new StatsAddrRequest<>(req, nodeGpsParts.getKey()));
         }
 
         return reqs;
     }
 
     /**
-     * Calculate node id to stats key map.
+     * Get all nodes where specified cache grous located.
      *
-     * @param groupKeys Cache group to stats key map.
-     * @return Node id to stats key map.
+     * @param grps Cache groups.
+     * @return Set of node ids.
      */
-    public static Map<UUID, Set<StatsKeyMessage>> nodeKeys(
-        Map<CacheGroupContext, Collection<StatsKeyMessage>> groupsKeys
-    ) {
-        Map<UUID, Set<StatsKeyMessage>> res = new HashMap<>();
-        for (Map.Entry<CacheGroupContext, Collection<StatsKeyMessage>> groupKeys : groupsKeys.entrySet()) {
-            CacheGroupContext grp = groupKeys.getKey();
+    public static Map<UUID, Collection<StatsKeyMessage>> nodeKeys(Map<CacheGroupContext, Collection<StatsKeyMessage>> grps) {
+        Map<UUID, Collection<StatsKeyMessage>> res = new HashMap<>();
 
+        for (Map.Entry<CacheGroupContext, Collection<StatsKeyMessage>> grpKeys : grps.entrySet()) {
+            CacheGroupContext grp = grpKeys.getKey();
             AffinityTopologyVersion grpTopVer = grp.shared().exchange().readyAffinityVersion();
             List<List<ClusterNode>> assignments = grp.affinity().assignments(grpTopVer);
 
-            for (List<ClusterNode> partNodes : assignments) {
-                for (ClusterNode node : partNodes) {
-                    res.compute(node.id(), (k, v) -> {
-                        if (v == null)
-                            v = new HashSet<>();
+            assignments.forEach(nodes -> nodes.forEach(clusterNode -> res.compute(clusterNode.id(), (k, v) -> {
+                if (v == null)
+                    v = new HashSet<>();
 
-                        v.addAll(groupKeys.getValue());
+                v.addAll(grpKeys.getValue());
 
-                        return v;
-                    });
-                }
-            }
+                return v;
+            })));
         }
         return res;
     }
@@ -282,15 +267,14 @@ public class IgniteStatisticsRequestCollection {
      * @return Collection of addressed statistics clear requests.
      * @throws IgniteCheckedException In case of errors.
      */
-    protected Collection<StatsAddrRequest<StatsClearRequest>> generateClearRequests(
+    public Collection<StatsAddrRequest<StatsClearRequest>> generateClearRequests(
         Collection<StatsKeyMessage> keys
     ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts = extractGroups(keys);
-        Map<UUID, Set<StatsKeyMessage>> nodeKeys = nodeKeys(grpContexts);
-        List<StatsAddrRequest<StatsClearRequest>> res = new ArrayList<>(nodeKeys.size());
+        Map<UUID, Collection<StatsKeyMessage>> nodeKeys = nodeKeys(grpContexts);
 
-        return nodeKeys.entrySet().stream().map(e -> new StatsAddrRequest<StatsClearRequest>(
-                new StatsClearRequest(UUID.randomUUID(), new ArrayList<>(e.getValue())), e.getKey()))
+        return nodeKeys.entrySet().stream().map(node -> new StatsAddrRequest<>(
+            new StatsClearRequest(UUID.randomUUID(), new ArrayList<>(node.getValue())), node.getKey()))
                 .collect(Collectors.toList());
     }
 
@@ -309,6 +293,7 @@ public class IgniteStatisticsRequestCollection {
         Map<StatsKeyMessage, int[]> failedPartitions
     ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts = extractGroups(keys);
+
         return generateCollectionRequests(colId, keys, failedPartitions, grpContexts);
     }
 

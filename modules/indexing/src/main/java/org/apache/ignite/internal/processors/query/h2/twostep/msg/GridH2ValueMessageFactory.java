@@ -23,7 +23,9 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
 import org.apache.ignite.internal.processors.query.stat.messages.CancelStatsCollectionRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsClearRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
@@ -73,12 +75,14 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
 
         // Statistics related messages.
         factory.register(StatsCollectionRequest.TYPE_CODE, StatsCollectionRequest::new);
+        factory.register(StatsCollectionResponse.TYPE_CODE, StatsCollectionResponse::new);
         factory.register(CancelStatsCollectionRequest.TYPE_CODE, CancelStatsCollectionRequest::new);
         factory.register(StatsPropagationMessage.TYPE_CODE, StatsPropagationMessage::new);
         factory.register(StatsGetRequest.TYPE_CODE, StatsGetRequest::new);
         factory.register(StatsKeyMessage.TYPE_CODE, StatsKeyMessage::new);
         factory.register(StatsObjectData.TYPE_CODE, StatsObjectData::new);
         factory.register(StatsColumnData.TYPE_CODE, StatsColumnData::new);
+        factory.register(StatsClearRequest.TYPE_CODE, StatsClearRequest::new);
     }
 
     /** {@inheritDoc} */

@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat.messages;
 
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
@@ -72,19 +73,65 @@ public class CancelStatsCollectionRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
+        writer.setBuffer(buf);
+
+        if (!writer.isHeaderWritten()) {
+            if (!writer.writeHeader(directType(), fieldsCount()))
+                return false;
+
+            writer.onHeaderWritten();
+        }
+
+        switch (writer.state()) {
+            case 0:
+                if (!writer.writeUuid("colId", colId))
+                    return false;
+
+                writer.incrementState();
+
+            case 1:
+                if (!writer.writeObjectArray("reqIds", reqIds, MessageCollectionItemType.UUID))
+                    return false;
+
+                writer.incrementState();
+
+        }
 
         return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
+        reader.setBuffer(buf);
+
+        if (!reader.beforeMessageRead())
+            return false;
+
+        switch (reader.state()) {
+            case 0:
+                colId = reader.readUuid("colId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 1:
+                reqIds = reader.readObjectArray("reqIds", MessageCollectionItemType.UUID, UUID.class);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+        }
 
         return reader.afterMessageRead(CancelStatsCollectionRequest.class);
     }
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return 0;
+        return TYPE_CODE;
     }
 
     /** {@inheritDoc} */
