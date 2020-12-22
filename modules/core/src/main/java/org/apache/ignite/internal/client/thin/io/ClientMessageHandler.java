@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.timeout;
+package org.apache.ignite.internal.client.thin.io;
 
-import org.apache.ignite.internal.processors.query.timeout.DefaultQueryTimeoutThickJavaTest;
+import java.nio.ByteBuffer;
 
 /**
- *
+ * Handles thin client responses and server -> client notifications.
  */
-public class DefaultQueryTimeoutThickJavaUpdateTest extends DefaultQueryTimeoutThickJavaTest {
-    /** */
-    public DefaultQueryTimeoutThickJavaUpdateTest() {
-        super(true, false);
-    }
+public interface ClientMessageHandler {
+    /**
+     * Handles messages from the server.
+     * @param buf Buffer.
+     */
+    void onMessage(ByteBuffer buf);
 }

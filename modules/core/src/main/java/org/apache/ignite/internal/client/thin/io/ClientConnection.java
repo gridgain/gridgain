@@ -14,14 +14,25 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.timeout;
+package org.apache.ignite.internal.client.thin.io;
+
+import java.nio.ByteBuffer;
+
+import org.apache.ignite.IgniteCheckedException;
 
 /**
- *
+ * Client connection: abstracts away sending and receiving messages.
  */
-public class DefaultQueryTimeoutThickJavaUpdateLazyTest extends DefaultQueryTimeoutThickJavaTest {
-    /** */
-    public DefaultQueryTimeoutThickJavaUpdateLazyTest() {
-        super(true, true);
-    }
+public interface ClientConnection extends AutoCloseable {
+    /**
+     * Sends a message.
+     *
+     * @param msg Message buffer.
+     */
+    void send(ByteBuffer msg) throws IgniteCheckedException;
+
+    /**
+     * Closes the connection.
+     */
+    @Override void close();
 }

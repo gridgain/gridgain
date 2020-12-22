@@ -14,7 +14,17 @@
  * limitations under the License.
  */
 
-module ignite_modules_test {
-    requires ignite.core;
-    requires junit;
+package org.apache.ignite.internal.client.thin.io;
+
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Handles thin client connection state.
+ */
+public interface ClientConnectionStateHandler {
+    /**
+     * Handles connection loss.
+     * @param e Exception that caused the disconnect, can be null.
+     */
+    void onDisconnected(@Nullable Exception e);
 }

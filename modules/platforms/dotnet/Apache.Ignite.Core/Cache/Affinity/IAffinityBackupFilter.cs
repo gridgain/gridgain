@@ -13,16 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+namespace Apache.Ignite.Core.Cache.Affinity
+{
+    using System.Diagnostics.CodeAnalysis;
+    using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
 
-/**
- * Test suite for dev utils.
- */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-})
-public class DevUtilsTestSuite {
+    /// <summary>
+    /// Represents a backup filter for an affinity function - see
+    /// <see cref="RendezvousAffinityFunction.AffinityBackupFilter"/>.
+    /// <para />
+    /// Only one predefined implementation is supported for now: <see cref="ClusterNodeAttributeAffinityBackupFilter"/>.
+    /// </summary>
+    [SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces")]
+    public interface IAffinityBackupFilter
+    {
+        // No-op: custom implementations are not supported.
+    }
 }
