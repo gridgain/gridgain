@@ -74,7 +74,7 @@ public class MemoryTrackerOnReducerTest extends GridCommonAbstractTest {
      * @throws Exception If fails.
      */
     @Test
-    public void test() throws Exception {
+    public void plainQueryWithoutMemoryTracker() throws Exception {
         Iterator<List<?>> it = query("select * from TEST", true).iterator();
 
         int cnt = 0;
@@ -92,7 +92,7 @@ public class MemoryTrackerOnReducerTest extends GridCommonAbstractTest {
      * @throws Exception If fails.
      */
     @Test
-    public void testReduceTables() throws Exception {
+    public void reduceQueryAndTrackReducedBuffers() throws Exception {
         Iterator<List<?>> it = query(
             "select * from TEST T0, " +
                 "(SELECT DISTINCT id, name from TEST) T1 " +
@@ -100,6 +100,7 @@ public class MemoryTrackerOnReducerTest extends GridCommonAbstractTest {
              true).iterator();
 
         QueryMemoryManager memMgr = ((IgniteH2Indexing)grid(0).context().query().getIndexing()).memoryManager();
+
         int cnt = 0;
         while (it.hasNext()) {
             it.next();
