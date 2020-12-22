@@ -128,4 +128,25 @@ public class SqlQueryView {
     public String initiatorId() {
         return qry.queryInitiatorId();
     }
+
+    /**
+     * @return Distributed joins.
+     */
+    public boolean distributedJoins() {
+        return qry.distributedJoins();
+    }
+
+    /**
+     * @return Enforce join order.
+     */
+    public boolean enforceJoinOrder() {
+        return qry.enforceJoinOrder();
+    }
+
+    /**
+     * @return Lazy flag.
+     */
+    public boolean lazy() {
+        return qry.lazy();
+    }
 }
