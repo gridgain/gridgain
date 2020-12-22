@@ -327,6 +327,11 @@ public abstract class AbstractReducer implements Reducer {
         this.memTracker = memTracker;
     }
 
+    /** {@inheritDoc} */
+    @Override public H2MemoryTracker memoryTracker() {
+        return memTracker;
+    }
+
     /**
      * @param queue Queue to poll.
      * @param iter Current iterator.
