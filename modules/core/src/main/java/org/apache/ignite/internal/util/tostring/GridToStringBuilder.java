@@ -104,7 +104,7 @@ public class GridToStringBuilder {
     private static final Map<String, GridToStringClassDescriptor> classCache = new ConcurrentHashMap<>();
 
     /** Supplier for {@link #includeSensitive} with default behavior. */
-    private static final AtomicReference<Supplier<SensitiveDataLogging>> INCL_SENS_SUP_REF =
+    private static final AtomicReference<Supplier<SensitiveDataLogging>> SENS_DATA_LOG_SUP_REF =
         new AtomicReference<>(new Supplier<SensitiveDataLogging>() {
             /** Value of "IGNITE_SENSITIVE_DATA_LOGGING". */
             final SensitiveDataLogging sensitiveDataLogging;
@@ -193,30 +193,29 @@ public class GridToStringBuilder {
      * "Initialization-on-demand holder idiom"</a>.
      */
     private static class Holder {
-        /** Supplier holder for {@link #includeSensitive}. */
-        static final Supplier<SensitiveDataLogging> INCL_SENS_SUP = INCL_SENS_SUP_REF.get();
+        /** Supplier holder for {@link #includeSensitive} and {@link #getSensitiveDataLogging}. */
+        static final Supplier<SensitiveDataLogging> SENS_DATA_LOG_SUP = SENS_DATA_LOG_SUP_REF.get();
     }
 
     /** @return {@link SensitiveDataLogging} Log levels for sensitive data
      */
     public static SensitiveDataLogging getSensitiveDataLogging() {
-        return Holder.INCL_SENS_SUP.get();
+        return Holder.SENS_DATA_LOG_SUP.get();
     }
 
     /**
-     * Setting the logic of the {@link #includeSensitive} method. <br/>
+     * Setting the logic of the {@link #includeSensitive} and {@link #getSensitiveDataLogging} methods. <br/>
      * By default, it take the value of
-     * {@link IgniteSystemProperties#IGNITE_TO_STRING_INCLUDE_SENSITIVE
-     * IGNITE_TO_STRING_INCLUDE_SENSITIVE} system property. <br/>
+     * {@link IgniteSystemProperties#IGNITE_SENSITIVE_DATA_LOGGING} system property. <br/>
      * <b>Important!</b> Changing the logic is possible only until the first
-     * call of  {@link #includeSensitive} method. <br/>
+     * call of {@link #includeSensitive} or {@link #getSensitiveDataLogging} methods. <br/>
      *
      * @param sup
      */
-    public static void setIncludeSensitiveSupplier(Supplier<SensitiveDataLogging> sup) {
+    public static void setSensitiveDataLoggingSupplier(Supplier<SensitiveDataLogging> sup) {
         assert nonNull(sup);
 
-        INCL_SENS_SUP_REF.set(sup);
+        SENS_DATA_LOG_SUP_REF.set(sup);
     }
 
     /**
@@ -225,10 +224,10 @@ public class GridToStringBuilder {
      *
      * @return {@code true} if need to include sensitive data otherwise
      *      {@code false}.
-     * @see GridToStringBuilder#setIncludeSensitiveSupplier(Supplier)
+     * @see GridToStringBuilder#setSensitiveDataLoggingSupplier(Supplier)
      */
     public static boolean includeSensitive() {
-        return Holder.INCL_SENS_SUP.get() == SensitiveDataLogging.PLAIN;
+        return Holder.SENS_DATA_LOG_SUP.get() == SensitiveDataLogging.PLAIN;
     }
 
     /**

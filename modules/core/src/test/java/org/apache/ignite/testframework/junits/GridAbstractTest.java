@@ -288,7 +288,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         System.setProperty(IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT, "1000");
         System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "false");
 
-        S.setIncludeSensitiveSupplier(() -> {
+        S.setSensitiveDataLoggingSupplier(() -> {
             String sysStrToStringIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
 
             if (sysStrToStringIncludeSensitive != null)
