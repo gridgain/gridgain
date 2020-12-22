@@ -40,9 +40,10 @@ namespace Apache.Ignite.Core.Tests.Cache
         [TestFixtureSetUp]
         public void FixtureSetUp()
         {
-            Environment.SetEnvironmentVariable("IGNITE_SENSITIVE_DATA_LOGGING", "plain");
-
-            Ignition.Start(TestUtils.GetTestConfiguration());
+            using (EnvVar.Set("IGNITE_SENSITIVE_DATA_LOGGING", "plain"))
+            {
+                Ignition.Start(TestUtils.GetTestConfiguration());
+            }
         }
 
         /// <summary>
