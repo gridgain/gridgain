@@ -987,7 +987,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** */
-    public H2MemoryTracker memTracker(H2QueryInfo qryInfo, long maxMem) {
+    public H2MemoryTracker memTracker(H2QueryInfo qryInfo) {
         assert qryInfo.runningQueryId() != null;
 
         GridRunningQueryInfo runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
@@ -998,8 +998,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
             return ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
+        else {
+            assert false : "Cannot find running query info to get memory tracker [qryInfo=" + qryInfo + ']'
 
-        return (H2MemoryTracker)memoryMgr.createQueryMemoryTracker(maxMem);
+            log.warning("Cannot find running query info to get memory tracker [qryInfo=" + qryInfo + ']');
+
+            return null;
+        }
     }
 
     /**

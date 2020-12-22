@@ -59,12 +59,10 @@ import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryCacheObjectsIterator;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
-import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.IgniteSQLMapStepException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -555,9 +553,7 @@ public class GridReduceQueryExecutor {
 
                             ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId, qryId);
 
-                            final H2MemoryTracker memoryTracker = h2.memTracker(qryInfo, maxMem);
-
-                            r.reducers().forEach(reducer -> reducer.memoryTracker(memoryTracker));
+                            r.reducers().forEach(reducer -> reducer.memoryTracker(h2.memTracker(qryInfo)));
 
                             ResultSet res = h2.executeSqlQueryWithTimer(stmt, conn,
                                 rdc.query(),
