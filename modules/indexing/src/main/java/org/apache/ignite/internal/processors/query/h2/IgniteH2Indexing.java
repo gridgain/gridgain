@@ -999,7 +999,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
             return ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
         else {
-            assert false : "Cannot find running query info to get memory tracker [qryInfo=" + qryInfo + ']'
+            assert false : "Cannot find running query info to get memory tracker [qryInfo=" + qryInfo + ']';
 
             log.warning("Cannot find running query info to get memory tracker [qryInfo=" + qryInfo + ']');
 
