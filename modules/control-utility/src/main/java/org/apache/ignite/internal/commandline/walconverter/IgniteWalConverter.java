@@ -68,7 +68,7 @@ public class IgniteWalConverter {
         H2ExtrasLeafIO.register();
 
         if (params.includeSensitive() == null)
-            System.setProperty(IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING, "plain");
+            System.setProperty(IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING, "hash");
         else {
             switch (params.includeSensitive()) {
                 case SHOW:
