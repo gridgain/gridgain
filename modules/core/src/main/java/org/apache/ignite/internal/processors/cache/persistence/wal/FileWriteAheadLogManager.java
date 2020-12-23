@@ -550,18 +550,16 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /**
-     *  Collect wal segment files from low pointer (include) to high pointer (not include) and reserve low pointer.
+     * Collection WAL segments from the archive only if they are all present.
+     * Will wait for the last segment to be archived if not.
      *
-     * @param low Low bound.
-     * @param high High bound.
+     * @param low Low bound (include).
+     * @param high High bound (not include).
+     * @return WAL segments from archive.
+     * @throws IgniteCheckedException If failed.
      */
-    public Collection<File> getAndReserveWalFiles(FileWALPointer low, FileWALPointer high) throws IgniteCheckedException {
-        final long awaitIdx = high.index() - 1;
-
-        segmentAware.awaitSegmentArchived(awaitIdx);
-
-        if (!reserve(low))
-            throw new IgniteCheckedException("WAL archive segment has been deleted [idx=" + low.index() + "]");
+    public Collection<File> archiveWalFiles(FileWALPointer low, FileWALPointer high) throws IgniteCheckedException {
+        segmentAware.awaitSegmentArchived(high.index() - 1);
 
         List<File> res = new ArrayList<>();
 
@@ -576,11 +574,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             else if (fileZip.exists())
                 res.add(fileZip);
             else {
-                if (log.isInfoEnabled()) {
+                if (log.isInfoEnabled())
                     log.info("Segment not found: " + file.getName() + "/" + fileZip.getName());
 
-                    log.info("Stopped iteration on idx: " + i);
-                }
+                res.clear();
 
                 break;
             }
