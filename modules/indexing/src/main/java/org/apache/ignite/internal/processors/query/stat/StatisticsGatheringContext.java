@@ -1,8 +1,8 @@
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringResponse;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -14,23 +14,23 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Statistics collection status by local or global request.
+ * Statistics collection context by local or global request.
  */
-public class StatCollectionStatus {
+public class StatisticsCollectionContext {
     /** Collection id. */
     private final UUID colId;
 
     /** Keys to collect statistics by. */
-    private Collection<StatsKeyMessage> keys;
+    private Collection<StatisticsKeyMessage> keys;
 
     /** Map request id to collection request. */
-    private final ConcurrentMap<UUID, StatsAddrRequest<StatsCollectionRequest>> remainingColReqs;
+    private final ConcurrentMap<UUID, StatisticssAddrRequest<StatisticsGatheringRequest>> remainingColReqs;
 
     /** Collected local statistics. */
-    private final List<StatsCollectionResponse> locStatistics;
+    private final List<StatisticsGatheringResponse> locStatistics;
 
     /** Done future adapter. */
-    private final StatsCollectionFutureAdapter doneFut;
+    private final StatisticsCollectionFutureAdapter doneFut;
 
     /**
      * Constructor.
@@ -39,23 +39,23 @@ public class StatCollectionStatus {
      * @param keys Keys to collect statistics by.
      * @param remainingColReqs Collection of remaining requests. If {@code null} - it's local collection task.
      */
-    public StatCollectionStatus(
+    public StatisticsCollectionContext(
             UUID colId,
-            Collection<StatsKeyMessage> keys,
-            Map<UUID, StatsAddrRequest<StatsCollectionRequest>> remainingColReqs
+            Collection<StatisticsKeyMessage> keys,
+            Map<UUID, StatisticssAddrRequest<StatisticsGatheringRequest>> remainingColReqs
     ) {
         this.colId = colId;
         this.keys = keys;
         this.remainingColReqs = (remainingColReqs == null) ? null : new ConcurrentHashMap<>(remainingColReqs);
         locStatistics = (remainingColReqs == null) ? null : Collections.synchronizedList(
                 new ArrayList<>(remainingColReqs.size()));
-        this.doneFut = new StatsCollectionFutureAdapter(colId);;
+        this.doneFut = new StatisticsCollectionFutureAdapter(colId);;
     }
 
     /**
      * @return Collection of keys to collect statistics by.
      */
-    public Collection<StatsKeyMessage> keys() {
+    public Collection<StatisticsKeyMessage> keys() {
         return keys;
     }
 
@@ -67,7 +67,7 @@ public class StatCollectionStatus {
      * @return {@code true} if all request finished and global statistics could be aggregated,
      *     {@code false} - otherwise.
      */
-    public boolean registerCollected(StatsCollectionResponse resp) {
+    public boolean registerCollected(StatisticsGatheringResponse resp) {
         assert colId.equals(resp.colId());
 
         locStatistics.add(resp);
@@ -85,8 +85,8 @@ public class StatCollectionStatus {
      */
     public void replaceStatsCollectionRequest(
         UUID oldReqId,
-        Map<UUID, StatsAddrRequest<StatsCollectionRequest>> newReqs,
-        StatsCollectionResponse resp
+        Map<UUID, StatisticssAddrRequest<StatisticsGatheringRequest>> newReqs,
+        StatisticsGatheringResponse resp
     ) {
         locStatistics.add(resp);
         remainingColReqs.putAll(newReqs);
@@ -99,8 +99,8 @@ public class StatCollectionStatus {
      * @param nodeId node id to remove requests by.
      * @return Collection of removed requests.
      */
-    public Collection<StatsCollectionRequest> removeNodeRequest(UUID nodeId) {
-        Collection<StatsCollectionRequest> res = new ArrayList<>();
+    public Collection<StatisticsGatheringRequest> removeNodeRequest(UUID nodeId) {
+        Collection<StatisticsGatheringRequest> res = new ArrayList<>();
 
         remainingColReqs.values().removeIf(req -> {
             if (nodeId.equals(req.nodeId())) {
@@ -124,21 +124,21 @@ public class StatCollectionStatus {
     /**
      * @return Map request id to collection request.
      */
-    public Map<UUID, StatsAddrRequest<StatsCollectionRequest>> remainingCollectionReqs() {
+    public Map<UUID, StatisticssAddrRequest<StatisticsGatheringRequest>> remainingCollectionReqs() {
         return remainingColReqs;
     }
 
     /**
      * @return Collected local statistics.
      */
-    public List<StatsCollectionResponse> localStatistics() {
+    public List<StatisticsGatheringResponse> localStatistics() {
         return locStatistics;
     }
 
     /**
      * @return Collection control future.
      */
-    public StatsCollectionFutureAdapter doneFut() {
+    public StatisticsCollectionFutureAdapter doneFut() {
         return doneFut;
     }
 }
