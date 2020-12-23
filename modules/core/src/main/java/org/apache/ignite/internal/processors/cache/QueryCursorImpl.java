@@ -32,9 +32,9 @@ import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
 
 import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.CLOSED;
+import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.COMPLETED;
 import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.EXECUTING;
 import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.IDLE;
-import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.COMPLETED;
 
 /**
  * Query cursor implementation.
@@ -107,26 +107,10 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
             throw new CacheException(new QueryCancelledException());
         }
 
-        if (lazy) {
-            Iterator<T> delegate = iter;
-
-            iter = new Iterator<T>() {
-                @Override public boolean hasNext() {
-                    if (delegate.hasNext())
-                        return true;
-
-                    STATE_UPDATER.compareAndSet(QueryCursorImpl.this, EXECUTING, COMPLETED);
-
-                    return false;
-                }
-
-                @Override public T next() {
-                    return delegate.next();
-                }
-            };
-        }
-
         assert iter != null;
+
+        if (lazy)
+            iter = new LazyIterator<>(iter);
 
         return iter;
     }
@@ -263,5 +247,52 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
      */
     public void partitionResult(PartitionResult partRes) {
         this.partRes = partRes;
+    }
+
+    /**
+     * Iterator wrapper for lazy results. Updates cursor state when all rows are read,
+     * otherwise just delegates invocation.
+     */
+    public class LazyIterator<Type> implements Iterator<Type>, AutoCloseable {
+        /** */
+        private final Iterator<Type> delegate;
+
+        /**
+         * @param delegate Iterator.
+         */
+        public LazyIterator(Iterator<Type> delegate) {
+            this.delegate = delegate;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean hasNext() {
+            if (delegate.hasNext())
+                return true;
+
+            STATE_UPDATER.compareAndSet(QueryCursorImpl.this, EXECUTING, COMPLETED);
+
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Type next() {
+            return delegate.next();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void remove() {
+            delegate.remove();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void forEachRemaining(java.util.function.Consumer<? super Type> action) {
+            delegate.forEachRemaining(action);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() throws Exception {
+            if (delegate instanceof AutoCloseable)
+                ((AutoCloseable)delegate).close();
+        }
     }
 }
