@@ -169,6 +169,7 @@ import org.apache.ignite.internal.processors.cache.index.LongIndexNameTest;
 import org.apache.ignite.internal.processors.cache.index.OptimizedMarshallerIndexNameTest;
 import org.apache.ignite.internal.processors.cache.index.QueryEntityValidationSelfTest;
 import org.apache.ignite.internal.processors.cache.index.SchemaExchangeSelfTest;
+import org.apache.ignite.internal.processors.cache.index.SqlPartitionEvictionTest;
 import org.apache.ignite.internal.processors.cache.index.SqlTransactionCommandsWithMvccDisabledSelfTest;
 import org.apache.ignite.internal.processors.cache.index.StopNodeOnRebuildIndexFailureTest;
 import org.apache.ignite.internal.processors.cache.local.IgniteCacheLocalAtomicQuerySelfTest;
@@ -618,6 +619,9 @@ import org.junit.runners.Suite;
 
     // Partition loss.
     IndexingCachePartitionLossPolicySelfTest.class,
+
+    // Partitions eviction
+    SqlPartitionEvictionTest.class,
 
     // GROUP_CONCAT
     IgniteSqlGroupConcatCollocatedTest.class,

@@ -1460,6 +1460,9 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
 
+    /** Preserve local store classLoaders. */
+    public static final String IGNITE_DEPLOYMENT_PRESERVE_LOCAL = "IGNITE_DEPLOYMENT_PRESERVE_LOCAL";
+
     /**
      * Defragmentation region size percentage of configured region size.
      * This percentage will be calculated from largest configured region size and then proportionally subtracted
@@ -1467,6 +1470,14 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE =
         "IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE";
+
+    /**
+     * There can be background tasks that can be interrupted due to node stop, node fail, or cluster deactivation,
+     * but need to be completed, so they start after node start or cluster activation. If this option is set to
+     * {@code false}, then tasks will not be started.
+     */
+    public static final String IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE =
+        "IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE";
 
     /**
      * Enforces singleton.

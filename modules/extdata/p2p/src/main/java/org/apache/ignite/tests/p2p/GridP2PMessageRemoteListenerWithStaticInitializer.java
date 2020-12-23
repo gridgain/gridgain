@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,16 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.tests.p2p;
+
+import java.util.UUID;
+import org.apache.ignite.lang.IgniteBiPredicate;
 
 /**
- * Test suite for dev utils.
+ * Message remote listener with static initializer.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-})
-public class DevUtilsTestSuite {
+public class GridP2PMessageRemoteListenerWithStaticInitializer implements IgniteBiPredicate<UUID, String> {
+    /** */
+    private final GridP2PTestObjectWithStaticInitializer testObj = new GridP2PTestObjectWithStaticInitializer();
+
+    /** {@inheritDoc} */
+    @Override public boolean apply(UUID nodeId, String msg) {
+        return true;
+    }
 }

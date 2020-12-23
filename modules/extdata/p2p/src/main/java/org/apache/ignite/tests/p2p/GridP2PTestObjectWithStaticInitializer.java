@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,22 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.timeout;
+package org.apache.ignite.tests.p2p;
 
 /**
- *
+ * Test object with static initializer.
  */
-public class DefaultQueryTimeoutThickJavaLazyTest extends DefaultQueryTimeoutThickJavaTest {
-    /** */
-    public DefaultQueryTimeoutThickJavaLazyTest() {
-        super(false, true);
+public class GridP2PTestObjectWithStaticInitializer {
+    /**
+     * Static initializer.
+     */
+    static {
+        new GridP2PTestObject();
+    }
+
+    /**
+     * Test Object.
+     */
+    public static class GridP2PTestObject {
     }
 }

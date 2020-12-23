@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -237,7 +237,7 @@ public class VisorWalTask extends VisorMultiNodeTask<VisorWalTaskArg, VisorWalTa
 
             dbMgr.onWalTruncated(lowBoundForTruncate);
 
-            int num = wal.truncate(null, lowBoundForTruncate);
+            int num = wal.truncate(lowBoundForTruncate);
 
             if (walFiles != null) {
                 sortWalFiles(walFiles);

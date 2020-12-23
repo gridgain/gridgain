@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.timeout;
+package org.apache.ignite.tests.p2p;
 
-import org.apache.ignite.internal.processors.query.timeout.DefaultQueryTimeoutThickJavaTest;
+import javax.cache.event.CacheEntryEvent;
+import org.apache.ignite.lang.IgniteClosure;
 
 /**
- *
+ * Remote transformer with static initializer.
  */
-public class DefaultQueryTimeoutThickJavaUpdateTest extends DefaultQueryTimeoutThickJavaTest {
+public class GridP2PRemoteTransformerWithStaticInitializer implements IgniteClosure<CacheEntryEvent<Integer, Integer>, String> {
     /** */
-    public DefaultQueryTimeoutThickJavaUpdateTest() {
-        super(true, false);
+    private final GridP2PTestObjectWithStaticInitializer testObj = new GridP2PTestObjectWithStaticInitializer();
+
+    /** {@inheritDoc} */
+    @Override public String apply(CacheEntryEvent<Integer, Integer> event) {
+        return Integer.toString(event.getValue());
     }
 }
