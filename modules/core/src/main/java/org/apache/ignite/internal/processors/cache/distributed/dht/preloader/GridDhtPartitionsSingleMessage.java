@@ -395,7 +395,7 @@ public class GridDhtPartitionsSingleMessage extends GridDhtPartitionsAbstractMes
                 partHistCntrsBytes0 = U.marshal(ctx, partHistCntrs);
 
             if (partClearCntrs != null && partClearCntrsBytes == null)
-                partClearCntrsBytes0 = U.marshal(ctx, partHistCntrs);
+                partClearCntrsBytes0 = U.marshal(ctx, partClearCntrs);
 
             if (partsSizes != null && partsSizesBytes == null)
                 partsSizesBytes0 = U.marshal(ctx, partsSizes);
