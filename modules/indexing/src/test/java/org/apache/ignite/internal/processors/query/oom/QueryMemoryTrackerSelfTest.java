@@ -38,7 +38,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
     }
 
     /** {@inheritDoc} */
-    protected long globalQuotaSize() {
+    @Override protected long globalQuotaSize() {
         return 11L * MB;
     }
 
