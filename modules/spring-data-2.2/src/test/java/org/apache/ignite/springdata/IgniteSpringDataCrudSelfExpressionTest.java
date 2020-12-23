@@ -33,9 +33,6 @@ public class IgniteSpringDataCrudSelfExpressionTest extends GridCommonAbstractTe
     /** Context. */
     private static AnnotationConfigApplicationContext ctx;
 
-    /** Number of entries to store */
-    private static int CACHE_SIZE = 1000;
-
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -53,9 +50,7 @@ public class IgniteSpringDataCrudSelfExpressionTest extends GridCommonAbstractTe
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        fillInRepository();
-
-        assertEquals(CACHE_SIZE, repo.count());
+        assertEquals(0, repo.count());
     }
 
     /** {@inheritDoc} */
@@ -68,37 +63,29 @@ public class IgniteSpringDataCrudSelfExpressionTest extends GridCommonAbstractTe
     }
 
     /**
-     *
+     * Test that put and get operations are working.
      */
-    private void fillInRepository() {
-        for (int i = 0; i < CACHE_SIZE - 5; i++) {
-            repo.save(i, new Person("person" + Integer.toHexString(i),
-                "lastName" + Integer.toHexString((i + 16) % 256)));
-        }
-
-        repo.save((int) repo.count(), new Person("uniquePerson", "uniqueLastName"));
-        repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
-        repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
-        repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
-        repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        ctx.destroy();
-    }
-
     @Test
     public void testPutGet() {
+        assertNotNull(repo);
+
         Person person = new Person("some_name", "some_surname");
 
-        int id = CACHE_SIZE + 1;
+        assertEquals(person, repo.save(0, person));
 
-        assertEquals(person, repo.save(id, person));
+        assertTrue(repo.existsById(0));
 
-        assertTrue(repo.existsById(id));
+        assertEquals(person, repo.findById(0).get());
+    }
 
-        assertEquals(person, repo.findById(id).get());
+    /**
+     * Test that saving without an id fails.
+     */
+    @Test
+    public void testFailIfSaveWithoutId() {
+        assertNotNull(repo);
+
+        Person person = new Person("some_name", "some_surname");
 
         try {
             repo.save(person);

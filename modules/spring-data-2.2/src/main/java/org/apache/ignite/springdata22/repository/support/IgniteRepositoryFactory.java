@@ -50,9 +50,6 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
     /** Ignite instance */
     private Ignite ignite;
 
-    /** Spring application context */
-    private ApplicationContext ctx;
-
     /** Spring application bean factory */
     private DefaultListableBeanFactory beanFactory;
 
@@ -73,8 +70,6 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
     public IgniteRepositoryFactory(Ignite ignite, ApplicationContext ctx) {
         this.ignite = ignite;
 
-        this.ctx = ctx;
-
         this.beanFactory = new DefaultListableBeanFactory(ctx.getAutowireCapableBeanFactory());
 
         this.beanExpressionContext = new BeanExpressionContext(beanFactory, null);
@@ -87,13 +82,7 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
      * @param cfg Ignite configuration.
      */
     public IgniteRepositoryFactory(IgniteConfiguration cfg, ApplicationContext ctx) {
-        this.ignite = Ignition.start(cfg);
-
-        this.ctx = ctx;
-
-        this.beanFactory = new DefaultListableBeanFactory(ctx.getAutowireCapableBeanFactory());
-
-        this.beanExpressionContext = new BeanExpressionContext(beanFactory, null);
+        this(Ignition.start(cfg), ctx);
     }
 
     /**
@@ -103,13 +92,7 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
      * @param springCfgPath A path to Ignite configuration.
      */
     public IgniteRepositoryFactory(String springCfgPath, ApplicationContext ctx) {
-        this.ignite = Ignition.start(springCfgPath);
-
-        this.ctx = ctx;
-
-        this.beanFactory = new DefaultListableBeanFactory(ctx.getAutowireCapableBeanFactory());
-
-        this.beanExpressionContext = new BeanExpressionContext(beanFactory, null);
+        this(Ignition.start(springCfgPath), ctx);
     }
 
     /** {@inheritDoc} */
@@ -151,10 +134,10 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
     }
 
     /**
-     *  evaluate the SpEL expression
+     *  Evaluate the SpEL expression
      *
      * @param spelExpression SpEL expression
-     * @return the result of execution of the SpEL expression
+     * @return The result of execution of the SpEL expression
      */
     @NotNull private String evaluateExpression(String spelExpression) {
         return (String)resolver.evaluate(spelExpression, beanExpressionContext);
