@@ -46,7 +46,7 @@ public class RecordSerializerFactoryImpl implements RecordSerializerFactory {
     /** Skip position check flag. Should be set for reading compacted wal file with skipped physical records. */
     private boolean skipPositionCheck;
 
-    /** Key provider for WAL records relating with encrypted caches. */
+    /** Key provider for WAL records related to encrypted caches. */
     private final EncryptionCacheKeyProvider cacheKeyProvider;
 
     /**

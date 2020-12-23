@@ -19,7 +19,7 @@ package org.apache.ignite.internal.managers.encryption;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Provider encryption cache keys.
+ * Provider for cache's encryption keys.
  */
 public interface EncryptionCacheKeyProvider {
     /**
