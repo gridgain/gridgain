@@ -38,6 +38,8 @@ enum { RETRIES_FOR_STABLE_TOPOLOGY = 5};
  */
 struct ComputeTestSuiteFixtureAffinity
 {
+    static const char* cacheName;
+
     Ignite node0;
     Ignite node1;
     Ignite node2;
@@ -47,7 +49,7 @@ struct ComputeTestSuiteFixtureAffinity
 #ifdef IGNITE_TESTS_32
         const char* config = "cache-test-32.xml";
 #else
-        const char* config = "cache-test.xml";
+        const char* config = "affinity-test.xml";
 #endif
         return StartNode(config, name);
     }
@@ -55,12 +57,19 @@ struct ComputeTestSuiteFixtureAffinity
     /*
      * Constructor.
      */
-    ComputeTestSuiteFixtureAffinity() :
-        node0(MakeNode("ComputeAffinityNode0")),
-        node1(MakeNode("ComputeAffinityNode1")),
-        node2(MakeNode("ComputeAffinityNode2"))
+    ComputeTestSuiteFixtureAffinity()
     {
-        // No-op.
+        node0 = MakeNode("ComputeAffinityNode0");
+
+        BOOST_REQUIRE(WaitForRebalance0());
+
+        node1 = MakeNode("ComputeAffinityNode1");
+
+        BOOST_REQUIRE(WaitForRebalance1());
+
+        node2 = MakeNode("ComputeAffinityNode2");
+
+        BOOST_REQUIRE(WaitForRebalance2());
     }
 
     /*
@@ -68,16 +77,39 @@ struct ComputeTestSuiteFixtureAffinity
      */
     ~ComputeTestSuiteFixtureAffinity()
     {
-        Ignition::StopAll(true);
+        Ignition::StopAll(false);
     }
 
     /**
      * Check whether rebalance is complete for the cluster.
      * @return true if complete.
      */
-    bool IsRebalanceComplete()
+    bool IsRebalanceComplete0()
     {
-        const char* cacheName = "partitioned";
+        return
+            node0.GetAffinity<int32_t>(cacheName).MapKeyToNode(0).IsLocal() &&
+            node0.GetAffinity<int32_t>(cacheName).MapKeyToNode(1).IsLocal() &&
+            node0.GetAffinity<int32_t>(cacheName).MapKeyToNode(6).IsLocal();
+    }
+
+    /**
+     * Check whether rebalance is complete for the cluster.
+     * @return true if complete.
+     */
+    bool IsRebalanceComplete1()
+    {
+        return
+            node0.GetAffinity<int32_t>(cacheName).MapKeyToNode(0).IsLocal() &&
+            node1.GetAffinity<int32_t>(cacheName).MapKeyToNode(1).IsLocal() &&
+            node1.GetAffinity<int32_t>(cacheName).MapKeyToNode(6).IsLocal();
+    }
+
+    /**
+     * Check whether rebalance is complete for the cluster.
+     * @return true if complete.
+     */
+    bool IsRebalanceComplete2()
+    {
         return
             node0.GetAffinity<int32_t>(cacheName).MapKeyToNode(0).IsLocal() &&
             node1.GetAffinity<int32_t>(cacheName).MapKeyToNode(1).IsLocal() &&
@@ -89,11 +121,33 @@ struct ComputeTestSuiteFixtureAffinity
      * @param timeout Timeout to wait.
      * @return True if condition was met, false if timeout has been reached.
      */
-    bool WaitForRebalance(int32_t timeout = 5000)
+    bool WaitForRebalance0(int32_t timeout = 5000)
     {
-        return WaitForCondition(boost::bind(&ComputeTestSuiteFixtureAffinity::IsRebalanceComplete, this), timeout);
+        return WaitForCondition(boost::bind(&ComputeTestSuiteFixtureAffinity::IsRebalanceComplete0, this), timeout);
+    }
+
+    /**
+     * Wait for rebalance.
+     * @param timeout Timeout to wait.
+     * @return True if condition was met, false if timeout has been reached.
+     */
+    bool WaitForRebalance1(int32_t timeout = 5000)
+    {
+        return WaitForCondition(boost::bind(&ComputeTestSuiteFixtureAffinity::IsRebalanceComplete1, this), timeout);
+    }
+
+    /**
+     * Wait for rebalance.
+     * @param timeout Timeout to wait.
+     * @return True if condition was met, false if timeout has been reached.
+     */
+    bool WaitForRebalance2(int32_t timeout = 5000)
+    {
+        return WaitForCondition(boost::bind(&ComputeTestSuiteFixtureAffinity::IsRebalanceComplete2, this), timeout);
     }
 };
+
+const char* ComputeTestSuiteFixtureAffinity::cacheName = "test_backups_0";
 
 /*
  * Test setup fixture.
@@ -521,19 +575,22 @@ IGNITE_EXPORTED_CALL void IgniteModuleInit1(IgniteBindingContext& context)
 }
 
 template<typename TK>
-std::vector<int32_t> GetPrimaryKeys(int32_t num, ClusterNode& node, CacheAffinity<TK>& affinity)
+std::vector<int32_t> GetPrimaryKeys(size_t num, ClusterNode& node, CacheAffinity<TK>& affinity)
 {
     std::vector<int32_t> ret;
-    int32_t count = 0;
+
+    if (!num)
+        return ret;
 
     for (int32_t i = 0; i < INT_MAX; i++)
-        if (affinity.IsPrimary(node, i))
-        {
-            if (count++ < num)
-                ret.push_back(i);
-            else
+    {
+        if (affinity.IsPrimary(node, i)) {
+            ret.push_back(i);
+
+            if (ret.size() >= num)
                 return ret;
         }
+    }
 
     BOOST_CHECK(false);
 
@@ -547,19 +604,18 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCall)
     const int32_t key = 100;
     const int32_t value = 500;
 
-    std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
-    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("partitioned");
+    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>(cacheName);
 
     cache.Put(key, value);
-
-    BOOST_REQUIRE(WaitForRebalance());
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
     Compute compute = node0.GetCompute();
 
+    ClusterNode clusterNode0 = affinity.MapKeyToNode(100);
+
     BOOST_TEST_CHECKPOINT("Starting local calls loop");
 
-    std::vector<int32_t> aKeys = GetPrimaryKeys(10, nodes.front(), affinity);
+    std::vector<int32_t> aKeys = GetPrimaryKeys(10, clusterNode0, affinity);
     for (size_t i = 0; i < aKeys.size(); i++)
     {
         int32_t res = compute.AffinityCall<int32_t>(cache.GetName(), aKeys[i],
@@ -568,9 +624,17 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCall)
         BOOST_CHECK_EQUAL(res, value);
     }
 
+    ClusterNode clusterNode1 = node0.GetCluster().GetLocalNode();
+
+    if (clusterNode0.GetId() == clusterNode1.GetId())
+        clusterNode1 = node1.GetCluster().GetLocalNode();
+
+    BOOST_REQUIRE_NE(clusterNode0.GetId(), clusterNode1.GetId());
+    BOOST_REQUIRE(!affinity.IsPrimary(clusterNode1, key));
+
     BOOST_TEST_CHECKPOINT("Starting remote calls loop");
 
-    aKeys = GetPrimaryKeys(10, nodes.back(), affinity);
+    aKeys = GetPrimaryKeys(10, clusterNode1, affinity);
     for (size_t i = 0; i < aKeys.size(); i++)
     {
         int32_t res = compute.AffinityCall<int32_t>(cache.GetName(), aKeys[i],
@@ -585,19 +649,18 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCallAsync)
     const int32_t key = 100;
     const int32_t value = 500;
 
-    std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
-    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("partitioned");
+    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>(cacheName);
 
     cache.Put(key, value);
-
-    BOOST_REQUIRE(WaitForRebalance());
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
     Compute compute = node0.GetCompute();
 
+    ClusterNode clusterNode0 = affinity.MapKeyToNode(100);
+
     BOOST_TEST_CHECKPOINT("Starting calls loop");
 
-    std::vector<int32_t> aKeys = GetPrimaryKeys(10, nodes.front(), affinity);
+    std::vector<int32_t> aKeys = GetPrimaryKeys(10, clusterNode0, affinity);
     for (size_t i = 0; i < aKeys.size(); i++)
     {
         Future<int32_t> res = compute.AffinityCallAsync<int32_t>(cache.GetName(), aKeys[i],
@@ -607,9 +670,17 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityCallAsync)
         BOOST_CHECK_EQUAL(value, resVal);
     }
 
+    ClusterNode clusterNode1 = node0.GetCluster().GetLocalNode();
+
+    if (clusterNode0.GetId() == clusterNode1.GetId())
+        clusterNode1 = node1.GetCluster().GetLocalNode();
+
+    BOOST_REQUIRE_NE(clusterNode0.GetId(), clusterNode1.GetId());
+    BOOST_REQUIRE(!affinity.IsPrimary(clusterNode1, key));
+
     BOOST_TEST_CHECKPOINT("Starting remote calls loop");
 
-    aKeys = GetPrimaryKeys(10, nodes.back(), affinity);
+    aKeys = GetPrimaryKeys(10, clusterNode1, affinity);
     for (size_t i = 0; i < aKeys.size(); i++)
     {
         Future<int32_t> res = compute.AffinityCallAsync<int32_t>(cache.GetName(), aKeys[i],
@@ -626,19 +697,18 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRun)
     const int32_t checkKey = -1;
     const int32_t value = 500;
 
-    std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
-    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("partitioned");
+    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>(cacheName);
 
     cache.Put(key, value);
-
-    BOOST_REQUIRE(WaitForRebalance());
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
     Compute compute = node0.GetCompute();
 
+    ClusterNode clusterNode0 = affinity.MapKeyToNode(100);
+
     BOOST_TEST_CHECKPOINT("Starting calls loop");
 
-    std::vector<int32_t> aKeys = GetPrimaryKeys(10, nodes.front(), affinity);
+    std::vector<int32_t> aKeys = GetPrimaryKeys(10, clusterNode0, affinity);
     for (size_t i = 0; i < aKeys.size(); i++)
     {
         compute.AffinityRun(cache.GetName(), aKeys[i],
@@ -648,9 +718,17 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRun)
         BOOST_CHECK_EQUAL(500, resVal);
     }
 
+    ClusterNode clusterNode1 = node0.GetCluster().GetLocalNode();
+
+    if (clusterNode0.GetId() == clusterNode1.GetId())
+        clusterNode1 = node1.GetCluster().GetLocalNode();
+
+    BOOST_REQUIRE_NE(clusterNode0.GetId(), clusterNode1.GetId());
+    BOOST_REQUIRE(!affinity.IsPrimary(clusterNode1, key));
+
     BOOST_TEST_CHECKPOINT("Starting remote calls loop");
 
-    aKeys = GetPrimaryKeys(10, nodes.back(), affinity);
+    aKeys = GetPrimaryKeys(10, clusterNode1, affinity);
     for (size_t i = 0; i < aKeys.size(); i++)
     {
         compute.AffinityRun(cache.GetName(), aKeys[i],
@@ -667,19 +745,18 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRunAsync)
     const int32_t checkKey = -1;
     const int32_t value = 500;
 
-    std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
-    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("partitioned");
+    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>(cacheName);
 
     cache.Put(key, value);
-
-    BOOST_REQUIRE(WaitForRebalance());
 
     CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
     Compute compute = node0.GetCompute();
 
+    ClusterNode clusterNode0 = affinity.MapKeyToNode(100);
+
     BOOST_TEST_CHECKPOINT("Starting calls loop");
 
-    std::vector<int32_t> aKeys = GetPrimaryKeys(10, nodes.front(), affinity);
+    std::vector<int32_t> aKeys = GetPrimaryKeys(10, clusterNode0, affinity);
     for (size_t i = 0; i < aKeys.size(); i++)
     {
         Future<void> res = compute.AffinityRunAsync(cache.GetName(), aKeys[i],
@@ -691,9 +768,17 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityRunAsync)
         BOOST_CHECK_EQUAL(500, resVal);
     }
 
+    ClusterNode clusterNode1 = node0.GetCluster().GetLocalNode();
+
+    if (clusterNode0.GetId() == clusterNode1.GetId())
+        clusterNode1 = node1.GetCluster().GetLocalNode();
+
+    BOOST_REQUIRE_NE(clusterNode0.GetId(), clusterNode1.GetId());
+    BOOST_REQUIRE(!affinity.IsPrimary(clusterNode1, key));
+
     BOOST_TEST_CHECKPOINT("Starting remote calls loop");
 
-    aKeys = GetPrimaryKeys(10, nodes.back(), affinity);
+    aKeys = GetPrimaryKeys(10, clusterNode1, affinity);
     for (size_t i = 0; i < aKeys.size(); i++)
     {
         Future<void> res = compute.AffinityRunAsync<int32_t>(cache.GetName(), aKeys[i],
