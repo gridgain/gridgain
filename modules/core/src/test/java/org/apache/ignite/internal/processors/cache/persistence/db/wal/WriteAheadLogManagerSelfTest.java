@@ -126,12 +126,12 @@ public class WriteAheadLogManagerSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checking the correctness of the method {@link FileWriteAheadLogManager#archiveWalFiles}.
+     * Checking the correctness of the method {@link FileWriteAheadLogManager#getWalFilesFromArchive}.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testArchiveWalFiles() throws Exception {
+    public void testGetWalFilesFromArchive() throws Exception {
         IgniteEx n = startGrids(1);
 
         FileWALPointer segment0WalPtr = new FileWALPointer(0, 0, 0);
@@ -142,7 +142,7 @@ public class WriteAheadLogManagerSelfTest extends GridCommonAbstractTest {
         IgniteInternalFuture<Collection<File>> fut = runAsync(() -> {
             startLatch.countDown();
 
-            return walMgr(n).archiveWalFiles(segment0WalPtr, segment2WalPtr);
+            return walMgr(n).getWalFilesFromArchive(segment0WalPtr, segment2WalPtr);
         });
 
         startLatch.await();
@@ -158,8 +158,8 @@ public class WriteAheadLogManagerSelfTest extends GridCommonAbstractTest {
         forceCheckpoint();
 
         assertEquals(1, walMgr(n).truncate(segment1WalPtr));
-        assertEquals(0, walMgr(n).archiveWalFiles(segment0WalPtr, segment2WalPtr).size());
-        assertEquals(1, walMgr(n).archiveWalFiles(segment1WalPtr, segment2WalPtr).size());
+        assertEquals(0, walMgr(n).getWalFilesFromArchive(segment0WalPtr, segment2WalPtr).size());
+        assertEquals(1, walMgr(n).getWalFilesFromArchive(segment1WalPtr, segment2WalPtr).size());
     }
 
     /**

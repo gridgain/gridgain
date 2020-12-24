@@ -565,15 +565,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /**
-     * Collection WAL segments from the archive only if they are all present.
-     * Will wait for the last segment to be archived if not.
+     * Collects WAL segments from the archive only if they are all present.
+     * Will wait for the last segment to be archived if it is not.
+     * If there are missing segments an empty collection is returned.
      *
      * @param low Low bound (include).
      * @param high High bound (not include).
-     * @return WAL segments from archive.
+     * @return WAL segments from the archive, or an empty collection if at
+     *      least a segment between {@code low} and {@code high} is missing.
      * @throws IgniteCheckedException If failed.
      */
-    public Collection<File> archiveWalFiles(FileWALPointer low, FileWALPointer high) throws IgniteCheckedException {
+    public Collection<File> getWalFilesFromArchive(
+        FileWALPointer low,
+        FileWALPointer high
+    ) throws IgniteCheckedException {
         segmentAware.awaitSegmentArchived(high.index() - 1);
 
         List<File> res = new ArrayList<>();
