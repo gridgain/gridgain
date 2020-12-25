@@ -22,7 +22,7 @@
             <PatternLayout pattern="[%p] %m%n"/>
         </Console>
 
-        <File name="FILE" fileName="${sys:IGNITE_HOME}/work/log/Log4j2ConfigUpdateTest.log" append="true">
+        <File name="FILE" fileName="${sys:IGNITE_HOME:-./ignite}/work/log/Log4j2ConfigUpdateTest.log" append="true">
             <PatternLayout pattern="[%p] %m%n"/>
         </File>
     </Appenders>
