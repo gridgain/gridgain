@@ -583,8 +583,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode);
         cacheCfg.setCacheStoreFactory(new MapCacheStoreStrategy.MapStoreFactory());
 
-        // TODO with invokes, first put optional
-
         IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
         int pk = 0;
         cache.put(pk, 0);

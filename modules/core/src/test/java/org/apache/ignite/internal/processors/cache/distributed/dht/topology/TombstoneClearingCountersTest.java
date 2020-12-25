@@ -60,9 +60,6 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
         cfg.setSystemThreadPoolSize(1); // Avoid assignState parallelization for easier debugging.
 
-        cfg.setFailureDetectionTimeout(100000L);
-        cfg.setClientFailureDetectionTimeout(100000L);
-
         // Need at least 2 threads in pool to avoid deadlock on clearing.
         cfg.setRebalanceThreadPoolSize(1);
         cfg.setConsistentId(igniteInstanceName);
@@ -73,7 +70,7 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         cfg.setDataStorageConfiguration(dsCfg);
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
-            setBackups(2).
+            setBackups(1).
             setAffinity(new RendezvousAffinityFunction(false, 64)));
 
         return cfg;
@@ -124,7 +121,6 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         assertTrue(historical(1).isEmpty());
         assertNull(rslvr.reason); // Expecting fast full rebalancing.
 
-        // TODO assert no historical rebalance.
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
 
@@ -151,6 +147,44 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
 
         // Expecting full clearing on grid1 so no desync happens.
         clearTombstones(cache);
+
+        TrackingResolver rslvr = new TrackingResolver(testPart);
+        IgniteEx g2 = startGrid(1, rslvr);
+
+        awaitPartitionMapExchange();
+
+        assertTrue(historical(1).isEmpty());
+        assertTrue(rslvr.reason == PartitionsEvictManager.EvictReason.CLEARING); // Tombstones are cleared, need eviction.
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConsistencyOnCounterTriggeredRebalanceClearTombstonesNotCrd() throws Exception {
+        IgniteEx crd = startGrids(3);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Object, Object> crdCache = crd.cache(DEFAULT_CACHE_NAME);
+
+        // Find a partition owned by non coordinator nodes.
+        int testPart = nearKey(crdCache);
+
+        crdCache.put(testPart, 0);
+
+        forceCheckpoint();
+
+        stopGrid(1);
+        awaitPartitionMapExchange();
+
+        crd.cache(DEFAULT_CACHE_NAME).remove(testPart);
+
+        IgniteCache<Object, Object> g2Cache = grid(2).cache(DEFAULT_CACHE_NAME);
+
+        // Expecting full clearing on grid1 (g2 will be a supplier) so no desync happens.
+        clearTombstones(g2Cache);
 
         TrackingResolver rslvr = new TrackingResolver(testPart);
         IgniteEx g2 = startGrid(1, rslvr);
@@ -256,11 +290,6 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         assertTrue(rslvr.reason == PartitionsEvictManager.EvictReason.CLEARING);
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
-    }
-
-    @Test
-    public void testConsistencyOnCounterTriggeredRebalanceRestartDemanderWhileClearing() throws Exception {
-        // TODO
     }
 
     /**
@@ -558,11 +587,6 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
 
-    @Test
-    public void testPauseDuringClearing() {
-        // TODO
-    }
-
     /**
      * @param size Size.
      */
@@ -571,14 +595,6 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
 
         for (Ignite grid : G.allGrids())
             assertEquals(size, grid.cache(DEFAULT_CACHE_NAME).size());
-    }
-
-    @Override protected long getTestTimeout() {
-        return super.getTestTimeout() * 100000;
-    }
-
-    @Override protected long getPartitionMapExchangeTimeout() {
-        return super.getPartitionMapExchangeTimeout() * 100000;
     }
 
     private void checkWAL(IgniteEx ig) throws IgniteCheckedException {
