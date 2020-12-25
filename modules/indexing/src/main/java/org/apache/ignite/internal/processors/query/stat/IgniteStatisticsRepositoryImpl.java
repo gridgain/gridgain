@@ -17,13 +17,12 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -42,10 +41,10 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     private final IgniteStatisticsManagerImpl statisticsMgr;
 
     /** Local (for current node) object statistics. */
-    private final Map<StatsKey, ObjectStatisticsImpl> locStats;
+    private final Map<StatisticsKey, ObjectStatisticsImpl> locStats;
 
     /** Global (for whole cluster) object statistics. */
-    private final Map<StatsKey, ObjectStatisticsImpl> globalStats = new ConcurrentHashMap<>();
+    private final Map<StatisticsKey, ObjectStatisticsImpl> globalStats = new ConcurrentHashMap<>();
 
     /**
      * Constructor.
@@ -72,7 +71,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
         else {
             // Cache only global statistics, no store
-            store = null;
+            store = new IgniteStatisticsDummyStoreImpl(logSupplier);
             locStats = null;
         }
         this.statisticsMgr = statisticsMgr;
@@ -81,29 +80,17 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
     /** {@inheritDoc} */
     @Override public void saveLocalPartitionsStatistics(
-            StatsKey key,
+            StatisticsKey key,
             Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
-        if (store == null) {
-            log.warning("Unable to save partition level statistics on non server node.");
-
-            return;
-        }
-
         store.replaceLocalPartitionsStatistics(key, statistics);
     }
 
     /** {@inheritDoc} */
     @Override public void mergeLocalPartitionsStatistics(
-            StatsKey key,
+            StatisticsKey key,
             Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
-        if (store == null) {
-            log.warning("Unable to save partition level statistics on non server node.");
-
-            return;
-        }
-
         for (ObjectPartitionStatisticsImpl newStat : statistics) {
             ObjectPartitionStatisticsImpl oldStat = store.getLocalPartitionStatistics(key, newStat.partId());
             if (oldStat != null)
@@ -114,23 +101,12 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key) {
-        if (store == null) {
-            log.warning("Unable to get local partition statistics by " + key + " on non server node.");
-
-            return Collections.emptyList();
-        }
-
+    @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatisticsKey key) {
         return store.getLocalPartitionsStatistics(key);
     }
 
     /** {@inheritDoc} */
-    @Override public void clearLocalPartitionsStatistics(StatsKey key, String... colNames) {
-        if (store == null) {
-            log.warning("Unable to clear local partitions by " + key + " on non server node.");
-
-            return;
-        }
+    @Override public void clearLocalPartitionsStatistics(StatisticsKey key, String... colNames) {
         if (F.isEmpty(colNames))
             store.clearLocalPartitionsStatistics(key);
         else {
@@ -160,12 +136,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics) {
-        if (store == null) {
-            log.warning("Unable to save local partition statistics for " + key + " on non server node.");
-
-            return;
-        }
+    @Override public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics) {
         ObjectPartitionStatisticsImpl oldPartStat = store.getLocalPartitionStatistics(key, statistics.partId());
         if (oldPartStat == null)
             store.saveLocalPartitionStatistics(key, statistics);
@@ -176,30 +147,17 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId) {
-        if (store == null) {
-            log.warning("Unable to get local partition statistics for " + key + " on non server node.");
-
-            return null;
-        }
-
+    @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatisticsKey key, int partId) {
         return store.getLocalPartitionStatistics(key, partId);
     }
 
     /** {@inheritDoc} */
-    @Override public void clearLocalPartitionStatistics(StatsKey key, int partId) {
-        if (store == null) {
-            log.warning("Unable to clear local partition statistics for " + key + " on non server node.");
-
-            return;
-        }
-
+    @Override public void clearLocalPartitionStatistics(StatisticsKey key, int partId) {
         store.clearLocalPartitionStatistics(key, partId);
     }
 
-    // TODO
     /** {@inheritDoc} */
-    @Override public void saveLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
+    @Override public void saveLocalStatistics(StatisticsKey key, ObjectStatisticsImpl statistics) {
         if (locStats == null) {
             log.warning("Unable to save local statistics for " + key + " on non server node.");
 
@@ -210,7 +168,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectStatisticsImpl mergeLocalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
+    @Override public ObjectStatisticsImpl mergeLocalStatistics(StatisticsKey key, ObjectStatisticsImpl statistics) {
         if (locStats == null) {
             log.warning("Unable to merge local statistics for " + key + " on non server node.");
 
@@ -228,18 +186,18 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public void cacheLocalStatistics(StatsKey key, Collection<ObjectPartitionStatisticsImpl> statistics) {
+    @Override public void cacheLocalStatistics(StatisticsKey key, Collection<ObjectPartitionStatisticsImpl> statistics) {
         if (locStats == null) {
             log.warning("Unable to cache local statistics for " + key + " on non server node.");
 
             return;
         }
-        StatsKeyMessage keyMsg = new StatsKeyMessage(key.schema(), key.obj(), null);
+        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(key.schema(), key.obj(), null);
         locStats.put(key, statisticsMgr.aggregateLocalStatistics(keyMsg, statistics));
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectStatisticsImpl getLocalStatistics(StatsKey key) {
+    @Override public ObjectStatisticsImpl getLocalStatistics(StatisticsKey key) {
         if (locStats == null)
             return null;
 
@@ -247,7 +205,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public void clearLocalStatistics(StatsKey key, String... colNames) {
+    @Override public void clearLocalStatistics(StatisticsKey key, String... colNames) {
         if (locStats == null) {
             log.warning("Unable to clear local statistics for " + key + " on non server node.");
 
@@ -264,12 +222,12 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public void saveGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
+    @Override public void saveGlobalStatistics(StatisticsKey key, ObjectStatisticsImpl statistics) {
         globalStats.put(key, statistics);
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectStatisticsImpl mergeGlobalStatistics(StatsKey key, ObjectStatisticsImpl statistics) {
+    @Override public ObjectStatisticsImpl mergeGlobalStatistics(StatisticsKey key, ObjectStatisticsImpl statistics) {
         ObjectStatisticsImpl[] res = new ObjectStatisticsImpl[1];
         globalStats.compute(key, (k,v) -> {
             v = (v == null) ? statistics : add(v, statistics);
@@ -282,12 +240,12 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectStatisticsImpl getGlobalStatistics(StatsKey key) {
+    @Override public ObjectStatisticsImpl getGlobalStatistics(StatisticsKey key) {
         return globalStats.get(key);
     }
 
     /** {@inheritDoc} */
-    @Override public void clearGlobalStatistics(StatsKey key, String... colNames) {
+    @Override public void clearGlobalStatistics(StatisticsKey key, String... colNames) {
         if (F.isEmpty(colNames))
             globalStats.remove(key);
         else
@@ -309,8 +267,9 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      * @param <T> Statistics type (partition or object one).
      * @return Combined statistics.
      */
-    private <T extends ObjectStatisticsImpl> T add(T base, T add) {
+    public static <T extends ObjectStatisticsImpl> T add(T base, T add) {
         T res = (T)add.clone();
+        res.rowCount(add.rowCount());
         for (Map.Entry<String, ColumnStatistics> entry : base.columnsStatistics().entrySet())
             res.columnsStatistics().putIfAbsent(entry.getKey(), entry.getValue());
 
@@ -324,7 +283,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      * @param cols Columns to remove.
      * @return Cloned object without specified columns statistics.
      */
-    private <T extends ObjectStatisticsImpl> T subtract(T base, String[] cols) {
+    public static <T extends ObjectStatisticsImpl> T subtract(T base, String[] cols) {
         T res = (T)base.clone();
         for (String col : cols)
             res.columnsStatistics().remove(col);

@@ -19,21 +19,9 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.collection.IntMap;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -45,7 +33,7 @@ import java.util.function.Function;
  */
 public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore {
     /** Table -> Partition -> Partition Statistics map, populated only on server nodes without persistence enabled. */
-    private final Map<StatsKey, IntMap<ObjectPartitionStatisticsImpl>> partsStats = new ConcurrentHashMap<>();
+    private final Map<StatisticsKey, IntMap<ObjectPartitionStatisticsImpl>> partsStats = new ConcurrentHashMap<>();
 
     /** Logger. */
     private final IgniteLogger log;
@@ -66,14 +54,14 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
 
     /** {@inheritDoc} */
     @Override public void replaceLocalPartitionsStatistics(
-        StatsKey key,
+        StatisticsKey key,
         Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
         partsStats.put(key, buildStatisticsMap(key, statistics));
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key) {
+    @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatisticsKey key) {
         Collection<ObjectPartitionStatisticsImpl>[] res = new Collection[1];
         partsStats.computeIfPresent(key, (k, v) -> {
             res[0] = Arrays.asList(v.values());
@@ -85,12 +73,12 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     }
 
     /** {@inheritDoc} */
-    @Override public void clearLocalPartitionsStatistics(StatsKey key) {
+    @Override public void clearLocalPartitionsStatistics(StatisticsKey key) {
         partsStats.remove(key);
     }
 
     /** {@inheritDoc} */
-    @Override public void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics) {
+    @Override public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics) {
         partsStats.compute(key, (k, v) -> {
             if (v == null)
                 v = new IntHashMap<>();
@@ -102,7 +90,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId) {
+    @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatisticsKey key, int partId) {
         ObjectPartitionStatisticsImpl[] res = new ObjectPartitionStatisticsImpl[1];
         partsStats.computeIfPresent(key, (k, v) -> {
             res[0] = v.get(partId);
@@ -113,7 +101,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     }
 
     /** {@inheritDoc} */
-    @Override public void clearLocalPartitionStatistics(StatsKey key, int partId) {
+    @Override public void clearLocalPartitionStatistics(StatisticsKey key, int partId) {
         partsStats.computeIfPresent(key, (k,v) -> {
             v.remove(partId);
 
@@ -122,7 +110,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     }
 
     /** {@inheritDoc} */
-    @Override public void clearLocalPartitionsStatistics(StatsKey key, Collection<Integer> partIds) {
+    @Override public void clearLocalPartitionsStatistics(StatisticsKey key, Collection<Integer> partIds) {
         partsStats.computeIfPresent(key, (k,v) -> {
             for (Integer partId : partIds)
                 v.remove(partId);
@@ -139,7 +127,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
      * @return Partition id to statistics map.
      */
     private IntMap<ObjectPartitionStatisticsImpl> buildStatisticsMap(
-        StatsKey key,
+        StatisticsKey key,
         Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
         IntMap<ObjectPartitionStatisticsImpl> statisticsMap = new IntHashMap<ObjectPartitionStatisticsImpl>();

@@ -1,55 +1,65 @@
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringResponse;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
- * Statistics collection context by local or global request.
+ * Statistics gathering context.
  */
-public class StatisticsCollectionContext {
-    /** Collection id. */
-    private final UUID colId;
+public class StatisticsGatheringContext {
+    /** Gathering id. */
+    private final UUID gatId;
 
     /** Keys to collect statistics by. */
-    private Collection<StatisticsKeyMessage> keys;
-
-    /** Map request id to collection request. */
-    private final ConcurrentMap<UUID, StatisticssAddrRequest<StatisticsGatheringRequest>> remainingColReqs;
+    private Set<StatisticsKeyMessage> keys;
 
     /** Collected local statistics. */
-    private final List<StatisticsGatheringResponse> locStatistics;
+    private final Map<StatisticsKeyMessage, Collection<StatisticsObjectData>> collectedStatistics;
 
     /** Done future adapter. */
-    private final StatisticsCollectionFutureAdapter doneFut;
+    private final StatisticsGatheringFutureAdapter doneFut;
+
+    /**
+     * Constructor in case when there are already gathering id generated.
+     *
+     * @param gatId Gathering id.
+     * @param keys Collection of keys to collect statistics by.
+     */
+    public StatisticsGatheringContext(UUID gatId, Set<StatisticsKeyMessage> keys) {
+        this.gatId = gatId;
+        collectedStatistics = null;
+        this.keys = keys;
+        this.doneFut = new StatisticsGatheringFutureAdapter(gatId);;
+    }
 
     /**
      * Constructor.
      *
-     * @param colId Collection id.
      * @param keys Keys to collect statistics by.
+     *             // TODO remove comment below
      * @param remainingColReqs Collection of remaining requests. If {@code null} - it's local collection task.
      */
-    public StatisticsCollectionContext(
-            UUID colId,
-            Collection<StatisticsKeyMessage> keys,
-            Map<UUID, StatisticssAddrRequest<StatisticsGatheringRequest>> remainingColReqs
+    public StatisticsGatheringContext(
+            Set<StatisticsKeyMessage> keys//, Map<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingColReqs
     ) {
-        this.colId = colId;
+        gatId = UUID.randomUUID();
+        collectedStatistics = new ConcurrentHashMap<>();
         this.keys = keys;
-        this.remainingColReqs = (remainingColReqs == null) ? null : new ConcurrentHashMap<>(remainingColReqs);
-        locStatistics = (remainingColReqs == null) ? null : Collections.synchronizedList(
-                new ArrayList<>(remainingColReqs.size()));
-        this.doneFut = new StatisticsCollectionFutureAdapter(colId);;
+        this.doneFut = new StatisticsGatheringFutureAdapter(gatId);;
+    }
+
+    /**
+     * @return Collected statistics map.
+     */
+    public Map<StatisticsKeyMessage, Collection<StatisticsObjectData>> collectedStatistics() {
+        return collectedStatistics;
     }
 
     /**
@@ -60,85 +70,36 @@ public class StatisticsCollectionContext {
     }
 
     /**
-     * Register collected response. If the response contains not all requested partitions - replace should be called
-     * instead.
+     * Register collected object statistics data.
      *
-     * @param resp Collection response to register.
-     * @return {@code true} if all request finished and global statistics could be aggregated,
-     *     {@code false} - otherwise.
+     * @param objData Object statistics data to register.
      */
-    public boolean registerCollected(StatisticsGatheringResponse resp) {
-        assert colId.equals(resp.colId());
+    public void registerCollected(Collection<StatisticsObjectData> objData) {
+        objData.forEach(data -> {
+            assert keys.contains(data.key());
 
-        locStatistics.add(resp);
-        remainingColReqs.remove(resp.reqId());
-        return remainingColReqs.isEmpty();
-    }
+            collectedStatistics.compute(data.key(), (k, v) -> {
+               if (v == null)
+                   v = new ArrayList<>();
 
-    /**
-     * Replace collection of old requests with new ones. Should be called on receiving response with not all requested
-     * partitions.
-     *
-     * @param oldReqIds Old request id to remove from state.
-     * @param newReqs new requests to add to the state.
-     * @param resp Collected response to add to the state.
-     */
-    public void replaceStatsCollectionRequest(
-        UUID oldReqId,
-        Map<UUID, StatisticssAddrRequest<StatisticsGatheringRequest>> newReqs,
-        StatisticsGatheringResponse resp
-    ) {
-        locStatistics.add(resp);
-        remainingColReqs.putAll(newReqs);
-        remainingColReqs.remove(oldReqId);
-    }
+               v.add(data);
 
-    /**
-     * Remove all requests to specified node id (due to its failure).
-     *
-     * @param nodeId node id to remove requests by.
-     * @return Collection of removed requests.
-     */
-    public Collection<StatisticsGatheringRequest> removeNodeRequest(UUID nodeId) {
-        Collection<StatisticsGatheringRequest> res = new ArrayList<>();
-
-        remainingColReqs.values().removeIf(req -> {
-            if (nodeId.equals(req.nodeId())) {
-                res.add(req.req());
-
-                return true;
-            }
-            return false;
+               return v;
+            });
         });
-
-        return res;
     }
 
     /**
-     * @return Collection id.
+     * @return Gathering (whole process) id.
      */
-    public UUID colId() {
-        return colId;
-    }
-
-    /**
-     * @return Map request id to collection request.
-     */
-    public Map<UUID, StatisticssAddrRequest<StatisticsGatheringRequest>> remainingCollectionReqs() {
-        return remainingColReqs;
-    }
-
-    /**
-     * @return Collected local statistics.
-     */
-    public List<StatisticsGatheringResponse> localStatistics() {
-        return locStatistics;
+    public UUID gatId() {
+        return gatId;
     }
 
     /**
      * @return Collection control future.
      */
-    public StatisticsCollectionFutureAdapter doneFut() {
+    public StatisticsGatheringFutureAdapter doneFut() {
         return doneFut;
     }
 }

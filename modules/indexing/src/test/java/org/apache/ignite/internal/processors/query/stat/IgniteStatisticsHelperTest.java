@@ -7,10 +7,10 @@ import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCach
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringResponse;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 /**
  * IgniteStatisticsRequestCollection unit tests.
  */
-public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTest {
+public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
     /** */
     private static final UUID node1 = UUID.randomUUID();
 
@@ -55,13 +55,13 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     private static final UUID r2_1 = UUID.randomUUID();
 
     /** */
-    private static final StatsKeyMessage k1 = keyMsg(1);
+    private static final StatisticsKeyMessage k1 = keyMsg(1);
 
     /** */
-    private static final StatsKeyMessage k2 = keyMsg(2, 1, 2);
+    private static final StatisticsKeyMessage k2 = keyMsg(2, 1, 2);
 
     /** */
-    private static final StatsKeyMessage k3 = keyMsg(3, 1, 2);
+    private static final StatisticsKeyMessage k3 = keyMsg(3, 1, 2);
 
     /** */
     private static final Map<UUID, int[]> nodeParts;
@@ -92,12 +92,12 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
      */
     @Test
     public void testExtractFailedOne() {
-        StatsCollectionRequest r1 = new StatsCollectionRequest(c1, r1_1, new HashMap<>());
-        StatsKeyMessage k1 = keyMsg(1, 1, 2, 3);
+        StatisticsGatheringRequest r1 = new StatisticsGatheringRequest(c1, r1_1, new HashMap<>());
+        StatisticsKeyMessage k1 = keyMsg(1, 1, 2, 3);
         r1.keys().put(k1, new int[]{100, 200, 300});
 
-        Map<StatsKeyMessage, int[]> extracted = IgniteStatisticsRequestCollection.extractFailed(
-                new StatsCollectionRequest[]{r1});
+        Map<StatisticsKeyMessage, int[]> extracted = IgniteStatisticsHelper.extractFailed(
+                new StatisticsGatheringRequest[]{r1});
 
         assertEquals(1, extracted.size());
         assertTrue(extracted.containsKey(k1));
@@ -109,20 +109,20 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
      */
     @Test
     public void testExtractFailed() {
-        StatsCollectionRequest r1 = new StatsCollectionRequest(c1, r1_1, new HashMap<>());
-        StatsKeyMessage k1 = keyMsg(1, 1, 2, 3);
+        StatisticsGatheringRequest r1 = new StatisticsGatheringRequest(c1, r1_1, new HashMap<>());
+        StatisticsKeyMessage k1 = keyMsg(1, 1, 2, 3);
         r1.keys().put(k1, new int[]{100, 200, 300});
-        StatsKeyMessage k2 = keyMsg(2, 2, 3, 4);
+        StatisticsKeyMessage k2 = keyMsg(2, 2, 3, 4);
         r1.keys().put(k2, new int[]{100, 200, 300});
 
-        StatsCollectionRequest r2 = new StatsCollectionRequest(c1, r1_2, new HashMap<>());
+        StatisticsGatheringRequest r2 = new StatisticsGatheringRequest(c1, r1_2, new HashMap<>());
         r2.keys().put(k1, new int[]{400});
 
-        StatsCollectionRequest r3 = new StatsCollectionRequest(c1, r1_3, new HashMap<>());
+        StatisticsGatheringRequest r3 = new StatisticsGatheringRequest(c1, r1_3, new HashMap<>());
         r3.keys().put(k2, new int[]{500, 600, 800});
 
-        Map<StatsKeyMessage, int[]> extracted = IgniteStatisticsRequestCollection.extractFailed(
-                new StatsCollectionRequest[]{r1, r2, r3});
+        Map<StatisticsKeyMessage, int[]> extracted = IgniteStatisticsHelper.extractFailed(
+                new StatisticsGatheringRequest[]{r1, r2, r3});
 
         assertEquals(2, extracted.size());
         assertTrue(extracted.containsKey(k1));
@@ -137,15 +137,15 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
      */
     @Test(expected = AssertionError.class)
     public void testExtractDifferentCollections() {
-        StatsCollectionRequest r1 = new StatsCollectionRequest(c1, r1_1, new HashMap<>());
-        StatsKeyMessage k1 = keyMsg(1, 1, 2, 3);
+        StatisticsGatheringRequest r1 = new StatisticsGatheringRequest(c1, r1_1, new HashMap<>());
+        StatisticsKeyMessage k1 = keyMsg(1, 1, 2, 3);
         r1.keys().put(k1, new int[]{1});
 
-        StatsCollectionRequest r2 = new StatsCollectionRequest(c2, r2_1, new HashMap<>());
+        StatisticsGatheringRequest r2 = new StatisticsGatheringRequest(c2, r2_1, new HashMap<>());
         r1.keys().put(k1, new int[]{2});
 
-        Map<StatsKeyMessage, int[]> extracted = IgniteStatisticsRequestCollection.extractFailed(
-                new StatsCollectionRequest[]{r1, r2});
+        Map<StatisticsKeyMessage, int[]> extracted = IgniteStatisticsHelper.extractFailed(
+                new StatisticsGatheringRequest[]{r1, r2});
     }
 
     /**
@@ -155,10 +155,10 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
      * @param subId Columns "ids".
      * @return Generated test statistics key message.
      */
-    private static StatsKeyMessage keyMsg(int keyId, int... subId) {
+    private static StatisticsKeyMessage keyMsg(int keyId, int... subId) {
         List<String> cols = (subId == null) ? null : Arrays.stream(subId).boxed().map(s -> ("COL" + s))
                 .collect(Collectors.toList());
-        return new StatsKeyMessage("SCHEMA", "OBJECT" + keyId, cols);
+        return new StatisticsKeyMessage("SCHEMA", "OBJECT" + keyId, cols);
     }
 
     /**
@@ -169,18 +169,18 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     @Test
     public void testGenerateCollectionRequestsSingle() throws IgniteCheckedException {
         UUID colId = UUID.randomUUID();
-        StatsKeyMessage k1 = keyMsg(1);
+        StatisticsKeyMessage k1 = keyMsg(1);
         CacheGroupContext cgc1 = cgc(Collections.singletonMap(node1, new int[]{0, 1, 2, 3}), 0);
-        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts =
+        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts =
             Collections.singletonMap(cgc1, Collections.singletonList(k1));
 
 
-        Collection<StatsAddrRequest<StatsCollectionRequest>> reqs = IgniteStatisticsRequestCollection
+        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = IgniteStatisticsHelper
                 .generateCollectionRequests(colId, Collections.singletonList(k1), null, grpContexts);
 
         assertEquals(1, reqs.size());
 
-        StatsAddrRequest<StatsCollectionRequest> req = reqs.stream().filter(r -> node1.equals(r.nodeId()))
+        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node1.equals(r.nodeId()))
                 .findAny().orElse(null);
 
         assertNotNull(req);
@@ -195,13 +195,13 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
      */
     @Test
     public void testGenerateCollectionRequests() throws IgniteCheckedException {
-        Collection<StatsAddrRequest<StatsCollectionRequest>> reqs = testGenerateCollectionRequests(null);
+        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = testGenerateCollectionRequests(null);
 
         assertEquals(2, reqs.size());
 
-        StatsAddrRequest<StatsCollectionRequest> req1 = reqs.stream().filter(req -> node1.equals(req.nodeId()))
+        StatisticsAddrRequest<StatisticsGatheringRequest> req1 = reqs.stream().filter(req -> node1.equals(req.nodeId()))
                 .findAny().orElse(null);
-        StatsAddrRequest<StatsCollectionRequest> req2 = reqs.stream().filter(req -> node2.equals(req.nodeId()))
+        StatisticsAddrRequest<StatisticsGatheringRequest> req2 = reqs.stream().filter(req -> node2.equals(req.nodeId()))
                 .findAny().orElse(null);
         assertNotNull(req1);
         assertNotNull(req2);
@@ -218,13 +218,13 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
      */
     @Test
     public void testGenerateCollectionRequestsFailedPartitions() throws IgniteCheckedException {
-        Map<StatsKeyMessage, int[]> failedPartitions = Collections.singletonMap(k1, new int[]{1});
+        Map<StatisticsKeyMessage, int[]> failedPartitions = Collections.singletonMap(k1, new int[]{1});
 
-        Collection<StatsAddrRequest<StatsCollectionRequest>> reqs = testGenerateCollectionRequests(failedPartitions);
+        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = testGenerateCollectionRequests(failedPartitions);
 
         assertEquals(1, reqs.size());
 
-        StatsAddrRequest<StatsCollectionRequest> req = reqs.stream().filter(r -> node2.equals(r.nodeId())).findAny()
+        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node2.equals(r.nodeId())).findAny()
                 .orElse(null);
 
         assertNotNull(req);
@@ -241,18 +241,18 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
      * @return Collection of statistics collection requests.
      * @throws IgniteCheckedException In case of errors.
      */
-    private Collection<StatsAddrRequest<StatsCollectionRequest>> testGenerateCollectionRequests(
-        Map<StatsKeyMessage, int[]> failedPartitions
+    private Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> testGenerateCollectionRequests(
+        Map<StatisticsKeyMessage, int[]> failedPartitions
     ) throws IgniteCheckedException {
-        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpContexts = new HashMap<>();
+        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts = new HashMap<>();
         grpContexts.put(cgc1, Collections.singletonList(k1));
         grpContexts.put(cgc2, Collections.singletonList(k2));
 
-        List<StatsKeyMessage> keys = new ArrayList<>();
+        List<StatisticsKeyMessage> keys = new ArrayList<>();
         keys.add(k1);
         keys.add(k2);
 
-        return IgniteStatisticsRequestCollection.generateCollectionRequests(
+        return IgniteStatisticsHelper.generateCollectionRequests(
                 c1, keys, failedPartitions, grpContexts);
     }
 
@@ -279,14 +279,14 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     private void testNodePartitionsInt(int backups) throws IgniteCheckedException {
         // 1 node not all partitions
         CacheGroupContext cgc = cgc(Collections.singletonMap(node1, new int[]{0, 1, 4}), backups);
-        Map<UUID, int[]> calcNodeParts = IgniteStatisticsRequestCollection.nodePartitions(cgc, null);
+        Map<UUID, int[]> calcNodeParts = IgniteStatisticsHelper.nodePartitions(cgc, null);
 
         assertEquals(1, calcNodeParts.size());
 
 
         // 1 node
         CacheGroupContext cgc2 = cgc(Collections.singletonMap(node1, new int[]{0, 1, 2, 3, 4}), backups);
-        Map<UUID, int[]> calcNodeParts2 = IgniteStatisticsRequestCollection.nodePartitions(cgc2, null);
+        Map<UUID, int[]> calcNodeParts2 = IgniteStatisticsHelper.nodePartitions(cgc2, null);
 
         assertEquals(1, calcNodeParts.size());
 
@@ -295,7 +295,7 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
         nodeParts.put(node1, new int[]{1, 2, 3});
         nodeParts.put(node2, new int[]{0, 4});
         CacheGroupContext cgc3 = cgc(nodeParts, 0);
-        Map<UUID, int[]> calcNodeParts3 = IgniteStatisticsRequestCollection.nodePartitions(cgc3, null);
+        Map<UUID, int[]> calcNodeParts3 = IgniteStatisticsHelper.nodePartitions(cgc3, null);
 
         assertEquals(2, calcNodeParts3.size());
     }
@@ -367,66 +367,66 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     @Test
     public void testExtractFailedByResponse() {
         //UUID colId, UUID reqId, Map<StatsKeyMessage, int[]> keys
-        Map<StatsKeyMessage, int[]> keys = new HashMap<>();
+        Map<StatisticsKeyMessage, int[]> keys = new HashMap<>();
         keys.put(k1, new int[]{1, 2, 3});
         keys.put(k2, new int[]{1, 2, 3});
 
-        StatsCollectionRequest req = new StatsCollectionRequest(c1, r1_1, keys);
+        StatisticsGatheringRequest req = new StatisticsGatheringRequest(c1, r1_1, keys);
 
         // 1) All keys collected
-        StatsObjectData sod1 = new StatsObjectData(k1, 0,StatsType.LOCAL, 0, 0, Collections.emptyMap());
-        StatsObjectData sod2 = new StatsObjectData(k2, 0,StatsType.LOCAL, 0, 0, Collections.emptyMap());
-        Map<StatsObjectData, int[]> collectedKeys1 = new HashMap<>();
+        StatisticsObjectData sod1 = new StatisticsObjectData(k1, 0, StatisticsType.LOCAL, 0, 0, Collections.emptyMap());
+        StatisticsObjectData sod2 = new StatisticsObjectData(k2, 0, StatisticsType.LOCAL, 0, 0, Collections.emptyMap());
+        Map<StatisticsObjectData, int[]> collectedKeys1 = new HashMap<>();
         collectedKeys1.put(sod1, new int[]{1, 2, 3});
         collectedKeys1.put(sod2, new int[]{1, 2, 3});
 
-        StatsCollectionResponse resp1 = new StatsCollectionResponse(c1, r1_1, collectedKeys1);
+        StatisticsGatheringResponse resp1 = new StatisticsGatheringResponse(c1, r1_1, collectedKeys1);
 
-        Map<StatsKeyMessage, int[]> failed1 = IgniteStatisticsRequestCollection.extractFailed(req, resp1);
+        Map<StatisticsKeyMessage, int[]> failed1 = IgniteStatisticsHelper.extractFailed(req, resp1);
 
         assertTrue(failed1.isEmpty());
 
         // 2) Some partition lack.
-        Map<StatsObjectData, int[]> collectedKeys2 = new HashMap<>(collectedKeys1);
+        Map<StatisticsObjectData, int[]> collectedKeys2 = new HashMap<>(collectedKeys1);
         collectedKeys2.put(sod1, new int[]{1, 3});
-        StatsCollectionResponse resp2 = new StatsCollectionResponse(c1, r1_2, collectedKeys2);
+        StatisticsGatheringResponse resp2 = new StatisticsGatheringResponse(c1, r1_2, collectedKeys2);
 
 
-        Map<StatsKeyMessage, int[]> failed2 = IgniteStatisticsRequestCollection.extractFailed(req, resp2);
+        Map<StatisticsKeyMessage, int[]> failed2 = IgniteStatisticsHelper.extractFailed(req, resp2);
 
         assertTrue(Arrays.equals(failed2.get(k1), new int[]{2}));
 
         // 3) Some keys lack.
-        Map<StatsObjectData, int[]> collectedKeys3 = new HashMap<>(collectedKeys1);
+        Map<StatisticsObjectData, int[]> collectedKeys3 = new HashMap<>(collectedKeys1);
         collectedKeys3.put(sod2, new int[0]);
-        StatsCollectionResponse resp3 = new StatsCollectionResponse(c1, r1_3, collectedKeys3);
+        StatisticsGatheringResponse resp3 = new StatisticsGatheringResponse(c1, r1_3, collectedKeys3);
 
 
-        Map<StatsKeyMessage, int[]> failed3 = IgniteStatisticsRequestCollection.extractFailed(req, resp3);
+        Map<StatisticsKeyMessage, int[]> failed3 = IgniteStatisticsHelper.extractFailed(req, resp3);
 
         assertTrue(Arrays.equals(failed3.get(k2), new int[]{1, 2, 3}));
 
         // 4) Some partition and keys lack.
-        Map<StatsObjectData, int[]> collectedKeys4 = new HashMap<>();
+        Map<StatisticsObjectData, int[]> collectedKeys4 = new HashMap<>();
         collectedKeys4.put(sod1, new int[]{1, 2});
         collectedKeys4.put(sod2, new int[0]);
-        StatsCollectionResponse resp4 = new StatsCollectionResponse(c1, r1_1, collectedKeys4);
+        StatisticsGatheringResponse resp4 = new StatisticsGatheringResponse(c1, r1_1, collectedKeys4);
 
 
-        Map<StatsKeyMessage, int[]> failed4 = IgniteStatisticsRequestCollection.extractFailed(req, resp4);
+        Map<StatisticsKeyMessage, int[]> failed4 = IgniteStatisticsHelper.extractFailed(req, resp4);
 
         assertTrue(Arrays.equals(failed4.get(k1), new int[]{3}));
         assertTrue(Arrays.equals(failed4.get(k2), new int[]{1, 2, 3}));
 
 
         // 5) All keys lack.
-        Map<StatsObjectData, int[]> collectedKeys5 = new HashMap<>();
+        Map<StatisticsObjectData, int[]> collectedKeys5 = new HashMap<>();
         collectedKeys5.put(sod1, new int[0]);
         collectedKeys5.put(sod2, new int[0]);
-        StatsCollectionResponse resp5 = new StatsCollectionResponse(c1, r1_2, collectedKeys5);
+        StatisticsGatheringResponse resp5 = new StatisticsGatheringResponse(c1, r1_2, collectedKeys5);
 
 
-        Map<StatsKeyMessage, int[]> failed5 = IgniteStatisticsRequestCollection.extractFailed(req, resp5);
+        Map<StatisticsKeyMessage, int[]> failed5 = IgniteStatisticsHelper.extractFailed(req, resp5);
 
         assertTrue(Arrays.equals(failed5.get(k1), new int[]{1, 2, 3}));
         assertTrue(Arrays.equals(failed5.get(k2), new int[]{1, 2, 3}));
@@ -442,20 +442,20 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
     @Test
     public void nodesTest() {
         // 1) Single group with single key to two nodes.
-        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpKeys1 = Collections.singletonMap(cgc1, Collections.singleton(k1));
+        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys1 = Collections.singletonMap(cgc1, Collections.singleton(k1));
 
-        Map<UUID, Collection<StatsKeyMessage>> nodeKeys1 = IgniteStatisticsRequestCollection.nodeKeys(grpKeys1);
+        Map<UUID, Collection<StatisticsKeyMessage>> nodeKeys1 = IgniteStatisticsHelper.nodeKeys(grpKeys1);
 
         assertEquals(2, nodeKeys1.size());
         assertTrue(nodeKeys1.get(node1).contains(k1));
         assertTrue(nodeKeys1.get(node2).contains(k1));
 
         // 2) Single group with two keys to two node.
-        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpKeys2 = new HashMap<>();
+        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys2 = new HashMap<>();
         grpKeys2.put(cgc1, Collections.singleton(k1));
         grpKeys2.put(cgc3, Arrays.asList(k2, k3));
 
-        Map<UUID, Collection<StatsKeyMessage>> nodeKeys2 = IgniteStatisticsRequestCollection.nodeKeys(grpKeys2);
+        Map<UUID, Collection<StatisticsKeyMessage>> nodeKeys2 = IgniteStatisticsHelper.nodeKeys(grpKeys2);
 
         assertEquals(2, nodeKeys2.size());
         assertEquals(3, nodeKeys2.get(node1).size());
@@ -466,11 +466,11 @@ public class IgniteStatisticsRequestCollectionTest extends GridCommonAbstractTes
         Map<UUID, int[]> nodeParts2 = Collections.singletonMap(node2, new int[]{0, 1, 2, 3});
         CacheGroupContext cgc1d = cgc(nodeParts1, 0);
         CacheGroupContext cgc2d = cgc(nodeParts2, 0);
-        Map<CacheGroupContext, Collection<StatsKeyMessage>> grpKeys3 = new HashMap<>();
+        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys3 = new HashMap<>();
         grpKeys3.put(cgc1d, Collections.singleton(k1));
         grpKeys3.put(cgc2d, Collections.singleton(k2));
 
-        Map<UUID, Collection<StatsKeyMessage>> nodeKeys3 = IgniteStatisticsRequestCollection.nodeKeys(grpKeys3);
+        Map<UUID, Collection<StatisticsKeyMessage>> nodeKeys3 = IgniteStatisticsHelper.nodeKeys(grpKeys3);
 
         assertEquals(2, nodeKeys3.size());
         assertEquals(1, nodeKeys3.get(node1).size());

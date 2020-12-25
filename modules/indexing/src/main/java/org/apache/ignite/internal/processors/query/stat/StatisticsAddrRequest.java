@@ -20,7 +20,7 @@ import java.util.UUID;
 /**
  * Statistics request with target node id.
  */
-public class StatsAddrRequest<T> {
+public class StatisticsAddrRequest<T> {
     /** Wrapped request. */
     private final T req;
 
@@ -33,7 +33,7 @@ public class StatsAddrRequest<T> {
      * @param req Wrapped request.
      * @param targetNodeId Target node id.
      */
-    public StatsAddrRequest(T req, UUID targetNodeId) {
+    public StatisticsAddrRequest(T req, UUID targetNodeId) {
         this.req = req;
         this.targetNodeId = targetNodeId;
     }

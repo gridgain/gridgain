@@ -27,50 +27,50 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Request to collect statistics message.
+ * Request to gather statistics message.
  */
-public class StatsCollectionRequest implements Message {
+public class StatisticsGatheringRequest implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
     public static final short TYPE_CODE = 179;
 
-    /** Collection id. */
-    private UUID colId;
+    /** Gathering id. */
+    private UUID gatId;
 
     /** Request id. */
     private UUID reqId;
 
-    /** Keys to partitions to collect statistics by. */
-    @GridDirectMap(keyType = StatsKeyMessage.class, valueType = int[].class)
-    private Map<StatsKeyMessage, int[]> keys;
+    /** Keys to partitions to gather statistics by. */
+    @GridDirectMap(keyType = StatisticsKeyMessage.class, valueType = int[].class)
+    private Map<StatisticsKeyMessage, int[]> keys;
 
     /**
      * Default constructor.
      */
-    public StatsCollectionRequest() {
+    public StatisticsGatheringRequest() {
         // No-op.
     }
 
     /**
      * Constructor.
      *
-     * @param colId Collection id.
+     * @param gatId Gathering id.
      * @param reqId Request id.
-     * @param keys Keys to partitions to collect statistics by.
+     * @param keys Keys to partitions to gather statistics by.
      */
-    public StatsCollectionRequest(UUID colId, UUID reqId, Map<StatsKeyMessage, int[]> keys) {
-        this.colId = colId;
+    public StatisticsGatheringRequest(UUID gatId, UUID reqId, Map<StatisticsKeyMessage, int[]> keys) {
+        this.gatId = gatId;
         this.reqId = reqId;
         this.keys = keys;
     }
 
     /**
-     * @return Collection id.
+     * @return Gathering id.
      */
-    public UUID colId() {
-        return colId;
+    public UUID gatId() {
+        return gatId;
     }
 
     /**
@@ -81,9 +81,9 @@ public class StatsCollectionRequest implements Message {
     }
 
     /**
-     * @return Map of keys to partitions to collect statistics by.
+     * @return Map of keys to partitions to gather statistics by.
      */
-    public Map<StatsKeyMessage, int[]> keys() {
+    public Map<StatisticsKeyMessage, int[]> keys() {
         return keys;
     }
 
@@ -100,7 +100,7 @@ public class StatsCollectionRequest implements Message {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeUuid("colId", colId))
+                if (!writer.writeUuid("gatId", gatId))
                     return false;
 
                 writer.incrementState();
@@ -131,7 +131,7 @@ public class StatsCollectionRequest implements Message {
 
         switch (reader.state()) {
             case 0:
-                colId = reader.readUuid("colId");
+                gatId = reader.readUuid("gatId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -156,7 +156,7 @@ public class StatsCollectionRequest implements Message {
 
         }
 
-        return reader.afterMessageRead(StatsCollectionRequest.class);
+        return reader.afterMessageRead(StatisticsGatheringRequest.class);
     }
 
     /** {@inheritDoc} */

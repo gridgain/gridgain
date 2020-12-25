@@ -20,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Types of statistics width.
  */
-public enum StatsType {
+public enum StatisticsType {
     /** Statistics by some particular partition. */
     PARTITION,
 
@@ -31,7 +31,7 @@ public enum StatsType {
     GLOBAL;
 
     /** Enumerated values. */
-    private static final StatsType[] VALUES = values();
+    private static final StatisticsType[] VALUES = values();
 
     /**
      * Efficiently gets enumerated value from its ordinal.
@@ -39,7 +39,7 @@ public enum StatsType {
      * @param ord Ordinal value.
      * @return Enumerated value or {@code null} if ordinal out of range.
      */
-    @Nullable public static StatsType fromOrdinal(int ord) {
+    @Nullable public static StatisticsType fromOrdinal(int ord) {
         return ord >= 0 && ord < VALUES.length ? VALUES[ord] : null;
     }
 }

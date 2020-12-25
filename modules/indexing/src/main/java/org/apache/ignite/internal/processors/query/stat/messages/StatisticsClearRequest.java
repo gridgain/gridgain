@@ -29,7 +29,7 @@ import java.util.UUID;
 /**
  * Request to clean existing statistics message.
  */
-public class StatsClearRequest implements Message {
+public class StatisticsClearRequest implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -40,8 +40,8 @@ public class StatsClearRequest implements Message {
     private UUID reqId;
 
     /** Keys to which statistics need to be cleaned. */
-    @GridDirectCollection(StatsKeyMessage.class)
-    private List<StatsKeyMessage> keys;
+    @GridDirectCollection(StatisticsKeyMessage.class)
+    private List<StatisticsKeyMessage> keys;
 
     /**
      * Constructor.
@@ -49,7 +49,7 @@ public class StatsClearRequest implements Message {
      * @param reqId id of request.
      * @param keys keys what statistics should be collected.
      */
-    public StatsClearRequest(UUID reqId, List<StatsKeyMessage> keys) {
+    public StatisticsClearRequest(UUID reqId, List<StatisticsKeyMessage> keys) {
         this.reqId = reqId;
         this.keys = keys;
     }
@@ -64,7 +64,7 @@ public class StatsClearRequest implements Message {
     /**
      * @return List of keys to collect statistics by.
      */
-    public List<StatsKeyMessage> keys() {
+    public List<StatisticsKeyMessage> keys() {
         return keys;
     }
 
@@ -123,7 +123,7 @@ public class StatsClearRequest implements Message {
 
         }
 
-        return reader.afterMessageRead(StatsClearRequest.class);
+        return reader.afterMessageRead(StatisticsClearRequest.class);
     }
 
     /** {@inheritDoc} */
@@ -149,7 +149,7 @@ public class StatsClearRequest implements Message {
     /**
      * Default constructor.
      */
-    public StatsClearRequest() {
+    public StatisticsClearRequest() {
         // No-op.
     }
 }

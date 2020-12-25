@@ -47,13 +47,13 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
     private List<Object[]> cacheArguments = new ArrayList<>();
 
     /** Test statistics key1. */
-    private StatsKey k1 = new StatsKey("A", "B");
+    private StatisticsKey k1 = new StatisticsKey("A", "B");
 
     /** Test object partition statistics 1_1. */
     private ObjectPartitionStatisticsImpl stat1_1 = getPartitionStatistics(1);
 
     /** Test statistics key2. */
-    private StatsKey k2 = new StatsKey("A", "B2");
+    private StatisticsKey k2 = new StatisticsKey("A", "B2");
 
     /** Test object partition statistics 2_2. */
     private ObjectPartitionStatisticsImpl stat2_2 = getPartitionStatistics(2);
@@ -66,7 +66,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
         statsRepos = Mockito.mock(IgniteStatisticsRepositoryImpl.class);
         Mockito.doAnswer(ans -> cacheArguments.add(ans.getArguments())).when(statsRepos)
-                .cacheLocalStatistics(Mockito.any(StatsKey.class), Mockito.anyCollection());
+                .cacheLocalStatistics(Mockito.any(StatisticsKey.class), Mockito.anyCollection());
         metastorage = new ReadWriteMetaStorageMock();
         statStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
                 new IgniteCacheDatabaseSharedManager(){}, statsRepos, cls -> log);

@@ -26,15 +26,15 @@ import java.util.UUID;
 /**
  * Request to cancel statistics collection.
  */
-public class CancelStatsCollectionRequest implements Message {
+public class CancelStatisticsGatheringRequest implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
     public static final short TYPE_CODE = 180;
 
-    /** Request id. */
-    private UUID colId;
+    /** Gathering id. */
+    private UUID gatId;
 
     /** Request id. */
     private UUID[] reqIds;
@@ -42,26 +42,26 @@ public class CancelStatsCollectionRequest implements Message {
     /**
      * Default constructor.
      */
-    public CancelStatsCollectionRequest() {
+    public CancelStatisticsGatheringRequest() {
         // No-op.
     }
 
     /**
      * Constructor.
      *
-     * @param colId Id of collection to cancel.
+     * @param gatId Id of gathering to cancel.
      * @param reqIds Request ids to cancel.
      */
-    public CancelStatsCollectionRequest(UUID colId, UUID[] reqIds) {
-        this.colId = colId;
+    public CancelStatisticsGatheringRequest(UUID gatId, UUID[] reqIds) {
+        this.gatId = gatId;
         this.reqIds = reqIds;
     }
 
     /**
-     * @return Id of collection to cancel.
+     * @return Id of gathering to cancel.
      */
-    public UUID colId() {
-        return colId;
+    public UUID gatId() {
+        return gatId;
     }
 
     /**
@@ -84,7 +84,7 @@ public class CancelStatsCollectionRequest implements Message {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeUuid("colId", colId))
+                if (!writer.writeUuid("gatId", gatId))
                     return false;
 
                 writer.incrementState();
@@ -109,7 +109,7 @@ public class CancelStatsCollectionRequest implements Message {
 
         switch (reader.state()) {
             case 0:
-                colId = reader.readUuid("colId");
+                gatId = reader.readUuid("gatId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -126,7 +126,7 @@ public class CancelStatsCollectionRequest implements Message {
 
         }
 
-        return reader.afterMessageRead(CancelStatsCollectionRequest.class);
+        return reader.afterMessageRead(CancelStatisticsGatheringRequest.class);
     }
 
     /** {@inheritDoc} */

@@ -23,10 +23,10 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsColumnData;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsPropagationMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsColumnData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.gridgain.internal.h2.value.Value;
 
@@ -41,11 +41,11 @@ public class StatisticsUtils {
      * @return Converted stats column data message.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static StatsColumnData toMessage(ColumnStatistics stat) throws IgniteCheckedException {
+    public static StatisticsColumnData toMessage(ColumnStatistics stat) throws IgniteCheckedException {
         GridH2ValueMessage msgMin = stat.min() == null ? null : GridH2ValueMessageFactory.toMessage(stat.min());
         GridH2ValueMessage msgMax = stat.max() == null ? null : GridH2ValueMessageFactory.toMessage(stat.max());
 
-        return new StatsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(), stat.total(), stat.size(), stat.raw());
+        return new StatisticsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(), stat.total(), stat.size(), stat.raw());
     }
 
     /**
@@ -56,7 +56,7 @@ public class StatisticsUtils {
      * @return ColumnStatistics object.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static ColumnStatistics toColumnStatistics(GridKernalContext ctx, StatsColumnData data) throws IgniteCheckedException {
+    public static ColumnStatistics toColumnStatistics(GridKernalContext ctx, StatisticsColumnData data) throws IgniteCheckedException {
         Value min = (data.min() == null) ? null : data.min().value(ctx);
         Value max = (data.max() == null) ? null : data.max().value(ctx);
 
@@ -72,21 +72,21 @@ public class StatisticsUtils {
      * @return Converted StatsObjectData message.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static StatsObjectData toObjectData(StatsKeyMessage keyMsg, StatsType type, ObjectStatisticsImpl stat)
+    public static StatisticsObjectData toObjectData(StatisticsKeyMessage keyMsg, StatisticsType type, ObjectStatisticsImpl stat)
             throws IgniteCheckedException {
-        Map<String, StatsColumnData> colData = new HashMap<>(stat.columnsStatistics().size());
+        Map<String, StatisticsColumnData> colData = new HashMap<>(stat.columnsStatistics().size());
 
         for (Map.Entry<String, ColumnStatistics> ts : stat.columnsStatistics().entrySet())
             colData.put(ts.getKey(), toMessage(ts.getValue()));
 
-        StatsObjectData data;
+        StatisticsObjectData data;
         if (stat instanceof ObjectPartitionStatisticsImpl) {
             ObjectPartitionStatisticsImpl partStats = (ObjectPartitionStatisticsImpl) stat;
-            data = new StatsObjectData(keyMsg, stat.rowCount(), type, partStats.partId(),
+            data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, partStats.partId(),
                     partStats.updCnt(), colData);
         }
         else
-            data = new StatsObjectData(keyMsg, stat.rowCount(), type, 0,0, colData);
+            data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, 0,0, colData);
         return data;
     }
 
@@ -98,8 +98,8 @@ public class StatisticsUtils {
      * @param colNames Column names or {@code null}.
      * @return Statistics key message.
      */
-    public static StatsKeyMessage toMessage(String schema, String obj, String... colNames) {
-        return new StatsKeyMessage(schema, obj, F.asList(colNames));
+    public static StatisticsKeyMessage toMessage(String schema, String obj, String... colNames) {
+        return new StatisticsKeyMessage(schema, obj, F.asList(colNames));
     }
 
     /**
@@ -111,13 +111,13 @@ public class StatisticsUtils {
      * @return Converted StatsPropagationMessage.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static StatsPropagationMessage toMessage(
-            StatsKeyMessage keyMsg,
-            StatsType type,
+    public static StatisticsPropagationMessage toMessage(
+            StatisticsKeyMessage keyMsg,
+            StatisticsType type,
             ObjectStatisticsImpl stat
     ) throws IgniteCheckedException {
-        StatsObjectData data = toObjectData(keyMsg, type, stat);
-        return new StatsPropagationMessage(Collections.singletonList(data));
+        StatisticsObjectData data = toObjectData(keyMsg, type, stat);
+        return new StatisticsPropagationMessage(Collections.singletonList(data));
     }
 
     /**
@@ -130,16 +130,16 @@ public class StatisticsUtils {
      */
     public static ObjectPartitionStatisticsImpl toObjectPartitionStatistics(
             GridKernalContext ctx,
-            StatsObjectData objData
+            StatisticsObjectData objData
     ) throws IgniteCheckedException {
         if (objData == null)
             return null;
 
-        assert objData.type() == StatsType.PARTITION;
+        assert objData.type() == StatisticsType.PARTITION;
 
         Map<String, ColumnStatistics> colNameToStat = new HashMap<>(objData.data().size());
 
-        for (Map.Entry<String, StatsColumnData> cs : objData.data().entrySet())
+        for (Map.Entry<String, StatisticsColumnData> cs : objData.data().entrySet())
             colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
 
         return new ObjectPartitionStatisticsImpl(objData.partId(), true, objData.rowsCnt(), objData.updCnt(),
@@ -154,10 +154,10 @@ public class StatisticsUtils {
      * @return Converted object statistics.
      * @throws IgniteCheckedException  In case of errors.
      */
-    public static ObjectStatisticsImpl toObjectStatistics(GridKernalContext ctx, StatsObjectData data) throws IgniteCheckedException {
+    public static ObjectStatisticsImpl toObjectStatistics(GridKernalContext ctx, StatisticsObjectData data) throws IgniteCheckedException {
         Map<String, ColumnStatistics> colNameToStat = new HashMap<>(data.data().size());
 
-        for (Map.Entry<String, StatsColumnData> cs : data.data().entrySet())
+        for (Map.Entry<String, StatisticsColumnData> cs : data.data().entrySet())
             colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
 
         return new ObjectStatisticsImpl(data.rowsCnt(), colNameToStat);
@@ -171,14 +171,14 @@ public class StatisticsUtils {
      * @return Converted object statistics.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static ObjectStatisticsImpl toObjectStatistics(GridKernalContext ctx, StatsPropagationMessage data)
+    public static ObjectStatisticsImpl toObjectStatistics(GridKernalContext ctx, StatisticsPropagationMessage data)
             throws IgniteCheckedException {
         if (data == null)
             return null;
 
         assert data.data().size() == 1;
 
-        StatsObjectData objData = data.data().get(0);
+        StatisticsObjectData objData = data.data().get(0);
 
         return toObjectStatistics(ctx, objData);
     }

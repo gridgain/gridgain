@@ -29,7 +29,7 @@ import java.util.UUID;
 /**
  * Message to send statistics.
  */
-public class StatsCollectionResponse implements Message {
+public class StatisticsGatheringResponse implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -37,14 +37,14 @@ public class StatsCollectionResponse implements Message {
     public static final short TYPE_CODE = 186;
 
     /** Collection id. */
-    private UUID colId;
+    private UUID gatId;
 
     /** Request id. */
     private UUID reqId;
 
     /** Map of collected local object statistics with array of included partitions. */
-    @GridDirectMap(keyType = StatsObjectData.class, valueType = int[].class)
-    private Map<StatsObjectData, int[]> data;
+    @GridDirectMap(keyType = StatisticsObjectData.class, valueType = int[].class)
+    private Map<StatisticsObjectData, int[]> data;
 
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
@@ -54,28 +54,28 @@ public class StatsCollectionResponse implements Message {
     /**
      * {@link Externalizable} support.
      */
-    public StatsCollectionResponse() {
+    public StatisticsGatheringResponse() {
         // No-op.
     }
 
     /**
      * Constructor.
      *
-     * @param colId Collection id.
+     * @param gatId Gathering id.
      * @param reqId Request id.
      * @param data Map of objects statistics with array of included partitions.
      */
-    public StatsCollectionResponse(UUID colId, UUID reqId, Map<StatsObjectData, int[]> data) {
-        this.colId = colId;
+    public StatisticsGatheringResponse(UUID gatId, UUID reqId, Map<StatisticsObjectData, int[]> data) {
+        this.gatId = gatId;
         this.reqId = reqId;
         this.data = data;
     }
 
     /**
-     * @return Collection id.
+     * @return Gathering id.
      */
-    public UUID colId() {
-        return colId;
+    public UUID gatId() {
+        return gatId;
     }
 
     /**
@@ -88,7 +88,7 @@ public class StatsCollectionResponse implements Message {
     /**
      * @return Map of object statistics with array of included partitions.
      */
-    public Map<StatsObjectData, int[]> data() {
+    public Map<StatisticsObjectData, int[]> data() {
         return data;
     }
 
@@ -105,7 +105,7 @@ public class StatsCollectionResponse implements Message {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeUuid("colId", colId))
+                if (!writer.writeUuid("gatId", gatId))
                     return false;
 
                 writer.incrementState();
@@ -136,7 +136,7 @@ public class StatsCollectionResponse implements Message {
 
         switch (reader.state()) {
             case 0:
-                colId = reader.readUuid("colId");
+                gatId = reader.readUuid("gatId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -161,7 +161,7 @@ public class StatsCollectionResponse implements Message {
 
         }
 
-        return reader.afterMessageRead(StatsCollectionResponse.class);
+        return reader.afterMessageRead(StatisticsGatheringResponse.class);
     }
 
     /** {@inheritDoc} */

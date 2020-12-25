@@ -22,7 +22,7 @@ import java.util.UUID;
 /**
  * Cancellable future adapter. TODO: global statistics? void? just statistics?
  */
-public class StatsCollectionFutureAdapter<R> extends GridFutureAdapter<R> implements StatsCollectionFuture<R> {
+public class StatisticsGatheringFutureAdapter<R> extends GridFutureAdapter<R> implements StatsCollectionFuture<R> {
     /** Collection id. */
     private final UUID colId;
 
@@ -31,7 +31,7 @@ public class StatsCollectionFutureAdapter<R> extends GridFutureAdapter<R> implem
      *
      * @param colId Collection id.
      */
-    public StatsCollectionFutureAdapter(UUID colId){
+    public StatisticsGatheringFutureAdapter(UUID colId){
         this.colId = colId;
     }
 

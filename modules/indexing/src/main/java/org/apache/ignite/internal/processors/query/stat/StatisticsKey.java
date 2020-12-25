@@ -21,7 +21,7 @@ import java.util.Objects;
 /**
  * Statistics key.
  */
-public class StatsKey implements Serializable {
+public class StatisticsKey implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -37,7 +37,7 @@ public class StatsKey implements Serializable {
      * @param schema Object schema.
      * @param obj Object name.
      */
-    public StatsKey(String schema, String obj) {
+    public StatisticsKey(String schema, String obj) {
         this.schema = schema;
         this.obj = obj;
     }
@@ -60,7 +60,7 @@ public class StatsKey implements Serializable {
     @Override public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        StatsKey statsKey = (StatsKey) o;
+        StatisticsKey statsKey = (StatisticsKey) o;
         return Objects.equals(schema, statsKey.schema) &&
                 Objects.equals(obj, statsKey.obj);
     }

@@ -21,8 +21,8 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -101,12 +101,12 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
      * @param metaKey Metastore path to get statistics key from.
      * @return Statistics key.
      */
-    private StatsKey getStatsKey(String metaKey) {
+    private StatisticsKey getStatsKey(String metaKey) {
         int schemaIdx = metaKey.indexOf(META_SEPARATOR) + 1;
         int objIdx = metaKey.indexOf(META_SEPARATOR, schemaIdx + 1);
         int partIdx = metaKey.indexOf(META_SEPARATOR, objIdx + 1);
 
-        return new StatsKey(metaKey.substring(schemaIdx, objIdx), metaKey.substring(objIdx + 1, partIdx));
+        return new StatisticsKey(metaKey.substring(schemaIdx, objIdx), metaKey.substring(objIdx + 1, partIdx));
     }
 
     /**
@@ -115,7 +115,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
      * @param key Statistics key.
      * @return Prefix for partition level statistics.
      */
-    private String getPartKeyPrefix(StatsKey key) {
+    private String getPartKeyPrefix(StatisticsKey key) {
         return META_STAT_PREFIX + META_SEPARATOR + key.schema() + META_SEPARATOR + key.obj() + META_SEPARATOR;
     }
 
@@ -127,14 +127,14 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     /** {@inheritDoc} */
     @Override public void onReadyForReadWrite(ReadWriteMetastorage metastorage) throws IgniteCheckedException {
         this.metastore = metastorage;
-        Map<StatsKey, List<ObjectPartitionStatisticsImpl>> statsMap = new HashMap<>();
-        Set<StatsKey> brokenObjects = new HashSet<>();
+        Map<StatisticsKey, List<ObjectPartitionStatisticsImpl>> statsMap = new HashMap<>();
+        Set<StatisticsKey> brokenObjects = new HashSet<>();
         metastorage.iterate(META_STAT_PREFIX, (keyStr, statMsg) -> {
-            StatsKey key = getStatsKey(keyStr);
+            StatisticsKey key = getStatsKey(keyStr);
             if (!brokenObjects.contains(key)) {
                 try {
                     ObjectPartitionStatisticsImpl statistics = StatisticsUtils
-                            .toObjectPartitionStatistics(null, (StatsObjectData)statMsg);
+                            .toObjectPartitionStatistics(null, (StatisticsObjectData)statMsg);
                     statsMap.compute(key, (k,v) -> {
                         if (v == null)
                             v = new ArrayList<>();
@@ -162,10 +162,10 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
 
         if (!brokenObjects.isEmpty())
             log.warning(String.format("Removing statistics by %d objects.", brokenObjects.size()));
-        for (StatsKey key : brokenObjects)
+        for (StatisticsKey key : brokenObjects)
             clearLocalPartitionsStatistics(key);
 
-        for (Map.Entry<StatsKey, List<ObjectPartitionStatisticsImpl>> entry : statsMap.entrySet())
+        for (Map.Entry<StatisticsKey, List<ObjectPartitionStatisticsImpl>> entry : statsMap.entrySet())
             repo.cacheLocalStatistics(entry.getKey(), entry.getValue());
     }
 
@@ -194,13 +194,13 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
 
     /** {@inheritDoc} */
     @Override public void replaceLocalPartitionsStatistics(
-            StatsKey key,
+            StatisticsKey key,
             Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
         if (!checkMetastore("Unable to save local partitions statistics: %s.%s for %d partitions", key.schema(),
                 key.obj(), statistics.size()))
             return;
-        StatsKeyMessage keyMsg = new StatsKeyMessage(key.schema(), key.obj(), null);
+        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(key.schema(), key.obj(), null);
 
         Map<Integer, ObjectPartitionStatisticsImpl> partStatistics = statistics.stream().collect(
                 Collectors.toMap(ObjectPartitionStatisticsImpl::partId, s -> s));
@@ -219,7 +219,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
                         if (log.isTraceEnabled())
                             log.trace("Rewriting statistics by key " + k);
 
-                        metastore.write(k, StatisticsUtils.toObjectData(keyMsg, StatsType.PARTITION, newStats));
+                        metastore.write(k, StatisticsUtils.toObjectData(keyMsg, StatisticsType.PARTITION, newStats));
                     }
                 }
                 catch (IgniteCheckedException e) {
@@ -229,7 +229,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
             }, false);
             if (!partStatistics.isEmpty()) {
                 for (Map.Entry<Integer, ObjectPartitionStatisticsImpl> entry : partStatistics.entrySet())
-                    writeMeta(objPrefix + entry.getKey(), StatisticsUtils.toObjectData(keyMsg, StatsType.PARTITION,
+                    writeMeta(objPrefix + entry.getKey(), StatisticsUtils.toObjectData(keyMsg, StatisticsType.PARTITION,
                             entry.getValue()));
             }
         }
@@ -239,7 +239,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatsKey key) {
+    @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatisticsKey key) {
         if (!checkMetastore("Unable to get local partitions statistics %s.%s", key.schema(), key.obj()))
             return Collections.emptyList();
 
@@ -248,7 +248,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
             iterateMeta(getPartKeyPrefix(key), (k,v) -> {
                 try {
                     ObjectPartitionStatisticsImpl partStats = StatisticsUtils
-                            .toObjectPartitionStatistics(null, (StatsObjectData)v);
+                            .toObjectPartitionStatistics(null, (StatisticsObjectData)v);
                     res.add(partStats);
                 }
                 catch (IgniteCheckedException e) {
@@ -264,7 +264,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     }
 
     /** {@inheritDoc} */
-    @Override public void clearLocalPartitionsStatistics(StatsKey key) {
+    @Override public void clearLocalPartitionsStatistics(StatisticsKey key) {
         if (!checkMetastore("Unable to clear local partitions statistics %s.%s", key.schema(), key.obj()))
             return;
 
@@ -284,15 +284,15 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     }
 
     /** {@inheritDoc} */
-    @Override public void saveLocalPartitionStatistics(StatsKey key, ObjectPartitionStatisticsImpl statistics) {
+    @Override public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics) {
         if (!checkMetastore("Unable to store local partition statistics %s.%s:%d", key.schema(), key.obj(),
                 statistics.partId()))
             return;
 
         String partKey = getPartKeyPrefix(key) + statistics.partId();
-        StatsKeyMessage keyMsg = new StatsKeyMessage(key.schema(), key.obj(), null);
+        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(key.schema(), key.obj(), null);
         try {
-            StatsObjectData statsMsg = StatisticsUtils.toObjectData(keyMsg, StatsType.PARTITION, statistics);
+            StatisticsObjectData statsMsg = StatisticsUtils.toObjectData(keyMsg, StatisticsType.PARTITION, statistics);
             if (log.isTraceEnabled())
                 log.trace("Writing statistics by key " + partKey);
             writeMeta(partKey, statsMsg);
@@ -304,14 +304,14 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatsKey key, int partId) {
+    @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatisticsKey key, int partId) {
         if (!checkMetastore("Unable to get local partition statistics: %s.%s:%d", key.schema(),
                 key.obj(), partId))
             return null;
 
         String metaKey = getPartKeyPrefix(key) + partId;
         try {
-            return StatisticsUtils.toObjectPartitionStatistics(null, (StatsObjectData) readMeta(metaKey));
+            return StatisticsUtils.toObjectPartitionStatistics(null, (StatisticsObjectData) readMeta(metaKey));
         }
         catch (IgniteCheckedException e) {
             log.warning(String.format("Error while reading local partition statistics %s.%s:%d",
@@ -321,7 +321,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     }
 
     /** {@inheritDoc} */
-    @Override public void clearLocalPartitionStatistics(StatsKey key, int partId) {
+    @Override public void clearLocalPartitionStatistics(StatisticsKey key, int partId) {
         if (!checkMetastore("Unable to clean local partition statistics: %s.%s:%d", key.schema(),
                 key.obj(), partId))
             return;
@@ -337,7 +337,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     }
 
     /** {@inheritDoc} */
-    @Override public void clearLocalPartitionsStatistics(StatsKey key, Collection<Integer> partIds) {
+    @Override public void clearLocalPartitionsStatistics(StatisticsKey key, Collection<Integer> partIds) {
         if (!checkMetastore("Unable to clean local partitions statistics: %s.%s:%s", key.schema(),
                 key.obj(), partIds))
             return;

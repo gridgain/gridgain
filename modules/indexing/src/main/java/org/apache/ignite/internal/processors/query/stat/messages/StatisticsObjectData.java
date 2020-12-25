@@ -16,7 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat.messages;
 
 import org.apache.ignite.internal.GridDirectMap;
-import org.apache.ignite.internal.processors.query.stat.StatsType;
+import org.apache.ignite.internal.processors.query.stat.StatisticsType;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
@@ -29,7 +29,7 @@ import java.util.Map;
 /**
  * Statistics for some object (index or table) in database.
  */
-public class StatsObjectData implements Message {
+public class StatisticsObjectData implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -37,13 +37,13 @@ public class StatsObjectData implements Message {
     public static final short TYPE_CODE = 184;
 
     /** Statistics key. */
-    private StatsKeyMessage key;
+    private StatisticsKeyMessage key;
 
     /** Total row count in current object. */
     private long rowsCnt;
 
     /** Type of statistics. */
-    private StatsType type;
+    private StatisticsType type;
 
     /** Partition id if statistics was collected by partition. */
     private int partId;
@@ -52,8 +52,8 @@ public class StatsObjectData implements Message {
     private long updCnt;
 
     /** Columns key to statistic map. */
-    @GridDirectMap(keyType = String.class, valueType = StatsColumnData.class)
-    private Map<String, StatsColumnData> data;
+    @GridDirectMap(keyType = String.class, valueType = StatisticsColumnData.class)
+    private Map<String, StatisticsColumnData> data;
 
     /**
      * Constructor.
@@ -65,13 +65,13 @@ public class StatsObjectData implements Message {
      * @param updCnt Partition update counter.
      * @param data Map of statistics column data.
      */
-    public StatsObjectData(
-            StatsKeyMessage key,
+    public StatisticsObjectData(
+            StatisticsKeyMessage key,
             long rowsCnt,
-            StatsType type,
+            StatisticsType type,
             int partId,
             long updCnt,
-            Map<String, StatsColumnData> data
+            Map<String, StatisticsColumnData> data
     ) {
         this.key = key;
         this.rowsCnt = rowsCnt;
@@ -84,7 +84,7 @@ public class StatsObjectData implements Message {
     /**
      * @return Statistics key.
      */
-    public StatsKeyMessage key() {
+    public StatisticsKeyMessage key() {
         return key;
     }
 
@@ -98,7 +98,7 @@ public class StatsObjectData implements Message {
     /**
      * @return Statistics type.
      */
-    public StatsType type() {
+    public StatisticsType type() {
         return type;
     }
 
@@ -119,14 +119,14 @@ public class StatsObjectData implements Message {
     /**
      * @return Statistics column data.
      */
-    public Map<String, StatsColumnData> data() {
+    public Map<String, StatisticsColumnData> data() {
         return data;
     }
 
     /**
      * Default constructor.
      */
-    public StatsObjectData() {
+    public StatisticsObjectData() {
         // No-op.
     }
 
@@ -231,7 +231,7 @@ public class StatsObjectData implements Message {
                 if (!reader.isLastRead())
                     return false;
 
-                type = StatsType.fromOrdinal(typeOrd);
+                type = StatisticsType.fromOrdinal(typeOrd);
 
                 reader.incrementState();
 
@@ -245,7 +245,7 @@ public class StatsObjectData implements Message {
 
         }
 
-        return reader.afterMessageRead(StatsObjectData.class);
+        return reader.afterMessageRead(StatisticsObjectData.class);
     }
 
     /** {@inheritDoc} */

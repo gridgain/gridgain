@@ -33,10 +33,10 @@ import java.util.Collection;
 @RunWith(Parameterized.class)
 public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
     /** Test statistics key1. */
-    private static final StatsKey KEY1 = new StatsKey("schema", "obj");
+    private static final StatisticsKey KEY1 = new StatisticsKey("schema", "obj");
 
     /** Test statistics key2. */
-    private static final StatsKey KEY2 = new StatsKey("schema", "obj2");
+    private static final StatisticsKey KEY2 = new StatisticsKey("schema", "obj2");
 
     /** Test against storage of such type. */
     @Parameterized.Parameter(0)

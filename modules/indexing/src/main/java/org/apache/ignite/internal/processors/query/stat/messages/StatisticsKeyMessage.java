@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Key, describing the object of statistics. For example: table with some columns.
  */
-public class StatsKeyMessage implements Message {
+public class StatisticsKeyMessage implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -34,7 +34,7 @@ public class StatsKeyMessage implements Message {
     /**
      * {@link Externalizable} support.
      */
-    public StatsKeyMessage() {
+    public StatisticsKeyMessage() {
         // No-op.
     }
 
@@ -45,7 +45,7 @@ public class StatsKeyMessage implements Message {
      * @param obj Object name.
      * @param colNames Column names.
      */
-    public StatsKeyMessage(String schema, String obj, List<String> colNames) {
+    public StatisticsKeyMessage(String schema, String obj, List<String> colNames) {
         this.schema = schema;
         this.obj = obj;
         this.colNames = colNames;
@@ -141,7 +141,7 @@ public class StatsKeyMessage implements Message {
 
         }
 
-        return reader.afterMessageRead(StatsKeyMessage.class);
+        return reader.afterMessageRead(StatisticsKeyMessage.class);
     }
 
     /** {@inheritDoc} */

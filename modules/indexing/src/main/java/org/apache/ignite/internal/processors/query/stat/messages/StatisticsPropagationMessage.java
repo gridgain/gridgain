@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * Message to send statistics.
  */
-public class StatsPropagationMessage implements Message {
+public class StatisticsPropagationMessage implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -35,8 +35,8 @@ public class StatsPropagationMessage implements Message {
     public static final short TYPE_CODE = 181;
 
     /** */
-    @GridDirectCollection(StatsObjectData.class)
-    private List<StatsObjectData> data;
+    @GridDirectCollection(StatisticsObjectData.class)
+    private List<StatisticsObjectData> data;
 
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
@@ -46,7 +46,7 @@ public class StatsPropagationMessage implements Message {
     /**
      * Default constructor.
      */
-    public StatsPropagationMessage() {
+    public StatisticsPropagationMessage() {
         // No-op.
     }
 
@@ -55,14 +55,14 @@ public class StatsPropagationMessage implements Message {
      *
      * @param data List of objects statistics.
      */
-    public StatsPropagationMessage(List<StatsObjectData> data) {
+    public StatisticsPropagationMessage(List<StatisticsObjectData> data) {
         this.data = data;
     }
 
     /**
      * @return List of objects statistics.
      */
-    public List<StatsObjectData> data() {
+    public List<StatisticsObjectData> data() {
         return data;
     }
 
@@ -107,7 +107,7 @@ public class StatsPropagationMessage implements Message {
 
         }
 
-        return reader.afterMessageRead(StatsPropagationMessage.class);
+        return reader.afterMessageRead(StatisticsPropagationMessage.class);
     }
 
     /** {@inheritDoc} */

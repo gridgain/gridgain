@@ -56,7 +56,7 @@ public interface IgniteStatisticsManager {
      * @param colId Collection id.
      * @return {@code true} if collection was cancelled, {@code false} if specified collection wasn't found.
      */
-    public boolean cancelObjectStatisticsCollection(UUID colId);
+    public boolean cancelObjectStatisticsGathering(UUID colId);
 
     /**
      * Get local statistics by object.

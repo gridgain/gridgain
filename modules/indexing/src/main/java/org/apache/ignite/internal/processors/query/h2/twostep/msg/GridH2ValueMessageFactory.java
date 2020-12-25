@@ -22,15 +22,15 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
-import org.apache.ignite.internal.processors.query.stat.messages.CancelStatsCollectionRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsClearRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsCollectionResponse;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsColumnData;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsKeyMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsObjectData;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsPropagationMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatsGetRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.CancelStatisticsGatheringRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsClearRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringResponse;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsColumnData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGetRequest;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
@@ -74,15 +74,16 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
         factory.register((short)-57, GridH2SelectForUpdateTxDetails::new);
 
         // Statistics related messages.
-        factory.register(StatsCollectionRequest.TYPE_CODE, StatsCollectionRequest::new);
-        factory.register(StatsCollectionResponse.TYPE_CODE, StatsCollectionResponse::new);
-        factory.register(CancelStatsCollectionRequest.TYPE_CODE, CancelStatsCollectionRequest::new);
-        factory.register(StatsPropagationMessage.TYPE_CODE, StatsPropagationMessage::new);
-        factory.register(StatsGetRequest.TYPE_CODE, StatsGetRequest::new);
-        factory.register(StatsKeyMessage.TYPE_CODE, StatsKeyMessage::new);
-        factory.register(StatsObjectData.TYPE_CODE, StatsObjectData::new);
-        factory.register(StatsColumnData.TYPE_CODE, StatsColumnData::new);
-        factory.register(StatsClearRequest.TYPE_CODE, StatsClearRequest::new);
+        factory.register(StatisticsGatheringRequest.TYPE_CODE, StatisticsGatheringRequest::new);
+        factory.register(StatisticsGatheringResponse.TYPE_CODE, StatisticsGatheringResponse::new);
+        factory.register(CancelStatisticsGatheringRequest.TYPE_CODE, CancelStatisticsGatheringRequest::new);
+        factory.register(StatisticsPropagationMessage.TYPE_CODE, StatisticsPropagationMessage::new);
+        factory.register(StatisticsGetRequest.TYPE_CODE, StatisticsGetRequest::new);
+        factory.register(StatisticsKeyMessage.TYPE_CODE, StatisticsKeyMessage::new);
+        factory.register(StatisticsObjectData.TYPE_CODE, StatisticsObjectData::new);
+        factory.register(StatisticsColumnData.TYPE_CODE, StatisticsColumnData::new);
+        factory.register(StatisticsClearRequest.TYPE_CODE, StatisticsClearRequest::new);
+        factory.register(StatisticsGatheringResponse.TYPE_CODE, StatisticsGatheringResponse::new);
     }
 
     /** {@inheritDoc} */

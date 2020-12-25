@@ -29,7 +29,7 @@ import java.util.UUID;
 /**
  * Statistics request message.
  */
-public class StatsGetRequest implements Message {
+public class StatisticsGetRequest implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -40,8 +40,8 @@ public class StatsGetRequest implements Message {
     private UUID reqId;
 
     /** List of keys to supply statistics by. */
-    @GridDirectCollection(StatsKeyMessage.class)
-    private List<StatsKeyMessage> keys;
+    @GridDirectCollection(StatisticsKeyMessage.class)
+    private List<StatisticsKeyMessage> keys;
 
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
@@ -51,7 +51,7 @@ public class StatsGetRequest implements Message {
     /**
      * {@link Externalizable} support.
      */
-    public StatsGetRequest() {
+    public StatisticsGetRequest() {
     }
 
     /**
@@ -60,7 +60,7 @@ public class StatsGetRequest implements Message {
      * @param reqId Request id.
      * @param keys Keys to get statistics by.
      */
-    public StatsGetRequest(UUID reqId, List<StatsKeyMessage> keys) {
+    public StatisticsGetRequest(UUID reqId, List<StatisticsKeyMessage> keys) {
         this.reqId = reqId;
         this.keys = keys;
     }
@@ -75,7 +75,7 @@ public class StatsGetRequest implements Message {
     /**
      * @return Keys to get statistics by.
      */
-    public List<StatsKeyMessage> keys() {
+    public List<StatisticsKeyMessage> keys() {
         return keys;
     }
 
@@ -134,7 +134,7 @@ public class StatsGetRequest implements Message {
 
         }
 
-        return reader.afterMessageRead(StatsGetRequest.class);
+        return reader.afterMessageRead(StatisticsGetRequest.class);
     }
 
     /** {@inheritDoc} */

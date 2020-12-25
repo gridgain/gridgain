@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 /**
  * Statistics by column (or by set of columns, if they collected together)
  */
-public class StatsColumnData implements Message {
+public class StatisticsColumnData implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -56,7 +56,7 @@ public class StatsColumnData implements Message {
     /**
      * Default constructor.
      */
-    public StatsColumnData() {
+    public StatisticsColumnData() {
     }
 
     /**
@@ -70,7 +70,7 @@ public class StatsColumnData implements Message {
      * @param size Average size, for variable size types (in bytes).
      * @param rawData Raw data to make statistics aggregate.
      */
-    public StatsColumnData(
+    public StatisticsColumnData(
         GridH2ValueMessage min,
         GridH2ValueMessage max,
         int nulls,
@@ -262,7 +262,7 @@ public class StatsColumnData implements Message {
 
         }
 
-        return reader.afterMessageRead(StatsColumnData.class);
+        return reader.afterMessageRead(StatisticsColumnData.class);
     }
 
     /** {@inheritDoc} */
