@@ -1490,6 +1490,15 @@ public final class IgniteSystemProperties {
         "IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE";
 
     /**
+     * Set to true only during the junit tests.
+     * Signals that the cluster is running in a test environment.
+     *
+     * Can be used for changing behaviour of tightly coupled code pieces during the tests.
+     * Use it as a last resort only, prefer another toolchain like DI, mocks and etc. if possible
+     */
+    public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

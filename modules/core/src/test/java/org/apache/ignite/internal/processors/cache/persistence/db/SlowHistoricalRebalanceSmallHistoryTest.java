@@ -75,6 +75,13 @@ public class SlowHistoricalRebalanceSmallHistoryTest extends GridCommonAbstractT
                 .setWalSegmentSize(512 * 1024)
         );
 
+        cfg.setCacheConfiguration(new CacheConfiguration<>(SLOW_REBALANCE_CACHE)
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setAffinity(new RendezvousAffinityFunction(false, 1))
+            .setBackups(1)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
+            .setRebalanceBatchSize(100));
+
         cfg.setFailureHandler(new StopNodeFailureHandler());
 
         cfg.setCommunicationSpi(new RebalanceBlockingSPI());
@@ -128,16 +135,9 @@ public class SlowHistoricalRebalanceSmallHistoryTest extends GridCommonAbstractT
         ig.cluster().baselineAutoAdjustEnabled(false);
         ig.cluster().active(true);
 
-        ig.getOrCreateCache(new CacheConfiguration<>(SLOW_REBALANCE_CACHE)
-            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            .setAffinity(new RendezvousAffinityFunction(false, 1))
-            .setBackups(1)
-            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-            .setRebalanceBatchSize(100));
-
         try (IgniteDataStreamer<Object, Object> streamer = ig.dataStreamer(SLOW_REBALANCE_CACHE)) {
             for (int i = 0; i < 3_000; i++)
-                streamer.addData(i, new byte[5 * 1000]);
+                streamer.addData(i, val());
 
             streamer.flush();
         }
@@ -157,12 +157,12 @@ public class SlowHistoricalRebalanceSmallHistoryTest extends GridCommonAbstractT
 
         for (int i = 0; i < WAL_HISTORY_SIZE; i++) {
             for (int j = 0; i < 500; i++)
-                anotherCache.put(j, new byte[5 * 1000]);
+                anotherCache.put(j, val());
 
             forceCheckpoint(); // Checkpoints where partition is OWNING on grid(0), MOVING on grid(1)
 
             for (int j = 0; i < 500; i++)
-                anotherCache.put(j, new byte[5 * 1000]);
+                anotherCache.put(j, val());
         }
 
         SUPPLY_MESSAGE_LATCH.get().countDown();
@@ -172,12 +172,12 @@ public class SlowHistoricalRebalanceSmallHistoryTest extends GridCommonAbstractT
 
         for (int i = 0; i < 2; i++) {
             for (int j = 0; i < 500; i++)
-                anotherCache.put(j, new byte[5 * 1000]);
+                anotherCache.put(j, val());
 
             forceCheckpoint(); // A few more checkpoints when partition is OWNING everywhere
 
             for (int j = 0; i < 500; i++)
-                anotherCache.put(j, new byte[5 * 1000]);
+                anotherCache.put(j, val());
         }
 
         stopGrid(0);
@@ -185,13 +185,18 @@ public class SlowHistoricalRebalanceSmallHistoryTest extends GridCommonAbstractT
         IgniteCache<Object, Object> anotherCacheGrid1 = grid(1).cache(REGULAR_CACHE);
 
         for (int i = 0; i < 500; i++)
-            anotherCacheGrid1.put(i, new byte[5 * 1000]);
+            anotherCacheGrid1.put(i, val());
 
         startGrid(0);
 
         awaitPartitionMapExchange();
 
         assertEquals(2, grid(1).context().discovery().aliveServerNodes().size());
+    }
+
+    /** */
+    protected Object val() {
+        return new byte[5 * 1000];
     }
 
     /**
