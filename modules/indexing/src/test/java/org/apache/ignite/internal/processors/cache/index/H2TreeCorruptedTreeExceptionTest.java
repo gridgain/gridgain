@@ -145,7 +145,7 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
     }
 
     /** */
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "false")
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
     @Test
     public void testCorruptedTree() throws Exception {
         IgniteEx srv = startGrid(0);
