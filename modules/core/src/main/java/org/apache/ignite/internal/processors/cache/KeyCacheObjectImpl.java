@@ -226,7 +226,7 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
                     "hasValBytes", valBytes != null, false);
         }
         else if (sensitiveDataLogging == HASH)
-            return String.valueOf(val == null ? "null" : IgniteUtils.hash(this));
+            return String.valueOf(val == null ? "null" : IgniteUtils.hash(val));
         else
             return "KeyCacheObject";
     }

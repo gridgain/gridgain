@@ -124,7 +124,7 @@ public class UnwrapDataEntry extends DataEntry implements UnwrappedDataEntry {
             sb.a("k = ").a(unwrappedKey()).a(", v = [ ").a(unwrappedValue()).a("], ");
         else if (sensitiveDataLogging == HASH)
             sb.a("k = ").a(unwrappedKey() == null ? "null" : IgniteUtils.hash(unwrappedKey()))
-                    .a(", v = [ ").a(unwrappedValue() == null ? "null" : IgniteUtils.hash(unwrappedKey())).a("], ");
+                    .a(", v = [ ").a(unwrappedValue() == null ? "null" : IgniteUtils.hash(unwrappedValue())).a("], ");
 
         return sb.a("super = [").a(super.toString()).a("]]").toString();
     }

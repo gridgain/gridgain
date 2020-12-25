@@ -183,9 +183,4 @@ public class TxDeadlock {
 
         return lb;
     }
-
-    public static void main(String[] args) {
-        System.out.println(IgniteUtils.hash(1));
-        System.out.println(IgniteUtils.hash(-1));
-    }
 }
