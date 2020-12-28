@@ -150,6 +150,7 @@ public class IgniteStatisticsHelper {
      * Generate statistics collection requests by given keys.
      *
      * @param colId Collection id.
+     * @param locNodeId Local node id.
      * @param keys Collection of keys to collect statistics by.
      * @param failedPartitions Map of stat key to array of failed partitions to generate requests by.
      *            If {@code null} - requests will be
@@ -158,6 +159,7 @@ public class IgniteStatisticsHelper {
      */
     public static Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> generateCollectionRequests(
         UUID colId,
+        UUID locNodeId,
         Collection<StatisticsKeyMessage> keys,
         Map<StatisticsKeyMessage, int[]> failedPartitions,
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts
@@ -192,7 +194,7 @@ public class IgniteStatisticsHelper {
                 continue;
 
             StatisticsGatheringRequest req = prepareRequest(colId, nodeGpsParts.getValue());
-            reqs.add(new StatisticsAddrRequest<>(req, nodeGpsParts.getKey()));
+            reqs.add(new StatisticsAddrRequest<>(req, locNodeId, nodeGpsParts.getKey()));
         }
 
         return reqs;
@@ -227,18 +229,20 @@ public class IgniteStatisticsHelper {
     /**
      * Generate statistics clear requests.
      *
+     * @param locNodeId Local node id.
      * @param keys Keys to clean statistics by.
      * @return Collection of addressed statistics clear requests.
      * @throws IgniteCheckedException In case of errors.
      */
     public Collection<StatisticsAddrRequest<StatisticsClearRequest>> generateClearRequests(
+            UUID locNodeId,
         Collection<StatisticsKeyMessage> keys
     ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts = extractGroups(keys);
         Map<UUID, Collection<StatisticsKeyMessage>> nodeKeys = nodeKeys(grpContexts);
 
         return nodeKeys.entrySet().stream().map(node -> new StatisticsAddrRequest<>(
-            new StatisticsClearRequest(UUID.randomUUID(), new ArrayList<>(node.getValue())), node.getKey()))
+            new StatisticsClearRequest(UUID.randomUUID(), new ArrayList<>(node.getValue())), locNodeId, node.getKey()))
                 .collect(Collectors.toList());
     }
 
@@ -247,18 +251,20 @@ public class IgniteStatisticsHelper {
      * Generate statistics collection requests by given keys.
      *
      * @param gatId Gathering id.
+     * @param locNodeId Local node id.
      * @param keys Collection of keys to collect statistics by.
      * @return Collection of statistics collection addressed request.
      * @throws IgniteCheckedException In case of errors.
      */
     protected Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> generateCollectionRequests(
         UUID gatId,
+        UUID locNodeId,
         Collection<StatisticsKeyMessage> keys,
         Map<StatisticsKeyMessage, int[]> failedPartitions
     ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts = extractGroups(keys);
 
-        return generateCollectionRequests(gatId, keys, failedPartitions, grpContexts);
+        return generateCollectionRequests(gatId, locNodeId, keys, failedPartitions, grpContexts);
     }
 
     /**

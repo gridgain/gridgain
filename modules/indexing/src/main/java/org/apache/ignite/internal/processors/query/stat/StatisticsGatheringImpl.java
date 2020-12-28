@@ -84,6 +84,14 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         this.gatMgmtPool = gatMgmtPool;
     }
 
+    /**
+     * // TODO
+     * @param keyMsg
+     * @param partIds
+     * @param cancelled
+     * @return
+     * @throws IgniteCheckedException
+     */
     public Collection<ObjectPartitionStatisticsImpl> collectLocalObjectStatistics(
             StatisticsKeyMessage keyMsg,
             int[] partIds,

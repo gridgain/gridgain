@@ -39,6 +39,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
+/**
+ * Implementation of Statistics gathering request crawler with addition event and message listeners handling.
+ */
 public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatheringRequestCrawler, GridLocalEventListener,
         GridMessageListener {
     /** Statistics related messages topic name. */
@@ -152,7 +155,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> failedMsgs;
         do {
             try {
-                reqs = helper.generateCollectionRequests(gatId, keys, failedPartitions);
+                reqs = helper.generateCollectionRequests(gatId, locNodeId, keys, failedPartitions);
             }
             catch (IgniteCheckedException e) {
                 statMgr.cancelObjectStatisticsGathering(gatId);
@@ -194,8 +197,12 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
     }
 
     /** {@inheritDoc} */
-    @Override public void sendGatheringRequestsAsync(UUID gatId, Collection<StatisticsKeyMessage> keys) {
-        msgMgmtPool.submit(() -> sendGatheringRequests(gatId, keys, null));
+    @Override public void sendGatheringRequestsAsync(
+        UUID gatId,
+        Collection<StatisticsKeyMessage> keys,
+        Map<StatisticsKeyMessage, int[]> failedParts
+    ) {
+        msgMgmtPool.submit(() -> sendGatheringRequests(gatId, keys, failedParts));
     }
 
     /**
@@ -282,15 +289,25 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
     }
 
 
-    public void replyGatheringRequest(UUID reqId, Collection<ObjectStatisticsImpl> data) {
-        StatisticsAddrRequest<StatisticsGatheringRequest> request = remainingRequests.get(reqId);
+    public void replyGatheringRequest(UUID reqId, int parts, Collection<ObjectStatisticsImpl> data) {
+        StatisticsAddrRequest<StatisticsGatheringRequest> req = remainingRequests.remove(reqId);
+        if (req == null) {
+            if (log.isDebugEnabled())
+                log.debug(String.format("Cannot reply to outdated request %s", reqId));
+
+            return;
+        }
+        //UUID gatId, UUID reqId, Map<StatisticsObjectData, int[]> data
+        StatisticsUtils.toObjectData()
+        StatisticsGatheringResponse resp = new StatisticsGatheringResponse(req.req().gatId(), reqId, data);
+
         if (locNodeId.equals(reqId.node())) {
-            receiveLocalStatistics();
+            receiveLocalStatistics(locNodeId, response);
         }
     }
 
-    public void replyGatheringRequestAsync(UUID reqId, Collection<ObjectStatisticsImpl> data) {
-        msgMgmtPool.submit(() -> replyGatheringRequest(reqId, data));
+    public void replyGatheringRequestAsync(UUID reqId, int parts, Collection<ObjectStatisticsImpl> data) {
+        msgMgmtPool.submit(() -> replyGatheringRequest(reqId, parts, data));
     }
 
 
@@ -316,7 +333,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
 
 
     /**
-     * Receive and handle statistics propagation message as response for collection request.
+     * Receive and handle statistics gathering response message as response for collection request.
      *
      * @param nodeId Sender node id.
      * @param msg Statistics propagation message with partitions statistics to handle.
@@ -326,11 +343,9 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         assert msg.data().keySet().stream().noneMatch(pd -> pd.type() == StatisticsType.PARTITION)
                 : "Got partition statistics by request " + msg.reqId();
 
-        StatisticsAddrRequest<StatisticsGatheringRequest> request = remainingRequests.get(msg.reqId());
+        StatisticsAddrRequest<StatisticsGatheringRequest> req = remainingRequests.remove(msg.reqId());
 
-        assert request.targetNodeId().equals(nodeId);
-
-        if (request == null) {
+        if (req == null) {
             if (log.isDebugEnabled())
                 log.debug(String.format(
                         "Ignoring outdated local statistics collection response from node %s to col %s req %s",
@@ -339,9 +354,14 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             return;
         }
 
-        Map<StatisticsKeyMessage, int[]> failedParts = IgniteStatisticsHelper.extractFailed(request.req(), msg);
+        assert req.targetNodeId().equals(nodeId);
 
         statMgr.registerLocalResult(msg.gatId(), msg.data());
+
+        Map<StatisticsKeyMessage, int[]> failedParts = IgniteStatisticsHelper.extractFailed(req.req(), msg);
+
+        if (!F.isEmpty(failedParts))
+            sendGatheringRequestsAsync(req.req().gatId(), req.req().keys().keySet(), failedParts);
     }
 
     /**

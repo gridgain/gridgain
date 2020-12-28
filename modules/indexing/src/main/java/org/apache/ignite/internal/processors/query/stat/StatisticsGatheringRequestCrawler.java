@@ -17,8 +17,13 @@ public interface StatisticsGatheringRequestCrawler {
      *
      * @param getId Gathering id.
      * @param keys Keys to collect statistics by.
+     * @param failedParts Map of keys to its failed partitions.
      */
-    public void sendGatheringRequestsAsync(UUID gatId, Collection<StatisticsKeyMessage> keys);
+    public void sendGatheringRequestsAsync(
+        UUID gatId,
+        Collection<StatisticsKeyMessage> keys,
+        Map<StatisticsKeyMessage, int[]> failedParts
+    );
 
     /**
      * Send statistics gathering response async.
