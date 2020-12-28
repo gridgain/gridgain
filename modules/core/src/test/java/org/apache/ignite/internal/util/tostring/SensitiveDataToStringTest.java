@@ -45,7 +45,9 @@ import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.Sensi
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.NONE;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
-/** */
+/**
+ * Tests for output of {@code toString()} depending on the value of {@link IGNITE_SENSITIVE_DATA_LOGGING}
+ */
 public class SensitiveDataToStringTest extends GridCommonAbstractTest {
     /** Random int. */
     int rndInt0 = 54321;
@@ -116,6 +118,14 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testSensitivePropertiesResolving6() {
         assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == NONE);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
+    public void testSensitivePropertiesResolving7() {
+        assertTrue(S.getSensitiveDataLogging().toString(), S.getSensitiveDataLogging() == PLAIN);
     }
 
     /** */

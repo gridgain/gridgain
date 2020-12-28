@@ -202,6 +202,10 @@ public final class IgniteSystemProperties {
      * Setting to {@code "plain"} enables writing sensitive information in {@code toString()} output.
      * Setting to {@code "hash"} enables writing hash of sensitive information in {@code toString()} output.
      * Setting to {@code "none"} disables writing sensitive information in {@code toString()} output.
+     *
+     * {@link #IGNITE_TO_STRING_INCLUDE_SENSITIVE} has higher priority. If it is explicitly set, then it is converted:
+     * "true" -> "plain",
+     * "false" -> "none".
      */
     public static final String IGNITE_SENSITIVE_DATA_LOGGING = "IGNITE_SENSITIVE_DATA_LOGGING";
 
