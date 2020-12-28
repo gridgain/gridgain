@@ -70,9 +70,6 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
     private final ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests =
             new ConcurrentHashMap<>();
 
-    /** Gathering counter. */
-    private final Counters gc = new Counters();
-
     public StatisticsGatheringRequestRouterImpl(
         UUID locNodeId,
         IgniteStatisticsManagerImpl statMgr,
@@ -94,8 +91,18 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
         ioMgr.addMessageListener(TOPIC, this);
     }
 
+    /**
+     * Stop request crawler manager.
+     */
+    public void stop() {
+        if (msgMgmtPool != null) {
+            List<Runnable> unfinishedTasks = msgMgmtPool.shutdownNow();
+            if (!unfinishedTasks.isEmpty())
+                log.warning(String.format("%d statistics collection request cancelled.", unfinishedTasks.size()));
+        }
+    }
+
     public void removeGathering(UUID gatId){
-        gc.removeCounter(gatId);
         // TODO remove remaining
     }
 
@@ -158,7 +165,6 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
             Map<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> reqsMap = toReqIdMap(reqs);
 
             remainingRequests.putAll(reqsMap);
-            gc.incrementCounter(gatId, reqs.size());
 
             // Process local request
             StatisticsAddrRequest<StatisticsGatheringRequest> locReq = reqs.stream().filter(
@@ -198,7 +204,7 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
     }
 
     @Override public void sendGatheringRequestsAsync(UUID gatId, Collection<StatisticsKeyMessage> keys) {
-        msgMgmtPool.submit(() -> sendGatheringRequests(gatId, keys));
+        msgMgmtPool.submit(() -> sendGatheringRequests(gatId, keys, null));
     }
 
     /**
@@ -405,71 +411,7 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
 
             assert removed == null || (removed.nodeId().equals(nodeId) && removed.req().gatId().equals(msg.gatId()));
         });
-        gc.removeCounter(msg.gatId());
         statMgr.cancelLocalStatisticsGathering(msg.gatId());
-    }
-
-    /**
-     * Thread safe counters by ids.
-     */
-    private static class Counters {
-
-        /** Id to counter map. */
-        private final ConcurrentMap<UUID, Integer> counters = new ConcurrentHashMap<>();
-
-        /**
-         * Increment counter.
-         *
-         * @param id Counter id.
-         * @param increment Increment value.
-         */
-        public void incrementCounter(UUID id, int increment) {
-            counters.compute(id, (k, v) -> (v == null) ? increment : v + increment);
-        }
-
-        /**
-         * Remove specified counter.
-         *
-         * @param id Counter id.
-         * @return Last counter value or {@code null} if there are no counter with specified id.
-         */
-        public Integer removeCounter(UUID id) {
-            return counters.remove(id);
-        }
-
-        /**
-         * Subtract decrement from counter and return {@code true} if counter became zero.
-         *
-         * @param id Counter id.
-         * @param decrement Decrement.
-         * @return {@code true} if counter became zero, {@code false} otherwise.
-         */
-        public boolean decrementCounter(UUID id, int decrement) {
-            boolean[] res = new boolean[1];
-            counters.compute(id, (k, v) -> {
-                if (v == null) {
-                    //TODO: log
-                    res[0] = true;
-                    return null;
-                }
-                v -= decrement;
-                res[0] = v == 0;
-                if (v == 0)
-                    return v;
-                return null;
-            });
-            return res[0];
-        }
-
-        /**
-         * Get counter current value.
-         *
-         * @param id Counter id.
-         * @return Current value of counter or {@code null} if there are no such counter
-         */
-        public Integer getCounter(UUID id) {
-            return counters.get(id);
-        }
     }
 
     /** {@inheritDoc} */
