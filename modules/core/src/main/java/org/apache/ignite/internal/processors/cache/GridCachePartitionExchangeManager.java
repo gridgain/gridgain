@@ -37,6 +37,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -190,6 +191,9 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.EXCHANGE_FU
  * Partition exchange manager.
  */
 public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedManagerAdapter<K, V> {
+    /** Prefix of error message for dumping long running operations. */
+    public static final String FAILED_DUMP_MSG = "Failed to dump debug information: ";
+
     /** Exchange history size. */
     private final int EXCHANGE_HISTORY_SIZE =
         IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE, 1_000);
@@ -304,6 +308,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
     /** */
     private final ReentrantLock dumpLongRunningOpsLock = new ReentrantLock();
+
+    /** Latch that is used to guarantee that this manager fully started and all variables initialized. */
+    private final CountDownLatch startLatch = new CountDownLatch(1);
 
     /** Discovery listener. */
     private final DiscoveryEventListener discoLsnr = new DiscoveryEventListener() {
@@ -522,6 +529,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         durationHistogram = mreg.findMetric(PME_DURATION_HISTOGRAM);
         blockingDurationHistogram = mreg.findMetric(PME_OPS_BLOCKED_DURATION_HISTOGRAM);
+
+        startLatch.countDown();
     }
 
     /**
@@ -2474,7 +2483,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             }
         }
         catch (Exception e) {
-            U.error(diagnosticLog, "Failed to dump debug information: " + e, e);
+            U.error(diagnosticLog, FAILED_DUMP_MSG + e, e);
         }
     }
 
@@ -3425,7 +3434,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                         dumpDebugInfo(exchFut);
                                     }
                                     catch (Exception e) {
-                                        U.error(diagnosticLog, "Failed to dump debug information: " + e, e);
+                                        U.error(diagnosticLog, FAILED_DUMP_MSG + e, e);
                                     }
 
                                     nextDumpTime = U.currentTimeMillis() + nextDumpTimeout(dumpCnt++, dumpTimeout);
