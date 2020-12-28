@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMe
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
@@ -33,14 +34,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
-public class StatisticsGatheringRequestRouterImpl implements StatisticsGatheringRequestRouter, GridLocalEventListener,
+public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatheringRequestCrawler, GridLocalEventListener,
         GridMessageListener {
     /** Statistics related messages topic name. */
     private static final Object TOPIC = GridTopic.TOPIC_CACHE.topic("statistics");
@@ -66,11 +65,23 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
     /** Ignite statistics helper. */
     private final IgniteStatisticsHelper helper;
 
-    /** Sended, but not received requests map reqId -> Request. */
+    /** Remaining requests map reqId -> Request. Contains incoming requests too. */
     private final ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests =
             new ConcurrentHashMap<>();
 
-    public StatisticsGatheringRequestRouterImpl(
+
+    /**
+     * Constructor.
+     *
+     * @param locNodeId Local node id.
+     * @param statMgr Statistics manager.
+     * @param eventMgr Event storage manager.
+     * @param ioMgr Io manager.
+     * @param helper Statistics helper.
+     * @param msgMgmtPool Message processing thread pool.
+     * @param logSupplier Log supplier.
+     */
+    public StatisticsGatheringRequestCrawlerImpl(
         UUID locNodeId,
         IgniteStatisticsManagerImpl statMgr,
         GridEventStorageManager eventMgr,
@@ -79,7 +90,7 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
         IgniteThreadPoolExecutor msgMgmtPool,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
-        this.log = logSupplier.apply(StatisticsGatheringRequestRouterImpl.class);
+        this.log = logSupplier.apply(StatisticsGatheringRequestCrawlerImpl.class);
         this.locNodeId = locNodeId;
         this.statMgr = statMgr;
         this.eventMgr = eventMgr;
@@ -102,31 +113,19 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
         }
     }
 
-    public void removeGathering(UUID gatId){
-        // TODO remove remaining
-    }
-
     /**
+     * Convert collection of addressed gathering request to map reqId to addressed request.
      *
-     * @param gatId
-     * @param keys
-     * @param failedPartitions
-     * @return Map nodeId to addressed gathering request.
-     * @throws IgniteCheckedException
+     * @param reqs Collection of request to convert.
+     * @return Map request id to request.
      */
-    /*private Map<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> generateCollectionRequestsMap(
-        UUID gatId,
-        Collection<StatisticsKeyMessage> keys,
-        Map<StatisticsKeyMessage, int[]> failedPartitions
-    ) throws IgniteCheckedException {
-        return helper.generateCollectionRequests(gatId, keys, failedPartitions).stream().collect(
-                Collectors.toMap(StatisticsAddrRequest::nodeId, r -> r));
-    }*/
-
     private Map<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> toReqIdMap(
-        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs) {
+        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs
+    ) {
         Map<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> res = new HashMap<>();
-        reqs.forEach(r -> res.put(r.req().reqId(), r -> r));
+
+        reqs.forEach(r -> res.put(r.req().reqId(), r));
+
         return res;
     }
 
@@ -156,7 +155,6 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
                 reqs = helper.generateCollectionRequests(gatId, keys, failedPartitions);
             }
             catch (IgniteCheckedException e) {
-                // TODO: maybe shell call some special method in case of error.
                 statMgr.cancelObjectStatisticsGathering(gatId);
 
                 return;
@@ -168,12 +166,9 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
 
             // Process local request
             StatisticsAddrRequest<StatisticsGatheringRequest> locReq = reqs.stream().filter(
-                    r -> locNodeId.equals(r.nodeId())).findAny().orElse(null);
-            if (locReq != null) {
+                    r -> locNodeId.equals(r.targetNodeId())).findAny().orElse(null);
+            if (locReq != null)
                 statMgr.gatherLocalObjectStatisticsAsync(gatId, locReq.req().reqId(), locReq.req().keys());
-
-                reqsMap.remove(locReq.req().reqId());
-            }
 
             // Process remote requests
             failedMsgs = sendRequests(reqs);
@@ -182,29 +177,78 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
                 failedPartitions = null;
             else {
                 failedMsgs.forEach(r -> remainingRequests.remove(r.req().reqId()));
-                //!
-                gc.decrementCounter(gatId, failedMsgs.size());
 
-                Set<UUID> failedIds = failedMsgs.stream().map(r -> r.req().reqId()).collect(Collectors.toSet());
                 failedPartitions = helper.extractFailed(failedMsgs.stream().map(StatisticsAddrRequest::req)
                         .toArray(StatisticsGatheringRequest[]::new));
             }
 
 
             if (cnt++ > 10) {
-                /*StatisticsKeyMessage key = status.keys().iterator().next();
+                if (log.isInfoEnabled())
+                    log.info(String.format("Unable to send gathering requests for 10 times, cancel gathering %s", gatId));
 
-                throw new IgniteCheckedException(String.format(
-                        "Unable to send all messages to collect statistics by key %s.%s and the others %d",
-                        key.schema(), key.obj(), status.keys().size() - 1));*/
-                // TODO: cancel gathering
+                statMgr.cancelObjectStatisticsGathering(gatId);
             }
         }
         while (failedPartitions != null);
     }
 
+    /** {@inheritDoc} */
     @Override public void sendGatheringRequestsAsync(UUID gatId, Collection<StatisticsKeyMessage> keys) {
         msgMgmtPool.submit(() -> sendGatheringRequests(gatId, keys, null));
+    }
+
+    /**
+     * Send response to given request.
+     *
+     * @param reqId Request id to response to.
+     * @param statistics Collected statistics.
+     */
+    private void sendGatheringResponse(
+        UUID reqId,
+        Map<IgniteBiTuple<StatisticsKeyMessage, ObjectStatisticsImpl>, int[]> statistics
+    ) {
+        StatisticsAddrRequest<StatisticsGatheringRequest> req =  remainingRequests.remove(reqId);
+        if (req == null) {
+            if (log.isDebugEnabled())
+                log.debug(String.format("Dropping results to cancelled collection request %s", reqId));
+
+            return;
+        }
+        UUID gatId = req.req().gatId();
+
+        Map<StatisticsObjectData, int[]> dataParts = new HashMap<>(statistics.size());
+        statistics.forEach((k,v) -> {
+            try {
+                StatisticsObjectData data = StatisticsUtils.toObjectData(k.getKey(), StatisticsType.LOCAL, k.getValue());
+
+                dataParts.put(data, v);
+            }
+            catch (IgniteCheckedException e) {
+                if (log.isDebugEnabled())
+                    log.debug(String.format("Unable to format statistics %s.%s by request=%s gathering=%s",
+                            k.getKey().schema(), k.getKey().obj(), reqId, gatId));
+
+            }
+        });
+
+
+        if (locNodeId.equals(req.senderNodeId()))
+            statMgr.registerLocalResult(gatId, dataParts);
+        else {
+            int parts = dataParts.values().stream().mapToInt(l -> l.length).sum();
+            statMgr.onRemoteGatheringSend(gatid, parts);
+            StatisticsGatheringResponse resp = new StatisticsGatheringResponse(req.req().gatId(), reqId, dataParts);
+            safeSend(req.senderNodeId(), resp);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void sendGatheringResponseAsync(
+        UUID reqId,
+        Map<IgniteBiTuple<StatisticsKeyMessage, ObjectStatisticsImpl>, int[]> statistics
+    ) {
+        msgMgmtPool.submit(() -> sendGatheringResponse(reqId, statistics));
     }
 
     /**
@@ -220,11 +264,11 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
         Collection<StatisticsAddrRequest<T>> res = null;
 
         for (StatisticsAddrRequest<T> req : reqs) {
-            if (locNodeId.equals(req.nodeId()))
+            if (locNodeId.equals(req.targetNodeId()))
                 continue;
 
             try {
-                ioMgr.sendToCustomTopic(req.nodeId(), TOPIC, req.req(), GridIoPolicy.QUERY_POOL);
+                ioMgr.sendToCustomTopic(req.targetNodeId(), TOPIC, req.req(), GridIoPolicy.QUERY_POOL);
             }
             catch (IgniteCheckedException e) {
                 if (res == null)
@@ -259,6 +303,18 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
         // TODO: implement me
         //ctx.closure().runLocalSafe(() -> onNodeLeft(nodeId), GridIoPolicy.QUERY_POOL);
     }
+
+    /**
+     * Process StatisticsGetResponse message.
+     *
+     * @param nodeId Sender node id.
+     * @param msg Response to process.
+     */
+    private void receiveGlobalStatistics(UUID nodeId, StatisticsGetResponse msg) {
+        statMgr.saveGlobalStatistics(msg.data());
+    }
+
+
     /**
      * Receive and handle statistics propagation message as response for collection request.
      *
@@ -272,7 +328,7 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
 
         StatisticsAddrRequest<StatisticsGatheringRequest> request = remainingRequests.get(msg.reqId());
 
-        assert request.nodeId().equals(nodeId);
+        assert request.targetNodeId().equals(nodeId);
 
         if (request == null) {
             if (log.isDebugEnabled())
@@ -284,13 +340,8 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
         }
 
         Map<StatisticsKeyMessage, int[]> failedParts = IgniteStatisticsHelper.extractFailed(request.req(), msg);
-        statMgr.registerLocalResult(msg.gatId(), msg.data().keySet());
-        if (gc.decrementCounter(msg.gatId(), 1))
-            finishGatheringAsync(msg.gatId());
-    }
 
-    private void finishGatheringAsync(UUID gatId) {
-        msgMgmtPool.submit(() -> statMgr.finishStatisticsCollection(gatId));
+        statMgr.registerLocalResult(msg.gatId(), msg.data());
     }
 
     /**
@@ -302,6 +353,7 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
     private void receivePartitionsStatisticsAsync(UUID nodeId, StatisticsPropagationMessage msg) {
         msgMgmtPool.submit(() -> statMgr.receivePartitionsStatistics(msg.data()));
     }
+
 
     /**
      * Send statistics by request.
@@ -322,13 +374,10 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
                     if (log.isDebugEnabled())
                         log.debug(String.format("Unable to build object statistics message by key %s due to %s",
                                 keyMsg, e.getMessage()));
-                    // Send statistics without current key.
                 }
         }
 
         safeSend(nodeId, new StatisticsGetResponse(msg.reqId(), data));
-
-
     }
 
     /**
@@ -354,16 +403,13 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
     /**
      * Schedule statistics gathering by specified request.
      *
-     * @param nodeId request origin node.
-     * @param msg request message.
+     * @param nodeId Request origin node.
+     * @param msg Request message.
      */
     private void handleGatheringRequest(UUID nodeId, StatisticsGatheringRequest msg) {
-        assert msg.reqId() != null : "Got statistics collection request without request id";
+        remainingRequests.put(msg.reqId(), new StatisticsAddrRequest<>(msg, nodeId, locNodeId));
 
-        statMgr.gatherLocalObjectStatisticsAsync(nodeId, msg.gatId(), msg.reqId(), msg.keys().keySet());
-        helper.addActiveCollectionStatus(msg.reqId(), new StatisticsGatheringContext(, null));
-
-        statMgmtPool.submit(() -> processLocal(nodeId, msg));
+        statMgr.gatherLocalObjectStatisticsAsync(msg.gatId(), msg.reqId(), msg.keys());
     }
 
     /**
@@ -376,27 +422,24 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
         statMgr.clearObjectStatisticsLocal(msg.keys());
     }
 
-
     /** {@inheritDoc} */
     @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-        try {
-            if (msg instanceof StatisticsPropagationMessage)
-                receivePartitionsStatisticsAsync(nodeId, (StatisticsPropagationMessage) msg);
-            else if (msg instanceof StatisticsGatheringResponse)
-                receiveLocalStatistics(nodeId, (StatisticsGatheringResponse) msg);
-            else if (msg instanceof StatisticsGetRequest)
-                msgMgmtPool.submit(() -> supplyStatistics(nodeId, (StatisticsGetRequest) msg));
-            else if (msg instanceof StatisticsGatheringRequest)
-                handleGatheringRequest(nodeId, (StatisticsGatheringRequest)msg);
-            else if (msg instanceof CancelStatisticsGatheringRequest)
-                cancelStatisticsCollection(nodeId, (CancelStatisticsGatheringRequest) msg);
-            else if (msg instanceof StatisticsClearRequest)
-                msgMgmtPool.submit(() -> clearObjectStatistics(nodeId, (StatisticsClearRequest)msg));
-            else
-                log.warning("Unknown msg " + msg +  " in statistics topic " + TOPIC + " from node " + nodeId);
-        } catch (IgniteCheckedException e) {
-            log.warning("Statistic msg from node " + nodeId + " processing failed", e);
-        }
+        if (msg instanceof StatisticsPropagationMessage)
+            receivePartitionsStatisticsAsync(nodeId, (StatisticsPropagationMessage) msg);
+        else if (msg instanceof StatisticsGatheringResponse)
+            receiveLocalStatistics(nodeId, (StatisticsGatheringResponse) msg);
+        else if (msg instanceof StatisticsGetRequest)
+            msgMgmtPool.submit(() -> supplyStatistics(nodeId, (StatisticsGetRequest) msg));
+        else if (msg instanceof StatisticsGetResponse)
+            receiveGlobalStatistics(nodeId, (StatisticsGetResponse)msg);
+        else if (msg instanceof StatisticsGatheringRequest)
+            handleGatheringRequest(nodeId, (StatisticsGatheringRequest)msg);
+        else if (msg instanceof CancelStatisticsGatheringRequest)
+            cancelStatisticsCollection(nodeId, (CancelStatisticsGatheringRequest) msg);
+        else if (msg instanceof StatisticsClearRequest)
+            msgMgmtPool.submit(() -> clearObjectStatistics(nodeId, (StatisticsClearRequest)msg));
+        else
+            log.warning("Unknown msg " + msg +  " in statistics topic " + TOPIC + " from node " + nodeId);
     }
 
     /**
@@ -409,7 +452,7 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
         Arrays.stream(msg.reqIds()).forEach(reqId -> {
             StatisticsAddrRequest<StatisticsGatheringRequest> removed = remainingRequests.remove(reqId);
 
-            assert removed == null || (removed.nodeId().equals(nodeId) && removed.req().gatId().equals(msg.gatId()));
+            assert removed == null || (removed.targetNodeId().equals(nodeId) && removed.req().gatId().equals(msg.gatId()));
         });
         statMgr.cancelLocalStatisticsGathering(msg.gatId());
     }
@@ -420,6 +463,11 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
             Collection<ObjectPartitionStatisticsImpl> objStats
     ) {
         msgMgmtPool.submit(() -> sendPartitionStatisticsToBackupNodes(tbl, objStats));
+    }
+
+    @Override
+    public void sendGlobalStat(Map<StatisticsKeyMessage, ObjectStatisticsImpl> globalStat) {
+
     }
 
     /**
@@ -478,7 +526,7 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
     private void onNodeLeft(UUID nodeId) {
         Map<UUID, Collection<StatisticsGatheringRequest>> failedGatherings = new HashMap<>();
         remainingRequests.forEach((k,v) -> {
-            if (!nodeId.equals(v.nodeId()))
+            if (!nodeId.equals(v.targetNodeId()))
                 return;
 
             StatisticsAddrRequest<StatisticsGatheringRequest> failedRequest = remainingRequests.remove(k);
@@ -486,13 +534,13 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
             if (failedRequest == null)
                 return;
 
-            failedGatherings.compute(failedRequest.req().gatId(), (k, v) -> {
-                if (v == null)
-                    v = new ArrayList<>();
+            failedGatherings.compute(failedRequest.req().gatId(), (k1, v1) -> {
+                if (v1 == null)
+                    v1 = new ArrayList<>();
 
-                v.add(failedRequest.req());
+                v1.add(failedRequest.req());
 
-                return v;
+                return v1;
             });
         });
 
@@ -500,9 +548,7 @@ public class StatisticsGatheringRequestRouterImpl implements StatisticsGathering
             Map<StatisticsKeyMessage, int[]> failedPartitions = IgniteStatisticsHelper.extractFailed(
                     failedGathering.getValue().toArray(new StatisticsGatheringRequest[0]));
 
-            gc.decrementCounter(failedGathering.getKey(), failedGathering.getValue().size());
-            // TODO reschedule sending... add request counter BEFORE actually send it.
-
+            sendGatheringRequests(failedGathering.getKey(),  failedPartitions.keySet(), failedPartitions);
         }
     }
 }

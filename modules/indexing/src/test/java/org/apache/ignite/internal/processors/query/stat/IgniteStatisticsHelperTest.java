@@ -180,7 +180,7 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
 
         assertEquals(1, reqs.size());
 
-        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node1.equals(r.nodeId()))
+        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node1.equals(r.targetNodeId()))
                 .findAny().orElse(null);
 
         assertNotNull(req);
@@ -199,9 +199,9 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
 
         assertEquals(2, reqs.size());
 
-        StatisticsAddrRequest<StatisticsGatheringRequest> req1 = reqs.stream().filter(req -> node1.equals(req.nodeId()))
+        StatisticsAddrRequest<StatisticsGatheringRequest> req1 = reqs.stream().filter(req -> node1.equals(req.targetNodeId()))
                 .findAny().orElse(null);
-        StatisticsAddrRequest<StatisticsGatheringRequest> req2 = reqs.stream().filter(req -> node2.equals(req.nodeId()))
+        StatisticsAddrRequest<StatisticsGatheringRequest> req2 = reqs.stream().filter(req -> node2.equals(req.targetNodeId()))
                 .findAny().orElse(null);
         assertNotNull(req1);
         assertNotNull(req2);
@@ -224,7 +224,7 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
 
         assertEquals(1, reqs.size());
 
-        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node2.equals(r.nodeId())).findAny()
+        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node2.equals(r.targetNodeId())).findAny()
                 .orElse(null);
 
         assertNotNull(req);

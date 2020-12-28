@@ -18,6 +18,7 @@ public interface StatisticsGathering {
      *
      * @param reqId Request id.
      * @param keysParts Keys to collect statistics by.
+     * @param cancelled Supplier to track cancelled state.
      */
     public void collectLocalObjectsStatisticsAsync(
             UUID reqId,

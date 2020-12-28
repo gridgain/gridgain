@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Statistics gathering context.
@@ -20,8 +21,11 @@ public class StatisticsGatheringContext {
     /** Keys to collect statistics by. */
     private Set<StatisticsKeyMessage> keys;
 
+    /** Collection of remaining partitions */
+    private int remainingParts;
+
     /** Collected local statistics. */
-    private final Map<StatisticsKeyMessage, Collection<StatisticsObjectData>> collectedStatistics;
+    private final Map<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> collectedStatistics;
 
     /** Done future adapter. */
     private final StatisticsGatheringFutureAdapter doneFut;
@@ -31,11 +35,13 @@ public class StatisticsGatheringContext {
      *
      * @param gatId Gathering id.
      * @param keys Collection of keys to collect statistics by.
+     * @param remainingParts Number of partition to be collected by gathering context.
      */
-    public StatisticsGatheringContext(UUID gatId, Set<StatisticsKeyMessage> keys) {
+    public StatisticsGatheringContext(UUID gatId, Set<StatisticsKeyMessage> keys, int remainingParts) {
         this.gatId = gatId;
         collectedStatistics = null;
         this.keys = keys;
+        this.remainingParts = remainingParts;
         this.doneFut = new StatisticsGatheringFutureAdapter(gatId);;
     }
 
@@ -55,10 +61,12 @@ public class StatisticsGatheringContext {
         this.doneFut = new StatisticsGatheringFutureAdapter(gatId);;
     }
 
+
+
     /**
      * @return Collected statistics map.
      */
-    public Map<StatisticsKeyMessage, Collection<StatisticsObjectData>> collectedStatistics() {
+    public Map<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> collectedStatistics() {
         return collectedStatistics;
     }
 
@@ -72,21 +80,33 @@ public class StatisticsGatheringContext {
     /**
      * Register collected object statistics data.
      *
-     * @param objData Object statistics data to register.
+     * @param objsData Object statistics data to register.
+     * @param parts Total number of partitions in collected data.
+     * @return {@code true} if all required partition collected, {@code false} otherwise.
      */
-    public void registerCollected(Collection<StatisticsObjectData> objData) {
-        objData.forEach(data -> {
-            assert keys.contains(data.key());
+    public boolean registerCollected(Map<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> objsData, int parts) {
+        for (Map.Entry<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> objData : objsData.entrySet())
+            collectedStatistics.compute(objData.getKey(), (k, v) -> {
+                if (v == null)
+                    v = new ArrayList<>();
 
-            collectedStatistics.compute(data.key(), (k, v) -> {
-               if (v == null)
-                   v = new ArrayList<>();
+                v.addAll(objData.getValue());
 
-               v.add(data);
-
-               return v;
+                return v;
             });
-        });
+
+        return decrement(parts);
+    }
+
+    /**
+     * Decrement remaining parts and tell if all required partitions are collected.
+     *
+     * @param parts Decrement.
+     * @return {@code true} if all required partition collected, {@code false} otherwise.
+     */
+    private synchronized boolean decrement(int parts) {
+        this.remainingParts -= parts;
+        return remainingParts == 0;
     }
 
     /**

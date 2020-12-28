@@ -76,4 +76,8 @@ public class IgniteStatisticsDummyStoreImpl implements IgniteStatisticsStore {
         if (log.isInfoEnabled())
             log.info("Unable to save partition level statistics on non server node.");
     }
+
+    /** {@inheritDoc} */
+    @Override public void setRepository(IgniteStatisticsRepository repository) {
+    }
 }

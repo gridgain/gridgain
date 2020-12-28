@@ -56,7 +56,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     private final IgniteCacheDatabaseSharedManager db;
 
     /** Statistics repository. */
-    private final IgniteStatisticsRepository repo;
+    private IgniteStatisticsRepository repo;
 
     /** Metastorage. */
     private volatile ReadWriteMetastorage metastore;
@@ -66,19 +66,15 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
      *
      * @param subscriptionProcessor Grid subscription processor to track metastorage availability.
      * @param db Database shared manager to lock db while reading/writing metastorage.
-     * @param repo Repository to fulfill on metastore available.
      * @param logSupplier Logger getting function.
      */
     public IgniteStatisticsPersistenceStoreImpl(
             GridInternalSubscriptionProcessor subscriptionProcessor,
             IgniteCacheDatabaseSharedManager db,
-            IgniteStatisticsRepository repo,
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.db = db;
-        this.repo = repo;
         subscriptionProcessor.registerMetastorageListener(this);
-
         this.log = logSupplier.apply(IgniteStatisticsPersistenceStoreImpl.class);
     }
 
@@ -301,6 +297,11 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
             log.warning(String.format("Error while storing local partition statistics %s.%s:%d", key.schema(), key.obj(),
                     statistics.partId()), e);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setRepository(IgniteStatisticsRepository repository) {
+        this.repo = repository;
     }
 
     /** {@inheritDoc} */

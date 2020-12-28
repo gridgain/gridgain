@@ -43,26 +43,28 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     /** Local (for current node) object statistics. */
     private final Map<StatisticsKey, ObjectStatisticsImpl> locStats;
 
+    /** Statistics gathering. */
+    private final StatisticsGathering statisticsGathering;
+
     /** Global (for whole cluster) object statistics. */
     private final Map<StatisticsKey, ObjectStatisticsImpl> globalStats = new ConcurrentHashMap<>();
 
     /**
      * Constructor.
      *
-     * @param storeData If {@code true} - node stores data locally, {@code false} - otherwise.
      * @param db Database to use in storage if persistence enabled.
      * @param subscriptionProcessor Subscription processor.
      * @param statisticsMgr Ignite statistics manager.
+     * @param statisticsGathering Statistics gathering.
      * @param logSupplier Ignite logger supplier to get logger from.
      */
     public IgniteStatisticsRepositoryImpl(
-            boolean storeData,
-            IgniteCacheDatabaseSharedManager db,
-            GridInternalSubscriptionProcessor subscriptionProcessor,
+            IgniteStatisticsStore store,
             IgniteStatisticsManagerImpl statisticsMgr,
+            StatisticsGathering statisticsGathering,
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
-        if (storeData) {
+        /*if (storeData) {
             // Persistence store
             store = (db == null) ? new IgniteStatisticsInMemoryStoreImpl(logSupplier) :
                     new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db, this, logSupplier);
@@ -73,8 +75,11 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             // Cache only global statistics, no store
             store = new IgniteStatisticsDummyStoreImpl(logSupplier);
             locStats = null;
-        }
+        }*/
+        this.store = store;
+        this.locStats = new ConcurrentHashMap<>();
         this.statisticsMgr = statisticsMgr;
+        this.statisticsGathering = statisticsGathering;
         this.log = logSupplier.apply(IgniteStatisticsRepositoryImpl.class);
     }
 
@@ -193,7 +198,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             return;
         }
         StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(key.schema(), key.obj(), null);
-        locStats.put(key, statisticsMgr.aggregateLocalStatistics(keyMsg, statistics));
+
+        locStats.put(key, statisticsGathering.aggregateLocalStatistics(keyMsg, statistics));
     }
 
     /** {@inheritDoc} */

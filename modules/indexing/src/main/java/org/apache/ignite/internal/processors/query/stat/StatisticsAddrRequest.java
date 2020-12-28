@@ -27,14 +27,19 @@ public class StatisticsAddrRequest<T> {
     /** Destination node id. */
     private final UUID targetNodeId;
 
+    /** Sender node id. */
+    private final UUID senderNodeId;
+
     /**
      * Constructor.
      *
      * @param req Wrapped request.
+     * @param senderNodeId Sender node id.
      * @param targetNodeId Target node id.
      */
-    public StatisticsAddrRequest(T req, UUID targetNodeId) {
+    public StatisticsAddrRequest(T req, UUID senderNodeId, UUID targetNodeId) {
         this.req = req;
+        this.senderNodeId = senderNodeId;
         this.targetNodeId = targetNodeId;
     }
 
@@ -46,9 +51,16 @@ public class StatisticsAddrRequest<T> {
     }
 
     /**
+     * @return Sender node id.
+     */
+    public UUID senderNodeId() {
+        return senderNodeId;
+    }
+
+    /**
      * @return Target node id.
      */
-    public UUID nodeId() {
+    public UUID targetNodeId() {
         return targetNodeId;
     }
 }

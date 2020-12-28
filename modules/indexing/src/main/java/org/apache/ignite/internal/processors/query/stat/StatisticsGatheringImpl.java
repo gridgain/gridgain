@@ -2,9 +2,6 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.GridTopic;
-import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -18,6 +15,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.Nullable;
@@ -54,7 +52,7 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
     private final GridQueryProcessor qryProcessor;
 
     /** Statistics request router. */
-    private final StatisticsGatheringRequestRouter statRouter;
+    private final StatisticsGatheringRequestCrawler statRouter;
 
     /** Ignite Thread pool executor to do statistics collection tasks. */
     private final IgniteThreadPoolExecutor gatMgmtPool;
@@ -66,7 +64,7 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
      * @param schemaMgr Schema manager.
      * @param discoMgr Discovery manager.
      * @param qryProcessor Query processor.
-     * @param statRouter Statistics request router.
+     * @param statCrawler Statistics request crawler.
      * @param gatMgmtPool Thread pool to gather statistics in.
      * @param logSupplier Log supplier function.
      */
@@ -74,7 +72,7 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         SchemaManager schemaMgr,
         GridDiscoveryManager discoMgr,
         GridQueryProcessor qryProcessor,
-        StatisticsGatheringRequestRouter statRouter,
+        StatisticsGatheringRequestCrawler statCrawler,
         IgniteThreadPoolExecutor gatMgmtPool,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
@@ -82,7 +80,7 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         this.schemaMgr = schemaMgr;
         this.discoMgr = discoMgr;
         this.qryProcessor = qryProcessor;
-        this.statRouter = statRouter;
+        this.statRouter = statCrawler;
         this.gatMgmtPool = gatMgmtPool;
     }
 
@@ -244,7 +242,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         return aggregateLocalStatistics(tbl, filterColumns(tbl.getColumns(), keyMsg.colNames()), stats);
     }
 
-
     /** {@inheritDoc} */
     @Override public void collectLocalObjectsStatisticsAsync(
         UUID reqId,
@@ -266,21 +263,23 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
             Map<StatisticsKeyMessage, int[]> keysParts,
             Supplier<Boolean> cancelled
     ) {
-        Map<ObjectStatisticsImpl, int[]> res = new HashMap<>();
+        Map<IgniteBiTuple<StatisticsKeyMessage, ObjectStatisticsImpl>, int[]> res = new HashMap<>();
         for (Map.Entry<StatisticsKeyMessage, int[]> keyParts : keysParts.entrySet()) {
             try {
                 Collection<ObjectPartitionStatisticsImpl> partsStat = collectLocalObjectStatistics(keyParts.getKey(),
                     keyParts.getValue(), cancelled);
                 ObjectStatisticsImpl localStat = aggregateLocalStatistics(keyParts.getKey(), partsStat);
-                res.put(localStat, partsStat.stream().map(ObjectPartitionStatisticsImpl::partId)
-                    .mapToInt(Integer::intValue).toArray());
+                int[] parts = partsStat.stream().map(ObjectPartitionStatisticsImpl::partId).mapToInt(Integer::intValue)
+                        .toArray();
+                res.put(new IgniteBiTuple<>(keyParts.getKey(), localStat), parts);
             } catch (IgniteCheckedException e) {
                 if (log.isDebugEnabled())
                     log.debug(String.format("Unable to collect local object statistics by key %s due to $s",
                             keyParts.getKey(), e.getMessage()));
             }
         }
-        statRouter.se
+
+        statRouter.sendGatheringResponseAsync(reqId, res);
     }
 
 
@@ -325,5 +324,16 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
 
         return tblStats;
+    }
+
+    /**
+     * Stop request crawler manager.
+     */
+    public void stop() {
+        if (gatMgmtPool != null) {
+            List<Runnable> unfinishedTasks = gatMgmtPool.shutdownNow();
+            if (!unfinishedTasks.isEmpty())
+                log.warning(String.format("%d statistics collection request cancelled.", unfinishedTasks.size()));
+        }
     }
 }
