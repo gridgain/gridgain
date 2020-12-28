@@ -2451,6 +2451,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             if (!dumpLongRunningOpsLock.tryLock())
                 return;
 
+            startLatch.await();
+
             try {
                 if (U.currentTimeMillis() < nextLongRunningOpsDumpTime)
                     return;
