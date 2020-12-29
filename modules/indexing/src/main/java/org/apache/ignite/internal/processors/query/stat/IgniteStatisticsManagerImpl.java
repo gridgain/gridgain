@@ -37,14 +37,10 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsClearRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringResponse;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -235,7 +231,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @throws IgniteCheckedException In case of errors.
      */
     private void collectObjectStatistics(StatisticsGatheringContext status) throws IgniteCheckedException {
-        statCrawler.sendGatheringRequestsAsync(status.gatId(), status.keys());
+        statCrawler.sendGatheringRequestsAsync(status.gatId(), status.keys(), null);
     }
 
     /**
@@ -397,7 +393,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             keysGlobalStats.put(keyStats.getKey(), globalStat);
         }
 
-        statCrawler.sendGlobalStat(keysGlobalStats);
+        statCrawler.sendGlobalStatAsync(keysGlobalStats);
     }
 
     /**

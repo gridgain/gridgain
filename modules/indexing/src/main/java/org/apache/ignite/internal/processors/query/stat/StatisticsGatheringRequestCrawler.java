@@ -66,5 +66,5 @@ public interface StatisticsGatheringRequestCrawler {
      *
      * @param globalStat Global statistics to send.
      */
-    public void sendGlobalStat(Map<StatisticsKeyMessage, ObjectStatisticsImpl> globalStat);
+    public void sendGlobalStatAsync(Map<StatisticsKeyMessage, ObjectStatisticsImpl> globalStat);
 }

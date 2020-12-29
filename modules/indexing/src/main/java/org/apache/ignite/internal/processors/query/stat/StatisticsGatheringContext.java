@@ -1,7 +1,6 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,7 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Statistics gathering context.
@@ -19,7 +17,7 @@ public class StatisticsGatheringContext {
     private final UUID gatId;
 
     /** Keys to collect statistics by. */
-    private Set<StatisticsKeyMessage> keys;
+    private final Set<StatisticsKeyMessage> keys;
 
     /** Collection of remaining partitions */
     private int remainingParts;
@@ -60,8 +58,6 @@ public class StatisticsGatheringContext {
         this.keys = keys;
         this.doneFut = new StatisticsGatheringFutureAdapter(gatId);;
     }
-
-
 
     /**
      * @return Collected statistics map.

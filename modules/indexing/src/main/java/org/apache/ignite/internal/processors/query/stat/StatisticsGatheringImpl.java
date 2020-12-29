@@ -264,7 +264,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
      *
      * @param reqId Request id.
      * @param keysParts Keys to collect statistics by.
-     * @return Collected statistics.
      */
     public void collectLocalObjectsStatistics(
             UUID reqId,
@@ -280,7 +279,8 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
                 int[] parts = partsStat.stream().map(ObjectPartitionStatisticsImpl::partId).mapToInt(Integer::intValue)
                         .toArray();
                 res.put(new IgniteBiTuple<>(keyParts.getKey(), localStat), parts);
-            } catch (IgniteCheckedException e) {
+            }
+            catch (IgniteCheckedException e) {
                 if (log.isDebugEnabled())
                     log.debug(String.format("Unable to collect local object statistics by key %s due to $s",
                             keyParts.getKey(), e.getMessage()));

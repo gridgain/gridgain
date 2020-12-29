@@ -72,8 +72,11 @@ public class StatisticsUtils {
      * @return Converted StatsObjectData message.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static StatisticsObjectData toObjectData(StatisticsKeyMessage keyMsg, StatisticsType type, ObjectStatisticsImpl stat)
-            throws IgniteCheckedException {
+    public static StatisticsObjectData toObjectData(
+        StatisticsKeyMessage keyMsg,
+        StatisticsType type,
+        ObjectStatisticsImpl stat
+    ) throws IgniteCheckedException {
         Map<String, StatisticsColumnData> colData = new HashMap<>(stat.columnsStatistics().size());
 
         for (Map.Entry<String, ColumnStatistics> ts : stat.columnsStatistics().entrySet())
