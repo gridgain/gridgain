@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
-import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -48,6 +47,12 @@ public class Slf4jLoggerSelfTest {
 
     /** Path to filtered log. */
     private static final String LOG_FILTERED = "work/log/filtered.log";
+
+    /** */
+    private static final String LOG_MESSAGE = "Text that should be present in logs";
+
+    /** */
+    private static final String LOG_EXCLUDED_MESSAGE = "Logs from org.springframework package should be excluded from logs";
 
     /** */
     @Before
@@ -79,19 +84,16 @@ public class Slf4jLoggerSelfTest {
     public void testJULIsRedirectedToSlf4j() throws Exception {
         File logFile = checkOneNode();
 
-        Logger log1 = Logger.getLogger(this.getClass().getName());
-        log1.info("Text that should be presence in logs");
+        Logger.getLogger(this.getClass().getName()).info(LOG_MESSAGE);
+        Logger.getLogger("org.springframework.context.ApplicationContext").info(LOG_EXCLUDED_MESSAGE);
 
-        Logger log2 = Logger.getLogger("org.springframework.context.ApplicationContext");
-        log2.info("INFO logs from org.springframework package should be excluded from logs");
+        String logs = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
 
-        String logContent = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
-
-        assertTrue("Logs from JUL logger should be present in log file",
-            logContent.contains("[INFO ][main][Slf4jLoggerSelfTest] Text that should be present in logs"));
-
-        assertFalse("JUL INFO logs for org.springframework package are present in log file",
-            logContent.contains("INFO logs from org.springframework package should be excluded from logs"));
+        assertTrue("Logs from JUL logger should be present in log file", logs.contains(LOG_MESSAGE));
+        assertFalse(
+            "JUL INFO logs for org.springframework package are present in log file",
+            logs.contains(LOG_EXCLUDED_MESSAGE)
+        );
     }
 
     /**
@@ -110,19 +112,16 @@ public class Slf4jLoggerSelfTest {
     public void testJCLIsRedirectedToSlf4j() throws Exception {
         File logFile = checkOneNode();
 
-        Log log1 = LogFactory.getLog(this.getClass());
-        log1.info("Text that should be presence in logs");
+        LogFactory.getLog(this.getClass()).info(LOG_MESSAGE);
+        LogFactory.getLog("org.springframework.context.ApplicationContext").info(LOG_EXCLUDED_MESSAGE);
 
-        Log log2 = LogFactory.getLog("org.springframework.context.ApplicationContext");
-        log2.info("INFO logs from org.springframework package should be excluded from logs");
+        String logs = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
 
-        String logContent = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
-
-        assertTrue("Logs from JCL logger should be present in log file",
-            logContent.contains("[INFO ][main][Slf4jLoggerSelfTest] Text that should be presence in logs"));
-
-        assertFalse("JCL INFO logs for org.springframework package are present in log file",
-            logContent.contains("INFO logs from org.springframework package should be excluded from logs"));
+        assertTrue("Logs from JCL logger should be present in log file", logs.contains(LOG_MESSAGE));
+        assertFalse(
+            "JCL INFO logs for org.springframework package are present in log file",
+            logs.contains(LOG_EXCLUDED_MESSAGE)
+        );
     }
 
     /**
