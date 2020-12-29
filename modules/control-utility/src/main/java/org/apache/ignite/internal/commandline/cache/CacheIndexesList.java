@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
@@ -50,7 +51,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.IndexListCom
 /**
  * Cache subcommand that allows to show indexes.
  */
-public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
+public class CacheIndexesList extends AbstractCommand<CacheIndexesList.Arguments> {
     /** Command parsed arguments. */
     private Arguments args;
 

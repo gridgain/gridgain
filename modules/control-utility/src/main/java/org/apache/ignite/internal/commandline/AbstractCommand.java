@@ -14,16 +14,21 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.timeout;
+package org.apache.ignite.internal.commandline;
 
-import org.apache.ignite.internal.processors.query.timeout.DefaultQueryTimeoutThickJavaTest;
+import java.util.logging.Logger;
+import org.apache.ignite.internal.client.GridClientConfiguration;
 
 /**
- *
+ * Abstract class for control.sh commands, that support verbose mode.
  */
-public class DefaultQueryTimeoutThickJavaUpdateTest extends DefaultQueryTimeoutThickJavaTest {
-    /** */
-    public DefaultQueryTimeoutThickJavaUpdateTest() {
-        super(true, false);
+public abstract class AbstractCommand<T> implements Command<T> {
+    /** Use verbose mode or not. */
+    protected boolean verbose;
+
+    /** {@inheritDoc} */
+    @Override public Object execute(GridClientConfiguration clientCfg, Logger log, boolean verbose) throws Exception {
+        this.verbose = verbose;
+        return execute(clientCfg, log);
     }
 }
