@@ -115,7 +115,7 @@ public class PartitionUpdateCounterDebugWrapper implements PartitionUpdateCounte
             ", before=" + toString());
 
         try {
-            return delegate.next();
+            return delegate.next(delta);
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
