@@ -21,6 +21,7 @@ import org.apache.ignite.internal.pagemem.impl.PageIdUtilsSelfTest;
 import org.apache.ignite.internal.util.BasicRateLimiterTest;
 import org.apache.ignite.internal.util.GridArraysSelfTest;
 import org.apache.ignite.internal.util.GridConcurrentMultiPairQueueTest;
+import org.apache.ignite.internal.util.HostAndPortRangeTest;
 import org.apache.ignite.internal.util.IgniteDevOnlyLogTest;
 import org.apache.ignite.internal.util.IgniteExceptionRegistrySelfTest;
 import org.apache.ignite.internal.util.IgniteUtilsSelfTest;
@@ -121,7 +122,9 @@ import org.junit.runners.Suite;
     //dbx
     PageIdUtilsSelfTest.class,
 
-    BasicRateLimiterTest.class
+    BasicRateLimiterTest.class,
+
+    HostAndPortRangeTest.class
 })
 public class IgniteUtilSelfTestSuite {
 }
