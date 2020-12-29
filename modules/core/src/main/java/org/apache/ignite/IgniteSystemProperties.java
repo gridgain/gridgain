@@ -191,8 +191,22 @@ public final class IgniteSystemProperties {
 
     /**
      * Setting to {@code true} enables writing sensitive information in {@code toString()} output.
+     *
+     * @deprecated Use {@link #IGNITE_SENSITIVE_DATA_LOGGING} instead.
      */
+    @Deprecated
     public static final String IGNITE_TO_STRING_INCLUDE_SENSITIVE = "IGNITE_TO_STRING_INCLUDE_SENSITIVE";
+
+    /**
+     * Setting to {@code "plain"} enables writing sensitive information in {@code toString()} output.
+     * Setting to {@code "hash"} enables writing hash of sensitive information in {@code toString()} output.
+     * Setting to {@code "none"} disables writing sensitive information in {@code toString()} output.
+     *
+     * {@link #IGNITE_TO_STRING_INCLUDE_SENSITIVE} has higher priority. If it is explicitly set, then it is converted:
+     * "true" -> "plain",
+     * "false" -> "none".
+     */
+    public static final String IGNITE_SENSITIVE_DATA_LOGGING = "IGNITE_SENSITIVE_DATA_LOGGING";
 
     /** Maximum length for {@code toString()} result. */
     public static final String IGNITE_TO_STRING_MAX_LENGTH = "IGNITE_TO_STRING_MAX_LENGTH";
