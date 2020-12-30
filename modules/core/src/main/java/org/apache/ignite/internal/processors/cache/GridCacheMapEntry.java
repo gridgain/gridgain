@@ -3415,10 +3415,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
                     }
                     else {
-                        ver = nextVersion(ver, null);
+                        if (!preload && ver.updateCounter() == 0) {
+                            assert ver.updateCounter() == 0;
 
-                        updateCntr = nextPartitionCounter(topVer, true, true, null);
-                        ver.updateCounter(updateCntr);
+                            ver = nextVersion(ver, null);
+
+                            updateCntr = nextPartitionCounter(topVer, true, true, null);
+                            ver.updateCounter(updateCntr);
+                        }
 
                         storeValue(val, expTime, ver);
                     }
@@ -3451,10 +3455,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     }
                 }
                 else {
-                    ver = nextVersion(ver, null);
+                    if (!preload && ver.updateCounter() == 0) {
+                        ver = nextVersion(ver, null);
 
-                    updateCntr = nextPartitionCounter(topVer, true, true, null);
-                    ver.updateCounter(updateCntr);
+                        updateCntr = nextPartitionCounter(topVer, true, true, null);
+                        ver.updateCounter(updateCntr);
+                    }
 
                     // Optimization to access storage only once.
                     UpdateClosure c = storeValue(val, expTime, ver, p);
