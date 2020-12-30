@@ -116,10 +116,6 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
     @GridToStringExclude
     private volatile UUID nodeId;
 
-    static {
-        System.setProperty("java.util.logging.manager", "org.apache.logging.log4j.jul.LogManager");
-    }
-
     /**
      * Creates new logger with default implementation.
      */
@@ -135,6 +131,11 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = null;
+
+        // Remove existing handlers attached to j.u.l root logger.
+        Log4jBridgeHandler.removeHandlersForRootLogger();
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -153,6 +154,11 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = path;
+
+        // Remove existing handlers attached to j.u.l root logger.
+        Log4jBridgeHandler.removeHandlersForRootLogger();
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -181,6 +187,11 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = path;
+
+        // Remove existing handlers attached to j.u.l root logger.
+        Log4jBridgeHandler.removeHandlersForRootLogger();
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -209,6 +220,11 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = cfgFile.getPath();
+
+        // Remove existing handlers attached to j.u.l root logger.
+        Log4jBridgeHandler.removeHandlersForRootLogger();
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -232,6 +248,11 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = cfgUrl.getPath();
+
+        // Remove existing handlers attached to j.u.l root logger.
+        Log4jBridgeHandler.removeHandlersForRootLogger();
+
+        Log4jBridgeHandler.install();
     }
 
     /**
