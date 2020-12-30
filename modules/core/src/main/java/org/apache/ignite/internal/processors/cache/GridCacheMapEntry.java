@@ -3416,8 +3416,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     }
                     else {
                         if (!preload && ver.updateCounter() == 0) {
-                            assert ver.updateCounter() == 0;
-
                             ver = nextVersion(ver, null);
 
                             updateCntr = nextPartitionCounter(topVer, true, true, null);
@@ -3489,7 +3487,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 }
                 else if (deletedUnlocked())
                     deletedUnlocked(false);
-
 
                 if (!preload && updateCntr == 0)
                     updateCntr = nextPartitionCounter(topVer, true, true, null);
