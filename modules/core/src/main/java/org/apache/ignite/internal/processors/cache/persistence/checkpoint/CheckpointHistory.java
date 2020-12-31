@@ -68,9 +68,6 @@ public class CheckpointHistory {
     /** Should WAL be truncated */
     private final boolean isWalTruncationEnabled;
 
-    /** Maximum size of WAL archive (in bytes) */
-    private final long maxWalArchiveSize;
-
     /** Map stores the earliest checkpoint for each partition from particular group. */
     private final Map<GroupPartitionId, CheckpointEntry> earliestCp = new ConcurrentHashMap<>();
 
@@ -87,22 +84,21 @@ public class CheckpointHistory {
      * Constructor.
      *
      * @param dsCfg Data storage configuration.
-     * @param wal Write ahead log.
+     * @param logFun Function for getting a logger.
+     * @param wal WAL manager.
      * @param inapplicable Checkpoint inapplicable filter.
      */
     CheckpointHistory(
         DataStorageConfiguration dsCfg,
-        Function<Class<?>, IgniteLogger> logger,
+        Function<Class<?>, IgniteLogger> logFun,
         IgniteWriteAheadLogManager wal,
         IgniteThrowableBiPredicate<Long, Integer> inapplicable
     ) {
-        this.log = logger.apply(getClass());
+        this.log = logFun.apply(getClass());
         this.wal = wal;
         this.checkpointInapplicable = inapplicable;
 
-        maxWalArchiveSize = dsCfg.getMaxWalArchiveSize();
-
-        isWalTruncationEnabled = maxWalArchiveSize != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
+        isWalTruncationEnabled = dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
 
         maxCpHistMemSize = IgniteSystemProperties.getInteger(IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE, 100);
 
@@ -230,7 +226,7 @@ public class CheckpointHistory {
             addCpGroupStatesToEarliestCpMap(entry, states);
         }
         catch (IgniteCheckedException ex) {
-            U.warn(log, "Failed to process checkpoint: " + (entry != null ? entry : "none"), ex);
+            U.warn(log, "Failed to process checkpoint: " + entry, ex);
 
             earliestCp.clear();
         }
@@ -309,6 +305,7 @@ public class CheckpointHistory {
     /**
      * Clears checkpoint history after WAL truncation.
      *
+     * @param highBound Upper bound.
      * @return List of checkpoint entries removed from history.
      */
     public List<CheckpointEntry> onWalTruncated(WALPointer ptr) {
@@ -376,8 +373,6 @@ public class CheckpointHistory {
 
             CheckpointEntry oldestCpInHistory = firstCheckpoint();
 
-            Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
-
             for (Map.Entry<GroupPartitionId, CheckpointEntry> grpPartPerCp : earliestCp.entrySet()) {
                 if (grpPartPerCp.getValue() == deletedCpEntry)
                     grpPartPerCp.setValue(oldestCpInHistory);
@@ -390,66 +385,13 @@ public class CheckpointHistory {
     /**
      * Logs and clears checkpoint history after checkpoint finish.
      *
+     * @param chp Finished checkpoint.
      * @return List of checkpoints removed from history.
      */
     public List<CheckpointEntry> onCheckpointFinished(Checkpoint chp) {
         chp.walSegsCoveredRange(calculateWalSegmentsCovered());
 
-        int removeCount = isWalTruncationEnabled
-            ? checkpointCountUntilDeleteByArchiveSize()
-            : (histMap.size() - maxCpHistMemSize);
-
-        if (removeCount <= 0)
-            return Collections.emptyList();
-
-        List<CheckpointEntry> deletedCheckpoints = removeCheckpoints(removeCount);
-
-        if (isWalTruncationEnabled) {
-            int deleted = wal.truncate(firstCheckpointPointer());
-
-            chp.walFilesDeleted(deleted);
-        }
-
-        return deletedCheckpoints;
-    }
-
-    /**
-     * Calculate count of checkpoints to delete by maximum allowed archive size.
-     *
-     * @return Checkpoint count to be deleted.
-     */
-    private int checkpointCountUntilDeleteByArchiveSize() {
-        long absFileIdxToDel = wal.maxArchivedSegmentToDelete();
-
-        if (absFileIdxToDel < 0)
-            return 0;
-
-        long fileUntilDel = absFileIdxToDel + 1;
-
-        long checkpointFileIdx = absFileIdx(lastCheckpoint());
-
-        int countToRemove = 0;
-
-        for (CheckpointEntry cpEntry : histMap.values()) {
-            long currFileIdx = absFileIdx(cpEntry);
-
-            if (checkpointFileIdx <= currFileIdx || fileUntilDel <= currFileIdx)
-                return countToRemove;
-
-            countToRemove++;
-        }
-
-        return histMap.size() - 1;
-    }
-
-    /**
-     * Retrieve absolute file index by checkpoint entry.
-     *
-     * @param pointer checkpoint entry for which need to calculate absolute file index.
-     * @return absolute file index for given checkpoint entry.
-     */
-    private long absFileIdx(CheckpointEntry pointer) {
-        return ((FileWALPointer)pointer.checkpointMark()).index();
+        return removeCheckpoints(isWalTruncationEnabled ? 0 : histMap.size() - maxCpHistMemSize);
     }
 
     /**

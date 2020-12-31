@@ -39,6 +39,12 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.IgniteSystemProperties.getString;
+import static org.apache.ignite.internal.commandline.walconverter.ProcessSensitiveData.HASH;
+import static org.apache.ignite.internal.commandline.walconverter.ProcessSensitiveData.HIDE;
+import static org.apache.ignite.internal.commandline.walconverter.ProcessSensitiveData.SHOW;
+
 /**
  * Test for IgniteWalConverter
  */
@@ -127,6 +133,30 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
         return dataRegionConfiguration;
     }
 
+    /** */
+    @Test
+    public void testIgniteWalConverterWithDefaultSensitive() throws Exception {
+        testIgniteWalConverter(null);
+    }
+
+    /** */
+    @Test
+    public void testIgniteWalConverterWithShowSensitive() throws Exception {
+        testIgniteWalConverter(SHOW);
+    }
+
+    /** */
+    @Test
+    public void testIgniteWalConverterWithHashSensitive() throws Exception {
+        testIgniteWalConverter(HASH);
+    }
+
+    /** */
+    @Test
+    public void testIgniteWalConverterWithHideSensitive() throws Exception {
+        testIgniteWalConverter(HIDE);
+    }
+
     /**
      * Checking utility IgniteWalConverter
      * <ul>
@@ -140,8 +170,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test
-    public void testIgniteWalConverter() throws Exception {
+    private void testIgniteWalConverter(ProcessSensitiveData sensitiveData) throws Exception {
         final List<Person> list = new LinkedList<>();
 
         final String nodeFolder = createWal(list);
@@ -158,10 +187,17 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false),
             true,
             null,
-            null, null, null, null, true,true
+            null, null, null, sensitiveData, true,true
         );
 
         IgniteWalConverter.convert(out, arg);
+
+        if (sensitiveData == SHOW)
+            assertTrue("plain".equals(getString(IGNITE_SENSITIVE_DATA_LOGGING)));
+        else if (sensitiveData == HIDE)
+            assertTrue("none".equals(getString(IGNITE_SENSITIVE_DATA_LOGGING)));
+        else
+            assertTrue("hash".equals(getString(IGNITE_SENSITIVE_DATA_LOGGING)));
 
         final String result = outByte.toString();
 
@@ -172,25 +208,41 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
             index = result.indexOf("DataRecord", index);
 
-            if (index > 0) {
-                index = result.indexOf("PersonKey", index + 10);
-
+            if (sensitiveData == SHOW) {
                 if (index > 0) {
-                    index = result.indexOf("id=" + person.getId(), index + 9);
+                    index = result.indexOf("PersonKey", index + 10);
 
                     if (index > 0) {
-                        index = result.indexOf(person.getClass().getSimpleName(), index + 4);
+                        index = result.indexOf("id=" + person.getId(), index + 9);
 
                         if (index > 0) {
-                            index = result.indexOf("id=" + person.getId(), index + person.getClass().getSimpleName().length());
+                            index = result.indexOf(person.getClass().getSimpleName(), index + 4);
 
                             if (index > 0) {
-                                index = result.indexOf("name=" + person.getName(), index + 4);
+                                index = result.indexOf("id=" + person.getId(), index + person.getClass().getSimpleName().length());
 
-                                find = index > 0;
+                                if (index > 0) {
+                                    index = result.indexOf("name=" + person.getName(), index + 4);
+
+                                    find = index > 0;
+                                }
                             }
                         }
                     }
+                }
+            }
+            else if (sensitiveData == HIDE) {
+                if (index > 0) {
+                    index = result.indexOf("v = []", index);
+
+                    find = index > 0;
+                }
+            }
+            else {
+                if (index > 0) {
+                    index = result.indexOf("v = [" + person.hashCode() + "]", index);
+
+                    find = index > 0;
                 }
             }
 
@@ -229,7 +281,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             null,
             false,
             null,
-            null, null, null, null, true,true
+            null, null, null, SHOW, true,true
         );
 
         IgniteWalConverter.convert(out, arg);
@@ -345,7 +397,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false),
             true,
             null,
-            null, null, null, null, true,true
+            null, null, null, SHOW, true,true
         );
 
         IgniteWalConverter.convert(out, arg);
@@ -457,7 +509,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false),
             true,
             null,
-            null, null, null, null, true,true
+            null, null, null, SHOW, true,true
         );
 
         IgniteWalConverter.convert(out, arg);

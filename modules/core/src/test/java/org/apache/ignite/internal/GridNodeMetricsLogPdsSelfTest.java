@@ -21,8 +21,6 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 
-import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
-
 /**
  * Check logging local node metrics with PDS enabled.
  */
@@ -37,7 +35,7 @@ public class GridNodeMetricsLogPdsSelfTest extends GridNodeMetricsLogSelfTest {
                     .setMaxSize(30 * 1024 * 1024)
                     .setPersistenceEnabled(true))
             .setDataRegionConfigurations(new DataRegionConfiguration()
-                .setName("userTransientDataRegion")
+                .setName(IN_MEMORY_REGION)
                 .setMaxSize(20 * 1024 * 1024)
                 .setPersistenceEnabled(false))
             .setWalMode(WALMode.LOG_ONLY);
@@ -72,7 +70,7 @@ public class GridNodeMetricsLogPdsSelfTest extends GridNodeMetricsLogSelfTest {
     }
 
     /** */
-    @Override protected boolean persistenceEnabled(String name) {
-        return !VOLATILE_DATA_REGION_NAME.equals(name) && !name.contains("Transient");
+    @Override protected boolean persistenceEnabled() {
+        return true;
     }
 }
