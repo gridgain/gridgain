@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.pagemem.FullPageId;
-import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -68,12 +67,6 @@ public class IndexStorageImpl implements IndexStorage {
     /** Whether group is shared. */
     private final boolean grpShared;
 
-    /** */
-    private final int allocPartId;
-
-    /** */
-    private final byte allocSpace;
-
     /**
      * @param pageMem Page memory.
      * @param wal Write ahead log manager.
@@ -96,8 +89,6 @@ public class IndexStorageImpl implements IndexStorage {
             this.pageMem = pageMem;
             this.grpId = grpId;
             this.grpShared = grpShared;
-            this.allocPartId = allocPartId;
-            this.allocSpace = allocSpace;
             this.reuseList = reuseList;
 
             metaTree = new MetaTree(
@@ -143,12 +134,8 @@ public class IndexStorageImpl implements IndexStorage {
             final IndexItem row = tree.findOne(new IndexItem(idxNameBytes, 0));
 
             if (row == null) {
-                long pageId = 0;
-
-                if (reuseList != null)
-                    pageId = reuseList.takeRecycledPage();
-
-                pageId = pageId == 0 ? pageMem.allocatePage(grpId, allocPartId, allocSpace) : pageId;
+                long pageId = tree.allocatePage(null);
+                //pageId = pageId == 0 ? pageMem.allocatePage(grpId, allocPartId, allocSpace) : pageId;
 
                 tree.put(new IndexItem(idxNameBytes, pageId));
 
@@ -226,11 +213,6 @@ public class IndexStorageImpl implements IndexStorage {
      *
      */
     private static class MetaTree extends BPlusTree<IndexItem, IndexItem> {
-        /** */
-        private final int allocPartId;
-
-        /** */
-        private final byte allocSpace;
 
         /**
          * @param pageMem Page memory.
@@ -267,20 +249,12 @@ public class IndexStorageImpl implements IndexStorage {
                 reuseList,
                 innerIos,
                 leafIos,
-                PageIdAllocator.FLAG_IDX,
+                allocSpace,
                 failureProcessor,
                 lockLsnr
             );
 
-            this.allocPartId = allocPartId;
-            this.allocSpace = allocSpace;
-
             initTree(initNew);
-        }
-
-        /** {@inheritDoc} */
-        @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
-            return pageMem.allocatePage(groupId(), allocPartId, allocSpace);
         }
 
         /** {@inheritDoc} */

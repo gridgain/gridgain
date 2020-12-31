@@ -521,8 +521,10 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                     else {
                         pageId = reuseList.takeRecycledPage();
 
-                        if (pageId != 0)
+                        if (pageId != 0) {
+                            System.out.println("take from Recycled to Data page");
                             pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions().latest());
+                        }
                     }
                 }
 
@@ -653,6 +655,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 assert nextLink != FAIL_L; // Can't fail here.
             }
 
+            System.out.println("Add to reuse from what?");
             reuseList.addForRecycle(bag);
         }
         catch (IgniteCheckedException | Error e) {

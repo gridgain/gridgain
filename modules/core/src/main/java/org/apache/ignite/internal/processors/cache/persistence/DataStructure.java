@@ -72,6 +72,9 @@ public abstract class DataStructure {
     /** */
     protected final byte pageFlag;
 
+    /** */
+    protected final int partition;
+
     /**
      * @param cacheGrpId Cache group ID.
      * @param grpName Cache group name.
@@ -88,7 +91,8 @@ public abstract class DataStructure {
         IgniteWriteAheadLogManager wal,
         PageLockListener lockLsnr,
         PageIoResolver pageIoRslvr,
-        byte pageFlag
+        byte pageFlag,
+        int partition
     ) {
         assert pageMem != null;
 
@@ -99,6 +103,7 @@ public abstract class DataStructure {
         this.lockLsnr = lockLsnr == null ? NOOP_LSNR : lockLsnr;
         this.pageIoRslvr = pageIoRslvr;
         this.pageFlag = pageFlag;
+        this.partition = partition;
     }
 
     /**
@@ -145,8 +150,10 @@ public abstract class DataStructure {
                 pageId = reuseList.takeRecycledPage();
 
             // Recycled. "pollFreePage" result should be reinitialized to move rotatedId to itemId.
-            if (pageId != 0)
+            if (pageId != 0) {
+                System.out.println("Take from reuse to what...");
                 pageId = reuseList.initRecycledPage(pageId, pageFlag, null);
+            }
         }
 
         if (pageId == 0)
@@ -168,7 +175,9 @@ public abstract class DataStructure {
      * @throws IgniteCheckedException If failed.
      */
     protected long allocatePageNoReuse() throws IgniteCheckedException {
-        return pageMem.allocatePage(grpId, PageIdAllocator.INDEX_PARTITION, FLAG_IDX);
+        // TODO: make final?
+        // Allocated to what
+        return pageMem.allocatePage(grpId, partition, pageFlag);
     }
 
     /**

@@ -2039,9 +2039,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert ctx.database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
                         }
                     };
+
+                    //freeList.bucketSize(255)
 
                     RootPage partMetastoreReuseListRoot = metas.partMetastoreReuseListRoot;
 
@@ -2065,7 +2067,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert ctx.database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
                         }
                     };
 
@@ -2089,7 +2091,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert ctx.database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
                         }
                     };
 
@@ -2111,7 +2113,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert ctx.database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
                         }
                     };
 
@@ -2133,7 +2135,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert grp.shared().database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
                         }
                     };
 

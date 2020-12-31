@@ -823,7 +823,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         @Nullable PageLockListener lsnr,
         PageIoResolver pageIoRslvr
     ) {
-        super(cacheGrpId, grpName, pageMem, wal, lsnr, pageIoRslvr, pageFlag);
+        super(cacheGrpId, grpName, pageMem, wal, lsnr, pageIoRslvr, pageFlag, PageIdUtils.partId(metaPageId));
 
         assert !F.isEmpty(name);
 
@@ -2579,6 +2579,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             releasePage(metaPageId, metaPage);
         }
 
+        System.out.println("Add to reuse from what?");
         reuseList.addForRecycle(bag);
 
         assert bag.isEmpty() : bag.size();
@@ -2680,6 +2681,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         if (bag.size() == 128) {
+            System.out.println("Add to reuse from what?");
             reuseList.addForRecycle(bag);
 
             assert bag.isEmpty() : bag.size();
@@ -4900,8 +4902,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          */
         private void reuseFreePages() throws IgniteCheckedException {
             // If we have a bag, then it will be processed at the upper level.
-            if (reuseList != null && freePages != null)
+            if (reuseList != null && freePages != null) {
+
+                System.out.println("Add to reuse from what?");
                 reuseList.addForRecycle(this);
+            }
         }
 
         /**

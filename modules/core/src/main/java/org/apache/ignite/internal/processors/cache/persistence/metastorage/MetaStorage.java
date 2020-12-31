@@ -275,7 +275,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
             MetastorageRowStore rowStore = new MetastorageRowStore(partStorage, db);
 
             tree = new MetastorageTree(METASTORAGE_CACHE_ID, treeName, dataRegion.pageMemory(), wal, rmvId,
-                partStorage, rowStore, treeRoot.pageId().pageId(), treeRoot.isAllocated(), failureProcessor, partId,
+                partStorage, rowStore, treeRoot.pageId().pageId(), treeRoot.isAllocated(), failureProcessor,
                 diagnosticMgr.pageLockTracker().createPageLockTracker(treeName));
 
             if (!readOnly)

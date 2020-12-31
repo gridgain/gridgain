@@ -39,9 +39,6 @@ public class MetastorageTree extends BPlusTree<MetastorageRow, MetastorageDataRo
     /** */
     private MetastorageRowStore rowStore;
 
-    /** Partition id. */
-    private final int partId;
-
     /**
      * @param pageMem Page memory instance.
      * @param wal WAL manager.
@@ -64,7 +61,6 @@ public class MetastorageTree extends BPlusTree<MetastorageRow, MetastorageDataRo
         long metaPageId,
         boolean initNew,
         @Nullable FailureProcessor failureProcessor,
-        int partId,
         @Nullable PageLockListener lockLsnr
     ) throws IgniteCheckedException {
         super(
@@ -84,8 +80,6 @@ public class MetastorageTree extends BPlusTree<MetastorageRow, MetastorageDataRo
         );
 
         this.rowStore = rowStore;
-
-        this.partId = partId;
 
         initTree(initNew);
     }
@@ -111,10 +105,5 @@ public class MetastorageTree extends BPlusTree<MetastorageRow, MetastorageDataRo
      */
     public MetastorageRowStore rowStore() {
         return rowStore;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
-        return pageMem.allocatePage(grpId, partId, FLAG_AUX);
     }
 }

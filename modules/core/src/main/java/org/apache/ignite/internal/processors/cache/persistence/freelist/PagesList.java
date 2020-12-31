@@ -207,7 +207,8 @@ public abstract class PagesList extends DataStructure {
         GridKernalContext ctx,
         byte pageFlag
     ) {
-        super(cacheId, null, pageMem, wal, lockLsnr, DEFAULT_PAGE_IO_RESOLVER, pageFlag);
+        super(cacheId, null, pageMem, wal, lockLsnr, DEFAULT_PAGE_IO_RESOLVER, pageFlag,
+            PageIdUtils.partId(metaPageId));
 
         this.name = name;
         this.buckets = buckets;
@@ -1437,6 +1438,7 @@ public abstract class PagesList extends DataStructure {
                 if (recycleId != 0L) {
                     assert !isReuseBucket(bucket);
 
+                    System.out.println("Add to reuse from what?");
                     reuseList.addForRecycle(new SingletonReuseBag(recycleId));
                 }
 
@@ -1670,8 +1672,10 @@ public abstract class PagesList extends DataStructure {
             if (nextId != 0L)
                 recycleId = merge(pageId, page, nextId, bucket, statHolder);
 
-            if (recycleId != 0L)
+            if (recycleId != 0L) {
+                System.out.println("Add to reuse from what?");
                 reuseList.addForRecycle(new SingletonReuseBag(recycleId));
+            }
 
             return true;
         }
