@@ -247,7 +247,6 @@ public class DefragmentationMXBeanTest extends GridCommonAbstractTest {
         assertEquals(status1.getStartTs(), mxBean.startTime());
 
         assertTrue(mxBean.inProgress());
-        assertEquals(126, mxBean.processedPartitions());
         final int totalPartitions = status1.getTotalPartitions();
         assertEquals(totalPartitions, mxBean.totalPartitions());
 
