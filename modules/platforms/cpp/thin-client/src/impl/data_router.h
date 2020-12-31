@@ -115,10 +115,11 @@ namespace ignite
                  *
                  * @param req Request message.
                  * @param rsp Response message.
+                 * @return Channel that was used for request.
                  * @throw IgniteError on error.
                  */
                 template<typename ReqT, typename RspT>
-                void SyncMessage(const ReqT& req, RspT& rsp)
+                SP_DataChannel SyncMessage(const ReqT& req, RspT& rsp)
                 {
                     SP_DataChannel channel = GetRandomChannel();
 
@@ -127,6 +128,8 @@ namespace ignite
                     SyncMessagePreferredChannelNoMetaUpdate(req, rsp, channel);
 
                     ProcessMeta(metaVer);
+
+                    return channel;
                 }
 
                 /**
@@ -135,10 +138,11 @@ namespace ignite
                  * @param req Request message.
                  * @param rsp Response message.
                  * @param hint Preferred server node to use.
+                 * @return Channel that was used for request.
                  * @throw IgniteError on error.
                  */
                 template<typename ReqT, typename RspT>
-                void SyncMessage(const ReqT& req, RspT& rsp, const Guid& hint)
+                SP_DataChannel SyncMessage(const ReqT& req, RspT& rsp, const Guid& hint)
                 {
                     SP_DataChannel channel = GetBestChannel(hint);
 
@@ -147,6 +151,8 @@ namespace ignite
                     SyncMessagePreferredChannelNoMetaUpdate(req, rsp, channel);
 
                     ProcessMeta(metaVer);
+
+                    return channel;
                 }
 
                 /**
@@ -156,14 +162,17 @@ namespace ignite
                  *
                  * @param req Request message.
                  * @param rsp Response message.
+                 * @return Channel that was used for request.
                  * @throw IgniteError on error.
                  */
                 template<typename ReqT, typename RspT>
-                void SyncMessageNoMetaUpdate(const ReqT& req, RspT& rsp)
+                SP_DataChannel SyncMessageNoMetaUpdate(const ReqT& req, RspT& rsp)
                 {
                     SP_DataChannel channel = GetRandomChannel();
 
                     SyncMessagePreferredChannelNoMetaUpdate(req, rsp, channel);
+
+                    return channel;
                 }
 
                 /**
