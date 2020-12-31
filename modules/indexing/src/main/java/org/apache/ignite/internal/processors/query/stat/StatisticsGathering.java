@@ -5,6 +5,7 @@ import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMe
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -17,12 +18,14 @@ public interface StatisticsGathering {
      * and pass it to router to send in response to specified reqId.
      *
      * @param reqId Request id.
-     * @param keysParts Keys to collect statistics by.
+     * @param keys Keys to collect statistics by.
+     * @param parts Partitions to collect statistics by.
      * @param cancelled Supplier to track cancelled state.
      */
     public void collectLocalObjectsStatisticsAsync(
             UUID reqId,
-            Map<StatisticsKeyMessage, int[]> keysParts,
+            Set<StatisticsKeyMessage> keys,
+            int[] parts,
             Supplier<Boolean> cancelled
     );
 

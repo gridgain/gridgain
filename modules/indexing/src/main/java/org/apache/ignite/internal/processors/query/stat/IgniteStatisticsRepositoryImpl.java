@@ -64,18 +64,6 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             StatisticsGathering statisticsGathering,
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
-        /*if (storeData) {
-            // Persistence store
-            store = (db == null) ? new IgniteStatisticsInMemoryStoreImpl(logSupplier) :
-                    new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db, this, logSupplier);
-
-            locStats = new ConcurrentHashMap<>();
-        }
-        else {
-            // Cache only global statistics, no store
-            store = new IgniteStatisticsDummyStoreImpl(logSupplier);
-            locStats = null;
-        }*/
         this.store = store;
         this.locStats = new ConcurrentHashMap<>();
         this.statisticsMgr = statisticsMgr;

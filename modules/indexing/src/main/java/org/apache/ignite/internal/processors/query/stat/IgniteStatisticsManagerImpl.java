@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -32,6 +34,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
@@ -258,9 +261,15 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             String objName,
             String... colNames
     ) throws IgniteCheckedException {
+
         StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(schemaName, objName, Arrays.asList(colNames));
-        StatisticsGatheringContext status = new StatisticsGatheringContext(Collections.singleton(keyMsg));
+        CacheGroupContext grpCtx = helper.getGroupContext(keyMsg);
+
+        StatisticsGatheringContext status = new StatisticsGatheringContext(UUID.randomUUID(),
+            Collections.singleton(keyMsg), grpCtx.topology().partitions());
+
         currColls.put(status.gatId(), status);
+
         collectObjectStatistics(status);
 
         status.doneFut().get();
@@ -273,36 +282,38 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @param gatId Gathering id.
      * @param reqId Request id.
      * @param keys Keys to collect statistics by.
+     * @param parts Partitions to collect statistics from.
      */
-    public void gatherLocalObjectStatisticsAsync(UUID gatId, UUID reqId, Map<StatisticsKeyMessage, int[]> keys) {
-        int parts = keys.values().stream().mapToInt(arr -> arr.length).sum();
+    public void gatherLocalObjectStatisticsAsync(UUID gatId, UUID reqId, Set<StatisticsKeyMessage> keys, int[] parts) {
+        int partsCount = Arrays.stream(parts).sum();
 
-        StatisticsGatheringContext[] ctxs = new StatisticsGatheringContext[1];
-        currColls.compute(gatId, (k, v) -> {
-            if (v == null)
-                v = new StatisticsGatheringContext(gatId, keys.keySet(), parts);
+        StatisticsGatheringContext gCtx = currColls.computeIfAbsent(gatId, k ->
+            new StatisticsGatheringContext(gatId, keys, partsCount));
 
-            ctxs[0] = v;
-
-            return v;
-        });
-
-        statGathering.collectLocalObjectsStatisticsAsync(reqId, keys, () -> ctxs[0].doneFut().isCancelled());
+        statGathering.collectLocalObjectsStatisticsAsync(reqId, keys, parts, () -> gCtx.doneFut().isCancelled());
     }
 
     /** {@inheritDoc} */
-    @Override public StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>>
+    @Override public StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>>[]
     collectObjectStatisticsAsync(
         GridTuple3<String, String, String[]>... keys
     ) throws IgniteCheckedException {
         Set<StatisticsKeyMessage> keysMsg = Arrays.stream(keys).map(
                 k -> new StatisticsKeyMessage(k.get1(), k.get2(), Arrays.asList(k.get3()))).collect(Collectors.toSet());
+        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = helper.splitByGroups(keysMsg);
 
-        StatisticsGatheringContext status = new StatisticsGatheringContext(keysMsg);
+        List<StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>>> res = new ArrayList<>();
+        for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys : grpsKeys.entrySet()) {
+            int parts = grpKeys.getKey().topology().partitions();
 
-        collectObjectStatistics(status);
+            StatisticsGatheringContext status = new StatisticsGatheringContext(UUID.randomUUID(),
+                    new HashSet<>(grpKeys.getValue()), parts);
 
-        return status.doneFut();
+            collectObjectStatistics(status);
+
+            res.add(status.doneFut());
+        }
+        return res.toArray(new StatsCollectionFuture[0]);
     }
 
     /**
@@ -420,8 +431,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      *
      * @param gatId Gathering id.
      * @param data Collected statistics.
+     * @param partsCount Count of collected partitions.
      */
-    public void registerLocalResult(UUID gatId, Map<StatisticsObjectData, int[]> data) {
+    public void registerLocalResult(UUID gatId, Collection<StatisticsObjectData> data, int partsCount) {
         StatisticsGatheringContext stCtx = currColls.get(gatId);
         if (stCtx == null) {
             if (log.isDebugEnabled())
@@ -430,7 +442,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             return;
         }
         Map<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> keyStats = new HashMap<>();
-        for (StatisticsObjectData objData : data.keySet()) {
+        for (StatisticsObjectData objData : data) {
             keyStats.compute(objData.key(), (k, v) -> {
                 if (v == null)
                     v = new ArrayList<>();
@@ -449,35 +461,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                 return v;
             });
         }
-        if (stCtx.registerCollected(keyStats, data.values().stream().mapToInt(a -> a.length).sum()))
+
+        if (stCtx.registerCollected(keyStats, partsCount))
             finishStatisticsCollection(stCtx);
-    }
-
-    /**
-     * Aggregate local statistics to global one.
-     *
-     * @param stat Statistics collection status to aggregate.
-     * @return Map stats key to merged global statistics.
-     */
-    private Map<StatisticsKey, ObjectStatisticsImpl> finishStatCollection(StatisticsGatheringContext stat) {
-        Map<StatisticsKey, ObjectStatisticsImpl> res = new HashMap<>();
-        for (Map.Entry<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> keyStats : stat.collectedStatistics()
-                .entrySet()) {
-            StatisticsKeyMessage keyMsg = keyStats.getKey();
-            GridH2Table tbl = schemaMgr.dataTable(keyMsg.schema(), keyMsg.obj());
-            if (tbl == null) {
-                if (log.isInfoEnabled())
-                    log.info(String.format("Unable to find object %s.%s to save collected statistics by.",
-                            keyMsg.schema(), keyMsg.obj()));
-
-                continue;
-            }
-
-            ObjectStatisticsImpl globalStat = statGathering.aggregateLocalStatistics(keyMsg, keyStats.getValue());
-            StatisticsKey key = new StatisticsKey(keyMsg.schema(), keyMsg.obj());
-            res.put(key, statsRepos.mergeGlobalStatistics(key, globalStat));
-        }
-        return res;
     }
 
     /**

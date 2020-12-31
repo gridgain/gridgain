@@ -15,15 +15,14 @@
  */
 package org.apache.ignite.internal.processors.query.stat.messages;
 
-import org.apache.ignite.internal.GridDirectMap;
+import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import java.nio.ByteBuffer;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -43,8 +42,11 @@ public class StatisticsGatheringRequest implements Message {
     private UUID reqId;
 
     /** Keys to partitions to gather statistics by. */
-    @GridDirectMap(keyType = StatisticsKeyMessage.class, valueType = int[].class)
-    private Map<StatisticsKeyMessage, int[]> keys;
+    @GridDirectCollection(StatisticsKeyMessage.class)
+    private Set<StatisticsKeyMessage> keys;
+
+    /** Partitions to collect statistics by. */
+    private int[] parts;
 
     /**
      * Default constructor.
@@ -59,11 +61,13 @@ public class StatisticsGatheringRequest implements Message {
      * @param gatId Gathering id.
      * @param reqId Request id.
      * @param keys Keys to partitions to gather statistics by.
+     * @param parts Partitions to collect statistics by.
      */
-    public StatisticsGatheringRequest(UUID gatId, UUID reqId, Map<StatisticsKeyMessage, int[]> keys) {
+    public StatisticsGatheringRequest(UUID gatId, UUID reqId, Set<StatisticsKeyMessage> keys, int[] parts) {
         this.gatId = gatId;
         this.reqId = reqId;
         this.keys = keys;
+        this.parts = parts;
     }
 
     /**
@@ -81,80 +85,28 @@ public class StatisticsGatheringRequest implements Message {
     }
 
     /**
-     * @return Map of keys to partitions to gather statistics by.
+     * @return Set of keys to gather statistics by.
      */
-    public Map<StatisticsKeyMessage, int[]> keys() {
+    public Set<StatisticsKeyMessage> keys() {
         return keys;
+    }
+
+    /**
+     * @return Array of partitions to collect statistics by.
+     */
+    public int[] parts() {
+        return parts;
     }
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
-        writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeUuid("gatId", gatId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeMap("keys", keys, MessageCollectionItemType.MSG, MessageCollectionItemType.INT_ARR))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeUuid("reqId", reqId))
-                    return false;
-
-                writer.incrementState();
-
-        }
 
         return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
-        reader.setBuffer(buf);
 
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                gatId = reader.readUuid("gatId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                keys = reader.readMap("keys", MessageCollectionItemType.MSG, MessageCollectionItemType.INT_ARR, false);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                reqId = reader.readUuid("reqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
 
         return reader.afterMessageRead(StatisticsGatheringRequest.class);
     }
@@ -176,6 +128,6 @@ public class StatisticsGatheringRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public byte policy() {
-        return GridIoPolicy.QUERY_POOL;
+        return GridIoPolicy.MANAGEMENT_POOL;
     }
 }

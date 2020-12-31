@@ -16,16 +16,12 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.util.future.IgniteFutureImpl;
-import org.apache.ignite.internal.util.lang.GridTriple;
 import org.apache.ignite.internal.util.lang.GridTuple3;
-
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Statistics manager.
+ * Statistics manager. Coordinate statistics collection and act as source of statistics.
  */
 public interface IgniteStatisticsManager {
     /**
@@ -35,7 +31,6 @@ public interface IgniteStatisticsManager {
      * @param objName Object to collect statistics by.
      * @param colNames Columns to collect statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
-     * @return future to get fini
      */
     public void collectObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
 
@@ -43,10 +38,10 @@ public interface IgniteStatisticsManager {
      * Collect objects statistics.
      *
      * @param keys Collection of keys to collect statistics by (schema, obj, columns).
-     * @return Future to track progress and cancel collection.
+     * @return Array of futures, to track progress and cancel collection on each of specified cache group.
      * @throws IgniteCheckedException In case of errors.
      */
-    public StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>> collectObjectStatisticsAsync(
+    public StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>>[] collectObjectStatisticsAsync(
         GridTuple3<String, String, String[]>... keys
     ) throws IgniteCheckedException;
 

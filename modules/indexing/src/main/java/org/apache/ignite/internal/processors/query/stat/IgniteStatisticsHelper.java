@@ -23,11 +23,9 @@ import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsClearRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringResponse;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
-import org.apache.ignite.internal.util.GridArrays;
 import org.apache.ignite.internal.util.typedef.F;
 
 import java.util.ArrayList;
@@ -96,6 +94,29 @@ public class IgniteStatisticsHelper {
     }
 
     /**
+     * Split specified keys to cache groups.
+     *
+     * @param keys Keys to split.
+     * @return Map cache group to collection of keys in group.
+     * @throws IgniteCheckedException If some of specified object won't be found in schema.
+     */
+    public Map<CacheGroupContext, Collection<StatisticsKeyMessage>> splitByGroups(
+        Collection<StatisticsKeyMessage> keys) throws IgniteCheckedException {
+        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> res = new HashMap<>();
+
+        for (StatisticsKeyMessage key : keys) {
+            GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
+
+            if (tbl == null)
+                throw new IgniteCheckedException(String.format("Can't  find table %s.%s", key.schema(), key.obj()));
+
+            res.computeIfAbsent(tbl.cacheContext().group(), k -> new ArrayList<>()).add(key);
+        }
+
+        return res;
+    }
+
+    /**
      * Return all nodes where specified cache group located.
      *
      * @param grp Cache group context to locate.
@@ -116,7 +137,7 @@ public class IgniteStatisticsHelper {
      * Get map cluster node to it's partitions for the specified cache group.
      *
      * @param grp Cache group context to get partition information by.
-     * @param partIds Partition to collect information by
+     * @param partIds Partition to collect information by, if {@code null} - will collect map for all cache group partitions.
      * @param isPrimary if {@code true} - only master partitions will be selected, if {@code false} - only backups.
      * @return Map nodeId to array of partitions, related to node.
      */
@@ -179,72 +200,6 @@ public class IgniteStatisticsHelper {
 
                     return v;
                 });
-    }
-
-    /**
-     * Prepare statistics collection request for specified node.
-     *
-     * @param colId Collection id.
-     * @param data Keys to partitions for current node.
-     * @return Statistics collection request.
-     */
-    public static StatisticsGatheringRequest prepareRequest(UUID colId, Map<StatisticsKeyMessage, int[]> data) {
-        UUID reqId = UUID.randomUUID();
-        return new StatisticsGatheringRequest(colId, reqId, data);
-    }
-
-    // TODO add extraction of necessary partIds by statKeyMsg
-
-    /**
-     * Generate statistics collection requests by given keys.
-     *
-     * @param colId Collection id.
-     * @param locNodeId Local node id.
-     * @param failedPartitions Map of stat key to array of failed partitions to generate requests by.
-     *            If {@code null} - requests will be
-     * @return Collection of statistics collection addressed request.
-     */
-    public static Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> generateCollectionRequests(
-        UUID colId,
-        UUID locNodeId,
-        Map<StatisticsKeyMessage, int[]> failedPartitions,
-        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts
-    ) {
-        // NodeId to <Key to partitions on node> map
-        Map<UUID, Map<StatisticsKeyMessage, int[]>> reqMap = new HashMap<>();
-        for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpEntry : grpContexts.entrySet()) {
-            // TODO: can we specify partitions here? from failed parts will it be effective?
-            Map<UUID, int[]> reqNodes = nodePartitions(grpEntry.getKey(), null, true);
-
-            for (Map.Entry<UUID, int[]> nodeParts : reqNodes.entrySet())
-                reqMap.compute(nodeParts.getKey(), (k, v) -> {
-                    if (v == null)
-                        v = new HashMap<>();
-
-                    Collection<StatisticsKeyMessage> grpKeys = grpContexts.get(grpEntry.getKey());
-
-                    for (StatisticsKeyMessage key : grpKeys) {
-                        int[] keyNodeParts = (failedPartitions == null) ? nodeParts.getValue() :
-                                GridArrays.intersect(nodeParts.getValue(), failedPartitions.get(key));
-
-                        if (keyNodeParts.length > 0)
-                            v.put(key, keyNodeParts);
-                    }
-
-                    return v.isEmpty() ? null : v;
-                });
-        }
-
-        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = new ArrayList<>();
-        for (Map.Entry<UUID, Map<StatisticsKeyMessage, int[]>> nodeGpsParts: reqMap.entrySet()) {
-            if (nodeGpsParts.getValue().isEmpty())
-                continue;
-
-            StatisticsGatheringRequest req = prepareRequest(colId, nodeGpsParts.getValue());
-            reqs.add(new StatisticsAddrRequest<>(req, locNodeId, nodeGpsParts.getKey()));
-        }
-
-        return reqs;
     }
 
     /**
@@ -367,40 +322,6 @@ public class IgniteStatisticsHelper {
                 .collect(Collectors.toList());
     }
 
-
-
-    /**
-     * Extract all partitions from specified statistics collection requests.
-     *
-     * @param reqs Failed request to extract partitions from.
-     * @return Map StatisticsKeyMessage to List of corresponding partitions.
-     */
-    public static Map<StatisticsKeyMessage, int[]> extractFailed(StatisticsGatheringRequest[] reqs) {
-        Map<StatisticsKeyMessage, List<Integer>> res = new HashMap<>();
-
-        UUID colId = null;
-        for (StatisticsGatheringRequest req : reqs) {
-
-            assert colId == null || colId.equals(req.gatId());
-            colId = req.gatId();
-
-            for (Map.Entry<StatisticsKeyMessage, int[]> keyEntry : req.keys().entrySet()) {
-                res.compute(keyEntry.getKey(), (k, v) -> {
-                    if (v == null)
-                        v = new ArrayList<>();
-
-                    for (int i = 0; i < keyEntry.getValue().length; i++)
-                        v.add(keyEntry.getValue()[i]);
-
-                    return v;
-                });
-            }
-        }
-
-        return res.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,
-                v -> v.getValue().stream().mapToInt(Integer::intValue).toArray()));
-    }
-
     /**
      * Generate statistics collection requests by given keys.
      *
@@ -414,11 +335,22 @@ public class IgniteStatisticsHelper {
             UUID gatId,
             UUID locNodeId,
             Collection<StatisticsKeyMessage> keys,
-            Map<StatisticsKeyMessage, int[]> failedPartitions
+            Collection<Integer> failedPartitions
     ) throws IgniteCheckedException {
-        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts = extractGroups(keys);
+        Map<UUID, Map<StatisticsKeyMessage, int[]>> reqMap = new HashMap<>();
+        CacheGroupContext grpCtx = getGroupContext(keys.iterator().next());
 
-        return generateCollectionRequests(gatId, locNodeId, failedPartitions, grpContexts);
+        Map<UUID, int[]> reqNodes = nodePartitions(grpCtx, failedPartitions, true);
+
+        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = new ArrayList<>();
+
+        for (Map.Entry<UUID, int[]> nodeParts: reqNodes.entrySet()) {
+            StatisticsGatheringRequest req = new StatisticsGatheringRequest(gatId, UUID.randomUUID(),
+                new HashSet<>(keys), nodeParts.getValue());
+            reqs.add(new StatisticsAddrRequest<>(req, locNodeId, nodeParts.getKey()));
+        }
+
+        return reqs;
     }
 
     /**
@@ -437,30 +369,6 @@ public class IgniteStatisticsHelper {
                 res.columnsStatistics().put(col, colStat);
         });
 
-        return res;
-    }
-
-    /**
-     * Get failed partitions map from request and its response.
-     *
-     * @param req Request to get the original requested partitions from.
-     * @param resp Response to get actually collected partitions.
-     * @return Map of not collected partitions.
-     */
-    public static Map<StatisticsKeyMessage, int[]> extractFailed(StatisticsGatheringRequest req, StatisticsGatheringResponse resp) {
-        assert req.gatId().equals(resp.gatId());
-
-        Map<StatisticsKeyMessage, int[]> collected = new HashMap<>(resp.data().size());
-        for (Map.Entry<StatisticsObjectData, int[]> data : resp.data().entrySet())
-            collected.put(data.getKey().key(), data.getValue());
-
-        Map<StatisticsKeyMessage, int[]> res = new HashMap<>();
-        for (Map.Entry<StatisticsKeyMessage, int[]> keyEntry : req.keys().entrySet()) {
-            int[] failed = GridArrays.subtract(keyEntry.getValue(), collected.get(keyEntry.getKey()));
-
-            if (failed.length > 0)
-                res.put(keyEntry.getKey(), failed);
-        }
         return res;
     }
 }

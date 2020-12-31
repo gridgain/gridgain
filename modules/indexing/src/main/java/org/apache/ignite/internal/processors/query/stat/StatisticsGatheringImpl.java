@@ -4,6 +4,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -23,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -51,8 +53,8 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
     /** Query processor */
     private final GridQueryProcessor qryProcessor;
 
-    /** Statistics request router. */
-    private final StatisticsGatheringRequestCrawler statRouter;
+    /** Statistics crawler. */
+    private final StatisticsGatheringRequestCrawler statCrawler;
 
     /** Ignite Thread pool executor to do statistics collection tasks. */
     private final IgniteThreadPoolExecutor gatMgmtPool;
@@ -80,49 +82,8 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         this.schemaMgr = schemaMgr;
         this.discoMgr = discoMgr;
         this.qryProcessor = qryProcessor;
-        this.statRouter = statCrawler;
+        this.statCrawler = statCrawler;
         this.gatMgmtPool = gatMgmtPool;
-    }
-
-    /**
-     * // TODO
-     * @param keyMsg
-     * @param partIds
-     * @param cancelled
-     * @return
-     * @throws IgniteCheckedException
-     */
-    public Collection<ObjectPartitionStatisticsImpl> collectLocalObjectStatistics(
-            StatisticsKeyMessage keyMsg,
-            int[] partIds,
-            Supplier<Boolean> cancelled
-    ) throws IgniteCheckedException {
-        GridH2Table tbl = schemaMgr.dataTable(keyMsg.schema(), keyMsg.obj());
-        if (tbl == null)
-            throw new IgniteCheckedException(String.format("Can't find table %s.%s", keyMsg.schema(), keyMsg.obj()));
-
-        Column[] selectedCols = filterColumns(tbl.getColumns(), keyMsg.colNames());
-
-        return collectPartitionStatistics(tbl, partIds, selectedCols, cancelled);
-        // Collection<ObjectPartitionStatisticsImpl> partsStats =
-        /*if (partsStats == null) {
-            assert cancelled.get() : "Error collecting partition level statistics.";
-
-            return partsStats;
-        }*/
-
-        // TODO! Move back to manager
-        //sendPartitionStatisticsToBackupNodes(tbl, partsStats);
-
-        //StatisticsKey key = new StatisticsKey(keyMsg.schema(), keyMsg.obj());
-        //statsRepos.saveLocalPartitionsStatistics(key, partsStats);
-
-        //ObjectStatisticsImpl tblStats = aggregateLocalStatistics(tbl, selectedCols, partsStats);
-        //statsRepos.mergeLocalStatistics(key, tblStats);
-// partsStats.stream().map(ObjectPartitionStatisticsImpl::partId)
-//                .mapToInt(Integer::intValue).toArray()
-
-        // return partsStats;
     }
 
     /**
@@ -142,28 +103,29 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
     }
 
     /**
-     * Collect partition level statistics.
+     * Collect single partition level statistics by the given tables.
      *
-     * @param tbl Table to collect statistics by.
-     * @param partIds Array of partition ids to collect statistics by.
-     * @param selectedCols Columns to collect statistics by.
+     * @param targets Table to column collection to collect statistics by. All tables should be in the same cache group.
+     * @param partId Partition id to collect statistics by.
      * @param cancelled Supplier to check if collection was cancelled.
-     * @return Collection of partition level statistics by local primary partitions.
+     * @return Map of table to Collection of partition level statistics by local primary partitions.
      * @throws IgniteCheckedException in case of error.
      */
-    private Collection<ObjectPartitionStatisticsImpl> collectPartitionStatistics(
-            GridH2Table tbl,
-            int[] partIds,
-            Column[] selectedCols,
+    private Map<GridH2Table, ObjectPartitionStatisticsImpl> collectPartitionStatisticsCaches(
+            Map<GridH2Table, Column[]> targets,
+            int partId,
             Supplier<Boolean> cancelled
     ) {
-        List<ObjectPartitionStatisticsImpl> tblPartStats = new ArrayList<>();
-        GridH2RowDescriptor desc = tbl.rowDescriptor();
-        String tblName = tbl.getName();
-        GridDhtPartitionTopology top = tbl.cacheContext().topology();
-        AffinityTopologyVersion topVer = top.readyTopologyVersion();
+        Map<GridH2Table, ObjectPartitionStatisticsImpl> res = new HashMap<>(targets.size());
 
-        for (int partId : partIds) {
+        for (Map.Entry<GridH2Table, Column[]> tblTarger : targets.entrySet()) {
+            GridH2Table tbl = tblTarger.getKey();
+            Column[] selectedCols = tblTarger.getValue();
+            GridH2RowDescriptor desc = tbl.rowDescriptor();
+            String tblName = tbl.getName();
+            GridDhtPartitionTopology top = tbl.cacheContext().topology();
+            AffinityTopologyVersion topVer = top.readyTopologyVersion();
+
             GridDhtLocalPartition locPart = top.localPartition(partId, topVer, false);
             if (locPart == null)
                 continue;
@@ -208,7 +170,7 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
                 Map<String, ColumnStatistics> colStats = colStatsCollectors.stream().collect(Collectors.toMap(
                         csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
 
-                tblPartStats.add(new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt,
+                res.put(tbl, new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt,
                         locPart.updateCounter(), colStats));
 
                 if (log.isTraceEnabled())
@@ -225,8 +187,119 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
                     locPart.release();
             }
         }
+        return res;
+    }
 
-        return tblPartStats;
+
+
+    /**
+     * Collect single partition level statistics by the given tables.
+     *
+     * @param targets Table to column collection to collect statistics by. All tables should be in the same cache group.
+     * @param partId Partition id to collect statistics by.
+     * @param cancelled Supplier to check if collection was cancelled.
+     * @return Map of table to Collection of partition level statistics by local primary partitions.
+     * @throws IgniteCheckedException in case of error.
+     */
+    private Map<GridH2Table, ObjectPartitionStatisticsImpl> collectPartitionStatistics(
+            Map<GridH2Table, Column[]> targets,
+            int partId,
+            Supplier<Boolean> cancelled
+    ) {
+        Map<GridH2Table, ObjectPartitionStatisticsImpl> res = new HashMap<>(targets.size());
+
+        GridH2Table ftbl = targets.keySet().iterator().next();
+        CacheGroupContext grp = ftbl.cacheContext().group();
+        GridDhtPartitionTopology gTop = grp.topology();
+        AffinityTopologyVersion topVer = gTop.readyTopologyVersion();
+        GridDhtLocalPartition locPart = gTop.localPartition(partId, topVer, false);
+        if (locPart == null)
+            return null;
+        boolean reserved = locPart.reserve();
+        try {
+            if (!reserved || (locPart.state() != OWNING) || !locPart.primary(discoMgr.topologyVersionEx()))
+                return null;
+
+            for (Map.Entry<GridH2Table, Column[]> tblTarger : targets.entrySet()) {
+                GridH2Table tbl = tblTarger.getKey();
+                Column[] selectedCols = tblTarger.getValue();
+                GridH2RowDescriptor desc = tbl.rowDescriptor();
+                String tblName = tbl.getName();
+
+                long rowsCnt = 0;
+
+                List<ColumnStatisticsCollector> colStatsCollectors = new ArrayList<>(selectedCols.length);
+
+                for (Column col : selectedCols)
+                    colStatsCollectors.add(new ColumnStatisticsCollector(col, tbl::compareValues));
+
+                //TODO swith to: for (grp.offheap().partitionIterator(partId))
+                for (CacheDataRow row : tbl.cacheContext().offheap().cachePartitionIterator(tbl.cacheId(), locPart.id(),
+                        null, true)) {
+                    GridQueryTypeDescriptor typeDesc = qryProcessor.typeByValue(tbl.cacheName(),
+                            tbl.cacheContext().cacheObjectContext(), row.key(), row.value(), false);
+                    if (!tblName.equals(typeDesc.tableName()))
+                        continue;
+
+                    rowsCnt++;
+
+                    H2Row row0 = desc.createRow(row);
+
+                    for (ColumnStatisticsCollector colStat : colStatsCollectors)
+                        colStat.add(row0.getValue(colStat.col().getColumnId()));
+
+                }
+
+                Map<String, ColumnStatistics> colStats = colStatsCollectors.stream().collect(Collectors.toMap(
+                        csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
+
+                res.put(tbl, new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt,
+                        locPart.updateCounter(), colStats));
+
+                if (log.isTraceEnabled())
+                    log.trace(String.format("Finished statistics collection on %s.%s:%d",
+                            tbl.identifier().schema(), tbl.identifier().table(), locPart.id()));
+            }
+        }
+        catch (IgniteCheckedException e) {
+            if (log.isDebugEnabled())
+                log.debug(String.format("Unable to collect statistics by %s.%s:%d due to error %s",
+                        ftbl.identifier().schema(), ftbl.identifier().table(), partId, e.getMessage()));
+        }
+        finally {
+            if (reserved)
+                locPart.release();
+        }
+
+        return res;
+    }
+
+    /**
+     * Collect partitions level statistics by the given tables.
+     *
+     * @param targets Table to column collection to collect statistics by. All tables should be in the same cache group.
+     * @param partIds Array of partition ids to collect statistics by.
+     * @param cancelled Supplier to check if collection was cancelled.
+     * @return Map of table to Collection of partition level statistics by local primary partitions.
+     * @throws IgniteCheckedException in case of error.
+     */
+    private Map<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> collectPartitionsStatistics(
+            Map<GridH2Table, Column[]> targets,
+            int[] partIds,
+            Supplier<Boolean> cancelled
+    ) {
+        Map<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> res = new HashMap<>();
+        for (GridH2Table tbl : targets.keySet())
+            res.put(tbl, new ArrayList<>(partIds.length));
+
+        for (int partId : partIds) {
+            Map<GridH2Table, ObjectPartitionStatisticsImpl> partStats = collectPartitionStatistics(targets, partId, cancelled);
+
+            for(Map.Entry<GridH2Table, ObjectPartitionStatisticsImpl> tblStat : partStats.entrySet())
+                res.get(tblStat.getKey()).add(tblStat.getValue());
+        }
+
+        return res;
     }
 
     /** {@inheritDoc} */
@@ -242,9 +315,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
             if (log.isDebugEnabled())
                 log.debug(String.format("Removing statistics for object %s.%s cause table doesn't exists.",
                         keyMsg.schema(), keyMsg.obj()));
-
-            // Just to double check
-            //statsRepos.clearLocalPartitionsStatistics(new StatisticsKey(keyMsg.schema(), keyMsg.obj()));
         }
 
         return aggregateLocalStatistics(tbl, filterColumns(tbl.getColumns(), keyMsg.colNames()), stats);
@@ -253,41 +323,71 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
     /** {@inheritDoc} */
     @Override public void collectLocalObjectsStatisticsAsync(
         UUID reqId,
-        Map<StatisticsKeyMessage, int[]> keysParts,
+        Set<StatisticsKeyMessage> keys,
+        int[] parts,
         Supplier<Boolean> cancelled
     ) {
-        gatMgmtPool.submit(() -> collectLocalObjectsStatistics(reqId, keysParts, cancelled));
+        gatMgmtPool.submit(() -> collectLocalObjectsStatistics(reqId, keys, parts, cancelled));
     }
 
     /**
      * Collect local statistics by specified keys and partitions.
      *
      * @param reqId Request id.
-     * @param keysParts Keys to collect statistics by.
+     * @param keys Keys to collect statistics by.
+     * @param parts Partitions to collect statistics from.
      */
     public void collectLocalObjectsStatistics(
             UUID reqId,
-            Map<StatisticsKeyMessage, int[]> keysParts,
+            Set<StatisticsKeyMessage> keys,
+            int[] parts,
             Supplier<Boolean> cancelled
     ) {
-        Map<IgniteBiTuple<StatisticsKeyMessage, ObjectStatisticsImpl>, int[]> res = new HashMap<>();
-        for (Map.Entry<StatisticsKeyMessage, int[]> keyParts : keysParts.entrySet()) {
-            try {
-                Collection<ObjectPartitionStatisticsImpl> partsStat = collectLocalObjectStatistics(keyParts.getKey(),
-                    keyParts.getValue(), cancelled);
-                ObjectStatisticsImpl localStat = aggregateLocalStatistics(keyParts.getKey(), partsStat);
-                int[] parts = partsStat.stream().map(ObjectPartitionStatisticsImpl::partId).mapToInt(Integer::intValue)
-                        .toArray();
-                res.put(new IgniteBiTuple<>(keyParts.getKey(), localStat), parts);
-            }
-            catch (IgniteCheckedException e) {
+
+        Map<GridH2Table, Column[]> targets = new HashMap<>(keys.size());
+        Map<GridH2Table, StatisticsKeyMessage> tblKey = new HashMap<>(keys.size());
+        for (StatisticsKeyMessage key : keys) {
+            GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
+            if (tbl == null) {
                 if (log.isDebugEnabled())
-                    log.debug(String.format("Unable to collect local object statistics by key %s due to $s",
-                            keyParts.getKey(), e.getMessage()));
+                    log.debug(String.format("Unable to find table %s.%s to gather its statistics by req %s",
+                            key.schema(), key.obj(), reqId));
+
+                // Send empty response may be necessary to cancel original context
+                statCrawler.sendGatheringResponseAsync(reqId, Collections.emptyMap(), new int[0]);
+            }
+
+            targets.put(tbl, filterColumns(tbl.getColumns(), key.colNames()));
+
+            if (tblKey.put(tbl, key) != null)
+                log.info(String.format("Unable to collect statistics by same table %s.%s twice in single gathering task",
+                        key.schema(), key.obj()));
+        }
+
+        Map<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> keyPartStat = new HashMap<>(keys.size());
+        List<Integer> collectedParts = new ArrayList<>(parts.length);
+        for (int partId : parts) {
+            Map<GridH2Table, ObjectPartitionStatisticsImpl> partStats = collectPartitionStatistics(targets, partId, cancelled);
+
+            if (partStats != null) {
+                collectedParts.add(partId);
+                for (Map.Entry<GridH2Table, ObjectPartitionStatisticsImpl> tblStat : partStats.entrySet()) {
+                    StatisticsKeyMessage key = tblKey.get(tblStat.getKey());
+
+                    keyPartStat.computeIfAbsent(tblStat.getKey(), k -> new ArrayList<>(parts.length)).add(tblStat.getValue());
+                }
             }
         }
 
-        statRouter.sendGatheringResponseAsync(reqId, res);
+        Map<StatisticsKeyMessage, ObjectStatisticsImpl> res = new HashMap<>();
+        for (Map.Entry<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> partStats : keyPartStat.entrySet()) {
+            ObjectStatisticsImpl locStat = aggregateLocalStatistics(partStats.getKey(), targets.get(partStats.getKey()),
+                partStats.getValue());
+
+            res.put(tblKey.get(partStats.getKey()), locStat);
+        }
+
+        statCrawler.sendGatheringResponseAsync(reqId, res, collectedParts.stream().mapToInt(Integer::intValue).toArray());
     }
 
 

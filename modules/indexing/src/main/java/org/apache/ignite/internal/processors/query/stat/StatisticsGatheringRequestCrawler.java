@@ -17,23 +17,25 @@ public interface StatisticsGatheringRequestCrawler {
      *
      * @param getId Gathering id.
      * @param keys Keys to collect statistics by.
-     * @param failedParts Map of keys to its failed partitions.
+     * @param failedParts Failed partitions or {@code null} if needs to send requests to by all partitions.
      */
     public void sendGatheringRequestsAsync(
         UUID gatId,
         Collection<StatisticsKeyMessage> keys,
-        Map<StatisticsKeyMessage, int[]> failedParts
+        Collection<Integer> failedParts
     );
 
     /**
      * Send statistics gathering response async.
      *
      * @param reqId Request to response to.
-     * @param statistics Collected statistics (with keys) to partitions, included in it.
+     * @param statistics Collected statistics by keys.
+     * @param parts Partitions, included in collected statistics.
      */
     public void sendGatheringResponseAsync(
         UUID reqId,
-        Map<IgniteBiTuple<StatisticsKeyMessage, ObjectStatisticsImpl>, int[]> statistics
+        Map<StatisticsKeyMessage, ObjectStatisticsImpl> statistics,
+        int[] parts
     );
 
     /**

@@ -19,7 +19,7 @@ public class StatisticsGatheringContext {
     /** Keys to collect statistics by. */
     private final Set<StatisticsKeyMessage> keys;
 
-    /** Collection of remaining partitions */
+    /** Amount of remaining partitions */
     private int remainingParts;
 
     /** Collected local statistics. */
@@ -47,17 +47,15 @@ public class StatisticsGatheringContext {
      * Constructor.
      *
      * @param keys Keys to collect statistics by.
-     *             // TODO remove comment below
-     * @param remainingColReqs Collection of remaining requests. If {@code null} - it's local collection task.
      */
-    public StatisticsGatheringContext(
-            Set<StatisticsKeyMessage> keys//, Map<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingColReqs
+    /*public StatisticsGatheringContext(
+            Set<StatisticsKeyMessage> keys
     ) {
         gatId = UUID.randomUUID();
         collectedStatistics = new ConcurrentHashMap<>();
         this.keys = keys;
         this.doneFut = new StatisticsGatheringFutureAdapter(gatId);;
-    }
+    }*/
 
     /**
      * @return Collected statistics map.

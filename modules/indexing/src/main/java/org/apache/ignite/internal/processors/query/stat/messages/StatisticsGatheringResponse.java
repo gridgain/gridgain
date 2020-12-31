@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat.messages;
 
+import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.GridDirectMap;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
@@ -24,6 +25,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -42,9 +44,12 @@ public class StatisticsGatheringResponse implements Message {
     /** Request id. */
     private UUID reqId;
 
-    /** Map of collected local object statistics with array of included partitions. */
-    @GridDirectMap(keyType = StatisticsObjectData.class, valueType = int[].class)
-    private Map<StatisticsObjectData, int[]> data;
+    /** Set of collected local object statistics. */
+    @GridDirectCollection(StatisticsObjectData.class)
+    private Set<StatisticsObjectData> data;
+
+    /** Array of included partitions. */
+    private int[] parts;
 
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
@@ -63,12 +68,14 @@ public class StatisticsGatheringResponse implements Message {
      *
      * @param gatId Gathering id.
      * @param reqId Request id.
-     * @param data Map of objects statistics with array of included partitions.
+     * @param data Set of objects statistics.
+     * @param parts Array of included partitions.
      */
-    public StatisticsGatheringResponse(UUID gatId, UUID reqId, Map<StatisticsObjectData, int[]> data) {
+    public StatisticsGatheringResponse(UUID gatId, UUID reqId, Set<StatisticsObjectData> data, int[] parts) {
         this.gatId = gatId;
         this.reqId = reqId;
         this.data = data;
+        this.parts = parts;
     }
 
     /**
@@ -86,43 +93,21 @@ public class StatisticsGatheringResponse implements Message {
     }
 
     /**
-     * @return Map of object statistics with array of included partitions.
+     * @return Set of object statistics.
      */
-    public Map<StatisticsObjectData, int[]> data() {
+    public Set<StatisticsObjectData> data() {
         return data;
     }
 
+    /**
+     * @return Array of included partitions.
+     */
+    public int[] parts() {
+        return parts;
+    }
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
-
-        if (!writer.isHeaderWritten()) {
-            if (!writer.writeHeader(directType(), fieldsCount()))
-                return false;
-
-            writer.onHeaderWritten();
-        }
-
-        switch (writer.state()) {
-            case 0:
-                if (!writer.writeUuid("gatId", gatId))
-                    return false;
-
-                writer.incrementState();
-
-            case 1:
-                if (!writer.writeMap("data", data, MessageCollectionItemType.MSG, MessageCollectionItemType.INT_ARR))
-                    return false;
-
-                writer.incrementState();
-
-            case 2:
-                if (!writer.writeUuid("reqId", reqId))
-                    return false;
-
-                writer.incrementState();
-
-        }
 
         return true;
     }
@@ -131,35 +116,6 @@ public class StatisticsGatheringResponse implements Message {
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
         reader.setBuffer(buf);
 
-        if (!reader.beforeMessageRead())
-            return false;
-
-        switch (reader.state()) {
-            case 0:
-                gatId = reader.readUuid("gatId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 1:
-                data = reader.readMap("data", MessageCollectionItemType.MSG, MessageCollectionItemType.INT_ARR, false);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 2:
-                reqId = reader.readUuid("reqId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-        }
 
         return reader.afterMessageRead(StatisticsGatheringResponse.class);
     }
