@@ -43,6 +43,7 @@ import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccMarkUpdatedRecord;
@@ -225,7 +226,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (cctx.affinityNode() && pendingEntries == null) {
             String pendingEntriesTreeName = cctx.name() + "##PendingEntries";
 
-            long rootPage = allocateForTree();
+            long rootPage = allocateForTree(PageCategory.DATA);
 
             PageLockListener lsnr = ctx.diagnostic().pageLockTracker().createPageLockTracker(pendingEntriesTreeName);
 
@@ -1135,23 +1136,26 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /**
+     * @param pageCategory Page category.
      * @return Page ID.
      * @throws IgniteCheckedException If failed.
      */
-    private long allocateForTree() throws IgniteCheckedException {
+    private long allocateForTree(PageCategory pageCategory) throws IgniteCheckedException {
         ReuseList reuseList = grp.reuseList();
 
         long pageId;
 
         if (reuseList == null || (pageId = reuseList.takeRecycledPage()) == 0L)
-            pageId = grp.dataRegion().pageMemory().allocatePage(grp.groupId(), INDEX_PARTITION, FLAG_IDX);
+            pageId = grp.dataRegion().pageMemory().allocatePage(grp.groupId(), INDEX_PARTITION, FLAG_IDX, pageCategory);
+        else
+            grp.dataRegion().pageMemory().getPageMetric().pageFromReuseList(pageCategory);
 
         return pageId;
     }
 
     /** {@inheritDoc} */
     @Override public RootPage rootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException {
-        long pageId = allocateForTree();
+        long pageId = allocateForTree(PageCategory.INDEX);
 
         return new RootPage(new FullPageId(pageId, grp.groupId()), true);
     }
@@ -1300,7 +1304,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @throws IgniteCheckedException If failed.
      */
     protected CacheDataStore createCacheDataStore0(int p) throws IgniteCheckedException {
-        final long rootPage = allocateForTree();
+        final long rootPage = allocateForTree(PageCategory.DATA);
 
         CacheDataRowStore rowStore = new CacheDataRowStore(grp, grp.freeList(), p);
 
@@ -1325,7 +1329,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             grp,
             logTreeName,
             grp.dataRegion().pageMemory(),
-            allocateForTree(),
+            allocateForTree(PageCategory.META),
             grp.reuseList(),
             true,
             ctx.diagnostic().pageLockTracker().createPageLockTracker(logTreeName),

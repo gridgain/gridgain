@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -119,5 +120,10 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         UpdateLogRow row = io.getLookupRow(this, pageAddr, idx);
 
         return flag == FULL_ROW ? row.initRow(grp) : row;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected PageCategory pageCategory() {
+        return PageCategory.META;
     }
 }

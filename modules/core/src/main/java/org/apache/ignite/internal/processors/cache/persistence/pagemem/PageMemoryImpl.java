@@ -53,6 +53,7 @@ import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageUtils;
@@ -504,7 +505,8 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /** {@inheritDoc} */
-    @Override public long allocatePage(int grpId, int partId, byte flags) throws IgniteCheckedException {
+    @Override public long allocatePage(int grpId, int partId, byte flags, PageCategory category)
+        throws IgniteCheckedException {
         assert flags != PageIdAllocator.FLAG_IDX && partId <= PageIdAllocator.MAX_PARTITION_ID ||
             flags == PageIdAllocator.FLAG_IDX && partId == PageIdAllocator.INDEX_PARTITION :
             "flags = " + flags + ", partId = " + partId;
@@ -572,6 +574,8 @@ public class PageMemoryImpl implements PageMemoryEx {
             setDirty(fullId, absPtr, true, true);
 
             if (isTrackingPage) {
+                memMetrics.pageAllocated(PageCategory.META);
+
                 long pageAddr = absPtr + PAGE_OVERHEAD;
 
                 // We are inside segment write lock, so no other thread can pin this tracking page yet.
@@ -595,6 +599,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                         }
                     }
                 }
+            } else {
+                memMetrics.pageAllocated(category);
             }
 
             seg.loadedPages.put(grpId, PageIdUtils.effectivePageId(pageId), relPtr, seg.partGeneration(grpId, partId));
@@ -627,7 +633,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             delayedWriter.finishReplacement();
 
         //we have allocated 'tracking' page, we need to allocate regular one
-        return isTrackingPage ? allocatePage(grpId, partId, flags) : pageId;
+        return isTrackingPage ? allocatePage(grpId, partId, flags, category) : pageId;
     }
 
     /**
@@ -767,8 +773,17 @@ public class PageMemoryImpl implements PageMemoryEx {
                 if (pageAllocated != null)
                     pageAllocated.set(true);
 
-                if (relPtr == INVALID_REL_PTR)
+                if (relPtr == INVALID_REL_PTR) {
                     relPtr = seg.removePageForReplacement(delayedWriter == null ? flushDirtyPage : delayedWriter);
+                    // TODO: define concreate type
+                    // need to define page type by content
+                    // memMetrics.reusePageIncreased(1, PageCategory.DATA);
+                    // memMetrics.pageAllocated(PageCategory.DATA);
+                } else {
+                    // TODO: define concreate type
+                    // it may be wrong
+                    memMetrics.pageAllocated(PageCategory.META);
+                }
 
                 absPtr = seg.absolute(relPtr);
 
@@ -1830,6 +1845,11 @@ public class PageMemoryImpl implements PageMemoryEx {
         return checkpointPool == null ? 0 : checkpointPool.size();
     }
 
+    /** {@inheritDoc} */
+    @Override public PagesMetric getPageMetric() {
+        return memMetrics;
+    }
+
     /**
      * Number of used pages in checkpoint buffer.
      */
@@ -2029,6 +2049,8 @@ public class PageMemoryImpl implements PageMemoryEx {
             long totalMemory = region.size();
 
             int pages = (int)(totalMemory / sysPageSize);
+
+            memMetrics.freePagesIncreased(pages);
 
             acquiredPagesPtr = region.address();
 

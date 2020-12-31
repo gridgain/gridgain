@@ -210,7 +210,8 @@ public abstract class PagesList extends DataStructure {
         GridKernalContext ctx,
         byte pageFlag
     ) {
-        super(cacheId, null, pageMem, wal, lockLsnr, DEFAULT_PAGE_IO_RESOLVER, pageFlag);
+        super(cacheId, null, pageMem, wal, lockLsnr, DEFAULT_PAGE_IO_RESOLVER, pageFlag,
+            pageFlag == FLAG_IDX ? INDEX_PARTITION : PageIdUtils.partId(metaPageId));
 
         this.name = name;
         this.buckets = buckets;
@@ -1459,6 +1460,7 @@ public abstract class PagesList extends DataStructure {
                 if (recycleId != 0L) {
                     assert !isReuseBucket(bucket);
 
+                    pageMetric.reusePageIncreased(1, pageCategory());
                     reuseList.addForRecycle(new SingletonReuseBag(recycleId));
                 }
 
@@ -1692,8 +1694,10 @@ public abstract class PagesList extends DataStructure {
             if (nextId != 0L)
                 recycleId = merge(pageId, page, nextId, bucket, statHolder);
 
-            if (recycleId != 0L)
+            if (recycleId != 0L) {
+                pageMetric.reusePageIncreased(1, pageCategory());
                 reuseList.addForRecycle(new SingletonReuseBag(recycleId));
+            }
 
             return true;
         }

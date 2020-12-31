@@ -43,6 +43,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.encryption.ReencryptStateUtils;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
@@ -907,7 +908,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         boolean init = cntrsPageId == 0;
 
         if (init && !sizes.isEmpty())
-            cntrsPageId = pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+            cntrsPageId = pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX, PageCategory.META);
 
         long nextId = cntrsPageId;
         int written = 0;
@@ -938,7 +939,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     if (written != items && (init = nextId == 0)) {
                         //allocate new counters page
-                        nextId = pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                        nextId = pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX, PageCategory.META);
                         partCntrIo.setNextCountersPageId(curAddr, nextId);
                     }
                 }
@@ -1174,8 +1175,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 if (PageIO.getType(pageAddr) != PageIO.T_META) {
                     io.initNewPage(pageAddr, metaId, pageMem.realPageSize(grpId));
 
-                    metastoreRoot = pageMem.allocatePage(grpId, PageIdAllocator.INDEX_PARTITION, PageMemory.FLAG_IDX);
-                    reuseListRoot = pageMem.allocatePage(grpId, PageIdAllocator.INDEX_PARTITION, PageMemory.FLAG_IDX);
+                    metastoreRoot = pageMem
+                        .allocatePage(grpId, PageIdAllocator.INDEX_PARTITION, PageMemory.FLAG_IDX, PageCategory.META);
+                    reuseListRoot = pageMem
+                        .allocatePage(grpId, PageIdAllocator.INDEX_PARTITION, PageMemory.FLAG_IDX, PageCategory.REUSE);
 
                     io.setTreeRoot(pageAddr, metastoreRoot);
                     io.setReuseListRoot(pageAddr, reuseListRoot);
@@ -2212,7 +2215,12 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert ctx.database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
+                        }
+
+                        /** {@inheritDoc} */
+                        @Override protected PageCategory pageCategory() {
+                            return PageCategory.REUSE;
                         }
                     };
 
@@ -2238,7 +2246,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert ctx.database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
                         }
                     };
 
@@ -2262,7 +2270,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert ctx.database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
                         }
                     };
 
@@ -2284,7 +2292,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert ctx.database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
                         }
                     };
 
@@ -2306,7 +2314,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert grp.shared().database().checkpointLockIsHeldByThread();
 
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                            return super.allocatePageNoReuse();
                         }
                     };
 
@@ -2464,11 +2472,12 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     if (PageIO.getType(pageAddr) != PageIO.T_PART_META) {
                         io.initNewPage(pageAddr, partMetaId, pageMem.realPageSize(grpId));
 
-                        treeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
-                        reuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
-                        pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
-                        partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
-                        updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
+                        treeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.DATA);
+                        reuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.REUSE);
+                        pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.DATA);
+                        partMetaStoreReuseListRoot = pageMem
+                            .allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.META);
+                        updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.META);
 
                         assert PageIdUtils.flag(treeRoot) == PageMemory.FLAG_AUX;
                         assert PageIdUtils.flag(reuseListRoot) == PageMemory.FLAG_AUX;
@@ -2506,7 +2515,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         reuseListRoot = io.getReuseListRoot(pageAddr);
 
                         if ((pendingTreeRoot = io.getPendingTreeRoot(pageAddr)) == 0) {
-                            pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
+                            pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.META);
 
                             io.setPendingTreeRoot(pageAddr, pendingTreeRoot);
 
@@ -2514,7 +2523,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         }
 
                         if ((partMetaStoreReuseListRoot = io.getPartitionMetaStoreReuseListRoot(pageAddr)) == 0) {
-                            partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
+                            partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.META);
 
                             io.setPartitionMetaStoreReuseListRoot(pageAddr, partMetaStoreReuseListRoot);
 
@@ -2522,7 +2531,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         }
 
                         if ((updateLogTreeRoot = io.getUpdateTreeRoot(pageAddr)) == 0) {
-                            updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
+                            updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.META);
 
                             io.setUpdateTreeRoot(pageAddr, updateLogTreeRoot);
 

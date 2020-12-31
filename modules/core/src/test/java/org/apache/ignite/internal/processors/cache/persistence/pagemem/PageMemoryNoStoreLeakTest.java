@@ -21,6 +21,7 @@ import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
+import org.apache.ignite.internal.processors.database.NoOpPagesMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.D;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -63,7 +64,8 @@ public class PageMemoryNoStoreLeakTest extends GridCommonAbstractTest {
                 PAGE_SIZE,
                 plcCfg,
                 new LongAdderMetric("NO_OP", null),
-                true);
+                true,
+                new NoOpPagesMetric());
 
             try {
                 mem.start();

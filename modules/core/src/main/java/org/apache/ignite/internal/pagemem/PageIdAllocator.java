@@ -66,7 +66,20 @@ public interface PageIdAllocator {
      * @param partId Partition ID.
      * @return Allocated page ID.
      */
-    public long allocatePage(int grpId, int partId, byte flags) throws IgniteCheckedException;
+    default long allocatePage(int grpId, int partId, byte flags) throws IgniteCheckedException {
+        return allocatePage(grpId, partId, flags, partId == INDEX_PARTITION ? PageCategory.INDEX : PageCategory.DATA);
+    }
+
+    /**
+     * Allocates a page from the space for the given partition ID and the given flags.
+     *
+     * @param grpId Cache Group ID.
+     * @param partId Partition ID.
+     * @param flags Flags.
+     * @param category Page category.
+     * @return Allocated page ID.
+     */
+    public long allocatePage(int grpId, int partId, byte flags, PageCategory category) throws IgniteCheckedException;
 
     /**
      * The given page is free now.

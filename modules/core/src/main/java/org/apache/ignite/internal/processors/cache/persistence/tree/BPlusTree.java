@@ -823,7 +823,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         @Nullable PageLockListener lsnr,
         PageIoResolver pageIoRslvr
     ) {
-        super(cacheGrpId, grpName, pageMem, wal, lsnr, pageIoRslvr, pageFlag);
+        super(cacheGrpId, grpName, pageMem, wal, lsnr, pageIoRslvr, pageFlag, PageIdUtils.partId(metaPageId));
 
         assert !F.isEmpty(name);
 
@@ -2579,6 +2579,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             releasePage(metaPageId, metaPage);
         }
 
+        pageMetric.reusePageIncreased(bag.size(), pageCategory());
         reuseList.addForRecycle(bag);
 
         assert bag.isEmpty() : bag.size();
@@ -2680,6 +2681,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         if (bag.size() == 128) {
+            pageMetric.reusePageIncreased(bag.size(), pageCategory());
             reuseList.addForRecycle(bag);
 
             assert bag.isEmpty() : bag.size();
@@ -4900,8 +4902,17 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          */
         private void reuseFreePages() throws IgniteCheckedException {
             // If we have a bag, then it will be processed at the upper level.
-            if (reuseList != null && freePages != null)
+            if (reuseList != null && freePages != null) {
+                //TODO: doublecheck
+                if (freePages.getClass() == GridLongList.class) {
+                    GridLongList list = ((GridLongList)freePages);
+                    pageMetric.reusePageIncreased(list.size(), pageCategory());
+                } else {
+                    pageMetric.reusePageIncreased(1, pageCategory());
+                }
+
                 reuseList.addForRecycle(this);
+            }
         }
 
         /**

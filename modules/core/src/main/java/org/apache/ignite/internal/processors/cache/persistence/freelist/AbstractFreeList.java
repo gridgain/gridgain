@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageUtils;
@@ -488,7 +489,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     private long allocateDataPage(int part) throws IgniteCheckedException {
         assert part <= PageIdAllocator.MAX_PARTITION_ID;
 
-        return pageMem.allocatePage(grpId, part, FLAG_DATA);
+        return pageMem.allocatePage(grpId, part, FLAG_DATA, PageCategory.REUSE);
     }
 
     /** {@inheritDoc} */
@@ -521,8 +522,10 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                     else {
                         pageId = reuseList.takeRecycledPage();
 
-                        if (pageId != 0)
+                        if (pageId != 0) {
+                            pageMetric.pageFromReuseList(PageCategory.DATA);
                             pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions().latest());
+                        }
                     }
                 }
 
@@ -636,7 +639,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             long pageId = PageIdUtils.pageId(link);
             int itemId = PageIdUtils.itemId(link);
 
-            ReuseBag bag = new LongListReuseBag();
+            LongListReuseBag bag = new LongListReuseBag();
 
             long nextLink = write(pageId, rmvRow, bag, itemId, FAIL_L, statHolder);
 
@@ -653,6 +656,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 assert nextLink != FAIL_L; // Can't fail here.
             }
 
+            pageMetric.reusePageIncreased(bag.size(), PageCategory.DATA);
             reuseList.addForRecycle(bag);
         }
         catch (IgniteCheckedException | Error e) {

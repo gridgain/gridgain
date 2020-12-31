@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.persistence.defragmentation;
 
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -35,7 +34,6 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_AUX;
-import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 
 /**
  * Class that holds mappings of old links to new links.
@@ -175,11 +173,6 @@ public class LinkMap {
         /** {@inheritDoc} */
         @Override public LinkMapping getRow(BPlusIO<LinkMapping> io, long pageAddr, int idx, Object x) throws IgniteCheckedException {
             return io.getLookupRow(this, pageAddr, idx);
-        }
-
-        /** {@inheritDoc} */
-        @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
-            return pageMem.allocatePage(grpId, PageIdUtils.partId(metaPageId), FLAG_DATA);
         }
     }
 

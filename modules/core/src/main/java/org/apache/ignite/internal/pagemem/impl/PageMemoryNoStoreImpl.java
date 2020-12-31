@@ -32,9 +32,11 @@ import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -141,6 +143,9 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     private final AtomicInteger allocatedPages = new AtomicInteger();
 
     /** */
+    private final PagesMetric pageMetric;
+
+    /** */
     private final LongAdderMetric totalAllocatedPagesMetric;
 
     /** */
@@ -182,7 +187,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         int pageSize,
         DataRegionConfiguration dataRegionCfg,
         LongAdderMetric totalAllocatedPagesMetric,
-        boolean trackAcquiredPages
+        boolean trackAcquiredPages,
+        PagesMetric metrics
     ) {
         assert log != null || sharedCtx != null;
         assert pageSize % 8 == 0;
@@ -192,6 +198,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         this.trackAcquiredPages = trackAcquiredPages;
         this.totalAllocatedPagesMetric = totalAllocatedPagesMetric;
         this.dataRegionCfg = dataRegionCfg;
+
+        pageMetric = metrics;
 
         sysPageSize = pageSize + PAGE_OVERHEAD;
 
@@ -268,12 +276,17 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     }
 
     /** {@inheritDoc} */
+    @Override public PagesMetric getPageMetric() {
+        return pageMetric;
+    }
+
+    /** {@inheritDoc} */
     @Override public ByteBuffer pageBuffer(long pageAddr) {
         return wrapPointer(pageAddr, pageSize());
     }
 
     /** {@inheritDoc} */
-    @Override public long allocatePage(int grpId, int partId, byte flags) {
+    @Override public long allocatePage(int grpId, int partId, byte flags, PageCategory category) {
         assert started;
 
         long relPtr = borrowFreePage();
@@ -285,6 +298,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
             Segment seg = segment(pageIdx);
 
             absPtr = seg.absolute(pageIdx);
+            pageMetric.freePageUsed();
         }
 
         // No segments contained a free page.
@@ -297,6 +311,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
                 if (relPtr != INVALID_REL_PTR) {
                     absPtr = allocSeg.absolute(PageIdUtils.pageIndex(relPtr));
+                    pageMetric.freePageUsed();
 
                     break;
                 }
@@ -329,6 +344,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         // TODO pass an argument to decide whether the page should be cleaned.
         GridUnsafe.setMemory(absPtr + PAGE_OVERHEAD, sysPageSize - PAGE_OVERHEAD, (byte)0);
 
+        pageMetric.pageAllocated(category);
+
         return pageId;
     }
 
@@ -337,6 +354,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         assert started;
 
         releaseFreePage(pageId);
+        pageMetric.freePagesIncreased(1);
 
         return true;
     }
@@ -688,7 +706,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
             Segment allocated = new Segment(newRef.length - 1, region, lastSeg == null ? 0 : lastSeg.sumPages());
 
-            allocated.init();
+            pageMetric.freePagesIncreased(allocated.init());
 
             newRef[newRef.length - 1] = allocated;
 
@@ -742,8 +760,10 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
         /**
          * Initializes page memory segment.
+         *
+         * @return Allocated free pages count.
          */
-        private void init() {
+        private int init() {
             long base = region.address();
 
             lastAllocatedIdxPtr = base;
@@ -758,6 +778,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
             long limit = region.address() + region.size();
 
             maxPages = (int)((limit - pagesBase) / sysPageSize);
+
+            return maxPages;
         }
 
         /**

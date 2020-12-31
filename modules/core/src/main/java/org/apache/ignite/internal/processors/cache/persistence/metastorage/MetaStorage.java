@@ -39,6 +39,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
@@ -268,14 +269,14 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                 FLAG_AUX
             ) {
                 @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
-                    return pageMem.allocatePage(grpId, partId, FLAG_AUX);
+                    return pageMem.allocatePage(grpId, partId, FLAG_AUX, PageCategory.META);
                 }
             };
 
             MetastorageRowStore rowStore = new MetastorageRowStore(partStorage, db);
 
             tree = new MetastorageTree(METASTORAGE_CACHE_ID, treeName, dataRegion.pageMemory(), wal, rmvId,
-                partStorage, rowStore, treeRoot.pageId().pageId(), treeRoot.isAllocated(), failureProcessor, partId,
+                partStorage, rowStore, treeRoot.pageId().pageId(), treeRoot.isAllocated(), failureProcessor,
                 diagnosticMgr.pageLockTracker().createPageLockTracker(treeName));
 
             if (!readOnly)
@@ -540,8 +541,8 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                         //MetaStorage never encrypted so realPageSize == pageSize.
                         io.initNewPage(pageAddr, partMetaId, pageMem.pageSize());
 
-                        treeRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, PageMemory.FLAG_AUX);
-                        reuseListRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, PageMemory.FLAG_AUX);
+                        treeRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, PageMemory.FLAG_AUX, PageCategory.META);
+                        reuseListRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, PageMemory.FLAG_AUX, PageCategory.META);
 
                         assert PageIdUtils.flag(treeRoot) == PageMemory.FLAG_AUX;
                         assert PageIdUtils.flag(reuseListRoot) == PageMemory.FLAG_AUX;

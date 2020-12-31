@@ -26,6 +26,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -131,8 +132,8 @@ public class TxLog implements CheckpointListener {
 
                             io.initNewPage(pageAddr, metaId, pageMemory.pageSize());
 
-                            treeRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, PageMemory.FLAG_IDX);
-                            reuseListRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, PageMemory.FLAG_IDX);
+                            treeRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, PageMemory.FLAG_IDX, PageCategory.META);
+                            reuseListRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, PageMemory.FLAG_IDX, PageCategory.REUSE);
 
                             assert PageIdUtils.flag(treeRoot) == PageMemory.FLAG_IDX;
                             assert PageIdUtils.flag(reuseListRoot) == PageMemory.FLAG_IDX;
@@ -211,7 +212,9 @@ public class TxLog implements CheckpointListener {
             long treeRoot;
 
             if ((treeRoot = reuseList1.takeRecycledPage()) == 0L)
-                treeRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, FLAG_IDX);
+                treeRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, FLAG_IDX, PageCategory.META);
+            else
+                pageMemory.getPageMetric().pageFromReuseList(PageCategory.META);
 
             tree = new TxLogTree(
                 txLogName,

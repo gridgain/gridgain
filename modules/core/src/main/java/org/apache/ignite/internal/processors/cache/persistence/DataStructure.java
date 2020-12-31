@@ -21,12 +21,13 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
-import org.apache.ignite.internal.pagemem.PageIdAllocator;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RecycleRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
@@ -72,6 +73,11 @@ public abstract class DataStructure {
     /** */
     protected final byte pageFlag;
 
+    /** */
+    protected final int partition;
+
+    protected final PagesMetric pageMetric;
+
     /**
      * @param cacheGrpId Cache group ID.
      * @param grpName Cache group name.
@@ -88,7 +94,8 @@ public abstract class DataStructure {
         IgniteWriteAheadLogManager wal,
         PageLockListener lockLsnr,
         PageIoResolver pageIoRslvr,
-        byte pageFlag
+        byte pageFlag,
+        int partition
     ) {
         assert pageMem != null;
 
@@ -99,6 +106,8 @@ public abstract class DataStructure {
         this.lockLsnr = lockLsnr == null ? NOOP_LSNR : lockLsnr;
         this.pageIoRslvr = pageIoRslvr;
         this.pageFlag = pageFlag;
+        this.partition = partition;
+        pageMetric = pageMem.getPageMetric();
     }
 
     /**
@@ -145,8 +154,10 @@ public abstract class DataStructure {
                 pageId = reuseList.takeRecycledPage();
 
             // Recycled. "pollFreePage" result should be reinitialized to move rotatedId to itemId.
-            if (pageId != 0)
+            if (pageId != 0) {
+                pageMetric.pageFromReuseList(pageCategory());
                 pageId = reuseList.initRecycledPage(pageId, pageFlag, null);
+            }
         }
 
         if (pageId == 0)
@@ -168,7 +179,15 @@ public abstract class DataStructure {
      * @throws IgniteCheckedException If failed.
      */
     protected long allocatePageNoReuse() throws IgniteCheckedException {
-        return pageMem.allocatePage(grpId, PageIdAllocator.INDEX_PARTITION, FLAG_IDX);
+        return pageMem.allocatePage(grpId, partition, pageFlag, pageCategory());
+    }
+
+
+    /**
+     * @return Page category.
+     */
+    protected PageCategory pageCategory() {
+        return partition == INDEX_PARTITION ? PageCategory.INDEX : PageCategory.DATA;
     }
 
     /**

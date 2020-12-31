@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.tree;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -130,5 +131,10 @@ public class PendingEntriesTree extends BPlusTree<PendingRow, PendingRow> {
         PendingRow row = io.getLookupRow(this, pageAddr, idx);
 
         return flag == WITHOUT_KEY ? row : row.initKey(grp);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected PageCategory pageCategory() {
+        return PageCategory.DATA;
     }
 }
