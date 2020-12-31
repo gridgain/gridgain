@@ -43,6 +43,7 @@ import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.communication.IgniteIoTestMessage;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.ssl.GridSslMeta;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -50,6 +51,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
+import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.TcpHandshakeExecutor;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
@@ -62,6 +64,7 @@ import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -98,6 +101,9 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     /** */
     private CacheConfiguration ccfg;
 
+    /** */
+    private long failureDetectionTimeout = 8_000;
+
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -118,7 +124,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setFailureDetectionTimeout(8_000);
+        cfg.setFailureDetectionTimeout(failureDetectionTimeout);
 
         cfg.setCommunicationSpi(
             new TestCommunicationSpi()
@@ -186,6 +192,47 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         RESPOND_TO_INVERSE_REQUEST.set(true);
 
         executeCacheTestWithUnreachableClient(false);
+    }
+
+    /**
+     *  Verifies that server threads don't wait for full failure detection timeout
+     *  for client that failed right after requesting inverse comm connection.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-32087")
+    public void testClientFailureDuringInverseConnectionRequest() throws Exception {
+        UNREACHABLE_DESTINATION.set(UNRESOLVED_HOST);
+        failureDetectionTimeout = 30_000;
+        RESPOND_TO_INVERSE_REQUEST.set(false);
+        forceClientToSrvConnections = true;
+
+        startGrids(SRVS_NUM);
+
+        IgniteEx srv = grid(SRVS_NUM - 1);
+
+        IgniteEx client = startClientGrid(SRVS_NUM);
+
+        GridTestUtils.runAsync(() -> {
+            srv.context().io().sendIoTest(client.localNode(), new byte[10], false);
+        });
+
+        TcpCommunicationSpi commSpi = (TcpCommunicationSpi) srv.configuration().getCommunicationSpi();
+        ConnectionClientPool clientPool = U.field(commSpi, "clientPool");
+        Map<ConnectionKey, GridFutureAdapter<?>> clientFuts = U.field(clientPool, "clientFuts");
+
+        assertTrue(GridTestUtils.waitForCondition(() -> clientFuts.size() == 1, 10_000));
+
+        UUID clientId = grid(SRVS_NUM).localNode().id();
+
+        ConnectionKey key = clientFuts.keySet().stream().findFirst().get();
+
+        assertTrue(clientId.equals(key.nodeId()));
+
+        stopGrid(SRVS_NUM, true);
+
+        assertTrue(GridTestUtils.waitForCondition(clientFuts::isEmpty, 10_000));
     }
 
     /**
@@ -414,6 +461,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         assertTrue(lsnr.check());
     }
+
+
 
     /**
      * No server threads hang even if client doesn't respond to inverse connection request.

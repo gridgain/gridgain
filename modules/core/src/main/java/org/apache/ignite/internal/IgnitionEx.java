@@ -2566,6 +2566,8 @@ public class IgnitionEx {
                                     catch (MalformedURLException ignore) {
                                         // No-op.
                                     }
+                                } else {
+                                    url = getClass().getClassLoader().getResource("META-INF/ignite-log4j2.xml");
                                 }
                             }
 
@@ -2574,8 +2576,6 @@ public class IgnitionEx {
 
                                 cfgLog = (IgniteLogger)ctor.newInstance(url);
                             }
-                            else
-                                cfgLog = (IgniteLogger)log4jCls.newInstance();
                         }
                         catch (Exception e) {
                             log4jInitErr = e;

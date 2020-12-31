@@ -33,6 +33,7 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.processors.monitoring.opencensus.AbstractTracingTest.IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_PROCESS_ATOMIC_DEFERRED_UPDATE_RESPONSE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_PROCESS_ATOMIC_UPDATE_REQUEST;
@@ -66,8 +67,8 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
  * </ul>
  */
 @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
+@WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
 public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
-
     /** Client node. */
     private IgniteEx client;
 
@@ -89,7 +90,7 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
 
         awaitPartitionMapExchange();
 
-        grid(0).tracingConfiguration().set(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(Scope.CACHE_API_WRITE).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());
@@ -378,7 +379,7 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicPutAsyncTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).putAsync("One",1);
+        client.cache(ATOMIC_CACHE).putAsync("One",1).get();
 
         handler().flush();
 
@@ -496,7 +497,7 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
                 put("One", 1);
                 put("Two", 2);
                 put("Three", 3);
-            }});
+            }}).get();
 
         handler().flush();
 
@@ -889,9 +890,9 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicRemoveAsyncTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).putAsync("One",1);
+        client.cache(ATOMIC_CACHE).putAsync("One",1).get();
 
-        client.cache(ATOMIC_CACHE).removeAsync("One");
+        client.cache(ATOMIC_CACHE).removeAsync("One").get();
 
         handler().flush();
 
@@ -1009,14 +1010,14 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
                 put("One", 1);
                 put("Two", 2);
                 put("Three", 3);
-            }});
+            }}).get();
 
         client.cache(ATOMIC_CACHE).removeAllAsync(
             new HashSet<String>() {{
                 add("One");
                 add("Two");
                 add("Three");
-            }});
+            }}).get();
 
         handler().flush();
 
@@ -1171,10 +1172,11 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testCacheAtomicRemoveAsyncWithValidValueTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).putAsync("One",1);
+        client.cache(ATOMIC_CACHE).putAsync("One",1).get();
 
-        client.cache(ATOMIC_CACHE).removeAsync("One", 1);
+        client.cache(ATOMIC_CACHE).removeAsync("One", 1).get();
 
         handler().flush();
 

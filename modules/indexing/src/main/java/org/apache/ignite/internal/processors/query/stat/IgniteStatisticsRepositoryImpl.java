@@ -232,11 +232,8 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl getLocalStatistics(StatsKey key) {
-        if (locStats == null) {
-            log.warning("Unable to get local statistics for " + key + " on non server node.");
-
+        if (locStats == null)
             return null;
-        }
 
         return locStats.get(key);
     }
