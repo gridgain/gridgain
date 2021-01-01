@@ -19,8 +19,10 @@ package org.apache.ignite.internal.processors.query.h2.twostep;
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
+
 import javax.cache.CacheException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.gridgain.internal.h2.index.Cursor;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.result.SearchRow;
@@ -102,4 +104,14 @@ interface Reducer {
          */
         int compareRows(SearchRow rowData, SearchRow compare);
     }
+
+    /**
+     * Set memory tracker for reducer.
+     */
+    void memoryTracker(H2MemoryTracker memoryTracker);
+
+    /**
+     * @return Memory tracker.
+     */
+    H2MemoryTracker memoryTracker();
 }

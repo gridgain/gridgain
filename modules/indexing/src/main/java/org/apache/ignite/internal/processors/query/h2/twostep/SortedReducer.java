@@ -498,7 +498,12 @@ public class SortedReducer extends AbstractReducer {
 
                 // Fetch stream.
                 while (stream.hasNext()) {
-                    fetched.add(requireNonNull(stream.next()));
+                    Row r = requireNonNull(stream.next());
+
+                    if (memTracker != null)
+                         memTracker.reserve(r.getMemory());
+
+                    fetched.add(r);
 
                     // Evict block if we've fetched too many rows.
                     if (fetched.size() == MAX_FETCH_SIZE) {
