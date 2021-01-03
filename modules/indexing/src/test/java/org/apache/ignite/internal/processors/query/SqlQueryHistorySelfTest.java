@@ -375,7 +375,7 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
 
         cache.query(new SqlFieldsQuery("select * from String")).getAll();
 
-        checkQueryBooleanParams(false);
+        checkQueryBooleanParams(false, false);
     }
 
     /**
@@ -383,16 +383,18 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSqlQueryHistoryCheckQueryParams() {
-        IgniteCache<Integer, String> cache = queryNode().context().cache().jcache("A");
+        IgniteEx node = queryNode();
+
+        IgniteCache<Integer, String> cache = node.context().cache().jcache("A");
 
         cache.query(new SqlFieldsQuery("select * from String")
             .setDistributedJoins(true)
             .setEnforceJoinOrder(true)
             .setLazy(true)
-            .setLocal(true)
+            .setLocal(!node.localNode().isClient())
         ).getAll();
 
-        checkQueryBooleanParams(true);
+        checkQueryBooleanParams(true, !node.localNode().isClient());
     }
 
     /**
@@ -504,8 +506,9 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
 
     /**
      * @param exp Expected.
+     * @param loc Query.
      */
-    private void checkQueryBooleanParams(boolean exp) {
+    private void checkQueryBooleanParams(boolean exp, boolean loc) {
         Collection<QueryHistory> metrics = ((IgniteH2Indexing)queryNode().context().query().getIndexing())
             .runningQueryManager().queryHistoryMetrics().values();
 
@@ -515,7 +518,7 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
 
         assertEquals(exp, hist.distributedJoins());
         assertEquals(exp, hist.enforceJoinOrder());
-        assertEquals(exp, hist.local());
+        assertEquals(loc, hist.local());
         assertEquals(exp, hist.lazy());
     }
 
