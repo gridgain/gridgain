@@ -740,14 +740,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 cctx.shared().database().checkpointReadLock();
 
                 try {
-                    KeyCacheObject key = it.next().key();
+                    CacheDataRow row = it.next();
+
+                    KeyCacheObject key = row.key();
 
                     try {
                         GridCacheEntryEx entry = cctx.cache().entryEx(key);
 
+                        // Need unswapped entry for clear method to check if it's a tombstone.
+                        entry.unswap(row);
+
                         entry.clear(obsoleteVer, readers);
                     }
-                    catch (GridDhtInvalidPartitionException ignore) {
+                    catch (GridDhtInvalidPartitionException | GridCacheEntryRemovedException ignore) {
                         // Ignore.
                     }
                     catch (IgniteCheckedException e) {

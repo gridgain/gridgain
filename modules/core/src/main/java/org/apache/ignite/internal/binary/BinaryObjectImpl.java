@@ -244,7 +244,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         if (compressedArr != null)
             return;
 
-        if (entryCompressionCfg == null) {
+        if (entryCompressionCfg == null || cacheObjectType() == TOMBSTONE) {
             compressedArr = UNCOMPRESSED;
 
             return;
