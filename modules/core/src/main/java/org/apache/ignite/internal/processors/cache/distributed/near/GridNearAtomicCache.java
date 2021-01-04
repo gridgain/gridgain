@@ -74,7 +74,7 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
  */
 public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
     /** Max remove history depth for resolving put-remove reordering issues. */
-    private static final int ATOMIC_NEAR_CACHE_RMV_HISTORY_SIZE =
+    private final int atomicNearCacheRmvHistSize =
         IgniteSystemProperties.getInteger("ATOMIC_NEAR_CACHE_RMV_HISTORY_SIZE", 1024);
 
     /** */
@@ -614,7 +614,7 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
 
         rmvQueue.add(new T2<>(entry.key(), ver));
 
-        while (rmvQueue.sizex() > ATOMIC_NEAR_CACHE_RMV_HISTORY_SIZE) {
+        while (rmvQueue.sizex() > atomicNearCacheRmvHistSize) {
             T2<KeyCacheObject, GridCacheVersion> evicted = rmvQueue.pollFirst();
 
             if (evicted != null)

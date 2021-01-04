@@ -42,7 +42,7 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
  */
 public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdapter {
     /** Ttl cleanup worker thread sleep interval, ms. */
-    private static final long CLEANUP_WORKER_SLEEP_INTERVAL =
+    private final long cleanupWorkerSleepInterval =
         IgniteSystemProperties.getLong("CLEANUP_WORKER_SLEEP_INTERVAL", 500);
 
     /** Limit of expired entries processed by worker for certain cache in one pass. */
@@ -227,7 +227,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                     updateHeartbeat();
 
                     if (!expiredRemains.get())
-                        U.sleep(CLEANUP_WORKER_SLEEP_INTERVAL);
+                        U.sleep(cleanupWorkerSleepInterval);
 
                     onIdle();
                 }
