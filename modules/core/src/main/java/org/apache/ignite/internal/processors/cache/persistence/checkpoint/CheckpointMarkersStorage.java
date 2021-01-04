@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,24 +141,28 @@ public class CheckpointMarkersStorage {
     }
 
     /**
-     * Wal truncate callBack.
+     * Wal truncate callback.
      *
-     * @param highBound WALPointer.
+     * @param highBound Upper bound.
+     * @throws IgniteCheckedException If failed.
      */
-    public void removeCheckpointsUntil(WALPointer highBound) throws IgniteCheckedException {
-        List<CheckpointEntry> removedFromHistory = history().onWalTruncated(highBound);
+    public void removeCheckpointsUntil(@Nullable WALPointer highBound) throws IgniteCheckedException {
+        List<CheckpointEntry> rmvFromHist = history().onWalTruncated(highBound);
 
-        for (CheckpointEntry cp : removedFromHistory)
+        for (CheckpointEntry cp : rmvFromHist)
             removeCheckpointFiles(cp);
     }
 
     /**
      * Logs and clears checkpoint history after checkpoint finish.
+     *
+     * @param chp Finished checkpoint.
+     * @throws IgniteCheckedException If failed.
      */
     public void onCheckpointFinished(Checkpoint chp) throws IgniteCheckedException {
-        List<CheckpointEntry> removedFromHistory = history().onCheckpointFinished(chp);
+        List<CheckpointEntry> rmvFromHist = history().onCheckpointFinished(chp);
 
-        for (CheckpointEntry cp : removedFromHistory)
+        for (CheckpointEntry cp : rmvFromHist)
             removeCheckpointFiles(cp);
     }
 

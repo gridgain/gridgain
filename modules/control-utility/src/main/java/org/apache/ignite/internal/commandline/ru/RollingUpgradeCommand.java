@@ -18,6 +18,7 @@ package org.apache.ignite.internal.commandline.ru;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
@@ -40,7 +41,7 @@ import static org.apache.ignite.internal.commandline.ru.RollingUpgradeSubCommand
 /**
  * Represents a command associated with rolling upgrade functionality.
  */
-public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
+public class RollingUpgradeCommand extends AbstractCommand<RollingUpgradeArguments> {
     /** Empty list. */
     private static final String EMPTY_LIST = CommandLogger.INDENT + "none";
 

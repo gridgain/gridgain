@@ -379,27 +379,37 @@ public class ConnectionClientPool {
 
             fut = triggerFut;
 
-            try {
-                connRequestor.request(node, connIdx);
+            if (nodeGetter.apply(node.id()) != null) {
+                try {
+                    connRequestor.request(node, connIdx);
 
-                long failTimeout = cfg.failureDetectionTimeoutEnabled()
-                    ? cfg.failureDetectionTimeout()
-                    : cfg.connectionTimeout();
+                    long failTimeout = cfg.failureDetectionTimeoutEnabled()
+                        ? cfg.failureDetectionTimeout()
+                        : cfg.connectionTimeout();
 
-                fut.get(failTimeout);
+                    fut.get(failTimeout);
+                }
+                catch (Throwable triggerException) {
+                    IgniteSpiException spiE = new IgniteSpiException(e);
+
+                    spiE.addSuppressed(triggerException);
+
+                    String msg = "Failed to wait for establishing inverse communication connection from node " + node;
+
+                    log.warning(msg, spiE);
+
+                    fut.onDone(spiE);
+
+                    throw spiE;
+                }
             }
-            catch (Throwable triggerException) {
-                IgniteSpiException spiE = new IgniteSpiException(e);
+            else {
+                ClusterTopologyCheckedException topE = new ClusterTopologyCheckedException("Failed to send message " +
+                    "(node left topology): " + node);
 
-                spiE.addSuppressed(triggerException);
+                fut.onDone(topE);
 
-                String msg = "Failed to wait for establishing inverse communication connection from node " + node;
-
-                log.warning(msg, spiE);
-
-                fut.onDone(spiE);
-
-                throw spiE;
+                throw topE;
             }
         }
         else {
@@ -715,6 +725,19 @@ public class ConnectionClientPool {
                 }
             }
         }
+
+        ClusterTopologyCheckedException topE = new ClusterTopologyCheckedException("Failed to wait for " +
+            "establishing inverse connection (node left topology): " + nodeId);
+
+        clientFuts.entrySet().stream()
+            .filter(e -> e.getKey().nodeId().equals(nodeId))
+            .forEach(e -> {
+                if (log.isDebugEnabled())
+                    log.debug("Cancelling inverse connection request (node left topology): " + e.getKey());
+
+                e.getValue().onDone(topE);
+            }
+        );
     }
 
     /**
