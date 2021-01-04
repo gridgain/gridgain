@@ -826,7 +826,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
             try {
-                ((IgniteClusterEx)ignite.cluster()).tag(newTag);
+                ignite.cluster().tag(newTag);
             }
             catch (IgniteCheckedException e) {
                 return false;

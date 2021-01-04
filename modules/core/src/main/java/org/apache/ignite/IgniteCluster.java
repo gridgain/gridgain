@@ -39,6 +39,11 @@ import org.apache.ignite.lang.IgniteFuture;
  */
 public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     /**
+     * Maximum length of {@link IgniteCluster#tag()} tag.
+     */
+    public static final int MAX_TAG_LENGTH = 280;
+
+    /**
      * Gets local grid node.
      *
      * @return Local grid node.
@@ -548,6 +553,29 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @see #enableWal(String)
      */
     public boolean isWalEnabled(String cacheName);
+
+    /**
+     * User-defined tag describing the cluster.
+     *
+     * @return Current tag value same across all nodes of the cluster..
+     */
+    public String tag();
+
+    /**
+     * Enables user to add a specific label to the cluster e.g. to describe purpose of the cluster
+     * or any its characteristics.
+     * Tag is set cluster-wide,
+     * value set on one node will be distributed across all nodes (including client nodes) in the cluster.
+     *
+     * Maximum tag length is limited by {@link #MAX_TAG_LENGTH} value.
+     *
+     * @param tag New tag to be set.
+     *
+     * @throws IgniteCheckedException In case tag change is requested on inactive cluster
+     *  or concurrent tag change request was completed before the current one.
+     *  Also provided tag is checked for max length.
+     */
+    public void tag(String tag) throws IgniteCheckedException;
 
     /**
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
