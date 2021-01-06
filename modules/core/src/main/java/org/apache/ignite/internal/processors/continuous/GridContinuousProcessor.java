@@ -180,12 +180,10 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
-
-        System.out.println("@@@@@@@@@@@@@@@@@@@@@@@: " + ctx.igniteInstanceName());
         ctx.systemView().registerView(CQ_SYS_VIEW, CQ_SYS_VIEW_DESC,
             new ContinuousQueryViewWalker(),
             new ContinuousQueriesCollection(new ReadOnlyCollectionView2X<>(rmtInfos.entrySet(), locInfos.entrySet()), ctx.igniteInstanceName()),
-            e -> e /*new ContinuousQueryView(e.getKey(), e.getValue())*/);
+            e -> e);
 
         discoProtoVer = ctx.discovery().mutableCustomMessages() ? 1 : 2;
 

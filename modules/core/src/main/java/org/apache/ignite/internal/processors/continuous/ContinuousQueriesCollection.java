@@ -18,10 +18,8 @@ public class ContinuousQueriesCollection extends AbstractCollection<ContinuousQu
     /** init collections only for size */
     private final Collection<?> coll;
 
+    /** local ignite instance name */
     private final String name;
-
-    //@IgniteInstanceResource
-    //private Ignite ignite;
 
     /** */
     public ContinuousQueriesCollection(Collection<?> coll, String name) {
