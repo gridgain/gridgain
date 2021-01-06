@@ -44,14 +44,84 @@ public class ContinuousQueryView {
     /** Routine id. */
     private final UUID routineId;
 
+    private UUID nodeId;
+    private String cacheName;
+    private String topic;
+    private int bufferSize;
+    private long interval;
+    private boolean autoUnsubscribe;
+    private boolean isEvent;
+    private boolean isMessaging;
+    private boolean isQuery;
+    private boolean keepBinary;
+    private boolean notifyExisting;
+    private boolean oldValueRequired;
+    private long lastSendTime;
+    private boolean delayedRegister;
+    private String localListener;
+    private String remoteFilter;
+    private String remoteTransformer;
+    private String localTransformedListener;
+
     /**
      * @param routineId Routine id.
      * @param qry Query info.
      */
     public ContinuousQueryView(UUID routineId, RoutineInfo qry) {
+        CacheContinuousQueryHandler hnd0 = cacheHandler();
+
         this.qry = qry;
         this.hnd = qry.handler();
         this.routineId = routineId;
+
+        this.nodeId = qry.nodeId();
+        this.cacheName = hnd.cacheName();
+        this.topic = toStringSafe(hnd.orderedTopic());
+        this.bufferSize = qry.bufferSize();
+        this.interval = qry.interval();
+        this.autoUnsubscribe = qry.autoUnsubscribe();
+        this.isEvent = hnd.isEvents();
+        this.isMessaging = hnd.isMessaging();
+        this.isQuery = hnd.isQuery();
+        this.keepBinary = hnd.keepBinary();
+        this.notifyExisting = hnd0 != null && hnd0.notifyExisting();;
+        this.oldValueRequired = hnd0 != null && hnd0.oldValueRequired();
+        this.lastSendTime = qry.lastSendTime();
+        this.delayedRegister = qry.delayedRegister();
+
+        //set local listener
+        if (hnd0 == null || hnd0.localListener() == null)
+            this.localListener = null;
+        else
+            this.localListener = toStringSafe(hnd0.localListener());
+
+        //set remote filter
+        try {
+            if (hnd0 == null || hnd0.getEventFilter() == null)
+                this.remoteFilter = null;
+            else
+                this.remoteFilter = toStringSafe(hnd0.getEventFilter());
+        }
+        catch (IgniteCheckedException e) {
+            this.remoteFilter = null;
+        }
+
+        //set remote transformer
+        try {
+            if (hnd0 == null || hnd0.getTransformer() == null)
+                this.remoteTransformer = null;
+            else
+                this.remoteTransformer = toStringSafe(hnd0.getTransformer());
+        }
+        catch (IgniteCheckedException e) {
+            this.remoteTransformer = null;
+        }
+
+        //set local transformed listener
+        if (hnd0 == null || hnd0.localTransformedEventListener() == null)
+            this.localTransformedListener = null;
+        else
+            this.localTransformedListener = toStringSafe(hnd0.localTransformedEventListener());
     }
 
     /** @return Continuous query id. */

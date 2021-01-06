@@ -534,8 +534,8 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
                 for (int i = 0; i < 100; i++)
                     cache.put(i, i);
 
-                checkContinuousQueryView(originNode, origQrys, true);
-                checkContinuousQueryView(originNode, remoteQrys, false);
+                checkContinuousQueryView(originNode, origQrys);
+                checkContinuousQueryView(originNode, remoteQrys);
             }
 
             assertEquals(0, origQrys.size());
@@ -544,7 +544,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void checkContinuousQueryView(IgniteEx g, SystemView<ContinuousQueryView> qrys, boolean loc) {
+    private void checkContinuousQueryView(IgniteEx g, SystemView<ContinuousQueryView> qrys) {
         assertEquals(1, qrys.size());
 
         for (ContinuousQueryView cq : qrys) {
@@ -552,12 +552,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
             assertEquals(100, cq.bufferSize());
             assertEquals(1000, cq.interval());
             assertEquals(g.localNode().id(), cq.nodeId());
-
-            if (loc)
-                assertTrue(cq.localListener().startsWith(getClass().getName()));
-            else
-                assertNull(cq.localListener());
-
+            assertTrue(cq.localListener().startsWith(getClass().getName()));
             assertTrue(cq.remoteFilter().startsWith(getClass().getName()));
             assertNull(cq.localTransformedListener());
             assertNull(cq.remoteTransformer());

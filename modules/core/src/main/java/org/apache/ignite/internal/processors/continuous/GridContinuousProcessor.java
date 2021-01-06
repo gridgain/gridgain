@@ -37,6 +37,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
@@ -179,10 +180,12 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
+
+        System.out.println("@@@@@@@@@@@@@@@@@@@@@@@: " + ctx.igniteInstanceName());
         ctx.systemView().registerView(CQ_SYS_VIEW, CQ_SYS_VIEW_DESC,
             new ContinuousQueryViewWalker(),
-            new ReadOnlyCollectionView2X<>(rmtInfos.entrySet(), locInfos.entrySet()),
-            e -> new ContinuousQueryView(e.getKey(), e.getValue()));
+            new ContinuousQueriesCollection(new ReadOnlyCollectionView2X<>(rmtInfos.entrySet(), locInfos.entrySet()), ctx.igniteInstanceName()),
+            e -> e /*new ContinuousQueryView(e.getKey(), e.getValue())*/);
 
         discoProtoVer = ctx.discovery().mutableCustomMessages() ? 1 : 2;
 
@@ -424,6 +427,15 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
 
         if (data != null)
             dataBag.addNodeSpecificData(CONTINUOUS_PROC.ordinal(), data);
+    }
+
+    /** @return Collection of local continuous routines */
+    public Collection<Map.Entry<UUID, LocalRoutineInfo>> getLocalContinuousQueryRoutines() {
+        return
+                copyLocalInfos(locInfos).
+                        entrySet().stream().
+                        filter(e -> e.getValue().handler().isQuery()).
+                        collect(Collectors.toSet());
     }
 
     /**
