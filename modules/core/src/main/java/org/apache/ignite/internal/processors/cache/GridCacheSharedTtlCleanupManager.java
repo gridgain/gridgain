@@ -191,6 +191,12 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                         cctx.exchange().affinityReadyFuture(AffinityTopologyVersion.ZERO).get();
                     }
                     catch (IgniteCheckedException ex) {
+                        if (cctx.kernalContext().isStopping()) {
+                            isCancelled = true;
+
+                            return; // Node is stopped before affinity has prepared.
+                        }
+
                         throw new IgniteException("Failed to wait for initialization topology [err="
                             + ex.getMessage() + ']', ex);
                     }
