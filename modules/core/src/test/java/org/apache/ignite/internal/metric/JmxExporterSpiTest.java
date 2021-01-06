@@ -447,12 +447,7 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
             assertEquals(100, cq.get("bufferSize"));
             assertEquals(1000L, cq.get("interval"));
             assertEquals(origNode.localNode().id().toString(), cq.get("nodeId"));
-
-            if (origNode.localNode().id().equals(checkNode.localNode().id()))
-                assertTrue(cq.get("localListener").toString().startsWith(getClass().getName()));
-            else
-                assertNull(cq.get("localListener"));
-
+            assertTrue(cq.get("localListener").toString().startsWith(getClass().getName()));
             assertTrue(cq.get("remoteFilter").toString().startsWith(getClass().getName()));
             assertNull(cq.get("localTransformedListener"));
             assertNull(cq.get("remoteTransformer"));
