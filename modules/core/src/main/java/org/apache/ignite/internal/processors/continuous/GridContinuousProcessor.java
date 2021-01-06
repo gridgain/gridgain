@@ -96,7 +96,6 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData;
-import org.apache.ignite.spi.systemview.view.ContinuousQueryView;
 import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.thread.OomExceptionHandler;
 import org.jetbrains.annotations.Nullable;

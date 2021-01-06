@@ -38,7 +38,7 @@ public class Reader {
             System.out.println(delimiter);
             System.out.println(delimiter);
 
-            for(String[] ar : values) {
+            for (String[] ar : values) {
                 String row = constructTableRow(ar, lengths);
 
                 System.out.println(row);
@@ -51,11 +51,11 @@ public class Reader {
     private static void fillValuesAndLengths(ResultSet rs, List<String[]> list, Map<Integer, Integer> lengths) throws Exception {
         while (rs.next()) {
             String[] ar = new String[HEADERS.length];
-            for(int i = 0; i < HEADERS.length; i++) {
-                String v = rs.getString(i+1) + "";
+            for (int i = 0; i < HEADERS.length; i++) {
+                String v = rs.getString(i + 1) + "";
                 ar[i] = v;
                 Integer len = lengths.getOrDefault(i, 0);
-                if(len < v.length())
+                if (len < v.length())
                     lengths.put(i, v.length());
             }
             list.add(ar);
@@ -64,7 +64,7 @@ public class Reader {
 
     private static String constructTableRow(String[] vals, Map<Integer, Integer> lengths) {
         StringBuilder sb = new StringBuilder("| ");
-        for(int i = 0; i < vals.length; i++) {
+        for (int i = 0; i < vals.length; i++) {
             String vRaw = vals[i];
             Integer len = lengths.get(i);
             String v = normLen(vRaw, len);
@@ -77,9 +77,9 @@ public class Reader {
 
     private static String getDelimiter(Map<Integer, Integer> lengths) {
         StringBuilder line = new StringBuilder("+");
-        for(int i = 0; i < HEADERS.length; i++) {
+        for (int i = 0; i < HEADERS.length; i++) {
             Integer len = lengths.get(i);
-            line.append(normLen("-", len+2, "-"));
+            line.append(normLen("-", len + 2, "-"));
             line.append("+");
         }
 
@@ -98,9 +98,9 @@ public class Reader {
         return normLen(v, l," ");
     }
 
-    private static Map<Integer, Integer> lengthsMap(){
+    private static Map<Integer, Integer> lengthsMap() {
         Map<Integer, Integer> map = new HashMap<>();
-        for(int i = 0; i < HEADERS.length; i++)
+        for (int i = 0; i < HEADERS.length; i++)
             map.put(i, HEADERS[i].length());
 
         return map;
@@ -109,7 +109,7 @@ public class Reader {
     private static String getHeader(Map<Integer, Integer> lengths) {
         StringBuilder sb = new StringBuilder("| ");
 
-        for(int i = 0; i < HEADERS.length; i++) {
+        for (int i = 0; i < HEADERS.length; i++) {
             Integer len = lengths.get(i);
             String v = normLen(HEADERS[i], len);
             sb.append(v);

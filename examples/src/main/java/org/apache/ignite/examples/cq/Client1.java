@@ -48,7 +48,7 @@ public class Client1 {
 
     public static class CQListener implements CacheEntryUpdatedListener<Integer, String> {
         @Override public void onUpdated(Iterable<CacheEntryEvent<? extends Integer, ? extends String>> events) throws CacheEntryListenerException {
-            for(CacheEntryEvent<? extends Integer, ? extends String> e: events)
+            for (CacheEntryEvent<? extends Integer, ? extends String> e: events)
                 System.out.println("Updated: " + e);
         }
     }

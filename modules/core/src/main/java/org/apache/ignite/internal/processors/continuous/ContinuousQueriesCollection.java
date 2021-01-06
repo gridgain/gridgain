@@ -48,6 +48,9 @@ public class ContinuousQueriesCollection extends AbstractCollection<ContinuousQu
 
     /** callable for collecting local routine info from grid */
     public static class ContinuousQueriesCollectorCallable implements IgniteCallable<Collection<ContinuousQueryView>> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** autowired ignite instance */
         @IgniteInstanceResource
         private Ignite ignite;
