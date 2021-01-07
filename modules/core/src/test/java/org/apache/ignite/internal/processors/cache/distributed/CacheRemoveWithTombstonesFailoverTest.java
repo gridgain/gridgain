@@ -51,8 +51,9 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 /**
  * Tests to check failover scenarios over tombstones.
  */
-@WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "5000")
 @RunWith(Parameterized.class)
+@WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "3000")
+@WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "10000000")
 public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTest {
     /** */
     private static final String TS_METRIC_NAME = "Tombstones";
@@ -146,11 +147,12 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
             crd.cache(DEFAULT_CACHE_NAME).remove(i); // Should create tombstones on both nodes.
         }
 
-        // Cache group context is not initialized properly on demander while calculating metric. TODO FIXME
-        long tsCnt = demander.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME))
-            .topology().localPartitions().stream().mapToLong(part -> part.dataStore().tombstonesCount()).sum();
+        // Cache group context is not initialized properly on demander while calculating metric.
+        long tsCnt = demander.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).offheap().tombstonesCount();
 
         Assert.assertEquals(keysWithTombstone.size(), tsCnt);
+
+        doSleep(3000);
 
         // Resume rebalance.
         TestRecordingCommunicationSpi.spi(crd).stopBlock();
@@ -158,14 +160,9 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
         // Partitions should be in OWNING state.
         awaitPartitionMapExchange();
 
-        tsCnt = demander.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME))
-            .topology().localPartitions().stream().mapToLong(part -> part.dataStore().tombstonesCount()).sum();
+        assertPartitionsSame(idleVerify(demander, DEFAULT_CACHE_NAME));
 
-        // Tombstones shouldn't yet be removed.
-        Assert.assertEquals(keysWithTombstone.size(), tsCnt);
-
-        stopGrid(1);
-        stopGrid(0);
+        stopAllGrids();
 
         // Startup demander with tombstones in inactive state.
         demander = startGrid(1);
@@ -173,8 +170,7 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
         final int grpId = groupIdForCache(demander, DEFAULT_CACHE_NAME);
 
         // Tombstone metrics are unavailable before join to topology, using internal api.
-        tsCnt = demander.context().cache().cacheGroup(grpId).topology().localPartitions()
-            .stream().mapToLong(part -> part.dataStore().tombstonesCount()).sum();
+        tsCnt = demander.context().cache().cacheGroup(grpId).offheap().tombstonesCount();
 
         Assert.assertEquals(keysWithTombstone.size(), tsCnt);
 
@@ -188,9 +184,7 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);
 
         // Tombstones should be removed after join to topology.
-        GridTestUtils.waitForCondition(() -> tombstoneMetric1.value() == 0, 30_000);
-
-        assertEquals(0, tombstoneMetric1.value());
+        assertTrue(GridTestUtils.waitForCondition(() -> tombstoneMetric1.value() == 0, 30_000));
     }
 
     /**

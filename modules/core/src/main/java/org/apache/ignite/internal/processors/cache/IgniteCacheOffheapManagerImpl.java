@@ -1368,12 +1368,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         int expRmvCnt = cctx.config().isEagerTtl() ? expireInternal(cctx, c, amount, false) : 0;
 
-        long tsCnt = tombstonesCount();
+        long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
-        if (tsCnt == 0)
-            return amount != -1 && expRmvCnt >= amount;
-
-        long tsLimit = ctx.ttl().tombstonesLimit();
+        // We need to keep tombstones during rebalancing because they are used to handle put-remove conflicts.
+        if (tsCnt <= tsLimit && !ctx.exchange().lastFinishedFuture().rebalanced())
+            return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
 
         if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);

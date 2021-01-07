@@ -57,7 +57,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
  * Tests if tombstones are correctly used for providing versions for removed entries.
  */
 @RunWith(Parameterized.class)
-@WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "5000")
+@WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "3000")
 public class CacheRemoveWithTombstonesPreloadingTest extends GridCommonAbstractTest {
     /** Test parameters. */
     @Parameterized.Parameters(name = "persistenceEnabled={0}, historicalRebalance={1}")
@@ -94,18 +94,16 @@ public class CacheRemoveWithTombstonesPreloadingTest extends GridCommonAbstractT
 
         cfg.setCommunicationSpi(commSpi);
 
-        if (persistence) {
-            DataStorageConfiguration dsCfg = new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(
-                    new DataRegionConfiguration()
-                        .setInitialSize(256L * 1024 * 1024)
-                        .setMaxSize(256L * 1024 * 1024)
-                        .setPersistenceEnabled(true)
-                )
-                .setWalSegmentSize(4 * 1024 * 1024);
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration()
+                    .setInitialSize(256L * 1024 * 1024)
+                    .setMaxSize(256L * 1024 * 1024)
+                    .setPersistenceEnabled(persistence)
+            )
+            .setWalSegmentSize(4 * 1024 * 1024);
 
-            cfg.setDataStorageConfiguration(dsCfg);
-        }
+        cfg.setDataStorageConfiguration(dsCfg);
 
         return cfg;
     }
@@ -209,14 +207,18 @@ public class CacheRemoveWithTombstonesPreloadingTest extends GridCommonAbstractT
             cache0.remove(i);
         }
 
+        // Tombstones shouldn't be cleared because there are moving partition.
         final LongMetric tombstoneMetric0 = ignite0.context().metric().registry(
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
 
         final LongMetric tombstoneMetric1 = ignite1.context().metric().registry(
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric("Tombstones");
 
-        assertEquals(keysWithTombstone.size(), tombstoneMetric0.value());
-        assertEquals(keysWithTombstone.size(), tombstoneMetric1.value());
+        assertEquals("Tombstones shouldn't be cleared during rebalancing",
+            keysWithTombstone.size(), tombstoneMetric0.value());
+
+        assertEquals("Tombstones shouldn't be cleared during rebalancing",
+            keysWithTombstone.size(), tombstoneMetric1.value());
 
         // Update some of removed keys, this should remove tombstones.
         for (int i = 0; i < KEYS; i += 128) {
@@ -224,6 +226,8 @@ public class CacheRemoveWithTombstonesPreloadingTest extends GridCommonAbstractT
 
             cache0.put(i, i);
         }
+
+        doSleep(3000); // Sleep until ts lifetime.
 
         assertTrue("Keys with tombstones should exist", !keysWithTombstone.isEmpty());
 
@@ -234,7 +238,9 @@ public class CacheRemoveWithTombstonesPreloadingTest extends GridCommonAbstractT
 
         awaitPartitionMapExchange();
 
-        IgniteCache<Integer, Integer> cache1 = ignite(1).cache(DEFAULT_CACHE_NAME);
+        assertPartitionsSame(idleVerify(ignite1, DEFAULT_CACHE_NAME));
+
+        IgniteCache<Integer, Integer> cache1 = ignite1.cache(DEFAULT_CACHE_NAME);
 
         for (int i = 0; i < KEYS; i++) {
             if (keysWithTombstone.contains(i))
@@ -244,9 +250,7 @@ public class CacheRemoveWithTombstonesPreloadingTest extends GridCommonAbstractT
         }
 
         // Tombstones should be removed after once rebalance is completed.
-        GridTestUtils.waitForCondition(() -> tombstoneMetric1.value() == 0, 30_000);
-
-        assertEquals(0, tombstoneMetric1.value());
+        assertTrue(GridTestUtils.waitForCondition(() -> tombstoneMetric1.value() == 0, 30_000));
     }
 
     /**
