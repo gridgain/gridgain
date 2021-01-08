@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.timeout;
+package org.apache.ignite.platform;
 
-/**
- *
- */
-public class DefaultQueryTimeoutThickJavaUpdateLazyTest extends DefaultQueryTimeoutThickJavaTest {
+/** Test value object. */
+public class Department {
     /** */
-    public DefaultQueryTimeoutThickJavaUpdateLazyTest() {
-        super(true, true);
+    private String name;
+
+    /** */
+    public String getName() {
+        return name;
+    }
+
+    /** */
+    public void setName(String name) {
+        this.name = name;
     }
 }

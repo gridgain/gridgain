@@ -14,14 +14,37 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.timeout;
+package org.apache.ignite.platform;
 
-/**
- *
- */
-public class DefaultQueryTimeoutThickJavaLazyTest extends DefaultQueryTimeoutThickJavaTest {
+import java.util.Objects;
+
+/** Test key object. */
+public class Key {
     /** */
-    public DefaultQueryTimeoutThickJavaLazyTest() {
-        super(false, true);
+    private long id;
+
+    /** */
+    public Key(long id) {
+        this.id = id;
+    }
+
+    /** */
+    public long getId() {
+        return id;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        Key key = (Key)o;
+        return id == key.id;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(id);
     }
 }

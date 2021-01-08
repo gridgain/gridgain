@@ -14,16 +14,37 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.timeout;
+package org.apache.ignite.platform;
 
-import org.apache.ignite.internal.processors.query.timeout.DefaultQueryTimeoutThickJavaTest;
+import java.util.Objects;
 
-/**
- *
- */
-public class DefaultQueryTimeoutThickJavaUpdateTest extends DefaultQueryTimeoutThickJavaTest {
+/** Test value object. */
+public class Value {
     /** */
-    public DefaultQueryTimeoutThickJavaUpdateTest() {
-        super(true, false);
+    private String val;
+
+    /** */
+    public Value(String val) {
+        this.val = val;
+    }
+
+    /** */
+    public String getVal() {
+        return val;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        Value value = (Value)o;
+        return Objects.equals(val, value.val);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(val);
     }
 }
