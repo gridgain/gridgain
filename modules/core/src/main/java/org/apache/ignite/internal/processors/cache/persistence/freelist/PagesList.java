@@ -208,7 +208,7 @@ public abstract class PagesList extends DataStructure {
         byte pageFlag
     ) {
         super(cacheId, null, pageMem, wal, lockLsnr, DEFAULT_PAGE_IO_RESOLVER, pageFlag,
-            PageIdUtils.partId(metaPageId));
+            pageFlag == FLAG_IDX ? INDEX_PARTITION : PageIdUtils.partId(metaPageId));
 
         this.name = name;
         this.buckets = buckets;
