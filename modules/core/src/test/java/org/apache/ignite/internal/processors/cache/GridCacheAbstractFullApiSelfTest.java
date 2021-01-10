@@ -70,6 +70,8 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -78,12 +80,15 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.CIX1;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -394,9 +399,58 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
         assertEquals(0, cache.localSize());
         assertEquals(0, cache.size());
+
+//        int ret = 3;
+//
+//        while(cache.size(ONHEAP) != 0 && ret-- > 0) {
+//            log.info("DBG: wait " + ret);
+//
+//            doSleep(500);
+//        }
+
+        //if (cache.size(ONHEAP) != 0) {
+        Collection<String> res = grid(0).compute(grid(0).cluster().forServers()).broadcast(new CollectInfo(cache.getName()));
+
+        log.info(res.toString());
+        //}
+
         assertEquals(0, cache.size(ONHEAP));
 
         dfltIgnite = null;
+    }
+
+    private static class CollectInfo implements IgniteCallable<String> {
+        private final String name;
+
+        @IgniteInstanceResource
+        private IgniteEx ggex;
+
+        public CollectInfo(String name) {
+            this.name = name;
+        }
+
+        @Override public String call() throws Exception {
+            SB sb = new SB();
+
+            @Nullable IgniteInternalCache<Object, Object> locCache = ggex.cachex(name);
+            GridCacheContext<Object, Object> ctx = locCache.context();
+
+            AffinityTopologyVersion topVer = ctx.topology().readyTopologyVersion();
+
+            sb.a("DBG: dumping heap map node=" + ggex.name() + ", topVer=" + topVer + ", cache=" + name);
+            sb.a('\n');
+
+            for (GridDhtLocalPartition locPart : ctx.topology().currentLocalPartitions()) {
+                if (locPart.primary(topVer)) {
+                    Collection<GridCacheMapEntry> entries = locPart.entries(ctx.cacheId());
+
+                    for (GridCacheMapEntry entry : entries)
+                        sb.a("    " + entry.toString() + ", deleted=" + entry.deleted() + ", part=" + locPart.id() + ", state=" + locPart.state() + '\n');
+                }
+            }
+
+            return sb.toString();
+        }
     }
 
     /**
