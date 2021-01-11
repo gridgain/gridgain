@@ -367,6 +367,37 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks that metrics contain default accessible values (distributedJoins, enforceJoinOrder, lazy, local).
+     */
+    @Test
+    public void testSqlQueryHistoryCheckQueryParamsDefaultValue() {
+        IgniteCache<Integer, String> cache = queryNode().context().cache().jcache("A");
+
+        cache.query(new SqlFieldsQuery("select * from String")).getAll();
+
+        checkQueryBooleanParams(false, false);
+    }
+
+    /**
+     * Checks that default query parameters are overridden.
+     */
+    @Test
+    public void testSqlQueryHistoryCheckQueryParams() {
+        IgniteEx node = queryNode();
+
+        IgniteCache<Integer, String> cache = node.context().cache().jcache("A");
+
+        cache.query(new SqlFieldsQuery("select * from String")
+            .setDistributedJoins(true)
+            .setEnforceJoinOrder(true)
+            .setLazy(true)
+            .setLocal(!node.localNode().isClient())
+        ).getAll();
+
+        checkQueryBooleanParams(true, !node.localNode().isClient());
+    }
+
+    /**
      * Test metrics for Sql queries.
      */
     @Test
@@ -471,6 +502,24 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
         try (Connection conn = GridTestUtils.connect(queryNode(), null); Statement stmt = conn.createStatement()) {
             stmt.execute(qry);
         }
+    }
+
+    /**
+     * @param exp Expected.
+     * @param loc Query.
+     */
+    private void checkQueryBooleanParams(boolean exp, boolean loc) {
+        Collection<QueryHistory> metrics = ((IgniteH2Indexing)queryNode().context().query().getIndexing())
+            .runningQueryManager().queryHistoryMetrics().values();
+
+        assertEquals(1, metrics.size());
+
+        QueryHistory hist = metrics.stream().findAny().get();
+
+        assertEquals(exp, hist.distributedJoins());
+        assertEquals(exp, hist.enforceJoinOrder());
+        assertEquals(loc, hist.local());
+        assertEquals(exp, hist.lazy());
     }
 
     /**
