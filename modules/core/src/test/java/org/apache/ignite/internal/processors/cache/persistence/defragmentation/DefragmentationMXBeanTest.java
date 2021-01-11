@@ -267,8 +267,8 @@ public class DefragmentationMXBeanTest extends GridCommonAbstractTest {
         return getMxBean(
             name,
             "Defragmentation",
-            DefragmentationMXBeanImpl.class,
-            DefragmentationMXBean.class
+            DefragmentationMXBean.class,
+            DefragmentationMXBeanImpl.class
         );
     }
 
