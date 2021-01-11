@@ -382,6 +382,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
         assertEquals(0, cache.localSize());
         assertEquals(0, cache.size());
+        assertEquals(0, cache.size(ONHEAP));
 
         super.beforeTest();
 
@@ -400,19 +401,11 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
         assertEquals(0, cache.localSize());
         assertEquals(0, cache.size());
 
-//        int ret = 3;
-//
-//        while(cache.size(ONHEAP) != 0 && ret-- > 0) {
-//            log.info("DBG: wait " + ret);
-//
-//            doSleep(500);
-//        }
+        if (!waitForCondition(() -> cache.size(ONHEAP) == 0, 3_000)) {
+            Collection<String> res = grid(0).compute(grid(0).cluster().forServers()).broadcast(new CollectInfo(cache.getName()));
 
-        //if (cache.size(ONHEAP) != 0) {
-        Collection<String> res = grid(0).compute(grid(0).cluster().forServers()).broadcast(new CollectInfo(cache.getName()));
-
-        log.info(res.toString());
-        //}
+            log.info("DBG: " + res.toString());
+        }
 
         assertEquals(0, cache.size(ONHEAP));
 
@@ -437,17 +430,20 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
             AffinityTopologyVersion topVer = ctx.topology().readyTopologyVersion();
 
-            sb.a("DBG: dumping heap map node=" + ggex.name() + ", topVer=" + topVer + ", cache=" + name);
-            sb.a('\n');
 
-            for (GridDhtLocalPartition locPart : ctx.topology().currentLocalPartitions()) {
-                if (locPart.primary(topVer)) {
-                    Collection<GridCacheMapEntry> entries = locPart.entries(ctx.cacheId());
+            Iterable<Cache.Entry<Object, Object>> entries1 = locCache.localEntries(new CachePeekMode[]{ONHEAP});
 
-                    for (GridCacheMapEntry entry : entries)
-                        sb.a("    " + entry.toString() + ", deleted=" + entry.deleted() + ", part=" + locPart.id() + ", state=" + locPart.state() + '\n');
-                }
-            }
+            int cnt = 0;
+
+            for (Cache.Entry<Object, Object> objectObjectEntry : entries1)
+                cnt++;
+
+            sb.a("Node=" + ggex.name() + ", topVer=" + topVer + ", cache=" + name +
+                ", near=" + ctx.isNear() +
+                ", locSizeOnheap=" + locCache.localSizeLong(new CachePeekMode[]{ONHEAP}) +
+                ", locSizeAll=" + locCache.localSizeLong(new CachePeekMode[]{ALL}) +
+                ", entsOnheapIter=" + cnt
+            );
 
             return sb.toString();
         }
