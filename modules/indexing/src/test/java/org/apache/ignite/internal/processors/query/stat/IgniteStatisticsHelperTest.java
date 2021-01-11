@@ -165,25 +165,25 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
      *
      * @throws IgniteCheckedException In case of errors.
      */
-    @Test
-    public void testGenerateCollectionRequests() throws IgniteCheckedException {
-        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = helper.generateCollectionRequests(null);
-
-        assertEquals(2, reqs.size());
-
-        StatisticsAddrRequest<StatisticsGatheringRequest> req1 = reqs.stream().filter(req -> node1.equals(req.targetNodeId()))
-                .findAny().orElse(null);
-        StatisticsAddrRequest<StatisticsGatheringRequest> req2 = reqs.stream().filter(req -> node2.equals(req.targetNodeId()))
-                .findAny().orElse(null);
-
-        assertNotNull(req1);
-        assertNotNull(req2);
-        assertTrue(reqs.stream().allMatch(req -> req.req().keys().size() == 2));
-        assertTrue(Arrays.equals(nodeParts.get(node1), req1.req().keys().get(k1)));
-        assertTrue(Arrays.equals(nodeParts.get(node1), req1.req().keys().get(k2)));
-        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().keys().get(k1)));
-        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().keys().get(k2)));
-    }
+//    @Test
+//    public void testGenerateCollectionRequests() throws IgniteCheckedException {
+//        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = helper.generateCollectionRequests(null);
+//
+//        assertEquals(2, reqs.size());
+//
+//        StatisticsAddrRequest<StatisticsGatheringRequest> req1 = reqs.stream().filter(req -> node1.equals(req.targetNodeId()))
+//                .findAny().orElse(null);
+//        StatisticsAddrRequest<StatisticsGatheringRequest> req2 = reqs.stream().filter(req -> node2.equals(req.targetNodeId()))
+//                .findAny().orElse(null);
+//
+//        assertNotNull(req1);
+//        assertNotNull(req2);
+//        assertTrue(reqs.stream().allMatch(req -> req.req().keys().size() == 2));
+//        assertTrue(Arrays.equals(nodeParts.get(node1), req1.req().keys().get(k1)));
+//        assertTrue(Arrays.equals(nodeParts.get(node1), req1.req().keys().get(k2)));
+//        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().keys().get(k1)));
+//        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().keys().get(k2)));
+//    }
 
 //    /**
 //     * Test generateCollectionRequests for two keys and two nodes with only one failed partition and check that

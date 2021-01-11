@@ -186,7 +186,7 @@ public class IgniteStatisticsHelper {
      * @param partId Partition to process.
      * @param isPrimary if {@code true} only primary nodes will be choosen, if {@code false} - only backups.
      */
-    protected static  void fillPartition(
+    protected static void fillPartition(
         Map<UUID, List<Integer>> res,
         List<List<ClusterNode>> assignments,
         int partId,

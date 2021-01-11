@@ -64,7 +64,6 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
         GridDiscoveryManager discoMgr = Mockito.mock(GridDiscoveryManager.class);
         GridQueryProcessor qryProcessor = Mockito.mock(GridQueryProcessor.class);
         GridCacheProcessor cacheProcessor = Mockito.mock(GridCacheProcessor.class);
-        IgniteCacheObjectProcessor objProcessor = Mockito.mock(IgniteCacheObjectProcessor.class);
         StatisticsGatheringRequestCrawler reqClawler = Mockito.mock(StatisticsGatheringRequestCrawler.class);
         IgniteThreadPoolExecutor gatMgmtPool = Mockito.mock(IgniteThreadPoolExecutor.class);
 
@@ -75,7 +74,7 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
         IgniteStatisticsStore inMemoryStore = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
 
         StatisticsGathering statGath = new StatisticsGatheringImpl(schemaMgr, discoMgr, qryProcessor, cacheProcessor,
-            objProcessor, reqClawler, gatMgmtPool, cts -> log);
+            reqClawler, gatMgmtPool, cts -> log);
 
         IgniteStatisticsManagerImpl statMgr = Mockito.mock(IgniteStatisticsManagerImpl.class);
         IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, statMgr, statGath,

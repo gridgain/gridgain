@@ -68,7 +68,6 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
     private final ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests =
             new ConcurrentHashMap<>();
 
-
     /**
      * Constructor.
      *
@@ -168,8 +167,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             remainingRequests.putAll(reqsMap);
 
             // Process local request
-            StatisticsGatheringRequest locReq = reqs.stream().filter(
-                    r -> locNodeId.equals(r.targetNodeId())).map(StatisticsAddrRequest::req).findAny().orElse(null);
+            StatisticsGatheringRequest locReq = findLocal(reqs);
             if (locReq != null)
                 statMgr.gatherLocalObjectStatisticsAsync(gatId, locReq.reqId(), locReq.keys(), locReq.parts());
 
@@ -218,7 +216,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         Map<StatisticsKeyMessage, ObjectStatisticsImpl> statistics,
         int[] parts
     ) {
-        StatisticsAddrRequest<StatisticsGatheringRequest> req =  remainingRequests.remove(reqId);
+        StatisticsAddrRequest<StatisticsGatheringRequest> req = remainingRequests.remove(reqId);
         if (req == null) {
             if (log.isDebugEnabled())
                 log.debug(String.format("Dropping results to cancelled collection request %s", reqId));
@@ -240,8 +238,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
                             stat.getKey().schema(), stat.getKey().obj(), reqId, gatId));
 
             }
-        };
-
+        }
 
         if (locNodeId.equals(req.sndNodeId()))
             statMgr.registerLocalResult(gatId, data, parts.length);
@@ -287,11 +284,6 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             if (reqToCancel == null)
                 return;
 
-            // TODOOOOOOo
-            // TODO: switch from forEach + huga lambda to foreach
-            // TODO: use return from compute
-            // TODO: replace with new version
-
             nodesReqs.computeIfAbsent(reqToCancel.targetNodeId(), nodeId -> new ArrayList<>()).add(reqToCancel.req().reqId());
         });
 
@@ -320,10 +312,13 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
      * @param keys Keys to clear statistics by.
      */
     public void sendClearStatistics(Collection<StatisticsKeyMessage> keys) {
-        // TODO: local node
 
         try {
             Collection<StatisticsAddrRequest<StatisticsClearRequest>> msgs = helper.generateClearRequests(keys);
+            StatisticsClearRequest localReq = findLocal(msgs);
+            if (localReq != null)
+                statMgr.clearObjectStatisticsLocal(localReq.keys());
+
             Collection<StatisticsAddrRequest<StatisticsClearRequest>> failedMsgs = sendRequests(msgs);
 
             if (!F.isEmpty(failedMsgs))
@@ -334,6 +329,18 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             if (log.isDebugEnabled())
                 log.debug(String.format("Unable to send clear statistics request by keys %s", keys));
         }
+    }
+
+    /**
+     * Find local request from specified addressed request and return it.
+     *
+     * @param msgs Collection of addressed messages to find local one.
+     * @param <T> Type of messages.
+     * @return Local message of {@code null} if there are no message targeted to local node.
+     */
+    private <T> T findLocal(Collection<StatisticsAddrRequest<T>> msgs) {
+        return msgs.stream().filter(
+                r -> locNodeId.equals(r.targetNodeId())).map(StatisticsAddrRequest::req).findAny().orElse(null);
     }
 
     /** {@inheritDoc} */
@@ -522,7 +529,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         else if (msg instanceof StatisticsClearRequest)
             msgMgmtPool.submit(() -> clearObjectStatistics(nodeId, (StatisticsClearRequest)msg));
         else
-            log.warning("Unknown msg " + msg +  " in statistics topic " + TOPIC_STATISTICS + " from node " + nodeId);
+            log.warning("Unknown msg " + msg + " in statistics topic " + TOPIC_STATISTICS + " from node " + nodeId);
     }
 
     /**
@@ -558,7 +565,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             Collection<StatisticsAddrRequest<StatisticsPropagationMessage>> msgs =
                     helper.generateGlobalPropagationMessages(globalStats);
 
-            Collection<StatisticsAddrRequest<StatisticsPropagationMessage>> failedMsgs =  sendRequests(msgs);
+            Collection<StatisticsAddrRequest<StatisticsPropagationMessage>> failedMsgs = sendRequests(msgs);
 
             if (!F.isEmpty(failedMsgs))
                 if (log.isDebugEnabled())

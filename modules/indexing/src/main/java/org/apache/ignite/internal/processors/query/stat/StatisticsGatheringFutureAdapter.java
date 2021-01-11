@@ -31,7 +31,7 @@ public class StatisticsGatheringFutureAdapter<R> extends GridFutureAdapter<R> im
      *
      * @param colId Collection id.
      */
-    public StatisticsGatheringFutureAdapter(UUID colId){
+    public StatisticsGatheringFutureAdapter(UUID colId) {
         this.colId = colId;
     }
 

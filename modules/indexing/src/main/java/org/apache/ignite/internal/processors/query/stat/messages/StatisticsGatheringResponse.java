@@ -103,6 +103,7 @@ public class StatisticsGatheringResponse implements Message {
     public int[] parts() {
         return parts;
     }
+
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);

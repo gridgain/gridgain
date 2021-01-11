@@ -154,21 +154,16 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      */
     private void clearObjectStatistics(Collection<StatisticsKeyMessage> keys) throws IgniteCheckedException {
         statCrawler.sendClearStatisticsAsync(keys);
-        /*Collection<StatisticsAddrRequest<StatisticsClearRequest>> clearReqs = helper.generateClearRequests(keys);
+    }
 
-        Collection<StatisticsAddrRequest<StatisticsClearRequest>> failedReqs = sendRequests(clearReqs);
-        if (!F.isEmpty(failedReqs))
-            if (log.isInfoEnabled())
-                log.info(String.format("Unable to send all statistics clear requests to %d nodes for keys %s",
-                    failedReqs.size(), keys));
-
-
-        UUID locId = ctx.localNodeId();
-        StatisticsAddrRequest<StatisticsClearRequest> locMsg = clearReqs.stream().filter(m -> locId.equals(m.targetNodeId())).findAny()
-                .orElse(null);
-        if (null != locMsg)
-            for (StatisticsKeyMessage locKey : locMsg.req().keys())
-                clearObjectStatisticsLocal(locKey);*/
+    /**
+     * Clear local statistics by specified keys.
+     *
+     * @param keys Keys to clear statistics by.
+     */
+    public void clearObjectsStatisticsLocal(Collection<StatisticsKeyMessage> keys) {
+        for (StatisticsKeyMessage key : keys)
+            clearObjectStatisticsLocal(key);
     }
 
     /**
@@ -325,7 +320,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      *
      * @param gatId Gathering id to cancel.
      */
-    public void cancelLocalStatisticsGathering(UUID gatId){
+    public void cancelLocalStatisticsGathering(UUID gatId) {
        StatisticsGatheringContext stCtx = currColls.remove(gatId);
        if (stCtx != null)
            stCtx.doneFut().cancel();

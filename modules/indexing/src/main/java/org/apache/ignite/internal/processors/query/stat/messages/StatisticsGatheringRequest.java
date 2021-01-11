@@ -24,7 +24,6 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
-import java.util.Set;
 import java.util.UUID;
 
 /**

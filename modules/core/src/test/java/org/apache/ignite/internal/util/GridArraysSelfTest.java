@@ -154,7 +154,7 @@ public class GridArraysSelfTest extends GridCommonAbstractTest {
         int[] b1 = new int[]{1};
         int[] b123 = new int[]{1, 2, 3};
         int[] b23 = new int[]{2, 3};
-        int[] b234 = new int []{2, 3, 4};
+        int[] b234 = new int[]{2, 3, 4};
         int[] b456 = new int[]{4, 5, 6};
 
         // 1) One of arrays as null array.

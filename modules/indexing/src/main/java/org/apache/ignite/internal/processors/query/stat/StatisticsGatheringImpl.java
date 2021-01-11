@@ -26,7 +26,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
@@ -80,7 +79,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
 
     /** Ignite Thread pool executor to do statistics collection tasks. */
     private final IgniteThreadPoolExecutor gatMgmtPool;
-
 
     /**
      * Constructor.
@@ -263,7 +261,7 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
                     if (cancelled.get())
                         return null;
 
-                    GridCacheContext cacheCtx = (row.cacheId() == CU.UNDEFINED_CACHE_ID) ?  grp.singleCacheContext() :
+                    GridCacheContext cacheCtx = (row.cacheId() == CU.UNDEFINED_CACHE_ID) ? grp.singleCacheContext() :
                             grp.shared().cacheContext(row.cacheId());
 
                     if (cacheCtx == null)
@@ -394,7 +392,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
 
         statCrawler.sendGatheringResponseAsync(reqId, res, collectedParts.stream().mapToInt(Integer::intValue).toArray());
     }
-
 
     /**
      * Aggregate partition level statistics to local level one or local statistics to global one.
