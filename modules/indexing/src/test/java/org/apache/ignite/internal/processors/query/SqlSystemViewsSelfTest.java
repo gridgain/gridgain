@@ -606,7 +606,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         assertFalse((Boolean)res0.get(7));
 
         // LAZY
-        assertEquals(activateLazyByDflt, (boolean)res0.get(8));
+        assertEquals(activateLazyByDflt, res0.get(8));
 
         String id0 = (String)res0.get(1);
         String id1 = (String)res1.get(1);
