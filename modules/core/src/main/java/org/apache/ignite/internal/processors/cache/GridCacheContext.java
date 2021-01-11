@@ -439,7 +439,7 @@ public class GridCacheContext<K, V> implements Externalizable {
             assert locMacs != null;
         }
 
-        tombstoneTtl = IgniteSystemProperties.getLong(DEFAULT_TOMBSTONE_TTL, defaultTombstoneTtl());
+        tombstoneTtl = IgniteSystemProperties.getLong(DEFAULT_TOMBSTONE_TTL, 24L * 60 * 60 * 1000);
     }
 
     /**
