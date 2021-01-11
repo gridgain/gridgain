@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.UUID;
 
 /**
- * Statistics request with target node id.
+ * Statistics request with sender and target node ids.
  */
 public class StatisticsAddrRequest<T> {
     /** Wrapped request. */
@@ -28,18 +28,18 @@ public class StatisticsAddrRequest<T> {
     private final UUID targetNodeId;
 
     /** Sender node id. */
-    private final UUID senderNodeId;
+    private final UUID sndNodeId;
 
     /**
      * Constructor.
      *
      * @param req Wrapped request.
-     * @param senderNodeId Sender node id.
+     * @param sndNodeId Sender node id.
      * @param targetNodeId Target node id.
      */
-    public StatisticsAddrRequest(T req, UUID senderNodeId, UUID targetNodeId) {
+    public StatisticsAddrRequest(T req, UUID sndNodeId, UUID targetNodeId) {
         this.req = req;
-        this.senderNodeId = senderNodeId;
+        this.sndNodeId = sndNodeId;
         this.targetNodeId = targetNodeId;
     }
 
@@ -53,8 +53,8 @@ public class StatisticsAddrRequest<T> {
     /**
      * @return Sender node id.
      */
-    public UUID senderNodeId() {
-        return senderNodeId;
+    public UUID sndNodeId() {
+        return sndNodeId;
     }
 
     /**

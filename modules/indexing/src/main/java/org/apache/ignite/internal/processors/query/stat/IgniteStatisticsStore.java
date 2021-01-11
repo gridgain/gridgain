@@ -87,5 +87,5 @@ public interface IgniteStatisticsStore {
      *
      * @param repository Ignite statistics repository.
      */
-    public void setRepository(IgniteStatisticsRepository repository);
+    public void repository(IgniteStatisticsRepository repository);
 }

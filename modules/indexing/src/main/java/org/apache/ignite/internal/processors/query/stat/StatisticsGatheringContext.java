@@ -4,6 +4,7 @@ import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMe
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -37,25 +38,11 @@ public class StatisticsGatheringContext {
      */
     public StatisticsGatheringContext(UUID gatId, Set<StatisticsKeyMessage> keys, int remainingParts) {
         this.gatId = gatId;
-        collectedStatistics = null;
+        collectedStatistics = new HashMap<>();
         this.keys = keys;
         this.remainingParts = remainingParts;
         this.doneFut = new StatisticsGatheringFutureAdapter(gatId);;
     }
-
-    /**
-     * Constructor.
-     *
-     * @param keys Keys to collect statistics by.
-     */
-    /*public StatisticsGatheringContext(
-            Set<StatisticsKeyMessage> keys
-    ) {
-        gatId = UUID.randomUUID();
-        collectedStatistics = new ConcurrentHashMap<>();
-        this.keys = keys;
-        this.doneFut = new StatisticsGatheringFutureAdapter(gatId);;
-    }*/
 
     /**
      * @return Collected statistics map.
@@ -78,16 +65,12 @@ public class StatisticsGatheringContext {
      * @param parts Total number of partitions in collected data.
      * @return {@code true} if all required partition collected, {@code false} otherwise.
      */
-    public boolean registerCollected(Map<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> objsData, int parts) {
+    public synchronized boolean registerCollected(
+        Map<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> objsData,
+        int parts
+    ) {
         for (Map.Entry<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> objData : objsData.entrySet())
-            collectedStatistics.compute(objData.getKey(), (k, v) -> {
-                if (v == null)
-                    v = new ArrayList<>();
-
-                v.addAll(objData.getValue());
-
-                return v;
-            });
+            collectedStatistics.computeIfAbsent(objData.getKey(), k -> new ArrayList<>()).addAll(objData.getValue());
 
         return decrement(parts);
     }

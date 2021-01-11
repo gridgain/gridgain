@@ -16,7 +16,6 @@
 package org.apache.ignite.internal.processors.query.stat.messages;
 
 import org.apache.ignite.internal.GridDirectCollection;
-import org.apache.ignite.internal.GridDirectMap;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
@@ -24,8 +23,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.Set;
+import java.util.Collection;
 import java.util.UUID;
 
 /**
@@ -46,7 +44,7 @@ public class StatisticsGatheringResponse implements Message {
 
     /** Set of collected local object statistics. */
     @GridDirectCollection(StatisticsObjectData.class)
-    private Set<StatisticsObjectData> data;
+    private Collection<StatisticsObjectData> data;
 
     /** Array of included partitions. */
     private int[] parts;
@@ -71,7 +69,7 @@ public class StatisticsGatheringResponse implements Message {
      * @param data Set of objects statistics.
      * @param parts Array of included partitions.
      */
-    public StatisticsGatheringResponse(UUID gatId, UUID reqId, Set<StatisticsObjectData> data, int[] parts) {
+    public StatisticsGatheringResponse(UUID gatId, UUID reqId, Collection<StatisticsObjectData> data, int[] parts) {
         this.gatId = gatId;
         this.reqId = reqId;
         this.data = data;
@@ -95,7 +93,7 @@ public class StatisticsGatheringResponse implements Message {
     /**
      * @return Set of object statistics.
      */
-    public Set<StatisticsObjectData> data() {
+    public Collection<StatisticsObjectData> data() {
         return data;
     }
 
@@ -109,6 +107,40 @@ public class StatisticsGatheringResponse implements Message {
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
+        if (!writer.isHeaderWritten()) {
+            if (!writer.writeHeader(directType(), fieldsCount()))
+                return false;
+
+            writer.onHeaderWritten();
+        }
+
+        switch (writer.state()) {
+            case 0:
+                if (!writer.writeCollection("data", data, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
+            case 1:
+                if (!writer.writeUuid("gatId", gatId))
+                    return false;
+
+                writer.incrementState();
+
+            case 2:
+                if (!writer.writeIntArray("parts", parts))
+                    return false;
+
+                writer.incrementState();
+
+            case 3:
+                if (!writer.writeUuid("reqId", reqId))
+                    return false;
+
+                writer.incrementState();
+
+        }
+
         return true;
     }
 
@@ -116,6 +148,43 @@ public class StatisticsGatheringResponse implements Message {
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
         reader.setBuffer(buf);
 
+        if (!reader.beforeMessageRead())
+            return false;
+
+        switch (reader.state()) {
+            case 0:
+                data = reader.readCollection("data", MessageCollectionItemType.MSG);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 1:
+                gatId = reader.readUuid("gatId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 2:
+                parts = reader.readIntArray("parts");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 3:
+                reqId = reader.readUuid("reqId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+        }
 
         return reader.afterMessageRead(StatisticsGatheringResponse.class);
     }
@@ -127,6 +196,6 @@ public class StatisticsGatheringResponse implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 3;
+        return 4;
     }
 }

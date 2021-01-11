@@ -18,10 +18,12 @@ package org.apache.ignite.internal.processors.query.stat.messages;
 import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 
@@ -43,7 +45,7 @@ public class StatisticsGatheringRequest implements Message {
 
     /** Keys to partitions to gather statistics by. */
     @GridDirectCollection(StatisticsKeyMessage.class)
-    private Set<StatisticsKeyMessage> keys;
+    private Collection<StatisticsKeyMessage> keys;
 
     /** Partitions to collect statistics by. */
     private int[] parts;
@@ -63,7 +65,7 @@ public class StatisticsGatheringRequest implements Message {
      * @param keys Keys to partitions to gather statistics by.
      * @param parts Partitions to collect statistics by.
      */
-    public StatisticsGatheringRequest(UUID gatId, UUID reqId, Set<StatisticsKeyMessage> keys, int[] parts) {
+    public StatisticsGatheringRequest(UUID gatId, UUID reqId, Collection<StatisticsKeyMessage> keys, int[] parts) {
         this.gatId = gatId;
         this.reqId = reqId;
         this.keys = keys;
@@ -87,7 +89,7 @@ public class StatisticsGatheringRequest implements Message {
     /**
      * @return Set of keys to gather statistics by.
      */
-    public Set<StatisticsKeyMessage> keys() {
+    public Collection<StatisticsKeyMessage> keys() {
         return keys;
     }
 
@@ -100,13 +102,86 @@ public class StatisticsGatheringRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
+        writer.setBuffer(buf);
+
+        if (!writer.isHeaderWritten()) {
+            if (!writer.writeHeader(directType(), fieldsCount()))
+                return false;
+
+            writer.onHeaderWritten();
+        }
+
+        switch (writer.state()) {
+            case 0:
+                if (!writer.writeUuid("gatId", gatId))
+                    return false;
+
+                writer.incrementState();
+
+            case 1:
+                if (!writer.writeCollection("keys", keys, MessageCollectionItemType.MSG))
+                    return false;
+
+                writer.incrementState();
+
+            case 2:
+                if (!writer.writeIntArray("parts", parts))
+                    return false;
+
+                writer.incrementState();
+
+            case 3:
+                if (!writer.writeUuid("reqId", reqId))
+                    return false;
+
+                writer.incrementState();
+
+        }
 
         return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
+        reader.setBuffer(buf);
 
+        if (!reader.beforeMessageRead())
+            return false;
+
+        switch (reader.state()) {
+            case 0:
+                gatId = reader.readUuid("gatId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 1:
+                keys = reader.readCollection("keys", MessageCollectionItemType.MSG);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 2:
+                parts = reader.readIntArray("parts");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 3:
+                reqId = reader.readUuid("reqId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+        }
 
         return reader.afterMessageRead(StatisticsGatheringRequest.class);
     }
@@ -118,7 +193,7 @@ public class StatisticsGatheringRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 3;
+        return 4;
     }
 
     /** {@inheritDoc} */

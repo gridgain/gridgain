@@ -300,7 +300,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     }
 
     /** {@inheritDoc} */
-    @Override public void setRepository(IgniteStatisticsRepository repository) {
+    @Override public void repository(IgniteStatisticsRepository repository) {
         this.repo = repository;
     }
 

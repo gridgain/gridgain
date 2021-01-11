@@ -90,7 +90,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     }
 
     /** {@inheritDoc} */
-    @Override public void setRepository(IgniteStatisticsRepository repository) {
+    @Override public void repository(IgniteStatisticsRepository repository) {
     }
 
     /** {@inheritDoc} */

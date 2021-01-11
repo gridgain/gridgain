@@ -5,8 +5,11 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.query.h2.SchemaManager;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringResponse;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
@@ -30,163 +33,132 @@ import java.util.stream.Collectors;
  * IgniteStatisticsRequestCollection unit tests.
  */
 public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
-//    /** */
-//    private static final UUID node1 = UUID.randomUUID();
-//
-//    /** */
-//    private static final UUID node2 = UUID.randomUUID();
-//
-//    /** */
-//    private static final UUID c1 = UUID.randomUUID();
-//
-//    /** */
-//    private static final UUID c2 = UUID.randomUUID();
-//
-//    /** */
-//    private static final UUID r1_1 = UUID.randomUUID();
-//
-//    /** */
-//    private static final UUID r1_2 = UUID.randomUUID();
-//
-//    /** */
-//    private static final UUID r1_3 = UUID.randomUUID();
-//
-//    /** */
-//    private static final UUID r2_1 = UUID.randomUUID();
-//
-//    /** */
-//    private static final StatisticsKeyMessage k1 = keyMsg(1);
-//
-//    /** */
-//    private static final StatisticsKeyMessage k2 = keyMsg(2, 1, 2);
-//
-//    /** */
-//    private static final StatisticsKeyMessage k3 = keyMsg(3, 1, 2);
-//
-//    /** */
-//    private static final Map<UUID, int[]> nodeParts;
-//
-//    /** */
-//    private static final CacheGroupContext cgc1;
-//
-//    /** */
-//    private static final CacheGroupContext cgc2;
-//
-//    /** */
-//    private static final CacheGroupContext cgc3;
-//
-//    static {
-//        nodeParts = new HashMap<>();
-//        int[] node1parts = new int[]{0, 2, 4, 6};
-//        int[] node2parts = new int[]{1, 3, 5, 7};
-//        nodeParts.put(node1, node1parts);
-//        nodeParts.put(node2, node2parts);
-//
-//        cgc1 = cgc(nodeParts, 0);
-//        cgc2 = cgc(nodeParts, 3);
-//        cgc3 = cgc(nodeParts, 0);
-//    }
-//
-//    /**
-//     * Extract failed keys to partitions map for single failed request.
-//     */
-//    @Test
-//    public void testExtractFailedOne() {
-//        StatisticsGatheringRequest r1 = new StatisticsGatheringRequest(c1, r1_1, new HashMap<>());
-//        StatisticsKeyMessage k1 = keyMsg(1, 1, 2, 3);
-//        r1.keys().put(k1, new int[]{100, 200, 300});
-//
-//        Map<StatisticsKeyMessage, int[]> extracted = IgniteStatisticsHelper.extractFailed(
-//                new StatisticsGatheringRequest[]{r1});
-//
-//        assertEquals(1, extracted.size());
-//        assertTrue(extracted.containsKey(k1));
-//        assertEquals(3, extracted.get(k1).length);
-//    }
-//
-//    /**
-//     * Extract failed keys to partitions map for multiple failed request.
-//     */
-//    @Test
-//    public void testExtractFailed() {
-//        StatisticsGatheringRequest r1 = new StatisticsGatheringRequest(c1, r1_1, new HashMap<>());
-//        StatisticsKeyMessage k1 = keyMsg(1, 1, 2, 3);
-//        r1.keys().put(k1, new int[]{100, 200, 300});
-//        StatisticsKeyMessage k2 = keyMsg(2, 2, 3, 4);
-//        r1.keys().put(k2, new int[]{100, 200, 300});
-//
-//        StatisticsGatheringRequest r2 = new StatisticsGatheringRequest(c1, r1_2, new HashMap<>());
-//        r2.keys().put(k1, new int[]{400});
-//
-//        StatisticsGatheringRequest r3 = new StatisticsGatheringRequest(c1, r1_3, new HashMap<>());
-//        r3.keys().put(k2, new int[]{500, 600, 800});
-//
-//        Map<StatisticsKeyMessage, int[]> extracted = IgniteStatisticsHelper.extractFailed(
-//                new StatisticsGatheringRequest[]{r1, r2, r3});
-//
-//        assertEquals(2, extracted.size());
-//        assertTrue(extracted.containsKey(k1));
-//        assertEquals(4, extracted.get(k1).length);
-//
-//        assertTrue(extracted.containsKey(k2));
-//        assertEquals(6, extracted.get(k2).length);
-//    }
-//
-//    /**
-//     * Test extraction failed of different collections requests.
-//     */
-//    @Test(expected = AssertionError.class)
-//    public void testExtractDifferentCollections() {
-//        StatisticsGatheringRequest r1 = new StatisticsGatheringRequest(c1, r1_1, new HashMap<>());
-//        StatisticsKeyMessage k1 = keyMsg(1, 1, 2, 3);
-//        r1.keys().put(k1, new int[]{1});
-//
-//        StatisticsGatheringRequest r2 = new StatisticsGatheringRequest(c2, r2_1, new HashMap<>());
-//        r1.keys().put(k1, new int[]{2});
-//
-//        Map<StatisticsKeyMessage, int[]> extracted = IgniteStatisticsHelper.extractFailed(
-//                new StatisticsGatheringRequest[]{r1, r2});
-//    }
-//
-//    /**
-//     * Generate test key message by some key numbers.
-//     *
-//     * @param keyId Object "id".
-//     * @param subId Columns "ids".
-//     * @return Generated test statistics key message.
-//     */
-//    private static StatisticsKeyMessage keyMsg(int keyId, int... subId) {
-//        List<String> cols = (subId == null) ? null : Arrays.stream(subId).boxed().map(s -> ("COL" + s))
-//                .collect(Collectors.toList());
-//        return new StatisticsKeyMessage("SCHEMA", "OBJECT" + keyId, cols);
-//    }
-//
-//    /**
-//     * Simple test to generate statistics collection requests for single key on single node.
-//     *
-//     * @throws IgniteCheckedException In case of errors.
-//     */
-//    @Test
-//    public void testGenerateCollectionRequestsSingle() throws IgniteCheckedException {
-//        UUID colId = UUID.randomUUID();
-//        StatisticsKeyMessage k1 = keyMsg(1);
-//        CacheGroupContext cgc1 = cgc(Collections.singletonMap(node1, new int[]{0, 1, 2, 3}), 0);
-//        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts =
-//            Collections.singletonMap(cgc1, Collections.singletonList(k1));
-//
-//
-//        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = IgniteStatisticsHelper
-//                .generateCollectionRequests(colId, Collections.singletonList(k1), null, grpContexts);
-//
-//        assertEquals(1, reqs.size());
-//
-//        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node1.equals(r.targetNodeId()))
-//                .findAny().orElse(null);
-//
-//        assertNotNull(req);
-//        assertTrue(Arrays.equals(new int[]{0, 1, 2, 3}, req.req().keys().get(k1)));
-//    }
-//
+    /** Schema. */
+    private static final String SCHEMA_NAME = "SCHEMA";
+
+    /** Local node id. */
+    private static final UUID LOC_NODE = UUID.randomUUID();
+
+    /** Schema map: table name to its cache group context. */
+    private static final Map<String, CacheGroupContext> schema = new HashMap<>();
+
+    /** Default helper instance to test. */
+    private static final IgniteStatisticsHelper helper;
+
+    /** */
+    private static final UUID node1 = UUID.randomUUID();
+
+    /** */
+    private static final UUID node2 = UUID.randomUUID();
+
+    /** */
+    private static final UUID c1 = UUID.randomUUID();
+
+    /** */
+    private static final UUID c2 = UUID.randomUUID();
+
+    /** */
+    private static final UUID r1_1 = UUID.randomUUID();
+
+    /** */
+    private static final UUID r1_2 = UUID.randomUUID();
+
+    /** */
+    private static final UUID r1_3 = UUID.randomUUID();
+
+    /** */
+    private static final UUID r2_1 = UUID.randomUUID();
+
+    /** */
+    private static final StatisticsKeyMessage k1 = keyMsg(1);
+
+    /** */
+    private static final StatisticsKeyMessage k2 = keyMsg(2, 1, 2);
+
+    /** */
+    private static final StatisticsKeyMessage k3 = keyMsg(3, 1, 2);
+
+    /** */
+    private static final Map<UUID, int[]> nodeParts;
+
+    /** */
+    private static final CacheGroupContext cgc1;
+
+    /** */
+    private static final CacheGroupContext cgc2;
+
+    /** */
+    private static final CacheGroupContext cgc3;
+
+    static {
+        SchemaManager schemaMgr = Mockito.mock(SchemaManager.class);
+        Mockito.when(schemaMgr.dataTable(Mockito.anyString(), Mockito.anyString())).thenAnswer(
+                invocation -> {
+                    String sch = (String) invocation.getArguments()[0];
+                    String obj = (String) invocation.getArguments()[1];
+                    if (!SCHEMA_NAME.equals(sch) || !schema.containsKey(obj))
+                        return null;
+
+                    GridCacheContext cacheCtx = Mockito.mock(GridCacheContext.class);
+                    Mockito.when(cacheCtx.group()).thenReturn(schema.get(obj));
+
+                    GridH2Table tbl = Mockito.mock(GridH2Table.class);
+                    Mockito.when(tbl.cacheContext()).thenReturn(cacheCtx);
+
+                    return tbl;
+                }
+        );
+        helper = new IgniteStatisticsHelper(LOC_NODE, schemaMgr, cls -> log);
+
+        nodeParts = new HashMap<>();
+        int[] node1parts = new int[]{0, 2, 4, 6};
+        int[] node2parts = new int[]{1, 3, 5, 7};
+        nodeParts.put(node1, node1parts);
+        nodeParts.put(node2, node2parts);
+
+        cgc1 = cgc(nodeParts, 0);
+        cgc2 = cgc(nodeParts, 3);
+        cgc3 = cgc(nodeParts, 0);
+    }
+
+
+    /**
+     * Generate test key message by some key numbers.
+     *
+     * @param keyId Object "id".
+     * @param subId Columns "ids".
+     * @return Generated test statistics key message.
+     */
+    private static StatisticsKeyMessage keyMsg(int keyId, int... subId) {
+        List<String> cols = (subId == null) ? null : Arrays.stream(subId).boxed().map(s -> ("COL" + s))
+                .collect(Collectors.toList());
+        return new StatisticsKeyMessage("SCHEMA", "OBJECT" + keyId, cols);
+    }
+
+    /**
+     * Simple test to generate statistics collection requests for single key on single node.
+     *
+     * @throws IgniteCheckedException In case of errors.
+     */
+    @Test
+    public void testGenerateCollectionRequestsSingle() throws IgniteCheckedException {
+        UUID gatId = UUID.randomUUID();
+        StatisticsKeyMessage k1 = keyMsg(1);
+        CacheGroupContext cgc1 = cgc(Collections.singletonMap(node1, new int[]{0, 1, 2, 3}), 0);
+        schema.put(k1.obj(), cgc1);
+
+        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = helper
+                .generateCollectionRequests(gatId, Collections.singletonList(k1), null);
+
+        assertEquals(1, reqs.size());
+
+        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node1.equals(r.targetNodeId()))
+                .findAny().orElse(null);
+
+        assertNotNull(req);
+        assertTrue(Arrays.equals(new int[]{0, 1, 2, 3}, req.req().parts()));
+    }
+
 //    /**
 //     * Test generateCollectionRequests for two keys and two nodes and check that generated requests contains all
 //     * required keys and partitions.
@@ -211,7 +183,7 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
 //        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().keys().get(k1)));
 //        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().keys().get(k2)));
 //    }
-//
+
 //    /**
 //     * Test generateCollectionRequests for two keys and two nodes with only one failed partition and check that
 //     * generated requests contains request to regenerate only that one partition.
@@ -300,61 +272,61 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
 //        assertEquals(2, calcNodeParts3.size());
 //    }
 //
-//    /**
-//     * Create mock for cache group context with given partition assignment.
-//     *
-//     * @param assignment Cache group partition assignment.
-//     * @param backups Number of backups (random node ids).
-//     * @return Cache group context.
-//     */
-//    private static CacheGroupContext cgc(Map<UUID, int[]> assignment, int backups) {
-//        AffinityTopologyVersion topVer = Mockito.mock(AffinityTopologyVersion.class);
-//
-//        GridCachePartitionExchangeManager exMgr = Mockito.mock(GridCachePartitionExchangeManager.class);
-//        Mockito.when(exMgr.readyAffinityVersion()).thenReturn(topVer);
-//
-//        GridCacheSharedContext csCtxt = Mockito.mock(GridCacheSharedContext.class);
-//        Mockito.when(csCtxt.exchange()).thenReturn(exMgr);
-//
-//        CacheGroupContext cgc = Mockito.mock(CacheGroupContext.class);
-//        Mockito.when(cgc.shared()).thenReturn(csCtxt);
-//
-//        GridAffinityAssignmentCache aaCache = Mockito.mock(GridAffinityAssignmentCache.class);
-//        List<List<ClusterNode>> partAssignment = makeAssignment(assignment, backups);
-//        Mockito.when(aaCache.assignments(Mockito.any(AffinityTopologyVersion.class))).thenReturn(partAssignment);
-//
-//        Mockito.when(cgc.affinity()).thenReturn(aaCache);
-//        return cgc;
-//    }
-//
-//    /**
-//     * Convert map nodeId to primary partitions to assignments lists.
-//     *
-//     * @param assignment Assignments as node partitions map.
-//     * @param backups Number of backups (random node ids).
-//     * @return Assignments as list of lists.
-//     */
-//    private static List<List<ClusterNode>> makeAssignment(Map<UUID, int[]> assignment, int backups) {
-//        int partCnt = assignment.values().stream().map(arr -> Arrays.stream(arr).max().getAsInt())
-//                .max(Integer::compareTo).orElse(null) + 1;
-//        List<List<ClusterNode>> partAssignment = Arrays.asList(new List[partCnt]);
-//
-//        for (Map.Entry<UUID, int[]> nodeParts : assignment.entrySet()) {
-//            for (int partId : nodeParts.getValue()) {
-//                assert partAssignment.get(partId) == null;
-//
-//                List<ClusterNode> partNodes = new ArrayList<>(backups + 1);
-//                partNodes.add(new GridTestNode(nodeParts.getKey()));
-//                for (int i = 0; i < backups; i++)
-//                    partNodes.add(new GridTestNode(UUID.randomUUID()));
-//
-//                partAssignment.set(partId, partNodes);
-//            }
-//        }
-//
-//        return partAssignment;
-//    }
-//
+    /**
+     * Create mock for cache group context with given partition assignment.
+     *
+     * @param assignment Cache group partition assignment.
+     * @param backups Number of backups (random node ids).
+     * @return Cache group context.
+     */
+    private static CacheGroupContext cgc(Map<UUID, int[]> assignment, int backups) {
+        AffinityTopologyVersion topVer = Mockito.mock(AffinityTopologyVersion.class);
+
+        GridCachePartitionExchangeManager exMgr = Mockito.mock(GridCachePartitionExchangeManager.class);
+        Mockito.when(exMgr.readyAffinityVersion()).thenReturn(topVer);
+
+        GridCacheSharedContext csCtxt = Mockito.mock(GridCacheSharedContext.class);
+        Mockito.when(csCtxt.exchange()).thenReturn(exMgr);
+
+        CacheGroupContext cgc = Mockito.mock(CacheGroupContext.class);
+        Mockito.when(cgc.shared()).thenReturn(csCtxt);
+
+        GridAffinityAssignmentCache aaCache = Mockito.mock(GridAffinityAssignmentCache.class);
+        List<List<ClusterNode>> partAssignment = makeAssignment(assignment, backups);
+        Mockito.when(aaCache.assignments(Mockito.any(AffinityTopologyVersion.class))).thenReturn(partAssignment);
+
+        Mockito.when(cgc.affinity()).thenReturn(aaCache);
+        return cgc;
+    }
+
+    /**
+     * Convert map nodeId to primary partitions to assignments lists.
+     *
+     * @param assignment Assignments as node partitions map.
+     * @param backups Number of backups (random node ids).
+     * @return Assignments as list of lists.
+     */
+    private static List<List<ClusterNode>> makeAssignment(Map<UUID, int[]> assignment, int backups) {
+        int partCnt = assignment.values().stream().map(arr -> Arrays.stream(arr).max().getAsInt())
+                .max(Integer::compareTo).orElse(null) + 1;
+        List<List<ClusterNode>> partAssignment = Arrays.asList(new List[partCnt]);
+
+        for (Map.Entry<UUID, int[]> nodeParts : assignment.entrySet()) {
+            for (int partId : nodeParts.getValue()) {
+                assert partAssignment.get(partId) == null;
+
+                List<ClusterNode> partNodes = new ArrayList<>(backups + 1);
+                partNodes.add(new GridTestNode(nodeParts.getKey()));
+                for (int i = 0; i < backups; i++)
+                    partNodes.add(new GridTestNode(UUID.randomUUID()));
+
+                partAssignment.set(partId, partNodes);
+            }
+        }
+
+        return partAssignment;
+    }
+
 //    /**
 //     * Test failed partition extraction by response and request:
 //     *

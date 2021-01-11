@@ -151,7 +151,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> failedMsgs;
         do {
             try {
-                reqs = helper.generateCollectionRequests(gatId, locNodeId, keys, failedPartitions);
+                reqs = helper.generateCollectionRequests(gatId, keys, failedPartitions);
             }
             catch (IgniteCheckedException e) {
                 if (log.isDebugEnabled())
@@ -185,7 +185,6 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
                     failedPartitions.addAll(GridArrays.list(msg.req().parts()));
                 }
             }
-
 
             if (cnt++ > 10) {
                 if (log.isInfoEnabled())
@@ -243,7 +242,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         };
 
 
-        if (locNodeId.equals(req.senderNodeId()))
+        if (locNodeId.equals(req.sndNodeId()))
             statMgr.registerLocalResult(gatId, data, parts.length);
         else {
             // Original partitions count to correctly tear down remaining on remote request
@@ -251,12 +250,12 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
 
             StatisticsGatheringResponse resp = new StatisticsGatheringResponse(req.req().gatId(), reqId, data, parts);
             try {
-                send(req.senderNodeId(), resp);
+                send(req.sndNodeId(), resp);
             }
             catch (IgniteCheckedException e) {
                 if (log.isDebugEnabled())
                     log.debug(String.format("Unable to send collected statistics to node %s by request %s by gathering %s",
-                        req.senderNodeId(), reqId, resp.gatId()));
+                        req.sndNodeId(), reqId, resp.gatId()));
             }
         }
     }
@@ -323,14 +322,14 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         // TODO: local node
 
         try {
-            Collection<StatisticsAddrRequest<StatisticsClearRequest>> msgs = helper
-                .generateClearRequests(locNodeId, keys);
+            Collection<StatisticsAddrRequest<StatisticsClearRequest>> msgs = helper.generateClearRequests(keys);
             Collection<StatisticsAddrRequest<StatisticsClearRequest>> failedMsgs = sendRequests(msgs);
 
             if (!F.isEmpty(failedMsgs))
                 if (log.isDebugEnabled())
                     log.debug(String.format("Unable to send %d clear statistics request", failedMsgs.size()));
-        } catch (IgniteCheckedException e) {
+        }
+        catch (IgniteCheckedException e) {
             if (log.isDebugEnabled())
                 log.debug(String.format("Unable to send clear statistics request by keys %s", keys));
         }
@@ -398,17 +397,6 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
     }
 
     /**
-     * Process StatisticsGetResponse message.
-     *
-     * @param nodeId Sender node id.
-     * @param msg Response to process.
-     */
-    private void receiveGlobalStatistics(UUID nodeId, StatisticsGetResponse msg) {
-        statMgr.saveGlobalStatistics(msg.data());
-    }
-
-
-    /**
      * Receive and handle statistics gathering response message as response for collection request.
      *
      * @param nodeId Sender node id.
@@ -431,7 +419,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         }
 
         assert req.targetNodeId().equals(locNodeId);
-        assert req.senderNodeId().equals(nodeId);
+        assert req.sndNodeId().equals(nodeId);
 
         statMgr.registerLocalResult(msg.gatId(), msg.data(), msg.parts().length);
 
@@ -440,17 +428,6 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         if (!F.isEmpty(failedParts))
             sendGatheringRequestsAsync(req.req().gatId(), req.req().keys(), GridArrays.list(failedParts));
     }
-
-    /**
-     * Receive and handle statistics propagation message with partitions statistics.
-     *
-     * @param nodeId Sender node id.
-     * @param msg Statistics propagation message with partitions statistics to handle.
-     */
-    private void receivePartitionsStatisticsAsync(UUID nodeId, StatisticsPropagationMessage msg) {
-        msgMgmtPool.submit(() -> statMgr.receivePartitionsStatistics(msg.data()));
-    }
-
 
     /**
      * Send statistics by request.
@@ -517,14 +494,19 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
 
     /** {@inheritDoc} */
     @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-        if (msg instanceof StatisticsPropagationMessage)
-            receivePartitionsStatisticsAsync(nodeId, (StatisticsPropagationMessage) msg);
+        if (msg instanceof StatisticsPropagationMessage) {
+            StatisticsPropagationMessage propMsg = (StatisticsPropagationMessage) msg;
+            if (propMsg.data().iterator().next().type() == StatisticsType.GLOBAL)
+                msgMgmtPool.submit(() -> statMgr.saveGlobalStatistics(propMsg.data()));
+            else
+                msgMgmtPool.submit(() -> statMgr.receivePartitionsStatistics(propMsg.data()));
+        }
         else if (msg instanceof StatisticsGatheringResponse)
             receiveLocalStatistics(nodeId, (StatisticsGatheringResponse) msg);
         else if (msg instanceof StatisticsGetRequest)
             msgMgmtPool.submit(() -> supplyStatistics(nodeId, (StatisticsGetRequest) msg));
         else if (msg instanceof StatisticsGetResponse)
-            receiveGlobalStatistics(nodeId, (StatisticsGetResponse)msg);
+            msgMgmtPool.submit(() -> statMgr.saveGlobalStatistics(((StatisticsGetResponse)msg).data()));
         else if (msg instanceof StatisticsGatheringRequest)
             handleGatheringRequest(nodeId, (StatisticsGatheringRequest)msg);
         else if (msg instanceof CancelStatisticsGatheringRequest)
@@ -566,7 +548,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
     public void sendGlobalStat(Map<StatisticsKeyMessage, ObjectStatisticsImpl> globalStats) {
         try {
             Collection<StatisticsAddrRequest<StatisticsPropagationMessage>> msgs =
-                    helper.generateGlobalPropagationMessages(locNodeId, globalStats);
+                    helper.generateGlobalPropagationMessages(globalStats);
 
             Collection<StatisticsAddrRequest<StatisticsPropagationMessage>> failedMsgs =  sendRequests(msgs);
 
@@ -600,7 +582,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         do {
             Collection<StatisticsAddrRequest<StatisticsPropagationMessage>> reqs;
             try {
-                reqs = helper.generatePropagationMessages(locNodeId, key, objStats);
+                reqs = helper.generatePropagationMessages(key, objStats);
             }
             catch (IgniteCheckedException e) {
                 if (log.isDebugEnabled())

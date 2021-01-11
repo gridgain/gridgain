@@ -83,7 +83,6 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
         factory.register(StatisticsObjectData.TYPE_CODE, StatisticsObjectData::new);
         factory.register(StatisticsColumnData.TYPE_CODE, StatisticsColumnData::new);
         factory.register(StatisticsClearRequest.TYPE_CODE, StatisticsClearRequest::new);
-        factory.register(StatisticsGatheringResponse.TYPE_CODE, StatisticsGatheringResponse::new);
     }
 
     /** {@inheritDoc} */

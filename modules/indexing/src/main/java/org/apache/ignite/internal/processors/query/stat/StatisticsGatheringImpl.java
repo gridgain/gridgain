@@ -5,9 +5,13 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
@@ -16,6 +20,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
@@ -53,6 +58,12 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
     /** Query processor */
     private final GridQueryProcessor qryProcessor;
 
+    /** Grid cache processor. */
+    private final GridCacheProcessor cacheProcessor;
+
+    /** Ignite cache object processor. */
+    private final IgniteCacheObjectProcessor cacheObjProc;
+
     /** Statistics crawler. */
     private final StatisticsGatheringRequestCrawler statCrawler;
 
@@ -66,6 +77,7 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
      * @param schemaMgr Schema manager.
      * @param discoMgr Discovery manager.
      * @param qryProcessor Query processor.
+     * @param cacheProcessor Grid cache processor.
      * @param statCrawler Statistics request crawler.
      * @param gatMgmtPool Thread pool to gather statistics in.
      * @param logSupplier Log supplier function.
@@ -74,6 +86,8 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         SchemaManager schemaMgr,
         GridDiscoveryManager discoMgr,
         GridQueryProcessor qryProcessor,
+        GridCacheProcessor cacheProcessor,
+        IgniteCacheObjectProcessor cacheObjProc,
         StatisticsGatheringRequestCrawler statCrawler,
         IgniteThreadPoolExecutor gatMgmtPool,
         Function<Class<?>, IgniteLogger> logSupplier
@@ -82,6 +96,8 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         this.schemaMgr = schemaMgr;
         this.discoMgr = discoMgr;
         this.qryProcessor = qryProcessor;
+        this.cacheProcessor = cacheProcessor;
+        this.cacheObjProc = cacheObjProc;
         this.statCrawler = statCrawler;
         this.gatMgmtPool = gatMgmtPool;
     }
@@ -206,72 +222,76 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
             int partId,
             Supplier<Boolean> cancelled
     ) {
-        Map<GridH2Table, ObjectPartitionStatisticsImpl> res = new HashMap<>(targets.size());
 
         GridH2Table ftbl = targets.keySet().iterator().next();
         CacheGroupContext grp = ftbl.cacheContext().group();
+
         GridDhtPartitionTopology gTop = grp.topology();
         AffinityTopologyVersion topVer = gTop.readyTopologyVersion();
         GridDhtLocalPartition locPart = gTop.localPartition(partId, topVer, false);
         if (locPart == null)
             return null;
+
         boolean reserved = locPart.reserve();
         try {
             if (!reserved || (locPart.state() != OWNING) || !locPart.primary(discoMgr.topologyVersionEx()))
                 return null;
 
-            for (Map.Entry<GridH2Table, Column[]> tblTarger : targets.entrySet()) {
-                GridH2Table tbl = tblTarger.getKey();
-                Column[] selectedCols = tblTarger.getValue();
-                GridH2RowDescriptor desc = tbl.rowDescriptor();
-                String tblName = tbl.getName();
+            Map<GridH2Table, List<ColumnStatisticsCollector>> collectors = new HashMap<>(targets.size());
+            Map<String, GridH2Table> tables = new HashMap<>(targets.size());
+            for (Map.Entry<GridH2Table, Column[]> target : targets.entrySet()) {
+                List<ColumnStatisticsCollector> colStatsCollectors = new ArrayList<>(target.getValue().length);
+                for (Column col : target.getValue())
+                    colStatsCollectors.add(new ColumnStatisticsCollector(col, target.getKey()::compareValues));
 
-                long rowsCnt = 0;
+                collectors.put(target.getKey(), colStatsCollectors);
 
-                List<ColumnStatisticsCollector> colStatsCollectors = new ArrayList<>(selectedCols.length);
+                tables.put(target.getKey().identifier().table(), target.getKey());
+            }
 
-                for (Column col : selectedCols)
-                    colStatsCollectors.add(new ColumnStatisticsCollector(col, tbl::compareValues));
+            Map<GridH2Table, ObjectPartitionStatisticsImpl> res = new HashMap<>(targets.size());
 
-                //TODO swith to: for (grp.offheap().partitionIterator(partId))
-                for (CacheDataRow row : tbl.cacheContext().offheap().cachePartitionIterator(tbl.cacheId(), locPart.id(),
-                        null, true)) {
-                    GridQueryTypeDescriptor typeDesc = qryProcessor.typeByValue(tbl.cacheName(),
-                            tbl.cacheContext().cacheObjectContext(), row.key(), row.value(), false);
-                    if (!tblName.equals(typeDesc.tableName()))
+            try {
+                for (CacheDataRow row : grp.offheap().partitionIterator(partId)) {
+                    GridCacheContext cacheCtx = (row.cacheId() == CU.UNDEFINED_CACHE_ID) ?  grp.singleCacheContext() :
+                            grp.shared().cacheContext(row.cacheId());
+
+                    if (cacheCtx == null)
                         continue;
 
-                    rowsCnt++;
+                    DynamicCacheDescriptor dcDescr = cacheProcessor.cacheDescriptor(row.cacheId());
+                    //GridQueryTypeDescriptor typeDesc = qryProcessor.typeByValue(dcDescr.cacheName(),
+                    GridQueryTypeDescriptor typeDesc = qryProcessor.typeByValue(cacheCtx.name(),
+                        cacheCtx.cacheObjectContext(), row.key(), row.value(), false);
+                    GridH2Table tbl = tables.get(typeDesc.tableName());
+                    if (tbl == null)
+                        continue;
 
-                    H2Row row0 = desc.createRow(row);
+                    List<ColumnStatisticsCollector> tblColls = collectors.get(tbl);
+                    H2Row h2row = tbl.rowDescriptor().createRow(row);
 
-                    for (ColumnStatisticsCollector colStat : colStatsCollectors)
-                        colStat.add(row0.getValue(colStat.col().getColumnId()));
-
+                    for (ColumnStatisticsCollector colStat : tblColls)
+                        colStat.add(h2row.getValue(colStat.col().getColumnId()));
                 }
-
-                Map<String, ColumnStatistics> colStats = colStatsCollectors.stream().collect(Collectors.toMap(
-                        csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
-
-                res.put(tbl, new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt,
-                        locPart.updateCounter(), colStats));
-
-                if (log.isTraceEnabled())
-                    log.trace(String.format("Finished statistics collection on %s.%s:%d",
-                            tbl.identifier().schema(), tbl.identifier().table(), locPart.id()));
             }
-        }
-        catch (IgniteCheckedException e) {
-            if (log.isDebugEnabled())
-                log.debug(String.format("Unable to collect statistics by %s.%s:%d due to error %s",
-                        ftbl.identifier().schema(), ftbl.identifier().table(), partId, e.getMessage()));
+            catch (IgniteCheckedException igniteCheckedException) {
+                igniteCheckedException.printStackTrace();
+            }
+
+            for (Map.Entry<GridH2Table, List<ColumnStatisticsCollector>> tblCollectors : collectors.entrySet()) {
+                Map<String, ColumnStatistics> colStats = tblCollectors.getValue().stream().collect(Collectors.toMap(
+                        csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
+                ObjectPartitionStatisticsImpl tblStat = new ObjectPartitionStatisticsImpl(partId, true,
+                        colStats.values().iterator().next().total(), locPart.updateCounter(), colStats);
+                res.put(tblCollectors.getKey(), tblStat);
+            }
+
+            return res;
         }
         finally {
             if (reserved)
                 locPart.release();
         }
-
-        return res;
     }
 
     /**
@@ -289,8 +309,11 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
             Supplier<Boolean> cancelled
     ) {
         Map<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> res = new HashMap<>();
+
         for (GridH2Table tbl : targets.keySet())
             res.put(tbl, new ArrayList<>(partIds.length));
+
+
 
         for (int partId : partIds) {
             Map<GridH2Table, ObjectPartitionStatisticsImpl> partStats = collectPartitionStatistics(targets, partId, cancelled);
@@ -364,7 +387,7 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
                         key.schema(), key.obj()));
         }
 
-        Map<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> keyPartStat = new HashMap<>(keys.size());
+        Map<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> tblPartStat = new HashMap<>(keys.size());
         List<Integer> collectedParts = new ArrayList<>(parts.length);
         for (int partId : parts) {
             Map<GridH2Table, ObjectPartitionStatisticsImpl> partStats = collectPartitionStatistics(targets, partId, cancelled);
@@ -374,13 +397,13 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
                 for (Map.Entry<GridH2Table, ObjectPartitionStatisticsImpl> tblStat : partStats.entrySet()) {
                     StatisticsKeyMessage key = tblKey.get(tblStat.getKey());
 
-                    keyPartStat.computeIfAbsent(tblStat.getKey(), k -> new ArrayList<>(parts.length)).add(tblStat.getValue());
+                    tblPartStat.computeIfAbsent(tblStat.getKey(), k -> new ArrayList<>(parts.length)).add(tblStat.getValue());
                 }
             }
         }
 
         Map<StatisticsKeyMessage, ObjectStatisticsImpl> res = new HashMap<>();
-        for (Map.Entry<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> partStats : keyPartStat.entrySet()) {
+        for (Map.Entry<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> partStats : tblPartStat.entrySet()) {
             ObjectStatisticsImpl locStat = aggregateLocalStatistics(partStats.getKey(), targets.get(partStats.getKey()),
                 partStats.getValue());
 

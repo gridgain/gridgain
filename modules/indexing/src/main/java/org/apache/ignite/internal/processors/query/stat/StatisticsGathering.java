@@ -1,10 +1,8 @@
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;

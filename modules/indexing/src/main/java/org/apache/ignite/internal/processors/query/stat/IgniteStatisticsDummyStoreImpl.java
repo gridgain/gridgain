@@ -78,6 +78,6 @@ public class IgniteStatisticsDummyStoreImpl implements IgniteStatisticsStore {
     }
 
     /** {@inheritDoc} */
-    @Override public void setRepository(IgniteStatisticsRepository repository) {
+    @Override public void repository(IgniteStatisticsRepository repository) {
     }
 }

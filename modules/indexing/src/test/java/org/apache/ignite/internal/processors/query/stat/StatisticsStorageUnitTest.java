@@ -16,10 +16,16 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -54,22 +60,37 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
 
         MetastorageLifecycleListener lsnr[] = new MetastorageLifecycleListener[1];
 
+        SchemaManager schemaMgr = Mockito.mock(SchemaManager.class);
+        GridDiscoveryManager discoMgr = Mockito.mock(GridDiscoveryManager.class);
+        GridQueryProcessor qryProcessor = Mockito.mock(GridQueryProcessor.class);
+        GridCacheProcessor cacheProcessor = Mockito.mock(GridCacheProcessor.class);
+        IgniteCacheObjectProcessor objProcessor = Mockito.mock(IgniteCacheObjectProcessor.class);
+        StatisticsGatheringRequestCrawler reqClawler = Mockito.mock(StatisticsGatheringRequestCrawler.class);
+        IgniteThreadPoolExecutor gatMgmtPool = Mockito.mock(IgniteThreadPoolExecutor.class);
+
         GridInternalSubscriptionProcessor subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
         Mockito.doAnswer(invocation -> lsnr[0] = invocation.getArgument(0))
                 .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
 
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(true,
-                new IgniteCacheDatabaseSharedManager(), subscriptionProcessor, null, cls -> log);
+        IgniteStatisticsStore inMemoryStore = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
+
+        StatisticsGathering statGath = new StatisticsGatheringImpl(schemaMgr, discoMgr, qryProcessor, cacheProcessor,
+            objProcessor, reqClawler, gatMgmtPool, cts -> log);
+
+        IgniteStatisticsManagerImpl statMgr = Mockito.mock(IgniteStatisticsManagerImpl.class);
+        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, statMgr, statGath,
+            cls -> log);
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);
 
         IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
+        IgniteStatisticsPersistenceStoreImpl persStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, dbMgr, cls -> log);
+        persStore.repository(statsRepos);
 
         return Arrays.asList(new Object[][] {
-                { "IgniteStatisticsInMemoryStoreImpl", new IgniteStatisticsInMemoryStoreImpl(cls -> log) },
-                { "IgniteStatisticsPersistenceStoreImpl",
-                        new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, dbMgr, statsRepos, cls -> log) },
+            { "IgniteStatisticsInMemoryStoreImpl", inMemoryStore },
+            { "IgniteStatisticsPersistenceStoreImpl", persStore},
         });
     }
 

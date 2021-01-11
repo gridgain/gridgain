@@ -69,7 +69,8 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
                 .cacheLocalStatistics(Mockito.any(StatisticsKey.class), Mockito.anyCollection());
         metastorage = new ReadWriteMetaStorageMock();
         statStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-                new IgniteCacheDatabaseSharedManager(){}, statsRepos, cls -> log);
+                new IgniteCacheDatabaseSharedManager(){}, cls -> log);
+        statStore.repository(statsRepos);
     }
 
     /**
@@ -98,7 +99,8 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         assertEquals(stat2_3, statStore.getLocalPartitionStatistics(k2, 3));
 
         IgniteStatisticsPersistenceStoreImpl statStore2 = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-                new IgniteCacheDatabaseSharedManager(){}, statsRepos, cls -> log);
+                new IgniteCacheDatabaseSharedManager(){}, cls -> log);
+        statStore2.repository(statsRepos);
 
         statStore2.onReadyForReadWrite(metastorage);
 
@@ -142,7 +144,8 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         metastorage.write(outerStatKey, outerStatValue);
 
         IgniteStatisticsPersistenceStoreImpl statStore2 = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-                new IgniteCacheDatabaseSharedManager(){}, statsRepos, cls -> log);
+                new IgniteCacheDatabaseSharedManager(){}, cls -> log);
+        statStore2.repository(statsRepos);
         statStore2.onReadyForReadWrite(metastorage);
 
         assertEquals(1, cacheArguments.size());
