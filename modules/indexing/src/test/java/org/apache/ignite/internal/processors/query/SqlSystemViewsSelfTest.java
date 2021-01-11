@@ -80,7 +80,6 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 import static org.junit.Assert.assertNotEquals;
 
@@ -92,7 +91,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
     private static final int METRICS_CHECK_ATTEMPTS = 10;
 
     /** Activate lazy by default. */
-    private final boolean activateLazyByDflt = getBoolean("DFLT_LAZY", false);
+    private final boolean activateLazyByDflt = GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY");
 
     /** */
     private boolean isPersistenceEnabled;
