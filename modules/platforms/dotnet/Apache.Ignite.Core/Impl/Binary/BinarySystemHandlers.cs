@@ -53,9 +53,6 @@ namespace Apache.Ignite.Core.Impl.Binary
             ReadHandlers[BinaryTypeId.Double] = new BinarySystemReader<double>(s => s.ReadDouble());
             ReadHandlers[BinaryTypeId.Decimal] = new BinarySystemReader<decimal?>(BinaryUtils.ReadDecimal);
 
-            // 2. Date.
-            ReadHandlers[BinaryTypeId.Timestamp] = new BinarySystemReader<DateTime?>(BinaryUtils.ReadTimestamp);
-
             // 3. String.
             ReadHandlers[BinaryTypeId.String] = new BinarySystemReader<string>(BinaryUtils.ReadString);
 
@@ -90,10 +87,6 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             ReadHandlers[BinaryTypeId.ArrayDecimal] =
                 new BinarySystemReader<decimal?[]>(BinaryUtils.ReadDecimalArray);
-
-            // 6. Date array.
-            ReadHandlers[BinaryTypeId.ArrayTimestamp] =
-                new BinarySystemReader<DateTime?[]>(BinaryUtils.ReadTimestampArray);
 
             // 7. String array.
             ReadHandlers[BinaryTypeId.ArrayString] = new BinarySystemTypedArrayReader<string>();
@@ -257,6 +250,20 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             if (handler == null)
             {
+                if (typeId == BinaryTypeId.Timestamp)
+                {
+                    // Date.
+                    res = TypeCaster<T>.Cast(BinaryUtils.ReadTimestamp(ctx.Stream, ctx.Marshaller.TimestampConverter));
+                    return true;
+                }
+
+                if (typeId == BinaryTypeId.ArrayTimestamp)
+                {
+                    // Date array.
+                    res = TypeCaster<T>.Cast(BinaryUtils.ReadTimestampArray(ctx.Stream, ctx.Marshaller.TimestampConverter));
+                    return true;
+                }
+
                 res = default(T);
                 return false;
             }
@@ -310,7 +317,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             ctx.Stream.WriteByte(BinaryTypeId.Timestamp);
 
-            BinaryUtils.WriteTimestamp(obj, ctx.Stream);
+            BinaryUtils.WriteTimestamp(obj, ctx.Stream, ctx.Marshaller.TimestampConverter);
         }
 
         /// <summary>
@@ -454,7 +461,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             ctx.Stream.WriteByte(BinaryTypeId.ArrayTimestamp);
 
-            BinaryUtils.WriteTimestampArray(obj, ctx.Stream);
+            BinaryUtils.WriteTimestampArray(obj, ctx.Stream, ctx.Marshaller.TimestampConverter);
         }
 
         /// <summary>
