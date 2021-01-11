@@ -20,16 +20,13 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
@@ -71,9 +68,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
     /** Query processor */
     private final GridQueryProcessor qryProcessor;
 
-    /** Grid cache processor. */
-    private final GridCacheProcessor cacheProcessor;
-
     /** Statistics crawler. */
     private final StatisticsGatheringRequestCrawler statCrawler;
 
@@ -95,7 +89,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         SchemaManager schemaMgr,
         GridDiscoveryManager discoMgr,
         GridQueryProcessor qryProcessor,
-        GridCacheProcessor cacheProcessor,
         StatisticsGatheringRequestCrawler statCrawler,
         IgniteThreadPoolExecutor gatMgmtPool,
         Function<Class<?>, IgniteLogger> logSupplier
@@ -104,7 +97,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         this.schemaMgr = schemaMgr;
         this.discoMgr = discoMgr;
         this.qryProcessor = qryProcessor;
-        this.cacheProcessor = cacheProcessor;
         this.statCrawler = statCrawler;
         this.gatMgmtPool = gatMgmtPool;
     }
@@ -123,94 +115,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         Set<String> colNamesSet = new HashSet<>(colNames);
 
         return Arrays.stream(cols).filter(c -> colNamesSet.contains(c.getName())).toArray(Column[]::new);
-    }
-
-    /**
-     * Collect single partition level statistics by the given tables.
-     *
-     * @param targets Table to column collection to collect statistics by. All tables should be in the same cache group.
-     * @param partId Partition id to collect statistics by.
-     * @param cancelled Supplier to check if collection was cancelled.
-     * @return Map of table to Collection of partition level statistics by local primary partitions.
-     * @throws IgniteCheckedException in case of error.
-     */
-    private Map<GridH2Table, ObjectPartitionStatisticsImpl> collectPartitionStatisticsCaches(
-            Map<GridH2Table, Column[]> targets,
-            int partId,
-            Supplier<Boolean> cancelled
-    ) {
-        Map<GridH2Table, ObjectPartitionStatisticsImpl> res = new HashMap<>(targets.size());
-
-        for (Map.Entry<GridH2Table, Column[]> tblTarger : targets.entrySet()) {
-            GridH2Table tbl = tblTarger.getKey();
-            Column[] selectedCols = tblTarger.getValue();
-            GridH2RowDescriptor desc = tbl.rowDescriptor();
-            String tblName = tbl.getName();
-            GridDhtPartitionTopology top = tbl.cacheContext().topology();
-            AffinityTopologyVersion topVer = top.readyTopologyVersion();
-
-            GridDhtLocalPartition locPart = top.localPartition(partId, topVer, false);
-            if (locPart == null)
-                continue;
-
-            if (cancelled.get()) {
-                if (log.isInfoEnabled())
-                    log.info(String.format("Canceled collection of object %s.%s statistics.", tbl.identifier().schema(),
-                            tbl.identifier().table()));
-
-                return null;
-            }
-
-            final boolean reserved = locPart.reserve();
-
-            try {
-                if (!reserved || (locPart.state() != OWNING) || !locPart.primary(discoMgr.topologyVersionEx()))
-                    continue;
-
-                long rowsCnt = 0;
-
-                List<ColumnStatisticsCollector> colStatsCollectors = new ArrayList<>(selectedCols.length);
-
-                for (Column col : selectedCols)
-                    colStatsCollectors.add(new ColumnStatisticsCollector(col, tbl::compareValues));
-
-                for (CacheDataRow row : tbl.cacheContext().offheap().cachePartitionIterator(tbl.cacheId(), locPart.id(),
-                        null, true)) {
-                    GridQueryTypeDescriptor typeDesc = qryProcessor.typeByValue(tbl.cacheName(),
-                            tbl.cacheContext().cacheObjectContext(), row.key(), row.value(), false);
-                    if (!tblName.equals(typeDesc.tableName()))
-                        continue;
-
-                    rowsCnt++;
-
-                    H2Row row0 = desc.createRow(row);
-
-                    for (ColumnStatisticsCollector colStat : colStatsCollectors)
-                        colStat.add(row0.getValue(colStat.col().getColumnId()));
-
-                }
-
-                Map<String, ColumnStatistics> colStats = colStatsCollectors.stream().collect(Collectors.toMap(
-                        csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
-
-                res.put(tbl, new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt,
-                        locPart.updateCounter(), colStats));
-
-                if (log.isTraceEnabled())
-                    log.trace(String.format("Finished statistics collection on %s.%s:%d",
-                            tbl.identifier().schema(), tbl.identifier().table(), locPart.id()));
-            }
-            catch (IgniteCheckedException e) {
-                if (log.isDebugEnabled())
-                    log.debug(String.format("Unable to collect statistics by %s.%s:%d due to error %s",
-                            tbl.identifier().schema(), tbl.identifier().table(), partId, e.getMessage()));
-            }
-            finally {
-                if (reserved)
-                    locPart.release();
-            }
-        }
-        return res;
     }
 
     /**
@@ -267,8 +171,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
                     if (cacheCtx == null)
                         continue;
 
-                    DynamicCacheDescriptor dcDescr = cacheProcessor.cacheDescriptor(row.cacheId());
-                    //GridQueryTypeDescriptor typeDesc = qryProcessor.typeByValue(dcDescr.cacheName(),
                     GridQueryTypeDescriptor typeDesc = qryProcessor.typeByValue(cacheCtx.name(),
                         cacheCtx.cacheObjectContext(), row.key(), row.value(), false);
                     GridH2Table tbl = tables.get(typeDesc.tableName());
@@ -287,10 +189,12 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
             }
 
             for (Map.Entry<GridH2Table, List<ColumnStatisticsCollector>> tblCollectors : collectors.entrySet()) {
-                Map<String, ColumnStatistics> colStats = tblCollectors.getValue().stream().collect(Collectors.toMap(
-                        csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
+                Map<String, ColumnStatistics> colStats = tblCollectors.getValue().stream().collect(
+                        Collectors.toMap(csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
+
                 ObjectPartitionStatisticsImpl tblStat = new ObjectPartitionStatisticsImpl(partId, true,
                         colStats.values().iterator().next().total(), locPart.updateCounter(), colStats);
+
                 res.put(tblCollectors.getKey(), tblStat);
             }
 

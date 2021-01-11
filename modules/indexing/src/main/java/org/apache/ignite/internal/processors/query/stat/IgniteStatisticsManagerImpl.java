@@ -116,8 +116,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         );
         statCrawler = new StatisticsGatheringRequestCrawlerImpl(ctx.localNodeId(), this, ctx.event(), ctx.io(),
             helper, msgMgmtPool, ctx::log);
-        statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), ctx.cache(), statCrawler,
-            gatMgmtPool, ctx::log);
+        statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), statCrawler, gatMgmtPool,
+            ctx::log);
 
         boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
         IgniteStatisticsStore store;
@@ -230,24 +230,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         statCrawler.sendGatheringRequestsAsync(status.gatId(), status.keys(), null);
     }
 
-    /**
-     * Calculate total partitions count for all keys in gathering task.
-     *
-     * @param keys Collection of keys to calculate partitions by.
-     * @return Total number of partitions in all tasks keys.
-     */
-    private Integer calculatePartitions(Collection<StatisticsKeyMessage> keys) {
-        int res = 0;
-        for (StatisticsKeyMessage key : keys) {
-            GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
-            if (tbl == null)
-                return null;
-
-            res += tbl.cacheContext().topology().partitions();
-        }
-        return res;
-    }
-
     /** {@inheritDoc} */
     @Override public void collectObjectStatistics(
             String schemaName,
@@ -302,6 +284,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = helper.splitByGroups(keysMsg);
 
         List<StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>>> res = new ArrayList<>();
+
         for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys : grpsKeys.entrySet()) {
             int parts = grpKeys.getKey().topology().partitions();
 
@@ -312,6 +295,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
             res.add(status.doneFut());
         }
+
         return res.toArray(new StatsCollectionFuture[0]);
     }
 
@@ -404,6 +388,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         }
 
         statCrawler.sendGlobalStatAsync(keysGlobalStats);
+
+        stCtx.doneFut().onDone(keysGlobalStats);
     }
 
     /**
@@ -412,7 +398,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @param data Global statistics to cache.
      */
     public void saveGlobalStatistics(Collection<StatisticsObjectData> data) {
-        data.forEach(objData -> {
+        for (StatisticsObjectData objData : data) {
             try {
                 ObjectStatisticsImpl objStat = StatisticsUtils.toObjectStatistics(this.ctx, objData);
 
@@ -422,7 +408,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                 if (log.isDebugEnabled())
                     log.debug(String.format("Cannot read global statistics %s", objData.key()));
             }
-        });
+        };
     }
 
     /**

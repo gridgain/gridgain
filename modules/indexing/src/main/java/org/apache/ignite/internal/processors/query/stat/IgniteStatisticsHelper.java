@@ -90,11 +90,12 @@ public class IgniteStatisticsHelper {
      * Extract groups of stats keys.
      *
      * @param keys Statistics key to extract groups from.
-     * @return Map of <group ids></group> to <collection of keys in groups>
+     * @return Map of <group ids> to <collection of keys in groups>
      * @throws IgniteCheckedException In case of lack some of specified objects.
      */
-    protected Map<CacheGroupContext, Collection<StatisticsKeyMessage>> extractGroups(Collection<StatisticsKeyMessage> keys)
-            throws IgniteCheckedException {
+    protected Map<CacheGroupContext, Collection<StatisticsKeyMessage>> extractGroups(
+        Collection<StatisticsKeyMessage> keys
+    ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> res = new HashMap<>(keys.size());
         for (StatisticsKeyMessage key : keys) {
             res.compute(getGroupContext(key), (k, v) -> {
@@ -117,7 +118,8 @@ public class IgniteStatisticsHelper {
      * @throws IgniteCheckedException If some of specified object won't be found in schema.
      */
     public Map<CacheGroupContext, Collection<StatisticsKeyMessage>> splitByGroups(
-        Collection<StatisticsKeyMessage> keys) throws IgniteCheckedException {
+        Collection<StatisticsKeyMessage> keys
+    ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> res = new HashMap<>();
 
         for (StatisticsKeyMessage key : keys) {
@@ -141,7 +143,6 @@ public class IgniteStatisticsHelper {
     public static Set<UUID> nodes(CacheGroupContext grp) {
         Set<UUID> res = new HashSet<>();
         AffinityTopologyVersion grpTopVer = grp.shared().exchange().readyAffinityVersion();
-        // На какой ноде на какой таблице какие партиции собирать
         List<List<ClusterNode>> assignments = grp.affinity().assignments(grpTopVer);
 
         assignments.forEach(pnodes -> pnodes.forEach(cn -> res.add(cn.id())));
@@ -163,7 +164,6 @@ public class IgniteStatisticsHelper {
         boolean isPrimary
     ) {
         AffinityTopologyVersion grpTopVer = grp.shared().exchange().readyAffinityVersion();
-        // На какой ноде на какой таблице какие партиции собирать
         List<List<ClusterNode>> assignments = grp.affinity().assignments(grpTopVer);
 
         Map<UUID, List<Integer>> res = new HashMap<>();
@@ -198,24 +198,10 @@ public class IgniteStatisticsHelper {
             return;
 
         if (isPrimary)
-            res.compute(partNodes.get(0).id(), (k, v) -> {
-                if (v == null)
-                    v = new ArrayList<>();
-
-                v.add(partId);
-
-                return v;
-            });
+            res.computeIfAbsent(partNodes.get(0).id(), k -> new ArrayList<>()).add(partId);
         else
             for (int i = 1; i < partNodes.size() - 1; i++)
-                res.compute(partNodes.get(i).id(), (k, v) -> {
-                    if (v == null)
-                        v = new ArrayList<>();
-
-                    v.add(partId);
-
-                    return v;
-                });
+                res.computeIfAbsent(partNodes.get(i).id(), k -> new ArrayList<>()).add(partId);
     }
 
     /**
@@ -234,14 +220,9 @@ public class IgniteStatisticsHelper {
             AffinityTopologyVersion grpTopVer = grp.shared().exchange().readyAffinityVersion();
             List<List<ClusterNode>> assignments = grp.affinity().assignments(grpTopVer);
 
-            assignments.forEach(nodes -> nodes.forEach(clusterNode -> res.compute(clusterNode.id(), (k, v) -> {
-                if (v == null)
-                    v = new HashSet<>();
-
-                v.addAll(grpKeys.getValue());
-
-                return v;
-            })));
+            for (List<ClusterNode> partNodes : assignments)
+                for (ClusterNode node : partNodes)
+                    res.computeIfAbsent(node.id(), k -> new HashSet<>()).addAll(grpKeys.getValue());
         }
         return res;
     }
@@ -277,14 +258,17 @@ public class IgniteStatisticsHelper {
         Collection<ObjectPartitionStatisticsImpl> objStats
     ) throws IgniteCheckedException {
         List<StatisticsObjectData> objData = new ArrayList<>(objStats.size());
-        objStats.forEach(ops -> {
+        for (ObjectPartitionStatisticsImpl ops : objStats) {
             try {
                 objData.add(StatisticsUtils.toObjectData(key, StatisticsType.PARTITION, ops));
             }
             catch (IgniteCheckedException e) {
-                // TODO: log
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Unable to format statistics propagation message for %s.%s object: %s",
+                            key.schema(), key.obj(), e.getMessage()));
+                }
             }
-        });
+        }
 
         StatisticsPropagationMessage msg = new StatisticsPropagationMessage(objData);
 
@@ -307,22 +291,25 @@ public class IgniteStatisticsHelper {
         Map<StatisticsKeyMessage, ObjectStatisticsImpl> objStats
     ) throws IgniteCheckedException {
         Map<StatisticsKeyMessage, StatisticsObjectData> objData = new HashMap<>(objStats.size());
-        objStats.forEach((k, v) -> {
+        for (Map.Entry<StatisticsKeyMessage, ObjectStatisticsImpl> objStat : objStats.entrySet()) {
+            StatisticsKeyMessage key = objStat.getKey();
             try {
-                objData.put(k, StatisticsUtils.toObjectData(k, StatisticsType.GLOBAL, v));
+                objData.put(key, StatisticsUtils.toObjectData(key, StatisticsType.GLOBAL, objStat.getValue()));
             }
             catch (IgniteCheckedException e) {
                 if (log.isDebugEnabled())
-                    log.debug(String.format("Unable to generage object data by key %s.%s", k.schema(), k.obj()));
+                    log.debug(String.format("Unable to generage object data by key %s.%s", key.schema(), key.obj()));
             }
-        });
+        }
+
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = extractGroups(objStats.keySet());
         Map<CacheGroupContext, Collection<StatisticsObjectData>> grpsData = new HashMap<>(grpsKeys.size());
 
-        grpsKeys.forEach((gpr, keys) -> {
-            Collection<StatisticsObjectData> stats = keys.stream().map(objData::get).collect(Collectors.toList());
-            grpsData.put(gpr, stats);
-        });
+        for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys : grpsKeys.entrySet()) {
+            Collection<StatisticsObjectData> stats = grpKeys.getValue().stream().map(objData::get)
+                .collect(Collectors.toList());
+            grpsData.put(grpKeys.getKey(), stats);
+        }
 
         Map<UUID, Collection<StatisticsObjectData>> reqMap = new HashMap<>();
         for (Map.Entry<CacheGroupContext, Collection<StatisticsObjectData>> grpKeys : grpsData.entrySet()) {
@@ -385,11 +372,12 @@ public class IgniteStatisticsHelper {
     public static ObjectStatisticsImpl filterColumns(ObjectStatisticsImpl stat, Collection<String> cols) {
         ObjectStatisticsImpl res = stat.clone();
         res.columnsStatistics().clear();
-        cols.forEach(col -> {
-            ColumnStatistics colStat = stat.columnStatistics(col);
+
+        for (String column : cols) {
+            ColumnStatistics colStat = stat.columnStatistics(column);
             if (colStat != null)
-                res.columnsStatistics().put(col, colStat);
-        });
+                res.columnsStatistics().put(column, colStat);
+        }
 
         return res;
     }

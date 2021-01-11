@@ -63,18 +63,17 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
         SchemaManager schemaMgr = Mockito.mock(SchemaManager.class);
         GridDiscoveryManager discoMgr = Mockito.mock(GridDiscoveryManager.class);
         GridQueryProcessor qryProcessor = Mockito.mock(GridQueryProcessor.class);
-        GridCacheProcessor cacheProcessor = Mockito.mock(GridCacheProcessor.class);
         StatisticsGatheringRequestCrawler reqClawler = Mockito.mock(StatisticsGatheringRequestCrawler.class);
         IgniteThreadPoolExecutor gatMgmtPool = Mockito.mock(IgniteThreadPoolExecutor.class);
 
         GridInternalSubscriptionProcessor subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
         Mockito.doAnswer(invocation -> lsnr[0] = invocation.getArgument(0))
-                .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
+            .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
 
         IgniteStatisticsStore inMemoryStore = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
 
-        StatisticsGathering statGath = new StatisticsGatheringImpl(schemaMgr, discoMgr, qryProcessor, cacheProcessor,
-            reqClawler, gatMgmtPool, cts -> log);
+        StatisticsGathering statGath = new StatisticsGatheringImpl(schemaMgr, discoMgr, qryProcessor, reqClawler,
+            gatMgmtPool, cts -> log);
 
         IgniteStatisticsManagerImpl statMgr = Mockito.mock(IgniteStatisticsManagerImpl.class);
         IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, statMgr, statGath,
