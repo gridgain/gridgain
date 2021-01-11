@@ -53,7 +53,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
     private final IgniteStatisticsManagerImpl statMgr;
 
     /** Event manager. */
-    private final GridEventStorageManager eventMgr;
+    private final GridEventStorageManager evtMgr;
 
     /** IO manager. */
     private final GridIoManager ioMgr;
@@ -74,7 +74,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
      *
      * @param locNodeId Local node id.
      * @param statMgr Statistics manager.
-     * @param eventMgr Event storage manager.
+     * @param evtMgr Event storage manager.
      * @param ioMgr Io manager.
      * @param helper Statistics helper.
      * @param msgMgmtPool Message processing thread pool.
@@ -83,7 +83,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
     public StatisticsGatheringRequestCrawlerImpl(
         UUID locNodeId,
         IgniteStatisticsManagerImpl statMgr,
-        GridEventStorageManager eventMgr,
+        GridEventStorageManager evtMgr,
         GridIoManager ioMgr,
         IgniteStatisticsHelper helper,
         IgniteThreadPoolExecutor msgMgmtPool,
@@ -92,12 +92,12 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         this.log = logSupplier.apply(StatisticsGatheringRequestCrawlerImpl.class);
         this.locNodeId = locNodeId;
         this.statMgr = statMgr;
-        this.eventMgr = eventMgr;
+        this.evtMgr = evtMgr;
         this.ioMgr = ioMgr;
         this.helper = helper;
         this.msgMgmtPool = msgMgmtPool;
 
-        eventMgr.addLocalEventListener(this, EventType.EVT_NODE_FAILED, EventType.EVT_NODE_LEFT);
+        evtMgr.addLocalEventListener(this, EventType.EVT_NODE_FAILED, EventType.EVT_NODE_LEFT);
         ioMgr.addMessageListener(TOPIC_STATISTICS, this);
     }
 
@@ -110,6 +110,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             if (!unfinishedTasks.isEmpty())
                 log.warning(String.format("%d statistics collection request cancelled.", unfinishedTasks.size()));
         }
+        evtMgr.removeLocalEventListener(this, EventType.EVT_NODE_FAILED, EventType.EVT_NODE_LEFT);
     }
 
     /**
@@ -378,7 +379,12 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
 
         Map<UUID, IgniteBiTuple<Collection<StatisticsKeyMessage>, Collection<Integer>>> failedGats = new HashMap<>();
 
+        Set<UUID> incomingGatsToCancel = new HashSet<>();
+
         for (StatisticsAddrRequest<StatisticsGatheringRequest> req : remainingRequests.values()) {
+            if (nodeId.equals(req.sndNodeId()))
+                incomingGatsToCancel.add(req.req().gatId());
+
             if (!nodeId.equals(req.targetNodeId()))
                 continue;
 
@@ -391,6 +397,8 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
                 new IgniteBiTuple<>(reqToCancel.req().keys(), new ArrayList<>()))
                 .getValue().addAll(GridArrays.list(reqToCancel.req().parts()));
         }
+        for (UUID gatId : incomingGatsToCancel)
+            statMgr.cancelLocalStatisticsGathering(gatId);
 
         for (Map.Entry<UUID, IgniteBiTuple<Collection<StatisticsKeyMessage>, Collection<Integer>>> failedGat : failedGats.entrySet())
             sendGatheringRequestsAsync(failedGat.getKey(), failedGat.getValue().get1(), failedGat.getValue().get2());
@@ -594,40 +602,4 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             failedMsgs = sendRequests(reqs);
         } while (!F.isEmpty(failedMsgs));
     }
-
-    /**
-     * Handle node left event:
-     * 1) Cancel all collection tasks which expect specified node statistics result.
-     * 2) Cancel collection task requested by node left.
-     *
-     * @param nodeId leaved node id.
-     */
-    /*private void onNodeLeft(UUID nodeId) {
-        Map<UUID, Collection<StatisticsGatheringRequest>> failedGatherings = new HashMap<>();
-        remainingRequests.forEach((k,v) -> {
-            if (!nodeId.equals(v.targetNodeId()))
-                return;
-
-            StatisticsAddrRequest<StatisticsGatheringRequest> failedRequest = remainingRequests.remove(k);
-
-            if (failedRequest == null)
-                return;
-
-            failedGatherings.compute(failedRequest.req().gatId(), (k1, v1) -> {
-                if (v1 == null)
-                    v1 = new ArrayList<>();
-
-                v1.add(failedRequest.req());
-
-                return v1;
-            });
-        });
-
-        for (Map.Entry<UUID, Collection<StatisticsGatheringRequest>> failedGathering : failedGatherings.entrySet()) {
-            Map<StatisticsKeyMessage, int[]> failedPartitions = IgniteStatisticsHelper.extractFailed(
-                    failedGathering.getValue().toArray(new StatisticsGatheringRequest[0]));
-
-            sendGatheringRequests(failedGathering.getKey(),  failedPartitions.keySet(), failedPartitions);
-        }
-    }*/
 }

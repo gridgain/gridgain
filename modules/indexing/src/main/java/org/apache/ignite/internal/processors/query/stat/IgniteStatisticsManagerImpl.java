@@ -116,8 +116,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         );
         statCrawler = new StatisticsGatheringRequestCrawlerImpl(ctx.localNodeId(), this, ctx.event(), ctx.io(),
             helper, msgMgmtPool, ctx::log);
-        statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), ctx.cache(),
-            ctx.cacheObjects(), statCrawler, gatMgmtPool, ctx::log);
+        statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), ctx.cache(), statCrawler,
+            gatMgmtPool, ctx::log);
 
         boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
         IgniteStatisticsStore store;
@@ -487,59 +487,4 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
        for (StatisticsKeyMessage key : keys)
            clearObjectStatisticsLocal(key);
    }
-
-    /**
-     * Collect local object statistics by specified request (possibly for a few objects) and send result back to origin
-     * node specified. If local node id specified - process result without sending it throw the communication.
-     *
-     * @param req request to collect statistics by.
-     */
-    /*private void processLocal(UUID nodeId, StatisticsGatheringRequest req) {
-        UUID locNode = ctx.localNodeId();
-
-        StatisticsGatheringContext stat = (nodeId.equals(locNode)) ? helper.getCollection(req.gatId()) :
-            helper.getCollection(req.reqId());
-
-        if (stat == null)
-            return;
-
-        Map<StatisticsObjectData, int[]> collected = new HashMap<>(req.keys().size());
-        for (Map.Entry<StatisticsKeyMessage, int[]> keyEntry : req.keys().entrySet()) {
-            try {
-                StatisticsKeyMessage key = keyEntry.getKey();
-                IgniteBiTuple <ObjectStatisticsImpl, int[]> loStat = gatherLocalObjectStatisticsAsync(key,
-                        keyEntry.getValue(), () -> stat.doneFut().isCancelled());
-                StatisticsKey statsKey = new StatisticsKey(key.schema(), key.obj());
-
-                // TODO?
-                statsRepos.mergeLocalStatistics(statsKey, loStat.getKey());
-
-                StatisticsObjectData objData = StatisticsUtils.toObjectData(key, StatisticsType.LOCAL, loStat.getKey());
-                collected.put(objData, loStat.getValue());
-            }
-            catch (IgniteCheckedException e) {
-                log.warning(String.format("Unable to complete request %s due to error %s", req.reqId(), e.getMessage()));
-                // TODO: send cancel to originator node
-            }
-        }
-
-        StatisticsGatheringResponse res = new StatisticsGatheringResponse(req.gatId(), req.reqId(), collected);
-
-        if (locNode.equals(nodeId))
-            receiveLocalStatistics(nodeId, res);
-        else {
-            try {
-                ctx.io().sendToCustomTopic(nodeId, TOPIC, res, GridIoPolicy.QUERY_POOL);
-            }
-            catch (IgniteCheckedException e) {
-                if (log.isDebugEnabled())
-                    log.debug(String.format(
-                            "Unable to send statistics collection result to node %s in response to colId %s, reqId %s",
-                        nodeId, req.gatId(), req.reqId()));
-            }
-
-            // Not local collection - remove by its reqId.
-            helper.updateCollection(req.reqId(), s -> null);
-        }
-    }*/
 }

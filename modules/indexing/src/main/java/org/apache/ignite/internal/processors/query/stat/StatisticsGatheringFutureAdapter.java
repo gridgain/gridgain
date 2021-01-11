@@ -20,7 +20,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import java.util.UUID;
 
 /**
- * Cancellable future adapter. TODO: global statistics? void? just statistics?
+ * Cancellable future adapter.
  */
 public class StatisticsGatheringFutureAdapter<R> extends GridFutureAdapter<R> implements StatsCollectionFuture<R> {
     /** Collection id. */

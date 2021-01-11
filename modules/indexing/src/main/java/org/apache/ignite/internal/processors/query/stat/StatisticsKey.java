@@ -19,7 +19,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * Statistics key.
+ * Key to collect statistics by.
  */
 public class StatisticsKey implements Serializable {
     /** */

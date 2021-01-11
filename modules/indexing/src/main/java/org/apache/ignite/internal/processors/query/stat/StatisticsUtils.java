@@ -56,7 +56,10 @@ public class StatisticsUtils {
      * @return ColumnStatistics object.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static ColumnStatistics toColumnStatistics(GridKernalContext ctx, StatisticsColumnData data) throws IgniteCheckedException {
+    public static ColumnStatistics toColumnStatistics(
+        GridKernalContext ctx,
+        StatisticsColumnData data
+    ) throws IgniteCheckedException {
         Value min = (data.min() == null) ? null : data.min().value(ctx);
         Value max = (data.max() == null) ? null : data.max().value(ctx);
 
@@ -115,9 +118,9 @@ public class StatisticsUtils {
      * @throws IgniteCheckedException In case of errors.
      */
     public static StatisticsPropagationMessage toMessage(
-            StatisticsKeyMessage keyMsg,
-            StatisticsType type,
-            ObjectStatisticsImpl stat
+        StatisticsKeyMessage keyMsg,
+        StatisticsType type,
+        ObjectStatisticsImpl stat
     ) throws IgniteCheckedException {
         StatisticsObjectData data = toObjectData(keyMsg, type, stat);
         return new StatisticsPropagationMessage(Collections.singletonList(data));
@@ -132,8 +135,8 @@ public class StatisticsUtils {
      * @throws IgniteCheckedException In case of errors.
      */
     public static ObjectPartitionStatisticsImpl toObjectPartitionStatistics(
-            GridKernalContext ctx,
-            StatisticsObjectData objData
+        GridKernalContext ctx,
+        StatisticsObjectData objData
     ) throws IgniteCheckedException {
         if (objData == null)
             return null;
@@ -157,7 +160,10 @@ public class StatisticsUtils {
      * @return Converted object statistics.
      * @throws IgniteCheckedException  In case of errors.
      */
-    public static ObjectStatisticsImpl toObjectStatistics(GridKernalContext ctx, StatisticsObjectData data) throws IgniteCheckedException {
+    public static ObjectStatisticsImpl toObjectStatistics(
+        GridKernalContext ctx,
+        StatisticsObjectData data
+    ) throws IgniteCheckedException {
         Map<String, ColumnStatistics> colNameToStat = new HashMap<>(data.data().size());
 
         for (Map.Entry<String, StatisticsColumnData> cs : data.data().entrySet())
@@ -174,8 +180,10 @@ public class StatisticsUtils {
      * @return Converted object statistics.
      * @throws IgniteCheckedException In case of errors.
      */
-    public static ObjectStatisticsImpl toObjectStatistics(GridKernalContext ctx, StatisticsPropagationMessage data)
-            throws IgniteCheckedException {
+    public static ObjectStatisticsImpl toObjectStatistics(
+        GridKernalContext ctx,
+        StatisticsPropagationMessage data
+    ) throws IgniteCheckedException {
         if (data == null)
             return null;
 
