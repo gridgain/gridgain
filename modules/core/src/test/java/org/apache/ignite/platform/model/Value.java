@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.platform;
+package org.apache.ignite.platform.model;
 
 import java.util.Objects;
 
-/** Test key object. */
-public class Key {
+/** Test value object. */
+public class Value {
     /** */
-    private long id;
+    private String val;
 
     /** */
-    public Key(long id) {
-        this.id = id;
+    public Value(String val) {
+        this.val = val;
     }
 
     /** */
-    public long getId() {
-        return id;
+    public String getVal() {
+        return val;
     }
 
     /** {@inheritDoc} */
@@ -39,12 +39,12 @@ public class Key {
             return true;
         if (o == null || getClass() != o.getClass())
             return false;
-        Key key = (Key)o;
-        return id == key.id;
+        Value value = (Value)o;
+        return Objects.equals(val, value.val);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(val);
     }
 }
