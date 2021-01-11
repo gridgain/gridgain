@@ -175,7 +175,16 @@ namespace Apache.Ignite.Core.Tests.Services
 
         /** */
         IDictionary testMap(IDictionary<Key, Value> dict);
-        
+
+        /** */
+        void testDateArray(DateTime?[] dates);
+
+        /** */
+        DateTime testDate(DateTime date);
+
+        /** */
+        void testUTCDateFromCache();
+
         /** */
         void sleep(long delayMs);
     }
