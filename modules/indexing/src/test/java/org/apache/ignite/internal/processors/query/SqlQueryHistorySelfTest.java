@@ -46,6 +46,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
@@ -57,6 +58,9 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
 
     /** */
     private static TcpDiscoveryIpFinder ipFinder = new TcpDiscoveryVmIpFinder(true);
+
+    /** Activate lazy by default. */
+    private final boolean activateLazyByDflt = getBoolean("DFLT_LAZY", false);
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -519,7 +523,7 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
         assertEquals(exp, hist.distributedJoins());
         assertEquals(exp, hist.enforceJoinOrder());
         assertEquals(loc, hist.local());
-        assertEquals(exp, hist.lazy());
+        assertEquals(activateLazyByDflt || exp, hist.lazy());
     }
 
     /**
