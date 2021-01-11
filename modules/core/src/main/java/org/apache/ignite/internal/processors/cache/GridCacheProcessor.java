@@ -3470,33 +3470,33 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         GridPlainClosure2<Collection<byte[]>, byte[], IgniteInternalFuture<Boolean>> startCacheClsr =
             (grpKeys, masterKeyDigest) -> {
-            assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
+                assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
 
                 byte[] encCacheKey = prepareEncryptionGroupKey(cacheName, ccfg, F.first(grpKeys));
 
                 DynamicCacheChangeRequest req = prepareCacheChangeRequest(
-                ccfg,
-                cacheName,
-                nearCfg,
-                cacheType,
-                sql,
-                failIfExists,
-                failIfNotStarted,
-                null,
-                false,
-                null,
-                encCacheKey,
-                ccfg != null && ccfg.isEncryptionEnabled() ? masterKeyDigest : null);
+                    ccfg,
+                    cacheName,
+                    nearCfg,
+                    cacheType,
+                    sql,
+                    failIfExists,
+                    failIfNotStarted,
+                    null,
+                    false,
+                    null,
+                    encCacheKey,
+                    ccfg != null && ccfg.isEncryptionEnabled() ? masterKeyDigest : null);
 
-            if (req != null) {
-                if (req.clientStartOnly())
-                    return startClientCacheChange(F.asMap(req.cacheName(), req), null);
+                if (req != null) {
+                    if (req.clientStartOnly())
+                        return startClientCacheChange(F.asMap(req.cacheName(), req), null);
 
-                return F.first(initiateCacheChanges(F.asList(req)));
-            }
-            else
-                return new GridFinishedFuture<>();
-        };
+                    return F.first(initiateCacheChanges(F.asList(req)));
+                }
+                else
+                    return new GridFinishedFuture<>();
+            };
 
         try {
             if (ccfg != null && ccfg.isEncryptionEnabled()) {
