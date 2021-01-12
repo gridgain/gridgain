@@ -20,7 +20,7 @@ namespace Apache.Ignite.Core.Tests.Services
     using System.Collections;
     using System.Collections.Generic;
     using Apache.Ignite.Core.Binary;
-    using org.apache.ignite.platform;
+    using org.apache.ignite.platform.model;
 
     /// <summary>
     /// Explicit service proxy over dynamic variable.
@@ -318,6 +318,16 @@ namespace Apache.Ignite.Core.Tests.Services
             return _svc.testEmployees(emps);
         }
 
+        public Account[] testAccounts()
+        {
+            return _svc.testAccounts();
+        }
+
+        public User[] testUsers()
+        {
+            return _svc.testUsers();
+        }
+
         /** <inheritDoc /> */
         public ICollection testDepartments(ICollection deps)
         {
@@ -328,6 +338,30 @@ namespace Apache.Ignite.Core.Tests.Services
         public IDictionary testMap(IDictionary<Key, Value> dict)
         {
             return _svc.testMap(dict);
+        }
+
+        /** <inheritDoc /> */
+        public void testDateArray(DateTime?[] dates)
+        {
+            _svc.testDateArray(dates);
+        }
+
+        /** <inheritDoc /> */
+        public DateTime testDate(DateTime date)
+        {
+            return _svc.testDate(date);
+        }
+
+        /** <inheritDoc /> */
+        public void testUTCDateFromCache()
+        {
+            _svc.testDateFromCache();
+        }
+
+        /** <inheritDoc /> */
+        public void testLocalDateFromCache()
+        {
+            _svc.testLocalDateFromCache();
         }
 
         /** <inheritDoc /> */
