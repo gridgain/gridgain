@@ -17,10 +17,8 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
-import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
-import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
@@ -79,12 +77,16 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
         IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, statMgr, statGath,
             cls -> log);
 
-        ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
-        lsnr[0].onReadyForReadWrite(metastorage);
 
         IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
-        IgniteStatisticsPersistenceStoreImpl persStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, dbMgr, cls -> log);
+        IgniteStatisticsPersistenceStoreImpl persStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
+            dbMgr, cls -> log);
+
         persStore.repository(statsRepos);
+        statGath.repository(statsRepos);
+
+        ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
+        lsnr[0].onReadyForReadWrite(metastorage);
 
         return Arrays.asList(new Object[][] {
             { "IgniteStatisticsInMemoryStoreImpl", inMemoryStore },

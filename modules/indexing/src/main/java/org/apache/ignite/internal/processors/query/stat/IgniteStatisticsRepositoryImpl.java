@@ -21,6 +21,7 @@ import org.apache.ignite.internal.util.typedef.F;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -78,17 +79,20 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     }
 
     /** {@inheritDoc} */
-    @Override public void mergeLocalPartitionsStatistics(
+    @Override public Collection<ObjectPartitionStatisticsImpl> mergeLocalPartitionsStatistics(
             StatisticsKey key,
             Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
+        List<ObjectPartitionStatisticsImpl> res = new ArrayList<>();
         for (ObjectPartitionStatisticsImpl newStat : statistics) {
             ObjectPartitionStatisticsImpl oldStat = store.getLocalPartitionStatistics(key, newStat.partId());
             if (oldStat != null)
                 newStat = add(oldStat, newStat);
 
+            res.add(newStat);
             store.saveLocalPartitionStatistics(key, newStat);
         }
+        return res;
     }
 
     /** {@inheritDoc} */

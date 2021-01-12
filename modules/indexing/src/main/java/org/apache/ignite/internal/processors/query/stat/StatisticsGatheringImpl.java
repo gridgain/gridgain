@@ -68,6 +68,9 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
     /** Query processor */
     private final GridQueryProcessor qryProcessor;
 
+    /** Ignite statistics repository. */
+    private IgniteStatisticsRepository statRepo;
+
     /** Statistics crawler. */
     private final StatisticsGatheringRequestCrawler statCrawler;
 
@@ -99,6 +102,11 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         this.qryProcessor = qryProcessor;
         this.statCrawler = statCrawler;
         this.gatMgmtPool = gatMgmtPool;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void repository(IgniteStatisticsRepository statRepo) {
+        this.statRepo = statRepo;
     }
 
     /**
@@ -247,7 +255,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
             int[] parts,
             Supplier<Boolean> cancelled
     ) {
-
         Map<GridH2Table, Column[]> targets = new HashMap<>(keys.size());
         Map<GridH2Table, StatisticsKeyMessage> tblKey = new HashMap<>(keys.size());
         for (StatisticsKeyMessage key : keys) {
@@ -278,11 +285,9 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
 
             if (partStats != null) {
                 collectedParts.add(partId);
-                for (Map.Entry<GridH2Table, ObjectPartitionStatisticsImpl> tblStat : partStats.entrySet()) {
-                    StatisticsKeyMessage key = tblKey.get(tblStat.getKey());
 
+                for (Map.Entry<GridH2Table, ObjectPartitionStatisticsImpl> tblStat : partStats.entrySet())
                     tblPartStat.computeIfAbsent(tblStat.getKey(), k -> new ArrayList<>(parts.length)).add(tblStat.getValue());
-                }
             }
         }
 
@@ -290,8 +295,15 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         for (Map.Entry<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> partStats : tblPartStat.entrySet()) {
             ObjectStatisticsImpl locStat = aggregateLocalStatistics(partStats.getKey(), targets.get(partStats.getKey()),
                 partStats.getValue());
+            StatisticsKeyMessage key = tblKey.get(partStats.getKey());
 
-            res.put(tblKey.get(partStats.getKey()), locStat);
+            StatisticsKey statKey = new StatisticsKey(key.schema(), key.obj());
+            statRepo.mergeLocalStatistics(statKey, locStat);
+            Collection<ObjectPartitionStatisticsImpl> mergedStats = statRepo
+                .mergeLocalPartitionsStatistics(statKey, partStats.getValue());
+            statCrawler.sendPartitionStatisticsToBackupNodesAsync(key, mergedStats);
+
+            res.put(key, locStat);
         }
 
         statCrawler.sendGatheringResponseAsync(reqId, res, collectedParts.stream().mapToInt(Integer::intValue).toArray());

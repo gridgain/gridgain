@@ -43,6 +43,11 @@ public interface StatisticsGathering {
     );
 
     /**
+     * @param statRepo Statistics repository.
+     */
+    public void repository(IgniteStatisticsRepository statRepo);
+
+    /**
      * Aggregate specified partition level statistics to local level statistics.
      *
      * @param keyMsg Aggregation key.

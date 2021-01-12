@@ -131,6 +131,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         statsRepos = new IgniteStatisticsRepositoryImpl(store, this, statGathering, ctx::log);
 
         store.repository(statsRepos);
+        statGathering.repository(statsRepos);
 
     }
 
@@ -273,6 +274,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         statGathering.collectLocalObjectsStatisticsAsync(reqId, keysSet, parts, () -> gCtx.doneFut().isCancelled());
     }
+
 
     /** {@inheritDoc} */
     @Override public StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>>[]
