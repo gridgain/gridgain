@@ -44,6 +44,9 @@ public class ContinuousQueryView {
     /** Routine id. */
     private final UUID routineId;
 
+    /** Node consistent ID */
+    private final String nodeConsistentId;
+
     /** Class name of the local listener */
     private String localListener;
 
@@ -51,10 +54,11 @@ public class ContinuousQueryView {
      * @param routineId Routine id.
      * @param qry Query info.
      */
-    public ContinuousQueryView(UUID routineId, RoutineInfo qry) {
+    public ContinuousQueryView(UUID routineId, RoutineInfo qry, String nodeConsistentId) {
         this.qry = qry;
         this.hnd = qry.handler();
         this.routineId = routineId;
+        this.nodeConsistentId = nodeConsistentId;
 
         CacheContinuousQueryHandler hnd0 = cacheHandler();
         if (hnd0 == null || hnd0.localListener() == null)
@@ -209,6 +213,14 @@ public class ContinuousQueryView {
             return null;
 
         return toStringSafe(hnd0.localTransformedEventListener());
+    }
+
+    /**
+     * @return String representation of consistent node ID
+     * */
+    @Order(5)
+    public String nodeConsistentId() {
+        return nodeConsistentId;
     }
 
     /** */

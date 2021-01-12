@@ -23,30 +23,30 @@ import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.systemview.view.ContinuousQueryView;
 import org.jetbrains.annotations.NotNull;
-
 import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /** Continuous Queries Collection which collected every time from grid */
 public class ContinuousQueriesCollection extends AbstractCollection<ContinuousQueryView> {
-    /** init collections only for size */
-    private final Collection<?> coll;
+    /** func for size */
+    private final Supplier<Integer> sizeFunc;
 
     /** local ignite instance name */
-    private final String name;
+    private final String locIgniteName;
 
     /** */
-    public ContinuousQueriesCollection(Collection<?> coll, String name) {
-        this.coll = coll;
-        this.name = name;
+    public ContinuousQueriesCollection(String locIgniteName, Supplier<Integer> sizeFunc) {
+        this.sizeFunc = sizeFunc;
+        this.locIgniteName = locIgniteName;
     }
 
     /** {@inheritDoc} */
     @NotNull
     @Override public Iterator<ContinuousQueryView> iterator() {
-        Ignite ignite = Ignition.ignite(name);
+        Ignite ignite = Ignition.ignite(locIgniteName);
 
         return
                 ignite.
@@ -59,7 +59,7 @@ public class ContinuousQueriesCollection extends AbstractCollection<ContinuousQu
 
     /** {@inheritDoc} */
     @Override public int size() {
-        return coll.size();
+        return sizeFunc.get();
     }
 
     /** callable for collecting local routine info from grid */
@@ -80,7 +80,7 @@ public class ContinuousQueriesCollection extends AbstractCollection<ContinuousQu
                             getLocalContinuousQueryRoutines().
                             stream().
                             map(
-                                    r -> new ContinuousQueryView(r.getKey(), r.getValue())
+                                    r -> new ContinuousQueryView(r.getKey(), r.getValue(), ignite.cluster().localNode().consistentId().toString())
                             ).
                             collect(Collectors.toSet());
         }
