@@ -364,6 +364,11 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
+    @Override public UUID id() {
+        return cluster.id();
+    }
+
+    /** {@inheritDoc} */
     @Override public String tag() {
         return cluster.tag();
     }
