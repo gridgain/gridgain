@@ -3841,7 +3841,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert obsoleteVer != null;
 
         boolean obsolete = false;
-        GridCacheVersion ver0 = null;
 
         lockEntry();
 

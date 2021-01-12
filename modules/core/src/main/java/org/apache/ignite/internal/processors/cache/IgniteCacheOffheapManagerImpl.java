@@ -2944,8 +2944,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     grp.topology().localPartition(oldRow.partition()).dataStore().partUpdateCounter().
                         updateTombstoneClearCounter(oldRow.version().updateCounter());
                 }
-                else if (oldRow.expireTime() != tombstoneRow.expireTime())
-                    updatePendingEntries(cctx, tombstoneRow, oldRow); // Reindex by TTL.
+                else // Reindex tombstones to avoid a situation when PendingRow link points to invalid row.
+                    updatePendingEntries(cctx, tombstoneRow, oldRow);
             }
             else if (tombstoneRow != null) {
                 tombstoneCreated();
