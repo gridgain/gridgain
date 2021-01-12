@@ -512,7 +512,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 true,
                 null,
                 null,
-                null);
+                null,
+                false,
+                false,
+                false
+            );
 
             Throwable failReason = null;
             try {
@@ -732,7 +736,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             true,
             null,
             null,
-            qryInitiatorId);
+            qryInitiatorId,
+            false,
+            false,
+            false
+        );
 
         Exception failReason = null;
 
@@ -1610,7 +1618,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryDesc.local(),
             memoryMgr.createQueryMemoryTracker(qryParams.maxMemory()),
             cancel,
-            qryDesc.queryInitiatorId()
+            qryDesc.queryInitiatorId(),
+            qryDesc.enforceJoinOrder(),
+            qryParams.lazy(),
+            qryDesc.distributedJoins()
         );
     }
 

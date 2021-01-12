@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.util.Objects;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
@@ -31,6 +32,15 @@ public class QueryHistoryMetricsKey {
     /** Local flag. */
     private final boolean loc;
 
+    /** Distributed joins. */
+    private final boolean distributedJoins;
+
+    /** Enforce join order. */
+    private final boolean enforceJoinOrder;
+
+    /** Lazy. */
+    private final boolean lazy;
+
     /** Pre-calculated hash code. */
     private final int hash;
 
@@ -40,16 +50,23 @@ public class QueryHistoryMetricsKey {
      * @param qry Textual query representation.
      * @param schema Schema.
      * @param loc Local flag of execution query.
+     * @param distributedJoins Distributed joins flag.
+     * @param enforceJoinOrder Enforce join order flag.
+     * @param lazy Lazy flag.
      */
-    public QueryHistoryMetricsKey(String qry, String schema, boolean loc) {
+    public QueryHistoryMetricsKey(String qry, String schema, boolean loc, boolean distributedJoins,
+        boolean enforceJoinOrder, boolean lazy) {
         assert qry != null;
         assert schema != null;
 
         this.qry = qry;
         this.schema = schema;
         this.loc = loc;
+        this.distributedJoins = distributedJoins;
+        this.enforceJoinOrder = enforceJoinOrder;
+        this.lazy = lazy;
 
-        hash = 31 * (31 * qry.hashCode() + schema.hashCode()) + (loc ? 1 : 0);
+        hash = Objects.hash(qry, schema, loc, distributedJoins, enforceJoinOrder, lazy);
     }
 
     /**
@@ -73,6 +90,27 @@ public class QueryHistoryMetricsKey {
         return loc;
     }
 
+    /**
+     * @return Distributed joins.
+     */
+    public boolean distributedJoins() {
+        return distributedJoins;
+    }
+
+    /**
+     * @return Enforce join order.
+     */
+    public boolean enforceJoinOrder() {
+        return enforceJoinOrder;
+    }
+
+    /**
+     * @return Lazy.
+     */
+    public boolean lazy() {
+        return lazy;
+    }
+
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return hash;
@@ -88,6 +126,7 @@ public class QueryHistoryMetricsKey {
 
         QueryHistoryMetricsKey key = (QueryHistoryMetricsKey)o;
 
-        return F.eq(qry, key.qry) && F.eq(schema, key.schema) && F.eq(loc, key.loc);
+        return F.eq(qry, key.qry) && F.eq(schema, key.schema) && F.eq(loc, key.loc) && F.eq(lazy, key.lazy)
+            && F.eq(enforceJoinOrder, key.enforceJoinOrder) && F.eq(distributedJoins, key.distributedJoins);
     }
 }
