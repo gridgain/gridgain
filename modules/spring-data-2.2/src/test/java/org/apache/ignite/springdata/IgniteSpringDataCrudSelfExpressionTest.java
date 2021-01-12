@@ -16,6 +16,8 @@
 
 package org.apache.ignite.springdata;
 
+import java.util.Collection;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.springdata.misc.ApplicationConfiguration;
 import org.apache.ignite.springdata.misc.Person;
 import org.apache.ignite.springdata.misc.PersonExpressionRepository;
@@ -32,6 +34,9 @@ public class IgniteSpringDataCrudSelfExpressionTest extends GridCommonAbstractTe
 
     /** Context. */
     private static AnnotationConfigApplicationContext ctx;
+
+    /** Number of entries to store */
+    private static int CACHE_SIZE = 1000;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -50,7 +55,9 @@ public class IgniteSpringDataCrudSelfExpressionTest extends GridCommonAbstractTe
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        assertEquals(0, repo.count());
+        fillInRepository();
+
+        assertEquals(CACHE_SIZE, repo.count());
     }
 
     /** {@inheritDoc} */
@@ -63,29 +70,40 @@ public class IgniteSpringDataCrudSelfExpressionTest extends GridCommonAbstractTe
     }
 
     /**
-     * Test that put and get operations are working.
+     *
      */
-    @Test
-    public void testPutGet() {
-        assertNotNull(repo);
+    private void fillInRepository() {
+        for (int i = 0; i < CACHE_SIZE - 5; i++) {
+            repo.save(i, new Person("person" + Integer.toHexString(i),
+                "lastName" + Integer.toHexString((i + 16) % 256)));
+        }
 
-        Person person = new Person("some_name", "some_surname");
+        repo.save((int) repo.count(), new Person("uniquePerson", "uniqueLastName"));
+        repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
+        repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
+        repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
+        repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
+    }
 
-        assertEquals(person, repo.save(0, person));
-
-        assertTrue(repo.existsById(0));
-
-        assertEquals(person, repo.findById(0).get());
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        ctx.close();
     }
 
     /**
-     * Test that saving without an id fails.
+     * Tests put & get operations.
      */
     @Test
-    public void testFailIfSaveWithoutId() {
-        assertNotNull(repo);
-
+    public void testPutGet() {
         Person person = new Person("some_name", "some_surname");
+
+        int id = CACHE_SIZE + 1;
+
+        assertEquals(person, repo.save(id, person));
+
+        assertTrue(repo.existsById(id));
+
+        assertEquals(person, repo.findById(id).get());
 
         try {
             repo.save(person);
@@ -95,5 +113,21 @@ public class IgniteSpringDataCrudSelfExpressionTest extends GridCommonAbstractTe
         catch (UnsupportedOperationException e) {
             //excepted
         }
+    }
+
+    /**
+     * Tests SpEL exphression.
+     */
+    @Test
+    public void testCacheCount() {
+        Ignite ignite = ctx.getBean(Ignite.class);
+
+        Collection<String> cacheNames = ignite.cacheNames();
+
+        assertFalse("The SpEL \"#{cacheNames.personCacheName}\" isn't processed!",
+            cacheNames.contains("#{cacheNames.personCacheName}"));
+
+        assertTrue("Cache \"PersonCache\" isn't found!",
+            cacheNames.contains("PersonCache"));
     }
 }

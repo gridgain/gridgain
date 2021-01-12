@@ -20,8 +20,8 @@ import org.apache.ignite.springdata22.repository.IgniteRepository;
 import org.apache.ignite.springdata22.repository.config.RepositoryConfig;
 
 /**
- *
+ * Test spring-data repository with Person entity.
  */
-@RepositoryConfig(cacheName = "@cacheNames.personCacheName")
+@RepositoryConfig(cacheName = "#{cacheNames.personCacheName}")
 public interface PersonExpressionRepository extends IgniteRepository<Person, Integer> {
 }
