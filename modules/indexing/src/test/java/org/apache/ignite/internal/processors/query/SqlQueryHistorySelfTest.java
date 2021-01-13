@@ -58,6 +58,9 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
     /** */
     private static TcpDiscoveryIpFinder ipFinder = new TcpDiscoveryVmIpFinder(true);
 
+    /** Activate lazy by default. */
+    private final boolean activateLazyByDflt = GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY");
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -375,7 +378,7 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
 
         cache.query(new SqlFieldsQuery("select * from String")).getAll();
 
-        checkQueryBooleanParams(false, false);
+        checkQueryBooleanParams(false, false, activateLazyByDflt);
     }
 
     /**
@@ -394,7 +397,7 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
             .setLocal(!node.localNode().isClient())
         ).getAll();
 
-        checkQueryBooleanParams(true, !node.localNode().isClient());
+        checkQueryBooleanParams(true, !node.localNode().isClient(), true);
     }
 
     /**
@@ -508,7 +511,7 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
      * @param exp Expected.
      * @param loc Query.
      */
-    private void checkQueryBooleanParams(boolean exp, boolean loc) {
+    private void checkQueryBooleanParams(boolean exp, boolean loc, boolean lazy) {
         Collection<QueryHistory> metrics = ((IgniteH2Indexing)queryNode().context().query().getIndexing())
             .runningQueryManager().queryHistoryMetrics().values();
 
@@ -519,7 +522,7 @@ public class SqlQueryHistorySelfTest extends GridCommonAbstractTest {
         assertEquals(exp, hist.distributedJoins());
         assertEquals(exp, hist.enforceJoinOrder());
         assertEquals(loc, hist.local());
-        assertEquals(exp, hist.lazy());
+        assertEquals(lazy, hist.lazy());
     }
 
     /**
