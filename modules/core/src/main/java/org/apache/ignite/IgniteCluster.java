@@ -555,6 +555,18 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public boolean isWalEnabled(String cacheName);
 
     /**
+     * Cluster ID is a unique identifier automatically generated when cluster starts up for the very first time.
+     *
+     * It is a cluster-wide property so all nodes of the cluster (including client nodes) return the same value.
+     *
+     * In in-memory clusters ID is generated again upon each cluster restart.
+     * In clusters running in persistent mode cluster ID is stored to disk and is used even after full cluster restart.
+     *
+     * @return Unique cluster ID.
+     */
+    public UUID id();
+
+    /**
      * User-defined tag describing the cluster.
      *
      * @return Current tag value same across all nodes of the cluster..
