@@ -23,10 +23,10 @@ import java.util.UUID;
  * Future to track statistics collection task. Allows to get collection id immediately.
  * @param <T>
  */
-public interface StatsCollectionFuture<T> extends IgniteInternalFuture<T> {
+public interface StatisticsCollectionFuture<T> extends IgniteInternalFuture<T> {
     /**
-     * @return Statistics collection id.
+     * @return Statistics gathering id.
      */
-    public UUID colId();
+    public UUID gatId();
 }
 
