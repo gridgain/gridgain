@@ -42,7 +42,8 @@ public class QueryHistoryMetrics {
      * @param failed {@code True} query executed unsuccessfully {@code false} otherwise.
      */
     public QueryHistoryMetrics(GridRunningQueryInfo info, boolean failed) {
-        key = new QueryHistoryMetricsKey(info.query(), info.schemaName(), info.local());
+        key = new QueryHistoryMetricsKey(info.query(), info.schemaName(), info.local(), info.distributedJoins(),
+            info.enforceJoinOrder(), info.lazy());
 
         long failures = failed ? 1 : 0;
         long duration = System.currentTimeMillis() - info.startTime();
@@ -212,6 +213,27 @@ public class QueryHistoryMetrics {
      */
     @Nullable public ConcurrentLinkedDeque8.Node<QueryHistoryMetrics> link() {
         return linkRef.get();
+    }
+
+    /**
+     * @return Distributed joins.
+     */
+    public boolean distributedJoins() {
+        return key.distributedJoins();
+    }
+
+    /**
+     * @return Enforce join order.
+     */
+    public boolean enforceJoinOrder() {
+        return key.enforceJoinOrder();
+    }
+
+    /**
+     * @return Lazy flag.
+     */
+    public boolean lazy() {
+        return key.lazy();
     }
 
     /**

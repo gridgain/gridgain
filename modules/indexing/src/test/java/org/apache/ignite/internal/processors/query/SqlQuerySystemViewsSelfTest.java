@@ -57,7 +57,10 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
         /** */ MEMORY_MAX,
         /** */ DISK_ALLOCATION_CURRENT,
         /** */ DISK_ALLOCATION_MAX,
-        /** */ DISK_ALLOCATION_TOTAL;
+        /** */ DISK_ALLOCATION_TOTAL,
+        /** */ ENFORCE_JOIN_ORDER,
+        /** */ DISTRIBUTED_JOINS,
+        /** */ LAZY;
 
         /** */
         public int pos() {
@@ -80,7 +83,10 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
         /** */ DISK_ALLOCATION_MIN,
         /** */ DISK_ALLOCATION_MAX,
         /** */ DISK_ALLOCATION_TOTAL_MIN,
-        /** */ DISK_ALLOCATION_TOTAL_MAX;
+        /** */ DISK_ALLOCATION_TOTAL_MAX,
+        /** */ ENFORCE_JOIN_ORDER,
+        /** */ DISTRIBUTED_JOINS,
+        /** */ LAZY;
 
         /** */
         public int pos() {
@@ -92,6 +98,9 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
     private static final String SELECT_RUNNING_QUERIES = "SELECT " + Arrays.stream(RunningQueriesViewField.values())
         .map(Enum::name).collect(Collectors.joining(", ")) + " FROM " +
         QueryUtils.sysSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES ORDER BY START_TIME";
+
+    /** Activate lazy by default. */
+    private final boolean activateLazyByDflt = GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY");
 
     /**
      * @return System schema name.
@@ -288,6 +297,15 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         assertEquals(3 * base, firstRow.get(QueriesHistoryViewField.DISK_ALLOCATION_TOTAL_MAX.pos()));
         assertEquals(3 * base, secondRow.get(QueriesHistoryViewField.DISK_ALLOCATION_TOTAL_MAX.pos()));
+
+        assertEquals(false, firstRow.get(QueriesHistoryViewField.ENFORCE_JOIN_ORDER.pos()));
+        assertEquals(false, secondRow.get(QueriesHistoryViewField.ENFORCE_JOIN_ORDER.pos()));
+
+        assertEquals(false, firstRow.get(QueriesHistoryViewField.DISTRIBUTED_JOINS.pos()));
+        assertEquals(false, secondRow.get(QueriesHistoryViewField.DISTRIBUTED_JOINS.pos()));
+
+        assertEquals(activateLazyByDflt, firstRow.get(QueriesHistoryViewField.LAZY.pos()));
+        assertEquals(activateLazyByDflt, secondRow.get(QueriesHistoryViewField.LAZY.pos()));
     }
 
     /**
@@ -436,6 +454,15 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
 
             assertEquals(SELECT_RUNNING_QUERIES, cur.get(0).get(RunningQueriesViewField.SQL.pos()));
             assertEquals(SELECT_RUNNING_QUERIES, cur.get(1).get(RunningQueriesViewField.SQL.pos()));
+
+            assertFalse((Boolean)cur.get(0).get(RunningQueriesViewField.ENFORCE_JOIN_ORDER.pos()));
+            assertFalse((Boolean)cur.get(1).get(RunningQueriesViewField.ENFORCE_JOIN_ORDER.pos()));
+
+            assertFalse((Boolean)cur.get(0).get(RunningQueriesViewField.DISTRIBUTED_JOINS.pos()));
+            assertFalse((Boolean)cur.get(1).get(RunningQueriesViewField.DISTRIBUTED_JOINS.pos()));
+
+            assertEquals(activateLazyByDflt, cur.get(0).get(RunningQueriesViewField.LAZY.pos()));
+            assertEquals(activateLazyByDflt, cur.get(1).get(RunningQueriesViewField.LAZY.pos()));
 
             assertTrue((Boolean)cur.get(0).get(RunningQueriesViewField.LOCAL.pos()));
             assertTrue((Boolean)cur.get(1).get(RunningQueriesViewField.LOCAL.pos()));

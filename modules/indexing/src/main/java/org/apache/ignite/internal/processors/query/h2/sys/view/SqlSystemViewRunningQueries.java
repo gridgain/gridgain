@@ -49,7 +49,10 @@ public class SqlSystemViewRunningQueries extends SqlAbstractLocalSystemView {
             newColumn("DISK_ALLOCATION_CURRENT", Value.LONG),
             newColumn("DISK_ALLOCATION_MAX", Value.LONG),
             newColumn("DISK_ALLOCATION_TOTAL", Value.LONG),
-            newColumn("INITIATOR_ID", Value.STRING)
+            newColumn("INITIATOR_ID", Value.STRING),
+            newColumn("ENFORCE_JOIN_ORDER", Value.BOOLEAN),
+            newColumn("DISTRIBUTED_JOINS", Value.BOOLEAN),
+            newColumn("LAZY", Value.BOOLEAN)
         );
     }
 
@@ -95,7 +98,10 @@ public class SqlSystemViewRunningQueries extends SqlAbstractLocalSystemView {
                     info.memoryMetricProvider().writtenOnDisk(),
                     info.memoryMetricProvider().maxWrittenOnDisk(),
                     info.memoryMetricProvider().totalWrittenOnDisk(),
-                    info.queryInitiatorId()
+                    info.queryInitiatorId(),
+                    info.enforceJoinOrder(),
+                    info.distributedJoins(),
+                    info.lazy()
                 )
             );
         }
