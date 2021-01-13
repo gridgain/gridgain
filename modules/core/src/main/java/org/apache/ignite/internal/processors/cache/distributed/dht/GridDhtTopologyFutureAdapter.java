@@ -40,7 +40,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSyste
 public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<AffinityTopologyVersion>
     implements GridDhtTopologyFuture {
     /** Error message format if cluster in read-only mode and write operation tries to execute.*/
-    private static final String CLUSTER_READ_ONLY_ERROR_MSG =
+    public static final String CLUSTER_READ_ONLY_ERROR_MSG =
         "Failed to perform cache operation (cluster is in read-only mode) [cacheGrp=%s, cache=%s]";
 
     /** Cache groups validation results. */

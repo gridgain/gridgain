@@ -266,8 +266,6 @@ public class CachePartitionDefragmentationManager {
 
         try {
             // Now the actual process starts.
-            TreeIterator treeIter = new TreeIterator(pageSize);
-
             IgniteInternalFuture<?> idxDfrgFut = null;
             DataPageEvictionMode prevPageEvictionMode = null;
 

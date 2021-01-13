@@ -28,8 +28,10 @@ import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_GET_FUTURE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_SINGLE_GET_FUTURE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET;
@@ -56,7 +58,6 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
  * </ul>
  */
 public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
-
     /** Client node. */
     private IgniteEx client;
 
@@ -78,7 +79,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
 
         awaitPartitionMapExchange();
 
-        grid(0).tracingConfiguration().set(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(Scope.CACHE_API_READ).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());
@@ -110,6 +111,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testCacheAtomicGetTracing() throws Exception {
         client.cache(ATOMIC_CACHE).put("One",1);
 
@@ -314,10 +316,11 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testCacheAtomicGetAsyncTracing() throws Exception {
         client.cache(ATOMIC_CACHE).put("One",1);
 
-        client.cache(ATOMIC_CACHE).getAsync("One");
+        client.cache(ATOMIC_CACHE).getAsync("One").get();
 
         handler().flush();
 
@@ -418,7 +421,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
                 add("One");
                 add("Two");
                 add("Three");
-            }});
+            }}).get();
 
         handler().flush();
 

@@ -27,6 +27,11 @@ import org.apache.ignite.springdata20.repository.config.RepositoryConfig;
 import org.apache.ignite.springdata20.repository.query.IgniteQuery;
 import org.apache.ignite.springdata20.repository.query.IgniteQueryGenerator;
 import org.apache.ignite.springdata20.repository.query.IgniteRepositoryQuery;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.config.BeanExpressionContext;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.expression.StandardBeanExpressionResolver;
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.RepositoryMetadata;
@@ -44,6 +49,15 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
     /** Ignite instance */
     private Ignite ignite;
 
+    /** Spring application bean factory */
+    private DefaultListableBeanFactory beanFactory;
+
+    /** Spring application expression resolver */
+    private StandardBeanExpressionResolver resolver = new StandardBeanExpressionResolver();
+
+    /** Spring application bean expression context */
+    private BeanExpressionContext beanExpressionContext;
+
     /** Mapping of a repository to a cache. */
     private final Map<Class<?>, String> repoToCache = new HashMap<>();
 
@@ -52,8 +66,12 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
      *
      * @param ignite
      */
-    public IgniteRepositoryFactory(Ignite ignite) {
+    public IgniteRepositoryFactory(Ignite ignite, ApplicationContext ctx) {
         this.ignite = ignite;
+
+        this.beanFactory = new DefaultListableBeanFactory(ctx.getAutowireCapableBeanFactory());
+
+        this.beanExpressionContext = new BeanExpressionContext(beanFactory, null);
     }
 
     /**
@@ -62,8 +80,8 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
      *
      * @param cfg Ignite configuration.
      */
-    public IgniteRepositoryFactory(IgniteConfiguration cfg) {
-        this.ignite = Ignition.start(cfg);
+    public IgniteRepositoryFactory(IgniteConfiguration cfg, ApplicationContext ctx) {
+        this(Ignition.start(cfg), ctx);
     }
 
     /**
@@ -72,8 +90,8 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
      *
      * @param springCfgPath A path to Ignite configuration.
      */
-    public IgniteRepositoryFactory(String springCfgPath) {
-        this.ignite = Ignition.start(springCfgPath);
+    public IgniteRepositoryFactory(String springCfgPath, ApplicationContext ctx) {
+        this(Ignition.start(springCfgPath), ctx);
     }
 
     /** {@inheritDoc} */
@@ -107,9 +125,21 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
         Assert.hasText(annotation.cacheName(), "Set a name of an Apache Ignite cache using @RepositoryConfig " +
             "annotation to map this repository to the underlying cache.");
 
-        repoToCache.put(repoItf, annotation.cacheName());
+        String cacheName = evaluateExpression(annotation.cacheName());
+
+        repoToCache.put(repoItf, cacheName);
 
         return super.getRepositoryMetadata(repoItf);
+    }
+
+    /**
+     *  Evaluate the SpEL expression
+     *
+     * @param spelExpression SpEL expression
+     * @return The result of execution of the SpEL expression
+     */
+    @NotNull private String evaluateExpression(String spelExpression) {
+        return (String)resolver.evaluate(spelExpression, beanExpressionContext);
     }
 
     /** {@inheritDoc} */
