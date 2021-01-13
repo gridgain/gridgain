@@ -16,7 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.util.lang.GridTuple3;
+
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,22 +27,20 @@ public interface IgniteStatisticsManager {
     /**
      * Collect object statistics.
      *
-     * @param schemaName Schema name.
-     * @param objName Object to collect statistics by.
-     * @param colNames Columns to collect statistics by.
+     * @param target Target to collect statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
      */
-    public void collectObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
+    public void collectObjectStatistics(StatisticsTarget target) throws IgniteCheckedException;
 
     /**
      * Collect objects statistics.
      *
-     * @param keys Collection of keys to collect statistics by (schema, obj, columns).
+     * @param targets Collection of targets to collect statistics by (schema, obj, columns).
      * @return Array of futures, to track progress and cancel collection on each of specified cache group.
      * @throws IgniteCheckedException In case of errors.
      */
-    public StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>>[] collectObjectStatisticsAsync(
-        GridTuple3<String, String, String[]>... keys
+    public StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] collectObjectStatisticsAsync(
+        StatisticsTarget... targets
     ) throws IgniteCheckedException;
 
     /**
@@ -65,18 +63,8 @@ public interface IgniteStatisticsManager {
     /**
      * Clear object statistics.
      *
-     * @param schemaName Schema name.
-     * @param objName Object to collect statistics by.
-     * @param colNames Columns to remove statistics by.
+     * @param targets Collection of target to collect statistics by (schema, obj, columns).
      * @throws IgniteCheckedException In case of errors.
      */
-    public void clearObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
-
-    /**
-     * Clear object statistics.
-     *
-     * @param keys Collection of keys to collect statistics by (schema, obj, columns).
-     * @throws IgniteCheckedException In case of errors.
-     */
-    public void clearObjectStatistics(GridTuple3<String, String, String[]>... keys) throws IgniteCheckedException;
+    public void clearObjectStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
 }

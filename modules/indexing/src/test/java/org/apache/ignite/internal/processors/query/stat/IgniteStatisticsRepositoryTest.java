@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
@@ -26,43 +27,44 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.function.Function;
 
 /**
  * Test for statistics repository.
  */
 public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
-//    /** First default key. */
-//    private static final StatisticsKey K1 = new StatisticsKey("PUBLIC", "tab1");
-//
-//    /** Second default key. */
-//    private static final StatisticsKey K2 = new StatisticsKey("PUBLIC", "tab2");
-//
-//    /** Column statistics with 100 nulls. */
-//    ColumnStatistics cs1 = new ColumnStatistics(null, null, 100, 0, 100,
-//            0, new byte[0]);
-//
-//    /** Column statistics with 100 integers 0-100. */
-//    ColumnStatistics cs2 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(100), 0, 100, 100,
-//            4, new byte[0]);
-//
-//    /** Column statistics with 0 rows. */
-//    ColumnStatistics cs3 = new ColumnStatistics(null, null, 0, 0, 0, 0, new byte[0]);
-//
-//    /** Column statistics with 100 integers 0-10. */
-//    ColumnStatistics cs4 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(10), 0, 10, 100,
-//            4, new byte[0]);
-//
-//
-//    /**
-//     * Test ignite statistics repository on client node without persistence.
-//     */
-//    @Test
-//    public void testClientNode() {
-//        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(false, null,
-//                null, null, cls -> log);
-//
-//        testRepositoryGlobal(statsRepos);
-//    }
+    /** First default key. */
+    private static final StatisticsKey K1 = new StatisticsKey("PUBLIC", "tab1");
+
+    /** Second default key. */
+    private static final StatisticsKey K2 = new StatisticsKey("PUBLIC", "tab2");
+
+    /** Column statistics with 100 nulls. */
+    ColumnStatistics cs1 = new ColumnStatistics(null, null, 100, 0, 100,
+            0, new byte[0]);
+
+    /** Column statistics with 100 integers 0-100. */
+    ColumnStatistics cs2 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(100), 0, 100, 100,
+            4, new byte[0]);
+
+    /** Column statistics with 0 rows. */
+    ColumnStatistics cs3 = new ColumnStatistics(null, null, 0, 0, 0, 0, new byte[0]);
+
+    /** Column statistics with 100 integers 0-10. */
+    ColumnStatistics cs4 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(10), 0, 10, 100,
+            4, new byte[0]);
+
+    /**
+     * Test ignite statistics repository on client node without persistence.
+     */
+    @Test
+    public void testClientNode() {
+        IgniteStatisticsDummyStoreImpl dummyStore = new IgniteStatisticsDummyStoreImpl(cls -> log);
+        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(dummyStore, null,
+                null, cls -> log);
+
+        testRepositoryGlobal(statsRepos);
+    }
 //
 //    /**
 //     * Test ignite statistics repository on server node without persistence.
@@ -173,35 +175,35 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
 //        assertEquals(2L, repo.getLocalStatistics(K1).rowCount());
 //    }
 //
-//    /**
-//     * Test specified repository with global statistics:
-//     *
-//     * 1) Clear empty statistics (whole object and only one column).
-//     * 2) Save global statistics.
-//     * 3) Check that it doesn't available by wrong key and available by right key.
-//     * 4) Merge global statistics and check that new version available.
-//     *
-//     * @param repo Ignite statistics repository to test.
-//     */
-//    public void testRepositoryGlobal(IgniteStatisticsRepositoryImpl repo) {
-//        assertNull(repo.getGlobalStatistics(K1));
-//        repo.clearGlobalStatistics(K1);
-//        repo.clearGlobalStatistics(K1, "col10");
-//
-//        ObjectStatisticsImpl tab1Statistics = getStatistics(1);
-//
-//        repo.saveGlobalStatistics(K1, tab1Statistics);
-//
-//        assertNull(repo.getGlobalStatistics(K2));
-//
-//        assertEquals(1L, repo.getGlobalStatistics(K1).rowCount());
-//
-//        ObjectStatisticsImpl tab1Statistics2 = getStatistics(2);
-//
-//        repo.mergeGlobalStatistics(K1, tab1Statistics2);
-//
-//        assertEquals(2L, repo.getGlobalStatistics(K1).rowCount());
-//    }
+    /**
+     * Test specified repository with global statistics:
+     *
+     * 1) Clear empty statistics (whole object and only one column).
+     * 2) Save global statistics.
+     * 3) Check that it doesn't available by wrong key and available by right key.
+     * 4) Merge global statistics and check that new version available.
+     *
+     * @param repo Ignite statistics repository to test.
+     */
+    public void testRepositoryGlobal(IgniteStatisticsRepositoryImpl repo) {
+        assertNull(repo.getGlobalStatistics(K1));
+        repo.clearGlobalStatistics(K1);
+        repo.clearGlobalStatistics(K1, "col10");
+
+        ObjectStatisticsImpl tab1Statistics = getStatistics(1);
+
+        repo.saveGlobalStatistics(K1, tab1Statistics);
+
+        assertNull(repo.getGlobalStatistics(K2));
+
+        assertEquals(1L, repo.getGlobalStatistics(K1).rowCount());
+
+        ObjectStatisticsImpl tab1Statistics2 = getStatistics(2);
+
+        repo.mergeGlobalStatistics(K1, tab1Statistics2);
+
+        assertEquals(2L, repo.getGlobalStatistics(K1).rowCount());
+    }
 //
 //    /**
 //     * Test object statistics add:

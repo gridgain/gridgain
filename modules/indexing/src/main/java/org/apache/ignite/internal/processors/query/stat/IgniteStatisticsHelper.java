@@ -40,9 +40,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
- * Current statistics collections with methods to work with it's messages.
+ * Utility methods to statistics messages generation.
  */
 public class IgniteStatisticsHelper {
     /** Logger. */
@@ -97,16 +98,9 @@ public class IgniteStatisticsHelper {
         Collection<StatisticsKeyMessage> keys
     ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> res = new HashMap<>(keys.size());
-        for (StatisticsKeyMessage key : keys) {
-            res.compute(getGroupContext(key), (k, v) -> {
-                if (v == null)
-                    v = new ArrayList<>();
+        for (StatisticsKeyMessage key : keys)
+            res.computeIfAbsent(getGroupContext(key), k -> new ArrayList<>()).add(key);
 
-                v.add(key);
-
-                return v;
-            });
-        }
         return res;
     }
 
@@ -145,7 +139,10 @@ public class IgniteStatisticsHelper {
         AffinityTopologyVersion grpTopVer = grp.shared().exchange().readyAffinityVersion();
         List<List<ClusterNode>> assignments = grp.affinity().assignments(grpTopVer);
 
-        assignments.forEach(pnodes -> pnodes.forEach(cn -> res.add(cn.id())));
+        for (List<ClusterNode> pnodes : assignments) {
+            for (ClusterNode node : pnodes)
+                res.add(node.id());
+        }
 
         return res;
     }
@@ -155,7 +152,7 @@ public class IgniteStatisticsHelper {
      *
      * @param grp Cache group context to get partition information by.
      * @param partIds Partition to collect information by, if {@code null} - will collect map for all cache group partitions.
-     * @param isPrimary if {@code true} - only master partitions will be selected, if {@code false} - only backups.
+     * @param isPrimary if {@code true} - only primary partitions will be selected, if {@code false} - only backups.
      * @return Map nodeId to array of partitions, related to node.
      */
     public static Map<UUID, int[]> nodePartitions(
@@ -166,42 +163,27 @@ public class IgniteStatisticsHelper {
         AffinityTopologyVersion grpTopVer = grp.shared().exchange().readyAffinityVersion();
         List<List<ClusterNode>> assignments = grp.affinity().assignments(grpTopVer);
 
-        Map<UUID, List<Integer>> res = new HashMap<>();
         if (partIds == null)
-            for (int i = 0; i < assignments.size(); i++)
-                fillPartition(res, assignments, i, isPrimary);
-        else
-            for (Integer partId : partIds)
-                fillPartition(res, assignments, partId, isPrimary);
+            partIds = IntStream.range(0, assignments.size()).boxed().collect(Collectors.toList());
+
+        Map<UUID, List<Integer>> res = new HashMap<>();
+        for (Integer partId : partIds) {
+            assert partId < assignments.size();
+
+            List<ClusterNode> partNodes = assignments.get(partId);
+            if (F.isEmpty(partNodes))
+                continue;
+
+            if (isPrimary)
+                res.computeIfAbsent(partNodes.get(0).id(), k -> new ArrayList<>()).add(partId);
+            else {
+                for (int i = 1; i < partNodes.size(); i++)
+                    res.computeIfAbsent(partNodes.get(i).id(), k -> new ArrayList<>()).add(partId);
+            }
+        }
 
         return res.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,
                 v -> v.getValue().stream().mapToInt(Integer::intValue).toArray()));
-    }
-
-    /**
-     * Fill map with master or backups node of specified partition.
-     *
-     * @param res Map to fill.
-     * @param assignments Partitions assignments.
-     * @param partId Partition to process.
-     * @param isPrimary if {@code true} only primary nodes will be choosen, if {@code false} - only backups.
-     */
-    protected static void fillPartition(
-        Map<UUID, List<Integer>> res,
-        List<List<ClusterNode>> assignments,
-        int partId,
-        boolean isPrimary
-    ) {
-        assert partId < assignments.size();
-        List<ClusterNode> partNodes = assignments.get(partId);
-        if (F.isEmpty(partNodes))
-            return;
-
-        if (isPrimary)
-            res.computeIfAbsent(partNodes.get(0).id(), k -> new ArrayList<>()).add(partId);
-        else
-            for (int i = 1; i < partNodes.size() - 1; i++)
-                res.computeIfAbsent(partNodes.get(i).id(), k -> new ArrayList<>()).add(partId);
     }
 
     /**
@@ -215,14 +197,14 @@ public class IgniteStatisticsHelper {
     ) {
         Map<UUID, Collection<StatisticsKeyMessage>> res = new HashMap<>();
 
+        AffinityTopologyVersion topVer = grps.keySet().iterator().next().shared().exchange().readyAffinityVersion();
         for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys : grps.entrySet()) {
-            CacheGroupContext grp = grpKeys.getKey();
-            AffinityTopologyVersion grpTopVer = grp.shared().exchange().readyAffinityVersion();
-            List<List<ClusterNode>> assignments = grp.affinity().assignments(grpTopVer);
+            List<List<ClusterNode>> assignments = grpKeys.getKey().affinity().assignments(topVer);
 
-            for (List<ClusterNode> partNodes : assignments)
+            for (List<ClusterNode> partNodes : assignments) {
                 for (ClusterNode node : partNodes)
                     res.computeIfAbsent(node.id(), k -> new HashSet<>()).addAll(grpKeys.getValue());
+            }
         }
         return res;
     }
@@ -314,13 +296,8 @@ public class IgniteStatisticsHelper {
         Map<UUID, Collection<StatisticsObjectData>> reqMap = new HashMap<>();
         for (Map.Entry<CacheGroupContext, Collection<StatisticsObjectData>> grpKeys : grpsData.entrySet()) {
             Set<UUID> grpNodes = nodes(grpKeys.getKey());
-            grpNodes.forEach(node -> reqMap.compute(node, (k, v) -> {
-                if (v == null)
-                    v = new HashSet<>();
-
-                v.addAll(grpKeys.getValue());
-                return v;
-            }));
+            for (UUID node : grpNodes)
+                reqMap.computeIfAbsent(node, k -> new HashSet<>()).addAll(grpKeys.getValue());
         }
 
         List<StatisticsAddrRequest<StatisticsPropagationMessage>> res = new ArrayList<>(reqMap.size());

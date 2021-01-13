@@ -66,12 +66,12 @@ public class StatisticsObjectData implements Message {
      * @param data Map of statistics column data.
      */
     public StatisticsObjectData(
-            StatisticsKeyMessage key,
-            long rowsCnt,
-            StatisticsType type,
-            int partId,
-            long updCnt,
-            Map<String, StatisticsColumnData> data
+        StatisticsKeyMessage key,
+        long rowsCnt,
+        StatisticsType type,
+        int partId,
+        long updCnt,
+        Map<String, StatisticsColumnData> data
     ) {
         this.key = key;
         this.rowsCnt = rowsCnt;

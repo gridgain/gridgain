@@ -79,14 +79,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
 
     /** {@inheritDoc} */
     @Override public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics) {
-        partsStats.compute(key, (k, v) -> {
-            if (v == null)
-                v = new IntHashMap<>();
-
-            v.put(statistics.partId(), statistics);
-
-            return v;
-        });
+        partsStats.computeIfAbsent(key, k -> new IntHashMap<>()).put(statistics.partId(), statistics);
     }
 
     /** {@inheritDoc} */

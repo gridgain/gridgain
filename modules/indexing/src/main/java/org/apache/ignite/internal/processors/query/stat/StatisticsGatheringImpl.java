@@ -30,6 +30,7 @@ import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.util.typedef.CA;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -56,6 +57,8 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  * Implementation of statistic collector.
  */
 public class StatisticsGatheringImpl implements StatisticsGathering {
+    /** Canceled check interval. */
+    private static final int CANCELLED_CHECK_INTERVAL = 100;
     /** Logger. */
     private final IgniteLogger log;
 
@@ -148,7 +151,7 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
         GridDhtLocalPartition locPart = gTop.localPartition(partId, topVer, false);
         if (locPart == null)
             return null;
-
+        int checkInt = CANCELLED_CHECK_INTERVAL;
         boolean reserved = locPart.reserve();
         try {
             if (!reserved || (locPart.state() != OWNING) || !locPart.primary(discoMgr.topologyVersionEx()))
@@ -170,8 +173,12 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
 
             try {
                 for (CacheDataRow row : grp.offheap().partitionIterator(partId)) {
-                    if (cancelled.get())
-                        return null;
+
+                    if (--checkInt == 0) {
+                        if (cancelled.get())
+                            return null;
+                        checkInt = CANCELLED_CHECK_INTERVAL;
+                    }
 
                     GridCacheContext cacheCtx = (row.cacheId() == CU.UNDEFINED_CACHE_ID) ? grp.singleCacheContext() :
                             grp.shared().cacheContext(row.cacheId());
@@ -192,8 +199,9 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
                         colStat.add(h2row.getValue(colStat.col().getColumnId()));
                 }
             }
-            catch (IgniteCheckedException igniteCheckedException) {
-                igniteCheckedException.printStackTrace();
+            catch (IgniteCheckedException e) {
+                log.warning(String.format("Unable to collect partition level statistics by %s.%s:%d due to %s",
+                        ftbl.identifier().schema(), ftbl.identifier().table(), partId, e.getMessage()));
             }
 
             for (Map.Entry<GridH2Table, List<ColumnStatisticsCollector>> tblCollectors : collectors.entrySet()) {

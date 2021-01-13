@@ -20,24 +20,24 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import java.util.UUID;
 
 /**
- * Cancellable future adapter.
+ * Cancellable future adapter with gathering id.
  */
-public class StatisticsGatheringFutureAdapter<R> extends GridFutureAdapter<R> implements StatsCollectionFuture<R> {
-    /** Collection id. */
-    private final UUID colId;
+public class StatisticsGatheringFutureAdapter<R> extends GridFutureAdapter<R> implements StatisticsGatheringFuture<R> {
+    /** Gathering id. */
+    private final UUID gatId;
 
     /**
      * Constructor.
      *
-     * @param colId Collection id.
+     * @param gatId Collection id.
      */
-    public StatisticsGatheringFutureAdapter(UUID colId) {
-        this.colId = colId;
+    public StatisticsGatheringFutureAdapter(UUID gatId) {
+        this.gatId = gatId;
     }
 
     /** {@inheritDoc} */
-    @Override public UUID colId() {
-        return colId;
+    @Override public UUID gatId() {
+        return gatId;
     }
 
     /** {@inheritDoc} */

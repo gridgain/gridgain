@@ -24,6 +24,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Key, describing the object of statistics. For example: table with some columns.
@@ -41,8 +42,7 @@ public class StatisticsKeyMessage implements Message {
     /** Object name. */
     private String obj;
 
-    /** Optional list of columns to collect statistics by.
-     * Each string can contain list of comma separated columns to represent multicolumn stats. */
+    /** Optional list of columns to collect statistics by. */
     @GridDirectCollection(String.class)
     private List<String> colNames;
 
@@ -172,5 +172,20 @@ public class StatisticsKeyMessage implements Message {
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
 
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        StatisticsKeyMessage that = (StatisticsKeyMessage) o;
+        return Objects.equals(schema, that.schema) &&
+                Objects.equals(obj, that.obj) &&
+                Objects.equals(colNames, that.colNames);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(schema, obj, colNames);
     }
 }

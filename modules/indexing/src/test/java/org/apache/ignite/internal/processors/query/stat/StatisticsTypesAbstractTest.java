@@ -198,6 +198,7 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
             insert.append(", ").append(getVal(type, cntr));
 
         insert.append(")");
+
         return insert.toString();
     }
 }

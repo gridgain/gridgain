@@ -51,8 +51,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     /**
      * Constructor.
      *
-     * @param db Database to use in storage if persistence enabled.
-     * @param subscriptionProcessor Subscription processor.
+     * @param store Ignite statistics store to use.
      * @param statisticsMgr Ignite statistics manager.
      * @param statisticsGathering Statistics gathering.
      * @param logSupplier Ignite logger supplier to get logger from.

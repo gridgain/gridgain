@@ -120,24 +120,6 @@ public final class GridArrays {
     }
 
     /**
-     * Intersect two specified arrays.
-     *
-     * @param a First array or {@code null}.
-     * @param b Second array or {@code null}.
-     * @return Arrays intersection.
-     */
-    public static int[] intersect(int[] a, int[] b) {
-        if (a == null || b == null)
-            return new int[0];
-        Set<Integer> aSet = Arrays.stream(a).boxed().collect(Collectors.toSet());
-        List<Integer> res = new ArrayList<>();
-        for (int bVal : b)
-            if (aSet.contains(bVal))
-                res.add(bVal);
-        return res.stream().mapToInt(Integer::intValue).toArray();
-    }
-
-    /**
      * Subtract b array from a array.
      *
      * @param a Base array.

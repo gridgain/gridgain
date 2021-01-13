@@ -36,10 +36,10 @@ public interface StatisticsGathering {
      * @param cancelled Supplier to track cancelled state.
      */
     public void collectLocalObjectsStatisticsAsync(
-            UUID reqId,
-            Set<StatisticsKeyMessage> keys,
-            int[] parts,
-            Supplier<Boolean> cancelled
+        UUID reqId,
+        Set<StatisticsKeyMessage> keys,
+        int[] parts,
+        Supplier<Boolean> cancelled
     );
 
     /**
@@ -55,7 +55,7 @@ public interface StatisticsGathering {
      * @return Local level aggregated statistics.
      */
     public ObjectStatisticsImpl aggregateLocalStatistics(
-            StatisticsKeyMessage keyMsg,
-            Collection<? extends ObjectStatisticsImpl> stats
+        StatisticsKeyMessage keyMsg,
+        Collection<? extends ObjectStatisticsImpl> stats
     );
 }

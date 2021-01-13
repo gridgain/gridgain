@@ -20,10 +20,9 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import java.util.UUID;
 
 /**
- * Future to track statistics collection task. Allows to get collection id immediately.
- * @param <T>
+ * Future to track statistics gathering task. Allows to get collection id immediately.
  */
-public interface StatisticsCollectionFuture<T> extends IgniteInternalFuture<T> {
+public interface StatisticsGatheringFuture<T> extends IgniteInternalFuture<T> {
     /**
      * @return Statistics gathering id.
      */

@@ -42,7 +42,6 @@ import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
-import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
@@ -132,7 +131,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         store.repository(statsRepos);
         statGathering.repository(statsRepos);
-
     }
 
     /**
@@ -187,24 +185,12 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /** {@inheritDoc} */
-    @Override public void clearObjectStatistics(
-            final GridTuple3<String, String, String[]>... keys
-    ) throws IgniteCheckedException {
-        Collection<StatisticsKeyMessage> keyMsgs = Arrays.stream(keys).map(k -> new StatisticsKeyMessage(k.get1(), k.get2(),
-                Arrays.asList(k.get3()))).collect(Collectors.toList());
+    @Override public void clearObjectStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
 
-        clearObjectStatistics(keyMsgs);
-    }
+        List<StatisticsKeyMessage> keys = Arrays.stream(targets).map(target -> new StatisticsKeyMessage(target.schema(),
+            target.obj(), Arrays.asList(target.columns()))).collect(Collectors.toList());
 
-    /** {@inheritDoc} */
-    @Override public void clearObjectStatistics(
-            String schemaName,
-            String objName,
-            String... colNames
-    ) throws IgniteCheckedException {
-        StatisticsKeyMessage keyMsg = StatisticsUtils.toMessage(schemaName, objName, colNames);
-
-        clearObjectStatistics(Collections.singleton(keyMsg));
+        clearObjectStatistics(keys);
     }
 
     /**
@@ -232,13 +218,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /** {@inheritDoc} */
-    @Override public void collectObjectStatistics(
-            String schemaName,
-            String objName,
-            String... colNames
-    ) throws IgniteCheckedException {
+    @Override public void collectObjectStatistics(StatisticsTarget target) throws IgniteCheckedException {
 
-        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(schemaName, objName, Arrays.asList(colNames));
+        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(target.schema(), target.obj(),
+            Arrays.asList(target.columns()));
         CacheGroupContext grpCtx = helper.getGroupContext(keyMsg);
 
         StatisticsGatheringContext status = new StatisticsGatheringContext(UUID.randomUUID(),
@@ -275,17 +258,15 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         statGathering.collectLocalObjectsStatisticsAsync(reqId, keysSet, parts, () -> gCtx.doneFut().isCancelled());
     }
 
-
     /** {@inheritDoc} */
-    @Override public StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>>[]
-        collectObjectStatisticsAsync(
-            GridTuple3<String, String, String[]>... keys
+    @Override public StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] collectObjectStatisticsAsync(
+        StatisticsTarget... keys
     ) throws IgniteCheckedException {
         Set<StatisticsKeyMessage> keysMsg = Arrays.stream(keys).map(
-                k -> new StatisticsKeyMessage(k.get1(), k.get2(), Arrays.asList(k.get3()))).collect(Collectors.toSet());
+            t -> new StatisticsKeyMessage(t.schema(), t.obj(), Arrays.asList(t.columns()))).collect(Collectors.toSet());
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = helper.splitByGroups(keysMsg);
 
-        List<StatsCollectionFuture<Map<GridTuple3<String, String, String[]>, ObjectStatistics>>> res = new ArrayList<>();
+        List<StatisticsGatheringFuture<Void>> res = new ArrayList<>();
 
         for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys : grpsKeys.entrySet()) {
             int parts = grpKeys.getKey().topology().partitions();
@@ -298,7 +279,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             res.add(status.doneFut());
         }
 
-        return res.toArray(new StatsCollectionFuture[0]);
+        return res.toArray(new StatisticsGatheringFuture[0]);
     }
 
     /**
