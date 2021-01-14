@@ -86,6 +86,7 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFre
 import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.migration.UpgradePendingTreeToPerPartitionTask;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetricNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.PagesAllocationRange;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.PartitionAllocationMap;
@@ -167,6 +168,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     /** */
     private DataStorageMetricsImpl persStoreMetrics;
 
+
+    private PagesMetricNoStoreImpl pageMetric;
+
     /** {@inheritDoc} */
     @Override protected void initPendingTree(GridCacheContext cctx) throws IgniteCheckedException {
         // No-op. Per-partition PendingTree should be used.
@@ -180,6 +184,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         CacheDiagnosticManager diagnosticMgr = ctx.diagnostic();
 
+        pageMetric = new PagesMetricNoStoreImpl();
         String reuseListName = grp.cacheOrGroupName() + "##ReuseList";
         String indexStorageTreeName = grp.cacheOrGroupName() + "##IndexStorageTree";
 
@@ -1397,7 +1402,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             partId,
             exists,
             busyLock,
-            log
+            log,
+            pageMetric
         );
     }
 
@@ -1914,6 +1920,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         private final IgniteLogger log;
 
         /** */
+        private final PagesMetricNoStoreImpl pageMetric;
+
+        /** */
         private final AtomicBoolean init = new AtomicBoolean();
 
         /** */
@@ -1928,12 +1937,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          */
         public GridCacheDataStore(CacheGroupContext grp, int partId, boolean exists,
             GridSpinBusyLock busyLock,
-            IgniteLogger log) {
+            IgniteLogger log,
+            PagesMetricNoStoreImpl pageMetric) {
             this.grp = grp;
             this.partId = partId;
             this.exists = exists;
             this.busyLock = busyLock;
             this.log = log;
+            this.pageMetric = pageMetric;
         }
 
         /** */

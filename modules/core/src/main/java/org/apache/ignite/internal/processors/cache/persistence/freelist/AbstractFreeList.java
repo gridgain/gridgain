@@ -638,7 +638,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             long pageId = PageIdUtils.pageId(link);
             int itemId = PageIdUtils.itemId(link);
 
-            ReuseBag bag = new LongListReuseBag();
+            LongListReuseBag bag = new LongListReuseBag();
 
             long nextLink = write(pageId, rmvRow, bag, itemId, FAIL_L, statHolder);
 
@@ -655,7 +655,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 assert nextLink != FAIL_L; // Can't fail here.
             }
 
-            System.out.println("Add to reuse from what?");
+            pageMetric.reusePageIncreased(bag.size(), grpId, partition, pageFlag);
             reuseList.addForRecycle(bag);
         }
         catch (IgniteCheckedException | Error e) {

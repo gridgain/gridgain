@@ -2579,7 +2579,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             releasePage(metaPageId, metaPage);
         }
 
-        System.out.println("Add to reuse from what?");
+        pageMetric.reusePageIncreased(bag.size(), grpId, partition, pageFlag);
         reuseList.addForRecycle(bag);
 
         assert bag.isEmpty() : bag.size();
@@ -2681,7 +2681,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         if (bag.size() == 128) {
-            System.out.println("Add to reuse from what?");
+            pageMetric.reusePageIncreased(bag.size(), grpId, partition, pageFlag);
             reuseList.addForRecycle(bag);
 
             assert bag.isEmpty() : bag.size();
@@ -4903,8 +4903,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         private void reuseFreePages() throws IgniteCheckedException {
             // If we have a bag, then it will be processed at the upper level.
             if (reuseList != null && freePages != null) {
+                //TODO: doublecheck
+                if (freePages.getClass() == GridLongList.class) {
+                    GridLongList list = ((GridLongList)freePages);
+                    pageMetric.reusePageIncreased(list.size(), grpId, partition, pageFlag);
+                } else {
+                    pageMetric.reusePageIncreased(1, grpId, partition, pageFlag);
+                }
 
-                System.out.println("Add to reuse from what?");
                 reuseList.addForRecycle(this);
             }
         }

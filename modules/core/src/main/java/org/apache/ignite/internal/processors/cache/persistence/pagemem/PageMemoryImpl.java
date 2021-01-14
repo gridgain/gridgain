@@ -204,6 +204,9 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** Direct memory allocator. */
     private final DirectMemoryProvider directMemoryProvider;
 
+    /** */
+    private final PagesMetric pageMetric = new PagesMetricNoStoreImpl();
+
     /** Segments array. */
     private volatile Segment[] segments;
 
@@ -1828,6 +1831,11 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** {@inheritDoc} */
     @Override public int checkpointBufferPagesCount() {
         return checkpointPool == null ? 0 : checkpointPool.size();
+    }
+
+    /** {@inheritDoc} */
+    @Override public PagesMetric getPageMetric() {
+        return pageMetric;
     }
 
     /**

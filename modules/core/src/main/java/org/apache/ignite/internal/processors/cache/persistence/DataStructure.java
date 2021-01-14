@@ -26,6 +26,8 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RecycleRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetricNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
@@ -74,6 +76,8 @@ public abstract class DataStructure {
     /** */
     protected final int partition;
 
+    protected final PagesMetric pageMetric;
+
     /**
      * @param cacheGrpId Cache group ID.
      * @param grpName Cache group name.
@@ -103,6 +107,7 @@ public abstract class DataStructure {
         this.pageIoRslvr = pageIoRslvr;
         this.pageFlag = pageFlag;
         this.partition = partition;
+        pageMetric = pageMem.getPageMetric();
     }
 
     /**
@@ -150,7 +155,7 @@ public abstract class DataStructure {
 
             // Recycled. "pollFreePage" result should be reinitialized to move rotatedId to itemId.
             if (pageId != 0) {
-                System.out.println("Take from reuse to what...");
+                pageMetric.pageFromReuseList(grpId, partition, pageFlag);
                 pageId = reuseList.initRecycledPage(pageId, pageFlag, null);
             }
         }
@@ -174,8 +179,6 @@ public abstract class DataStructure {
      * @throws IgniteCheckedException If failed.
      */
     protected long allocatePageNoReuse() throws IgniteCheckedException {
-        // TODO: make final?
-        // Allocated to what
         return pageMem.allocatePage(grpId, partition, pageFlag);
     }
 

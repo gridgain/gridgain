@@ -35,6 +35,8 @@ import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetricNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -139,6 +141,9 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
     /** */
     private final AtomicInteger allocatedPages = new AtomicInteger();
+
+    /** */
+    private final PagesMetric pageMetric = new PagesMetricNoStoreImpl();
 
     /** */
     private final LongAdderMetric totalAllocatedPagesMetric;
@@ -268,6 +273,11 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     }
 
     /** {@inheritDoc} */
+    @Override public PagesMetric getPageMetric() {
+        return pageMetric;
+    }
+
+    /** {@inheritDoc} */
     @Override public ByteBuffer pageBuffer(long pageAddr) {
         return wrapPointer(pageAddr, pageSize());
     }
@@ -285,6 +295,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
             Segment seg = segment(pageIdx);
 
             absPtr = seg.absolute(pageIdx);
+            pageMetric.freePageUsed();
         }
 
         // No segments contained a free page.
@@ -297,6 +308,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
                 if (relPtr != INVALID_REL_PTR) {
                     absPtr = allocSeg.absolute(PageIdUtils.pageIndex(relPtr));
+                    pageMetric.freePageUsed();
 
                     break;
                 }
@@ -329,6 +341,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         // TODO pass an argument to decide whether the page should be cleaned.
         GridUnsafe.setMemory(absPtr + PAGE_OVERHEAD, sysPageSize - PAGE_OVERHEAD, (byte)0);
 
+        pageMetric.pageAllocated(grpId, partId, flags);
+
         return pageId;
     }
 
@@ -337,6 +351,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         assert started;
 
         releaseFreePage(pageId);
+        pageMetric.freePagesIncreased(1);
 
         return true;
     }
@@ -688,7 +703,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
             Segment allocated = new Segment(newRef.length - 1, region, lastSeg == null ? 0 : lastSeg.sumPages());
 
-            allocated.init();
+            pageMetric.freePagesIncreased(allocated.init());
 
             newRef[newRef.length - 1] = allocated;
 
@@ -742,8 +757,10 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
         /**
          * Initializes page memory segment.
+         *
+         * @return max pages
          */
-        private void init() {
+        private int init() {
             long base = region.address();
 
             lastAllocatedIdxPtr = base;
@@ -758,6 +775,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
             long limit = region.address() + region.size();
 
             maxPages = (int)((limit - pagesBase) / sysPageSize);
+
+            return maxPages;
         }
 
         /**
