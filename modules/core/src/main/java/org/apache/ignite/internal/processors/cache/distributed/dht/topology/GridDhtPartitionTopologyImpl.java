@@ -2523,7 +2523,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * @param aff Affinity assignments.
      * @return {@code True} if there are local partitions need to be evicted.
      */
-    @SuppressWarnings("unchecked")
     private boolean checkEvictions(long updateSeq, AffinityAssignment aff) {
         assert lock.isWriteLockedByCurrentThread();
 
@@ -2550,6 +2549,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             Collection<UUID> nodeIds = F.nodeIds(nodes);
 
             // If all affinity nodes are owners, then evict partition from local node.
+            // The preloading should be already finished for this topVer.
             if (nodeIds.containsAll(F.nodeIds(affNodes))) {
                 GridDhtPartitionState state0 = part.state();
 
@@ -2570,9 +2570,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 int ownerCnt = nodeIds.size();
                 int affCnt = affNodes.size();
 
+                // Keep owners count as defined by affinity configuration. This can happen during preloading.
                 if (ownerCnt > affCnt) {
                     // Sort by node orders in ascending order.
-                    Collections.sort(nodes, CU.nodeComparator(true));
+                    nodes.sort(CU.nodeComparator(true));
 
                     int diff = nodes.size() - affCnt;
 

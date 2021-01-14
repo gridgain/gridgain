@@ -53,6 +53,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult.U
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocalAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicAbstractUpdateFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.extras.GridCacheEntryExtras;
@@ -2194,8 +2195,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         lockListenerReadLock();
         lockEntry();
 
+        boolean reserved = false;
+
         try {
             checkObsolete();
+
+            GridDhtLocalPartition locPart = localPartition();
+
+            // Reserve before update to avoid writing to evicting partition.
+            if (!(reserved = locPart.reserve()))
+                throw new GridDhtInvalidPartitionException(partition(), "The partition can't be reserved");
 
             boolean internal = isInternal() || !context().userCache();
 
@@ -2447,6 +2456,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             updatePlatformCache(c.op == UPDATE ? updateVal : null, topVer);
         }
         finally {
+            if (reserved)
+                localPartition().release();
+
             unlockEntry();
             unlockListenerReadLock();
         }

@@ -4379,13 +4379,6 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     }
 
     /**
-     * TODO remove.
-     * @param entry Entry.
-     * @param ver Version.
-     */
-    public abstract void onDeferredDelete(GridCacheEntryEx entry, GridCacheVersion ver);
-
-    /**
      *
      */
     public void onReconnected() {

@@ -96,7 +96,8 @@ public class GridCachePartitionedConcurrentMap implements GridCacheConcurrentMap
             if (res != null || !create)
                 return res;
 
-            // Otherwise partition was concurrently evicted and should be re-created on next iteration.
+            // Otherwise partition was concurrently evicted and should be re-created on next iteration
+            // if it belongs by affinity.
         }
     }
 

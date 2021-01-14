@@ -281,7 +281,7 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
                         transformedValue);
 
                     if (updRes.removeVersion() != null)
-                        onDeferredDelete(entry, updRes.removeVersion());
+                        onRemove(entry, updRes.removeVersion());
 
                     break; // While.
                 }
@@ -385,7 +385,7 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
                             false);
 
                         if (updRes.removeVersion() != null)
-                            onDeferredDelete(entry, updRes.removeVersion());
+                            onRemove(entry, updRes.removeVersion());
 
                         break;
                     }
@@ -608,8 +608,11 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
         dht.unlockAll(keys);
     }
 
-    /** {@inheritDoc} */
-    @Override public void onDeferredDelete(GridCacheEntryEx entry, GridCacheVersion ver) {
+    /**
+     * @param entry Entry.
+     * @param ver Version.
+     */
+    private void onRemove(GridCacheEntryEx entry, GridCacheVersion ver) {
         assert entry.isNear();
 
         rmvQueue.add(new T2<>(entry.key(), ver));

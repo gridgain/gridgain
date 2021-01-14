@@ -483,7 +483,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     private boolean casState(long state, GridDhtPartitionState toState) {
         if (grp.persistenceEnabled() && grp.walEnabled()) {
             synchronized (this) {
-                GridDhtPartitionState prevState = state();
+                GridDhtPartitionState prevState = getPartState(state);
 
                 boolean updated = this.state.compareAndSet(state, setPartState(state, toState));
 
