@@ -36,9 +36,6 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     /** Statistics store. */
     private final IgniteStatisticsStore store;
 
-    /** Statistics manager. */
-    private final IgniteStatisticsManagerImpl statisticsMgr;
-
     /** Local (for current node) object statistics. */
     private final Map<StatisticsKey, ObjectStatisticsImpl> locStats;
 
@@ -52,19 +49,16 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      * Constructor.
      *
      * @param store Ignite statistics store to use.
-     * @param statisticsMgr Ignite statistics manager.
      * @param statisticsGathering Statistics gathering.
      * @param logSupplier Ignite logger supplier to get logger from.
      */
     public IgniteStatisticsRepositoryImpl(
             IgniteStatisticsStore store,
-            IgniteStatisticsManagerImpl statisticsMgr,
             StatisticsGathering statisticsGathering,
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.store = store;
         this.locStats = new ConcurrentHashMap<>();
-        this.statisticsMgr = statisticsMgr;
         this.statisticsGathering = statisticsGathering;
         this.log = logSupplier.apply(IgniteStatisticsRepositoryImpl.class);
     }
@@ -168,15 +162,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
             return null;
         }
-        ObjectStatisticsImpl[] res = new ObjectStatisticsImpl[1];
-        locStats.compute(key, (k, v) -> {
-            v = (v == null) ? statistics : add(v, statistics);
-
-            res[0] = v;
-
-            return v;
-        });
-        return res[0];
+        return locStats.compute(key, (k, v) -> (v == null) ? statistics : add(v, statistics));
     }
 
     /** {@inheritDoc} */
@@ -223,15 +209,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
 
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl mergeGlobalStatistics(StatisticsKey key, ObjectStatisticsImpl statistics) {
-        ObjectStatisticsImpl[] res = new ObjectStatisticsImpl[1];
-        globalStats.compute(key, (k,v) -> {
-            v = (v == null) ? statistics : add(v, statistics);
-
-            res[0] = v;
-
-            return v;
-        });
-        return res[0];
+        return globalStats.compute(key, (k, v) -> (v == null) ? statistics : add(v, statistics));
     }
 
     /** {@inheritDoc} */
@@ -264,7 +242,6 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      */
     public static <T extends ObjectStatisticsImpl> T add(T base, T add) {
         T res = (T)add.clone();
-        res.rowCount(add.rowCount());
         for (Map.Entry<String, ColumnStatistics> entry : base.columnsStatistics().entrySet())
             res.columnsStatistics().putIfAbsent(entry.getKey(), entry.getValue());
 

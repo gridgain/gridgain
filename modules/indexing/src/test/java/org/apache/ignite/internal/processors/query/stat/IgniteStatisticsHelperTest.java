@@ -165,70 +165,74 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
      *
      * @throws IgniteCheckedException In case of errors.
      */
-//    @Test
-//    public void testGenerateCollectionRequests() throws IgniteCheckedException {
-//        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = helper.generateCollectionRequests(null);
-//
-//        assertEquals(2, reqs.size());
-//
-//        StatisticsAddrRequest<StatisticsGatheringRequest> req1 = reqs.stream().filter(req -> node1.equals(req.targetNodeId()))
-//                .findAny().orElse(null);
-//        StatisticsAddrRequest<StatisticsGatheringRequest> req2 = reqs.stream().filter(req -> node2.equals(req.targetNodeId()))
-//                .findAny().orElse(null);
-//
-//        assertNotNull(req1);
-//        assertNotNull(req2);
-//        assertTrue(reqs.stream().allMatch(req -> req.req().keys().size() == 2));
-//        assertTrue(Arrays.equals(nodeParts.get(node1), req1.req().keys().get(k1)));
-//        assertTrue(Arrays.equals(nodeParts.get(node1), req1.req().keys().get(k2)));
-//        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().keys().get(k1)));
-//        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().keys().get(k2)));
-//    }
+    @Test
+    public void testGenerateCollectionRequests() throws IgniteCheckedException {
+        UUID gatId = UUID.randomUUID();
+        StatisticsKeyMessage k1 = keyMsg(1);
 
-//    /**
-//     * Test generateCollectionRequests for two keys and two nodes with only one failed partition and check that
-//     * generated requests contains request to regenerate only that one partition.
-//     */
-//    @Test
-//    public void testGenerateCollectionRequestsFailedPartitions() throws IgniteCheckedException {
-//        Map<StatisticsKeyMessage, int[]> failedPartitions = Collections.singletonMap(k1, new int[]{1});
-//
-//        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = testGenerateCollectionRequests(failedPartitions);
-//
-//        assertEquals(1, reqs.size());
-//
-//        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node2.equals(r.targetNodeId())).findAny()
-//                .orElse(null);
-//
-//        assertNotNull(req);
-//
-//        int[] k1parts = req.req().keys().get(k1);
-//
-//        assertTrue(Arrays.equals(new int[]{1}, k1parts));
-//    }
-//
-//    /**
-//     * Prepare and generate statistics collection requests for two keys and two nodes.
-//     *
-//     * @param failedPartitions Map of failed partitions to generate requests only by its.
-//     * @return Collection of statistics collection requests.
-//     * @throws IgniteCheckedException In case of errors.
-//     */
-//    private Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> testGenerateCollectionRequests(
-//        Map<StatisticsKeyMessage, int[]> failedPartitions
-//    ) throws IgniteCheckedException {
-//        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts = new HashMap<>();
-//        grpContexts.put(cgc1, Collections.singletonList(k1));
-//        grpContexts.put(cgc2, Collections.singletonList(k2));
-//
-//        List<StatisticsKeyMessage> keys = new ArrayList<>();
-//        keys.add(k1);
-//        keys.add(k2);
-//
-//        return IgniteStatisticsHelper.generateCollectionRequests(
-//                c1, keys, failedPartitions, grpContexts);
-//    }
-//
+        CacheGroupContext cgc1 = cgc(nodeParts, 0);
+
+        schema.put(k1.obj(), cgc1);
+        schema.put(k2.obj(), cgc1);
+
+        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = helper.generateCollectionRequests(gatId,
+                Arrays.asList(k1, k2), null);
+
+        assertEquals(2, reqs.size());
+
+        StatisticsAddrRequest<StatisticsGatheringRequest> req1 = reqs.stream().filter(req -> node1.equals(req.targetNodeId()))
+                .findAny().orElse(null);
+        StatisticsAddrRequest<StatisticsGatheringRequest> req2 = reqs.stream().filter(req -> node2.equals(req.targetNodeId()))
+                .findAny().orElse(null);
+
+        assertNotNull(req1);
+        assertNotNull(req2);
+        assertTrue(reqs.stream().allMatch(req -> req.req().keys().size() == 2));
+        assertTrue(Arrays.equals(nodeParts.get(node1), req1.req().parts()));
+        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().parts()));
+    }
+
+    /**
+     * Test generateCollectionRequests for two keys and two nodes with only one failed partition and check that
+     * generated requests contains request to regenerate only that one partition.
+     */
+    @Test
+    public void testGenerateCollectionRequestsFailedPartitions() throws IgniteCheckedException {
+        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = testGenerateCollectionRequests(new int[]{1});
+
+        assertEquals(1, reqs.size());
+
+        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node2.equals(r.targetNodeId())).findAny()
+                .orElse(null);
+
+        assertNotNull(req);
+
+        int[] k1parts = req.req().parts();
+
+        assertTrue(Arrays.equals(new int[]{1}, k1parts));
+    }
+
+    /**
+     * Prepare and generate statistics collection requests for two keys and two nodes.
+     *
+     * @param failedPartitions Failed partitions to generate requests only by it.
+     * @return Collection of statistics collection requests.
+     * @throws IgniteCheckedException In case of errors.
+     */
+    private Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> testGenerateCollectionRequests(
+        int[] failedPartitions
+    ) throws IgniteCheckedException {
+        schema.put(k1.obj(), cgc1);
+        schema.put(k2.obj(), cgc2);
+
+        List<StatisticsKeyMessage> keys = new ArrayList<>();
+        keys.add(k1);
+        keys.add(k2);
+
+        return helper.generateCollectionRequests(c1, keys,
+            Arrays.stream(failedPartitions).boxed().collect(Collectors.toList()));
+    }
+
 //    /**
 //     * Test node partitions with and without backups.
 //     *
@@ -272,7 +276,7 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
 //
 //        assertEquals(2, calcNodeParts3.size());
 //    }
-//
+
     /**
      * Create mock for cache group context with given partition assignment.
      *

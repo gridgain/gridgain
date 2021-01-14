@@ -31,10 +31,7 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
         cfg.setConsistentId(igniteInstanceName);
 
         DataStorageConfiguration memCfg = new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(
-                        new DataRegionConfiguration()
-                                .setPersistenceEnabled(true)
-                );
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true));
 
         cfg.setDataStorageConfiguration(memCfg);
 
@@ -62,6 +59,7 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
         for (int i = 0; i < SMALL_SIZE; i++)
             runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
 
-        grid(0).context().query().getIndexing().statsManager().collectObjectStatistics("PUBLIC", "SMALL");
+        grid(0).context().query().getIndexing().statsManager().collectObjectStatistics(
+            new StatisticsTarget("PUBLIC", "SMALL"));
     }
 }

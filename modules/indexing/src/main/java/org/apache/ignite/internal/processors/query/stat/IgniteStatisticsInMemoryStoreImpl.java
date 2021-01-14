@@ -64,6 +64,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     @Override public Collection<ObjectPartitionStatisticsImpl> getLocalPartitionsStatistics(StatisticsKey key) {
         Collection<ObjectPartitionStatisticsImpl>[] res = new Collection[1];
         partsStats.computeIfPresent(key, (k, v) -> {
+            // Need to make a copy under the lock.
             res[0] = Arrays.asList(v.values());
 
             return v;
@@ -79,7 +80,15 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
 
     /** {@inheritDoc} */
     @Override public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics) {
-        partsStats.computeIfAbsent(key, k -> new IntHashMap<>()).put(statistics.partId(), statistics);
+        partsStats.compute(key, (k, v) -> {
+            // Need to change the map under the lock.
+            if (v == null)
+                v = new IntHashMap<>();
+
+            v.put(statistics.partId(), statistics);
+
+            return v;
+        });
     }
 
     /** {@inheritDoc} */
@@ -90,6 +99,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatisticsKey key, int partId) {
         ObjectPartitionStatisticsImpl[] res = new ObjectPartitionStatisticsImpl[1];
         partsStats.computeIfPresent(key, (k, v) -> {
+            // Need to access the map under the lock.
             res[0] = v.get(partId);
 
             return v;

@@ -365,7 +365,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
                 continue;
 
             try {
-                ioMgr.sendToCustomTopic(req.targetNodeId(), TOPIC_STATISTICS, req.req(), GridIoPolicy.MANAGEMENT_POOL);
+                send(req.targetNodeId(), req.req());
             }
             catch (IgniteCheckedException e) {
                 if (res == null)
@@ -433,8 +433,8 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             return;
         }
 
-        assert req.targetNodeId().equals(locNodeId);
-        assert req.sndNodeId().equals(nodeId);
+        assert req.targetNodeId().equals(nodeId);
+        assert req.sndNodeId().equals(locNodeId);
 
         statMgr.registerLocalResult(msg.gatId(), msg.data(), msg.parts().length);
 
@@ -482,7 +482,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
      * @param msg Message to send.
      */
     private void send(UUID nodeId, Message msg) throws IgniteCheckedException {
-        ioMgr.sendToCustomTopic(nodeId, TOPIC_STATISTICS, msg, GridIoPolicy.MANAGEMENT_POOL);
+        ioMgr.sendToGridTopic(nodeId, TOPIC_STATISTICS, msg, GridIoPolicy.MANAGEMENT_POOL);
     }
 
     /**

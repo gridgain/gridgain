@@ -73,9 +73,7 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
         StatisticsGathering statGath = new StatisticsGatheringImpl(schemaMgr, discoMgr, qryProcessor, reqClawler,
             gatMgmtPool, cts -> log);
 
-        IgniteStatisticsManagerImpl statMgr = Mockito.mock(IgniteStatisticsManagerImpl.class);
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, statMgr, statGath,
-            cls -> log);
+        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, statGath, cls -> log);
 
 
         IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();

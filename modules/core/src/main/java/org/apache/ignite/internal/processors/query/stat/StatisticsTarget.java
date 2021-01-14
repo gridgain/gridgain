@@ -23,7 +23,7 @@ public class StatisticsTarget {
      * @param obj Object name.
      * @param columns Array of column names or {@code null} if target - all columns.
      */
-    public StatisticsTarget(String schema, String obj, String[] columns) {
+    public StatisticsTarget(String schema, String obj, String... columns) {
         this.schema = schema;
         this.obj = obj;
         this.columns = columns;

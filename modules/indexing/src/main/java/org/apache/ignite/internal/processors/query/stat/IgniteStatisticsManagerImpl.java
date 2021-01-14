@@ -127,7 +127,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         else
             store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db, ctx::log);
 
-        statsRepos = new IgniteStatisticsRepositoryImpl(store, this, statGathering, ctx::log);
+        statsRepos = new IgniteStatisticsRepositoryImpl(store, statGathering, ctx::log);
 
         store.repository(statsRepos);
         statGathering.repository(statsRepos);
@@ -395,7 +395,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /**
-     * Register
+     * Register collected statistics in task context.
      *
      * @param gatId Gathering id.
      * @param data Collected statistics.

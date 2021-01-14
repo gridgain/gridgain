@@ -75,12 +75,12 @@ public class PSUStatisticPartialCollectionTest extends StatisticsAbstractTest {
                 String.format(lo_med_select, 6, 6), noHints);
 
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
-        statsMgr.collectObjectStatistics("PUBLIC", "TBL_SELECT", "HI_SELECT");
+        statsMgr.collectObjectStatistics(new StatisticsTarget("PUBLIC", "TBL_SELECT", "HI_SELECT"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
                 String.format(lo_med_select, 7, 7), noHints);
 
-        statsMgr.collectObjectStatistics("PUBLIC", "TBL_SELECT", "LO_SELECT");
+        statsMgr.collectObjectStatistics(new StatisticsTarget("PUBLIC", "TBL_SELECT", "LO_SELECT"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_LO_IDX"},
                 String.format(lo_med_select, 8, 8), noHints);

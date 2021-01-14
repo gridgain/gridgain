@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
@@ -42,12 +43,31 @@ public class PSUStatistcsRestartTest extends StatisticsRestartAbstractTest {
         startGrid(0);
 
         grid(0).cluster().state(ClusterState.ACTIVE);
-        Thread.sleep(100);
 
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_B"}, isNullSql, noHints);
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_B"}, isNullSql, noHints);
 
-        grid(0).context().query().getIndexing().statsManager().clearObjectStatistics("PUBLIC", "SMALL");
+                return true;
+            }
+            catch (AssertionError e) {
+                return false;
+            }
+        }, TIMEOUT);
 
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_C"}, isNullSql, noHints);
+        grid(0).context().query().getIndexing().statsManager().clearObjectStatistics(
+                new StatisticsTarget("PUBLIC", "SMALL"));
+
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_C"}, isNullSql, noHints);
+
+                return true;
+            }
+            catch (AssertionError e) {
+                return false;
+            }
+        }, TIMEOUT);
+
     }
 }

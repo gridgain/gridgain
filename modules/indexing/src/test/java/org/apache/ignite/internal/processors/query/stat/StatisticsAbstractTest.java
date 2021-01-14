@@ -48,6 +48,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     /** Small table size. */
     static final int SMALL_SIZE = 100;
 
+    /** Async operation timeout for test */
+    static final int TIMEOUT = 1_000;
+
     static {
         assertTrue(SMALL_SIZE < MED_SIZE && MED_SIZE < BIG_SIZE);
     }
@@ -274,7 +277,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             for (String tbl : allTbls) {
                 for (Ignite node : G.allGrids()) {
                     IgniteStatisticsManager statsMgr = ((IgniteEx)node).context().query().getIndexing().statsManager();
-                    statsMgr.collectObjectStatistics("PUBLIC", tbl.toUpperCase());
+                    statsMgr.collectObjectStatistics(new StatisticsTarget("PUBLIC", tbl.toUpperCase()));
                 }
             }
         }

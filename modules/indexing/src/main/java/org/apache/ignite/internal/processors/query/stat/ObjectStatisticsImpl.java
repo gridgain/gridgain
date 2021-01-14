@@ -24,7 +24,7 @@ import java.util.Objects;
  */
 public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /** Total number of rows in object. */
-    private long rowsCnt;
+    private final long rowsCnt;
 
     /** Map columnKey to its statistic. */
     private final Map<String, ColumnStatistics> colNameToStat;
@@ -50,13 +50,6 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
      */
     public long rowCount() {
         return rowsCnt;
-    }
-
-    /**
-     * @param rowsCnt Object rows count.
-     */
-    public void rowCount(long rowsCnt) {
-        this.rowsCnt = rowsCnt;
     }
 
     /**
