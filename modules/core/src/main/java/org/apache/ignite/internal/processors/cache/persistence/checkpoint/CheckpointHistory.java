@@ -582,7 +582,16 @@ public class CheckpointHistory {
             long margin,
             Map<Integer, Long> partCntsForUpdate
         ) {
-            Long foundCntr = cpEntry == null ? null : cpEntry.partitionCounter(wal, grpId, part);
+            Long foundCntr = null;
+
+            try {
+                foundCntr = cpEntry == null ? null : cpEntry.partitionCounter(wal, grpId, part);
+            }
+            catch (IgniteCheckedException e) {
+                log.warning("Checkpoint cannot be chosen because counter is unavailable [grpId=" + grpId
+                    + ", part=" + part
+                    + ", cp=(" + cpEntry.checkpointId() + ", " + U.format(cpEntry.timestamp()) + ")]", e);
+            }
 
             if (foundCntr == null || foundCntr == walPntrCntr) {
                 partCntsForUpdate.put(part, walPntrCntr);
@@ -632,7 +641,9 @@ public class CheckpointHistory {
                 if (F.isEmpty(modifiedSearchMap))
                     return res;
             }
-            catch (IgniteCheckedException ignore) {
+            catch (IgniteCheckedException e) {
+                log.warning("Checkpoint data is unavailable in WAL [cpTs=" + U.format(cpTs) + ']', e);
+
                 break;
             }
         }
@@ -661,7 +672,12 @@ public class CheckpointHistory {
                 if (foundCntr != null && foundCntr <= partCntrSince)
                     return entry;
             }
-            catch (IgniteCheckedException ignore) {
+            catch (IgniteCheckedException e) {
+                log.warning("Checkpoint data is unavailable in WAL [grpId=" + grpId
+                    + ", part=" + part
+                    + ", cntr=" + partCntrSince
+                    + ", cpTs=" + U.format(cpTs) + ']', e);
+
                 break;
             }
         }

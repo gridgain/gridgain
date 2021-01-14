@@ -296,6 +296,9 @@ public class GridDhtPartitionSupplier {
                     log.debug("Starting supplying rebalancing [" + supplyRoutineInfo(topicId, nodeId, demandMsg) +
                         ", fullPartitions=" + S.compact(demandMsg.partitions().fullSet()) +
                         ", histPartitions=" + S.compact(demandMsg.partitions().historicalSet()) + "]");
+
+                //We cannot process a message before the node has moved to its topology.
+                grp.shared().exchange().affinityReadyFuture(demandMsg.topologyVersion()).get();
             }
             else
                 maxBatchesCnt = 1;
