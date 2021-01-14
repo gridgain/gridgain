@@ -14,24 +14,29 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.testsuites;
-
-import org.apache.ignite.springdata.IgniteSpringDataCrudSelfExpressionTest;
-import org.apache.ignite.springdata.IgniteSpringDataCompoundKeyTest;
-import org.apache.ignite.springdata.IgniteSpringDataCrudSelfTest;
-import org.apache.ignite.springdata.IgniteSpringDataQueriesSelfTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.springdata.misc;
 
 /**
- * Ignite Spring Data 2.2 test suite.
+ * The bean with cache names
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    IgniteSpringDataCrudSelfTest.class,
-    IgniteSpringDataQueriesSelfTest.class,
-    IgniteSpringDataCompoundKeyTest.class,
-    IgniteSpringDataCrudSelfExpressionTest.class
-})
-public class IgniteSpringData22TestSuite {
+public class CacheNamesBean {
+    /** Cache name for persons. */
+    private String personCacheName;
+
+    /**
+     * Get name of the cache for persons.
+     *
+     * @return Name of cache.
+     */
+    public String getPersonCacheName() {
+        return personCacheName;
+    }
+
+    /**
+     * Set name of the cache for persons.
+     * @param personCacheName Name of cache.
+     */
+    public void setPersonCacheName(String personCacheName) {
+        this.personCacheName = personCacheName;
+    }
 }
