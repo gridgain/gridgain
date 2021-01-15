@@ -83,7 +83,7 @@ class CacheGroupEncryptionKeys {
     @Nullable GroupKey getKey(int grpId, int keyId) {
         List<GroupKey> keys = grpKeys.get(grpId);
 
-        if (keys == null)
+        if (F.isEmpty(keys))
             return null;
 
         for (GroupKey groupKey : keys) {

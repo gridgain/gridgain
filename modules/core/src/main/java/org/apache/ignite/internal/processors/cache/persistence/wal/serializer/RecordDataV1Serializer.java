@@ -29,6 +29,7 @@ import java.util.Map.Entry;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.managers.encryption.EncryptionCacheKeyProvider;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.encryption.GroupKey;
 import org.apache.ignite.internal.managers.encryption.GroupKeyEncrypted;
@@ -157,7 +158,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     private final EncryptionSpi encSpi;
 
     /** Encryption manager. */
-    private final GridEncryptionManager encMgr;
+    private final EncryptionCacheKeyProvider encMgr;
 
     /** */
     private final boolean encryptionDisabled;
@@ -170,14 +171,15 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
     /**
      * @param cctx Cache shared context.
+     * @param keyProvider Cache key provider.
      */
-    public RecordDataV1Serializer(GridCacheSharedContext cctx) {
+    public RecordDataV1Serializer(GridCacheSharedContext cctx, EncryptionCacheKeyProvider keyProvider) {
         this.cctx = cctx;
         this.txRecordSerializer = new TxRecordSerializer();
         this.co = cctx.kernalContext().cacheObjects();
         this.pageSize = cctx.database().pageSize();
         this.encSpi = cctx.gridConfig().getEncryptionSpi();
-        this.encMgr = cctx.kernalContext().encryption();
+        this.encMgr = keyProvider;
 
         encryptionDisabled = encSpi instanceof NoopEncryptionSpi;
 
@@ -268,7 +270,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
         GridEncryptionManager encMgr = cctx.kernalContext().encryption();
 
-        return encMgr != null && encMgr.groupKey(grpId) != null;
+        return encMgr != null && encMgr.getActiveKey(grpId) != null;
     }
 
     /**
@@ -351,7 +353,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         if (plainRecType != null)
             putRecordType(dst, plainRecType);
 
-        GroupKey grpKey = encMgr.groupKey(grpId);
+        GroupKey grpKey = encMgr.getActiveKey(grpId);
 
         dst.put(grpKey.id());
 

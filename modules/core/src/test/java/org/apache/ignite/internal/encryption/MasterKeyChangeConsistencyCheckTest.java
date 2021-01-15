@@ -129,16 +129,16 @@ public class MasterKeyChangeConsistencyCheckTest extends AbstractEncryptionTest 
     /** */
     private class TestKeystoreEncryptionSpi extends KeystoreEncryptionSpi {
         /** {@inheritDoc} */
-        @Override public byte[] masterKeyDigest() {
+        @Override public byte[] masterKeyDigest(String name) {
             if (simulateOtherDigest.get() && ignite.name().equals(GRID_1)) {
-                byte[] digest = super.masterKeyDigest();
+                byte[] digest = super.masterKeyDigest(name);
 
                 digest[0] += 1;
 
                 return digest;
             }
 
-            return super.masterKeyDigest();
+            return super.masterKeyDigest(name);
         }
 
         /** {@inheritDoc} */

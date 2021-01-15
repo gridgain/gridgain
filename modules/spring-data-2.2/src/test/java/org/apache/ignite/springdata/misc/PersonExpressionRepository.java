@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,33 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.platform;
+package org.apache.ignite.springdata.misc;
 
-/** Test value object. */
-public class Address {
-    /** */
-    private String zip;
+import org.apache.ignite.springdata22.repository.IgniteRepository;
+import org.apache.ignite.springdata22.repository.config.RepositoryConfig;
 
-    /** */
-    private String addr;
-
-    /** */
-    public String getZip() {
-        return zip;
-    }
-
-    /** */
-    public void setZip(String zip) {
-        this.zip = zip;
-    }
-
-    /** */
-    public String getAddr() {
-        return addr;
-    }
-
-    /** */
-    public void setAddr(String addr) {
-        this.addr = addr;
-    }
+/**
+ * Test spring-data repository with Person entity.
+ */
+@RepositoryConfig(cacheName = "#{cacheNames.personCacheName}")
+public interface PersonExpressionRepository extends IgniteRepository<Person, Integer> {
 }
