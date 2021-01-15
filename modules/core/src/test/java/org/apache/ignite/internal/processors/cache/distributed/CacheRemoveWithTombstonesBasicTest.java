@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -322,19 +323,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         TestRecordingCommunicationSpi.spi(crd).blockMessages((n, msg) -> msg instanceof GridDhtAtomicSingleUpdateRequest);
 
-        IgniteInternalFuture<?> op1 = multithreadedAsync(new Runnable() {
-            @Override public void run() {
-                cache.put(pk, 0);
-            }
-        }, 1, "op1-thread");
+        IgniteInternalFuture<?> op1 = multithreadedAsync(() -> cache.put(pk, 0), 1, "op1-thread");
 
         TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
 
-        IgniteInternalFuture<?> op2 = multithreadedAsync(new Runnable() {
-            @Override public void run() {
-                cache.remove(pk);
-            }
-        }, 1, "op2-thread");
+        IgniteInternalFuture<?> op2 = multithreadedAsync(() -> cache.remove(pk), 1, "op2-thread");
 
         TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
 
@@ -362,6 +355,152 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     }
 
     /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "50") // Disable cleanup by unwindEvicts.
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0")
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
+    public void testAtomicReorderPutRemovePutRemove() throws Exception {
+        assumeTrue(atomicityMode == ATOMIC);
+
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        doSleep(500);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
+
+        Integer pk = primaryKey(crd.cache(DEFAULT_CACHE_NAME));
+
+        TestRecordingCommunicationSpi.spi(crd).record(GridDhtAtomicSingleUpdateRequest.class);
+
+        for (int i = 0; i < PERMUTATIONS.length; i++) {
+            int[] permutation = PERMUTATIONS[i];
+
+            log.info("Testing permutation " + Arrays.toString(permutation));
+
+            TestRecordingCommunicationSpi.spi(crd).blockMessages((n, msg) -> msg instanceof GridDhtAtomicSingleUpdateRequest);
+
+            IgniteInternalFuture<?> op1 = multithreadedAsync(() -> cache.put(pk, 0), 1, "op1-thread");
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+            IgniteInternalFuture<?> op2 = multithreadedAsync(() -> cache.remove(pk), 1, "op2-thread");
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
+
+            IgniteInternalFuture<?> op3 = multithreadedAsync(() -> cache.put(pk, 1), 1, "op3-thread");
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked(3);
+
+            IgniteInternalFuture<?> op4 = multithreadedAsync(() -> cache.remove(pk), 1, "op4-thread");
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked(4);
+
+            List<Object> msgs = TestRecordingCommunicationSpi.spi(crd).recordedMessages(false);
+
+            for (int j = 0; j < permutation.length; j++) {
+                int finalJ = j;
+
+                TestRecordingCommunicationSpi.spi(crd).stopBlock(true,
+                    desc -> desc.ioMessage().message() == msgs.get(permutation[finalJ]));
+
+                doSleep(100);
+            }
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+            GridCacheContext<Object, Object> ctx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context();
+            validateCache(ctx0.group(), pk, 1, 0);
+
+            GridCacheContext<Object, Object> ctx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context();
+            validateCache(ctx1.group(), pk, 1, 0);
+
+            doSleep(100);
+
+            ctx0.ttl().expire(1);
+            ctx1.ttl().expire(1);
+
+            validateCache(ctx0.group(), pk, 0, 0);
+            validateCache(ctx0.group(), pk, 0, 0);
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "50") // Disable cleanup by unwindEvicts.
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0")
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
+    public void testAtomicReorderPutPutRemoveRemove() throws Exception {
+        assumeTrue(atomicityMode == ATOMIC);
+
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        doSleep(500);
+
+        IgniteCache<Object, Object> cache = crd.createCache(cacheConfiguration(atomicityMode));
+
+        Integer pk = primaryKey(crd.cache(DEFAULT_CACHE_NAME));
+
+        TestRecordingCommunicationSpi.spi(crd).record(GridDhtAtomicSingleUpdateRequest.class);
+
+        for (int i = 0; i < PERMUTATIONS.length; i++) {
+            int[] permutation = PERMUTATIONS[i];
+
+            log.info("Testing permutation " + Arrays.toString(permutation));
+
+            TestRecordingCommunicationSpi.spi(crd).blockMessages((n, msg) -> msg instanceof GridDhtAtomicSingleUpdateRequest);
+
+            IgniteInternalFuture<?> op1 = multithreadedAsync(() -> cache.put(pk, 0), 1, "op1-thread");
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+            IgniteInternalFuture<?> op2 = multithreadedAsync(() -> cache.put(pk, 1), 1, "op2-thread");
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
+
+            IgniteInternalFuture<?> op3 = multithreadedAsync(() -> cache.remove(pk), 1, "op3-thread");
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked(3);
+
+            IgniteInternalFuture<?> op4 = multithreadedAsync(() -> cache.remove(pk), 1, "op4-thread");
+
+            TestRecordingCommunicationSpi.spi(crd).waitForBlocked(4);
+
+            List<Object> msgs = TestRecordingCommunicationSpi.spi(crd).recordedMessages(false);
+
+            for (int j = 0; j < permutation.length; j++) {
+                int finalJ = j;
+
+                TestRecordingCommunicationSpi.spi(crd).stopBlock(true,
+                    desc -> desc.ioMessage().message() == msgs.get(permutation[finalJ]));
+
+                doSleep(100);
+            }
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+            GridCacheContext<Object, Object> ctx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context();
+            validateCache(ctx0.group(), pk, 1, 0);
+
+            GridCacheContext<Object, Object> ctx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context();
+            validateCache(ctx1.group(), pk, 1, 0);
+
+            doSleep(100);
+
+            ctx0.ttl().expire(1);
+            ctx1.ttl().expire(1);
+
+            validateCache(ctx0.group(), pk, 0, 0);
+            validateCache(ctx0.group(), pk, 0, 0);
+        }
+    }
+
+    /**
      * Tests put-remove on primary reordered to remove-put on backup.
      * @throws Exception If failed.
      */
@@ -378,19 +517,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         TestRecordingCommunicationSpi.spi(crd).blockMessages((n, msg) -> msg instanceof GridDhtAtomicSingleUpdateRequest);
 
-        IgniteInternalFuture<?> op1 = multithreadedAsync(new Runnable() {
-            @Override public void run() {
-                cache.invoke(pk, new InsertClosure(0));
-            }
-        }, 1, "op1-thread");
+        IgniteInternalFuture<?> op1 = multithreadedAsync(() -> cache.invoke(pk, new InsertClosure(0)), 1, "op1-thread");
 
         TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
 
-        IgniteInternalFuture<?> op2 = multithreadedAsync(new Runnable() {
-            @Override public void run() {
-                cache.invoke(pk, new RemoveClosure());
-            }
-        }, 1, "op2-thread");
+        IgniteInternalFuture<?> op2 = multithreadedAsync(() -> cache.invoke(pk, new RemoveClosure()), 1, "op2-thread");
 
         TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
 
@@ -1477,4 +1608,12 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             return null;
         }
     }
+
+    /** Permutations. */
+    private static final int[][] PERMUTATIONS = {
+        {0, 1, 2, 3}, {0, 1, 3, 2}, {0, 2, 1, 3}, {0, 2, 3, 1}, {0, 3, 1, 2}, {0, 3, 2, 1}, {1, 0, 2, 3},
+        {1, 0, 3, 2}, {1, 2, 0, 3}, {1, 2, 3, 0}, {1, 3, 0, 2}, {1, 3, 2, 0}, {2, 0, 1, 3}, {2, 0, 3, 1},
+        {2, 1, 0, 3}, {2, 1, 3, 0}, {2, 3, 0, 1}, {2, 3, 1, 0}, {3, 0, 1, 2}, {3, 0, 2, 1}, {3, 1, 0, 2},
+        {3, 1, 2, 0}, {3, 2, 0, 1}, {3, 2, 1, 0}
+    };
 }

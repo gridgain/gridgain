@@ -52,9 +52,10 @@ public class ConsistencyUtils {
      * @param log Logger.
      */
     public static void printDivergenceDetailsForKey(IdleVerifyResultV2 res, IgniteLogger log) throws IgniteCheckedException {
-        Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> e0 = !F.isEmpty(res.hashConflicts()) ?
-            res.hashConflicts().entrySet().iterator().next() :
-            res.counterConflicts().entrySet().iterator().next();
+        if (F.isEmpty(res.hashConflicts()))
+            return;
+
+        Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> e0 = res.hashConflicts().entrySet().iterator().next();
 
         List<PartitionHashRecordV2> list = e0.getValue();
         PartitionKeyV2 first = e0.getKey();
