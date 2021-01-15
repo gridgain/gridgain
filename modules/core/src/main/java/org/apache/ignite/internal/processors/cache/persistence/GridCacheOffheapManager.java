@@ -1168,11 +1168,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
 
-        FileWALPointer latestReservedPointer = (FileWALPointer)database.latestWalPointerReservedForPreloading();
-
-        if (latestReservedPointer == null)
-            throw new IgniteHistoricalIteratorException("Historical iterator wasn't created, because WAL isn't reserved.");
-
         Map<Integer, Long> partsCounters = new HashMap<>();
 
         for (int i = 0; i < partCntrs.size(); i++) {
@@ -1184,12 +1179,17 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         try {
             FileWALPointer minPtr = database.checkpointHistory().searchEarliestWalPointer(grp.groupId(),
-                partsCounters, latestReservedPointer, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
+                partsCounters, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
 
-            assert latestReservedPointer.compareTo(minPtr) <= 0
+            FileWALPointer latestReservedPointer = (FileWALPointer)database.latestWalPointerReservedForPreloading();
+
+            assert latestReservedPointer == null || latestReservedPointer.compareTo(minPtr) <= 0
                 : "Historical iterator tries to iterate WAL out of reservation [cache=" + grp.cacheOrGroupName()
                 + ", reservedPointer=" + database.latestWalPointerReservedForPreloading()
                 + ", historicalPointer=" + minPtr + ']';
+
+            if (latestReservedPointer == null)
+                log.warning("History for the preloading has not reserved yet.");
 
             WALIterator it = grp.shared().wal().replay(minPtr);
 
