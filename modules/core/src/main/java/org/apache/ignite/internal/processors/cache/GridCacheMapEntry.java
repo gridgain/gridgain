@@ -2203,7 +2203,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             GridDhtLocalPartition locPart = localPartition();
 
             // Reserve before update to avoid writing to evicting partition.
-            if (!(reserved = locPart != null && locPart.reserve()))
+            if (locPart != null && !(reserved = locPart.reserve()))
                 throw new GridDhtInvalidPartitionException(partition(), "The partition can't be reserved");
 
             boolean internal = isInternal() || !context().userCache();
