@@ -48,6 +48,7 @@ public class PagesMetricNoStoreImpl implements PagesMetric {
 
     /** {@inheritDoc} */
     @Override public void pageFromReuseList(int grpId, int partId, byte pageFlag) {
+        physicalMemoryFreelistPagesSize--;
         if (partId == PageIdAllocator.INDEX_PARTITION) {
             //TODO: define index or metadata
             physicalMemoryIndexPagesSize++;
@@ -70,11 +71,6 @@ public class PagesMetricNoStoreImpl implements PagesMetric {
                 .addAndGet(-count);
         }
         physicalMemoryFreelistPagesSize += count;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void freeListPageReused() {
-        physicalMemoryFreelistPagesSize--;
     }
 
     /** {@inheritDoc} */

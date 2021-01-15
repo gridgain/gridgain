@@ -56,11 +56,6 @@ public interface PagesMetric {
     long physicalMemoryFreePagesSize();
 
     /**
-     * Page is reused from {@link ReuseList}.
-     */
-    void freeListPageReused();
-
-    /**
      * Page is used first time.
      */
     void freePageUsed();
