@@ -522,7 +522,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                         pageId = reuseList.takeRecycledPage();
 
                         if (pageId != 0) {
-                            System.out.println("take from Recycled to Data page");
+                            pageMetric.pageFromReuseList(grpId, partition, FLAG_DATA);
                             pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions().latest());
                         }
                     }

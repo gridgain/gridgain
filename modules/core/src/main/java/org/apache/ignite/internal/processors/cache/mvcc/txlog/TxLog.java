@@ -210,11 +210,10 @@ public class TxLog implements CheckpointListener {
 
             long treeRoot;
 
-            if ((treeRoot = reuseList1.takeRecycledPage()) == 0L) {
-                System.out.println("allocated INDEX");
+            if ((treeRoot = reuseList1.takeRecycledPage()) == 0L)
                 treeRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, FLAG_IDX);
-            } else
-                System.out.println("from recycled to INDEX");
+            else
+                pageMemory.getPageMetric().pageFromReuseList(TX_LOG_CACHE_ID, INDEX_PARTITION, FLAG_IDX);
 
             tree = new TxLogTree(
                 txLogName,

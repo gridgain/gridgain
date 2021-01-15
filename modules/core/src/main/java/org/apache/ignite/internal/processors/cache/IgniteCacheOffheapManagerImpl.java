@@ -1102,6 +1102,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         if (reuseList == null || (pageId = reuseList.takeRecycledPage()) == 0L)
             pageId = grp.dataRegion().pageMemory().allocatePage(grp.groupId(), INDEX_PARTITION, FLAG_IDX);
+        else
+            grp.dataRegion().pageMemory().getPageMetric().pageFromReuseList(grp.groupId(), INDEX_PARTITION, FLAG_IDX);
 
         return pageId;
     }
