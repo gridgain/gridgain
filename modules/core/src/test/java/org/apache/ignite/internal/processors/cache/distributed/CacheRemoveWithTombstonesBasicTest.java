@@ -382,19 +382,21 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
             TestRecordingCommunicationSpi.spi(crd).blockMessages((n, msg) -> msg instanceof GridDhtAtomicSingleUpdateRequest);
 
-            IgniteInternalFuture<?> op1 = multithreadedAsync(() -> cache.put(pk, 0), 1, "op1-thread");
+            IgniteInternalFuture[] futs = new IgniteInternalFuture[4];
+
+            futs[0] = multithreadedAsync(() -> cache.put(pk, 0), 1, "op1-thread");
 
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
 
-            IgniteInternalFuture<?> op2 = multithreadedAsync(() -> cache.remove(pk), 1, "op2-thread");
+            futs[1] = multithreadedAsync(() -> cache.remove(pk), 1, "op2-thread");
 
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
 
-            IgniteInternalFuture<?> op3 = multithreadedAsync(() -> cache.put(pk, 1), 1, "op3-thread");
+            futs[2] = multithreadedAsync(() -> cache.put(pk, 1), 1, "op3-thread");
 
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked(3);
 
-            IgniteInternalFuture<?> op4 = multithreadedAsync(() -> cache.remove(pk), 1, "op4-thread");
+            futs[3] = multithreadedAsync(() -> cache.remove(pk), 1, "op4-thread");
 
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked(4);
 
@@ -406,7 +408,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
                 TestRecordingCommunicationSpi.spi(crd).stopBlock(true,
                     desc -> desc.ioMessage().message() == msgs.get(permutation[finalJ]));
 
-                doSleep(100);
+                futs[permutation[finalJ]].get();
             }
 
             assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
@@ -455,19 +457,21 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
             TestRecordingCommunicationSpi.spi(crd).blockMessages((n, msg) -> msg instanceof GridDhtAtomicSingleUpdateRequest);
 
-            IgniteInternalFuture<?> op1 = multithreadedAsync(() -> cache.put(pk, 0), 1, "op1-thread");
+            IgniteInternalFuture[] futs = new IgniteInternalFuture[4];
+
+            futs[0] = multithreadedAsync(() -> cache.put(pk, 0), 1, "op1-thread");
 
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
 
-            IgniteInternalFuture<?> op2 = multithreadedAsync(() -> cache.put(pk, 1), 1, "op2-thread");
+            futs[1] = multithreadedAsync(() -> cache.put(pk, 1), 1, "op2-thread");
 
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked(2);
 
-            IgniteInternalFuture<?> op3 = multithreadedAsync(() -> cache.remove(pk), 1, "op3-thread");
+            futs[2] = multithreadedAsync(() -> cache.remove(pk), 1, "op3-thread");
 
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked(3);
 
-            IgniteInternalFuture<?> op4 = multithreadedAsync(() -> cache.remove(pk), 1, "op4-thread");
+            futs[3] = multithreadedAsync(() -> cache.remove(pk), 1, "op4-thread");
 
             TestRecordingCommunicationSpi.spi(crd).waitForBlocked(4);
 
@@ -479,7 +483,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
                 TestRecordingCommunicationSpi.spi(crd).stopBlock(true,
                     desc -> desc.ioMessage().message() == msgs.get(permutation[finalJ]));
 
-                doSleep(100);
+                futs[permutation[finalJ]].get();
             }
 
             assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
