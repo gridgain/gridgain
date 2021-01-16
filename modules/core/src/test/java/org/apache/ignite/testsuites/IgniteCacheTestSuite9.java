@@ -69,6 +69,7 @@ import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCount
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStatePutTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateTwoPrimaryTwoBackupsTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateWithFilterTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxRecoveryOnCoordniatorFailTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
@@ -168,6 +169,8 @@ public class IgniteCacheTestSuite9 {
         GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesPreloadingTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, TombstoneClearingCountersTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, TxRecoveryOnCoordniatorFailTest.class, ignoredTests);
 
         return suite;
     }
