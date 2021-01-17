@@ -3226,11 +3226,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             boolean update;
 
-            GridCacheVersion finalVer = ver;
             IgniteBiPredicate<CacheObject, GridCacheVersion> p = (oldVal, oldVer) -> {
                 GridCacheVersion testVer = oldVer != null ? oldVer : this.ver;
 
-                return preload ? cctx.shared().versions().isStartVersion(testVer) || testVer.compareTo(finalVer) < 0 : oldVal == null;
+                return preload ? cctx.shared().versions().isStartVersion(testVer) || testVer.compareTo(ver) < 0 : oldVal == null;
             };
 
             long updateCntr = 0;
@@ -3253,12 +3252,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
                     }
                     else {
-                        if (!preload && ver.updateCounter() == 0) {
-                            ver = nextVersion(ver, null);
-
-                            updateCntr = nextPartitionCounter(topVer, true, true, null);
-                            ver.updateCounter(updateCntr);
-                        }
+                        if (!preload)
+                            ver.updateCounter((updateCntr = nextPartitionCounter(topVer, true, true, null)));
 
                         storeValue(val, expTime, ver);
                     }
@@ -3285,12 +3280,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     }
                 }
                 else {
-                    if (!preload && ver.updateCounter() == 0) {
-                        ver = nextVersion(ver, null);
-
-                        updateCntr = nextPartitionCounter(topVer, true, true, null);
-                        ver.updateCounter(updateCntr);
-                    }
+                    if (!preload)
+                        ver.updateCounter((updateCntr = nextPartitionCounter(topVer, true, true, null)));
 
                     // Optimization to access storage only once.
                     UpdateClosure c = storeValue(val, expTime, ver, p);
@@ -3301,9 +3292,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             if (update) {
                 update(val, expTime, ttl, ver, true);
-
-                if (!preload)
-                    updateCntr = nextPartitionCounter(topVer, true, true, null);
 
                 if (walEnabled) {
                     if (cctx.mvccEnabled()) {

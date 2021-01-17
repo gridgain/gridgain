@@ -359,8 +359,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "50") // Disable cleanup by unwindEvicts.
-    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0")
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
+    @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
     public void testAtomicReorderPutRemovePutRemove() throws Exception {
         assumeTrue(atomicityMode == ATOMIC);
 
@@ -425,7 +426,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             ctx1.ttl().expire(1);
 
             validateCache(ctx0.group(), pk, 0, 0);
-            validateCache(ctx0.group(), pk, 0, 0);
+            validateCache(ctx1.group(), pk, 0, 0);
         }
     }
 
@@ -434,8 +435,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "50") // Disable cleanup by unwindEvicts.
-    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0")
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
+    @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
     public void testAtomicReorderPutPutRemoveRemove() throws Exception {
         assumeTrue(atomicityMode == ATOMIC);
 
@@ -494,13 +496,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             GridCacheContext<Object, Object> ctx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context();
             validateCache(ctx1.group(), pk, 1, 0);
 
-            doSleep(100);
-
             ctx0.ttl().expire(1);
             ctx1.ttl().expire(1);
 
             validateCache(ctx0.group(), pk, 0, 0);
-            validateCache(ctx0.group(), pk, 0, 0);
+            validateCache(ctx1.group(), pk, 0, 0);
         }
     }
 
