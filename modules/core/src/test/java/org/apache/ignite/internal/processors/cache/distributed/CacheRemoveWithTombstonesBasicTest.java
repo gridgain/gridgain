@@ -496,6 +496,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             GridCacheContext<Object, Object> ctx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context();
             validateCache(ctx1.group(), pk, 1, 0);
 
+            doSleep(100);
+
             ctx0.ttl().expire(1);
             ctx1.ttl().expire(1);
 
