@@ -126,12 +126,11 @@ public class ContinuousQueryMarshallerTest extends GridCommonAbstractTest {
 
         final IgniteCache<Integer, MarshallerCheckingEntry> cache1 = node2.cache(CACHE_NAME);
 
-        int count = 0;
-        for (Cache.Entry<Integer, MarshallerCheckingEntry> entry : cache1.query(qry)) {
-            count++;
-        }
+        int cnt = 0;
+        for (Cache.Entry<Integer, MarshallerCheckingEntry> entry : cache1.query(qry))
+            cnt++;
 
-        assertEquals("Unexpected number of entries scanned",CACHE_SIZE / 2, count);
+        assertEquals("Unexpected number of entries scanned", CACHE_SIZE / 2, cnt);
 
         for (int i = CACHE_SIZE; i < CACHE_SIZE + NUM_OF_UPDATES; i++)
             cache1.put(i, new MarshallerCheckingEntry(i));
