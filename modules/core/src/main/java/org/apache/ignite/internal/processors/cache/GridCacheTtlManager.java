@@ -45,6 +45,10 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     private final long unwindThrottlingTimeout = Long.getLong(
         IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
 
+    /** Each cache operation removes this amount of entries with expired TTL. */
+    private final int ttlBatchSize = IgniteSystemProperties.getInteger(
+        IgniteSystemProperties.IGNITE_TTL_EXPIRE_BATCH_SIZE, 5);
+
     /** Entries pending removal. This collection tracks entries for near cache only. */
     private GridConcurrentSkipListSetEx pendingEntries;
 
@@ -177,6 +181,14 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     }
 
     /**
+     * Processes expired entries with default batch size.
+     * @return {@code True} if unprocessed expired entries remains.
+     */
+    public boolean expire() {
+        return expire(ttlBatchSize);
+    }
+
+    /**
      * Processes specified amount of expired entries.
      * <p>
      * Both TTL cleanup (if TTL is configured and eager TTL is enabled)
@@ -187,6 +199,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      */
     public boolean expire(int amount) {
         assert cctx != null;
+
+        if (amount == 0)
+            return false;
 
         long now = U.currentTimeMillis();
 
