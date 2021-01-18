@@ -158,13 +158,13 @@ public class IgniteStatisticsHelper {
     }
 
     /**
-     * Extract groups of stats keys.
+     * Return map cache group to corrsponding stats keys.
      *
-     * @param keys Statistics key to extract groups from.
+     * @param keys Statistics key to map.
      * @return Map of <group ids> to <collection of keys in groups>
      * @throws IgniteCheckedException In case of lack some of specified objects.
      */
-    protected Map<CacheGroupContext, Collection<StatisticsKeyMessage>> extractGroups(
+    protected Map<CacheGroupContext, Collection<StatisticsKeyMessage>> mapToCacheGroups(
         Collection<StatisticsKeyMessage> keys
     ) throws IgniteCheckedException {
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> res = new HashMap<>(keys.size());
@@ -190,7 +190,7 @@ public class IgniteStatisticsHelper {
             GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
 
             if (tbl == null)
-                throw new IgniteCheckedException(String.format("Can't  find table %s.%s", key.schema(), key.obj()));
+                throw new IgniteCheckedException(String.format("Can't find table %s.%s", key.schema(), key.obj()));
 
             res.computeIfAbsent(tbl.cacheContext().group(), k -> new ArrayList<>()).add(key);
         }
@@ -289,7 +289,7 @@ public class IgniteStatisticsHelper {
     public Collection<StatisticsAddrRequest<StatisticsClearRequest>> generateClearRequests(
         Collection<StatisticsKeyMessage> keys
     ) throws IgniteCheckedException {
-        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts = extractGroups(keys);
+        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts = mapToCacheGroups(keys);
         Map<UUID, Collection<StatisticsKeyMessage>> nodeKeys = nodeKeys(grpContexts);
 
         return nodeKeys.entrySet().stream().map(node -> new StatisticsAddrRequest<>(
@@ -354,7 +354,7 @@ public class IgniteStatisticsHelper {
             }
         }
 
-        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = extractGroups(objStats.keySet());
+        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = mapToCacheGroups(objStats.keySet());
         Map<CacheGroupContext, Collection<StatisticsObjectData>> grpsData = new HashMap<>(grpsKeys.size());
 
         for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys : grpsKeys.entrySet()) {

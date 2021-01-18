@@ -84,7 +84,6 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
      * @param discoMgr Discovery manager.
      * @param qryProcessor Query processor.
      * @param repo IgniteStatisticsRepository.
-     * @param cacheProcessor Grid cache processor.
      * @param statCrawler Statistics request crawler.
      * @param gatMgmtPool Thread pool to gather statistics in.
      * @param logSupplier Log supplier function.

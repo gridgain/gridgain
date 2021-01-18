@@ -66,7 +66,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Statistics repository. */
     private final IgniteStatisticsRepository statsRepos;
 
-    /** Current statistics collections tasks. */
+    /** Ignite statistics helper. */
     private final IgniteStatisticsHelper helper;
 
     /** Statistics collector. */
