@@ -141,7 +141,6 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.isVisib
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccVersionIsValid;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.state;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.unexpectedStateException;
-import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.FULL_WITH_HINTS;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO.MVCC_INFO_SIZE;
 import static org.apache.ignite.internal.util.IgniteTree.OperationType.NOOP;
 import static org.apache.ignite.internal.util.IgniteTree.OperationType.PUT;
@@ -1154,8 +1153,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Override public GridCloseableIterator<CacheDataRow> reservedIterator(int part,
-        AffinityTopologyVersion topVer) throws IgniteCheckedException {
+    @Override public GridCloseableIterator<CacheDataRow> reservedIterator(int part, AffinityTopologyVersion topVer) {
         final GridDhtLocalPartition loc = grp.topology().localPartition(part, topVer, false);
 
         if (loc == null || !loc.reserve())
@@ -1168,14 +1166,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             return null;
         }
 
-        CacheDataStore data = partitionData(part);
-
-        final GridCursor<? extends CacheDataRow> cur = grp.mvccEnabled() ? data.cursor(FULL_WITH_HINTS) :
-            data.cursor(IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
+        final CacheDataStore data = partitionData(part);
 
         return new GridCloseableIteratorAdapter<CacheDataRow>() {
             /** */
             private CacheDataRow next;
+
+            /** */
+            private GridCursor<? extends CacheDataRow> cur;
 
             @Override protected CacheDataRow onNext() {
                 CacheDataRow res = next;
@@ -1186,20 +1184,30 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             @Override protected boolean onHasNext() throws IgniteCheckedException {
+                if (cur == null)
+                    cur = data.cursor(CacheDataRowAdapter.RowData.FULL_WITH_HINTS);
+
                 if (next != null)
                     return true;
 
                 if (cur.next())
                     next = cur.get();
 
-                return next != null;
+                boolean hasNext = next != null;
+
+                if (!hasNext)
+                    cur = null;
+
+                return hasNext;
             }
 
-            @Override protected void onClose() throws IgniteCheckedException {
+            @Override protected void onClose() {
                 assert loc != null && loc.state() == OWNING && loc.reservations() > 0
                     : "Partition should be in OWNING state and has at least 1 reservation: " + loc;
 
                 loc.release();
+
+                cur = null;
             }
         };
     }
