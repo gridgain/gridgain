@@ -239,6 +239,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (!hasPendingEntries || nextCleanTime > U.currentTimeMillis())
                 return false;
 
+            if (!cctx.topology().initialized())
+                return false;
+
             boolean more = cctx.offheap().expire(dhtCtx, expireC, amount);
 
             if (more)
