@@ -125,7 +125,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
     /** Check UNION operation with large sub-selects. */
     @Test
     public void testUnionSimple() throws Exception {
-        maxMem = 9L * MB;
+        maxMem = 11L * MB;
         assert localResults.isEmpty();
 
         execQuery("select * from T as T0, T as T1 where T0.id < 3 " +

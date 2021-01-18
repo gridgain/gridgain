@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationCancelTask;
 
@@ -30,7 +31,7 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PART
 /**
  * Partition reconciliation cancel command.
  */
-public class PartitionReconciliationCancel implements Command<Void> {
+public class PartitionReconciliationCancel extends AbstractCommand<Void> {
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
         String desc = "Cancels partition reconciliation command.";

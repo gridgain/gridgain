@@ -28,9 +28,11 @@ import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PUT;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_CLOSE;
@@ -1161,6 +1163,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testTXCachePutLogPoint() throws Exception {
         IgniteEx client = startGrid("client");
 

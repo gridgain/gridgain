@@ -40,7 +40,7 @@ import static org.apache.ignite.internal.commandline.defragmentation.Defragmenta
 import static org.apache.ignite.internal.commandline.defragmentation.DefragmentationSubcommands.SCHEDULE;
 
 /** */
-public class DefragmentationCommand implements Command<DefragmentationArguments> {
+public class DefragmentationCommand extends AbstractCommand<DefragmentationArguments> {
     /** */
     private static final String NODES_ARG = "--nodes";
 

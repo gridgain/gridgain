@@ -26,6 +26,7 @@ import org.apache.ignite.internal.client.GridClientCompute;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientDisconnectedException;
 import org.apache.ignite.internal.client.GridClientNode;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
@@ -42,7 +43,7 @@ import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 public abstract class DrAbstractRemoteSubCommand<
     VisorArgsDto extends IgniteDataTransferObject,
     VisorResultDto extends IgniteDataTransferObject,
-    DrArgs extends DrAbstractRemoteSubCommand.Arguments<VisorArgsDto>> implements Command<DrArgs> {
+    DrArgs extends DrAbstractRemoteSubCommand.Arguments<VisorArgsDto>> extends AbstractCommand<DrArgs> {
     /** */
     protected static boolean drControlUtilitySupported(GridClientNode node) {
         return node.supports(DR_CONTROL_UTILITY);
