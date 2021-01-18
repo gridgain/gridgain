@@ -28,8 +28,11 @@ import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMe
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
 import org.apache.ignite.internal.util.typedef.F;
+import org.gridgain.internal.h2.table.Column;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -70,6 +73,73 @@ public class IgniteStatisticsHelper {
         this.locNodeId = locNodeId;
         this.schemaMgr = schemaMgr;
         this.log = logSupplier.apply(IgniteStatisticsHelper.class);
+    }
+
+    /**
+     * Aggregate specified partition level statistics to local level statistics.
+     *
+     * @param keyMsg Aggregation key.
+     * @param stats Collection of all local partition level or local level statistics by specified key to aggregate.
+     * @return Local level aggregated statistics.
+     */
+    public ObjectStatisticsImpl aggregateLocalStatistics(
+            StatisticsKeyMessage keyMsg,
+            Collection<? extends ObjectStatisticsImpl> stats
+    ) {
+        // For now there can be only tables
+        GridH2Table tbl = schemaMgr.dataTable(keyMsg.schema(), keyMsg.obj());
+
+        if (tbl == null) {
+            // remove all loaded statistics.
+            if (log.isDebugEnabled())
+                log.debug(String.format("Removing statistics for object %s.%s cause table doesn't exists.",
+                        keyMsg.schema(), keyMsg.obj()));
+        }
+
+        return aggregateLocalStatistics(tbl, filterColumns(tbl.getColumns(), keyMsg.colNames()), stats);
+    }
+
+    /**
+     * Aggregate partition level statistics to local level one or local statistics to global one.
+     *
+     * @param tbl Table to aggregate statistics by.
+     * @param selectedCols Columns to aggregate statistics by.
+     * @param stats Collection of partition level or local level statistics to aggregate.
+     * @return Local level statistics.
+     */
+    public static ObjectStatisticsImpl aggregateLocalStatistics(
+            GridH2Table tbl,
+            Column[] selectedCols,
+            Collection<? extends ObjectStatisticsImpl> stats
+    ) {
+        Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedCols.length);
+        long rowCnt = 0;
+        for (Column col : selectedCols)
+            colPartStats.put(col, new ArrayList<>());
+
+        for (ObjectStatisticsImpl partStat : stats) {
+            for (Column col : selectedCols) {
+                ColumnStatistics colPartStat = partStat.columnStatistics(col.getName());
+                if (colPartStat != null) {
+                    colPartStats.computeIfPresent(col, (k, v) -> {
+                        v.add(colPartStat);
+
+                        return v;
+                    });
+                }
+            }
+            rowCnt += partStat.rowCount();
+        }
+
+        Map<String, ColumnStatistics> colStats = new HashMap<>(selectedCols.length);
+        for (Column col : selectedCols) {
+            ColumnStatistics stat = ColumnStatisticsCollector.aggregate(tbl::compareValues, colPartStats.get(col));
+            colStats.put(col.getName(), stat);
+        }
+
+        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
+
+        return tblStats;
     }
 
     /**
@@ -357,5 +427,21 @@ public class IgniteStatisticsHelper {
         }
 
         return res;
+    }
+
+    /**
+     * Filter columns by specified names.
+     *
+     * @param cols Columns to filter.
+     * @param colNames Column names.
+     * @return Column with specified names.
+     */
+    public static Column[] filterColumns(Column[] cols, @Nullable Collection<String> colNames) {
+        if (F.isEmpty(colNames))
+            return cols;
+
+        Set<String> colNamesSet = new HashSet<>(colNames);
+
+        return Arrays.stream(cols).filter(c -> colNamesSet.contains(c.getName())).toArray(Column[]::new);
     }
 }

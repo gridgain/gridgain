@@ -113,10 +113,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                 GridIoPolicy.UNDEFINED,
                 ctx.uncaughtExceptionHandler()
         );
-        statCrawler = new StatisticsGatheringRequestCrawlerImpl(ctx.localNodeId(), this, ctx.event(), ctx.io(),
-            helper, msgMgmtPool, ctx::log);
-        statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), statCrawler, gatMgmtPool,
-            ctx::log);
 
         boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
         IgniteStatisticsStore store;
@@ -125,12 +121,16 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         else if (db == null)
             store = new IgniteStatisticsInMemoryStoreImpl(ctx::log);
         else
-            store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db, ctx::log);
+            store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db,
+                (k, s) -> this.statisticsRepository().cacheLocalStatistics(k, s), ctx::log);
 
-        statsRepos = new IgniteStatisticsRepositoryImpl(store, statGathering, ctx::log);
+        statsRepos = new IgniteStatisticsRepositoryImpl(store, helper, ctx::log);
 
-        store.repository(statsRepos);
-        statGathering.repository(statsRepos);
+        statCrawler = new StatisticsGatheringRequestCrawlerImpl(ctx.localNodeId(), this, ctx.event(), ctx.io(),
+            helper, msgMgmtPool, ctx::log);
+        statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), statsRepos, statCrawler,
+            gatMgmtPool, ctx::log);
+
     }
 
     /**
@@ -273,6 +273,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
             StatisticsGatheringContext status = new StatisticsGatheringContext(UUID.randomUUID(),
                     new HashSet<>(grpKeys.getValue()), parts);
+            currColls.put(status.gatId(), status);
 
             collectObjectStatistics(status);
 
@@ -291,12 +292,16 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
        StatisticsGatheringContext stCtx = currColls.remove(gatId);
        if (stCtx != null)
            stCtx.doneFut().cancel();
+       else {
+           if (log.isDebugEnabled())
+               log.debug(String.format("Unable to cancel gathering %s. No active task with such gatId found.", gatId));
+       }
     }
 
     /** {@inheritDoc} */
     @Override public boolean cancelObjectStatisticsGathering(UUID gatId) {
         boolean res = false;
-        StatisticsGatheringContext stCtx = currColls.remove(gatId);
+        StatisticsGatheringContext stCtx = currColls.get(gatId);
         if (stCtx != null) {
 
             res = stCtx.doneFut().cancel();
@@ -330,7 +335,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
                 continue;
             }
-            GridDhtPartitionState partState = tbl.cacheContext().topology().partitionState(ctx.localNodeId(), partData.partId());
+            GridDhtPartitionState partState = tbl.cacheContext().topology().partitionState(ctx.localNodeId(),
+                partData.partId());
             if (partState != OWNING) {
                 if (log.isInfoEnabled())
                     log.info(String.format("Ignoring non local partition statistics %s.%s:%d",
@@ -363,7 +369,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         Map<StatisticsKeyMessage, ObjectStatisticsImpl> keysGlobalStats = new HashMap<>();
         for (Map.Entry<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> keyStats : stCtx.collectedStatistics()
                 .entrySet()) {
-            ObjectStatisticsImpl globalCollectedStat = statGathering.aggregateLocalStatistics(keyStats.getKey(),
+            ObjectStatisticsImpl globalCollectedStat = helper.aggregateLocalStatistics(keyStats.getKey(),
                 keyStats.getValue());
             StatisticsKey statsKey = new StatisticsKey(keyStats.getKey().schema(), keyStats.getKey().obj());
             ObjectStatisticsImpl globalStat = statsRepos.mergeGlobalStatistics(statsKey, globalCollectedStat);
@@ -441,6 +447,11 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         return stat;
    }
+
+    /** {@inheritDoc} */
+    @Override public ObjectStatistics getGlobalStatistics(String schemaName, String objName) {
+        return statsRepos.getGlobalStatistics(new StatisticsKey(schemaName, objName));
+    }
 
     /**
      * Clear object statistics by specified keys.

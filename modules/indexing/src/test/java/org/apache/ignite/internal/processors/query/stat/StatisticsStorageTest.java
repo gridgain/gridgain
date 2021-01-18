@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -25,11 +24,11 @@ import org.junit.Test;
  */
 public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTest {
     /** {@inheritDoc} */
-    @Before
-    public void beforeTest() throws IgniteCheckedException {
+    @Override public void beforeTest() throws IgniteCheckedException {
         grid(0).context().query().getIndexing().statsManager().collectObjectStatistics(
             new StatisticsTarget("PUBLIC", "SMALL"));
     }
+
     /**
      * Test that statistics manager will return local statistics after cleaning of statistics repository.
      * @throws IgniteCheckedException In case of errors.
@@ -128,7 +127,6 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
 
         assertNotNull(locStat);
         assertNotNull(locStat.columnsStatistics().get("A"));
-
 
         statsMgr.clearObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "B"));
 

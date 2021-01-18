@@ -43,6 +43,9 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_STATISTICS;
  */
 public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatheringRequestCrawler, GridLocalEventListener,
         GridMessageListener {
+    /** Maximum number of attempts to send statistics gathering requests. */
+    public static final int MAX_SEND_RETRIES = 10;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -185,7 +188,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
                 }
             }
 
-            if (cnt++ > 10) {
+            if (cnt++ > MAX_SEND_RETRIES) {
                 if (log.isInfoEnabled())
                     log.info(String.format("Unable to send gathering requests for 10 times, cancel gathering %s", gatId));
 
@@ -240,13 +243,14 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             }
         }
 
+        StatisticsGatheringResponse resp = new StatisticsGatheringResponse(req.req().gatId(), reqId, data, parts);
+
         if (locNodeId.equals(req.sndNodeId()))
-            statMgr.registerLocalResult(gatId, data, parts.length);
+            receiveLocalStatistics(locNodeId, resp, req);
         else {
             // Original partitions count to correctly tear down remaining on remote request
             statMgr.onRemoteGatheringSend(gatId, req.req().parts().length);
 
-            StatisticsGatheringResponse resp = new StatisticsGatheringResponse(req.req().gatId(), reqId, data, parts);
             try {
                 send(req.sndNodeId(), resp);
             }
@@ -273,7 +277,6 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
      * @param gatId Gathering id to cancel.
      */
     public void sendCancelGathering(UUID gatId) {
-        // TODO: local node
         Map<UUID, Collection<UUID>> nodesReqs = new HashMap<>();
         remainingRequests.forEach((reqId, addrReq) -> {
             if (!gatId.equals(addrReq.req().gatId()))
@@ -290,9 +293,14 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         Collection<StatisticsAddrRequest<CancelStatisticsGatheringRequest>> cancelReqs = new ArrayList<>(nodesReqs.size());
         for (Map.Entry<UUID, Collection<UUID>> nodeReqs : nodesReqs.entrySet()) {
             CancelStatisticsGatheringRequest req = new CancelStatisticsGatheringRequest(gatId,
-                    nodeReqs.getValue().toArray(new UUID[0]));
+                nodeReqs.getValue().toArray(new UUID[0]));
             cancelReqs.add(new StatisticsAddrRequest<>(req, locNodeId, nodeReqs.getKey()));
         }
+
+        CancelStatisticsGatheringRequest locReq = cancelReqs.stream().filter(req -> locNodeId.equals(req.targetNodeId()))
+            .map(StatisticsAddrRequest::req).findAny().orElse(null);
+        if (locReq != null)
+            cancelStatisticsCollection(locNodeId, locReq);
 
         Collection<StatisticsAddrRequest<CancelStatisticsGatheringRequest>> failedReqs = sendRequests(cancelReqs);
 
@@ -327,7 +335,8 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         }
         catch (IgniteCheckedException e) {
             if (log.isDebugEnabled())
-                log.debug(String.format("Unable to send clear statistics request by keys %s", keys));
+                log.debug(String.format("Unable to send clear statistics request by keys %s due to %s", keys,
+                    e.getMessage()));
         }
     }
 
@@ -412,7 +421,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
     }
 
     /**
-     * Receive and handle statistics gathering response message as response for collection request.
+     * Receive gathering response and math it to request, then process these couple.
      *
      * @param nodeId Sender node id.
      * @param msg Statistics propagation message with partitions statistics to handle.
@@ -433,6 +442,22 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             return;
         }
 
+        receiveLocalStatistics(nodeId, msg, req);
+    }
+
+    /**
+     * Process pair of statistics gathering request and response: save collected statistics and, if there are
+     * some skipped partition, reschedule their collection.
+     *
+     * @param nodeId Sender node id.
+     * @param msg Statistics propagation message.
+     * @param req Corresponding statistics collection request.
+     */
+    private void receiveLocalStatistics(
+        UUID nodeId,
+        StatisticsGatheringResponse msg,
+        StatisticsAddrRequest<StatisticsGatheringRequest> req
+    ) {
         assert req.targetNodeId().equals(nodeId);
         assert req.sndNodeId().equals(locNodeId);
 
@@ -456,22 +481,27 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         List<StatisticsObjectData> data = new ArrayList<>(msg.keys().size());
         for (StatisticsKeyMessage keyMsg : msg.keys()) {
             ObjectStatisticsImpl objStats = statMgr.getGlobalStatistics(keyMsg);
-            if (objStats != null)
+            if (objStats != null) {
                 try {
                     data.add(StatisticsUtils.toObjectData(keyMsg, StatisticsType.GLOBAL, objStats));
-                } catch (IgniteCheckedException e) {
-                    if (log.isDebugEnabled())
+                }
+                catch (IgniteCheckedException e) {
+                    if (log.isDebugEnabled()) {
                         log.debug(String.format("Unable to build object statistics message by key %s due to %s",
                                 keyMsg, e.getMessage()));
+                    }
                 }
+            }
         }
 
         try {
             send(nodeId, new StatisticsGetResponse(msg.reqId(), data));
-        } catch (IgniteCheckedException e) {
-            if (log.isDebugEnabled())
+        }
+        catch (IgniteCheckedException e) {
+            if (log.isDebugEnabled()) {
                 log.debug(String.format("Unable to send back requested statistics to node %s by request %s",
                     nodeId, msg.reqId()));
+            }
         }
     }
 
@@ -542,15 +572,15 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
         Arrays.stream(msg.reqIds()).forEach(reqId -> {
             StatisticsAddrRequest<StatisticsGatheringRequest> removed = remainingRequests.remove(reqId);
 
-            assert removed == null || (removed.targetNodeId().equals(nodeId) && removed.req().gatId().equals(msg.gatId()));
+            assert removed == null || (removed.sndNodeId().equals(nodeId) && removed.req().gatId().equals(msg.gatId()));
         });
         statMgr.cancelLocalStatisticsGathering(msg.gatId());
     }
 
     /** {@inheritDoc} */
     @Override public void sendPartitionStatisticsToBackupNodesAsync(
-            StatisticsKeyMessage key,
-            Collection<ObjectPartitionStatisticsImpl> objStats
+        StatisticsKeyMessage key,
+        Collection<ObjectPartitionStatisticsImpl> objStats
     ) {
         msgMgmtPool.submit(() -> sendPartitionStatisticsToBackupNodes(key, objStats));
     }
@@ -567,9 +597,10 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
 
             Collection<StatisticsAddrRequest<StatisticsPropagationMessage>> failedMsgs = sendRequests(msgs);
 
-            if (!F.isEmpty(failedMsgs))
+            if (!F.isEmpty(failedMsgs)) {
                 if (log.isDebugEnabled())
                     log.debug(String.format("Failed to send %d global statistics messages.", failedMsgs.size()));
+            }
         }
         catch (IgniteCheckedException e) {
             if (log.isDebugEnabled())
@@ -600,9 +631,10 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
                 reqs = helper.generatePropagationMessages(key, objStats);
             }
             catch (IgniteCheckedException e) {
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug(String.format("Unable to send statistics to backups by object %s.%s", key.schema(),
                         key.obj()));
+                }
 
                 return;
             }

@@ -66,11 +66,10 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
         statsRepos = Mockito.mock(IgniteStatisticsRepositoryImpl.class);
         Mockito.doAnswer(ans -> cacheArguments.add(ans.getArguments())).when(statsRepos)
-                .cacheLocalStatistics(Mockito.any(StatisticsKey.class), Mockito.anyCollection());
+            .cacheLocalStatistics(Mockito.any(StatisticsKey.class), Mockito.anyCollection());
         metastorage = new ReadWriteMetaStorageMock();
         statStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-                new IgniteCacheDatabaseSharedManager(){}, cls -> log);
-        statStore.repository(statsRepos);
+            new IgniteCacheDatabaseSharedManager(){}, statsRepos::cacheLocalStatistics, cls -> log);
     }
 
     /**
@@ -99,8 +98,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         assertEquals(stat2_3, statStore.getLocalPartitionStatistics(k2, 3));
 
         IgniteStatisticsPersistenceStoreImpl statStore2 = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-                new IgniteCacheDatabaseSharedManager(){}, cls -> log);
-        statStore2.repository(statsRepos);
+            new IgniteCacheDatabaseSharedManager(){}, statsRepos::cacheLocalStatistics, cls -> log);
 
         statStore2.onReadyForReadWrite(metastorage);
 
@@ -112,9 +110,9 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
 
         assertEquals(2, cacheArguments.size());
         assertNotNull(cacheArguments.stream().filter(args -> k1.equals(args[0]) && stat1_1.equals(
-                ((Collection<ObjectPartitionStatisticsImpl>)args[1]).iterator().next())).findAny().orElse(null));
+            ((Collection<ObjectPartitionStatisticsImpl>)args[1]).iterator().next())).findAny().orElse(null));
         assertNotNull(cacheArguments.stream().filter(args -> k2.equals(args[0]) && stat2_2.equals(
-                ((Collection<ObjectPartitionStatisticsImpl>)args[1]).iterator().next())).findAny().orElse(null));
+            ((Collection<ObjectPartitionStatisticsImpl>)args[1]).iterator().next())).findAny().orElse(null));
     }
 
     /**
@@ -144,8 +142,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         metastorage.write(outerStatKey, outerStatValue);
 
         IgniteStatisticsPersistenceStoreImpl statStore2 = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-                new IgniteCacheDatabaseSharedManager(){}, cls -> log);
-        statStore2.repository(statsRepos);
+            new IgniteCacheDatabaseSharedManager(){}, statsRepos::cacheLocalStatistics, cls -> log);
         statStore2.onReadyForReadWrite(metastorage);
 
         assertEquals(1, cacheArguments.size());

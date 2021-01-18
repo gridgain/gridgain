@@ -22,7 +22,7 @@ import org.junit.Test;
 /**
  * Test that statistics still used by planner after restart.
  */
-public class PSUStatistcsRestartTest extends StatisticsRestartAbstractTest {
+public class PSUStatisticsRestartTest extends StatisticsRestartAbstractTest {
     /**
      * Use select with two conditions which shows statistics presence.
      * 1) Check that select use correct index with statistics
@@ -56,7 +56,7 @@ public class PSUStatistcsRestartTest extends StatisticsRestartAbstractTest {
         }, TIMEOUT);
 
         grid(0).context().query().getIndexing().statsManager().clearObjectStatistics(
-                new StatisticsTarget("PUBLIC", "SMALL"));
+                new StatisticsTarget(SCHEMA, "SMALL"));
 
         GridTestUtils.waitForCondition(() -> {
             try {

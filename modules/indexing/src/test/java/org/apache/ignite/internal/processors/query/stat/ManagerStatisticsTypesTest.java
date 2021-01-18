@@ -280,6 +280,6 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
      */
     private ObjectStatisticsImpl getTypesStats() {
         return (ObjectStatisticsImpl) grid(0).context().query().getIndexing().statsManager()
-                .getLocalStatistics("PUBLIC", "DTYPES");
+                .getLocalStatistics(SCHEMA, "DTYPES");
     }
 }

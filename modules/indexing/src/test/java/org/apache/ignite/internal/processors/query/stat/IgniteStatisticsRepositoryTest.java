@@ -16,7 +16,6 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
@@ -27,7 +26,6 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.function.Function;
 
 /**
  * Test for statistics repository.
@@ -41,11 +39,11 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
 
     /** Column statistics with 100 nulls. */
     ColumnStatistics cs1 = new ColumnStatistics(null, null, 100, 0, 100,
-            0, new byte[0]);
+        0, new byte[0]);
 
     /** Column statistics with 100 integers 0-100. */
     ColumnStatistics cs2 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(100), 0, 100, 100,
-            4, new byte[0]);
+        4, new byte[0]);
 
     /** Column statistics with 0 rows. */
     ColumnStatistics cs3 = new ColumnStatistics(null, null, 0, 0, 0, 0, new byte[0]);
@@ -87,19 +85,21 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
 
         GridInternalSubscriptionProcessor subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
         Mockito.doAnswer(invocation -> lsnr[0] = invocation.getArgument(0))
-                .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
+            .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
         IgniteCacheDatabaseSharedManager db = Mockito.mock(IgniteCacheDatabaseSharedManager.class);
 
-        IgniteStatisticsStore store = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db, cls -> log);
-        StatisticsGathering gath = Mockito.mock(StatisticsGathering.class);
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(store, gath, cls -> log);
+        IgniteStatisticsRepositoryImpl statsRepos[] = new IgniteStatisticsRepositoryImpl[1];
+        IgniteStatisticsStore store = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db,
+            statsRepos[0]::cacheLocalStatistics, cls -> log);
+        IgniteStatisticsHelper helper = Mockito.mock(IgniteStatisticsHelper.class);
+        statsRepos[0] = new IgniteStatisticsRepositoryImpl(store, helper, cls -> log);
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);
 
-        testRepositoryGlobal(statsRepos);
-        testRepositoryLocal(statsRepos);
-        testRepositoryPartitions(statsRepos);
+        testRepositoryGlobal(statsRepos[0]);
+        testRepositoryLocal(statsRepos[0]);
+        testRepositoryPartitions(statsRepos[0]);
     }
 
     /**
@@ -252,14 +252,35 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         assertEquals(99, sumStat3.rowCount());
         assertEquals(2, sumStat3.columnsStatistics().size());
         assertEquals(cs3, sumStat3.columnStatistics("col1"));
-
     }
 
-//    /**
-//     *
-//     */
-//    @Test
-//    public void subtractTest() {
-//
-//    }
+    /**
+     * 1) Remove not existing column.
+     * 2) Remove some columns.
+     * 3) Remove all columns.
+     */
+    @Test
+    public void subtractTest() {
+        HashMap<String, ColumnStatistics> colStat1 = new HashMap<>();
+        colStat1.put("col1", cs1);
+        colStat1.put("col2", cs2);
+
+        ObjectStatisticsImpl os = new ObjectStatisticsImpl(100, colStat1);
+
+        // 1) Remove not existing column.
+        ObjectStatisticsImpl os1 = IgniteStatisticsRepositoryImpl.subtract(os, new String[]{"col0"});
+
+        assertEquals(os, os1);
+
+        // 2) Remove some columns.
+        ObjectStatisticsImpl os2 = IgniteStatisticsRepositoryImpl.subtract(os, new String[]{"col1"});
+
+        assertEquals(1, os2.columnsStatistics().size());
+        assertEquals(cs2, os2.columnStatistics("col2"));
+
+        // 3) Remove all columns.
+        ObjectStatisticsImpl os3 = IgniteStatisticsRepositoryImpl.subtract(os, new String[]{"col2","col1"});
+
+        assertTrue(os3.columnsStatistics().isEmpty());
+    }
 }

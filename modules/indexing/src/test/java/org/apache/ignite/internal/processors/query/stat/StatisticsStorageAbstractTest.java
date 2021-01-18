@@ -65,7 +65,7 @@ public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTe
             runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
 
         grid(0).context().query().getIndexing().statsManager().collectObjectStatistics(
-            new StatisticsTarget("PUBLIC", "SMALL"));
+            new StatisticsTarget(SCHEMA, "SMALL"));
     }
 
     /** {@inheritDoc} */

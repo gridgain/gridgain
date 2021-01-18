@@ -92,10 +92,6 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     }
 
     /** {@inheritDoc} */
-    @Override public void repository(IgniteStatisticsRepository repository) {
-    }
-
-    /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatisticsKey key, int partId) {
         ObjectPartitionStatisticsImpl[] res = new ObjectPartitionStatisticsImpl[1];
         partsStats.computeIfPresent(key, (k, v) -> {

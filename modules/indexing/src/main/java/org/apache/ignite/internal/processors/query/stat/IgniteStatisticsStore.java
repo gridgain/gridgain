@@ -81,11 +81,4 @@ public interface IgniteStatisticsStore {
      * @param statistics Statistics to save.
      */
     public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics);
-
-    /**
-     * Set statistics repository.
-     *
-     * @param repository Ignite statistics repository.
-     */
-    public void repository(IgniteStatisticsRepository repository);
 }

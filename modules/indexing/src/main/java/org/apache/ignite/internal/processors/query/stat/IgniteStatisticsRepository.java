@@ -34,7 +34,7 @@ public interface IgniteStatisticsRepository {
      *
      * @param key Object key.
      * @param statistics Collection of tables partition statistics.
-     * @return Merget statistics by same partitions.
+     * @return Merged statistics by same partitions.
      */
     public Collection<ObjectPartitionStatisticsImpl> mergeLocalPartitionsStatistics(
         StatisticsKey key,

@@ -61,6 +61,15 @@ public interface IgniteStatisticsManager {
     public ObjectStatistics getLocalStatistics(String schemaName, String objName);
 
     /**
+     * Get global statistics by object.
+     *
+     * @param schemaName Schema name.
+     * @param objName Object to collect statistics by.
+     * @return Object statistics or {@code null} if there are no available statistics by specified object.
+     */
+    public ObjectStatistics getGlobalStatistics(String schemaName, String objName);
+
+    /**
      * Clear object statistics.
      *
      * @param targets Collection of target to collect statistics by (schema, obj, columns).

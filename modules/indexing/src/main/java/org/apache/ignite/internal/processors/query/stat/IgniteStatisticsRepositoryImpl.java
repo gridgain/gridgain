@@ -40,7 +40,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     private final Map<StatisticsKey, ObjectStatisticsImpl> locStats;
 
     /** Statistics gathering. */
-    private final StatisticsGathering statisticsGathering;
+    private final IgniteStatisticsHelper helper;
 
     /** Global (for whole cluster) object statistics. */
     private final Map<StatisticsKey, ObjectStatisticsImpl> globalStats = new ConcurrentHashMap<>();
@@ -49,17 +49,17 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
      * Constructor.
      *
      * @param store Ignite statistics store to use.
-     * @param statisticsGathering Statistics gathering.
+     * @param helper IgniteStatisticsHelper.
      * @param logSupplier Ignite logger supplier to get logger from.
      */
     public IgniteStatisticsRepositoryImpl(
             IgniteStatisticsStore store,
-            StatisticsGathering statisticsGathering,
+            IgniteStatisticsHelper helper,
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.store = store;
         this.locStats = new ConcurrentHashMap<>();
-        this.statisticsGathering = statisticsGathering;
+        this.helper = helper;
         this.log = logSupplier.apply(IgniteStatisticsRepositoryImpl.class);
     }
 
@@ -85,6 +85,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             res.add(newStat);
             store.saveLocalPartitionStatistics(key, newStat);
         }
+        System.out.println(statistics.size() + " partitions saved!");
         return res;
     }
 
@@ -174,7 +175,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
         }
         StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(key.schema(), key.obj(), null);
 
-        locStats.put(key, statisticsGathering.aggregateLocalStatistics(keyMsg, statistics));
+        locStats.put(key, helper.aggregateLocalStatistics(keyMsg, statistics));
     }
 
     /** {@inheritDoc} */
@@ -221,8 +222,12 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
     @Override public void clearGlobalStatistics(StatisticsKey key, String... colNames) {
         if (F.isEmpty(colNames))
             globalStats.remove(key);
-        else
-            globalStats.computeIfPresent(key, (k, v) -> subtract(v, colNames));
+        else {
+            globalStats.computeIfPresent(key, (k, v) -> {
+                ObjectStatisticsImpl newStat = subtract(v, colNames);
+                return newStat.columnsStatistics().isEmpty() ? null : newStat;
+            });
+        }
     }
 
     /**

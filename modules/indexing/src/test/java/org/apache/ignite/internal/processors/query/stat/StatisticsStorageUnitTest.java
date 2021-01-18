@@ -63,6 +63,7 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
         GridQueryProcessor qryProcessor = Mockito.mock(GridQueryProcessor.class);
         StatisticsGatheringRequestCrawler reqClawler = Mockito.mock(StatisticsGatheringRequestCrawler.class);
         IgniteThreadPoolExecutor gatMgmtPool = Mockito.mock(IgniteThreadPoolExecutor.class);
+        IgniteStatisticsHelper helper = Mockito.mock(IgniteStatisticsHelper.class);
 
         GridInternalSubscriptionProcessor subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
         Mockito.doAnswer(invocation -> lsnr[0] = invocation.getArgument(0))
@@ -70,18 +71,14 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
 
         IgniteStatisticsStore inMemoryStore = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
 
-        StatisticsGathering statGath = new StatisticsGatheringImpl(schemaMgr, discoMgr, qryProcessor, reqClawler,
+        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, helper, cls -> log);
+
+        StatisticsGathering statGath = new StatisticsGatheringImpl(schemaMgr, discoMgr, qryProcessor, statsRepos, reqClawler,
             gatMgmtPool, cts -> log);
-
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, statGath, cls -> log);
-
 
         IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
         IgniteStatisticsPersistenceStoreImpl persStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-            dbMgr, cls -> log);
-
-        persStore.repository(statsRepos);
-        statGath.repository(statsRepos);
+            dbMgr, statsRepos::cacheLocalStatistics, cls -> log);
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);

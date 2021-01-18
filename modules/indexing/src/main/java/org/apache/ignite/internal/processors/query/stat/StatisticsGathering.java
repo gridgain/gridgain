@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 
-import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -40,22 +39,5 @@ public interface StatisticsGathering {
         Set<StatisticsKeyMessage> keys,
         int[] parts,
         Supplier<Boolean> cancelled
-    );
-
-    /**
-     * @param statRepo Statistics repository.
-     */
-    public void repository(IgniteStatisticsRepository statRepo);
-
-    /**
-     * Aggregate specified partition level statistics to local level statistics.
-     *
-     * @param keyMsg Aggregation key.
-     * @param stats Collection of all local partition level or local level statistics by specified key to aggregate.
-     * @return Local level aggregated statistics.
-     */
-    public ObjectStatisticsImpl aggregateLocalStatistics(
-        StatisticsKeyMessage keyMsg,
-        Collection<? extends ObjectStatisticsImpl> stats
     );
 }

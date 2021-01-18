@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -39,16 +40,18 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
+    @Override protected void beforeTestsStarted() throws Exception {
+        stopAllGrids();
+
         cleanPersistenceDir();
 
-        startGridsMultiThreaded(1);
+        startGridsMultiThreaded(nodes());
 
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
         runSql("DROP TABLE IF EXISTS small");
 
-        runSql("CREATE TABLE small (a INT PRIMARY KEY, b INT, c INT)");
+        runSql("CREATE TABLE small (a INT PRIMARY KEY, b INT, c INT) with \"BACKUPS=1\"");
 
         runSql("CREATE INDEX small_b ON small(b)");
 
@@ -58,8 +61,18 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
 
         for (int i = 0; i < SMALL_SIZE; i++)
             runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
+    }
 
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws IgniteCheckedException {
         grid(0).context().query().getIndexing().statsManager().collectObjectStatistics(
-            new StatisticsTarget("PUBLIC", "SMALL"));
+                new StatisticsTarget(SCHEMA, "SMALL"));
+    }
+
+    /**
+     * @return Number of nodes to start.
+     */
+    public int nodes() {
+        return 1;
     }
 }

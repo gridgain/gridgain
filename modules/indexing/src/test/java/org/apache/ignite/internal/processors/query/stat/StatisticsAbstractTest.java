@@ -15,11 +15,17 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
@@ -28,14 +34,19 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
 /**
  * Base test for table statistics.
  */
 public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
+    /** Default SQL schema. */
+    public static final String SCHEMA = "PUBLIC";
+
     /** Counter to avoid query caching. */
     private static final AtomicInteger queryRandomizer = new AtomicInteger(0);
 
@@ -63,7 +74,12 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @param sql Query with placeholders to hint indexes (i1, i2, ...).
      * @param indexes Arrays of indexes to put into placeholders.
      */
-    protected void checkOptimalPlanChosenForDifferentIndexes(IgniteEx grid, String[] optimal, String sql, String[][] indexes) {
+    protected void checkOptimalPlanChosenForDifferentIndexes(
+        IgniteEx grid,
+        String[] optimal,
+        String sql,
+        String[][] indexes
+    ) {
         int size = -1;
         for (String[] idxs : indexes) {
             if (size == -1)
@@ -277,7 +293,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             for (String tbl : allTbls) {
                 for (Ignite node : G.allGrids()) {
                     IgniteStatisticsManager statsMgr = ((IgniteEx)node).context().query().getIndexing().statsManager();
-                    statsMgr.collectObjectStatistics(new StatisticsTarget("PUBLIC", tbl.toUpperCase()));
+                    statsMgr.collectObjectStatistics(new StatisticsTarget(SCHEMA, tbl.toUpperCase()));
                 }
             }
         }
@@ -309,5 +325,90 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                 100, 0, new byte[0]);
         return new ObjectPartitionStatisticsImpl(partId, true, 0, 0,
                 Collections.singletonMap("col1", colStatistics));
+    }
+
+    /**
+     * Check that all statistics collections related tasks is empty in specified node.
+     *
+     * @param nodeIdx Node idx.
+     * @throws Exception In case of errors.
+     */
+    protected void checkStatTasksEmpty(int nodeIdx) throws Exception {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
+            .statsManager();
+        StatisticsGatheringRequestCrawlerImpl crawler = readField(statMgr, "statCrawler");
+
+        ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests = readField(crawler,
+            "remainingRequests");
+
+        assertTrue(remainingRequests.isEmpty());
+
+        IgniteThreadPoolExecutor pool = readField(crawler, "msgMgmtPool");
+
+        assertTrue(pool.getQueue().isEmpty());
+
+        Map<UUID, StatisticsGatheringContext> currColls = readField(statMgr, "currColls");
+
+        assertTrue(currColls.isEmpty());
+    }
+
+    /**
+     * Get nodes StatisticsGatheringRequestCrawlerImpl.msgMgmtPool lock.
+     * Put additional task into it and return lock to complete these task.
+     *
+     * @param nodeIdx Node idx.
+     * @return Lock to complete pool task and allow it to process next one.
+     */
+    protected Lock nodeMsgsLock(int nodeIdx) throws Exception {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
+            .statsManager();
+        StatisticsGatheringRequestCrawlerImpl crawler = readField(statMgr, "statCrawler");
+        IgniteThreadPoolExecutor pool = readField(crawler, "msgMgmtPool");
+        Lock res = new ReentrantLock();
+        res.lock();
+        pool.submit(res::lock);
+        return res;
+    }
+
+    /**
+     * Get nodes StatisticsGatheringImpl.gatMgmtPool lock.
+     * Put additional task into it and return lock to complete these task.
+     *
+     * @param nodeIdx Node idx.
+     * @return Lock to complete pool task and allow it to process next one.
+     */
+    protected Lock nodeGathLock(int nodeIdx) throws Exception {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
+            .statsManager();
+        StatisticsGatheringImpl crawler = readField(statMgr, "statGathering");
+        IgniteThreadPoolExecutor pool = readField(crawler, "gatMgmtPool");
+        return lockPool(pool);
+    }
+
+    /**
+     * Lock specified pool with task, waiting for lock release.
+     *
+     * @param pool Pool to block.
+     * @return Lock.
+     */
+    private Lock lockPool(IgniteThreadPoolExecutor pool) {
+        Lock res = new ReentrantLock();
+        res.lock();
+        pool.submit(res::lock);
+        return res;
+    }
+
+    /**
+     * Read object field value by name.
+     *
+     * @param obj Object to read value from.
+     * @param field Field name.
+     * @return Field value.
+     * @throws Exception If case if object doesn't contains specified field.
+     */
+    protected <T> T readField(Object obj, String field) throws Exception {
+        Field reader = obj.getClass().getDeclaredField(field);
+        reader.setAccessible(true);
+        return (T)reader.get(obj);
     }
 }

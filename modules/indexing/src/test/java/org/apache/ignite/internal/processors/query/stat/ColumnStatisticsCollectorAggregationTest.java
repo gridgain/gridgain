@@ -44,7 +44,7 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     public void aggregateSingleTest() {
         List<ColumnStatistics> statistics = new ArrayList<>();
         ColumnStatistics stat1 = new ColumnStatistics(null, null, 100, 0, 100, 0,
-                getHLL(-1).toBytes());
+            getHLL(-1).toBytes());
         statistics.add(stat1);
 
         ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
@@ -60,9 +60,9 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     public void aggregateNullTest() {
         List<ColumnStatistics> statistics = new ArrayList<>();
         ColumnStatistics stat1 = new ColumnStatistics(null, null, 100, 0, 100, 0,
-                getHLL(-1).toBytes());
+            getHLL(-1).toBytes());
         ColumnStatistics stat2 = new ColumnStatistics(null, null, 100, 0, 10, 0,
-                getHLL(-1).toBytes());
+            getHLL(-1).toBytes());
 
         statistics.add(stat1);
         statistics.add(stat2);
@@ -86,9 +86,9 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     public void aggregateTest() {
         List<ColumnStatistics> statistics = new ArrayList<>();
         ColumnStatistics stat1 = new ColumnStatistics(ValueDecimal.get(BigDecimal.ONE), ValueDecimal.get(BigDecimal.TEN),
-                50, 10, 1000, 0, getHLL(50).toBytes());
+            50, 10, 1000, 0, getHLL(50).toBytes());
         ColumnStatistics stat2 = new ColumnStatistics(ValueDecimal.get(BigDecimal.ZERO), ValueDecimal.get(BigDecimal.ONE),
-                10, 100, 10, 0, getHLL(9).toBytes());
+            10, 100, 10, 0, getHLL(9).toBytes());
 
         statistics.add(stat1);
         statistics.add(stat2);
