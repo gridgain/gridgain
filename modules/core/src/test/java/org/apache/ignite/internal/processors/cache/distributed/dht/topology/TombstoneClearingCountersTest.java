@@ -49,9 +49,8 @@ import org.junit.Test;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 
 /**
- * Tests scenarious then tombstone clearing is blocked in the middle.
+ * Tests rebalancing scenarios after tombstones are forcefully cleared on supplier.
  */
-@WithSystemProperty(key = "TOMBSTONES_EVICTION_FREQ", value = "10000000") // Disable automatic clearing.
 public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -60,7 +59,6 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
         cfg.setSystemThreadPoolSize(1); // Avoid assignState parallelization for easier debugging.
 
-        // Need at least 2 threads in pool to avoid deadlock on clearing.
         cfg.setRebalanceThreadPoolSize(1);
         cfg.setConsistentId(igniteInstanceName);
 

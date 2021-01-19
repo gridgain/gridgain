@@ -28,14 +28,20 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
+import org.apache.ignite.spi.ExponentialBackoffTimeoutStrategy;
+import org.apache.ignite.spi.communication.CommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.thread.IgniteThread;
 
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
+import static org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty.detachedBooleanProperty;
+import static org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty.detachedLongProperty;
 
 /**
  * Periodically removes expired entities from caches with {@link CacheConfiguration#isEagerTtl()} flag set.
@@ -49,7 +55,19 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     private static final int CLEANUP_WORKER_ENTRIES_PROCESS_LIMIT = 1000;
 
     /** Default tombstone limit per cache group. */
-    private static final long DEFAULT_TOMBSTONE_LIMIT = 10_000;
+    public static final long DEFAULT_TOMBSTONE_LIMIT = Long.MAX_VALUE;
+
+    /** Default minimum tombstone TTL. */
+    public static final long DEFAULT_MIN_TOMBSTONE_TTL = 30_000;
+
+    /** */
+    public static final String TS_LIMIT = "tombstones.limit";
+
+    /** */
+    public static final String TS_TTL = "tombstones.ttl";
+
+    /** */
+    public static final String TS_CLEANUP = "tombstones.suspended.cleanup";
 
     /** Cleanup worker. */
     private CleanupWorker cleanupWorker;
@@ -61,17 +79,55 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     private final Map<Integer, GridCacheTtlManager> mgrs = new ConcurrentHashMap<>();
 
     /** Tombstones limit per cache group. */
-    private DistributedLongProperty tsLimit = DistributedLongProperty.detachedLongProperty("tombstones.limit");
+    private DistributedLongProperty tsLimit = detachedLongProperty(TS_LIMIT);
+
+    /** Tombstones TTL. */
+    private DistributedLongProperty tsTtl = detachedLongProperty(TS_TTL);
+
+    /** Tombstones suspended cleanup state. */
+    private DistributedBooleanProperty tsSuspendedCleanup = detachedBooleanProperty(TS_CLEANUP);
 
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
         super.start0();
 
         cctx.kernalContext().internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
-            tsLimit.addListener((name, oldVal, newVal) ->
-                U.log(log, "Tombstones limit was updated [oldVal=" + oldVal + ", newVal=" + newVal + ']'));
+            tsLimit.addListener((name, oldVal, newVal) -> {
+                if (oldVal == null && newVal == null)
+                    return;
+
+                U.log(log, "Tombstones limit has been updated [oldVal=" + oldVal + ", newVal=" + newVal + ']');
+            });
 
             dispatcher.registerProperty(tsLimit);
+        });
+
+        cctx.kernalContext().internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+            tsTtl.addListener((name, oldVal, newVal) -> {
+                if (oldVal == null && newVal == null)
+                    return;
+
+                U.log(log, "Tombstones time to live has been updated [oldVal=" + oldVal + ", newVal=" + newVal + ']');
+            });
+
+            dispatcher.registerProperty(tsTtl);
+        });
+
+        cctx.kernalContext().internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+            tsSuspendedCleanup.addListener((name, oldVal, newVal) -> {
+                if (oldVal == null && newVal == null)
+                    return;
+
+                if (oldVal == null)
+                    oldVal = false;
+
+                if (!oldVal && newVal)
+                    U.log(log, "Tombstones cleanup has been disabled");
+                else if (oldVal && !newVal)
+                    U.log(log, "Tombstones cleanup has been enabled");
+            });
+
+            dispatcher.registerProperty(tsSuspendedCleanup);
         });
     }
 
@@ -123,8 +179,51 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     /**
      * @return Tombstones limit per cache group.
      */
-    public long tombstonesLimit() {
+    public final long tombstonesLimit() {
         return tsLimit.getOrDefault(DEFAULT_TOMBSTONE_LIMIT);
+    }
+
+    /**
+     * @return Tombstone expiration time.
+     */
+    public final long tombstoneExpireTime() {
+        return U.currentTimeMillis() + tombstoneTTL();
+    }
+
+    /**
+     * @return Tombstone time to live.
+     */
+    public final long tombstoneTTL() {
+        return tsTtl.getOrDefault(defaultTombstoneTtl());
+    }
+
+    /**
+     * @return Tombstones cleanup suspension status.
+     */
+    public final boolean tombstoneCleanupSuspended() {
+        return tsSuspendedCleanup.getOrDefault(false);
+    }
+
+    /**
+     * @return Tombstone TTL in millisecond, based on failure detection timeout.
+     */
+    private long defaultTombstoneTtl() {
+        CommunicationSpi cfg0 = cctx.kernalContext().config().getCommunicationSpi();
+
+        long totalTimeout = 0;
+
+        if (cfg0 instanceof TcpCommunicationSpi) {
+            TcpCommunicationSpi cfg = (TcpCommunicationSpi) cfg0;
+
+            totalTimeout = cfg.failureDetectionTimeoutEnabled() ? cfg.failureDetectionTimeout() :
+                ExponentialBackoffTimeoutStrategy.totalBackoffTimeout(
+                    cfg.getConnectTimeout(),
+                    cfg.getMaxConnectTimeout(),
+                    cfg.getReconnectCount()
+                );
+        }
+
+        return Math.max((long)(totalTimeout * 1.5), DEFAULT_MIN_TOMBSTONE_TTL);
     }
 
     /**

@@ -3866,10 +3866,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (isStartVersion())
                 unswap(null, false);
 
-            long expireTime = expireTimeExtras();
-
-            if (!(expireTime > 0 && expireTime <= U.currentTimeMillis()))
-                return false;
+            // Do not check for expiration time, because the expiration can be forcefully requested.
 
             CacheObject expiredVal = this.val;
 
@@ -5717,7 +5714,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             else {
                 // Create tombstone for preloaded removal.
                 newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(entry.cctx, entry.key(),
-                    TombstoneCacheObject.INSTANCE, ver, entry.cctx.tombstoneExpireTime(), oldRow);
+                    TombstoneCacheObject.INSTANCE, ver, entry.cctx.shared().ttl().tombstoneExpireTime(), oldRow);
             }
 
             treeOp = oldRow != null && oldRow.link() == newRow.link() ?
@@ -6425,7 +6422,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 GridDhtLocalPartition part = entry.localPartition();
 
                 newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer,
-                    cctx.tombstoneExpireTime(), oldRow);
+                    cctx.shared().ttl().tombstoneExpireTime(), oldRow);
 
                 if (oldRow != null && oldRow.link() == newRow.link())
                     treeOp = IgniteTree.OperationType.IN_PLACE;

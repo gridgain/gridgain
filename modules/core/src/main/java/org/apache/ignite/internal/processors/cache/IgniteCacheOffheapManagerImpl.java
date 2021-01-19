@@ -1366,19 +1366,25 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         assert pendingEntries != null;
 
-        int expRmvCnt = cctx.config().isEagerTtl() ? expireInternal(cctx, c, amount, false) : 0;
+        long now = U.currentTimeMillis();
+
+        int expRmvCnt = cctx.config().isEagerTtl() ? expireInternal(cctx, c, amount, false, now) : 0;
 
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
         // We need to keep tombstones during rebalancing because they are used to handle put-remove conflicts.
-        if (tsCnt <= tsLimit && !ctx.exchange().lastFinishedFuture().rebalanced())
+        if (tsCnt <= tsLimit &&
+            (!ctx.exchange().lastFinishedFuture().rebalanced() || ctx.ttl().tombstoneCleanupSuspended()))
             return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
 
-        if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
+        if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
 
+            now = Long.MAX_VALUE;
+        }
+
         // Tombstones for volatile cache group are always cleared.
-        int tsRmvCnt = expireInternal(cctx, c, amount, true);
+        int tsRmvCnt = expireInternal(cctx, c, amount, true, now);
 
         return amount != -1 && (expRmvCnt >= amount || tsRmvCnt >= amount);
     }
@@ -1388,6 +1394,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param c Closure.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
      * @param tombstone {@code True} to clear tombstone.
+     * @param upper Upper limit.
      * @return cleared entries count.
      * @throws IgniteCheckedException If failed.
      */
@@ -1395,10 +1402,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
         int amount,
-        boolean tombstone
+        boolean tombstone,
+        long upper
     ) throws IgniteCheckedException {
-        long now = U.currentTimeMillis();
-
         GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
         GridCursor<PendingRow> cur;
@@ -1409,7 +1415,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             cur = pendingEntries.find(new PendingRow(cacheId, tombstone, 0, 0),
-                new PendingRow(cacheId, tombstone, now, 0));
+                new PendingRow(cacheId, tombstone, upper, 0));
 
             if (!cur.next())
                 return 0;
@@ -2861,7 +2867,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 this.oldRow = oldRow;
 
                 // Always write tombstone (overwrite with new version if it existed before)
-                newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver, cctx.tombstoneExpireTime(), oldRow);
+                newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver, cctx.shared().ttl().tombstoneExpireTime(), oldRow);
 
                 operationType = oldRow != null && oldRow.link() == newRow.link() ?
                     IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;

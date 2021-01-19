@@ -1292,6 +1292,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (!busyLock.enterBusy())
             return false;
 
+        long now = U.currentTimeMillis();
+
         try {
             int expRmvCnt = 0;
             int tsRmvCnt = 0;
@@ -1303,7 +1305,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 Collections.shuffle(stores); // Randomize partitions to clear.
 
                 for (CacheDataStore store : stores) {
-                    expRmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - expRmvCnt, false);
+                    expRmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - expRmvCnt, false, now);
 
                     if (amount != -1 && expRmvCnt >= amount)
                         break;
@@ -1321,11 +1323,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
             // This will allow offline node to join faster using fast full rebalancing.
-            if (tsCnt <= tsLimit && (!discoCache.fullBaseline() || !ctx.exchange().lastFinishedFuture().rebalanced()))
+            if (tsCnt <= tsLimit && (!discoCache.fullBaseline() || !ctx.exchange().lastFinishedFuture().rebalanced()) ||
+                ctx.ttl().tombstoneCleanupSuspended())
                 return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
 
-            if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
+            if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
                 amount = (int) (tsCnt - tsLimit);
+
+                now = Long.MAX_VALUE;
+            }
 
             // Sort by descending tombstones count.
             GridDhtPartitionTopology top = grp.topology();
@@ -1340,7 +1346,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             });
 
             for (CacheDataStore store : stores) {
-                tsRmvCnt += ((GridCacheDataStore)store).purgeExpired(cctx, c, amount - tsRmvCnt, true);
+                tsRmvCnt += ((GridCacheDataStore)store).purgeExpired(cctx, c, amount - tsRmvCnt, true, now);
 
                 if (amount != -1 && tsRmvCnt >= amount)
                     break;
@@ -3182,6 +3188,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @param c Expiry closure that should be applied to expired entry. See {@link GridCacheTtlManager} for details.
          * @param amount Limit of processed entries by single call, {@code -1} for no limit.
          * @param tombstone {@code True} to clear tombstones.
+         * @param upper Upper limit.
          * @return cleared entries count.
          * @throws IgniteCheckedException If failed.
          */
@@ -3189,7 +3196,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             GridCacheContext cctx,
             IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
             int amount,
-            boolean tombstone
+            boolean tombstone,
+            long upper
         ) throws IgniteCheckedException {
             CacheDataStore delegate0 = init0(true);
 
@@ -3198,7 +3206,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             assert pendingTree != null : "Partition data store was not initialized.";
 
-            return purgeExpiredInternal(cctx, c, amount, tombstone);
+            return purgeExpiredInternal(cctx, c, amount, tombstone, upper);
         }
 
         /**
@@ -3208,6 +3216,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @param c Expiry closure that should be applied to expired entry. See {@link GridCacheTtlManager} for details.
          * @param amount Limit of processed entries by single call, {@code -1} for no limit.
          * @param tombstone {@code True} if cleaning tombstones.
+         * @param upper Upper limit.
          * @return cleared entries count.
          * @throws IgniteCheckedException If failed.
          */
@@ -3215,7 +3224,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             GridCacheContext cctx,
             IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
             int amount,
-            boolean tombstone
+            boolean tombstone,
+            long upper
         ) throws IgniteCheckedException {
             GridDhtLocalPartition part = null;
 
@@ -3237,14 +3247,12 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     if (part == null || part.state() != OWNING && part.state() != MOVING)
                         return 0;
 
-                    long now = U.currentTimeMillis();
-
                     GridCursor<PendingRow> cur;
 
                     int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
                     cur = pendingTree.find(new PendingRow(cacheId, tombstone, 0, 0),
-                        new PendingRow(cacheId, tombstone, now, 0));
+                        new PendingRow(cacheId, tombstone, upper, 0));
 
                     if (!cur.next())
                         return 0;
