@@ -16,7 +16,7 @@
 
 namespace Apache.Ignite.BenchmarkDotNet
 {
-    using Apache.Ignite.BenchmarkDotNet.ThinClient;
+    using Apache.Ignite.BenchmarkDotNet.Binary;
     using global::BenchmarkDotNet.Running;
 
     /// <summary>
@@ -29,7 +29,7 @@ namespace Apache.Ignite.BenchmarkDotNet
         /// </summary>
         public static void Main()
         {
-            BenchmarkRunner.Run<ThinClientServicesBenchmark>();
+            BenchmarkRunner.Run<BinarySystemTypeReadBenchmark>();
         }
     }
 }

@@ -14,13 +14,29 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.cluster;
+package org.apache.ignite.platform.model;
 
-import org.apache.ignite.IgniteCluster;
+/** */
+public class Parameter {
+    /** */
+    private int id;
 
-/**
- *
- */
-public interface IgniteClusterEx extends IgniteCluster, ClusterGroupEx {
-    // No-op.
+    /** */
+    private ParamValue[] values;
+
+    /** */
+    public Parameter(int id, ParamValue[] values) {
+        this.id = id;
+        this.values = values;
+    }
+
+    /** */
+    public int getId() {
+        return id;
+    }
+
+    /** */
+    public ParamValue[] getValues() {
+        return values;
+    }
 }
