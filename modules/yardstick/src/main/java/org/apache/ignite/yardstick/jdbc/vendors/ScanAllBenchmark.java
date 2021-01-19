@@ -18,12 +18,11 @@ package org.apache.ignite.yardstick.jdbc.vendors;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import org.apache.ignite.yardstick.IgniteBenchmarkArguments;
 
 /**
  * Benchmark that fetches all the rows from Person table. Specify in the properties file {@link
- * IgniteBenchmarkArguments#sqlRange()} to be equal to whole Person table size ({@link
- * IgniteBenchmarkArguments#range()}).
+ * org.apache.ignite.yardstick.IgniteBenchmarkArguments#sqlRange()} to be equal to whole Person table size ({@link
+ * org.apache.ignite.yardstick.IgniteBenchmarkArguments#range()}).
  */
 public class ScanAllBenchmark extends BaseSelectRangeBenchmark {
     /** {@inheritDoc} */

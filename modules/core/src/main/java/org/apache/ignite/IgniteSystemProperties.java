@@ -41,7 +41,6 @@ import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.mxbean.MetricsMxBean;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.plugin.security.SecurityPermissionSet;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
 
@@ -1447,7 +1446,7 @@ public final class IgniteSystemProperties {
 
     /**
      * Enables setting attribute value of {@link
-     * TcpCommunicationSpi#ATTR_HOST_NAMES ATTR_HOST_NAMES} when value {@link
+     * org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi#ATTR_HOST_NAMES ATTR_HOST_NAMES} when value {@link
      * IgniteConfiguration#getLocalHost getLocalHost} is ip, for backward
      * compatibility. By default, {@code false}.
      */

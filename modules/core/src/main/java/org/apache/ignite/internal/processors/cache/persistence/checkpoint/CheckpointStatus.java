@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
 import java.util.UUID;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
-import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -68,7 +67,7 @@ public class CheckpointStatus {
 
     /**
      * @return {@code True} if need perform binary memory recovery. Only records {@link PageDeltaRecord} and {@link
-     * PageSnapshot} needs to be applyed from {@link #cpStartId}.
+     * org.apache.ignite.internal.pagemem.wal.record.PageSnapshot} needs to be applied from {@link #cpStartId}.
      */
     public boolean needRestoreMemory() {
         return !F.eq(cpStartId, cpEndId) && !F.eq(NULL_UUID, cpStartId);

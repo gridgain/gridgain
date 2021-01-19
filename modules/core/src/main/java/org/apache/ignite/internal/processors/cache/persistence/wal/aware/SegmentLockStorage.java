@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.persistence.wal.aware;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 
 /**
  * Lock on segment protects from archiving segment.
@@ -26,7 +25,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAhea
 class SegmentLockStorage extends SegmentObservable {
     /**
      * Maps absolute segment index to locks counter. Lock on segment protects from archiving segment and may come from
-     * {@link FileWriteAheadLogManager.RecordsIterator} during WAL replay. Map itself is guarded by <code>this</code>.
+     * {@link org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.RecordsIterator} during WAL replay. Map itself is guarded by <code>this</code>.
      */
     private final Map<Long, Integer> locked = new ConcurrentHashMap<>();
 

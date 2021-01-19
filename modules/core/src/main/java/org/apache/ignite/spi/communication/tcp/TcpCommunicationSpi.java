@@ -39,7 +39,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
-import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
@@ -398,7 +397,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /**
      * {@inheritDoc} This call should be change after refactoring. It produces dependency hell. Because {@link
-     * GridIoManager} set it after self construct.
+     * org.apache.ignite.internal.managers.communication.GridIoManager} set it after self construct.
      */
     @Deprecated
     @Override public void setListener(CommunicationListener<Message> lsnr) {

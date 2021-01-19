@@ -16,13 +16,9 @@
 
 package org.apache.ignite.yardstick.jdbc;
 
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.internal.IgniteEx;
-import org.yardstickframework.BenchmarkConfiguration;
-
 /**
  * Creates SELECT queries and arguments for those queries. Uses data model defined in {@link
- * JdbcUtils#fillData(BenchmarkConfiguration, IgniteEx, long, CacheAtomicityMode)}
+ * JdbcUtils#fillData(org.yardstickframework.BenchmarkConfiguration, org.apache.ignite.internal.IgniteEx, long, org.apache.ignite.cache.CacheAtomicityMode)}
  */
 public enum SelectCommand {
     /**
@@ -74,8 +70,8 @@ public enum SelectCommand {
 
     /**
      * Gets field value by primary key. Field can be PK itself or val field depending on type of this Select.
-     * Implementation of this method is based on how {@link JdbcUtils#fillData(BenchmarkConfiguration, IgniteEx, long,
-     * CacheAtomicityMode)} generates data.
+     * Implementation of this method is based on how {@link JdbcUtils#fillData(org.yardstickframework.BenchmarkConfiguration, org.apache.ignite.internal.IgniteEx, long,
+     * org.apache.ignite.cache.CacheAtomicityMode)} generates data.
      *
      * @param pk primary key for what to compute field value.
      * @return field value.

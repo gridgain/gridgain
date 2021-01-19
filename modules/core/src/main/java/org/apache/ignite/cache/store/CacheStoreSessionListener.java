@@ -16,7 +16,6 @@
 
 package org.apache.ignite.cache.store;
 
-import javax.cache.configuration.Factory;
 import javax.sql.DataSource;
 import org.apache.ignite.cache.store.jdbc.CacheJdbcStoreSessionListener;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -77,14 +76,14 @@ import org.apache.ignite.configuration.IgniteConfiguration;
  * <ul>
  *     <li>
  *         Provide a global listener for all caches via
- *         {@link IgniteConfiguration#setCacheStoreSessionListenerFactories(Factory[])}
+ *         {@link IgniteConfiguration#setCacheStoreSessionListenerFactories(javax.cache.configuration.Factory[])}
  *         configuration property. This will we called for any store
  *         session, not depending on what caches participate in
  *         transaction.
  *     </li>
  *     <li>
  *         Provide a listener for a particular cache via
- *         {@link CacheConfiguration#setCacheStoreSessionListenerFactories(Factory[])}
+ *         {@link CacheConfiguration#setCacheStoreSessionListenerFactories(javax.cache.configuration.Factory[])}
  *         configuration property. This will be called only if the
  *         cache participates in transaction.
  *     </li>

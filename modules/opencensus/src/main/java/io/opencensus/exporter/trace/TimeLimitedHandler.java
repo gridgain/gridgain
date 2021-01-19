@@ -35,7 +35,6 @@ import io.opencensus.trace.TraceOptions;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.export.SpanData;
 import io.opencensus.trace.export.SpanExporter;
-import io.opencensus.trace.export.SpanExporter.Handler;
 import io.opencensus.trace.samplers.Samplers;
 
 /**
@@ -50,7 +49,7 @@ import io.opencensus.trace.samplers.Samplers;
  * timeout), use that instead.
  *
  * <p>To export data this MUST be register to to the ExportComponent using {@link
- * SpanExporter#registerHandler(String, Handler)}.
+ * SpanExporter#registerHandler(String, SpanExporter.Handler)}.
  *
  * @since 0.22
  */

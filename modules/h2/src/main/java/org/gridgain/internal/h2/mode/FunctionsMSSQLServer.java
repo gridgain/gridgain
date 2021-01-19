@@ -8,12 +8,11 @@ package org.gridgain.internal.h2.mode;
 import java.util.HashMap;
 
 import org.gridgain.internal.h2.engine.Database;
-import org.gridgain.internal.h2.engine.Mode;
 import org.gridgain.internal.h2.expression.function.Function;
 import org.gridgain.internal.h2.expression.function.FunctionInfo;
 
 /**
- * Functions for {@link Mode.ModeEnum#MSSQLServer} compatibility
+ * Functions for {@link org.gridgain.internal.h2.engine.Mode.ModeEnum#MSSQLServer} compatibility
  * mode.
  */
 public final class FunctionsMSSQLServer extends FunctionsBase {

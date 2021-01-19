@@ -19,7 +19,6 @@ package org.apache.ignite.yardstick.upload;
 import com.beust.jcommander.Parameter;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.yardstick.IgniteBenchmarkArguments;
@@ -131,7 +130,7 @@ public class UploadBenchmarkArguments implements StreamerParams {
 
     /**
      * How many entries to collect before sending to java streamer api in either way: passing map to {@link
-     * IgniteDataStreamer#addData(Map)}, or set STREAMING sql command parameter. <br/> If set to 1, {@link
+     * IgniteDataStreamer#addData(java.util.Map)}, or set STREAMING sql command parameter. <br/> If set to 1, {@link
      * IgniteDataStreamer#addData(Object, Object)} method will be used.
      */
     @Override @Nullable public Integer streamerLocalBatchSize() {

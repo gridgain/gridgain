@@ -25,5 +25,6 @@
 
     <rule ref="category/java/errorprone.xml/EmptyFinallyBlock" />
     <rule ref="category/java/errorprone.xml/EmptySwitchStatements" />
+    <rule ref="category/java/bestpractices.xml/UnusedImports"/>
 </ruleset>
 
