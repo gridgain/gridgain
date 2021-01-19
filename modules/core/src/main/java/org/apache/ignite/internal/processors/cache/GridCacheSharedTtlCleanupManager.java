@@ -69,6 +69,9 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     /** */
     public static final String TS_CLEANUP = "tombstones.suspended.cleanup";
 
+    /** */
+    private static final String DEFAULT_TOMBSTONE_TTL = "DEFAULT_TOMBSTONE_TTL";
+
     /** Cleanup worker. */
     private CleanupWorker cleanupWorker;
 
@@ -194,7 +197,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
      * @return Tombstone time to live.
      */
     public final long tombstoneTTL() {
-        return tsTtl.getOrDefault(defaultTombstoneTtl());
+        return tsTtl.getOrDefault(IgniteSystemProperties.getLong(DEFAULT_TOMBSTONE_TTL, defaultTombstoneTtl()));
     }
 
     /**

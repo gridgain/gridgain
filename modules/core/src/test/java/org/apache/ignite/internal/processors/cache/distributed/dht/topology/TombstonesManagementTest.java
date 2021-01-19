@@ -107,7 +107,6 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "600")
     public void testLimit() throws Exception {
         IgniteEx crd = startGrids(2);
         crd.cluster().state(ClusterState.ACTIVE);

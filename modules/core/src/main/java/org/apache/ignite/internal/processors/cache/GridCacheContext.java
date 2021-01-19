@@ -145,9 +145,6 @@ public class GridCacheContext<K, V> implements Externalizable {
     /** Empty cache version array. */
     private static final GridCacheVersion[] EMPTY_VERSION = new GridCacheVersion[0];
 
-    /** */
-    private static final String DEFAULT_TOMBSTONE_TTL = "DEFAULT_TOMBSTONE_TTL";
-
     /** Kernal context. */
     private GridKernalContext ctx;
 
