@@ -134,7 +134,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
         statStore.saveLocalPartitionStatistics(k1, stat1_1);
         statStore.replaceLocalPartitionsStatistics(k2, Arrays.asList(stat2_2, stat2_3));
 
-        String statKey = String.format("stats.%s.%s.%d", k1.schema(), k1.obj(), 1000);
+        String statKey = String.format("stats.data.%s.%s.%d", k1.schema(), k1.obj(), 1000);
         metastorage.write(statKey, new byte[2]);
 
         String outerStatKey = "some.key.1";

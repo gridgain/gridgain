@@ -110,11 +110,11 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
      * @return Statistics key.
      */
     private StatisticsKey getStatsKey(String metaKey) {
-        int schemaIdx = metaKey.indexOf(META_SEPARATOR) + 1;
-        int objIdx = metaKey.indexOf(META_SEPARATOR, schemaIdx + 1);
+        int objIdx = metaKey.indexOf(META_SEPARATOR, STAT_DATA_PREFIX.length() + 1);
         int partIdx = metaKey.indexOf(META_SEPARATOR, objIdx + 1);
 
-        return new StatisticsKey(metaKey.substring(schemaIdx, objIdx), metaKey.substring(objIdx + 1, partIdx));
+        return new StatisticsKey(metaKey.substring(STAT_DATA_PREFIX.length() + 1, objIdx),
+            metaKey.substring(objIdx + 1, partIdx));
     }
 
     /**

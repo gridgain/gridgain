@@ -90,7 +90,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
 
         IgniteStatisticsRepositoryImpl statsRepos[] = new IgniteStatisticsRepositoryImpl[1];
         IgniteStatisticsStore store = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db,
-            statsRepos[0]::cacheLocalStatistics, cls -> log);
+            (k, s) -> statsRepos[0].cacheLocalStatistics(k, s), cls -> log);
         IgniteStatisticsHelper helper = Mockito.mock(IgniteStatisticsHelper.class);
         statsRepos[0] = new IgniteStatisticsRepositoryImpl(store, helper, cls -> log);
 

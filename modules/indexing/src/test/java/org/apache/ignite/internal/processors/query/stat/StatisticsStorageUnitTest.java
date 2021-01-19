@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMe
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -58,11 +59,6 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
 
         MetastorageLifecycleListener lsnr[] = new MetastorageLifecycleListener[1];
 
-        SchemaManager schemaMgr = Mockito.mock(SchemaManager.class);
-        GridDiscoveryManager discoMgr = Mockito.mock(GridDiscoveryManager.class);
-        GridQueryProcessor qryProcessor = Mockito.mock(GridQueryProcessor.class);
-        StatisticsGatheringRequestCrawler reqClawler = Mockito.mock(StatisticsGatheringRequestCrawler.class);
-        IgniteThreadPoolExecutor gatMgmtPool = Mockito.mock(IgniteThreadPoolExecutor.class);
         IgniteStatisticsHelper helper = Mockito.mock(IgniteStatisticsHelper.class);
 
         GridInternalSubscriptionProcessor subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
@@ -73,12 +69,9 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
 
         IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, helper, cls -> log);
 
-        StatisticsGathering statGath = new StatisticsGatheringImpl(schemaMgr, discoMgr, qryProcessor, statsRepos, reqClawler,
-            gatMgmtPool, cts -> log);
-
         IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
         IgniteStatisticsPersistenceStoreImpl persStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-            dbMgr, statsRepos::cacheLocalStatistics, cls -> log);
+            dbMgr, statsRepos::cacheLocalStatistics, cls -> new GridTestLog4jLogger());
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);
