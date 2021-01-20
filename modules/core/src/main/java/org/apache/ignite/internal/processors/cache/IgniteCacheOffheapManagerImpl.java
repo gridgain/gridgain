@@ -2867,7 +2867,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 this.oldRow = oldRow;
 
                 // Always write tombstone (overwrite with new version if it existed before)
-                newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver, cctx.shared().ttl().tombstoneExpireTime(), oldRow);
+                newRow = createRow(cctx, key, TombstoneCacheObject.INSTANCE, ver,
+                    cctx.shared().ttl().tombstoneExpireTime(), oldRow);
 
                 operationType = oldRow != null && oldRow.link() == newRow.link() ?
                     IgniteTree.OperationType.IN_PLACE : IgniteTree.OperationType.PUT;

@@ -786,7 +786,7 @@ public final class IgniteSystemProperties {
 
     /**
      * When cache has entries with expired TTL and/or tombstones, each user operation will also remove this amount of
-     * expired entries. Defaults to {@code 5}. Setting the value to {@code 0} will disable expiration.
+     * expired entries. Defaults to {@code 5}. Setting the value to {@code 0} will disable this behavior.
      */
     public static final String IGNITE_TTL_EXPIRE_BATCH_SIZE = "IGNITE_TTL_EXPIRE_BATCH_SIZE";
 
