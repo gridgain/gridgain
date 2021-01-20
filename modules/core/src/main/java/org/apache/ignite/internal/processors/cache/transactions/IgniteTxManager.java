@@ -148,6 +148,7 @@ import static org.apache.ignite.internal.processors.cache.transactions.IgniteInt
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.USER_FINISH;
 import static org.apache.ignite.internal.util.GridConcurrentFactory.newMap;
 import static org.apache.ignite.internal.util.IgniteUtils.broadcastToNodesSupportingFeature;
+import static org.apache.ignite.internal.util.IgniteUtils.enabledString;
 import static org.apache.ignite.transactions.TransactionState.ACTIVE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
@@ -2764,6 +2765,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
+     * @param logTxRecords Whether to enable logging.
+     * @param reason Reason to write in log.
+     */
+    public void logTxRecords(boolean logTxRecords, String reason) {
+        this.logTxRecords = logTxRecords;
+
+        U.warn(log, "Transaction wal logging is " + enabledString(logTxRecords) + ", because " + reason);
+    }
+
+    /**
      * @return Tracker that is aware of pending transactions state.
      */
     public LocalPendingTransactionsTracker pendingTxsTracker() {
@@ -2772,7 +2783,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /**
      * Enables pending transactions tracker.
-     * Also enables transaction wal logging, if it was disabled.
+     * Also allows to enable transaction wal logging.
      */
     public void trackPendingTxs(boolean logTxRecords) {
         pendingTracker.enable();
