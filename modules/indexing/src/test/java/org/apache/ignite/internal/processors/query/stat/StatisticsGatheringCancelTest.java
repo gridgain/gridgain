@@ -15,7 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,12 +35,11 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
     private StatisticsTarget[] generateTargets() throws Exception {
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        int tCount = 10;
-        StatisticsTarget[] targets = new StatisticsTarget[tCount];
-        for (int i = 0; i < tCount; i++) {
-            createSmallTable(i);
-            targets[i] = new StatisticsTarget(SCHEMA, "SMALL" + i);
-        }
+        int tCnt = 10;
+        StatisticsTarget[] targets = new StatisticsTarget[tCnt];
+        for (int i = 0; i < tCnt; i++)
+            targets[i] = createSmallTable(i);
+
         return targets;
     }
 
@@ -59,28 +58,35 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
 
         cancelGathering(targets, true, true);
 
-        statMgr1.collectObjectStatistics(targets[0]);
+        statMgr1.gatherObjectStatistics(targets[0]);
 
         cancelGathering(targets, false, true);
 
-        statMgr1.collectObjectStatistics(targets[0]);
+        statMgr1.gatherObjectStatistics(targets[0]);
 
         cancelGathering(targets, false, false);
 
-        statMgr1.collectObjectStatistics(targets[0]);
+        statMgr1.gatherObjectStatistics(targets[0]);
 
-        U.sleep(100);
-
-        checkStatTasksEmpty(0);
-        checkStatTasksEmpty(1);
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                checkStatTasksEmpty(0);
+                checkStatTasksEmpty(1);
+                return true;
+            }
+            catch (Throwable e) {
+                return false;
+            }
+        }, TIMEOUT);
     }
 
     /**
+     * Start and cancel statistics gathering.
      *
      * @param targets Targets to collect statistics by.
      * @param hangLoc If {@code true} - hand local node, otherwise - hang pool in remote one.
      * @param hangGathering If {@code true} - hang gathering pool, otherwise - hand message processing one.
-     * @throws Exception
+     * @throws Exception In case of errors.
      */
     private void cancelGathering(StatisticsTarget[] targets, boolean hangLoc, boolean hangGathering) throws Exception {
         IgniteStatisticsManagerImpl statMgr0 = (IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing()
@@ -93,7 +99,7 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
             lock = nodeMsgsLock(hangLoc ? 0 : 1);
 
         StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = statMgr0
-            .collectObjectStatisticsAsync(targets);
+            .gatherObjectStatisticsAsync(targets);
 
         Assert.assertEquals(targets.length, futures.length);
 

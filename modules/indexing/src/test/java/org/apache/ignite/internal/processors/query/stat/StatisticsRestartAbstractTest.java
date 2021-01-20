@@ -55,7 +55,13 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
         createSmallTable(null);
     }
 
-    protected void createSmallTable(Integer idx) {
+    /**
+     * Create SQL table with the given index.
+     *
+     * @param idx Table idx, if {@code null} - name "SMALL" without index will be used.
+     * @return Target to created table.
+     */
+    protected StatisticsTarget createSmallTable(Integer idx) {
         String strIdx = (idx == null) ? "" : String.valueOf(idx);
 
         runSql("DROP TABLE IF EXISTS small" + strIdx);
@@ -70,11 +76,13 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
 
         for (int i = 0; i < SMALL_SIZE; i++)
             runSql(String.format("INSERT INTO small%s(a, b, c) VALUES(%d, %d, %d)", strIdx, i, i, i % 10));
+
+        return new StatisticsTarget(SCHEMA, "SMALL" + strIdx);
     }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws IgniteCheckedException {
-        grid(0).context().query().getIndexing().statsManager().collectObjectStatistics(SMALL_TARGET);
+        grid(0).context().query().getIndexing().statsManager().gatherObjectStatistics(SMALL_TARGET);
     }
 
     /**

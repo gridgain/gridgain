@@ -28,7 +28,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
@@ -100,7 +99,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         String actual[] = runLocalExplainIdx(grid, sql);
 
         assertTrue(String.format("got %s, expected %s in query %s", Arrays.asList(actual), Arrays.asList(optimal), sql),
-                Arrays.equals(actual, optimal));
+            Arrays.equals(actual, optimal));
     }
 
     /**
@@ -144,7 +143,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         int cntStats = runLocalExplainAnalyze(grid, false, sql);
 
         String res = "Scanned rows count [noStats=" + cntNoStats + ", withStats=" + cntStats +
-                ", diff=" + (cntNoStats - cntStats) + ']';
+            ", diff=" + (cntNoStats - cntStats) + ']';
 
         if (log.isInfoEnabled())
             log.info(res);
@@ -161,7 +160,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected String[] runLocalExplainIdx(Ignite grid, String sql) {
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("EXPLAIN " + sql).setLocal(true))
-                .getAll();
+            .getAll();
         String explainRes = (String)res.get(0).get(0);
 
         // Extract scan count from EXPLAIN ANALYZE with regex: return all numbers after "scanCount: ".
@@ -182,10 +181,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected int runLocalExplainAnalyze(Ignite grid, boolean enfJoinOrder, String sql) {
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME)
-                .query(new SqlFieldsQueryEx("EXPLAIN ANALYZE " + sql, null)
-                        .setEnforceJoinOrder(enfJoinOrder)
-                        .setLocal(true))
-                .getAll();
+            .query(new SqlFieldsQueryEx("EXPLAIN ANALYZE " + sql, null).setEnforceJoinOrder(enfJoinOrder)
+                .setLocal(true))
+            .getAll();
 
         if (log.isDebugEnabled())
             log.debug("ExplainAnalyze enfJoinOrder=" + enfJoinOrder + ", res=" + res);
@@ -295,7 +293,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
         try {
             StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context()
-                .query().getIndexing().statsManager().collectObjectStatisticsAsync(targets);
+                .query().getIndexing().statsManager().gatherObjectStatisticsAsync(targets);
             for (StatisticsGatheringFuture<?> fut : futures)
                 fut.get();
         }
@@ -312,7 +310,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0, 100,
-                0, new byte[0]);
+            0, new byte[0]);
         return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
     }
 
@@ -324,9 +322,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
-                100, 0, new byte[0]);
+            100, 0, new byte[0]);
         return new ObjectPartitionStatisticsImpl(partId, true, 0, 0,
-                Collections.singletonMap("col1", colStatistics));
+            Collections.singletonMap("col1", colStatistics));
     }
 
     /**
@@ -369,6 +367,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         Lock res = new ReentrantLock();
         res.lock();
         pool.submit(res::lock);
+
         return res;
     }
 
@@ -384,6 +383,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             .statsManager();
         StatisticsGatheringImpl crawler = readField(statMgr, "statGathering");
         IgniteThreadPoolExecutor pool = readField(crawler, "gatMgmtPool");
+
         return lockPool(pool);
     }
 
@@ -397,6 +397,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         Lock res = new ReentrantLock();
         res.lock();
         pool.submit(res::lock);
+
         return res;
     }
 
@@ -411,6 +412,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected <T> T readField(Object obj, String field) throws Exception {
         Field reader = obj.getClass().getDeclaredField(field);
         reader.setAccessible(true);
+
         return (T)reader.get(obj);
     }
 }

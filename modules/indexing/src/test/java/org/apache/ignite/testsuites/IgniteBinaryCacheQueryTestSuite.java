@@ -276,7 +276,7 @@ import org.apache.ignite.internal.processors.query.stat.PSUCompositeIndexTableSt
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticsRestartTest;
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticsStorageTest;
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticsTypesTest;
-import org.apache.ignite.internal.processors.query.stat.PSUStatisticPartialCollectionTest;
+import org.apache.ignite.internal.processors.query.stat.PSUStatisticPartialGatheringTest;
 import org.apache.ignite.internal.processors.query.stat.PSUValueDistributionTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsClearTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringCancelTest;
@@ -686,7 +686,7 @@ import org.junit.runners.Suite;
     RowCountTableStatisticsUsageTest.class,
     RowCountTableStatisticsSurvivesNodeRestartTest.class,
     PSUStatisticsTypesTest.class,
-    PSUStatisticPartialCollectionTest.class,
+    PSUStatisticPartialGatheringTest.class,
     PSUBasicValueDistributionTableStatisticsUsageTest.class,
     PSUValueDistributionTableStatisticsUsageTest.class,
     PSUCompositeIndexTableStatisticsUsageTest.class,

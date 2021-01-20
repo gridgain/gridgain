@@ -67,6 +67,5 @@ public class PSUStatisticsRestartTest extends StatisticsRestartAbstractTest {
                 return false;
             }
         }, TIMEOUT);
-
     }
 }

@@ -25,31 +25,32 @@ import java.util.UUID;
  */
 public interface IgniteStatisticsManager {
     /**
-     * Collect object statistics.
+     * Gather object statistics.
      *
-     * @param target Target to collect statistics by.
+     * @param target Target to gather statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
      */
-    public void collectObjectStatistics(StatisticsTarget target) throws IgniteCheckedException;
+    public void gatherObjectStatistics(StatisticsTarget target) throws IgniteCheckedException;
 
     /**
-     * Collect objects statistics.
+     * Gather objects statistics.
      *
-     * @param targets Collection of targets to collect statistics by (schema, obj, columns).
+     * @param targets Gathering of targets to collect statistics by (schema, obj, columns).
      * @return Array of futures, to track progress and cancel collection on each of specified cache group.
      * @throws IgniteCheckedException In case of errors.
      */
-    public StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] collectObjectStatisticsAsync(
+    public StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] gatherObjectStatisticsAsync(
         StatisticsTarget... targets
     ) throws IgniteCheckedException;
 
     /**
-     * Cancel object statistics collection.
+     * Cancel object statistics gathering.
      *
-     * @param colId Collection id.
-     * @return {@code true} if collection was cancelled, {@code false} if specified collection wasn't found.
+     * @param gatId Gathering id.
+     * @return {@code true} if gathering was cancelled, {@code false} if specified gathering wasn't found.
+     * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
      */
-    public boolean cancelObjectStatisticsGathering(UUID colId);
+    public boolean cancelObjectStatisticsGathering(UUID gatId)  throws IgniteCheckedException;
 
     /**
      * Get local statistics by object.
@@ -66,14 +67,15 @@ public interface IgniteStatisticsManager {
      * @param schemaName Schema name.
      * @param objName Object to collect statistics by.
      * @return Object statistics or {@code null} if there are no available statistics by specified object.
+     * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
      */
-    public ObjectStatistics getGlobalStatistics(String schemaName, String objName);
+    public ObjectStatistics getGlobalStatistics(String schemaName, String objName) throws IgniteCheckedException;
 
     /**
      * Clear object statistics.
      *
      * @param targets Collection of target to collect statistics by (schema, obj, columns).
-     * @throws IgniteCheckedException In case of errors.
+     * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
      */
     public void clearObjectStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
 }

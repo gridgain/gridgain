@@ -64,7 +64,7 @@ public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTe
         for (int i = 0; i < SMALL_SIZE; i++)
             runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
 
-        grid(0).context().query().getIndexing().statsManager().collectObjectStatistics(
+        grid(0).context().query().getIndexing().statsManager().gatherObjectStatistics(
             new StatisticsTarget(SCHEMA, "SMALL"));
     }
 

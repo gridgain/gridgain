@@ -15,17 +15,19 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * Test cluster wide collection.
+ * Test cluster wide gathering.
  */
 public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
     /** {@inheritDoc} */
@@ -35,7 +37,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
 
     /**
      * Test statistics gathering:
-     * 1) Get local statistics from each nodes and check: not null, equals columns length, not null nubers
+     * 1) Get local statistics from each nodes and check: not null, equals columns length, not null numbers
      * 2) Get global statistics (with delay) and check its equality in all nodes.
      */
     @Test
@@ -46,7 +48,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
 
         testCond(stat -> stat.columnsStatistics().size() == stats[0].columnsStatistics().size(), stats);
 
-        testCond(stat -> checkStat(stat), stats);
+        testCond(this::checkStat, stats);
 
         GridTestUtils.waitForCondition(() -> {
             ObjectStatisticsImpl globalStats[] = getStats("SMALL", StatisticsType.GLOBAL);
@@ -60,24 +62,42 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         }, 1000);
     }
 
+    /**
+     * Collect statistics for group of object at once and check it collected in each node.
+     *
+     * @throws Exception In case of errors.
+     */
     @Test
     public void testGroupGathering() throws Exception {
-        runSql("");
+        StatisticsTarget t100 = createSmallTable(100);
+        StatisticsTarget t101 = createSmallTable(101);
+        StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context().query()
+            .getIndexing().statsManager().gatherObjectStatisticsAsync(t100, t101);
+
+        for(StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>> future : futures)
+            future.get();
+
+        ObjectStatisticsImpl[] stats100 = getStats(t100.obj(), StatisticsType.LOCAL);
+        ObjectStatisticsImpl[] stats101 = getStats(t101.obj(), StatisticsType.LOCAL);
+
+        testCond(this::checkStat, stats100);
+        testCond(this::checkStat, stats101);
     }
 
     /**
-     * Test statistics collection on new node after join to cluster:
+     * Test statistics gathering on new node after join to cluster:
+     *
      * 0) check statistics exists.
      * 1) clear statistics and check last node lack it.
-     * 2) stop last node and collect statistics again.
+     * 2) stop last node and gather statistics again.
      * 3) start last node and check last node lack statistics.
-     * 4) collect statistics and check last node have it.
+     * 4) gather statistics and check last node have it.
      *
      * @throws Exception In case of errors.
      */
     @Test
     public void testNoStatNewNode() throws Exception {
-        ObjectStatisticsImpl stat0local, stat0global, statNlocal, statNglobal;
+        ObjectStatisticsImpl stat0local, stat0global, statNlocal;
 
         IgniteStatisticsManager statMgr = grid(0).context().query().getIndexing().statsManager();
 
@@ -96,10 +116,10 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
             null == getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL), TIMEOUT);
         assertNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL));
 
-        // 2) stop last node and collect statistics again.
+        // 2) stop last node and gather statistics again.
         stopGrid(nodes() - 1);
 
-        statMgr.collectObjectStatistics(SMALL_TARGET);
+        statMgr.gatherObjectStatistics(SMALL_TARGET);
 
         assertNotNull(getStatsFromNode(0, "SMALL", StatisticsType.LOCAL));
         assertNotNull(getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL));
@@ -110,8 +130,8 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         assertNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL));
         assertNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL));
 
-        // 4) collect statistics and check last node have it.
-        statMgr.collectObjectStatistics(SMALL_TARGET);
+        // 4) gather statistics and check last node have it.
+        statMgr.gatherObjectStatistics(SMALL_TARGET);
 
         assertNotNull(stat0local = getStatsFromNode(0, "SMALL", StatisticsType.LOCAL));
         GridTestUtils.waitForCondition(() ->
@@ -131,19 +151,19 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
     }
 
     /**
-     * Collect object statistics from a client node.
+     * Gather object statistics from a client node.
      *
      * @throws Exception In case of errors.
      */
     @Ignore("https://ggsystems.atlassian.net/browse/GG-18638")
     @Test
-    public void testCollectionFromClientNode() throws Exception {
+    public void testGatheringFromClientNode() throws Exception {
         IgniteEx client = startClientGrid(nodes());
         IgniteStatisticsManager statMgr = client.context().query().getIndexing().statsManager();
 
         assertNull(statMgr.getGlobalStatistics(SCHEMA, "SMALL"));
 
-        statMgr.collectObjectStatistics(SMALL_TARGET);
+        statMgr.gatherObjectStatistics(SMALL_TARGET);
 
         assertNotNull(statMgr.getGlobalStatistics(SCHEMA, "SMALL"));
     }
@@ -208,13 +228,19 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
      */
     private ObjectStatisticsImpl getStatsFromNode(int nodeIdx, String tblName, StatisticsType type) {
         IgniteStatisticsManager statMgr = grid(nodeIdx).context().query().getIndexing().statsManager();
-        switch (type) {
-            case LOCAL:
-                return (ObjectStatisticsImpl)statMgr.getLocalStatistics(SCHEMA, tblName);
-            case GLOBAL:
-                return (ObjectStatisticsImpl)statMgr.getGlobalStatistics(SCHEMA, tblName);
-            default:
-                throw new UnsupportedOperationException();
+        try {
+            switch (type) {
+                case LOCAL:
+                    return (ObjectStatisticsImpl) statMgr.getLocalStatistics(SCHEMA, tblName);
+                case GLOBAL:
+                    return (ObjectStatisticsImpl) statMgr.getGlobalStatistics(SCHEMA, tblName);
+                default:
+                    throw new UnsupportedOperationException();
+            }
         }
+        catch (IgniteCheckedException e) {
+            fail(e.getMessage());
+        }
+        return null;
     }
 }
