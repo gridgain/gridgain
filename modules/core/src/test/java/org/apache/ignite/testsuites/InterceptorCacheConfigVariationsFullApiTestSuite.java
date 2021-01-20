@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import java.util.Arrays;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.InterceptorCacheConfigVariationsFullApiTest;
 import org.apache.ignite.testframework.configvariations.ConfigVariationsTestSuiteBuilder;
@@ -29,10 +30,12 @@ import org.junit.runner.RunWith;
 public class InterceptorCacheConfigVariationsFullApiTestSuite {
     /** */
     public static List<Class<?>> suite() {
-        return new ConfigVariationsTestSuiteBuilder(InterceptorCacheConfigVariationsFullApiTest.class)
+        List<Class<?>> classes = new ConfigVariationsTestSuiteBuilder(InterceptorCacheConfigVariationsFullApiTest.class)
             .withBasicCacheParams()
             .gridsCount(5).backups(1)
             .testedNodesCount(3).withClients()
             .classes();
+
+        return Arrays.asList(classes.get(63), classes.get(65));
     }
 }
