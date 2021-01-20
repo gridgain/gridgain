@@ -32,6 +32,7 @@ import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -283,7 +284,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     }
 
     /** {@inheritDoc} */
-    @Override public long allocatePage(int grpId, int partId, byte flags) {
+    @Override public long allocatePage(int grpId, int partId, byte flags, PageCategory category) {
         assert started;
 
         long relPtr = borrowFreePage();
@@ -341,7 +342,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         // TODO pass an argument to decide whether the page should be cleaned.
         GridUnsafe.setMemory(absPtr + PAGE_OVERHEAD, sysPageSize - PAGE_OVERHEAD, (byte)0);
 
-        pageMetric.pageAllocated(grpId, partId, flags);
+        pageMetric.pageAllocated(grpId, partId, flags, category);
 
         return pageId;
     }

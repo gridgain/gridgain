@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence.pagemem;
+package org.apache.ignite.internal.pagemem;
 
-import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 
 public interface PagesMetric {
@@ -67,9 +66,8 @@ public interface PagesMetric {
      * @param grpId Group id.
      * @param partId Partition id.
      * @param flags Flags.
-     * @param category Page category.
      */
-    void pageAllocated(int grpId, int partId, byte flags, PageCategory category);
+    void pageAllocated(int grpId, int partId, byte flags);
 
     /**
      * Page is reused from reuse list.

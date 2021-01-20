@@ -53,6 +53,7 @@ import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageUtils;
@@ -507,7 +508,8 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /** {@inheritDoc} */
-    @Override public long allocatePage(int grpId, int partId, byte flags) throws IgniteCheckedException {
+    @Override public long allocatePage(int grpId, int partId, byte flags, PageCategory category)
+        throws IgniteCheckedException {
         assert flags != PageIdAllocator.FLAG_IDX && partId <= PageIdAllocator.MAX_PARTITION_ID ||
             flags == PageIdAllocator.FLAG_IDX && partId == PageIdAllocator.INDEX_PARTITION :
             "flags = " + flags + ", partId = " + partId;
@@ -575,6 +577,8 @@ public class PageMemoryImpl implements PageMemoryEx {
             setDirty(fullId, absPtr, true, true);
 
             if (isTrackingPage) {
+                pageMetric.pageAllocated(grpId, partId, flags, PageCategory.META);
+
                 long pageAddr = absPtr + PAGE_OVERHEAD;
 
                 // We are inside segment write lock, so no other thread can pin this tracking page yet.
@@ -598,7 +602,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                         }
                     }
                 }
-            }
+            } else
+                pageMetric.pageAllocated(grpId, partId, flags, category);
 
             seg.loadedPages.put(grpId, PageIdUtils.effectivePageId(pageId), relPtr, seg.partGeneration(grpId, partId));
         }
@@ -630,7 +635,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             delayedWriter.finishReplacement();
 
         //we have allocated 'tracking' page, we need to allocate regular one
-        return isTrackingPage ? allocatePage(grpId, partId, flags) : pageId;
+        return isTrackingPage ? allocatePage(grpId, partId, flags, category) : pageId;
     }
 
     /**
@@ -2038,6 +2043,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             int pages = (int)(totalMemory / sysPageSize);
 
+            pageMetric.freePagesIncreased(pages);
+
             acquiredPagesPtr = region.address();
 
             GridUnsafe.putIntVolatile(null, acquiredPagesPtr, 0);
@@ -2061,6 +2068,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             maxDirtyPages = throttlingPlc != ThrottlingPolicy.DISABLED
                 ? pool.pages() * 3L / 4
                 : Math.min(pool.pages() * 2L / 3, cpPoolPages);
+
         }
 
         /**

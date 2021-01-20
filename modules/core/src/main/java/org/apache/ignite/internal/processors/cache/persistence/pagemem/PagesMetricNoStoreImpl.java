@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 
 public class PagesMetricNoStoreImpl implements PagesMetric {
@@ -34,15 +35,21 @@ public class PagesMetricNoStoreImpl implements PagesMetric {
     private long physicalMemoryFreePagesSize = 0;
 
     /** {@inheritDoc} */
-    @Override public void pageAllocated(int grpId, int part, byte pageFlag) {
+    @Override public void pageAllocated(int grpId, int part, byte pageFlag, PageCategory category) {
         physicalMemoryFreePagesSize--;
-        if (part == PageIdAllocator.INDEX_PARTITION) {
-            //TODO: define index or metadata
-            physicalMemoryIndexPagesSize++;
-        } else {
-            physicalMemoryDataPagesSize
-                .computeIfAbsent(grpId, id -> new ConcurrentHashMap<>())
-                .computeIfAbsent(part, id -> new AtomicInteger(0)).getAndIncrement();
+        switch (category) {
+            case DATA:
+                physicalMemoryDataPagesSize
+                    .computeIfAbsent(grpId, id -> new ConcurrentHashMap<>())
+                    .computeIfAbsent(part, id -> new AtomicInteger(0)).getAndIncrement();
+                break;
+            case INDEX:
+                physicalMemoryIndexPagesSize++;
+                break;
+            case META:
+                physicalMemoryMetaPagesSize++;
+                break;
+
         }
     }
 

@@ -21,13 +21,13 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RecycleRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetricNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
@@ -179,7 +179,17 @@ public abstract class DataStructure {
      * @throws IgniteCheckedException If failed.
      */
     protected long allocatePageNoReuse() throws IgniteCheckedException {
-        return pageMem.allocatePage(grpId, partition, pageFlag);
+        return pageCategory() == null
+            ? pageMem.allocatePage(grpId, partition, pageFlag)
+            : pageMem.allocatePage(grpId, partition, pageFlag, pageCategory());
+    }
+
+
+    /**
+     * @return Page category. Null if can be defined by partition.
+     */
+    protected PageCategory pageCategory() {
+        return null;
     }
 
     /**

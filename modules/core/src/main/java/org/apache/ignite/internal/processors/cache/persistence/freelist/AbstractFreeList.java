@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageUtils;
@@ -488,7 +489,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     private long allocateDataPage(int part) throws IgniteCheckedException {
         assert part <= PageIdAllocator.MAX_PARTITION_ID;
 
-        return pageMem.allocatePage(grpId, part, FLAG_DATA);
+        return pageMem.allocatePage(grpId, part, FLAG_DATA, PageCategory.REUSE);
     }
 
     /** {@inheritDoc} */
