@@ -338,8 +338,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             GridDhtPartitionState partState = tbl.cacheContext().topology().partitionState(ctx.localNodeId(),
                 partData.partId());
             if (partState != OWNING) {
-                if (log.isInfoEnabled())
-                    log.info(String.format("Ignoring non local partition statistics %s.%s:%d",
+                if (log.isTraceEnabled())
+                    log.trace(String.format("Ignoring non local partition statistics %s.%s:%d",
                             key.schema(), key.obj(), partData.partId()));
 
                 continue;

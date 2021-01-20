@@ -280,6 +280,7 @@ import org.apache.ignite.internal.processors.query.stat.PSUStatisticPartialColle
 import org.apache.ignite.internal.processors.query.stat.PSUValueDistributionTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsClearTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringCancelTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageInMemoryTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStoragePersistenceTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageRestartTest;
@@ -677,6 +678,7 @@ import org.junit.runners.Suite;
     ManagerStatisticsTypesTest.class,
     IgniteStatisticsRepositoryTest.class,
     StatisticsStorageRestartTest.class,
+    StatisticsGatheringTest.class,
     StatisticsClearTest.class,
     StatisticsGatheringCancelTest.class,
 

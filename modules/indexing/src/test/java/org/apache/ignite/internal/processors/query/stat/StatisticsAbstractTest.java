@@ -28,6 +28,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -36,7 +38,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
@@ -289,13 +290,14 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         if (null != tables)
             allTbls.addAll(Arrays.asList(tables));
 
+        StatisticsTarget[] targets = allTbls.stream().map(tbl -> new StatisticsTarget(SCHEMA, tbl.toUpperCase()))
+            .toArray(StatisticsTarget[]::new);
+
         try {
-            for (String tbl : allTbls) {
-                for (Ignite node : G.allGrids()) {
-                    IgniteStatisticsManager statsMgr = ((IgniteEx)node).context().query().getIndexing().statsManager();
-                    statsMgr.collectObjectStatistics(new StatisticsTarget(SCHEMA, tbl.toUpperCase()));
-                }
-            }
+            StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context()
+                .query().getIndexing().statsManager().collectObjectStatisticsAsync(targets);
+            for (StatisticsGatheringFuture<?> fut : futures)
+                fut.get();
         }
         catch (IgniteCheckedException ex) {
             throw new IgniteException(ex);

@@ -47,7 +47,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
 
-        statMgr0.collectObjectStatistics(new StatisticsTarget(SCHEMA, "SMALL"));
+        statMgr0.collectObjectStatistics(SMALL_TARGET);
 
         Assert.assertNotNull(statMgr0.getLocalStatistics(SCHEMA, "SMALL"));
         Assert.assertNotNull(statMgr0.getGlobalStatistics(SCHEMA, "SMALL"));
@@ -55,7 +55,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         Assert.assertNotNull(statMgr1.getLocalStatistics(SCHEMA, "SMALL"));
         Assert.assertNotNull(statMgr1.getGlobalStatistics(SCHEMA, "SMALL"));
 
-        statMgr1.clearObjectStatistics(new StatisticsTarget(SCHEMA, "SMALL"));
+        statMgr1.clearObjectStatistics(SMALL_TARGET);
 
         GridTestUtils.waitForCondition(() -> null == statMgr0.getLocalStatistics(SCHEMA, "SMALL")
             && null == statMgr1.getLocalStatistics(SCHEMA, "SMALL")
@@ -74,7 +74,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
 
-        statMgr1.clearObjectStatistics(new StatisticsTarget(SCHEMA, "NO_NAME"));
+        statMgr1.clearObjectStatistics(SMALL_TARGET);
 
         Assert.assertNull(statMgr0.getLocalStatistics(SCHEMA, "NO_NAME"));
         Assert.assertNull(statMgr1.getLocalStatistics(SCHEMA, "NO_NAME"));
@@ -137,10 +137,10 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
     /**
      * Apply function to metastorage and restart node to verify that it will lead to metadata removal.
      *
-     * @param versionCorruptor statistics version corruptor.
+     * @param verCorruptor statistics version corruptor.
      * @throws Exception In case of errors.
      */
-    private void testRestartVersion(Consumer<MetaStorage> versionCorruptor) throws Exception {
+    private void testRestartVersion(Consumer<MetaStorage> verCorruptor) throws Exception {
         IgniteCacheDatabaseSharedManager db = grid(0).context().cache().context().database();
 
         db = grid(0).context().cache().context().database();
@@ -149,7 +149,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
 
         db.checkpointReadLock();
         try {
-            versionCorruptor.accept(db.metaStorage());
+            verCorruptor.accept(db.metaStorage());
         }
         finally {
             db.checkpointReadUnlock();

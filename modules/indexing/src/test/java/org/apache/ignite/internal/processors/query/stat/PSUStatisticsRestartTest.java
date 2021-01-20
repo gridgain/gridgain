@@ -55,8 +55,7 @@ public class PSUStatisticsRestartTest extends StatisticsRestartAbstractTest {
             }
         }, TIMEOUT);
 
-        grid(0).context().query().getIndexing().statsManager().clearObjectStatistics(
-                new StatisticsTarget(SCHEMA, "SMALL"));
+        grid(0).context().query().getIndexing().statsManager().clearObjectStatistics(SMALL_TARGET);
 
         GridTestUtils.waitForCondition(() -> {
             try {

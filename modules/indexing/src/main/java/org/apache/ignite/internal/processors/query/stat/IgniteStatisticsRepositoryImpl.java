@@ -85,7 +85,7 @@ public class IgniteStatisticsRepositoryImpl implements IgniteStatisticsRepositor
             res.add(newStat);
             store.saveLocalPartitionStatistics(key, newStat);
         }
-        System.out.println(statistics.size() + " partitions saved!");
+
         return res;
     }
 

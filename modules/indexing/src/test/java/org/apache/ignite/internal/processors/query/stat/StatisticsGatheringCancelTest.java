@@ -27,9 +27,10 @@ import java.util.concurrent.locks.Lock;
  */
 public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest {
     /**
+     * Create tables and return its targets.
      *
-     * @return
-     * @throws Exception
+     * @return Array of existing statistics targets.
+     * @throws Exception In case of error.
      */
     private StatisticsTarget[] generateTargets() throws Exception {
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
@@ -37,10 +38,8 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
         int tCount = 10;
         StatisticsTarget[] targets = new StatisticsTarget[tCount];
         for (int i = 0; i < tCount; i++) {
-            String tName = "TEST_TABLE" + i;
-            runSql("DROP TABLE IF EXISTS " + tName);
-            runSql(String.format("CREATE TABLE %s (a INT PRIMARY KEY, b INT, c INT)", tName));
-            targets[i] = new StatisticsTarget(SCHEMA, tName);
+            createSmallTable(i);
+            targets[i] = new StatisticsTarget(SCHEMA, "SMALL" + i);
         }
         return targets;
     }
