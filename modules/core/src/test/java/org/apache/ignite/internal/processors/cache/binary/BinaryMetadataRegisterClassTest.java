@@ -48,7 +48,7 @@ public class BinaryMetadataRegisterClassTest extends GridCommonAbstractTest {
     private static final int MAX_RETRY_CONT = 10;
 
     /** */
-    private IgniteClient [] thinClients;
+    private IgniteClient[] thinClients;
 
     /** */
     private List<IgniteBinary> testBinary;
@@ -150,7 +150,6 @@ public class BinaryMetadataRegisterClassTest extends GridCommonAbstractTest {
         U.sleep(1000);
     }
 
-
     /** */
     public static class TestValue {
         /** */
@@ -162,5 +161,4 @@ public class BinaryMetadataRegisterClassTest extends GridCommonAbstractTest {
         /** */
         private String strField;
     }
-
 }
