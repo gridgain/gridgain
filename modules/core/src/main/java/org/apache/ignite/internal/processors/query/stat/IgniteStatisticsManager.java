@@ -50,7 +50,7 @@ public interface IgniteStatisticsManager {
      * @return {@code true} if gathering was cancelled, {@code false} if specified gathering wasn't found.
      * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
      */
-    public boolean cancelObjectStatisticsGathering(UUID gatId)  throws IgniteCheckedException;
+    public boolean cancelObjectStatisticsGathering(UUID gatId) throws IgniteCheckedException;
 
     /**
      * Get local statistics by object.

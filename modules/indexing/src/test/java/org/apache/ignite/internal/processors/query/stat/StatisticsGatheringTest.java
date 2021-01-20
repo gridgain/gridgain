@@ -74,7 +74,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context().query()
             .getIndexing().statsManager().gatherObjectStatisticsAsync(t100, t101);
 
-        for(StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>> future : futures)
+        for (StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>> future : futures)
             future.get();
 
         ObjectStatisticsImpl[] stats100 = getStats(t100.obj(), StatisticsType.LOCAL);
@@ -137,7 +137,6 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         GridTestUtils.waitForCondition(() ->
             null != getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL), TIMEOUT);
 
-
         assertNotNull(statNlocal = getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL));
         GridTestUtils.waitForCondition(() ->
             null != getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL), TIMEOUT);
@@ -168,14 +167,13 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         assertNotNull(statMgr.getGlobalStatistics(SCHEMA, "SMALL"));
     }
 
-
     /**
      * Check if specified SMALL table stats is OK (have not null values).
      *
      * @param stat Object statistics to check.
      * @return {@code true} if statistics OK, otherwise - throws exception.
      */
-    private boolean checkStat(ObjectStatisticsImpl stat){
+    private boolean checkStat(ObjectStatisticsImpl stat) {
         assertTrue(stat.columnStatistics("A").total() > 0);
         assertTrue(stat.columnStatistics("B").cardinality() > 0);
         ColumnStatistics statC = stat.columnStatistics("C");
