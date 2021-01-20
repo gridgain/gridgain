@@ -196,8 +196,8 @@ public enum IgniteFeatures {
     /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
     SAFE_CLUSTER_DEACTIVATION(51),
 
-    /** Point-in-time distributed property. */
-    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54);
+    /** Statistics collection. */
+    STATISTICS_COLLECTION(52);
 
     /**
      * Unique feature identifier.

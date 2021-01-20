@@ -68,21 +68,6 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
     private static final UUID c1 = UUID.randomUUID();
 
     /** */
-    private static final UUID c2 = UUID.randomUUID();
-
-    /** */
-    private static final UUID r1_1 = UUID.randomUUID();
-
-    /** */
-    private static final UUID r1_2 = UUID.randomUUID();
-
-    /** */
-    private static final UUID r1_3 = UUID.randomUUID();
-
-    /** */
-    private static final UUID r2_1 = UUID.randomUUID();
-
-    /** */
     private static final StatisticsKeyMessage k1 = keyMsg(1);
 
     /** */

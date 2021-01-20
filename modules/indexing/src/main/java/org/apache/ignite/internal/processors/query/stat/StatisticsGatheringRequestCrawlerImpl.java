@@ -175,7 +175,12 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
                 if (log.isDebugEnabled())
                     log.debug(String.format("Cancelling statistics collection %s caused by %s", gatId, e.getMessage()));
 
-                statMgr.cancelObjectStatisticsGathering(gatId);
+                try {
+                    statMgr.cancelObjectStatisticsGathering(gatId);
+                }
+                catch (IgniteCheckedException e1) {
+                    log.warning("Unable to cancel statistics gathering " + gatId + " due to " + e1.getMessage());
+                }
 
                 return;
             }
@@ -207,7 +212,13 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
                 if (log.isInfoEnabled())
                     log.info(String.format("Unable to send gathering requests for 10 times, cancel gathering %s", gatId));
 
-                statMgr.cancelObjectStatisticsGathering(gatId);
+                try {
+                    statMgr.cancelObjectStatisticsGathering(gatId);
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning("Unable to cancel statistics gathering " + gatId + " after max retries due to: "
+                        + e.getMessage());
+                }
             }
         }
         while (!F.isEmpty(failedPartitions));
@@ -340,7 +351,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
             Collection<StatisticsAddrRequest<StatisticsClearRequest>> msgs = helper.generateClearRequests(keys);
             StatisticsClearRequest localReq = findLocal(msgs);
             if (localReq != null)
-                statMgr.clearObjectStatisticsLocal(localReq.keys());
+                statMgr.clearObjectsStatisticsLocal(localReq.keys());
 
             Collection<StatisticsAddrRequest<StatisticsClearRequest>> failedMsgs = sendRequests(msgs);
 
@@ -549,7 +560,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
      * @param msg Clear request message.
      */
     private void clearObjectStatistics(UUID nodeId, StatisticsClearRequest msg) {
-        statMgr.clearObjectStatisticsLocal(msg.keys());
+        statMgr.clearObjectsStatisticsLocal(msg.keys());
     }
 
     /** {@inheritDoc} */

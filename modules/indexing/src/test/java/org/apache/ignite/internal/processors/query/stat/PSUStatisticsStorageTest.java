@@ -56,7 +56,8 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
             try {
                 checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_C"}, lessSql, noHints);
                 return true;
-            } catch (AssertionError e) {
+            }
+            catch (AssertionError e) {
                 return false;
             }
         }, TIMEOUT);
@@ -64,13 +65,13 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
         // 4) partially collect statistics for extra column and check that query plan still unable to get all statistics
         //      it wants
 
-        statsMgr.collectObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
+        statsMgr.gatherObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_C"}, lessSql, noHints);
 
         // 5) partially collect statistics for the necessarily column and check that the query plan will restore to optimal
 
-        statsMgr.collectObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "B"));
+        statsMgr.gatherObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "B"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_B"}, lessSql, noHints);
     }

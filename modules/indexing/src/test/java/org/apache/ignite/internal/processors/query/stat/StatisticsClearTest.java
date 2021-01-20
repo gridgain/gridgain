@@ -47,7 +47,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
 
-        statMgr0.collectObjectStatistics(SMALL_TARGET);
+        statMgr0.gatherObjectStatistics(SMALL_TARGET);
 
         Assert.assertNotNull(statMgr0.getLocalStatistics(SCHEMA, "SMALL"));
         Assert.assertNotNull(statMgr0.getGlobalStatistics(SCHEMA, "SMALL"));
@@ -57,10 +57,18 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
 
         statMgr1.clearObjectStatistics(SMALL_TARGET);
 
-        GridTestUtils.waitForCondition(() -> null == statMgr0.getLocalStatistics(SCHEMA, "SMALL")
-            && null == statMgr1.getLocalStatistics(SCHEMA, "SMALL")
-            && null == statMgr0.getGlobalStatistics(SCHEMA, "SMALL")
-            && null == statMgr1.getGlobalStatistics(SCHEMA, "SMALL"), TIMEOUT);
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                return null == statMgr0.getLocalStatistics(SCHEMA, "SMALL")
+                    && null == statMgr1.getLocalStatistics(SCHEMA, "SMALL")
+                    && null == statMgr0.getGlobalStatistics(SCHEMA, "SMALL")
+                    && null == statMgr1.getGlobalStatistics(SCHEMA, "SMALL");
+            }
+            catch (IgniteCheckedException e) {
+                fail(e.getMessage());
+            }
+            return false;
+        }, TIMEOUT);
     }
 
     /**
@@ -95,8 +103,9 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
 
         testRestartVersion(metaStorage -> {
             try {
-                metaStorage.write("stats.version", Integer.valueOf(2));
-            } catch (IgniteCheckedException e) {
+                metaStorage.write("stats.version", 2);
+            }
+            catch (IgniteCheckedException e) {
                 Assert.fail();
             }
         });
@@ -112,7 +121,8 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         testRestartVersion(metaStorage -> {
             try {
                 metaStorage.remove("stats.version");
-            } catch (IgniteCheckedException e) {
+            }
+            catch (IgniteCheckedException e) {
                 Assert.fail();
             }
         });
@@ -128,7 +138,8 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         testRestartVersion(metaStorage -> {
             try {
                 metaStorage.write("stats.version", "corrupted");
-            } catch (IgniteCheckedException e) {
+            }
+            catch (IgniteCheckedException e) {
                 Assert.fail();
             }
         });
@@ -142,8 +153,6 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
      */
     private void testRestartVersion(Consumer<MetaStorage> verCorruptor) throws Exception {
         IgniteCacheDatabaseSharedManager db = grid(0).context().cache().context().database();
-
-        db = grid(0).context().cache().context().database();
 
         checkStatisticsExist(db);
 

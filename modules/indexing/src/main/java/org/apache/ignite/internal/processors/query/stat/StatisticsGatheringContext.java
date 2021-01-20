@@ -103,14 +103,14 @@ public class StatisticsGatheringContext {
     /**
      * @return Gathering (whole process) id.
      */
-    public UUID gatId() {
+    public UUID gatheringId() {
         return gatId;
     }
 
     /**
      * @return Collection control future.
      */
-    public StatisticsGatheringFutureAdapter doneFut() {
+    public StatisticsGatheringFutureAdapter doneFuture() {
         return doneFut;
     }
 }
