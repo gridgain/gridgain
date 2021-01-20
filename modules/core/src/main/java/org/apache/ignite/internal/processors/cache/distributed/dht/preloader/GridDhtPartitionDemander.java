@@ -1723,7 +1723,8 @@ public class GridDhtPartitionDemander {
          * @param p Partition number.
          * @param own {@code True} to own partition if possible.
          */
-        private synchronized void partitionDone(UUID nodeId, int p, boolean own) {
+        private void partitionDone(UUID nodeId, int p, boolean own) {
+            // Do not own a partition in synchronized to avoid deadlock.
             if (own && grp.localWalEnabled())
                 grp.topology().own(grp.topology().localPartition(p));
 
@@ -1733,26 +1734,28 @@ public class GridDhtPartitionDemander {
             if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_LOADED))
                 rebalanceEvent(p, EVT_CACHE_REBALANCE_PART_LOADED, exchId.discoveryEvent());
 
-            IgniteDhtDemandedPartitionsMap parts = remaining.get(nodeId);
+            synchronized (this) {
+                IgniteDhtDemandedPartitionsMap parts = remaining.get(nodeId);
 
-            assert parts != null : "Remaining not found [grp=" + grp.cacheOrGroupName() + ", fromNode=" + nodeId +
-                ", part=" + p + "]";
+                assert parts != null : "Remaining not found [grp=" + grp.cacheOrGroupName() + ", fromNode=" + nodeId +
+                    ", part=" + p + "]";
 
-            boolean rmvd = parts.remove(p);
+                boolean rmvd = parts.remove(p);
 
-            assert rmvd : "Partition already done [grp=" + grp.cacheOrGroupName() + ", fromNode=" + nodeId +
-                ", part=" + p + ", left=" + parts + "]";
+                assert rmvd : "Partition already done [grp=" + grp.cacheOrGroupName() + ", fromNode=" + nodeId +
+                    ", part=" + p + ", left=" + parts + "]";
 
-            if (rmvd)
-                partitionsLeft.decrementAndGet();
+                if (rmvd)
+                    partitionsLeft.decrementAndGet();
 
-            if (parts.isEmpty()) {
-                logSupplierDone(nodeId);
+                if (parts.isEmpty()) {
+                    logSupplierDone(nodeId);
 
-                remaining.remove(nodeId);
+                    remaining.remove(nodeId);
+                }
+
+                checkIsDone(false);
             }
-
-            checkIsDone(false);
         }
 
         /**
