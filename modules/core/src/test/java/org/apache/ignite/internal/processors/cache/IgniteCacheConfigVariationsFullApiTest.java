@@ -5120,8 +5120,13 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
                             if (part.primary(top.readyTopologyVersion())) {
                                 List<CacheDataRow> rows = ConsistencyUtils.rows(ctx.group(), part.id());
 
-                                if (sizes.get(part.id()) != rows.stream().filter(p -> !p.tombstone()).count())
-                                    log.info("DBG: found bad partition: idx=" + j + ", rows=" + rows);
+                                Integer expSize = sizes.get(part.id());
+
+                                if (expSize == null)
+                                    expSize = 0;
+
+                                if (expSize != rows.stream().filter(p -> !p.tombstone()).count())
+                                    log.info("DBG: found bad partition: idx=" + j + ", exp=" + expSize + ", rows=" + rows);
                             }
                         }
                     }
