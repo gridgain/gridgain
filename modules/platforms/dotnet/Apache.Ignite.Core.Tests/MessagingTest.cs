@@ -344,7 +344,7 @@ namespace Apache.Ignite.Core.Tests
         {
             var messaging =_grid1.GetMessaging();
 
-            var listener = MessagingTestHelper.GetListener();
+            var listener = MessagingTestHelper.GetListener("1");
             var listenId = async
                 ? messaging.RemoteListenAsync(listener, topic).Result
                 : messaging.RemoteListen(listener, topic);
@@ -356,7 +356,7 @@ namespace Apache.Ignite.Core.Tests
             CheckNoMessage(NextId());
 
             // Test multiple subscriptions for the same filter
-            var listener2 = MessagingTestHelper.GetListener();
+            var listener2 = MessagingTestHelper.GetListener("2");
             var listenId2 = async
                 ? messaging.RemoteListenAsync(listener2, topic).Result
                 : messaging.RemoteListen(listener2, topic);
@@ -621,11 +621,8 @@ namespace Apache.Ignite.Core.Tests
                 string.Format("expectedMessages: {0}, expectedRepeat: {1}, remaining: {2}",
                     expectedMessagesStr, expectedRepeat, ReceivedEvent.CurrentCount));
 
-            var actualMessages = resultFunc(ReceivedMessages.Select(m => m.Message)).ToArray();
-
-            // check that all messages came from local node.
-            var localNodeId = cluster.Ignite.GetCluster().GetLocalNode().Id;
-            Assert.AreEqual(localNodeId, ReceivedMessages.Select(m => m.NodeId).Distinct().Single());
+            var receivedMessages = ReceivedMessages.ToArray();
+            var actualMessages = resultFunc(receivedMessages.Select(m => m.Message)).ToArray();
 
             CollectionAssert.AreEqual(
                 expectedMessages,
@@ -634,6 +631,10 @@ namespace Apache.Ignite.Core.Tests
                     expectedMessagesStr,
                     string.Join(", ", actualMessages),
                     expectedRepeat));
+
+            // check that all messages came from local node.
+            var localNodeId = cluster.Ignite.GetCluster().GetLocalNode().Id;
+            Assert.AreEqual(localNodeId, ReceivedMessages.Select(m => m.NodeId).Distinct().Single());
 
             AssertFailures();
         }
@@ -728,6 +729,11 @@ namespace Apache.Ignite.Core.Tests
             public string ListenerName
             {
                 get { return _listenerName; }
+            }
+
+            public override string ToString()
+            {
+                return string.Format("ReceivedMessage [{0}, {1}, {2}, {3}]", Message, NodeId, ListenerId, ListenerName);
             }
         }
     }
