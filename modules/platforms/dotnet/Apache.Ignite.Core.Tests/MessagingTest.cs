@@ -664,8 +664,10 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         public class RemoteListener : IMessageListener<string>
         {
+            /** */
             private readonly string _name;
 
+            /** */
             public RemoteListener(string name)
             {
                 _name = name;
@@ -694,15 +696,24 @@ namespace Apache.Ignite.Core.Tests
             }
         }
 
+        /// <summary>
+        /// Received message data.
+        /// </summary>
         public class ReceivedMessage
         {
+            /** */
             private readonly string _message;
 
+            /** */
             private readonly Guid _nodeId;
 
+            /** */
             private readonly int _listenerId;
 
+            /** */
             private readonly string _listenerName;
+
+            /** */
 
             public ReceivedMessage(string message, Guid nodeId, int listenerId, string listenerName)
             {
@@ -712,29 +723,11 @@ namespace Apache.Ignite.Core.Tests
                 _listenerName = listenerName;
             }
 
-            public string Message
-            {
-                get { return _message; }
-            }
-
-            public Guid NodeId
-            {
-                get { return _nodeId; }
-            }
-
-            public int ListenerId
-            {
-                get { return _listenerId; }
-            }
-
-            public string ListenerName
-            {
-                get { return _listenerName; }
-            }
-
+            /** <inheritdoc /> */
             public override string ToString()
             {
-                return string.Format("ReceivedMessage [{0}, {1}, {2}, {3}]", Message, NodeId, ListenerId, ListenerName);
+                return string.Format(
+                    "ReceivedMessage [{0}, {1}, {2}, {3}]", _message, _nodeId, _listenerId, _listenerName);
             }
         }
     }
