@@ -30,7 +30,6 @@ namespace Apache.Ignite.Core.Tests
     using Apache.Ignite.Core.Resource;
     using Apache.Ignite.Core.Tests.Cache;
     using NUnit.Framework;
-    using NUnit.Framework.Interfaces;
 
     /// <summary>
     /// <see cref="IMessaging"/> tests.
@@ -89,12 +88,9 @@ namespace Apache.Ignite.Core.Tests
         {
             try
             {
-                if (TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Passed)
-                {
-                    TestUtils.AssertHandleRegistryIsEmpty(1000, _grid1, _grid2, _grid3);
+                TestUtils.AssertHandleRegistryIsEmpty(1000, _grid1, _grid2, _grid3);
 
-                    MessagingTestHelper.AssertFailures();
-                }
+                MessagingTestHelper.AssertFailures();
             }
             finally
             {
@@ -344,7 +340,7 @@ namespace Apache.Ignite.Core.Tests
         {
             var messaging =_grid1.GetMessaging();
 
-            var listener = MessagingTestHelper.GetListener("1");
+            var listener = MessagingTestHelper.GetListener("first");
             var listenId = async
                 ? messaging.RemoteListenAsync(listener, topic).Result
                 : messaging.RemoteListen(listener, topic);
@@ -356,7 +352,7 @@ namespace Apache.Ignite.Core.Tests
             CheckNoMessage(NextId());
 
             // Test multiple subscriptions for the same filter
-            var listener2 = MessagingTestHelper.GetListener("2");
+            var listener2 = MessagingTestHelper.GetListener("second");
             var listenId2 = async
                 ? messaging.RemoteListenAsync(listener2, topic).Result
                 : messaging.RemoteListen(listener2, topic);
@@ -473,7 +469,7 @@ namespace Apache.Ignite.Core.Tests
             if (sharedResult.Length != 0)
             {
                 Assert.Fail("Unexpected messages ({0}): {1}; last sent message: {2}", sharedResult.Length,
-                    string.Join(",", sharedResult.Select(x => x.Message)), lastMsg);
+                    string.Join(",", sharedResult.Select(x => x.ToString())), lastMsg);
             }
         }
 
@@ -616,8 +612,7 @@ namespace Apache.Ignite.Core.Tests
         public static void VerifyReceive(IClusterGroup cluster, IEnumerable<string> expectedMessages,
             Func<IEnumerable<string>, IEnumerable<string>> resultFunc, int expectedRepeat)
         {
-            var origMessages = expectedMessages.ToArray();
-            expectedMessages = origMessages.SelectMany(x => Enumerable.Repeat(x, expectedRepeat)).ToArray();
+            expectedMessages = expectedMessages.SelectMany(x => Enumerable.Repeat(x, expectedRepeat)).ToArray();
             var expectedMessagesStr = string.Join(", ", expectedMessages);
 
             // check if expected message count has been received; Wait returns false if there were none.
