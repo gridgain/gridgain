@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.ignite.internal.processors.query.stat.schema.StatisticConfiguration;
+
 /**
  * All statistics by some object (table or index).
  */
@@ -29,20 +31,31 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /** Map columnKey to its statistic. */
     private final Map<String, ColumnStatistics> colNameToStat;
 
+    /** */
+    private final StatisticConfiguration cfg;
+
+    /** */
+    private final long version;
+
     /**
      * Constructor.
      *
      * @param rowsCnt Total rows count.
      * @param colNameToStat Column names to statistics map.
      */
-    public ObjectStatisticsImpl(long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
-
+    public ObjectStatisticsImpl(
+        long rowsCnt,
+        Map<String, ColumnStatistics> colNameToStat,
+        StatisticConfiguration cfg,
+        long ver) {
         assert rowsCnt >= 0 : "rowsCnt >= 0";
 
         assert colNameToStat != null : "colNameToStat != null";
 
         this.rowsCnt = rowsCnt;
         this.colNameToStat = colNameToStat;
+        this.cfg = cfg;
+        this.version = ver;
     }
 
     /**
@@ -72,6 +85,16 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl clone() {
         return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat));
+    }
+
+    /** */
+    public StatisticConfiguration config() {
+        return cfg;
+    }
+
+    /** */
+    public long version() {
+        return version;
     }
 
     /** {@inheritDoc} */
