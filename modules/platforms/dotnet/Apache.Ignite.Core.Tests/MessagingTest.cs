@@ -30,6 +30,7 @@ namespace Apache.Ignite.Core.Tests
     using Apache.Ignite.Core.Resource;
     using Apache.Ignite.Core.Tests.Cache;
     using NUnit.Framework;
+    using NUnit.Framework.Interfaces;
 
     /// <summary>
     /// <see cref="IMessaging"/> tests.
@@ -88,9 +89,12 @@ namespace Apache.Ignite.Core.Tests
         {
             try
             {
-                TestUtils.AssertHandleRegistryIsEmpty(1000, _grid1, _grid2, _grid3);
+                if (TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Passed)
+                {
+                    TestUtils.AssertHandleRegistryIsEmpty(1000, _grid1, _grid2, _grid3);
 
-                MessagingTestHelper.AssertFailures();
+                    MessagingTestHelper.AssertFailures();
+                }
             }
             finally
             {

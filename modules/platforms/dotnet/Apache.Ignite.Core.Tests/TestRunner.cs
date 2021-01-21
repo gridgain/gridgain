@@ -135,6 +135,8 @@ namespace Apache.Ignite.Core.Tests
 #else
 namespace Apache.Ignite.Core.Tests
 {
+    using System;
+
     /// <summary>
     /// Test runner.
     /// </summary>
@@ -145,7 +147,18 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static void Main()
         {
-            new IgniteStartStopTest().TestStartDefault();
+            // TODO: Revert!
+            for (int i = 0; i < 1000; i++)
+            {
+                Console.WriteLine(">>> " + i);
+
+                var t = new MessagingTest();
+                t.SetUp();
+                t.TestRemoteListen(true);
+                t.TearDown();
+            }
+
+            Console.WriteLine(">>> END");
         }
     }
 }
