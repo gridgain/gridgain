@@ -629,7 +629,7 @@ namespace Apache.Ignite.Core.Tests
                 actualMessages,
                 string.Format("Expected messages: '{0}', actual messages: '{1}', expectedRepeat: {2}",
                     expectedMessagesStr,
-                    string.Join(", ", actualMessages),
+                    string.Join(", ", receivedMessages.Select(x => x.ToString())),
                     expectedRepeat));
 
             // check that all messages came from local node.
