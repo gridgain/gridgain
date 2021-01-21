@@ -87,16 +87,6 @@ public class Log4jBridgeHandler extends java.util.logging.Handler {
         getJulRootLogger().addHandler(new Log4jBridgeHandler());
     }
 
-    /**
-     * Invoking this method removes/unregisters/detaches all handlers currently attached to the root logger.
-     */
-    public static void removeHandlersForRootLogger() {
-        java.util.logging.Logger rootLog = getJulRootLogger();
-
-        for (java.util.logging.Handler handler : rootLog.getHandlers())
-            rootLog.removeHandler(handler);
-    }
-
     /** {@inheritDoc} */
     @Override public void publish(java.util.logging.LogRecord record) {
         // Silently ignore null records.

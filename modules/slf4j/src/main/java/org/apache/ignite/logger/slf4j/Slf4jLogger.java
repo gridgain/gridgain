@@ -68,9 +68,6 @@ public class Slf4jLogger implements IgniteLogger {
 
         quiet = Boolean.parseBoolean(System.getProperty(IGNITE_QUIET, "true"));
 
-        // Remove existing handlers attached to j.u.l root logger.
-        SLF4JBridgeHandler.removeHandlersForRootLogger();
-
         SLF4JBridgeHandler.install();
     }
 

@@ -132,9 +132,6 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
         quiet = quiet0;
         cfg = null;
 
-        // Remove existing handlers attached to j.u.l root logger.
-        Log4jBridgeHandler.removeHandlersForRootLogger();
-
         Log4jBridgeHandler.install();
     }
 
@@ -154,9 +151,6 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = path;
-
-        // Remove existing handlers attached to j.u.l root logger.
-        Log4jBridgeHandler.removeHandlersForRootLogger();
 
         Log4jBridgeHandler.install();
     }
@@ -188,9 +182,6 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
         quiet = quiet0;
         cfg = path;
 
-        // Remove existing handlers attached to j.u.l root logger.
-        Log4jBridgeHandler.removeHandlersForRootLogger();
-
         Log4jBridgeHandler.install();
     }
 
@@ -221,9 +212,6 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
         quiet = quiet0;
         cfg = cfgFile.getPath();
 
-        // Remove existing handlers attached to j.u.l root logger.
-        Log4jBridgeHandler.removeHandlersForRootLogger();
-
         Log4jBridgeHandler.install();
     }
 
@@ -248,9 +236,6 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = cfgUrl.getPath();
-
-        // Remove existing handlers attached to j.u.l root logger.
-        Log4jBridgeHandler.removeHandlersForRootLogger();
 
         Log4jBridgeHandler.install();
     }
