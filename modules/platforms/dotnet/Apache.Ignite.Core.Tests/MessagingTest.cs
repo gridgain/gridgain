@@ -615,9 +615,10 @@ namespace Apache.Ignite.Core.Tests
                 string.Format("expectedMessages: {0}, expectedRepeat: {1}, remaining: {2}",
                     expectedMessages, expectedRepeat, ReceivedEvent.CurrentCount));
 
-            expectedMessages = expectedMessages.SelectMany(x => Enumerable.Repeat(x, expectedRepeat));
+            expectedMessages = expectedMessages.SelectMany(x => Enumerable.Repeat(x, expectedRepeat)).ToArray();
+            var actualMessages = resultFunc(ReceivedMessages);
 
-            Assert.AreEqual(expectedMessages, resultFunc(ReceivedMessages));
+            CollectionAssert.AreEqual(expectedMessages, actualMessages);
 
             // check that all messages came from local node.
             var localNodeId = cluster.Ignite.GetCluster().GetLocalNode().Id;
