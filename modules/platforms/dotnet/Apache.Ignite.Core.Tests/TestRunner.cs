@@ -147,8 +147,7 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static void Main()
         {
-            // TODO: Revert!
-            for (int i = 0; i < int.MaxValue; i++)
+            for (var i = 0; i < int.MaxValue; i++)
             {
                 Console.WriteLine(">>> " + i);
 
@@ -157,8 +156,6 @@ namespace Apache.Ignite.Core.Tests
                 t.TestRemoteListen(false);
                 t.TearDown();
             }
-
-            Console.WriteLine(">>> END");
         }
     }
 }
