@@ -55,6 +55,7 @@ public class SqlQueryMXBeanImplTest extends GridCommonAbstractTest {
     public void testSqlQueryMXBeanImplJMXAttrs() throws Exception {
         checkBean("SQL Query", "SqlQueryMXBeanImpl", "SqlQueryMemoryQuotaBytes", 10485760L);
         checkBean("SQL Query", "SqlQueryMXBeanImpl", "SqlGlobalMemoryQuotaBytes", 20971520L);
+        checkBean("SQL Query", "SqlQueryMXBeanImpl", "SqlFreeMem", 20971520L);
         checkBean("SQL Query", "SqlQueryMXBeanImpl", "SqlQueryMemoryQuota", "10m");
         checkBean("SQL Query", "SqlQueryMXBeanImpl", "SqlGlobalMemoryQuota", "20m");
 

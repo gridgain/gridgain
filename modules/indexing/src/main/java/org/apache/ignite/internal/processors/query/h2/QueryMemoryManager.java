@@ -39,6 +39,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.metric.LongMetric;
 import org.gridgain.internal.h2.command.dml.GroupByData;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.expression.Expression;
@@ -324,6 +325,15 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     public long memoryLimit() {
         return globalQuota;
     }
+
+    /**
+     *
+     * @return memory in bytes currently left available for the queries on this node.
+     */
+    public long getFreeMem() {
+        return ((LongMetric)ctx.metric().registry(SqlMemoryStatisticsHolder.SQL_QUOTAS_REG_NAME).findMetric("freeMem")).value();
+    }
+
 
     /** {@inheritDoc} */
     @Override public void spill(long size) {
