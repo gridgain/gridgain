@@ -37,6 +37,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
@@ -336,18 +337,18 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected void checkStatTasksEmpty(int nodeIdx) throws Exception {
         IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
             .statsManager();
-        StatisticsGatheringRequestCrawlerImpl crawler = readField(statMgr, "statCrawler");
+        StatisticsGatheringRequestCrawlerImpl crawler = GridTestUtils.getFieldValue(statMgr, "statCrawler");
 
-        ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests = readField(crawler,
-            "remainingRequests");
+        ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests = GridTestUtils
+            .getFieldValue(crawler, "remainingRequests");
 
         assertTrue(remainingRequests.isEmpty());
 
-        IgniteThreadPoolExecutor pool = readField(crawler, "msgMgmtPool");
+        IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(crawler, "msgMgmtPool");
 
         assertTrue(pool.getQueue().isEmpty());
 
-        Map<UUID, StatisticsGatheringContext> currColls = readField(statMgr, "currColls");
+        Map<UUID, StatisticsGatheringContext> currColls = GridTestUtils.getFieldValue(statMgr, "currColls");
 
         assertTrue(currColls.isEmpty());
     }
@@ -362,8 +363,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected Lock nodeMsgsLock(int nodeIdx) throws Exception {
         IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
             .statsManager();
-        StatisticsGatheringRequestCrawlerImpl crawler = readField(statMgr, "statCrawler");
-        IgniteThreadPoolExecutor pool = readField(crawler, "msgMgmtPool");
+        IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(statMgr, "statCrawler", "msgMgmtPool");
         Lock res = new ReentrantLock();
         res.lock();
         pool.submit(res::lock);
@@ -381,8 +381,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected Lock nodeGathLock(int nodeIdx) throws Exception {
         IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
             .statsManager();
-        StatisticsGatheringImpl crawler = readField(statMgr, "statGathering");
-        IgniteThreadPoolExecutor pool = readField(crawler, "gatMgmtPool");
+        IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(statMgr, "statGathering", "gatMgmtPool");
 
         return lockPool(pool);
     }
@@ -399,20 +398,5 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         pool.submit(res::lock);
 
         return res;
-    }
-
-    /**
-     * Read object field value by name.
-     *
-     * @param obj Object to read value from.
-     * @param field Field name.
-     * @return Field value.
-     * @throws Exception If case if object doesn't contains specified field.
-     */
-    protected <T> T readField(Object obj, String field) throws Exception {
-        Field reader = obj.getClass().getDeclaredField(field);
-        reader.setAccessible(true);
-
-        return (T)reader.get(obj);
     }
 }

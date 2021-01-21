@@ -158,7 +158,7 @@ public class IgniteStatisticsHelper {
     }
 
     /**
-     * Return map cache group to corrsponding stats keys.
+     * Return map cache group to corresponding stats keys.
      *
      * @param keys Statistics key to map.
      * @return Map of <group ids> to <collection of keys in groups>
