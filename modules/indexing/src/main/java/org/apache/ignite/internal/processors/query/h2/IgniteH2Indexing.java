@@ -526,7 +526,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 true,
                 null,
                 null,
-                null);
+                null,
+                false,
+                false,
+                false
+            );
 
             Throwable failReason = null;
             try {
@@ -746,7 +750,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             true,
             null,
             null,
-            qryInitiatorId);
+            qryInitiatorId,
+            false,
+            false,
+            false
+        );
 
         Exception failReason = null;
 
@@ -983,6 +991,27 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                 H2Utils.session(conn).queryDescription(null);
             }
+        }
+    }
+
+    /** */
+    public H2MemoryTracker memTracker(H2QueryInfo qryInfo) {
+        assert qryInfo.runningQueryId() != null;
+
+        GridRunningQueryInfo runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
+
+        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() != null
+            && !(runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker))
+            return null;
+
+        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
+            return ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
+        else {
+            assert false : "Cannot find running query info to get memory tracker [qryInfo=" + qryInfo + ']';
+
+            log.warning("Cannot find running query info to get memory tracker [qryInfo=" + qryInfo + ']');
+
+            return null;
         }
     }
 
@@ -1624,7 +1653,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryDesc.local(),
             memoryMgr.createQueryMemoryTracker(qryParams.maxMemory()),
             cancel,
-            qryDesc.queryInitiatorId()
+            qryDesc.queryInitiatorId(),
+            qryDesc.enforceJoinOrder(),
+            qryParams.lazy(),
+            qryDesc.distributedJoins()
         );
     }
 

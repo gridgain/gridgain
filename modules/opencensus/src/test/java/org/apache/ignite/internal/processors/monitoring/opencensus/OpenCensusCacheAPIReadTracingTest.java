@@ -28,8 +28,10 @@ import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_GET_FUTURE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_SINGLE_GET_FUTURE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET;
@@ -109,6 +111,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testCacheAtomicGetTracing() throws Exception {
         client.cache(ATOMIC_CACHE).put("One",1);
 
@@ -313,6 +316,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testCacheAtomicGetAsyncTracing() throws Exception {
         client.cache(ATOMIC_CACHE).put("One",1);
 

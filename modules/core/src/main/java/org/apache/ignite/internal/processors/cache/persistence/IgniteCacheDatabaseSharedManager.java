@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -1011,7 +1011,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     /**
      * @return Last checkpoint mark WAL pointer.
      */
-    public WALPointer lastCheckpointMarkWalPointer() {
+    @Nullable public WALPointer lastCheckpointMarkWalPointer() {
         return null;
     }
 
@@ -1511,7 +1511,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @param memMetrics Memory metrics.
      * @return Wrapped memory provider.
      */
-    protected DirectMemoryProvider wrapMetricsMemoryProvider(
+    private DirectMemoryProvider wrapMetricsMemoryProvider(
         final DirectMemoryProvider memoryProvider0,
         final DataRegionMetricsImpl memMetrics
     ) {

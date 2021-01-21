@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -10031,6 +10031,16 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * @param ctx Kernal context.
+     * @return Whether current node is oldest.
+     */
+    public static boolean isCurrentNodeOldest(GridKernalContext ctx) {
+        ClusterNode oldest = ctx.grid().cluster().forServers().forOldest().node();
+
+        return F.eq(ctx.localNodeId(), oldest.id());
+    }
+
+    /**
      * @param ptr Address.
      * @param size Size.
      * @return Bytes.
@@ -12423,7 +12433,7 @@ public abstract class IgniteUtils {
         /** Return collection of local network interfaces. */
         Enumeration<NetworkInterface> getInterfaces() throws SocketException;
     }
-    
+
     /**
      * @param ctx Kernel context.
      * @param depInfo Deployment info.
@@ -12434,5 +12444,33 @@ public abstract class IgniteUtils {
         GridDeployment dep = ctx.deploy().getDeployment(clsName);
 
         return dep == null || dep.classLoaderId().equals(depInfo.classLoaderId());
+    }
+
+    /**
+     * Getting the total size of uncompressed data in zip.
+     *
+     * @param zip Zip file.
+     * @return Total uncompressed size.
+     * @throws IOException If failed.
+     */
+    public static long uncompressedSize(File zip) throws IOException {
+        try (ZipFile zipFile = new ZipFile(zip)) {
+            long size = 0;
+
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+
+            while (entries.hasMoreElements())
+                size += entries.nextElement().getSize();
+
+            return size;
+        }
+    }
+
+    /**
+     * @param enabled Parameter.
+     * @return Returns "enabled" or "disabled" string.
+     */
+    public static String enabledString(boolean enabled) {
+        return enabled ? "enabled" : "disabled";
     }
 }

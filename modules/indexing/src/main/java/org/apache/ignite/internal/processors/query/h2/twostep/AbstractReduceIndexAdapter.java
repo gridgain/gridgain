@@ -82,7 +82,8 @@ public abstract class AbstractReduceIndexAdapter extends BaseIndex {
 
     /** {@inheritDoc} */
     @Override public void close(Session ses) {
-        // No-op.
+        if (reducer().memoryTracker() != null)
+            reducer().memoryTracker().close();
     }
 
     /** {@inheritDoc} */

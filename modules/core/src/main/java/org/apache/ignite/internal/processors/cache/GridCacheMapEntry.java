@@ -86,6 +86,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisito
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
 import org.apache.ignite.internal.util.IgniteTree;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.GridCursor;
@@ -128,6 +129,8 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_MA
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.compareIgnoreOpCounter;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
 /**
  * Adapter for cache entry.
@@ -3361,6 +3364,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             boolean update;
 
+            final GridCacheVersion finalVersion = ver;
             IgnitePredicate<CacheDataRow> p = new IgnitePredicate<CacheDataRow>() {
                 @Override public boolean apply(@Nullable CacheDataRow row) {
                     boolean update0;
@@ -3372,9 +3376,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (cctx.group().persistenceEnabled()) {
                         if (!isStartVer) {
                             if (cctx.atomic())
-                                update0 = ATOMIC_VER_COMPARATOR.compare(currVer, ver) < 0;
+                                update0 = ATOMIC_VER_COMPARATOR.compare(currVer, finalVersion) < 0;
                             else
-                                update0 = currVer.compareTo(ver) < 0;
+                                update0 = currVer.compareTo(finalVersion) < 0;
                         }
                         else
                             update0 = true;
@@ -3387,6 +3391,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return update0;
                 }
             };
+
+            long updateCntr = 0;
 
             if (unswapped) {
                 update = p.apply(null);
@@ -3411,8 +3417,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                         cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
                     }
-                    else
+                    else {
+                        if (!preload && ver.updateCounter() == 0) {
+                            ver = nextVersion(ver, null);
+
+                            updateCntr = nextPartitionCounter(topVer, true, true, null);
+                            ver.updateCounter(updateCntr);
+                        }
+
                         storeValue(val, expTime, ver);
+                    }
                 }
             }
             else {
@@ -3442,6 +3456,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     }
                 }
                 else {
+                    if (!preload && ver.updateCounter() == 0) {
+                        ver = nextVersion(ver, null);
+
+                        updateCntr = nextPartitionCounter(topVer, true, true, null);
+                        ver.updateCounter(updateCntr);
+                    }
+
                     // Optimization to access storage only once.
                     UpdateClosure c = storeValue(val, expTime, ver, p);
 
@@ -3470,9 +3491,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 else if (deletedUnlocked())
                     deletedUnlocked(false);
 
-                long updateCntr = 0;
-
-                if (!preload)
+                if (!preload && updateCntr == 0)
                     updateCntr = nextPartitionCounter(topVer, true, true, null);
 
                 if (walEnabled) {
@@ -5207,7 +5226,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
         }
         else {
-            String keySens = GridToStringBuilder.includeSensitive() ? ", key=" + key : "";
+            GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+
+            String keySens;
+
+            if (sensitiveDataLogging == PLAIN)
+                keySens = ", key=" + key;
+            else if (sensitiveDataLogging == HASH)
+                keySens = ", key=" + (key == null ? "null" : String.valueOf(IgniteUtils.hash(key)));
+            else
+                keySens = "";
 
             return "GridCacheMapEntry [err='Partial result represented because entry lock wasn't acquired."
                 + " Waiting time elapsed.'"

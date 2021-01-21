@@ -1,5 +1,5 @@
 Control utility [ver. <!any!>
-2020 Copyright(C) GridGain Systems, Inc. and Contributors
+2021 Copyright(C) GridGain Systems, Inc. and Contributors
 User: <!any!>
 Time: <!any!>
 Control utility script is used to execute admin commands on cluster or get common cluster info. The command has the following syntax:
@@ -27,7 +27,10 @@ This utility can do the following commands:
       ACTIVE_READ_ONLY  - Activate cluster. Cache updates are denied.
 
   Print cluster baseline topology:
-    control.(sh|bat) --baseline
+    control.(sh|bat) --baseline [--verbose]
+
+    Parameters:
+      verbose  - Show the full list of node ips.
 
   Add nodes into baseline topology:
     control.(sh|bat) --baseline add consistentId1[,consistentId2,....,consistentIdN] [--yes]
