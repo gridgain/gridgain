@@ -5099,15 +5099,11 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
         for (int i = 0; i < gridCount(); ++i) {
             long sz = checkIteratorCache2(jcache(i), entries);
 
-            sz = 9998;
-
             if (sz != entries.size()) {
                 printPartitionState(jcache(i));
                 doSleep(3000);
 
                 long sz2 = checkIteratorCache2(jcache(i), entries);
-
-                sz2 = 9998;
 
                 if (sz2 != entries.size()) {
                     for (int j = 0; j < gridCount(); ++j) {
