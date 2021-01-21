@@ -148,7 +148,7 @@ namespace Apache.Ignite.Core.Tests
         private static void Main()
         {
             // TODO: Revert!
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < int.MaxValue; i++)
             {
                 Console.WriteLine(">>> " + i);
 
