@@ -714,13 +714,24 @@ namespace Apache.Ignite.Core.Tests
             private readonly string _listenerName;
 
             /** */
-
             public ReceivedMessage(string message, Guid nodeId, int listenerId, string listenerName)
             {
                 _message = message;
                 _nodeId = nodeId;
                 _listenerId = listenerId;
                 _listenerName = listenerName;
+            }
+
+            /** */
+            public string Message
+            {
+                get { return _message; }
+            }
+
+            /** */
+            public Guid NodeId
+            {
+                get { return _nodeId; }
             }
 
             /** <inheritdoc /> */
