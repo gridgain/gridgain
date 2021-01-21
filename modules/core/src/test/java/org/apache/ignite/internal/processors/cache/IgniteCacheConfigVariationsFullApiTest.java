@@ -68,7 +68,12 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
+import org.apache.ignite.internal.processors.cache.verify.ConsistencyUtils;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.lang.IgnitePair;
@@ -5058,8 +5063,19 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
         Map<String, Integer> putMap = new HashMap<>();
 
+        Map<Integer, Integer> sizes = new HashMap<>();
+
         for (int i = 0; i < SIZE; ++i) {
             String key = Integer.toString(i);
+
+            int part = grid(0).affinity(cache.getName()).partition(key);
+
+            Integer val = sizes.get(part);
+
+            if (val == null)
+                val = 0;
+
+            sizes.put(part, val + 1);
 
             putMap.put(key, i);
 
@@ -5078,7 +5094,44 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
         checkIteratorHasNext();
 
-        checkIteratorCache(entries);
+        //checkIteratorCache(entries);
+
+        for (int i = 0; i < gridCount(); ++i) {
+            long sz = checkIteratorCache2(jcache(i), entries);
+
+            sz = 9998;
+
+            if (sz != entries.size()) {
+                printPartitionState(jcache(i));
+                doSleep(3000);
+
+                long sz2 = checkIteratorCache2(jcache(i), entries);
+
+                sz2 = 9998;
+
+                if (sz2 != entries.size()) {
+                    for (int j = 0; j < gridCount(); ++j) {
+                        GridCacheContext<Object, Object> ctx = grid(j).cachex(cache.getName()).context();
+
+                        GridDhtPartitionTopology top = ctx.group().topology();
+                        List<GridDhtLocalPartition> parts = top.localPartitions();
+
+                        for (GridDhtLocalPartition part : parts) {
+                            if (part.primary(top.readyTopologyVersion())) {
+                                List<CacheDataRow> rows = ConsistencyUtils.rows(ctx.group(), part.id());
+
+                                if (sizes.get(part.id()) != rows.stream().filter(p -> !p.tombstone()).count())
+                                    log.info("DBG: found bad partition: idx=" + j + ", rows=" + rows);
+                            }
+                        }
+                    }
+
+                    // Try to find bad partition.
+                }
+
+                assertEquals("idx=" + i + " " + sz2, entries.size(), sz);
+            }
+        }
 
         checkIteratorRemove(cache, entries);
 
@@ -5162,6 +5215,27 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
     private void checkIteratorCache(Map<String, Integer> entries) {
         for (int i = 0; i < gridCount(); ++i)
             checkIteratorCache(jcache(i), entries);
+    }
+
+    /**
+     * @param cache Cache.
+     * @param entries Expected entries in the cache.
+     */
+    private long checkIteratorCache2(IgniteCache cache, Map<String, Integer> entries) {
+        Iterator<Cache.Entry<String, Integer>> iter = cache.iterator();
+
+        int cnt = 0;
+
+        while (iter.hasNext()) {
+            Cache.Entry<String, Integer> cur = iter.next();
+
+            assertTrue(entries.containsKey(cur.getKey()));
+            assertEquals(entries.get(cur.getKey()), cur.getValue());
+
+            cnt++;
+        }
+
+        return cnt;
     }
 
     /**

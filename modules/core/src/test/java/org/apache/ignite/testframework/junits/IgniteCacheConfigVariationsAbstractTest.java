@@ -312,7 +312,7 @@ public abstract class IgniteCacheConfigVariationsAbstractTest extends IgniteConf
         // Restore cache if current cache has garbage.
         if (cacheIsNotEmptyMsg != null) {
             for (int i = 0; i < gridCount(); i++) {
-                info("Destroing cache on grid: " + i);
+                info("Destroing cache on grid 2: " + i);
 
                 IgniteCache<String, Integer> cache = jcache(i);
 
