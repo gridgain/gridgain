@@ -387,7 +387,8 @@ namespace Apache.Ignite.Core.Tests
                 messaging.StopRemoteListen(listenId2);
 
             // Wait for all to unsubscribe: StopRemoteListen (both sync and async) does not remove remote listeners
-            // upon exit. Remote listeners are removed with disco messages after some delay.
+            // upon exit. Remote listeners are removed with disco messages after some delay -
+            // see TestStopRemoteListenRemovesAllCallbacksUponExit.
             TestUtils.AssertHandleRegistryHasItems(
                 timeout: (int)MessagingTestHelper.SleepTimeout.TotalMilliseconds,
                 expectedCount: 1,
