@@ -96,7 +96,7 @@ public class GridLocalDeploymentSpiSelfTest extends GridSpiAbstractTest<LocalDep
         deploy(task);
 
         // Note we use task name instead of class name.
-        DeploymentResource t1 = getSpi().findResource(taskName);
+        DeploymentResource t1 = getSpi().findResource(taskName, task.getClassLoader());
 
         assert t1 != null;
 
@@ -107,8 +107,8 @@ public class GridLocalDeploymentSpiSelfTest extends GridSpiAbstractTest<LocalDep
 
         checkUndeployed(task);
 
-        assert getSpi().findResource(taskName) == null;
-        assert getSpi().findResource(task.getName()) == null;
+        assert getSpi().findResource(taskName, task.getClassLoader()) == null;
+        assert getSpi().findResource(task.getName(), task.getClassLoader()) == null;
     }
 
     /**
@@ -138,7 +138,7 @@ public class GridLocalDeploymentSpiSelfTest extends GridSpiAbstractTest<LocalDep
 
         checkUndeployed(t1);
 
-        assert getSpi().findResource("GridDeploymentTestTask") == null;
+        assert getSpi().findResource("GridDeploymentTestTask", t1.getClassLoader()) == null;
 
         tasks.clear();
 
@@ -157,8 +157,8 @@ public class GridLocalDeploymentSpiSelfTest extends GridSpiAbstractTest<LocalDep
 
         checkUndeployed(t1);
 
-        assert getSpi().findResource(taskName) == null;
-        assert getSpi().findResource(t1.getName()) == null;
+        assert getSpi().findResource(taskName, t1.getClassLoader()) == null;
+        assert getSpi().findResource(t1.getName(), t1.getClassLoader()) == null;
     }
 
     /**

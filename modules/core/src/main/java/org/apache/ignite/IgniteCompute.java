@@ -39,6 +39,7 @@ import org.apache.ignite.resources.SpringResource;
 import org.apache.ignite.resources.TaskSessionResource;
 import org.apache.ignite.spi.failover.FailoverSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Defines compute grid functionality for executing tasks and closures over nodes
@@ -373,8 +374,12 @@ public interface IgniteCompute extends IgniteAsyncSupport {
      * @return Task result.
      * @throws IgniteException If task failed.
      * @see ComputeTask for information about task execution.
+     *
+     * @deprecated Multi thread usage of {@link IgniteCompute#localDeployTask(Class, ClassLoader)} and the subsequent
+     * call of {@link IgniteCompute#execute(String, Object)} without ClassLoader clarification may lead to unpredictable instance calling.
      */
-    public <T, R> R execute(String taskName, T arg) throws IgniteException;
+    @Deprecated
+    public <T, R> R execute(String taskName, @Nullable T arg) throws IgniteException;
 
     /**
      * Executes given task asynchronously within the cluster group. For step-by-step explanation of task execution
@@ -723,7 +728,10 @@ public interface IgniteCompute extends IgniteAsyncSupport {
      * @param clsLdr Task class loader. This class loader is in charge
      *      of loading all necessary resources for task execution.
      * @throws IgniteException If task is invalid and cannot be deployed.
+     *
+     * @deprecated check {@link IgniteCompute#execute(String, Object)} documentation.
      */
+    @Deprecated
     public void localDeployTask(Class<? extends ComputeTask> taskCls, ClassLoader clsLdr) throws IgniteException;
 
     /**

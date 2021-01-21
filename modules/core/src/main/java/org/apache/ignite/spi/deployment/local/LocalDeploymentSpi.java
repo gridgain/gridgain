@@ -42,11 +42,7 @@ import org.apache.ignite.spi.deployment.DeploymentResourceAdapter;
 import org.apache.ignite.spi.deployment.DeploymentSpi;
 import org.apache.ignite.spi.deployment.IgnoreIfPeerClassLoadingDisabled;
 import org.jetbrains.annotations.Nullable;
-import java.util.concurrent.ConcurrentHashMap;
 import org.jsr166.ConcurrentLinkedHashMap;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEPLOYMENT_PRESERVE_LOCAL;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 
 /**
  * Local deployment SPI that implements only within VM deployment on local
@@ -82,8 +78,7 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
     private IgniteLogger log;
 
     /** Map of all resources. */
-    private ConcurrentLinkedHashMap<ClassLoader, ConcurrentMap<String, String>> ldrRsrcs =
-        new ConcurrentLinkedHashMap<>(16, 0.75f, 64);
+    private ConcurrentLinkedHashMap<ClassLoader, ConcurrentMap<String, String>> ldrRsrcs = new ConcurrentLinkedHashMap<>();
 
     /** Deployment SPI listener. */
     private volatile DeploymentListener lsnr;
@@ -110,7 +105,16 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
             log.debug(stopInfo());
     }
 
-    /** {@inheritDoc} */
+    /**
+     * Finds class loader for the given class.
+     *
+     * @param rsrcName Class name or class alias to find class loader for.
+     * @return Deployed class loader, or {@code null} if not deployed.
+     *
+     * @deprecated It is recommended to use {@link DeploymentSpi#findResource(String, ClassLoader)} instead.
+     * This method can return incorrect resource.
+     */
+    @Deprecated
     @Nullable @Override public DeploymentResource findResource(String rsrcName) {
         assert rsrcName != null;
 
@@ -146,6 +150,68 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
         return null;
     }
 
+    /** {@inheritDoc} */
+    @Nullable @Override public DeploymentResource findResource(String rsrcName, @Nullable ClassLoader clsLdr) {
+        assert rsrcName != null;
+
+        if (clsLdr != null) {
+            ConcurrentMap<String, String> rsrcs = ldrRsrcs.get(clsLdr);
+
+            if (rsrcs == null)
+                return null;
+
+            return findResource0(rsrcs, rsrcName, clsLdr);
+        }
+
+        // we can remove this stub after deprecated IgniteCompute.localDeployTask was deleted.
+        for (Entry<ClassLoader, ConcurrentMap<String, String>> e : ldrRsrcs.descendingEntrySet()) {
+            ClassLoader ldr = e.getKey();
+            ConcurrentMap<String, String> rsrcs = e.getValue();
+
+            DeploymentResourceAdapter res = findResource0(rsrcs, rsrcName, ldr);
+
+            if (res != null)
+                return res;
+        }
+
+        return null;
+    }
+
+    /**
+     * Finds appropriate resource.
+     *
+     * @param rsrcs Resources.
+     * @param rsrcName Class name or class alias to find class loader for.
+     * @param clsLdr desired class loader.
+     * @return Deployed class loader, or {@code null} if not deployed.
+     */
+    @Nullable private DeploymentResourceAdapter findResource0(Map<String, String> rsrcs, String rsrcName, ClassLoader clsLdr) {
+        String clsName = rsrcs.get(rsrcName);
+
+        // Return class if it was found in resources map.
+        if (clsName != null) {
+            // Recalculate resource name in case if access is performed by
+            // class name and not the resource name.
+            rsrcName = getResourceName(clsName, rsrcs);
+
+            assert clsName != null;
+
+            try {
+                Class<?> cls = U.forName(clsName, clsLdr);
+
+                assert cls != null;
+
+                // Return resource.
+                return new DeploymentResourceAdapter(rsrcName, cls, clsLdr);
+            }
+            catch (ClassNotFoundException ignored) {
+                // No-op.
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Gets resource name for a given class name.
      *
@@ -171,38 +237,33 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
     @Override public boolean register(ClassLoader ldr, Class<?> rsrc) throws IgniteSpiException {
         assert ldr != null;
         assert rsrc != null;
+        boolean move = false;
 
         if (log.isDebugEnabled())
             log.debug("Registering [ldrRsrcs=" + ldrRsrcs + ", ldr=" + ldr + ", rsrc=" + rsrc + ']');
 
-        ConcurrentMap<String, String> clsLdrRsrcs = ldrRsrcs.getSafe(ldr);
+        Map<String, String> newRsrcs;
 
-        if (clsLdrRsrcs == null) {
+        synchronized (this) {
+            ConcurrentMap<String, String> clsLdrRsrcs = ldrRsrcs.getSafe(ldr);
+
+            // move forward, localDeployTask compatibility issue.
+            if (clsLdrRsrcs != null && ldrRsrcs.size() > 1) {
+                ldrRsrcs.remove(ldr);
+
+                move = true;
+            }
+
             ConcurrentMap<String, String> old = ldrRsrcs.putIfAbsent(ldr,
-                clsLdrRsrcs = new ConcurrentHashMap<>());
+                clsLdrRsrcs == null ? clsLdrRsrcs = new ConcurrentLinkedHashMap<>() : clsLdrRsrcs);
 
             if (old != null)
                 clsLdrRsrcs = old;
+
+            newRsrcs = addResource(ldr, clsLdrRsrcs, rsrc);
         }
 
-        Map<String, String> newRsrcs = addResource(ldr, clsLdrRsrcs, rsrc);
-
-        if (!getBoolean(IGNITE_DEPLOYMENT_PRESERVE_LOCAL)) {
-            Collection<ClassLoader> rmvClsLdrs = null;
-
-            if (!F.isEmpty(newRsrcs)) {
-                rmvClsLdrs = new LinkedList<>();
-
-                removeResources(ldr, newRsrcs, rmvClsLdrs);
-            }
-
-            if (rmvClsLdrs != null) {
-                for (ClassLoader cldLdr : rmvClsLdrs)
-                    onClassLoaderReleased(cldLdr);
-            }
-        }
-
-        return !F.isEmpty(newRsrcs);
+        return !F.isEmpty(newRsrcs) && !move;
     }
 
     /** {@inheritDoc} */
@@ -269,11 +330,12 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
             String oldCls = ldrRsrcs.putIfAbsent(entry.getKey(), entry.getValue());
 
             if (oldCls != null) {
-                if (!oldCls.equals(entry.getValue()))
+                if (!oldCls.equals(entry.getValue())) {
                     throw new IgniteSpiException("Failed to register resources with given task name " +
                         "(found another class with same task name in the same class loader) " +
                         "[taskName=" + entry.getKey() + ", existingCls=" + oldCls +
                         ", newCls=" + entry.getValue() + ", ldr=" + ldr + ']');
+                }
             }
             else {
                 // New resource was added.
