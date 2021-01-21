@@ -1484,9 +1484,6 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
 
-    /** Preserve local store classLoaders. */
-    public static final String IGNITE_DEPLOYMENT_PRESERVE_LOCAL = "IGNITE_DEPLOYMENT_PRESERVE_LOCAL";
-
     /**
      * Defragmentation region size percentage of configured region size.
      * This percentage will be calculated from largest configured region size and then proportionally subtracted
