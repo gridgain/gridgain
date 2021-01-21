@@ -338,8 +338,7 @@ namespace Apache.Ignite.Core.Tests
         /// upon method exit.
         /// </summary>
         [Test]
-        [Ignore("This test fails: it demonstrates that listeners are not removed upon StopRemoteListen method exit " +
-                "- there is some delay.")]
+        [Ignore("IGNITE-14032")]
         public void TestStopRemoteListenRemovesAllCallbacksUponExit()
         {
             const string topic = "topic";
