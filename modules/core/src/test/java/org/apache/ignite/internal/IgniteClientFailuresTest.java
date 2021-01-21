@@ -15,13 +15,23 @@
  */
 package org.apache.ignite.internal;
 
+import java.lang.management.ManagementFactory;
+import javax.management.MBeanServer;
+import javax.management.MBeanServerInvocationHandler;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.mxbean.ClusterMetricsMXBean;
+import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -115,28 +125,40 @@ public class IgniteClientFailuresTest extends GridCommonAbstractTest {
      */
     @Test
     public void testFailedClientLeavesTopologyAfterTimeout() throws Exception {
-        IgniteEx srv0 = startGrid(0);
+        IgniteEx srv0 = (IgniteEx)startGridsMultiThreaded(3);
 
         IgniteEx client00 = startGrid("client00");
+        IgniteEx client01 = startGrid("client01");
 
         client00.getOrCreateCache(new CacheConfiguration<>("cache0"));
+        client01.getOrCreateCache(new CacheConfiguration<>("cache1"));
 
-        breakClient(client00);
+        IgniteInternalFuture f1 = GridTestUtils.runAsync(() -> breakClient(client00));
+        IgniteInternalFuture f2 = GridTestUtils.runAsync(() -> breakClient(client01));
+
+        f1.get(); f2.get();
 
         final IgniteClusterEx cl = srv0.cluster();
 
-        assertEquals(2, cl.topology(cl.topologyVersion()).size());
+        assertEquals(5, cl.topology(cl.topologyVersion()).size());
 
-        IgniteEx client01 = startGrid("client01");
+        IgniteEx client02 = startGrid("client02");
 
-        assertEquals(3, cl.topology(cl.topologyVersion()).size());
+        assertEquals(6, cl.topology(cl.topologyVersion()).size());
 
-        boolean waitRes = GridTestUtils.waitForCondition(() -> (cl.topology(cl.topologyVersion()).size() == 2),
+        boolean waitRes = GridTestUtils.waitForCondition(() -> (cl.topology(cl.topologyVersion()).size() == 4),
             20_000);
 
-        checkCacheOperations(client01.cache("cache0"));
-
         assertTrue(waitRes);
+
+        checkCacheOperations(client02.cache("cache0"));
+
+        assertEquals( 4, srv0.context().discovery().allNodes().size());
+
+        // Cluster metrics.
+        ClusterMetricsMXBean mxBeanCluster = mxBean(0, ClusterMetricsMXBeanImpl.class);
+
+        assertEquals(1, mxBeanCluster.getTotalClientNodes());
     }
 
     /**
@@ -238,5 +260,28 @@ public class IgniteClientFailuresTest extends GridCommonAbstractTest {
         ((TcpCommunicationSpi)commSpi).simulateNodeFailure();
 
         ((TcpDiscoverySpi)discoSpi).simulateNodeFailure();
+    }
+
+    /**
+     * Gets ClusterMetricsMXBean for given node.
+     *
+     * @param nodeIdx Node index.
+     * @param clazz Class of ClusterMetricsMXBean implementation.
+     * @return MBean instance.
+     */
+    private ClusterMetricsMXBean mxBean(int nodeIdx, Class<? extends ClusterMetricsMXBean> clazz)
+        throws MalformedObjectNameException {
+
+        ObjectName mbeanName = U.makeMBeanName(
+            getTestIgniteInstanceName(nodeIdx),
+            "Kernal",
+            clazz.getSimpleName());
+
+        MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
+
+        if (!mbeanSrv.isRegistered(mbeanName))
+            fail("MBean is not registered: " + mbeanName.getCanonicalName());
+
+        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, ClusterMetricsMXBean.class, true);
     }
 }
