@@ -45,7 +45,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jsr166.ConcurrentLinkedHashMap;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEPLOYMENT_PRESERVE_LOCAL;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 
 /**
@@ -82,8 +81,7 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
     private IgniteLogger log;
 
     /** Map of all resources. */
-    private ConcurrentLinkedHashMap<ClassLoader, ConcurrentMap<String, String>> ldrRsrcs =
-        new ConcurrentLinkedHashMap<>(16, 0.75f, 64);
+    private ConcurrentLinkedHashMap<ClassLoader, ConcurrentMap<String, String>> ldrRsrcs = new ConcurrentLinkedHashMap<>();
 
     /** Deployment SPI listener. */
     private volatile DeploymentListener lsnr;
@@ -111,35 +109,49 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public DeploymentResource findResource(String rsrcName) {
+    @Nullable @Override public DeploymentResource findResource(String rsrcName, @Nullable ClassLoader clsLdr) {
         assert rsrcName != null;
 
-        // Last updated class loader has highest priority in search.
-        for (Entry<ClassLoader, ConcurrentMap<String, String>> e : ldrRsrcs.descendingEntrySet()) {
+        if (clsLdr != null) {
+            ConcurrentMap<String, String> rsrcs = ldrRsrcs.get(clsLdr);
+
+            return findResource0(rsrcs, rsrcName, clsLdr);
+        }
+
+        for (Entry<ClassLoader, ConcurrentMap<String, String>> e : ldrRsrcs.entrySet()) {
             ClassLoader ldr = e.getKey();
             ConcurrentMap<String, String> rsrcs = e.getValue();
 
-            String clsName = rsrcs.get(rsrcName);
+            DeploymentResourceAdapter res = findResource0(rsrcs, rsrcName, ldr);
 
-            // Return class if it was found in resources map.
-            if (clsName != null) {
-                // Recalculate resource name in case if access is performed by
-                // class name and not the resource name.
-                rsrcName = getResourceName(clsName, rsrcs);
+            if (res != null)
+                return res;
+        }
 
-                assert clsName != null;
+        return null;
+    }
 
-                try {
-                    Class<?> cls = Class.forName(clsName, true, ldr);
+    @Nullable private DeploymentResourceAdapter findResource0(Map<String, String> rsrcs, String rsrcName, ClassLoader clsLdr) {
+        String clsName = rsrcs.get(rsrcName);
 
-                    assert cls != null;
+        // Return class if it was found in resources map.
+        if (clsName != null) {
+            // Recalculate resource name in case if access is performed by
+            // class name and not the resource name.
+            rsrcName = getResourceName(clsName, rsrcs);
 
-                    // Return resource.
-                    return new DeploymentResourceAdapter(rsrcName, cls, ldr);
-                }
-                catch (ClassNotFoundException ignored) {
-                    // No-op.
-                }
+            assert clsName != null;
+
+            try {
+                Class<?> cls = Class.forName(clsName, true, clsLdr);
+
+                assert cls != null;
+
+                // Return resource.
+                return new DeploymentResourceAdapter(rsrcName, cls, clsLdr);
+            }
+            catch (ClassNotFoundException ignored) {
+                // No-op.
             }
         }
 
@@ -186,21 +198,6 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
         }
 
         Map<String, String> newRsrcs = addResource(ldr, clsLdrRsrcs, rsrc);
-
-        if (!getBoolean(IGNITE_DEPLOYMENT_PRESERVE_LOCAL)) {
-            Collection<ClassLoader> rmvClsLdrs = null;
-
-            if (!F.isEmpty(newRsrcs)) {
-                rmvClsLdrs = new LinkedList<>();
-
-                removeResources(ldr, newRsrcs, rmvClsLdrs);
-            }
-
-            if (rmvClsLdrs != null) {
-                for (ClassLoader cldLdr : rmvClsLdrs)
-                    onClassLoaderReleased(cldLdr);
-            }
-        }
 
         return !F.isEmpty(newRsrcs);
     }

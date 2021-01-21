@@ -82,7 +82,7 @@ import org.jetbrains.annotations.Nullable;
  * <p>
  * SPI tracks all changes of every given URI. This means that if any file is
  * changed or deleted, SPI will re-deploy or delete corresponding tasks.
- * Note that the very first apply to {@link #findResource(String)}
+ * Note that the very first apply to {@link #findResource(String, ClassLoader)}
  * is blocked until SPI finishes scanning all URI's at least once.
  * <p>
  * There are several deployable unit types supported:
@@ -705,7 +705,12 @@ public class UriDeploymentSpi extends IgniteSpiAdapter implements DeploymentSpi 
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public DeploymentResource findResource(String rsrcName) {
+    @Nullable public DeploymentResource findResource(String rsrcName) {
+        return findResource(rsrcName, null);
+    }
+
+    /** {@inheritDoc} */
+    @Nullable @Override public DeploymentResource findResource(String rsrcName, @Nullable ClassLoader clsLdr) {
         assert rsrcName != null;
 
         // Wait until all scanner managers finish their first scanning.

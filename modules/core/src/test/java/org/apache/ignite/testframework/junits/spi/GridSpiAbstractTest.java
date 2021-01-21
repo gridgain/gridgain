@@ -455,7 +455,7 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
     /**
      * @return  Fully initialized and started SPI implementation.
      */
-    protected final T getSpi() throws IgniteCheckedException {
+    protected final T getSpi() {
         return getTestData().getSpi();
     }
 

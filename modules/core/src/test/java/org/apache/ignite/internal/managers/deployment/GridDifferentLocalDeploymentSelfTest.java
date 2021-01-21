@@ -22,18 +22,32 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.configuration.DeploymentMode;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEPLOYMENT_PRESERVE_LOCAL;
 
 /** Multiple local deployments. */
 public class GridDifferentLocalDeploymentSelfTest extends GridCommonAbstractTest {
     /** Task name. */
     private static final String TASK_NAME1 = "org.apache.ignite.tests.p2p.P2PTestTaskExternalPath1";
+
+    /** Task name. */
+    private static final String TASK_NAME2 = "org.apache.ignite.tests.p2p.P2PTestTaskExternalPath2";
+
+    /** */
+    private DeploymentMode depMode = DeploymentMode.PRIVATE;
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setDeploymentMode(depMode);
+
+        return cfg;
+    }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -48,7 +62,6 @@ public class GridDifferentLocalDeploymentSelfTest extends GridCommonAbstractTest
      * @throws Exception if error occur.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_DEPLOYMENT_PRESERVE_LOCAL, value = "true")
     public void testCheckTaskClassloaderCacheSharedMode() throws Exception {
         testCheckTaskClassloaderCache(DeploymentMode.SHARED);
     }
@@ -59,7 +72,6 @@ public class GridDifferentLocalDeploymentSelfTest extends GridCommonAbstractTest
      * @throws Exception if error occur.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_DEPLOYMENT_PRESERVE_LOCAL, value = "true")
     public void testCheckTaskClassloaderCachePrivateMode() throws Exception {
         testCheckTaskClassloaderCache(DeploymentMode.PRIVATE);
     }
@@ -70,7 +82,6 @@ public class GridDifferentLocalDeploymentSelfTest extends GridCommonAbstractTest
      * @throws Exception if error occur.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_DEPLOYMENT_PRESERVE_LOCAL, value = "true")
     public void testCheckTaskClassloaderCacheIsolatedMode() throws Exception {
         testCheckTaskClassloaderCache(DeploymentMode.ISOLATED);
     }
@@ -81,13 +92,14 @@ public class GridDifferentLocalDeploymentSelfTest extends GridCommonAbstractTest
      * @throws Exception if error occur.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_DEPLOYMENT_PRESERVE_LOCAL, value = "true")
     public void testCheckTaskClassloaderCacheContinuousMode() throws Exception {
         testCheckTaskClassloaderCache(DeploymentMode.CONTINUOUS);
     }
 
     /** */
     public void testCheckTaskClassloaderCache(DeploymentMode depMode) throws Exception {
+        this.depMode = depMode;
+
         IgniteEx server = startGrid(0);
 
         IgniteEx client = startClientGrid(1);
@@ -96,12 +108,35 @@ public class GridDifferentLocalDeploymentSelfTest extends GridCommonAbstractTest
 
         ClassLoader clsLdr2 = getExternalClassLoader();
 
-        Class<ComputeTask> taskCls1 = (Class<ComputeTask>) clsLdr1.loadClass(TASK_NAME1);
-        Class<ComputeTask> taskCls2 = (Class<ComputeTask>) clsLdr2.loadClass(TASK_NAME1);
+        Class<ComputeTask> taskCls11 = (Class<ComputeTask>) clsLdr1.loadClass(TASK_NAME1);
+        Class<ComputeTask> taskCls12 = (Class<ComputeTask>) clsLdr2.loadClass(TASK_NAME1);
+        Class<ComputeTask> taskCls21 = (Class<ComputeTask>) clsLdr2.loadClass(TASK_NAME2);
 
-        client.compute().execute(taskCls1.newInstance(), server.localNode().id());
-        client.compute().execute(taskCls2.newInstance(), server.localNode().id());
-        client.compute().execute(taskCls1.newInstance(), server.localNode().id());
+        IgniteInternalFuture f1 = GridTestUtils.runAsync(() -> {
+            for (int i = 0; i < 10; ++i) {
+                try {
+                    client.compute().execute(taskCls11.newInstance(), server.localNode().id());
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        IgniteInternalFuture f2 = GridTestUtils.runAsync(() -> {
+            for (int i = 0; i < 10; ++i) {
+                try {
+                    client.compute().execute(taskCls12.newInstance(), server.localNode().id());
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        f1.get(); f2.get();
+
+        client.compute().execute(taskCls21.newInstance(), server.localNode().id());
 
         GridDeploymentManager deploymentMgr = client.context().deploy();
 
