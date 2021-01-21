@@ -363,12 +363,12 @@ namespace Apache.Ignite.Core.Tests
 
             CheckSend(topic, msg: messaging, remoteListen: true, repeatMultiplier: 2); // expect twice the messages
 
-            Console.WriteLine(">>> Unsubscribing");
             if (async)
                 messaging.StopRemoteListenAsync(listenId2).Wait();
             else
                 messaging.StopRemoteListen(listenId2);
-            Console.WriteLine(">>> Unsubscribed");
+
+            Thread.Sleep(MessagingTestHelper.SleepTimeout); // wait for all to unsubscribe
 
             // TODO: This is problematic: looks like sometimes we still receive messages from the second listener.
             // UPD: this is confirmed: the first message is sometimes from listener "2", but the message is with the new ID.
@@ -680,7 +680,6 @@ namespace Apache.Ignite.Core.Tests
             public bool Invoke(Guid nodeId, string message)
             {
                 var receivedMessage = new ReceivedMessage(message, nodeId, GetHashCode(), _name);
-                Console.WriteLine(receivedMessage);
 
                 try
                 {
