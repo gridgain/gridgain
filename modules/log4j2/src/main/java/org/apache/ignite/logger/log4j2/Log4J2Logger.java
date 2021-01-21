@@ -132,8 +132,7 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
         quiet = quiet0;
         cfg = null;
 
-        if (!Log4jBridgeHandler.isInstalled())
-            Log4jBridgeHandler.install();
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -153,8 +152,7 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
         quiet = quiet0;
         cfg = path;
 
-        if (!Log4jBridgeHandler.isInstalled())
-            Log4jBridgeHandler.install();
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -184,8 +182,7 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
         quiet = quiet0;
         cfg = path;
 
-        if (!Log4jBridgeHandler.isInstalled())
-            Log4jBridgeHandler.install();
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -215,8 +212,7 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
         quiet = quiet0;
         cfg = cfgFile.getPath();
 
-        if (!Log4jBridgeHandler.isInstalled())
-            Log4jBridgeHandler.install();
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -241,8 +237,7 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
         quiet = quiet0;
         cfg = cfgUrl.getPath();
 
-        if (!Log4jBridgeHandler.isInstalled())
-            Log4jBridgeHandler.install();
+        Log4jBridgeHandler.install();
     }
 
     /**

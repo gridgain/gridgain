@@ -16,6 +16,7 @@
 
 package org.apache.ignite.logger.slf4j;
 
+import java.util.logging.Handler;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
@@ -68,8 +69,15 @@ public class Slf4jLogger implements IgniteLogger {
 
         quiet = Boolean.parseBoolean(System.getProperty(IGNITE_QUIET, "true"));
 
-        if (!SLF4JBridgeHandler.isInstalled())
+        if (!SLF4JBridgeHandler.isInstalled()) {
+            java.util.logging.Logger rootLog = getJulRootLogger();
+
+            for (Handler handler : rootLog.getHandlers())
+                if (handler instanceof java.util.logging.ConsoleHandler)
+                    rootLog.removeHandler(handler);
+
             SLF4JBridgeHandler.install();
+        }
     }
 
     /** {@inheritDoc} */
@@ -173,5 +181,12 @@ public class Slf4jLogger implements IgniteLogger {
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(Slf4jLogger.class, this);
+    }
+
+    /**
+     * Return the root logger instance.
+     */
+    private static java.util.logging.Logger getJulRootLogger() {
+        return java.util.logging.LogManager.getLogManager().getLogger("");
     }
 }

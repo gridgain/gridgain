@@ -21,6 +21,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.logging.Handler;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
@@ -45,6 +46,9 @@ public class Log4jBridgeHandler extends java.util.logging.Handler {
 
     /** Unknown logger name. */
     private static final String UNKNOWN_LOGGER_NAME = "unknown.jul.logger";
+
+    /** JUL formatter. */
+    private static final java.util.logging.Formatter julFormatter = new java.util.logging.SimpleFormatter();
 
     /**
      * Custom Log4j level corresponding to the {@link java.util.logging.Level#FINEST} logging level. This maps to a
@@ -86,7 +90,16 @@ public class Log4jBridgeHandler extends java.util.logging.Handler {
      * Adds a new Log4jBridgeHandler instance to JUL's root logger.
      */
     public static void install() {
-        getJulRootLogger().addHandler(new Log4jBridgeHandler());
+        if (Log4jBridgeHandler.isInstalled())
+            return;
+
+        java.util.logging.Logger rootLog = getJulRootLogger();
+
+        for (Handler handler : rootLog.getHandlers())
+            if (handler instanceof java.util.logging.ConsoleHandler)
+                rootLog.removeHandler(handler);
+
+        rootLog.addHandler(new Log4jBridgeHandler());
     }
 
     /**
@@ -107,7 +120,7 @@ public class Log4jBridgeHandler extends java.util.logging.Handler {
         Logger log4jLog = getLog4jLogger(record);
 
         Level level = toLevel(record.getLevel());
-        String msg = record.getMessage();
+        String msg = julFormatter.formatMessage(record); // use JUL's implementation to get real msg
         Throwable thrown = record.getThrown();
 
         if (log4jLog instanceof ExtendedLogger) {
