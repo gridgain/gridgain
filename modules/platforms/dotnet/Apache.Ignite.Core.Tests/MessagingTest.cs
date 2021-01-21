@@ -334,6 +334,26 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Tests that <see cref="IMessaging.StopRemoteListen"/> guarantees that all handlers are removed
+        /// upon method exit.
+        /// </summary>
+        [Test]
+        public void TestStopRemoteListenRemovesAllCallbacksUponExit()
+        {
+            const string topic = "topic";
+
+            var messaging =_grid1.GetMessaging();
+            var listenId = messaging.RemoteListen(MessagingTestHelper.GetListener("first"), topic);
+
+            TestUtils.AssertHandleRegistryHasItems(timeout: -1, expectedCount: 1, _grid1, _grid2, _grid3);
+
+            messaging.Send(1, topic);
+            messaging.StopRemoteListen(listenId);
+
+            TestUtils.AssertHandleRegistryHasItems(timeout: -1, expectedCount: 0, _grid1, _grid2, _grid3);
+        }
+
+        /// <summary>
         /// Tests RemoteListen.
         /// </summary>
         private void TestRemoteListen(object topic, bool async = false)
@@ -364,8 +384,8 @@ namespace Apache.Ignite.Core.Tests
             else
                 messaging.StopRemoteListen(listenId2);
 
-            // Wait for all to unsubscribe: StopRemoteListen (both sync and async) does not guarantee the subscription
-            // removal upon exit.
+            // Wait for all to unsubscribe: StopRemoteListen (both sync and async) does not remove remote listeners
+            // upon exit. Remote listeners are removed with disco messages after some delay.
             Thread.Sleep(MessagingTestHelper.SleepTimeout);
 
             CheckSend(topic, msg: messaging, remoteListen: true); // back to normal after unsubscription
