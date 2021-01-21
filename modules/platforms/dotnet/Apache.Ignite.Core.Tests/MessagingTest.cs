@@ -614,20 +614,22 @@ namespace Apache.Ignite.Core.Tests
         public static void VerifyReceive(IClusterGroup cluster, IEnumerable<string> expectedMessages,
             Func<IEnumerable<string>, IEnumerable<string>> resultFunc, int expectedRepeat)
         {
+            var origMessages = expectedMessages.ToArray();
+            expectedMessages = origMessages.SelectMany(x => Enumerable.Repeat(x, expectedRepeat)).ToArray();
+            var expectedMessagesStr = string.Join(", ", expectedMessages);
+
             // check if expected message count has been received; Wait returns false if there were none.
             Assert.IsTrue(ReceivedEvent.Wait(MessageTimeout),
                 string.Format("expectedMessages: {0}, expectedRepeat: {1}, remaining: {2}",
-                    expectedMessages, expectedRepeat, ReceivedEvent.CurrentCount));
+                    expectedMessagesStr, expectedRepeat, ReceivedEvent.CurrentCount));
 
-            var origMessages = expectedMessages.ToArray();
-            expectedMessages = origMessages.SelectMany(x => Enumerable.Repeat(x, expectedRepeat)).ToArray();
             var actualMessages = resultFunc(ReceivedMessages).ToArray();
 
             CollectionAssert.AreEqual(
                 expectedMessages,
                 actualMessages,
                 string.Format("Expected messages: '{0}', actual messages: '{1}', expectedRepeat: {2}",
-                    string.Join(", ", expectedMessages),
+                    expectedMessagesStr,
                     string.Join(", ", actualMessages),
                     expectedRepeat));
 
