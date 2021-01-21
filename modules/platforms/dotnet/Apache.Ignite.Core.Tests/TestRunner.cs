@@ -154,7 +154,7 @@ namespace Apache.Ignite.Core.Tests
 
                 var t = new MessagingTest();
                 t.SetUp();
-                t.TestRemoteListen(true);
+                t.TestRemoteListen(false);
                 t.TearDown();
             }
 

@@ -356,9 +356,10 @@ namespace Apache.Ignite.Core.Tests
             CheckNoMessage(NextId());
 
             // Test multiple subscriptions for the same filter
+            var listener2 = MessagingTestHelper.GetListener();
             var listenId2 = async
-                ? messaging.RemoteListenAsync(listener, topic).Result
-                : messaging.RemoteListen(listener, topic);
+                ? messaging.RemoteListenAsync(listener2, topic).Result
+                : messaging.RemoteListen(listener2, topic);
 
             CheckSend(topic, msg: messaging, remoteListen: true, repeatMultiplier: 2); // expect twice the messages
 
@@ -366,6 +367,8 @@ namespace Apache.Ignite.Core.Tests
                 messaging.StopRemoteListenAsync(listenId2).Wait();
             else
                 messaging.StopRemoteListen(listenId2);
+
+            listener2.Closed = true;
 
             // TODO: This is problematic: looks like sometimes we still receive messages from the second listener.
             CheckSend(topic, msg: messaging, remoteListen: true); // back to normal after unsubscription
@@ -645,7 +648,7 @@ namespace Apache.Ignite.Core.Tests
         /// Gets the message listener.
         /// </summary>
         /// <returns>New instance of message listener.</returns>
-        public static IMessageListener<string> GetListener()
+        public static RemoteListener GetListener()
         {
             return new RemoteListener();
         }
@@ -665,11 +668,19 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Remote listener.
         /// </summary>
-        private class RemoteListener : IMessageListener<string>
+        public class RemoteListener : IMessageListener<string>
         {
+            public volatile bool Closed;
+
             /** <inheritdoc /> */
             public bool Invoke(Guid nodeId, string message)
             {
+                if (Closed)  // TODO: Revert
+                {
+                    Console.WriteLine(">>>>>>>> CLOSED: " + message);
+                    Environment.Exit(64);
+                }
+
                 try
                 {
                     LastNodeIds.Push(nodeId);
