@@ -76,7 +76,7 @@ import org.junit.runners.Suite;
     RaceOnDeployClassesWithSameAliases.class,
     P2PCacheOperationIntoComputeTest.class,
     GridDifferentLocalDeploymentSelfTest.class,
-    GridP2PContinuousDeploymentClientDisconnectTest.class
+    GridP2PContinuousDeploymentClientDisconnectTest.class,
 })
 public class IgniteP2PSelfTestSuite {
 }
