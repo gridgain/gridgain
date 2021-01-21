@@ -154,7 +154,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @throws IgniteCheckedException In case of errors.
      */
     private void clearObjectStatistics(Collection<StatisticsKeyMessage> keys) throws IgniteCheckedException {
-        checkSupport("clear statistics");
+        checkStatisticsSupport("clear statistics");
 
         statCrawler.sendClearStatisticsAsync(keys);
     }
@@ -190,7 +190,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
     /** {@inheritDoc} */
     @Override public void clearObjectStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
-        checkSupport("clear statistics");
+        checkStatisticsSupport("clear statistics");
 
         List<StatisticsKeyMessage> keys = Arrays.stream(targets).map(target -> new StatisticsKeyMessage(target.schema(),
             target.obj(), Arrays.asList(target.columns()))).collect(Collectors.toList());
@@ -216,15 +216,14 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * Collect object statistics prepared status.
      *
      * @param status Collection status to collect statistics by.
-     * @throws IgniteCheckedException In case of errors.
      */
-    private void collectObjectStatistics(StatisticsGatheringContext status) throws IgniteCheckedException {
+    private void collectObjectStatistics(StatisticsGatheringContext status) {
         statCrawler.sendGatheringRequestsAsync(status.gatheringId(), status.keys(), null);
     }
 
     /** {@inheritDoc} */
     @Override public void gatherObjectStatistics(StatisticsTarget target) throws IgniteCheckedException {
-        checkSupport("collect statistics");
+        checkStatisticsSupport("collect statistics");
 
         StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(target.schema(), target.obj(),
             Arrays.asList(target.columns()));
@@ -267,14 +266,23 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** {@inheritDoc} */
     @Override public StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] gatherObjectStatisticsAsync(
         StatisticsTarget... keys
-    ) throws IgniteCheckedException {
-        checkSupport("collect statistics async");
+    ) {
 
-        Set<StatisticsKeyMessage> keysMsg = Arrays.stream(keys).map(
-            t -> new StatisticsKeyMessage(t.schema(), t.obj(), Arrays.asList(t.columns()))).collect(Collectors.toSet());
+        Set<StatisticsKeyMessage> keysMsg = Arrays.stream(keys).map(StatisticsUtils::statisticsKeyMessage)
+            .collect(Collectors.toSet());
+
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = helper.splitByGroups(keysMsg);
 
-        List<StatisticsGatheringFuture<Void>> res = new ArrayList<>();
+        if (!IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.STATISTICS_COLLECTION, IgniteDiscoverySpi.SRV_NODES)) {
+            return grpsKeys.entrySet().stream().map(
+                grpKeys -> new StatisticsGatheringFutureAdapter(UUID.randomUUID(),
+                    grpKeys.getValue().stream().map(StatisticsUtils::statisticsTarget).toArray(StatisticsTarget[]::new)))
+                .toArray(StatisticsGatheringFuture[]::new);
+        }
+
+        Collection<StatisticsKeyMessage> notFoundKeys = grpsKeys.remove(null);
+
+        List<StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>> res = new ArrayList<>();
 
         for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys : grpsKeys.entrySet()) {
             int parts = grpKeys.getKey().topology().partitions();
@@ -286,6 +294,15 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             collectObjectStatistics(status);
 
             res.add(status.doneFuture());
+        }
+        if (notFoundKeys != null) {
+            StatisticsGatheringFutureAdapter<Map<StatisticsTarget, ObjectStatistics>> notFoundFut =
+                new StatisticsGatheringFutureAdapter<>(UUID.randomUUID(),
+                    notFoundKeys.stream().map(StatisticsUtils::statisticsTarget).toArray(StatisticsTarget[]::new));
+
+            notFoundFut.onDone(new IgniteCheckedException(notFoundKeys.size() + " target not found."));
+
+            res.add(notFoundFut);
         }
 
         return res.toArray(new StatisticsGatheringFuture[0]);
@@ -308,7 +325,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
     /** {@inheritDoc} */
     @Override public boolean cancelObjectStatisticsGathering(UUID gatId) throws IgniteCheckedException {
-        checkSupport("cancel gathering");
+        checkStatisticsSupport("cancel gathering");
 
         boolean res = false;
         StatisticsGatheringContext stCtx = currColls.get(gatId);
@@ -376,19 +393,23 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     public void finishStatisticsCollection(StatisticsGatheringContext stCtx) {
         currColls.remove(stCtx.gatheringId());
 
-        Map<StatisticsKeyMessage, ObjectStatisticsImpl> keysGlobalStats = new HashMap<>();
+        Map<StatisticsTarget, ObjectStatistics> targetStats = new HashMap<>();
+        Map<StatisticsKeyMessage, ObjectStatisticsImpl> keysStats = new HashMap<>();
         for (Map.Entry<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> keyStats : stCtx.collectedStatistics()
                 .entrySet()) {
             ObjectStatisticsImpl globalCollectedStat = helper.aggregateLocalStatistics(keyStats.getKey(),
                 keyStats.getValue());
+
             StatisticsKey statsKey = new StatisticsKey(keyStats.getKey().schema(), keyStats.getKey().obj());
             ObjectStatisticsImpl globalStat = statsRepos.mergeGlobalStatistics(statsKey, globalCollectedStat);
-            keysGlobalStats.put(keyStats.getKey(), globalStat);
+
+            targetStats.put(StatisticsUtils.statisticsTarget(keyStats.getKey()), globalStat);
+            keysStats.put(keyStats.getKey(), globalStat);
         }
 
-        statCrawler.sendGlobalStatAsync(keysGlobalStats);
+        statCrawler.sendGlobalStatAsync(keysStats);
 
-        stCtx.doneFuture().onDone(keysGlobalStats);
+        stCtx.doneFuture().onDone(targetStats);
     }
 
     /**
@@ -464,11 +485,13 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /**
-     * Check that all server nodes in the cluster support STATISTICS_COLLECTION features.
+     * Check that all server nodes in the cluster support STATISTICS_COLLECTION feature. Throws IgniteCheckedException
+     * in not.
      *
      * @param op Operation name.
+     * @throws IgniteCheckedException If at least one server node doesn't support feature.
      */
-   private void checkSupport(String op) throws IgniteCheckedException {
+   private void checkStatisticsSupport(String op) throws IgniteCheckedException {
        if (!IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.STATISTICS_COLLECTION, IgniteDiscoverySpi.SRV_NODES)) {
            throw new IgniteCheckedException(String.format(
                "Unable to perform %s due to not all server nodes supports STATISTICS_COLLECTION feature.", op));

@@ -179,20 +179,15 @@ public class IgniteStatisticsHelper {
      *
      * @param keys Keys to split.
      * @return Map cache group to collection of keys in group.
-     * @throws IgniteCheckedException If some of specified object won't be found in schema.
      */
-    public Map<CacheGroupContext, Collection<StatisticsKeyMessage>> splitByGroups(
-        Collection<StatisticsKeyMessage> keys
-    ) throws IgniteCheckedException {
+    public Map<CacheGroupContext, Collection<StatisticsKeyMessage>> splitByGroups(Collection<StatisticsKeyMessage> keys) {
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> res = new HashMap<>();
 
         for (StatisticsKeyMessage key : keys) {
             GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
+            CacheGroupContext grp = (tbl == null) ? null : tbl.cacheContext().group();
 
-            if (tbl == null)
-                throw new IgniteCheckedException(String.format("Can't find table %s.%s", key.schema(), key.obj()));
-
-            res.computeIfAbsent(tbl.cacheContext().group(), k -> new ArrayList<>()).add(key);
+            res.computeIfAbsent(grp, k -> new ArrayList<>()).add(key);
         }
 
         return res;

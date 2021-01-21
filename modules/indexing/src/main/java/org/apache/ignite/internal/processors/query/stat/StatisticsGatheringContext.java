@@ -41,7 +41,7 @@ public class StatisticsGatheringContext {
     private final Map<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> collectedStatistics;
 
     /** Done future adapter. */
-    private final StatisticsGatheringFutureAdapter doneFut;
+    private final StatisticsGatheringFutureAdapter<Map<StatisticsTarget, ObjectStatistics>> doneFut;
 
     /**
      * Constructor in case when there are already gathering id generated.
@@ -55,7 +55,9 @@ public class StatisticsGatheringContext {
         collectedStatistics = new HashMap<>();
         this.keys = keys;
         this.remainingParts = remainingParts;
-        this.doneFut = new StatisticsGatheringFutureAdapter<>(gatId);;
+        StatisticsTarget[] targets = keys.stream().map(key -> new StatisticsTarget(key.schema(), key.obj(),
+            key.colNames().toArray(new String[0]))).toArray(StatisticsTarget[]::new);
+        this.doneFut = new StatisticsGatheringFutureAdapter<>(gatId, targets);
     }
 
     /**
@@ -110,7 +112,7 @@ public class StatisticsGatheringContext {
     /**
      * @return Collection control future.
      */
-    public StatisticsGatheringFutureAdapter doneFuture() {
+    public StatisticsGatheringFutureAdapter<Map<StatisticsTarget, ObjectStatistics>> doneFuture() {
         return doneFut;
     }
 }

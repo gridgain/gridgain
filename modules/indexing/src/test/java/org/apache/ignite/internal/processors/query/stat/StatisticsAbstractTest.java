@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -364,11 +363,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
             .statsManager();
         IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(statMgr, "statCrawler", "msgMgmtPool");
-        Lock res = new ReentrantLock();
-        res.lock();
-        pool.submit(res::lock);
 
-        return res;
+        return lockPool(pool);
     }
 
     /**
