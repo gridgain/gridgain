@@ -71,11 +71,19 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
     public void testGroupGathering() throws Exception {
         StatisticsTarget t100 = createSmallTable(100);
         StatisticsTarget t101 = createSmallTable(101);
-        StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context().query()
-            .getIndexing().statsManager().gatherObjectStatisticsAsync(t100, t101);
+        StatisticsTarget tWrong = new StatisticsTarget(t101.schema(), t101.obj() + "wrong");
 
-        for (StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>> future : futures)
-            future.get();
+        StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context().query()
+            .getIndexing().statsManager().gatherObjectStatisticsAsync(t100, t101, tWrong);
+
+        try {
+            for (StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>> future : futures)
+                future.get();
+
+            fail("Got result of wrong target.");
+        } catch (IgniteCheckedException e) {
+            assertTrue(e.getMessage().contains("1 target not found"));
+        }
 
         ObjectStatisticsImpl[] stats100 = getStats(t100.obj(), StatisticsType.LOCAL);
         ObjectStatisticsImpl[] stats101 = getStats(t101.obj(), StatisticsType.LOCAL);
