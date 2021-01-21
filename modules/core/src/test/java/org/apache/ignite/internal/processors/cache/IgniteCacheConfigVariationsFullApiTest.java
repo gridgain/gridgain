@@ -89,6 +89,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.IgniteCacheConfigVariationsAbstractTest;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -121,6 +122,7 @@ import static org.apache.ignite.transactions.TransactionState.COMMITTED;
  * Full API cache test.
  */
 @SuppressWarnings({"unchecked"})
+@WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain")
 public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVariationsAbstractTest {
     /** Test timeout */
     private static final long TEST_TIMEOUT = 60 * 1000;
@@ -169,7 +171,12 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName).setIncludeEventTypes(EventType.EVTS_ALL);
+        IgniteConfiguration igniteConfiguration = super.getConfiguration(igniteInstanceName).setIncludeEventTypes(EventType.EVTS_ALL);
+
+        igniteConfiguration.setFailureDetectionTimeout(1000000L);
+        igniteConfiguration.setClientFailureDetectionTimeout(1000000L);
+
+        return igniteConfiguration;
     }
 
     /** {@inheritDoc} */
@@ -5057,25 +5064,22 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
         if (hasNext)
             assertFalse("Cache has value: " + it.next(), hasNext);
 
-        final int SIZE = 10_000;
+        final int SIZE = 11_000;
 
         Map<String, Integer> entries = new HashMap<>();
 
         Map<String, Integer> putMap = new HashMap<>();
 
-        Map<Integer, Integer> sizes = new HashMap<>();
+        Map<Integer, Set<Integer>> sizes = new HashMap<>();
+
+        log.info("DBG: load " + System.currentTimeMillis());
 
         for (int i = 0; i < SIZE; ++i) {
             String key = Integer.toString(i);
 
             int part = grid(0).affinity(cache.getName()).partition(key);
 
-            Integer val = sizes.get(part);
-
-            if (val == null)
-                val = 0;
-
-            sizes.put(part, val + 1);
+            sizes.computeIfAbsent(part, k -> new HashSet<>()).add(i);
 
             putMap.put(key, i);
 
@@ -5100,37 +5104,26 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
             long sz = checkIteratorCache2(jcache(i), entries);
 
             if (sz != entries.size()) {
-                printPartitionState(jcache(i));
-                doSleep(3000);
+                for (int j = 0; j < gridCount(); ++j) {
+                    GridCacheContext<Object, Object> ctx = grid(j).cachex(cache.getName()).context();
 
-                long sz2 = checkIteratorCache2(jcache(i), entries);
+                    GridDhtPartitionTopology top = ctx.group().topology();
+                    List<GridDhtLocalPartition> parts = top.localPartitions();
 
-                if (sz2 != entries.size()) {
-                    for (int j = 0; j < gridCount(); ++j) {
-                        GridCacheContext<Object, Object> ctx = grid(j).cachex(cache.getName()).context();
+                    for (GridDhtLocalPartition part : parts) {
+                        if (part.primary(top.readyTopologyVersion())) {
+                            List<CacheDataRow> rows = ConsistencyUtils.rows(ctx.group(), part.id());
 
-                        GridDhtPartitionTopology top = ctx.group().topology();
-                        List<GridDhtLocalPartition> parts = top.localPartitions();
+                            Set<Integer> expKeys = sizes.get(part.id());
 
-                        for (GridDhtLocalPartition part : parts) {
-                            if (part.primary(top.readyTopologyVersion())) {
-                                List<CacheDataRow> rows = ConsistencyUtils.rows(ctx.group(), part.id());
-
-                                Integer expSize = sizes.get(part.id());
-
-                                if (expSize == null)
-                                    expSize = 0;
-
-                                if (expSize != rows.stream().filter(p -> !p.tombstone()).count())
-                                    log.info("DBG: found bad partition: idx=" + j + ", exp=" + expSize + ", rows=" + rows);
+                            if (expKeys != null && expKeys.size() != rows.stream().filter(p -> !p.tombstone()).count()) {
+                                log.info("DBG: found bad partition: idx=" + j + ", part=" + part.id() + ", size=" + part.fullSize() + ", exp=" + expKeys + ", rows=" + rows + ", exp=" + expKeys + ", q=" + part.tmp);
                             }
                         }
                     }
-
-                    // Try to find bad partition.
                 }
 
-                assertEquals("idx=" + i + " " + sz2, entries.size(), sz);
+                assertEquals("idx=" + i, entries.size(), sz);
             }
         }
 

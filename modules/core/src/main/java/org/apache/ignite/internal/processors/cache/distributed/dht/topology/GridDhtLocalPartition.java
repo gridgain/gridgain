@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -70,6 +72,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -1344,5 +1347,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         }
 
         buf.a(']');
+    }
+
+    public FastSizeDeque tmp = new FastSizeDeque(new ConcurrentLinkedDeque());
+
+    public void add(List rec) {
+        while (tmp.sizex() > 20)
+            tmp.removeFirst();
+
+        tmp.addLast(rec);
     }
 }
