@@ -26,6 +26,8 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.spi.ExtendedLogger;
 
+import static java.util.Arrays.stream;
+
 /**
  * Bridge from JUL to log4j2.<br> This is an alternative to log4j.jul.LogManager (running as complete JUL replacement),
  * especially useful for webapps running on a container for which the LogManager cannot or should not be used.<br><br>
@@ -85,6 +87,15 @@ public class Log4jBridgeHandler extends java.util.logging.Handler {
      */
     public static void install() {
         getJulRootLogger().addHandler(new Log4jBridgeHandler());
+    }
+
+    /**
+     * Returns true if Log4jBridgeHandler has been previously installed, returns false otherwise.
+     *
+     * @return {@code True} if Log4jBridgeHandler is already installed, {@code false} other wise
+     */
+    public static boolean isInstalled() {
+        return stream(getJulRootLogger().getHandlers()).anyMatch(handler -> handler instanceof Log4jBridgeHandler);
     }
 
     /** {@inheritDoc} */
