@@ -364,11 +364,10 @@ namespace Apache.Ignite.Core.Tests
             else
                 messaging.StopRemoteListen(listenId2);
 
-            Thread.Sleep(MessagingTestHelper.SleepTimeout); // wait for all to unsubscribe
+            // Wait for all to unsubscribe: StopRemoteListen (both sync and async) does not guarantee the subscription
+            // removal upon exit.
+            Thread.Sleep(MessagingTestHelper.SleepTimeout);
 
-            // TODO: This is problematic: looks like sometimes we still receive messages from the second listener.
-            // UPD: this is confirmed: the first message is sometimes from listener "2", but the message is with the new ID.
-            // Therefore, unsubscription did not yet take effect. This is true for both sync and async StopRemoteListen.
             CheckSend(topic, msg: messaging, remoteListen: true); // back to normal after unsubscription
 
             // Test message type mismatch
