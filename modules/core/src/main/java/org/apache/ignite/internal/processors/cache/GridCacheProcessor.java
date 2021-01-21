@@ -3470,31 +3470,33 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         GridPlainClosure2<Collection<byte[]>, byte[], IgniteInternalFuture<Boolean>> startCacheClsr =
             (grpKeys, masterKeyDigest) -> {
-            assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
+                assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
 
-            DynamicCacheChangeRequest req = prepareCacheChangeRequest(
-                ccfg,
-                cacheName,
-                nearCfg,
-                cacheType,
-                sql,
-                failIfExists,
-                failIfNotStarted,
-                null,
-                false,
-                null,
-                ccfg != null && ccfg.isEncryptionEnabled() ? grpKeys.iterator().next() : null,
-                ccfg != null && ccfg.isEncryptionEnabled() ? masterKeyDigest : null);
+                byte[] encCacheKey = prepareEncryptionGroupKey(cacheName, ccfg, F.first(grpKeys));
 
-            if (req != null) {
-                if (req.clientStartOnly())
-                    return startClientCacheChange(F.asMap(req.cacheName(), req), null);
+                DynamicCacheChangeRequest req = prepareCacheChangeRequest(
+                    ccfg,
+                    cacheName,
+                    nearCfg,
+                    cacheType,
+                    sql,
+                    failIfExists,
+                    failIfNotStarted,
+                    null,
+                    false,
+                    null,
+                    encCacheKey,
+                    ccfg != null && ccfg.isEncryptionEnabled() ? masterKeyDigest : null);
 
-                return F.first(initiateCacheChanges(F.asList(req)));
-            }
-            else
-                return new GridFinishedFuture<>();
-        };
+                if (req != null) {
+                    if (req.clientStartOnly())
+                        return startClientCacheChange(F.asMap(req.cacheName(), req), null);
+
+                    return F.first(initiateCacheChanges(F.asList(req)));
+                }
+                else
+                    return new GridFinishedFuture<>();
+            };
 
         try {
             if (ccfg != null && ccfg.isEncryptionEnabled()) {
@@ -3508,6 +3510,30 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         catch (Exception e) {
             return new GridFinishedFuture<>(e);
         }
+    }
+
+    /**
+     * Prepares encryption key for the cache or return {@code null}
+     * if it will use a key which is stored in the metasatorage.
+     *
+     * @param cacheName Cache name.
+     * @param ccfg Cache config or {@code null}.
+     * @param proposedKey Proposed encryption key.
+     * @return Encryption key.
+     */
+    private byte[] prepareEncryptionGroupKey(String cacheName, @Nullable CacheConfiguration ccfg, byte[] proposedKey) {
+        if (proposedKey != null) {
+            int grpId = CU.cacheGroupId(cacheName, ccfg == null ? null : ccfg.getGroupName());
+
+            if (ctx.encryption().getActiveKey(grpId) != null) {
+                U.warn(log, "Encryption key for this cache has already existed," +
+                    " the new key was ignored [grpId=" + grpId + ", cache=" + cacheName + ']');
+
+                return null;
+            }
+        }
+
+        return proposedKey;
     }
 
     /**
@@ -3651,7 +3677,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             failIfExists,
             checkThreadTx,
             disabledAfterStart,
-            null);
+            null,
+            true);
     }
 
     /**
@@ -3662,6 +3689,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param checkThreadTx If {@code true} checks that current thread does not have active transactions.
      * @param disabledAfterStart If true, cache proxies will be only activated after {@link #restartProxies()}.
      * @param restartId Restart requester id (it'll allow to start this cache only him).
+     * @param isKeysGenerationRequired True if it is needed to generate group's encryption keys.
      * @return Future that will be completed when all caches are deployed.
      */
     public IgniteInternalFuture<Boolean> dynamicStartCachesByStoredConf(
@@ -3669,7 +3697,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean failIfExists,
         boolean checkThreadTx,
         boolean disabledAfterStart,
-        IgniteUuid restartId
+        IgniteUuid restartId,
+        boolean isKeysGenerationRequired
     ) {
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(() -> {
@@ -3687,10 +3716,17 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             List<DynamicCacheChangeRequest> srvReqs = null;
             Map<String, DynamicCacheChangeRequest> clientReqs = null;
 
-            Iterator<byte[]> grpKeysIter = grpKeys.iterator();
+            // Keys had to be generated before in that case
+            assert !((grpKeys == null) && (isKeysGenerationRequired));
+
+            Iterator<byte[]> grpKeysIter = F.isEmpty(grpKeys) ? null : grpKeys.iterator();
 
             for (StoredCacheData ccfg : storedCacheDataList) {
-                assert !ccfg.config().isEncryptionEnabled() || grpKeysIter.hasNext();
+                assert grpKeysIter == null || !ccfg.config().isEncryptionEnabled() || grpKeysIter.hasNext();
+
+                byte[] encCacheKey = grpKeysIter != null && ccfg.config().isEncryptionEnabled() ? grpKeysIter.next() : null;
+
+                encCacheKey = prepareEncryptionGroupKey(ccfg.config().getName(), ccfg.config(), encCacheKey);
 
                 DynamicCacheChangeRequest req = prepareCacheChangeRequest(
                     ccfg.config(),
@@ -3703,7 +3739,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     restartId,
                     disabledAfterStart,
                     ccfg.queryEntities(),
-                    ccfg.config().isEncryptionEnabled() ? grpKeysIter.next() : null,
+                    encCacheKey,
                     ccfg.config().isEncryptionEnabled() ? masterKeyDigest : null);
 
                 if (req != null) {
@@ -3746,9 +3782,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         int encGrpCnt = 0;
 
-        for (StoredCacheData ccfg : storedCacheDataList) {
-            if (ccfg.config().isEncryptionEnabled())
-                encGrpCnt++;
+        if (isKeysGenerationRequired) {
+            for (StoredCacheData ccfg : storedCacheDataList) {
+                if (ccfg.config().isEncryptionEnabled())
+                    encGrpCnt++;
+            }
         }
 
         return generateEncryptionKeysAndStartCacheAfter(encGrpCnt, startCacheClsr);
