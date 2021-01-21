@@ -434,7 +434,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
     /** */
     private boolean isSingleRowLookup(SearchRow lower, SearchRow upper, H2Tree tree) {
-        return !cctx.mvccEnabled() && indexType.isPrimaryKey() && lower != null && upper != null &&
+        return !cctx.mvccEnabled() && lower != null && upper != null &&
             tree.checkRowsTheSame((H2Row)lower, (H2Row)upper) && hasAllIndexColumns(lower);
     }
 
