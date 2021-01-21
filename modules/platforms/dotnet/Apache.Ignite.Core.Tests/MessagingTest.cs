@@ -368,7 +368,8 @@ namespace Apache.Ignite.Core.Tests
             else
                 messaging.StopRemoteListen(listenId2);
 
-            // TODO: This is problematic: looks like sometimes we still receive messages from the second listener. UPD: Closed flag does not confirm this?
+            // TODO: This is problematic: looks like sometimes we still receive messages from the second listener.
+            // UPD: this is confirmed: the first message is sometimes from listener "2".
             CheckSend(topic, msg: messaging, remoteListen: true); // back to normal after unsubscription
 
             // Test message type mismatch
