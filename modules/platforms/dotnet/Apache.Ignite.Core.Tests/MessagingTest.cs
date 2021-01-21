@@ -368,9 +368,7 @@ namespace Apache.Ignite.Core.Tests
             else
                 messaging.StopRemoteListen(listenId2);
 
-            listener2.Closed = true;
-
-            // TODO: This is problematic: looks like sometimes we still receive messages from the second listener.
+            // TODO: This is problematic: looks like sometimes we still receive messages from the second listener. UPD: Closed flag does not confirm this?
             CheckSend(topic, msg: messaging, remoteListen: true); // back to normal after unsubscription
 
             // Test message type mismatch
@@ -471,7 +469,7 @@ namespace Apache.Ignite.Core.Tests
             if (sharedResult.Length != 0)
             {
                 Assert.Fail("Unexpected messages ({0}): {1}; last sent message: {2}", sharedResult.Length,
-                    string.Join(",", sharedResult), lastMsg);
+                    string.Join(",", sharedResult.Select(x => x.Message)), lastMsg);
             }
         }
 
@@ -577,16 +575,13 @@ namespace Apache.Ignite.Core.Tests
     public static class MessagingTestHelper
     {
         /** */
-        public static readonly ConcurrentStack<string> ReceivedMessages = new ConcurrentStack<string>();
+        public static readonly ConcurrentStack<ReceivedMessage> ReceivedMessages = new ConcurrentStack<ReceivedMessage>();
 
         /** */
         private static readonly ConcurrentStack<string> Failures = new ConcurrentStack<string>();
 
         /** */
         private static readonly CountdownEvent ReceivedEvent = new CountdownEvent(0);
-
-        /** */
-        private static readonly ConcurrentStack<Guid> LastNodeIds = new ConcurrentStack<Guid>();
 
         /** */
         public static volatile bool ListenResult = true;
@@ -605,7 +600,6 @@ namespace Apache.Ignite.Core.Tests
         {
             ReceivedMessages.Clear();
             ReceivedEvent.Reset(expectedCount);
-            LastNodeIds.Clear();
         }
 
         /// <summary>
@@ -627,7 +621,11 @@ namespace Apache.Ignite.Core.Tests
                 string.Format("expectedMessages: {0}, expectedRepeat: {1}, remaining: {2}",
                     expectedMessagesStr, expectedRepeat, ReceivedEvent.CurrentCount));
 
-            var actualMessages = resultFunc(ReceivedMessages).ToArray();
+            var actualMessages = resultFunc(ReceivedMessages.Select(m => m.Message)).ToArray();
+
+            // check that all messages came from local node.
+            var localNodeId = cluster.Ignite.GetCluster().GetLocalNode().Id;
+            Assert.AreEqual(localNodeId, ReceivedMessages.Select(m => m.NodeId).Distinct().Single());
 
             CollectionAssert.AreEqual(
                 expectedMessages,
@@ -637,10 +635,6 @@ namespace Apache.Ignite.Core.Tests
                     string.Join(", ", actualMessages),
                     expectedRepeat));
 
-            // check that all messages came from local node.
-            var localNodeId = cluster.Ignite.GetCluster().GetLocalNode().Id;
-            Assert.AreEqual(localNodeId, LastNodeIds.Distinct().Single());
-
             AssertFailures();
         }
 
@@ -648,9 +642,9 @@ namespace Apache.Ignite.Core.Tests
         /// Gets the message listener.
         /// </summary>
         /// <returns>New instance of message listener.</returns>
-        public static RemoteListener GetListener()
+        public static RemoteListener GetListener(string name = null)
         {
-            return new RemoteListener();
+            return new RemoteListener(name);
         }
 
         /// <summary>
@@ -670,21 +664,19 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         public class RemoteListener : IMessageListener<string>
         {
-            public volatile bool Closed;
+            private readonly string _name;
+
+            public RemoteListener(string name)
+            {
+                _name = name;
+            }
 
             /** <inheritdoc /> */
             public bool Invoke(Guid nodeId, string message)
             {
-                if (Closed)  // TODO: Revert
-                {
-                    Console.WriteLine(">>>>>>>> CLOSED: " + message);
-                    Environment.Exit(64);
-                }
-
                 try
                 {
-                    LastNodeIds.Push(nodeId);
-                    ReceivedMessages.Push(message);
+                    ReceivedMessages.Push(new ReceivedMessage(message, nodeId, GetHashCode(), _name));
 
                     ReceivedEvent.Signal();
 
@@ -697,6 +689,45 @@ namespace Apache.Ignite.Core.Tests
                     Failures.Push(string.Format("Exception in Listen (msg: {0}, id: {1}): {2}", message, nodeId, ex));
                     throw;
                 }
+            }
+        }
+
+        public class ReceivedMessage
+        {
+            private readonly string _message;
+
+            private readonly Guid _nodeId;
+
+            private readonly int _listenerId;
+
+            private readonly string _listenerName;
+
+            public ReceivedMessage(string message, Guid nodeId, int listenerId, string listenerName)
+            {
+                _message = message;
+                _nodeId = nodeId;
+                _listenerId = listenerId;
+                _listenerName = listenerName;
+            }
+
+            public string Message
+            {
+                get { return _message; }
+            }
+
+            public Guid NodeId
+            {
+                get { return _nodeId; }
+            }
+
+            public int ListenerId
+            {
+                get { return _listenerId; }
+            }
+
+            public string ListenerName
+            {
+                get { return _listenerName; }
             }
         }
     }
