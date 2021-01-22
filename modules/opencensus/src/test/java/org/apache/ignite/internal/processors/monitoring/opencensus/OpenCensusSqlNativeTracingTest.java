@@ -29,6 +29,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
+import io.opencensus.exporter.trace.zipkin.ZipkinExporterConfiguration;
+import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
 import io.opencensus.trace.SpanId;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracing;
@@ -73,6 +75,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE_ID;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_CACHE_UPDATES;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_IDX_RANGE_ROWS;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_MAP_PLAN_ANALYZE;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PAGE_ROWS;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PARSER_CACHE_HIT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
@@ -101,6 +104,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_CANCEL_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXECUTE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXEC_REQ;
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_MAP_END;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_PARSE;
 import static org.apache.ignite.spi.tracing.Scope.SQL;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
@@ -131,6 +135,14 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCommunicationSpi(new TestRecordingCommunicationSpi());
+    }
+
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        ZipkinTraceExporter.createAndRegister(
+            ZipkinExporterConfiguration.builder().setV2Url("http://localhost:9411/api/v2/spans")
+                .setServiceName("ignite-cluster").build());
     }
 
     /** {@inheritDoc} */
@@ -563,6 +575,34 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
 
         for (SpanId rootSpan : rootSpans)
             checkBasicSelectQuerySpanTree(rootSpan, TEST_TABLE_POPULATION);
+    }
+
+    /** */
+    @Test
+    public void testQueryEndSpanWithPlan() throws Exception {
+        String prsnTable = createTableAndPopulate(Person.class, PARTITIONED, 1);
+
+        reducer().context().query()
+            .querySqlFields(new SqlFieldsQuery("SELECT * FROM " + prsnTable), false).getAll();
+
+        handler().flush();
+
+        checkDroppedSpans();
+
+        List<SpanId> rootSpans = findRootSpans(SQL_QRY);
+
+        assertEquals(1, rootSpans.size());
+
+        List<SpanId> mapQryEndSpans = checkSpan(SQL_QRY_MAP_END, null, mapNodesCount(), null);
+
+        mapQryEndSpans.forEach(span -> {
+            String plan = getAttribute(span, SQL_MAP_PLAN_ANALYZE);
+
+            assertTrue(
+                "Invalid plan in tag: " + plan,
+                plan.contains("SELECT") && plan.contains("lookupCount")
+            );
+        });
     }
 
     /**

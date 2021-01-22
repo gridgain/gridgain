@@ -59,6 +59,7 @@ public class TableFilter implements ColumnResolver {
     private final IndexHints indexHints;
     private int[] masks;
     private int scanCount;
+    private int lookupCount;
     private boolean evaluatable;
 
     /**
@@ -354,6 +355,7 @@ public class TableFilter implements ColumnResolver {
     public void startQuery(Session s) {
         this.session = s;
         scanCount = 0;
+        lookupCount = 0;
         if (nestedJoin != null) {
             nestedJoin.startQuery(s);
         }
@@ -479,6 +481,7 @@ public class TableFilter implements ColumnResolver {
         if (state == AFTER_LAST) {
             return false;
         } else if (state == BEFORE_FIRST) {
+            lookupCount++;
             cursor.find(session, indexConditions);
             if (!cursor.isAlwaysFalse()) {
                 if (nestedJoin != null) {
@@ -899,6 +902,9 @@ public class TableFilter implements ColumnResolver {
         }
         if (scanCount > 0) {
             builder.append("\n    /* scanCount: ").append(scanCount).append(" */");
+        }
+        if (lookupCount > 0) {
+            builder.append("\n    /* lookupCount: ").append(lookupCount).append(" */");
         }
         return builder;
     }

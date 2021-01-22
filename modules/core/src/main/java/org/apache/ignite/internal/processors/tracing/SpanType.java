@@ -343,7 +343,10 @@ public enum SpanType {
     SQL_CACHE_UPDATE(Scope.SQL, "sql.cache.update", 102),
 
     /** Processing of incoming batch. */
-    SQL_BATCH_PROCESS(Scope.SQL, "sql.batch.process", 103);
+    SQL_BATCH_PROCESS(Scope.SQL, "sql.batch.process", 103),
+
+    /** Processing query cancellation request. */
+    SQL_QRY_MAP_END(Scope.SQL, "sql.query.map.end", 104);
 
     /** Scope */
     private Scope scope;
