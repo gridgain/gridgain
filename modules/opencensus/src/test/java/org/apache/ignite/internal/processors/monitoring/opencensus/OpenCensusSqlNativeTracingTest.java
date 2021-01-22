@@ -137,14 +137,6 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
             .setCommunicationSpi(new TestRecordingCommunicationSpi());
     }
 
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        ZipkinTraceExporter.createAndRegister(
-            ZipkinExporterConfiguration.builder().setV2Url("http://localhost:9411/api/v2/spans")
-                .setServiceName("ignite-cluster").build());
-    }
-
     /** {@inheritDoc} */
     @Override public void before() throws Exception {
         super.before();
