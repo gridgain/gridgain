@@ -583,7 +583,7 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
 
         assertEquals(1, rootSpans.size());
 
-        List<SpanId> mapQryEndSpans = checkSpan(SQL_QRY_MAP_END, null, mapNodesCount(), null);
+        List<SpanId> mapQryEndSpans = checkSpan(SQL_QRY_MAP_END, null, GRID_CNT, null);
 
         mapQryEndSpans.forEach(span -> {
             String plan = getAttribute(span, SQL_MAP_PLAN_ANALYZE);
