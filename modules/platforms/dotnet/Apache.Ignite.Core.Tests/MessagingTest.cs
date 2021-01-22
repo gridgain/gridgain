@@ -346,12 +346,12 @@ namespace Apache.Ignite.Core.Tests
             var messaging =_grid1.GetMessaging();
             var listenId = messaging.RemoteListen(MessagingTestHelper.GetListener("first"), topic);
 
-            TestUtils.AssertHandleRegistryHasItems(timeout: -1, expectedCount: 1, _grid1, _grid2, _grid3);
+            TestUtils.AssertHandleRegistryHasItems(-1, 1, _grid1, _grid2, _grid3);
 
             messaging.Send(1, topic);
             messaging.StopRemoteListen(listenId);
 
-            TestUtils.AssertHandleRegistryHasItems(timeout: -1, expectedCount: 0, _grid1, _grid2, _grid3);
+            TestUtils.AssertHandleRegistryHasItems(-1, 0, _grid1, _grid2, _grid3);
         }
 
         /// <summary>
@@ -389,8 +389,8 @@ namespace Apache.Ignite.Core.Tests
             // upon exit. Remote listeners are removed with disco messages after some delay -
             // see TestStopRemoteListenRemovesAllCallbacksUponExit.
             TestUtils.AssertHandleRegistryHasItems(
-                timeout: (int)MessagingTestHelper.SleepTimeout.TotalMilliseconds,
-                expectedCount: 1,
+                (int)MessagingTestHelper.SleepTimeout.TotalMilliseconds,
+                1,
                 _grid1, _grid2, _grid3);
 
             CheckSend(topic, msg: messaging, remoteListen: true); // back to normal after unsubscription
