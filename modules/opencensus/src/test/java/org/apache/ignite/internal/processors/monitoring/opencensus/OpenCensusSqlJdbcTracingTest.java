@@ -21,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Objects;
+
 import io.opencensus.trace.SpanId;
 import org.apache.ignite.client.Config;
 import org.apache.ignite.internal.IgniteEx;
@@ -80,7 +81,7 @@ public class OpenCensusSqlJdbcTracingTest extends OpenCensusSqlNativeTracingTest
         checkChildSpan(SQL_QRY_EXECUTE, iterSpan);
 
         int fetchedRows = findChildSpans(SQL_PAGE_FETCH, rootSpan).stream()
-            .mapToInt(span -> getAttribute(span, SQL_PAGE_ROWS))
+            .mapToInt(span -> Integer.parseInt(getAttribute(span, SQL_PAGE_ROWS)))
             .sum();
 
         assertEquals(TEST_TABLE_POPULATION, fetchedRows);
