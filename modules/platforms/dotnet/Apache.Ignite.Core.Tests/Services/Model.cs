@@ -93,7 +93,7 @@ namespace org.apache.ignite.platform.model
     public class Account
     {
         public String Id { get; set; }
-        
+
         public int Amount { get; set; }
 
         protected bool Equals(Account other)
@@ -119,6 +119,7 @@ namespace org.apache.ignite.platform.model
     /// <summary>
     /// A enum is a clone of Java class User with the same namespace.
     /// </summary>
+    // ReSharper disable once InconsistentNaming
     public enum ACL
     {
         Allow, Deny
@@ -138,16 +139,16 @@ namespace org.apache.ignite.platform.model
     public class User
     {
         public int Id { get; set; }
-        
+
         public ACL Acl { get; set; }
-        
+
         public Role Role { get; set; }
-    }    
-    
+    }
+
     /// <summary>
     /// A class is a clone of Java class ParamValue with the same namespace.
     /// </summary>
-    public class ParamValue 
+    public class ParamValue
     {
         /** */
         public int Id { get; set; }
@@ -167,4 +168,24 @@ namespace org.apache.ignite.platform.model
         /** */
         public ParamValue[] Values { get; set; }
     }
+
+    /// <summary>
+    /// A class is a clone of Java class V1 with the same namespace.
+    /// </summary>
+    public class V1 { public String Name { get; set; } }
+
+    /// <summary>
+    /// A class is a clone of Java class V2 with the same namespace.
+    /// </summary>
+    public class V2 { public String Name { get; set; } }
+
+    /// <summary>
+    /// A class is a clone of Java class V3 with the same namespace.
+    /// </summary>
+    public class V3 { public String Name { get; set; } }
+
+    /// <summary>
+    /// A class is a clone of Java class V4 with the same namespace.
+    /// </summary>
+    public class V4 { public String Name { get; set; } }
 }
