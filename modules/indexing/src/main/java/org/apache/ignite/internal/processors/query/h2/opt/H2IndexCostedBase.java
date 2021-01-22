@@ -782,7 +782,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
                         totalCardinality = 100 - ((100 - totalCardinality) * (100 - cardinality) / 100);
 
-                        long distinctRows = rowCount * totalCardinality / 100;
+                        long distinctRows = Math.round((double) rowCount * totalCardinality / 100);
 
                         if (distinctRows <= 0)
                             distinctRows = 1;
