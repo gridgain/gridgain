@@ -273,7 +273,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = helper.splitByGroups(keysMsg);
 
-        if (!IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.STATISTICS_COLLECTION, IgniteDiscoverySpi.SRV_NODES)) {
+        if (!isStatisticsSupport()) {
             return grpsKeys.entrySet().stream().map(
                 grpKeys -> new StatisticsGatheringFutureAdapter(UUID.randomUUID(),
                     grpKeys.getValue().stream().map(StatisticsUtils::statisticsTarget).toArray(StatisticsTarget[]::new)))
@@ -492,9 +492,18 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @throws IgniteCheckedException If at least one server node doesn't support feature.
      */
    private void checkStatisticsSupport(String op) throws IgniteCheckedException {
-       if (!IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.STATISTICS_COLLECTION, IgniteDiscoverySpi.SRV_NODES)) {
+       if (!isStatisticsSupport()) {
            throw new IgniteCheckedException(String.format(
                "Unable to perform %s due to not all server nodes supports STATISTICS_COLLECTION feature.", op));
        }
+   }
+
+    /**
+     * Test is statistics collection feature are supported by each server node in cluster.
+     *
+     * @return {@code true} if all server nodes support STATISTICS_COLLECTION feature, {@code false} - otherwise.
+     */
+   private boolean isStatisticsSupport() {
+       return IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.STATISTICS_COLLECTION, IgniteDiscoverySpi.SRV_NODES);
    }
 }
