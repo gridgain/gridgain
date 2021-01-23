@@ -368,8 +368,4 @@ public class FastSizeDeque<E> implements Deque<E> {
     @NotNull @Override public Iterator<E> descendingIterator() {
         return new Iter(deque.descendingIterator());
     }
-
-    @Override public String toString() {
-        return deque.toString();
-    }
 }

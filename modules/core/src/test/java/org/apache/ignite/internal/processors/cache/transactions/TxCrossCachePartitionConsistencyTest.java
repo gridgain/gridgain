@@ -57,7 +57,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  *
  * Success: partitions are consistent, total balances invariant is held.
  */
-@WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain")
+@WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain") // Dump normal row content on inconsistency.
 public class TxCrossCachePartitionConsistencyTest extends GridCommonAbstractTest {
     /** Cache 1. */
     private static final String CACHE1 = DEFAULT_CACHE_NAME;

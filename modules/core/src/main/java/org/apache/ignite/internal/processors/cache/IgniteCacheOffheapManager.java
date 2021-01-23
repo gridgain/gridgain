@@ -176,7 +176,7 @@ public interface IgniteCacheOffheapManager {
      * @return {@code True} if unprocessed expired entries remains.
      * @throws IgniteCheckedException If failed.
      */
-    public boolean expire(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c, int amount)
+    public boolean expire(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount)
         throws IgniteCheckedException;
 
     /**

@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1360,7 +1359,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /** {@inheritDoc} */
     @Override public boolean expire(
         GridCacheContext cctx,
-        IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
+        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount
     ) throws IgniteCheckedException {
         assert !cctx.isNear() : cctx.name();
@@ -1401,7 +1400,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      */
     private int expireInternal(
         GridCacheContext cctx,
-        IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
+        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount,
         boolean tombstone,
         long upper
@@ -1441,7 +1440,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     try {
                         GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
-                        c.apply(entry, obsoleteVer);
+                        c.apply(entry, upper);
                     }
                     catch (GridDhtInvalidPartitionException ignored) {
                         // Skip renting or evicted partition.
@@ -2740,8 +2739,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          */
         private void finishUpdate(GridCacheContext cctx, CacheDataRow newRow, @Nullable CacheDataRow oldRow)
             throws IgniteCheckedException {
-            cctx.topology().localPartition(partId()).add(newRow.key(), Arrays.asList("finishUpdate", newRow, oldRow));
-
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean hasOldVal = oldRow != null && !oldRow.tombstone();
 
@@ -2930,8 +2927,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             @Nullable CacheDataRow oldRow,
             @Nullable CacheDataRow tombstoneRow
         ) throws IgniteCheckedException {
-            cctx.topology().localPartition(partId()).add(oldRow != null ? oldRow.key() : tombstoneRow.key(), Arrays.asList("finishRemove", oldRow, tombstoneRow));
-
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean oldVal = oldRow != null && !oldRow.tombstone();
 

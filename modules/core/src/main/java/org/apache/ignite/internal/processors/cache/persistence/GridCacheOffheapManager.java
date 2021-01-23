@@ -1283,7 +1283,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     /** {@inheritDoc} */
     @Override public boolean expire(
         GridCacheContext cctx,
-        IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
+        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount
     ) throws IgniteCheckedException {
         assert !cctx.isNear() : cctx.name();
@@ -3194,7 +3194,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          */
         public int purgeExpired(
             GridCacheContext cctx,
-            IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
+            IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
             int amount,
             boolean tombstone,
             long upper
@@ -3222,7 +3222,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          */
         private int purgeExpiredInternal(
             GridCacheContext cctx,
-            IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> c,
+            IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
             int amount,
             boolean tombstone,
             long upper
@@ -3275,7 +3275,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
                         if (entry != null)
-                            c.apply(entry, obsoleteVer);
+                            c.apply(entry, upper);
 
                         cleared++;
 

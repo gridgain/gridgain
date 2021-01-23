@@ -68,12 +68,7 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
-import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
-import org.apache.ignite.internal.processors.cache.verify.ConsistencyUtils;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.lang.IgnitePair;
@@ -89,7 +84,6 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.IgniteCacheConfigVariationsAbstractTest;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -122,7 +116,6 @@ import static org.apache.ignite.transactions.TransactionState.COMMITTED;
  * Full API cache test.
  */
 @SuppressWarnings({"unchecked"})
-@WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain")
 public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVariationsAbstractTest {
     /** Test timeout */
     private static final long TEST_TIMEOUT = 60 * 1000;
@@ -171,12 +164,7 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration igniteConfiguration = super.getConfiguration(igniteInstanceName).setIncludeEventTypes(EventType.EVTS_ALL);
-
-        igniteConfiguration.setFailureDetectionTimeout(1000000L);
-        igniteConfiguration.setClientFailureDetectionTimeout(1000000L);
-
-        return igniteConfiguration;
+        return super.getConfiguration(igniteInstanceName).setIncludeEventTypes(EventType.EVTS_ALL);
     }
 
     /** {@inheritDoc} */
@@ -5070,16 +5058,8 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
         Map<String, Integer> putMap = new HashMap<>();
 
-        Map<Integer, Set<Integer>> sizes = new HashMap<>();
-
-        log.info("DBG: load " + System.currentTimeMillis());
-
         for (int i = 0; i < SIZE; ++i) {
             String key = Integer.toString(i);
-
-            int part = grid(0).affinity(cache.getName()).partition(key);
-
-            sizes.computeIfAbsent(part, k -> new HashSet<>()).add(i);
 
             putMap.put(key, i);
 
@@ -5098,43 +5078,7 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
         checkIteratorHasNext();
 
-        //checkIteratorCache(entries);
-
-        for (int i = 0; i < gridCount(); ++i) {
-            long sz = checkIteratorCache2(jcache(i), entries);
-
-            if (sz != entries.size()) {
-                for (int j = 0; j < gridCount(); ++j) {
-                    GridCacheContext<Object, Object> ctx = grid(j).cachex(cache.getName()).context();
-
-                    GridDhtPartitionTopology top = ctx.group().topology();
-                    List<GridDhtLocalPartition> parts = top.localPartitions();
-
-                    for (GridDhtLocalPartition part : parts) {
-                        if (part.primary(top.readyTopologyVersion())) {
-                            List<CacheDataRow> rows = ConsistencyUtils.rows(ctx.group(), part.id());
-
-                            Set<Integer> expKeys = sizes.get(part.id());
-
-                            if (expKeys != null && expKeys.size() != rows.stream().filter(p -> !p.tombstone()).count()) {
-                                log.info("DBG: found bad partition: idx=" + j + ", part=" + part.id() + ", size=" + part.fullSize() + ", exp=" + expKeys);
-                                for (CacheDataRow row : rows) {
-                                    log.info("DBG: row=" + row);
-                                }
-
-                                for (Integer expKey : expKeys) {
-                                    KeyCacheObject key = part.group().singleCacheContext().toCacheKeyObject(String.valueOf(expKey));
-
-                                    log.info("DBG: key=" + key + ", hist=" + part.hist.get(key));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                assertEquals("idx=" + i, entries.size(), sz);
-            }
-        }
+        checkIteratorCache(entries);
 
         checkIteratorRemove(cache, entries);
 
@@ -5218,27 +5162,6 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
     private void checkIteratorCache(Map<String, Integer> entries) {
         for (int i = 0; i < gridCount(); ++i)
             checkIteratorCache(jcache(i), entries);
-    }
-
-    /**
-     * @param cache Cache.
-     * @param entries Expected entries in the cache.
-     */
-    private long checkIteratorCache2(IgniteCache cache, Map<String, Integer> entries) {
-        Iterator<Cache.Entry<String, Integer>> iter = cache.iterator();
-
-        int cnt = 0;
-
-        while (iter.hasNext()) {
-            Cache.Entry<String, Integer> cur = iter.next();
-
-            assertTrue(entries.containsKey(cur.getKey()));
-            assertEquals(entries.get(cur.getKey()), cur.getValue());
-
-            cnt++;
-        }
-
-        return cnt;
     }
 
     /**

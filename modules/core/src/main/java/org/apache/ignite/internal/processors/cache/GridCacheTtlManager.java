@@ -62,9 +62,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     private GridCacheContext dhtCtx;
 
     /** */
-    private final IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean> expireC =
-        new IgniteClosure2X<GridCacheEntryEx, GridCacheVersion, Boolean>() {
-            @Override public Boolean applyx(GridCacheEntryEx entry, GridCacheVersion obsoleteVer) {
+    private final IgniteClosure2X<GridCacheEntryEx, Long, Boolean> expireC =
+        new IgniteClosure2X<GridCacheEntryEx, Long, Boolean>() {
+            @Override public Boolean applyx(GridCacheEntryEx entry, Long expireTime) {
                 boolean touch = !entry.isNear();
 
                 while (true) {
@@ -72,7 +72,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                         if (log.isTraceEnabled())
                             log.trace("Trying to remove expired entry from cache: " + entry);
 
-                        if (entry.onTtlExpired(obsoleteVer)) // A successful call will remove an entry from a heap.
+                        if (entry.onTtlExpired(expireTime)) // A successful call will remove an entry from a heap.
                             return true;
 
                         break;
@@ -209,8 +209,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (pendingEntries != null) {
                 GridNearCacheAdapter nearCache = cctx.near();
 
-                GridCacheVersion obsoleteVer = cctx.versions().startVersion();
-
                 int limit = (-1 != amount) ? amount : pendingEntries.sizex();
 
                 for (int cnt = limit; cnt > 0; cnt--) {
@@ -223,7 +221,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                         GridNearCacheEntry nearEntry = nearCache.peekExx(e.key);
 
                         if (nearEntry != null)
-                            expireC.apply(nearEntry, obsoleteVer);
+                            expireC.apply(nearEntry, now);
                     }
                 }
             }

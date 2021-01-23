@@ -3853,10 +3853,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public boolean onTtlExpired(GridCacheVersion obsoleteVer) throws GridCacheEntryRemovedException {
-        assert obsoleteVer != null;
-
+    @Override public boolean onTtlExpired(long expireTime) throws GridCacheEntryRemovedException {
         boolean obsolete = false;
+
+        GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
         lockEntry();
 
@@ -3866,7 +3866,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (isStartVersion())
                 unswap(null, false);
 
-            // Do not check for expiration time, because the expiration can be forcefully requested.
+            long expireTime0 = expireTimeExtras();
+
+            if (!(expireTime0 > 0 && expireTime0 <= expireTime))
+                return false;
 
             CacheObject expiredVal = this.val;
 
