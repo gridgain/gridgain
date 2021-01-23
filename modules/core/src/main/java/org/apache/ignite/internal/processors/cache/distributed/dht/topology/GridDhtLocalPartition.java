@@ -1349,12 +1349,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         buf.a(']');
     }
 
-    public FastSizeDeque tmp = new FastSizeDeque(new ConcurrentLinkedDeque());
+    public ConcurrentMap<KeyCacheObject, ConcurrentLinkedQueue> hist = new ConcurrentHashMap<>();
 
-    public void add(List rec) {
-        while (tmp.sizex() > 20)
-            tmp.removeFirst();
-
-        tmp.addLast(rec);
+    public void add(KeyCacheObject k, List rec) {
+        hist.computeIfAbsent(k, z -> new ConcurrentLinkedQueue()).add(rec);
     }
 }

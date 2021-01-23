@@ -5064,7 +5064,7 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
         if (hasNext)
             assertFalse("Cache has value: " + it.next(), hasNext);
 
-        final int SIZE = 11_000;
+        final int SIZE = 10_000;
 
         Map<String, Integer> entries = new HashMap<>();
 
@@ -5117,7 +5117,16 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
                             Set<Integer> expKeys = sizes.get(part.id());
 
                             if (expKeys != null && expKeys.size() != rows.stream().filter(p -> !p.tombstone()).count()) {
-                                log.info("DBG: found bad partition: idx=" + j + ", part=" + part.id() + ", size=" + part.fullSize() + ", exp=" + expKeys + ", rows=" + rows + ", exp=" + expKeys + ", q=" + part.tmp);
+                                log.info("DBG: found bad partition: idx=" + j + ", part=" + part.id() + ", size=" + part.fullSize() + ", exp=" + expKeys);
+                                for (CacheDataRow row : rows) {
+                                    log.info("DBG: row=" + row);
+                                }
+
+                                for (Integer expKey : expKeys) {
+                                    KeyCacheObject key = part.group().singleCacheContext().toCacheKeyObject(String.valueOf(expKey));
+
+                                    log.info("DBG: key=" + key + ", hist=" + part.hist.get(key));
+                                }
                             }
                         }
                     }
