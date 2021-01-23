@@ -52,7 +52,8 @@ public class TestPersistentCommonTableExpressions extends AbstractBaseForCommonT
                 "        /++ PUBLIC.B.tableScan ++/\n" +
                 "        /++ WHERE A IS ?1\n" +
                 "        ++/\n" +
-                "        /++ scanCount: 4 ++/\n" +
+                    "        /++ scanCount: 4 ++/\n" +
+                    "        /++ lookupCount: 1 ++/\n" +
                 "    INNER JOIN PUBLIC.C\n" +
                 "        /++ PUBLIC.C.tableScan ++/\n" +
                 "        ON 1=1\n" +
@@ -61,6 +62,7 @@ public class TestPersistentCommonTableExpressions extends AbstractBaseForCommonT
                 "    GROUP BY A: A IS A.VAL\n" +
                 "     */\n" +
                 "    /* scanCount: 1 */\n" +
+                "    /* lookupCount: 1 */\n" +
                 "WHERE BB.A IS A.VAL))"};
 
         String setupSQL =
