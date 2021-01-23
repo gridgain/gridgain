@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepository;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepositoryImpl;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatisticsImpl;
@@ -42,16 +43,21 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
     /** */
     private final IgniteStatisticsRepository localRepo;
 
+    /** */
+    private final IgniteStatisticsManager mgr;
+
     /** Logger. */
     private final IgniteLogger log;
 
     /** */
     public IgniteStatisticsSchemaManager(
+        IgniteStatisticsManager mgr,
         DistributedMetaStorage distrMetaStorage,
         GridInternalSubscriptionProcessor subscriptionProcessor,
         IgniteStatisticsRepository localRepo,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
+        this.mgr = mgr;
         this.distrMetaStorage = distrMetaStorage;
         log = logSupplier.apply(IgniteStatisticsSchemaManager.class);
         this.localRepo = localRepo;
@@ -110,7 +116,7 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
         ObjectStatisticsImpl localStat = localRepo.getLocalStatistics(tblStatInfo.key());
 
         if (localStat != null && localStat.version() != tblStatInfo.version()) {
-            // TODO: update local
+            mgr.gatherObjectStatisticsAsync()
         }
     }
 

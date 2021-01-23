@@ -137,6 +137,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             gatMgmtPool, ctx::log);
 
         statSchemaMgr = new IgniteStatisticsSchemaManager(
+            this,
             ctx.distributedMetastorage(),
             ctx.internalSubscriptionProcessor(),
             statsRepos,
@@ -252,7 +253,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Ensure that local gathering context exists and schedule local statistics gathering.
      *
-     * @param nodeId Initiator node id.
      * @param gatId Gathering id.
      * @param reqId Request id.
      * @param keys Keys to collect statistics by.

@@ -286,6 +286,68 @@ public class StatisticsGatheringImpl implements StatisticsGathering {
     }
 
     /**
+     * Collect local statistics by specified keys and partitions.
+     *
+     * @param keys Keys to collect statistics by.
+     * @param parts Partitions to collect statistics from.
+     */
+    public void collectLocalStatistics(
+        Set<StatisticsKeyMessage> keys,
+        int[] parts,
+        Supplier<Boolean> cancelled
+    ) {
+        Map<GridH2Table, Column[]> targets = new HashMap<>(keys.size());
+        Map<GridH2Table, StatisticsKeyMessage> tblKey = new HashMap<>(keys.size());
+        for (StatisticsKeyMessage key : keys) {
+            GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
+            if (tbl == null) {
+                if (log.isDebugEnabled())
+                    log.debug(String.format("Unable to find table %s.%s to gather its statistics by req %s",
+                        key.schema(), key.obj()));
+            }
+
+            targets.put(tbl, IgniteStatisticsHelper.filterColumns(tbl.getColumns(), key.colNames()));
+
+            if (tblKey.put(tbl, key) != null)
+                log.info(String.format("Unable to collect statistics by same table %s.%s twice in single gathering task",
+                    key.schema(), key.obj()));
+        }
+
+        Map<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> tblPartStat = new HashMap<>(keys.size());
+        List<Integer> collectedParts = new ArrayList<>(parts.length);
+
+        for (int partId : parts) {
+            Map<GridH2Table, ObjectPartitionStatisticsImpl> partStats = collectPartitionStatistics(targets, partId,
+                cancelled);
+
+            if (cancelled.get()) {
+                //statCrawler.
+                return;
+            }
+
+            if (partStats != null) {
+                collectedParts.add(partId);
+
+                for (Map.Entry<GridH2Table, ObjectPartitionStatisticsImpl> tblStat : partStats.entrySet())
+                    tblPartStat.computeIfAbsent(tblStat.getKey(), k -> new ArrayList<>(parts.length))
+                        .add(tblStat.getValue());
+            }
+        }
+
+        for (Map.Entry<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> partStats : tblPartStat.entrySet()) {
+            ObjectStatisticsImpl locStat = IgniteStatisticsHelper.aggregateLocalStatistics(partStats.getKey(),
+                targets.get(partStats.getKey()), partStats.getValue());
+
+            StatisticsKeyMessage key = tblKey.get(partStats.getKey());
+
+            StatisticsKey statKey = new StatisticsKey(key.schema(), key.obj());
+
+            statRepo.mergeLocalStatistics(statKey, locStat);
+        }
+    }
+
+
+    /**
      * Stop request crawler manager.
      */
     public void stop() {

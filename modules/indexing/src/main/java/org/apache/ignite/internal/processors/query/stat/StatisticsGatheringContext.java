@@ -46,6 +46,16 @@ public class StatisticsGatheringContext {
     /**
      * Constructor in case when there are already gathering id generated.
      *
+     * @param keys Collection of keys to collect statistics by.
+     * @param remainingParts Number of partition to be collected by gathering context.
+     */
+    public StatisticsGatheringContext(Set<StatisticsKeyMessage> keys, int remainingParts) {
+        this(UUID.randomUUID(), keys, remainingParts);
+    }
+
+    /**
+     * Constructor in case when there are already gathering id generated.
+     *
      * @param gatId Gathering id.
      * @param keys Collection of keys to collect statistics by.
      * @param remainingParts Number of partition to be collected by gathering context.
