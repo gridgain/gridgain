@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
-    @Override public int truncate(WALPointer low, WALPointer high) {
+    @Override public int truncate(@Nullable WALPointer high) {
         return 0;
     }
 
@@ -164,6 +164,11 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
+    @Override public long currentSegment() {
+        return 0;
+    }
+
+    /** {@inheritDoc} */
     @Override public int walArchiveSegments() {
         return 0;
     }
@@ -179,7 +184,12 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
-    @Override public long maxArchivedSegmentToDelete() {
+    @Override public long segmentSize(long idx) {
         return -1;
+    }
+
+    /** {@inheritDoc} */
+    @Override public WALPointer lastWritePointer() {
+        return null;
     }
 }

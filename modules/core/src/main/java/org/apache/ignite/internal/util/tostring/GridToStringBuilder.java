@@ -38,8 +38,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.function.Supplier;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -48,10 +48,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.getString;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.NONE;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.convertSensitiveDataLogging;
 
 /**
  * Provides auto-generation framework for {@code toString()} output.
@@ -99,14 +104,23 @@ public class GridToStringBuilder {
     private static final Map<String, GridToStringClassDescriptor> classCache = new ConcurrentHashMap<>();
 
     /** Supplier for {@link #includeSensitive} with default behavior. */
-    private static final AtomicReference<Supplier<Boolean>> INCL_SENS_SUP_REF =
-        new AtomicReference<>(new Supplier<Boolean>() {
-            /** Value of "IGNITE_TO_STRING_INCLUDE_SENSITIVE". */
-            final boolean INCLUDE_SENSITIVE = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE, true);
+    private static final AtomicReference<Supplier<SensitiveDataLogging>> SENS_DATA_LOG_SUP_REF =
+        new AtomicReference<>(new Supplier<SensitiveDataLogging>() {
+            /** Value of "IGNITE_SENSITIVE_DATA_LOGGING". */
+            final SensitiveDataLogging sensitiveDataLogging;
+
+            {
+                String sysStrToStringIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
+
+                if (sysStrToStringIncludeSensitive != null)
+                    sensitiveDataLogging = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE) ? PLAIN : NONE;
+                else
+                    sensitiveDataLogging = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
+            }
 
             /** {@inheritDoc} */
-            @Override public Boolean get() {
-                return INCLUDE_SENSITIVE;
+            @Override public SensitiveDataLogging get() {
+                return sensitiveDataLogging;
             }
         });
 
@@ -142,30 +156,66 @@ public class GridToStringBuilder {
         }
     };
 
+    /** Log levels for sensitive data */
+    public enum SensitiveDataLogging {
+        /**
+         * Write sensitive information in {@code toString()} output.
+         */
+        PLAIN,
+
+        /**
+         * Write hash of sensitive information in {@code toString()} output.
+         */
+        HASH,
+
+        /**
+         * Don't write sensitive information in {@code toString()} output.
+         */
+        NONE;
+
+        /** */
+        public static SensitiveDataLogging convertSensitiveDataLogging(String strDataLogging) {
+            switch (strDataLogging) {
+                case "plain":
+                    return PLAIN;
+                case "none":
+                    return NONE;
+                case "hash":
+                default:
+                    return HASH;
+            }
+        }
+    }
+
     /**
      * Implementation of the <a href=
      * "https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom">
      * "Initialization-on-demand holder idiom"</a>.
      */
     private static class Holder {
-        /** Supplier holder for {@link #includeSensitive}. */
-        static final Supplier<Boolean> INCL_SENS_SUP = INCL_SENS_SUP_REF.get();
+        /** Supplier holder for {@link #includeSensitive} and {@link #getSensitiveDataLogging}. */
+        static final Supplier<SensitiveDataLogging> SENS_DATA_LOG_SUP = SENS_DATA_LOG_SUP_REF.get();
+    }
+
+    /** @return {@link SensitiveDataLogging} Log levels for sensitive data
+     */
+    public static SensitiveDataLogging getSensitiveDataLogging() {
+        return Holder.SENS_DATA_LOG_SUP.get();
     }
 
     /**
-     * Setting the logic of the {@link #includeSensitive} method. <br/>
+     * Setting the logic of the {@link #includeSensitive} and {@link #getSensitiveDataLogging} methods. <br/>
      * By default, it take the value of
-     * {@link IgniteSystemProperties#IGNITE_TO_STRING_INCLUDE_SENSITIVE
-     * IGNITE_TO_STRING_INCLUDE_SENSITIVE} system property. <br/>
+     * {@link IgniteSystemProperties#IGNITE_SENSITIVE_DATA_LOGGING} system property. <br/>
      * <b>Important!</b> Changing the logic is possible only until the first
-     * call of  {@link #includeSensitive} method. <br/>
+     * call of {@link #includeSensitive} or {@link #getSensitiveDataLogging} methods. <br/>
      *
      * @param sup
      */
-    public static void setIncludeSensitiveSupplier(Supplier<Boolean> sup) {
+    public static void setSensitiveDataLoggingSupplier(Supplier<SensitiveDataLogging> sup) {
         assert nonNull(sup);
 
-        INCL_SENS_SUP_REF.set(sup);
+        SENS_DATA_LOG_SUP_REF.set(sup);
     }
 
     /**
@@ -174,10 +224,10 @@ public class GridToStringBuilder {
      *
      * @return {@code true} if need to include sensitive data otherwise
      *      {@code false}.
-     * @see GridToStringBuilder#setIncludeSensitiveSupplier(Supplier)
+     * @see GridToStringBuilder#setSensitiveDataLoggingSupplier(Supplier)
      */
     public static boolean includeSensitive() {
-        return Holder.INCL_SENS_SUP.get();
+        return Holder.SENS_DATA_LOG_SUP.get() == SensitiveDataLogging.PLAIN;
     }
 
     /**
@@ -1727,6 +1777,52 @@ public class GridToStringBuilder {
 
         try {
             return toStringImpl(str, sb, propNames, propVals, propSens, 7);
+        }
+        finally {
+            if (newStr)
+                sb.reset();
+        }
+    }
+
+    /**
+     * Produces uniformed output of string with context properties
+     *
+     * @param str Output prefix or {@code null} if empty.
+     * @param triplets Triplets {@code {name, value, sencitivity}}.
+     * @return String presentation.
+     */
+    public static String toString(String str, Object... triplets) {
+        if (triplets.length % 3 != 0)
+            throw new IllegalArgumentException("Array length must be a multiple of 3");
+
+        int propCnt = triplets.length / 3;
+
+        Object[] propNames = new Object[propCnt];
+        Object[] propVals = new Object[propCnt];
+        boolean[] propSens = new boolean[propCnt];
+
+        for (int i = 0; i < propCnt; i++) {
+            Object name = triplets[i * 3];
+
+            assert name != null;
+
+            propNames[i] = name;
+
+            propVals[i] = triplets[i * 3 + 1];
+
+            Object sens = triplets[i * 3 + 2];
+
+            assert sens instanceof Boolean;
+
+            propSens[i] = (Boolean)sens;
+        }
+
+        SBLimitedLength sb = threadLocSB.get();
+
+        boolean newStr = sb.length() == 0;
+
+        try {
+            return toStringImpl(str, sb, propNames, propVals, propSens, propCnt);
         }
         finally {
             if (newStr)

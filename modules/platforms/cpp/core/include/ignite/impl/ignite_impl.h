@@ -266,7 +266,7 @@ namespace ignite
             /** Projection implementation. */
             common::Lazy<cluster::ClusterGroupImpl> prjImpl;
 
-            IGNITE_NO_COPY_ASSIGNMENT(IgniteImpl)
+            IGNITE_NO_COPY_ASSIGNMENT(IgniteImpl);
 
             /**
             * Get or create cache.

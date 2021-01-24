@@ -40,7 +40,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
  */
 public class OutOfMemoryVolatileRegionTest extends GridCommonAbstractTest {
     /** Minimal region size. */
-    private static final long DATA_REGION_SIZE = 15L * 1024 * 1024;
+    private static final long DATA_REGION_SIZE = 24L * 1024 * 1024;
 
     /** */
     private static final int ATTEMPTS_NUM = 3;

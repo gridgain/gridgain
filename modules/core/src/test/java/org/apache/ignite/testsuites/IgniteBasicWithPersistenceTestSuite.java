@@ -23,6 +23,8 @@ import org.apache.ignite.failure.SystemWorkersTerminationTest;
 import org.apache.ignite.internal.ClusterBaselineNodesMetricsSelfTest;
 import org.apache.ignite.internal.GridNodeMetricsLogPdsSelfTest;
 import org.apache.ignite.internal.cluster.IgniteClusterIdTagTest;
+import org.apache.ignite.internal.encryption.CacheGroupKeyChangeTest;
+import org.apache.ignite.internal.encryption.CacheGroupReencryptionTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheBigEntryTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheCreateTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheDestroyTest;
@@ -30,8 +32,12 @@ import org.apache.ignite.internal.encryption.EncryptedCacheGroupCreateTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheNodeJoinTest;
 import org.apache.ignite.internal.encryption.EncryptedCachePreconfiguredRestartTest;
 import org.apache.ignite.internal.encryption.EncryptedCacheRestartTest;
+import org.apache.ignite.internal.encryption.EncryptionMXBeanTest;
+import org.apache.ignite.internal.encryption.MasterKeyChangeConsistencyCheckTest;
+import org.apache.ignite.internal.encryption.MasterKeyChangeTest;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointReadLockFailureTest;
 import org.apache.ignite.internal.processors.cache.persistence.SingleNodePersistenceSslTest;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.LinkMapTest;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessorTest;
 import org.apache.ignite.marshaller.GridMarshallerMappingConsistencyTest;
 import org.apache.ignite.util.GridInternalTaskUnusedWalSegmentsTest;
@@ -66,7 +72,17 @@ import org.junit.runners.Suite;
 
     SingleNodePersistenceSslTest.class,
 
-    IgniteClusterIdTagTest.class
+    LinkMapTest.class,
+
+    IgniteClusterIdTagTest.class,
+
+    MasterKeyChangeTest.class,
+    MasterKeyChangeConsistencyCheckTest.class,
+
+    CacheGroupKeyChangeTest.class,
+    CacheGroupReencryptionTest.class,
+
+    EncryptionMXBeanTest.class
 })
 public class IgniteBasicWithPersistenceTestSuite {
 }

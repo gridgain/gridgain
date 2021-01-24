@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +36,7 @@ import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -51,7 +53,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
-import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
@@ -137,6 +138,13 @@ public abstract class GridCacheAbstractRemoveFailureTest extends GridCommonAbstr
     protected abstract NearCacheConfiguration nearCache();
 
     /**
+     * @return Compression configuration or {@code null} if none is needed.
+     */
+    protected EntryCompressionConfiguration entryCompressionConfiguration() {
+        return null;
+    }
+
+    /**
      * @return {@code True} if test updates from client node.
      */
     protected boolean testClientNode() {
@@ -202,6 +210,7 @@ public abstract class GridCacheAbstractRemoveFailureTest extends GridCommonAbstr
 
         ccfg.setAtomicityMode(atomicityMode());
         ccfg.setNearConfiguration(nearCache());
+        ccfg.setEntryCompressionConfiguration(entryCompressionConfiguration());
 
         final IgniteCache<Integer, Integer> sndCache0 = grid(0).createCache(ccfg);
 

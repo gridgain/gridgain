@@ -57,6 +57,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 
@@ -108,7 +109,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
      * @param i Cache index number.
      * @return Cache configuration with the given number in name.
      */
-    private CacheConfiguration<Object, Object> getCacheConfiguration(int i) {
+    protected CacheConfiguration<Object, Object> getCacheConfiguration(int i) {
         CacheConfiguration ccfg = new CacheConfiguration();
 
         LinkedHashMap<String, String> fields = new LinkedHashMap<>();
@@ -263,6 +264,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE, value = "false")
     public void testCleaningGarbageAfterCacheDestroyedAndNodeStop() throws Exception {
         testFindAndDeleteGarbage(this::executeTask);
     }

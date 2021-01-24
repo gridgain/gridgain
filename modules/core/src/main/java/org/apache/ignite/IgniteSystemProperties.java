@@ -192,8 +192,22 @@ public final class IgniteSystemProperties {
 
     /**
      * Setting to {@code true} enables writing sensitive information in {@code toString()} output.
+     *
+     * @deprecated Use {@link #IGNITE_SENSITIVE_DATA_LOGGING} instead.
      */
+    @Deprecated
     public static final String IGNITE_TO_STRING_INCLUDE_SENSITIVE = "IGNITE_TO_STRING_INCLUDE_SENSITIVE";
+
+    /**
+     * Setting to {@code "plain"} enables writing sensitive information in {@code toString()} output.
+     * Setting to {@code "hash"} enables writing hash of sensitive information in {@code toString()} output.
+     * Setting to {@code "none"} disables writing sensitive information in {@code toString()} output.
+     *
+     * {@link #IGNITE_TO_STRING_INCLUDE_SENSITIVE} has higher priority. If it is explicitly set, then it is converted:
+     * "true" -> "plain",
+     * "false" -> "none".
+     */
+    public static final String IGNITE_SENSITIVE_DATA_LOGGING = "IGNITE_SENSITIVE_DATA_LOGGING";
 
     /** Maximum length for {@code toString()} result. */
     public static final String IGNITE_TO_STRING_MAX_LENGTH = "IGNITE_TO_STRING_MAX_LENGTH";
@@ -1387,6 +1401,16 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING = "IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING";
 
     /**
+     * The master key name that the node will use during the recovery.
+     * <p>
+     * If a node was unavailable during a master key change process it won't be able to join to cluster with old the
+     * master key. Set up this property to re-encrypt cache keys on startup and join to cluster with the valid
+     * master key name.
+     */
+    public static final String IGNITE_MASTER_KEY_NAME_TO_CHANGE_BEFORE_STARTUP =
+        "IGNITE_MASTER_KEY_NAME_TO_CHANGE_BEFORE_STARTUP";
+
+    /**
      * Disable group state lazy store. It means that group state won't be cached for {@link CheckpointEntry} and will be
      * read from wal every time. Should be used for test purposes only.
      */
@@ -1413,8 +1437,9 @@ public final class IgniteSystemProperties {
      * .
      * The possible values:
      *         - "LAST",
+     *         - "COMPATIBLE_8_7_28"
      *         - "COMPATIBLE_8_7_12",
-     *         - COMPATIBLE_8_7_6
+     *         - "COMPATIBLE_8_7_6"
      *
      * The last cost function is used by default.
      */
@@ -1448,6 +1473,34 @@ public final class IgniteSystemProperties {
      * all system actions will be prohibited.
      */
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
+
+    /** Preserve local store classLoaders. */
+    public static final String IGNITE_DEPLOYMENT_PRESERVE_LOCAL = "IGNITE_DEPLOYMENT_PRESERVE_LOCAL";
+
+    /**
+     * Defragmentation region size percentage of configured region size.
+     * This percentage will be calculated from largest configured region size and then proportionally subtracted
+     * from all configured regions.
+     */
+    public static final String IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE =
+        "IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE";
+
+    /**
+     * There can be background tasks that can be interrupted due to node stop, node fail, or cluster deactivation,
+     * but need to be completed, so they start after node start or cluster activation. If this option is set to
+     * {@code false}, then tasks will not be started.
+     */
+    public static final String IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE =
+        "IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE";
+
+    /**
+     * Set to true only during the junit tests.
+     * Signals that the cluster is running in a test environment.
+     *
+     * Can be used for changing behaviour of tightly coupled code pieces during the tests.
+     * Use it as a last resort only, prefer another toolchain like DI, mocks and etc. if possible
+     */
+    public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
 
     /**
      * Enforces singleton.

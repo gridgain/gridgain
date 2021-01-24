@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.spi.IgniteSpi;
+import org.apache.ignite.spi.IgniteSpiException;
 
 /**
  * SPI provides encryption features for an Ignite.
@@ -33,6 +34,16 @@ public interface EncryptionSpi extends IgniteSpi {
      * @return Master key digest.
      */
     byte[] masterKeyDigest();
+
+    /**
+     * Returns master key digest by name.
+     * Should always return same digest for a same key.
+     * Digest used for a configuration consistency check.
+     *
+     * @param masterKeyName Master key name.
+     * @return Master key digest.
+     */
+    byte[] masterKeyDigest(String masterKeyName);
 
     /**
      * Creates new key for an encryption/decryption of cache persistent data: pages, WAL records.
@@ -86,12 +97,31 @@ public interface EncryptionSpi extends IgniteSpi {
     byte[] encryptKey(Serializable key);
 
     /**
+     * Encrypts a key with the master key specified by name.
+     * Adds some info to check key integrity on decryption.
+     *
+     * @param key Key to encrypt.
+     * @param masterKeyName Master key name.
+     * @return Encrypted key.
+     */
+    byte[] encryptKey(Serializable key, String masterKeyName);
+
+    /**
      * Decrypts key and checks it integrity.
      * 
      * @param key Key to decrypt.
      * @return Encrypted key.
      */
     Serializable decryptKey(byte[] key);
+
+    /**
+     * Decrypts key and checks its integrity using the master key specified by name.
+     *
+     * @param key Key to decrypt.
+     * @param masterKeyName Master key name.
+     * @return Encrypted key.
+     */
+    Serializable decryptKey(byte[] key, String masterKeyName);
 
     /**
      * @param dataSize Size of plain data in bytes.
@@ -109,4 +139,21 @@ public interface EncryptionSpi extends IgniteSpi {
      * @return Encrypted data block size.
      */
     int blockSize();
+
+    /**
+     * Gets the current master key name.
+     *
+     * @return Master key name.
+     * @see #setMasterKeyName(String)
+     */
+    String getMasterKeyName();
+
+    /**
+     * Sets master key Name that will be used for keys encryption in {@link #encryptKey(Serializable)} and {@link
+     * #decryptKey(byte[])} methods and in the {@link #masterKeyDigest()} method.
+     *
+     * @param masterKeyName Master key name.
+     * @throws IgniteSpiException In case of error.
+     */
+    void setMasterKeyName(String masterKeyName) throws IgniteSpiException;
 }

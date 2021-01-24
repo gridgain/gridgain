@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 import org.gridgain.internal.h2.engine.SysProperties;
+import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.util.StringUtils;
 
 /**
@@ -57,19 +58,6 @@ public class CompareMode implements Comparator<Value> {
     public static final String UNSIGNED = "UNSIGNED";
 
     private static volatile CompareMode lastUsed;
-
-    private static final boolean CAN_USE_ICU4J;
-
-    static {
-        boolean b = false;
-        try {
-            Class.forName("com.ibm.icu.text.Collator");
-            b = true;
-        } catch (Exception e) {
-            // ignore
-        }
-        CAN_USE_ICU4J = b;
-    }
 
     private final String name;
     private final int strength;
@@ -131,21 +119,13 @@ public class CompareMode implements Comparator<Value> {
         if (name == null || name.equals(OFF)) {
             last = new CompareMode(name, strength, binaryUnsigned, uuidUnsigned);
         } else {
-            boolean useICU4J;
-            if (name.startsWith(ICU4J)) {
-                useICU4J = true;
-                name = name.substring(ICU4J.length());
-            } else if (name.startsWith(DEFAULT)) {
-                useICU4J = false;
+            if (name.startsWith(ICU4J))
+                throw DbException.getInvalidValueException("collation", name);
+
+            if (name.startsWith(DEFAULT))
                 name = name.substring(DEFAULT.length());
-            } else {
-                useICU4J = CAN_USE_ICU4J;
-            }
-            if (useICU4J) {
-                last = new CompareModeIcu4J(name, strength, binaryUnsigned, uuidUnsigned);
-            } else {
-                last = new CompareModeDefault(name, strength, binaryUnsigned, uuidUnsigned);
-            }
+
+            last = new CompareModeDefault(name, strength, binaryUnsigned, uuidUnsigned);
         }
         lastUsed = last;
         return last;

@@ -58,11 +58,9 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.lang.System.lineSeparator;
 import static java.util.Objects.nonNull;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
-import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_ROLLING_UPGRADE_MODE;
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
-import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
+import static org.apache.ignite.internal.client.GridClientConfiguration.DFLT_CONNECT_TIMEOUT;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.errorMessage;
@@ -289,7 +287,7 @@ public class CommandHandler {
 
                     logger.info(DELIM);
 
-                    lastOperationRes = command.execute(clientCfg, logger);
+                    lastOperationRes = command.execute(clientCfg, logger, args.verbose());
 
                     break;
                 }
@@ -531,6 +529,8 @@ public class CommandHandler {
 
         clientCfg.setPingTimeout(args.pingTimeout());
 
+        clientCfg.setConnectTimeout(args.connectionTimeout());
+
         clientCfg.setServers(Collections.singletonList(args.host() + ":" + args.port()));
 
         if (!F.isEmpty(userName))
@@ -753,6 +753,7 @@ public class CommandHandler {
         logger.info(DOUBLE_INDENT + "PORT=" + DFLT_PORT);
         logger.info(DOUBLE_INDENT + "PING_INTERVAL=" + DFLT_PING_INTERVAL);
         logger.info(DOUBLE_INDENT + "PING_TIMEOUT=" + DFLT_PING_TIMEOUT);
+        logger.info(DOUBLE_INDENT + "CONNECTION_TIMEOUT=" + DFLT_CONNECT_TIMEOUT);
         logger.info(DOUBLE_INDENT + "SSL_PROTOCOL=" + SslContextFactory.DFLT_SSL_PROTOCOL);
         logger.info(DOUBLE_INDENT + "SSL_KEY_ALGORITHM=" + SslContextFactory.DFLT_KEY_ALGORITHM);
         logger.info(DOUBLE_INDENT + "KEYSTORE_TYPE=" + SslContextFactory.DFLT_STORE_TYPE);
@@ -773,9 +774,6 @@ public class CommandHandler {
      * @param cmd Command.
      */
     private boolean skipCommand(CommandList cmd) {
-        if (cmd == ROLLING_UPGRADE && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
-            return false;
-
         return true;
     }
 }

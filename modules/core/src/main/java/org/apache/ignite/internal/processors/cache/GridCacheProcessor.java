@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -59,6 +60,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DeploymentMode;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.configuration.WarmUpConfiguration;
 import org.apache.ignite.events.EventType;
@@ -84,6 +86,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategy;
 import org.apache.ignite.internal.processors.cache.datastructures.CacheDataStructuresManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
@@ -96,7 +99,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Part
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTransactionalCache;
-import org.apache.ignite.internal.processors.cache.dr.GridCacheDrManager;
+import org.apache.ignite.internal.processors.cache.dr.GridCacheReplicationManager;
 import org.apache.ignite.internal.processors.cache.jta.CacheJtaManagerAdapter;
 import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.local.atomic.GridLocalAtomicCache;
@@ -104,11 +107,11 @@ import org.apache.ignite.internal.processors.cache.mvcc.DeadlockDetectionManager
 import org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
-import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.RowStore;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.PagesList;
@@ -148,11 +151,10 @@ import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.IgniteCollectors;
 import org.apache.ignite.internal.util.InitializationProtector;
-import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.GridPlainClosure;
+import org.apache.ignite.internal.util.lang.GridPlainClosure2;
 import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -930,14 +932,22 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 reconnected.add(cache);
 
                 if (cache.context().userCache()) {
-                    // Re-create cache structures inside indexing in order to apply recent schema changes.
-                    GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cache.context(), false);
+                    DynamicCacheDescriptor desc = cacheDescriptor(cache.name());
 
-                    DynamicCacheDescriptor desc = cacheDescriptor(cacheInfo.name());
+                    assert desc != null : cache.name();
 
-                    assert desc != null : cacheInfo.name();
+                    if (!QueryUtils.isEnabled(cache.context().config())
+                            && QueryUtils.isEnabled(desc.cacheConfiguration())) {
+                        CacheConfiguration newCfg = desc.cacheConfiguration();
+
+                        cache.context().onSchemaAddQueryEntity(newCfg.getQueryEntities(), newCfg.getSqlSchema(),
+                                newCfg.isSqlEscapeAll(), newCfg.getQueryParallelism());
+                    }
 
                     boolean rmvIdx = !cache.context().group().persistenceEnabled();
+
+                    // Re-create cache structures inside indexing in order to apply recent schema changes.
+                    GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cache.context(), false);
 
                     ctx.query().onCacheStop0(cacheInfo, rmvIdx);
                     ctx.query().onCacheStart0(cacheInfo, desc.schema(), desc.sql());
@@ -1254,7 +1264,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         GridCacheTtlManager ttlMgr = new GridCacheTtlManager();
 
         CacheConflictResolutionManager rslvrMgr = pluginMgr.createComponent(CacheConflictResolutionManager.class);
-        GridCacheDrManager drMgr = pluginMgr.createComponent(GridCacheDrManager.class);
+        GridCacheReplicationManager drMgr = pluginMgr.createComponent(GridCacheReplicationManager.class);
         CacheStoreManager storeMgr = pluginMgr.createComponent(CacheStoreManager.class);
         PlatformCacheManager platformMgr = ctx.platform().cacheManager();
 
@@ -1403,7 +1413,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             evictMgr = cfg.isOnheapCacheEnabled() ? new GridCacheEvictionManager() : new CacheOffheapEvictionManager();
             evtMgr = new GridCacheEventManager();
             pluginMgr = new CachePluginManager(ctx, cfg);
-            drMgr = pluginMgr.createComponent(GridCacheDrManager.class);
+            drMgr = pluginMgr.createComponent(GridCacheReplicationManager.class);
 
             cacheCtx = new GridCacheContext(
                 ctx,
@@ -1986,7 +1996,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         CacheConfiguration ccfg = new CacheConfiguration(startCfg);
 
-        CacheObjectContext cacheObjCtx = ctx.cacheObjects().contextForCache(ccfg);
+        CacheObjectContext cacheObjCtx = desc.cacheObjectContext(ctx.cacheObjects());
 
         boolean affNode = checkForAffinityNode(desc, reqNearCfg, ccfg);
 
@@ -1995,6 +2005,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         try {
             CacheGroupContext grp = getOrCreateCacheGroupContext(
                 desc, exchTopVer, cacheObjCtx, affNode, startCfg.getGroupName(), false);
+
+            cacheObjCtx.compressionStrategy(grp.entryCompressionStrategy());
 
             GridCacheContext cacheCtx = createCacheContext(ccfg,
                 grp,
@@ -2291,7 +2303,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         CacheConfiguration cfg = desc.cacheConfiguration();
 
-        CacheObjectContext cacheObjCtx = ctx.cacheObjects().contextForCache(cfg);
+        CacheObjectContext cacheObjCtx = desc.cacheObjectContext(ctx.cacheObjects());
 
         preparePageStore(desc, true);
 
@@ -2309,6 +2321,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 cfg.getGroupName(),
                 true
             );
+
+            cacheObjCtx.compressionStrategy(grpCtx.entryCompressionStrategy());
 
             cacheCtx = createCacheContext(cfg,
                 grpCtx,
@@ -2461,6 +2475,17 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean persistenceEnabled = recoveryMode || sharedCtx.localNode().isClient() ? desc.persistenceEnabled() :
             dataRegion != null && dataRegion.config().isPersistenceEnabled();
 
+        EntryCompressionStrategy compressionStrategy = null;
+
+        EntryCompressionConfiguration compressionConfiguration = desc.config().getEntryCompressionConfiguration();
+
+        if (compressionConfiguration != null) {
+            compressionStrategy = CU.entryCompressionStrategies(ctx).get(compressionConfiguration.getClass())
+                .apply(compressionConfiguration);
+
+            compressionStrategy.start(ctx, cfg);
+        }
+
         CacheGroupContext grp = new CacheGroupContext(sharedCtx,
             desc.groupId(),
             desc.receivedFrom(),
@@ -2475,7 +2500,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             persistenceEnabled,
             desc.walEnabled(),
             recoveryMode,
-            desc.persistenceEnabled()
+            desc.persistenceEnabled(),
+            compressionStrategy
         );
 
         for (Object obj : grp.configuredUserObjects())
@@ -2843,7 +2869,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 if (gctx != null && gctx.persistenceEnabled() && sharedCtx.database() instanceof GridCacheDatabaseSharedManager) {
                     GridCacheDatabaseSharedManager mngr = (GridCacheDatabaseSharedManager)sharedCtx.database();
-                    mngr.removeCheckpointListener((DbCheckpointListener)gctx.offheap());
+                    mngr.removeCheckpointListener((CheckpointListener)gctx.offheap());
                 }
             });
         }
@@ -2920,7 +2946,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param success Future result.
      * @param err Error if any.
      */
-    void completeCacheStartFuture(DynamicCacheChangeRequest req, boolean success, @Nullable Throwable err) {
+    public void completeCacheStartFuture(DynamicCacheChangeRequest req, boolean success, @Nullable Throwable err) {
         if (ctx.localNodeId().equals(req.initiatingNodeId())) {
             DynamicCacheStartFuture fut = (DynamicCacheStartFuture)pendingFuts.get(req.requestId());
 
@@ -3442,31 +3468,35 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicStartCache"));
         }
 
-        GridPlainClosure<Collection<byte[]>, IgniteInternalFuture<Boolean>> startCacheClsr = (grpKeys) -> {
-            assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
+        GridPlainClosure2<Collection<byte[]>, byte[], IgniteInternalFuture<Boolean>> startCacheClsr =
+            (grpKeys, masterKeyDigest) -> {
+                assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
 
-            DynamicCacheChangeRequest req = prepareCacheChangeRequest(
-                ccfg,
-                cacheName,
-                nearCfg,
-                cacheType,
-                sql,
-                failIfExists,
-                failIfNotStarted,
-                null,
-                false,
-                null,
-                ccfg != null && ccfg.isEncryptionEnabled() ? grpKeys.iterator().next() : null);
+                byte[] encCacheKey = prepareEncryptionGroupKey(cacheName, ccfg, F.first(grpKeys));
 
-            if (req != null) {
-                if (req.clientStartOnly())
-                    return startClientCacheChange(F.asMap(req.cacheName(), req), null);
+                DynamicCacheChangeRequest req = prepareCacheChangeRequest(
+                    ccfg,
+                    cacheName,
+                    nearCfg,
+                    cacheType,
+                    sql,
+                    failIfExists,
+                    failIfNotStarted,
+                    null,
+                    false,
+                    null,
+                    encCacheKey,
+                    ccfg != null && ccfg.isEncryptionEnabled() ? masterKeyDigest : null);
 
-                return F.first(initiateCacheChanges(F.asList(req)));
-            }
-            else
-                return new GridFinishedFuture<>();
-        };
+                if (req != null) {
+                    if (req.clientStartOnly())
+                        return startClientCacheChange(F.asMap(req.cacheName(), req), null);
+
+                    return F.first(initiateCacheChanges(F.asList(req)));
+                }
+                else
+                    return new GridFinishedFuture<>();
+            };
 
         try {
             if (ccfg != null && ccfg.isEncryptionEnabled()) {
@@ -3475,11 +3505,35 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 return generateEncryptionKeysAndStartCacheAfter(1, startCacheClsr);
             }
 
-            return startCacheClsr.apply(Collections.EMPTY_SET);
+            return startCacheClsr.apply(Collections.EMPTY_SET, null);
         }
         catch (Exception e) {
             return new GridFinishedFuture<>(e);
         }
+    }
+
+    /**
+     * Prepares encryption key for the cache or return {@code null}
+     * if it will use a key which is stored in the metasatorage.
+     *
+     * @param cacheName Cache name.
+     * @param ccfg Cache config or {@code null}.
+     * @param proposedKey Proposed encryption key.
+     * @return Encryption key.
+     */
+    private byte[] prepareEncryptionGroupKey(String cacheName, @Nullable CacheConfiguration ccfg, byte[] proposedKey) {
+        if (proposedKey != null) {
+            int grpId = CU.cacheGroupId(cacheName, ccfg == null ? null : ccfg.getGroupName());
+
+            if (ctx.encryption().getActiveKey(grpId) != null) {
+                U.warn(log, "Encryption key for this cache has already existed," +
+                    " the new key was ignored [grpId=" + grpId + ", cache=" + cacheName + ']');
+
+                return null;
+            }
+        }
+
+        return proposedKey;
     }
 
     /**
@@ -3542,20 +3596,21 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param after Closure to execute after encryption keys would be generated.
      */
     private IgniteInternalFuture<Boolean> generateEncryptionKeysAndStartCacheAfter(int keyCnt,
-        GridPlainClosure<Collection<byte[]>, IgniteInternalFuture<Boolean>> after) {
-        IgniteInternalFuture<Collection<byte[]>> genEncKeyFut = ctx.encryption().generateKeys(keyCnt);
+        GridPlainClosure2<Collection<byte[]>, byte[], IgniteInternalFuture<Boolean>> after) {
+        IgniteInternalFuture<T2<Collection<byte[]>, byte[]>> genEncKeyFut = ctx.encryption().generateKeys(keyCnt);
 
         GridFutureAdapter<Boolean> res = new GridFutureAdapter<>();
 
-        genEncKeyFut.listen(new IgniteInClosure<IgniteInternalFuture<Collection<byte[]>>>() {
-            @Override public void apply(IgniteInternalFuture<Collection<byte[]>> fut) {
+        genEncKeyFut.listen(new IgniteInClosure<IgniteInternalFuture<T2<Collection<byte[]>, byte[]>>>() {
+            @Override public void apply(IgniteInternalFuture<T2<Collection<byte[]>, byte[]>> fut) {
                 try {
-                    Collection<byte[]> grpKeys = fut.result();
+                    Collection<byte[]> grpKeys = fut.result().get1();
+                    byte[] masterKeyDigest = fut.result().get2();
 
                     if (F.size(grpKeys, F.alwaysTrue()) != keyCnt)
                         res.onDone(false, fut.error());
 
-                    IgniteInternalFuture<Boolean> dynStartCacheFut = after.apply(grpKeys);
+                    IgniteInternalFuture<Boolean> dynStartCacheFut = after.apply(grpKeys, masterKeyDigest);
 
                     dynStartCacheFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
                         @Override public void apply(IgniteInternalFuture<Boolean> fut) {
@@ -3622,7 +3677,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             failIfExists,
             checkThreadTx,
             disabledAfterStart,
-            null);
+            null,
+            true);
     }
 
     /**
@@ -3633,6 +3689,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param checkThreadTx If {@code true} checks that current thread does not have active transactions.
      * @param disabledAfterStart If true, cache proxies will be only activated after {@link #restartProxies()}.
      * @param restartId Restart requester id (it'll allow to start this cache only him).
+     * @param isKeysGenerationRequired True if it is needed to generate group's encryption keys.
      * @return Future that will be completed when all caches are deployed.
      */
     public IgniteInternalFuture<Boolean> dynamicStartCachesByStoredConf(
@@ -3640,7 +3697,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean failIfExists,
         boolean checkThreadTx,
         boolean disabledAfterStart,
-        IgniteUuid restartId
+        IgniteUuid restartId,
+        boolean isKeysGenerationRequired
     ) {
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(() -> {
@@ -3653,14 +3711,22 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             });
         }
 
-        GridPlainClosure<Collection<byte[]>, IgniteInternalFuture<Boolean>> startCacheClsr = (grpKeys) -> {
+        GridPlainClosure2<Collection<byte[]>, byte[], IgniteInternalFuture<Boolean>> startCacheClsr =
+            (grpKeys, masterKeyDigest) -> {
             List<DynamicCacheChangeRequest> srvReqs = null;
             Map<String, DynamicCacheChangeRequest> clientReqs = null;
 
-            Iterator<byte[]> grpKeysIter = grpKeys.iterator();
+            // Keys had to be generated before in that case
+            assert !((grpKeys == null) && (isKeysGenerationRequired));
+
+            Iterator<byte[]> grpKeysIter = F.isEmpty(grpKeys) ? null : grpKeys.iterator();
 
             for (StoredCacheData ccfg : storedCacheDataList) {
-                assert !ccfg.config().isEncryptionEnabled() || grpKeysIter.hasNext();
+                assert grpKeysIter == null || !ccfg.config().isEncryptionEnabled() || grpKeysIter.hasNext();
+
+                byte[] encCacheKey = grpKeysIter != null && ccfg.config().isEncryptionEnabled() ? grpKeysIter.next() : null;
+
+                encCacheKey = prepareEncryptionGroupKey(ccfg.config().getName(), ccfg.config(), encCacheKey);
 
                 DynamicCacheChangeRequest req = prepareCacheChangeRequest(
                     ccfg.config(),
@@ -3673,7 +3739,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     restartId,
                     disabledAfterStart,
                     ccfg.queryEntities(),
-                    ccfg.config().isEncryptionEnabled() ? grpKeysIter.next() : null);
+                    encCacheKey,
+                    ccfg.config().isEncryptionEnabled() ? masterKeyDigest : null);
 
                 if (req != null) {
                     if (req.clientStartOnly()) {
@@ -3715,9 +3782,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         int encGrpCnt = 0;
 
-        for (StoredCacheData ccfg : storedCacheDataList) {
-            if (ccfg.config().isEncryptionEnabled())
-                encGrpCnt++;
+        if (isKeysGenerationRequired) {
+            for (StoredCacheData ccfg : storedCacheDataList) {
+                if (ccfg.config().isEncryptionEnabled())
+                    encGrpCnt++;
+            }
         }
 
         return generateEncryptionKeysAndStartCacheAfter(encGrpCnt, startCacheClsr);
@@ -4107,8 +4176,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             return msg0.needExchange();
         }
 
-        if (msg instanceof DynamicCacheChangeBatch)
-            return cachesInfo.onCacheChangeRequested((DynamicCacheChangeBatch)msg, topVer);
+        if (msg instanceof DynamicCacheChangeBatch) {
+            boolean changeRequested = cachesInfo.onCacheChangeRequested((DynamicCacheChangeBatch)msg, topVer);
+
+            ctx.query().onCacheChangeRequested((DynamicCacheChangeBatch)msg);
+
+            return changeRequested;
+        }
 
         if (msg instanceof DynamicCacheChangeFailureMessage)
             cachesInfo.onCacheChangeRequested((DynamicCacheChangeFailureMessage)msg, topVer);
@@ -4919,6 +4993,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param disabledAfterStart If true, cache proxies will be only activated after {@link #restartProxies()}.
      * @param qryEntities Query entities.
      * @param encKey Encryption key.
+     * @param masterKeyDigest Master key digest.
      * @return Request or {@code null} if cache already exists.
      * @throws IgniteCheckedException if some of pre-checks failed
      * @throws CacheExistsException if cache exists and failIfExists flag is {@code true}
@@ -4934,7 +5009,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         IgniteUuid restartId,
         boolean disabledAfterStart,
         @Nullable Collection<QueryEntity> qryEntities,
-        @Nullable byte[] encKey
+        @Nullable byte[] encKey,
+        @Nullable byte[] masterKeyDigest
     ) throws IgniteCheckedException {
         DynamicCacheDescriptor desc = cacheDescriptor(cacheName);
 
@@ -4945,6 +5021,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         req.failIfExists(failIfExists);
 
         req.disabledAfterStart(disabledAfterStart);
+
+        req.masterKeyDigest(masterKeyDigest);
 
         req.encryptionKey(encKey);
 
@@ -5324,12 +5402,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             AtomicReference<IgniteCheckedException> restoreStateError = new AtomicReference<>();
 
-            StripedExecutor stripedExec = ctx.getStripedExecutorService();
+            ExecutorService sysPool = ctx.getSystemExecutorService();
 
-            int roundRobin = 0;
+            CountDownLatch completionLatch = new CountDownLatch(forGroups.size());
 
             for (CacheGroupContext grp : forGroups) {
-                stripedExec.execute(roundRobin % stripedExec.stripesCount(), () -> {
+                sysPool.execute(() -> {
                     try {
                         long processed = grp.offheap().restorePartitionStates(partitionStates);
 
@@ -5346,14 +5424,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                                 : new IgniteCheckedException(e)
                         );
                     }
+                    finally {
+                        completionLatch.countDown();
+                    }
                 });
-
-                roundRobin++;
             }
 
             try {
                 // Await completion restore state tasks in all stripes.
-                stripedExec.awaitComplete();
+                completionLatch.await();
             }
             catch (InterruptedException e) {
                 throw new IgniteInterruptedException(e);

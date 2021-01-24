@@ -20,8 +20,11 @@
 #include <stdint.h>
 #include <string>
 
+#include <ignite/thin/cache/query/query_sql_fields.h>
+
 #include "impl/data_router.h"
 #include "impl/transactions/transactions_impl.h"
+#include "impl/cache/query/query_fields_cursor_impl.h"
 
 namespace ignite
 {
@@ -286,6 +289,14 @@ namespace ignite
                      */
                     void GetAndPutIfAbsent(const WritableKey& key, const Writable& valIn, Readable& valOut);
 
+                    /**
+                     * Perform SQL fields query.
+                     *
+                     * @param qry Query.
+                     * @return Query cursor.
+                     */
+                    query::SP_QueryFieldsCursorImpl Query(const ignite::thin::cache::query::SqlFieldsQuery &qry);
+
                 private:
                     /**
                      * Synchronously send request message and receive response.
@@ -306,10 +317,11 @@ namespace ignite
                      *
                      * @param req Request message.
                      * @param rsp Response message.
+                     * @return Channel that was used for request.
                      * @throw IgniteError on error.
                      */
                     template<typename ReqT, typename RspT>
-                    void SyncMessage(const ReqT& req, RspT& rsp);
+                    SP_DataChannel SyncMessage(const ReqT& req, RspT& rsp);
 
                     /** Data router. */
                     SP_DataRouter router;

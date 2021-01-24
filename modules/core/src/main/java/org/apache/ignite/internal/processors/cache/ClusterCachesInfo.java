@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -53,6 +54,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.systemview.walker.CacheGroupViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.CacheViewWalker;
+import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
@@ -979,6 +981,31 @@ public class ClusterCachesInfo {
 
         if (!validateStartNewCache(err, persistedCfgs, res, req))
             return false;
+
+        GridEncryptionManager encMgr = ctx.encryption();
+
+        if (ccfg.isEncryptionEnabled()) {
+            IgniteCheckedException error = null;
+
+            if (encMgr.isMasterKeyChangeInProgress())
+                error = new IgniteCheckedException("Cache start failed. Master key change is in progress.");
+            else if (encMgr.masterKeyDigest() != null &&
+                !Arrays.equals(encMgr.masterKeyDigest(), req.masterKeyDigest())) {
+                error = new IgniteCheckedException("Cache start failed. The request was initiated before " +
+                    "the master key change and can't be processed.");
+            }
+
+            if (error != null) {
+                U.warn(log, "Ignore cache start request during the master key change process.", error);
+
+                if (persistedCfgs)
+                    res.errs.add(error);
+                else
+                    ctx.cache().completeCacheStartFuture(req, false, error);
+
+                return false;
+            }
+        }
 
         assert req.cacheType() != null : req;
         assert F.eq(ccfg.getName(), cacheName) : req;
@@ -2040,7 +2067,7 @@ public class ClusterCachesInfo {
             else if (!active && isMergeConfigSupport) {
                 DynamicCacheDescriptor desc = registeredCaches.get(cfg.getName());
 
-                QuerySchemaPatch schemaPatch = desc.makeSchemaPatch(cacheInfo.cacheData().queryEntities());
+                QuerySchemaPatch schemaPatch = desc.makeSchemaPatch(cacheInfo.cacheData());
 
                 if (schemaPatch.hasConflicts()) {
                     hasSchemaPatchConflict = true;
@@ -2245,6 +2272,13 @@ public class ClusterCachesInfo {
         Map<String, Integer> caches = Collections.singletonMap(startedCacheCfg.getName(), cacheId);
 
         boolean persistent = resolvePersistentFlag(exchActions, startedCacheCfg);
+        boolean walGloballyEnabled = false;
+
+        // client nodes cannot read wal enabled/disabled status so they should use default one
+        if (ctx.clientNode())
+            walGloballyEnabled = persistent;
+        else if (persistent)
+            walGloballyEnabled = ctx.cache().context().database().walEnabled(grpId, false);
 
         CacheGroupDescriptor grpDesc = new CacheGroupDescriptor(
             startedCacheCfg,
@@ -2255,16 +2289,13 @@ public class ClusterCachesInfo {
             deploymentId,
             caches,
             persistent,
-            persistent,
+            walGloballyEnabled,
             null,
             cacheCfgEnrichment
         );
 
         if (startedCacheCfg.isEncryptionEnabled())
-            ctx.encryption().beforeCacheGroupStart(grpId, encKey);
-
-        if (ctx.cache().context().pageStore() != null)
-            ctx.cache().context().pageStore().beforeCacheGroupStart(grpDesc);
+            ctx.encryption().setInitialGroupKey(grpId, encKey);
 
         CacheGroupDescriptor old = registeredCacheGrps.put(grpId, grpDesc);
 
@@ -2399,6 +2430,9 @@ public class ClusterCachesInfo {
 
         CU.validateCacheGroupsAttributesMismatch(log, cfg, startCfg, "encryptionEnabled", "Encrypted",
             cfg.isEncryptionEnabled(), startCfg.isEncryptionEnabled(), true);
+
+        CU.validateCacheGroupsAttributesMismatch(log, cfg, startCfg, "entryCompressionConfiguration", "Entry compression",
+            cfg.getEntryCompressionConfiguration(), startCfg.getEntryCompressionConfiguration(), true);
     }
 
     /**

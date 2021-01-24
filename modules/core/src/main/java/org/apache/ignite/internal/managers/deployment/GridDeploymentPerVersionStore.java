@@ -327,7 +327,7 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
                 if (isDeadClassLoader(meta))
                     return null;
 
-                if (meta.participants() != null && !meta.participants().isEmpty()) {
+                if (!F.isEmpty(meta.participants())) {
                     Map<UUID, IgniteUuid> participants = new LinkedHashMap<>();
 
                     for (Map.Entry<UUID, IgniteUuid> e : meta.participants().entrySet()) {
@@ -1069,7 +1069,10 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
             log.debug("Created new deployment: " + dep);
 
         if (isCache) {
-            List<SharedDeployment> deps = F.addIfAbsent(cache, meta.userVersion(), new LinkedList<SharedDeployment>());
+            List<SharedDeployment> deps = F.addIfAbsent(cache, meta.userVersion(), new LinkedList<>());
+
+            if (log.isDebugEnabled())
+                log.debug("Append new deployment: " + dep);
 
             assert deps != null;
 

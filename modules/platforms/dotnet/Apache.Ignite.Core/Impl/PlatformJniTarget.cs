@@ -158,7 +158,7 @@ namespace Apache.Ignite.Core.Impl
 
         /** <inheritdoc /> */
         public TR InStreamOutStream<TR>(int type, Action<IBinaryStream> writeAction, 
-            Func<IBinaryStream, TR> readAction)
+            Func<IBinaryStream, TR> readAction, Func<Exception, TR> errorAction = null)
         {
             try
             {
@@ -176,6 +176,9 @@ namespace Apache.Ignite.Core.Impl
             }
             catch (JavaException jex)
             {
+                if (errorAction != null)
+                    return errorAction.Invoke(ConvertException(jex));
+
                 throw ConvertException(jex);
             }
         }
