@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.managers.encryption.EncryptionCacheKeyProvider;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
@@ -57,6 +58,8 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointe
 import org.apache.ignite.internal.processors.cache.persistence.wal.record.HeaderRecord;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD_V2;
+
 /**
  * Record data V2 serializer.
  */
@@ -71,9 +74,10 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
      * Create an instance of V2 data serializer.
      *
      * @param cctx Cache shared context.
+     * @param keyProvider Encryption key provider.
      */
-    public RecordDataV2Serializer(GridCacheSharedContext cctx) {
-        super(cctx);
+    public RecordDataV2Serializer(GridCacheSharedContext cctx, EncryptionCacheKeyProvider keyProvider) {
+        super(cctx, keyProvider);
 
         this.txRecordSerializer = new TxRecordSerializer();
     }
@@ -192,13 +196,14 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 return new MvccDataRecord(entries, timeStamp);
 
             case ENCRYPTED_DATA_RECORD:
+            case ENCRYPTED_DATA_RECORD_V2:
                 entryCnt = in.readInt();
                 timeStamp = in.readLong();
 
                 entries = new ArrayList<>(entryCnt);
 
                 for (int i = 0; i < entryCnt; i++)
-                    entries.add(readEncryptedDataEntry(in));
+                    entries.add(readEncryptedDataEntry(in, type == ENCRYPTED_DATA_RECORD_V2));
 
                 return new DataRecord(entries, timeStamp);
 

@@ -159,11 +159,11 @@ public enum GridRestCommand {
     /** Close query. */
     CLOSE_SQL_QUERY("qrycls"),
 
-    /** @deprecated Use {@link #CLUSTER_ACTIVATE} instead. */
+    /** @deprecated Use {@link #CLUSTER_SET_STATE} with {@link ClusterState#ACTIVE} instead. */
     @Deprecated
     CLUSTER_ACTIVE("active"),
 
-    /** @deprecated Use {@link #CLUSTER_DEACTIVATE} instead. */
+    /** @deprecated Use {@link #CLUSTER_SET_STATE} with {@link ClusterState#INACTIVE} instead. */
     @Deprecated
     CLUSTER_INACTIVE("inactive"),
 
@@ -222,7 +222,10 @@ public enum GridRestCommand {
     NODE_STATE_BEFORE_START("nodestatebeforestart"),
 
     /** Warm-up. */
-    WARM_UP("warmup");
+    WARM_UP("warmup"),
+
+    /** probe. */
+    PROBE("probe");
 
     /** Enum values. */
     private static final GridRestCommand[] VALS = values();

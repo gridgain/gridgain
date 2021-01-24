@@ -51,6 +51,7 @@ import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
@@ -62,6 +63,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.MapCacheStoreStrategy;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.P2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -146,6 +148,7 @@ public abstract class GridCacheBinaryObjectsAbstractSelfTest extends GridCommonA
         cacheCfg.setLoadPreviousValue(true);
         cacheCfg.setBackups(1);
         cacheCfg.setOnheapCacheEnabled(false);
+        cacheCfg.setEntryCompressionConfiguration(entryCompressionConfiguration());
 
         return cacheCfg;
     }
@@ -196,6 +199,13 @@ public abstract class GridCacheBinaryObjectsAbstractSelfTest extends GridCommonA
     protected abstract NearCacheConfiguration nearConfiguration();
 
     /**
+     * @return Compression configuration or {@code null} if none is needed.
+     */
+    protected EntryCompressionConfiguration entryCompressionConfiguration() {
+        return null;
+    }
+
+    /**
      * @return Grid count.
      */
     protected abstract int gridCount();
@@ -239,7 +249,7 @@ public abstract class GridCacheBinaryObjectsAbstractSelfTest extends GridCommonA
         assertTrue("Unexpected toString: " + str,
             S.includeSensitive() ?
             str.startsWith(typeName) && str.contains("obj=" + typeName + " [") :
-            str.startsWith("BinaryObject") && str.contains("idHash=") && str.contains("hash=")
+            str.contains(String.valueOf(IgniteUtils.hash(po)))
         );
 
         TestReferenceObject obj1_r = po.deserialize();

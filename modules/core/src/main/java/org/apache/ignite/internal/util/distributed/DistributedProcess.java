@@ -152,7 +152,7 @@ public class DistributedProcess<I extends Serializable, R extends Serializable> 
                 return;
             }
 
-            finish.apply(p.id,msg.result(), msg.error());
+            finish.apply(p.id, msg.result(), msg.error());
 
             processes.remove(msg.processId());
         });
@@ -378,6 +378,16 @@ public class DistributedProcess<I extends Serializable, R extends Serializable> 
          *
          * @see GridEncryptionManager
          */
-        MASTER_KEY_CHANGE_FINISH
+        MASTER_KEY_CHANGE_FINISH,
+
+        /**
+         * Cache group encyption key change prepare phase.
+         */
+        CACHE_GROUP_KEY_CHANGE_PREPARE,
+
+        /**
+         * Cache group encyption key change perform phase.
+         */
+        CACHE_GROUP_KEY_CHANGE_FINISH
     }
 }

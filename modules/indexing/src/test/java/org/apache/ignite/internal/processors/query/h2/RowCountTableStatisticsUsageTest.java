@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.Arrays;
@@ -48,6 +47,7 @@ public class RowCountTableStatisticsUsageTest extends TableStatisticsAbstractTes
         });
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(2);
 
@@ -83,7 +83,7 @@ public class RowCountTableStatisticsUsageTest extends TableStatisticsAbstractTes
     }
 
     /**
-     *
+     * Join two tables with similar where clauses on both of it.
      */
     @Test
     public void compareJoinsWithConditionsOnBothTables() {

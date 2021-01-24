@@ -123,6 +123,7 @@
                 <exclude>org.gridgain:ignite-examples</exclude>
                 <exclude>org.gridgain:ignite-examples-ml</exclude>
                 <exclude>org.gridgain:ignite-indexing</exclude>
+                <exclude>org.gridgain:ignite-log4j</exclude>
                 <exclude>org.gridgain:ignite-visor-console</exclude>
                 <exclude>org.gridgain:ignite-visor-console_2.10</exclude>
                 <exclude>org.gridgain:ignite-visor-plugins</exclude>
@@ -133,7 +134,6 @@
                 <exclude>org.gridgain:ignite-cassandra</exclude>
                 <exclude>org.gridgain:ignite-yardstick</exclude>
                 <exclude>org.gridgain:ignite-benchmarks</exclude>
-                <exclude>org.gridgain:ignite-dev-utils</exclude>
                 <exclude>org.gridgain:ignite-extdata-platform</exclude>
                 <exclude>org.gridgain:ignite-compatibility</exclude>
                 <exclude>org.gridgain:ignite-sqlline</exclude>

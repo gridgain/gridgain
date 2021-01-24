@@ -60,7 +60,7 @@ namespace ignite
             /** Default connection timeout in seconds. */
             enum
             {
-                DEFAULT_CONNECT_TIMEOUT = 5,
+                DEFAULT_CONNECT_TIMEOUT = 5
             };
 
             /**

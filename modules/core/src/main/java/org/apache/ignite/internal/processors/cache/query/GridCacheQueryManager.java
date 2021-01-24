@@ -218,10 +218,10 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
     private GridLocalEventListener lsnr;
 
     /** */
-    private boolean enabled;
+    private volatile boolean enabled;
 
     /** */
-    private boolean qryProcEnabled;
+    private volatile boolean qryProcEnabled;
 
     /** */
     private AffinityTopologyVersion qryTopVer;
@@ -295,6 +295,14 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      */
     public boolean enabled() {
         return enabled;
+    }
+
+    /**
+     * Enable query manager.
+     */
+    public void enable() {
+        qryProcEnabled = true;
+        enabled = true;
     }
 
     /** {@inheritDoc} */
@@ -423,7 +431,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      */
     public void remove(KeyCacheObject key, @Nullable CacheDataRow prevRow)
         throws IgniteCheckedException {
-        if (!QueryUtils.isEnabled(cctx.config()))
+        if (!qryProcEnabled)
             return; // No-op.
 
         if (!enterBusy())

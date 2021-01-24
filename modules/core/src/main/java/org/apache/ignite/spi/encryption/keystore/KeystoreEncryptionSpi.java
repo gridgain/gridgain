@@ -143,7 +143,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
-        loadMasterKey(masterKeyName);
+        masterKey = loadMasterKey(masterKeyName);
     }
 
     /** {@inheritDoc} */
@@ -155,9 +155,16 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
     /** {@inheritDoc} */
     @Override public byte[] masterKeyDigest() {
+        return masterKeyDigest(null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte[] masterKeyDigest(String masterKeyName) {
         ensureStarted();
 
-        return makeDigest(masterKey.key().getEncoded());
+        KeystoreEncryptionKey masterKey0 = loadKeyOrCurrent(masterKeyName);
+
+        return makeDigest(masterKey0.key().getEncoded());
     }
 
     /** {@inheritDoc} */
@@ -263,20 +270,32 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
     /** {@inheritDoc} */
     @Override public byte[] encryptKey(Serializable key) {
+        return encryptKey(key, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte[] encryptKey(Serializable key, String masterKeyName) {
         assert key instanceof KeystoreEncryptionKey;
 
         byte[] serKey = U.toBytes(key);
 
         byte[] res = new byte[encryptedSize(serKey.length)];
 
-        encrypt(ByteBuffer.wrap(serKey), masterKey, ByteBuffer.wrap(res));
+        KeystoreEncryptionKey masterKey0 = loadKeyOrCurrent(masterKeyName);
+
+        encrypt(ByteBuffer.wrap(serKey), masterKey0, ByteBuffer.wrap(res));
 
         return res;
     }
 
     /** {@inheritDoc} */
-    @Override public KeystoreEncryptionKey decryptKey(byte[] data) {
-        byte[] serKey = decrypt(data, masterKey);
+    @Override public KeystoreEncryptionKey decryptKey(byte[] key) {
+        return decryptKey(key, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public KeystoreEncryptionKey decryptKey(byte[] data, String masterKeyName) {
+        byte[] serKey = decrypt(data, loadKeyOrCurrent(masterKeyName));
 
         KeystoreEncryptionKey key = U.fromBytes(serKey);
 
@@ -313,7 +332,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
         this.masterKeyName = masterKeyName;
 
         if (started())
-            loadMasterKey(masterKeyName);
+            masterKey = loadMasterKey(masterKeyName);
     }
 
     /**
@@ -464,11 +483,24 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
     }
 
     /**
-     * Loads master key.
+     * Loads a master key by name, or gets current key.
+     * If a key name is empty, {@code null} or equals to the current master key name, this method returns the current master key.
      *
      * @param masterKeyName Master key name.
+     * @return Master key.
      */
-    private void loadMasterKey(String masterKeyName) {
+    private KeystoreEncryptionKey loadKeyOrCurrent(String masterKeyName) {
+        return F.isEmpty(masterKeyName) || masterKeyName.equals(this.masterKeyName) ? masterKey :
+            loadMasterKey(masterKeyName);
+    }
+
+    /**
+     * Loads and returns a master key by name.
+     *
+     * @param masterKeyName Master key name.
+     * @return Master key.
+     */
+    private KeystoreEncryptionKey loadMasterKey(String masterKeyName) {
         assertParameter(!F.isEmpty(keyStorePath), "KeyStorePath shouldn't be empty");
         assertParameter(keyStorePwd != null && keyStorePwd.length > 0,
             "KeyStorePassword shouldn't be empty");
@@ -487,9 +519,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
             assertParameter(key != null, "No such master key found [masterKeyName=" + masterKeyName + ']');
 
-            masterKey = new KeystoreEncryptionKey(key, null);
-
-            this.masterKeyName = masterKeyName;
+            return new KeystoreEncryptionKey(key, null);
         }
         catch (GeneralSecurityException | IOException e) {
             throw new IgniteSpiException(e);

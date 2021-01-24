@@ -29,6 +29,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -60,9 +61,9 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
 
         IgniteCache<KeyClass, ValueClass> cache = client().cache(CACHE_NAME);
 
-        cache.put(new KeyClass(1), new ValueClass("val1"));
-        cache.put(new KeyClass(2), new ValueClass("val2"));
-        cache.put(new KeyClass(3), new ValueClass("val3"));
+        cache.put(new KeyClass(1), new ValueClass(1L));
+        cache.put(new KeyClass(2), new ValueClass(2L));
+        cache.put(new KeyClass(3), new ValueClass(3L));
     }
 
     /** {@inheritDoc} */
@@ -90,14 +91,14 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
                 continue;
 
             List<List<?>> locRes = ignite(i).cache("cache").query(new SqlFieldsQuery("explain select \"id\" from " +
-                "\"cache\".\"ValueClass\" where \"field1\" = 'A'").setLocal(true)).getAll();
+                "\"cache\".\"ValueClass\" where \"field1\" = 1").setLocal(true)).getAll();
 
             assertEquals(F.asList(
                 Collections.singletonList("SELECT\n" +
                     "    \"id\"\n" +
                     "FROM \"cache\".\"ValueClass\"\n" +
-                    "    /* cache.idx_1: field1 = 'A' */\n" +
-                    "WHERE \"field1\" = 'A'")
+                    "    /* cache.idx_1: field1 = 1 */\n" +
+                    "WHERE \"field1\" = 1")
             ), locRes);
         }
 
@@ -107,7 +108,7 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
 
         assertSize(2);
 
-        cache.put(new KeyClass(4), new ValueClass("someVal"));
+        cache.put(new KeyClass(4), new ValueClass(1L));
 
         assertSize(3);
     }
@@ -166,14 +167,14 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
                 continue;
 
             List<List<?>> locRes = ignite(i).cache("cache").query(new SqlFieldsQuery("explain select \"id\" from " +
-                "\"cache\".\"ValueClass\" where \"field1\" = 'A'").setLocal(true)).getAll();
+                "\"cache\".\"ValueClass\" where \"field1\" = 1").setLocal(true)).getAll();
 
             assertEquals(F.asList(
                 Collections.singletonList("SELECT\n" +
                     "    \"id\"\n" +
                     "FROM \"cache\".\"ValueClass\"\n" +
                     "    /* cache.ValueClass.__SCAN_ */\n" +
-                    "WHERE \"field1\" = 'A'")
+                    "WHERE \"field1\" = 1")
             ), locRes);
         }
 
@@ -211,49 +212,53 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
     public void testIndexState() {
         IgniteCache<KeyClass, ValueClass> cache = cache();
 
-        assertColumnValues("val1", "val2", "val3");
+        assertColumnValues(1L, 2L, 3L);
 
         cache.query(new SqlFieldsQuery("CREATE INDEX \"" + IDX_NAME_1_ESCAPED + "\" ON \"" + TBL_NAME_ESCAPED + "\"(\""
             + FIELD_NAME_1_ESCAPED + "\" ASC)"));
 
-        assertColumnValues("val1", "val2", "val3");
+        assertColumnValues(1L, 2L, 3L);
 
         cache.remove(new KeyClass(2));
 
-        assertColumnValues("val1", "val3");
+        assertColumnValues(1L, 3L);
 
-        cache.put(new KeyClass(0), new ValueClass("someVal"));
+        cache.put(new KeyClass(0), new ValueClass(0L));
 
-        assertColumnValues("someVal", "val1", "val3");
+        assertColumnValues(0L, 1L, 3L);
 
         cache.query(new SqlFieldsQuery("DROP INDEX \"" + IDX_NAME_1_ESCAPED + "\""));
 
-        assertColumnValues("someVal", "val1", "val3");
+        assertColumnValues(0L, 1L, 3L);
     }
 
     /**
      * Check that values of {@code field1} match what we expect.
+     *
      * @param vals Expected values.
      */
-    private void assertColumnValues(String... vals) {
+    private void assertColumnValues(Long... vals) {
         List<List<?>> expRes = new ArrayList<>(vals.length);
 
-        for (String v : vals)
+        for (Long v : vals)
             expRes.add(Collections.singletonList(v));
 
-        assertEquals(expRes, cache().query(new SqlFieldsQuery("SELECT \"" + FIELD_NAME_1_ESCAPED + "\" FROM \"" +
-            TBL_NAME_ESCAPED + "\" ORDER BY \"id\"")).getAll());
+        List<List<?>> all = cache().query(new SqlFieldsQuery("SELECT \"" + FIELD_NAME_1_ESCAPED + "\" FROM \"" +
+            TBL_NAME_ESCAPED + "\" ORDER BY \"id\"")).getAll();
+        assertEquals(expRes, all);
     }
 
     /**
      * Do a {@code SELECT COUNT(*)} query to check index state correctness.
+     *
      * @param expSize Expected number of items in table.
      */
     private void assertSize(long expSize) {
         assertEquals(expSize, cache().size());
 
-        assertEquals(expSize, cache().query(new SqlFieldsQuery("SELECT COUNT(*) from \"ValueClass\""))
-            .getAll().get(0).get(0));
+        Object actual = cache().query(new SqlFieldsQuery("SELECT COUNT(*) from \"ValueClass\""))
+            .getAll().get(0).get(0);
+        assertEquals(expSize, actual);
     }
 
     /**
@@ -320,8 +325,8 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
         entity.setValueType(ValueClass.class.getName());
 
         entity.addQueryField("id", Long.class.getName(), null);
-        entity.addQueryField(FIELD_NAME_1_ESCAPED, String.class.getName(), null);
-        entity.addQueryField(FIELD_NAME_2_ESCAPED, String.class.getName(), null);
+        entity.addQueryField(FIELD_NAME_1_ESCAPED, Long.class.getName(), null);
+        entity.addQueryField(FIELD_NAME_2_ESCAPED, Long.class.getName(), null);
 
         entity.setKeyFields(Collections.singleton("id"));
 
@@ -333,6 +338,7 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
         ccfg.setSqlEscapeAll(true);
         ccfg.setAtomicityMode(atomicityMode());
         ccfg.setCacheMode(cacheMode());
+        ccfg.setEntryCompressionConfiguration(entryCompressionConfiguration());
 
         if (nearCache())
             ccfg.setNearConfiguration(new NearCacheConfiguration<KeyClass, ValueClass>());
@@ -354,4 +360,11 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
      * @return Whether to use near cache.
      */
     protected abstract boolean nearCache();
+
+    /**
+     * @return Compression configuration or {@code null} if none is needed.
+     */
+    protected EntryCompressionConfiguration entryCompressionConfiguration() {
+        return null;
+    }
 }

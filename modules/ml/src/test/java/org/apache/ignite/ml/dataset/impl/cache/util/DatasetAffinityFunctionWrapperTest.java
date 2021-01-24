@@ -26,11 +26,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -76,8 +76,6 @@ public class DatasetAffinityFunctionWrapperTest {
     /** Tests {@code partition} method. */
     @Test
     public void testPartition() {
-        doReturn(0).when(affinityFunction).partition(eq(42));
-
         int part = wrapper.partition(42);
 
         assertEquals(42, part);

@@ -51,7 +51,7 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
 /**
  * Commands associated with tracing configuration functionality.
  */
-public class TracingConfigurationCommand implements Command<TracingConfigurationArguments> {
+public class TracingConfigurationCommand extends AbstractCommand<TracingConfigurationArguments> {
     /** Arguments. */
     private TracingConfigurationArguments args;
 
@@ -211,7 +211,7 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
                                 "values can be used: " + Arrays.toString(Scope.values()) + '.');
 
                         try {
-                            scope = Scope.valueOf(strVal);
+                            scope = Scope.valueOf(strVal.toUpperCase());
                         }
                         catch (IllegalArgumentException e) {
                             throw new IllegalArgumentException(

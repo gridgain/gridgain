@@ -33,6 +33,18 @@ import org.springframework.context.annotation.Configuration;
 @EnableIgniteRepositories
 public class ApplicationConfiguration {
     /**
+     * The bean with cache names
+     */
+    @Bean
+    public CacheNamesBean cacheNames() {
+        CacheNamesBean bean = new CacheNamesBean();
+
+        bean.setPersonCacheName("PersonCache");
+
+        return bean;
+    }
+
+    /**
      * Ignite instance bean.
      */
     @Bean

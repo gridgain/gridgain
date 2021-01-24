@@ -2067,7 +2067,7 @@ public class ClusterCachesInfo {
             else if (!active && isMergeConfigSupport) {
                 DynamicCacheDescriptor desc = registeredCaches.get(cfg.getName());
 
-                QuerySchemaPatch schemaPatch = desc.makeSchemaPatch(cacheInfo.cacheData().queryEntities());
+                QuerySchemaPatch schemaPatch = desc.makeSchemaPatch(cacheInfo.cacheData());
 
                 if (schemaPatch.hasConflicts()) {
                     hasSchemaPatchConflict = true;
@@ -2272,6 +2272,13 @@ public class ClusterCachesInfo {
         Map<String, Integer> caches = Collections.singletonMap(startedCacheCfg.getName(), cacheId);
 
         boolean persistent = resolvePersistentFlag(exchActions, startedCacheCfg);
+        boolean walGloballyEnabled = false;
+
+        // client nodes cannot read wal enabled/disabled status so they should use default one
+        if (ctx.clientNode())
+            walGloballyEnabled = persistent;
+        else if (persistent)
+            walGloballyEnabled = ctx.cache().context().database().walEnabled(grpId, false);
 
         CacheGroupDescriptor grpDesc = new CacheGroupDescriptor(
             startedCacheCfg,
@@ -2282,16 +2289,13 @@ public class ClusterCachesInfo {
             deploymentId,
             caches,
             persistent,
-            persistent,
+            walGloballyEnabled,
             null,
             cacheCfgEnrichment
         );
 
         if (startedCacheCfg.isEncryptionEnabled())
-            ctx.encryption().beforeCacheGroupStart(grpId, encKey);
-
-        if (ctx.cache().context().pageStore() != null)
-            ctx.cache().context().pageStore().beforeCacheGroupStart(grpDesc);
+            ctx.encryption().setInitialGroupKey(grpId, encKey);
 
         CacheGroupDescriptor old = registeredCacheGrps.put(grpId, grpDesc);
 
@@ -2426,6 +2430,9 @@ public class ClusterCachesInfo {
 
         CU.validateCacheGroupsAttributesMismatch(log, cfg, startCfg, "encryptionEnabled", "Encrypted",
             cfg.isEncryptionEnabled(), startCfg.isEncryptionEnabled(), true);
+
+        CU.validateCacheGroupsAttributesMismatch(log, cfg, startCfg, "entryCompressionConfiguration", "Entry compression",
+            cfg.getEntryCompressionConfiguration(), startCfg.getEntryCompressionConfiguration(), true);
     }
 
     /**

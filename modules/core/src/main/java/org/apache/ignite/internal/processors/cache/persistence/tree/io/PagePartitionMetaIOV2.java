@@ -16,9 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
@@ -49,7 +47,6 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
         setPendingTreeRoot(pageAddr, 0L);
         setPartitionMetaStoreReuseListRoot(pageAddr, 0L);
         setGapsLink(pageAddr, 0L);
-        setUpdateTreeRoot(pageAddr, 0L);
     }
 
     /** {@inheritDoc} */
@@ -101,23 +98,11 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long pageAddr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
-        byte state = getPartitionState(pageAddr);
+    @Override protected void printFields(long pageAddr, GridStringBuilder sb) {
+        super.printFields(pageAddr, sb);
 
-        sb.a("PagePartitionMeta[\n\ttreeRoot=").a(getReuseListRoot(pageAddr));
-        sb.a(",\n\tpendingTreeRoot=").a(getLastSuccessfulFullSnapshotId(pageAddr));
-        sb.a(",\n\tlastSuccessfulFullSnapshotId=").a(getLastSuccessfulFullSnapshotId(pageAddr));
-        sb.a(",\n\tlastSuccessfulSnapshotId=").a(getLastSuccessfulSnapshotId(pageAddr));
-        sb.a(",\n\tnextSnapshotTag=").a(getNextSnapshotTag(pageAddr));
-        sb.a(",\n\tlastSuccessfulSnapshotTag=").a(getLastSuccessfulSnapshotTag(pageAddr));
-        sb.a(",\n\tlastAllocatedPageCount=").a(getLastAllocatedPageCount(pageAddr));
-        sb.a(",\n\tcandidatePageCount=").a(getCandidatePageCount(pageAddr));
-        sb.a(",\n\tsize=").a(getSize(pageAddr));
-        sb.a(",\n\tupdateCounter=").a(getUpdateCounter(pageAddr));
-        sb.a(",\n\tglobalRemoveId=").a(getGlobalRemoveId(pageAddr));
-        sb.a(",\n\tpartitionState=").a(state).a("(").a(GridDhtPartitionState.fromOrdinal(state)).a(")");
-        sb.a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr));
-        sb.a(",\n\tcntrUpdDataPageId=").a(getGapsLink(pageAddr));
-        sb.a("\n]");
+        sb.a(",\n\tpendingTreeRoot=").a(getPendingTreeRoot(pageAddr))
+            .a(",\n\tpartitionMetaStoreReuseListRoot=").a(getPartitionMetaStoreReuseListRoot(pageAddr))
+            .a(",\n\tcntrUpdDataPageId=").a(getGapsLink(pageAddr));
     }
 }

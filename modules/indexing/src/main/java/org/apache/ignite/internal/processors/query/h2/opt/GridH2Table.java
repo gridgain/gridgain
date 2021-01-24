@@ -54,6 +54,8 @@ import org.apache.ignite.internal.processors.query.h2.database.H2IndexType;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -463,6 +465,19 @@ public class GridH2Table extends TableBase {
      */
     public boolean isCacheLazy() {
         return cacheInfo.cacheContext() == null;
+    }
+
+    /**
+     * Get actual table statistics if exists.
+     *
+     * @return Table statistics or {@code null} if there is no statistics available.
+     */
+    public ObjectStatistics tableStatistics() {
+        GridCacheContext cacheContext = cacheInfo.cacheContext();
+        if (cacheContext == null)
+            return null;
+        IgniteStatisticsManager statManager = cacheContext.kernalContext().query().getIndexing().statsManager();
+        return statManager.getLocalStatistics(identifier.schema(), identifier.table());
     }
 
     /**
@@ -881,7 +896,7 @@ public class GridH2Table extends TableBase {
      * @param clo Closure.
      */
     public void collectIndexesForPartialRebuild(IndexRebuildPartialClosure clo) {
-        for (int i = sysIdxsCnt; i < idxs.size(); i++) {
+        for (int i = 0; i < idxs.size(); i++) {
             Index idx = idxs.get(i);
 
             if (idx instanceof H2TreeIndex) {
