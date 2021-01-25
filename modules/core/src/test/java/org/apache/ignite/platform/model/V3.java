@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.cluster;
+package org.apache.ignite.platform.model;
 
-import org.apache.ignite.IgniteCluster;
+/** Test V3 object. */
+public class V3 {
+    /** */
+    private final String name;
 
-/**
- *
- */
-public interface IgniteClusterEx extends IgniteCluster, ClusterGroupEx {
-    // No-op.
+    /** */
+    public V3(String name) {
+        this.name = name;
+    }
+
+    /** */
+    public String getName() {
+        return name;
+    }
 }

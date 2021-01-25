@@ -197,7 +197,13 @@ public enum IgniteFeatures {
     SAFE_CLUSTER_DEACTIVATION(51),
 
     /** Transaction distributed configuration. */
-    TRANSACTION_DISTRIBUTED_PROPERTIES(52);
+    TRANSACTION_DISTRIBUTED_PROPERTIES(52),
+
+    /** Custom snapshot operations. */
+    CUSTOM_SNAPSHOT_OPERATIONS(53),
+
+    /** Point-in-time distributed property. */
+    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54);
 
     /**
      * Unique feature identifier.

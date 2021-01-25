@@ -28,7 +28,7 @@ namespace Apache.Ignite.Core.Impl.Binary
     using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
-    /// Binary reader implementation. 
+    /// Binary reader implementation.
     /// </summary>
     internal class BinaryReader : IBinaryReader, IBinaryRawReader
     {
@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="builder">Builder.</param>
         public BinaryReader
             (Marshaller marsh,
-            IBinaryStream stream, 
+            IBinaryStream stream,
             BinaryMode mode,
             BinaryObjectBuilder builder)
         {
@@ -322,19 +322,19 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             return Read(stream => BinaryUtils.ReadTimestamp(stream, _marsh.TimestampConverter), BinaryTypeId.Timestamp);
         }
-        
+
         /** <inheritdoc /> */
         public DateTime?[] ReadTimestampArray(string fieldName)
         {
             return ReadField(fieldName, stream => BinaryUtils.ReadTimestampArray(stream, _marsh.TimestampConverter), BinaryTypeId.ArrayTimestamp);
         }
-        
+
         /** <inheritdoc /> */
         public DateTime?[] ReadTimestampArray()
         {
             return Read(stream => BinaryUtils.ReadTimestampArray(stream, _marsh.TimestampConverter), BinaryTypeId.ArrayTimestamp);
         }
-        
+
         /** <inheritdoc /> */
         public string ReadString(string fieldName)
         {
@@ -350,13 +350,13 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritdoc /> */
         public string[] ReadStringArray(string fieldName)
         {
-            return ReadField(fieldName, r => BinaryUtils.ReadArray<string>(r, false), BinaryTypeId.ArrayString);
+            return ReadField(fieldName, stream => BinaryUtils.ReadStringArray(stream), BinaryTypeId.ArrayString);
         }
 
         /** <inheritdoc /> */
         public string[] ReadStringArray()
         {
-            return Read(r => BinaryUtils.ReadArray<string>(r, false), BinaryTypeId.ArrayString);
+            return Read(stream => BinaryUtils.ReadStringArray(stream), BinaryTypeId.ArrayString);
         }
 
         /** <inheritdoc /> */
@@ -374,13 +374,13 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritdoc /> */
         public Guid?[] ReadGuidArray(string fieldName)
         {
-            return ReadField(fieldName, r => BinaryUtils.ReadArray<Guid?>(r, false), BinaryTypeId.ArrayGuid);
+            return ReadField(fieldName, stream => BinaryUtils.ReadGuidArray(stream), BinaryTypeId.ArrayGuid);
         }
 
         /** <inheritdoc /> */
         public Guid?[] ReadGuidArray()
         {
-            return Read(r => BinaryUtils.ReadArray<Guid?>(r, false), BinaryTypeId.ArrayGuid);
+            return Read(stream => BinaryUtils.ReadGuidArray(stream), BinaryTypeId.ArrayGuid);
         }
 
         /** <inheritdoc /> */
@@ -409,7 +409,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                     // Unregistered enum written as serializable
                     Stream.Seek(-1, SeekOrigin.Current);
 
-                    return ReadObject<T>(); 
+                    return ReadObject<T>();
 
                 default:
                     throw new BinaryObjectException(string.Format(
@@ -473,7 +473,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public ICollection ReadCollection(string fieldName, Func<int, ICollection> factory, 
+        public ICollection ReadCollection(string fieldName, Func<int, ICollection> factory,
             Action<ICollection, object> adder)
         {
             return ReadField(fieldName, r => BinaryUtils.ReadCollection(r, factory, adder), BinaryTypeId.Collection);
@@ -510,7 +510,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
-        /// Enable detach mode for the next object read. 
+        /// Enable detach mode for the next object read.
         /// </summary>
         public BinaryReader DetachNext()
         {
@@ -799,7 +799,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 if (_frame.Schema == null)
                 {
-                    _frame.Schema = 
+                    _frame.Schema =
                         BinaryObjectSchemaSerializer.GetFieldIds(_frame.Hdr, Marshaller.Ignite, Stream, _frame.Pos);
 
                     desc.Schema.Add(_frame.Hdr.SchemaId, _frame.Schema);
@@ -888,7 +888,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
-        /// Mark current output as raw. 
+        /// Mark current output as raw.
         /// </summary>
         private void MarkRaw()
         {

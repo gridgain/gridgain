@@ -22,16 +22,24 @@ import java.util.regex.Pattern;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.Affinity;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
+import org.apache.ignite.internal.managers.eventstorage.HighPriorityListener;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishResponse;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -39,11 +47,12 @@ import org.apache.ignite.transactions.TransactionHeuristicException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.locationtech.jts.util.Assert;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
+import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
+import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishFuture.ALL_PARTITION_OWNERS_LEFT_GRID_MSG;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
@@ -56,6 +65,13 @@ import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.Sensi
  */
 @RunWith(Parameterized.class)
 public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
+
+    /** Client node name. */
+    private static final String CLIENT = "client";
+
+    /** Node leave events for discovery event listener. */
+    private static final int[] TYPES = {EVT_NODE_LEFT, EVT_NODE_FAILED};
+
     /** Parameters. */
     @Parameterized.Parameters(name = "syncMode={0}")
     public static Iterable<CacheWriteSynchronizationMode> data() {
@@ -66,21 +82,22 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
     @Parameterized.Parameter()
     public CacheWriteSynchronizationMode syncMode;
 
+    /** Amount backups for cache. */
+    public int backups = 0;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        DataStorageConfiguration dsConfig = new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(100L * 1024 * 1024)
-                .setPersistenceEnabled(true));
-
-        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
-
-        return cfg
-            .setDataStorageConfiguration(dsConfig)
-            .setCacheConfiguration(new CacheConfiguration("cache")
+        return super.getConfiguration(igniteInstanceName)
+            .setConsistentId(igniteInstanceName)
+            .setCommunicationSpi(new TestRecordingCommunicationSpi())
+            .setDataStorageConfiguration(new DataStorageConfiguration()
+                .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+                    .setMaxSize(100L * 1024 * 1024)
+                    .setPersistenceEnabled(true)))
+            .setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                .setWriteSynchronizationMode(syncMode).setBackups(0));
+                .setWriteSynchronizationMode(syncMode)
+                .setBackups(backups));
     }
 
     /** {@inheritDoc} */
@@ -134,98 +151,170 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
      * @throws Exception If failed
      */
     private void testNodeFailBeforeSendGridNearTxFinishResponse() throws Exception {
-        startGrids(2);
+        IgniteEx grid0 = startGrids(2);
 
-        grid(0).cluster().active(true);
+        grid0.cluster().state(ClusterState.ACTIVE);
 
-        IgniteEx grid0 = grid(0);
         IgniteEx grid1 = grid(1);
 
-        int key0 = 0;
-        int key1 = 0;
+        int key0 = primaryKey(grid0.cache(DEFAULT_CACHE_NAME));
+        int key1 = primaryKey(grid1.cache(DEFAULT_CACHE_NAME));
 
-        Affinity<Object> aff = grid1.affinity("cache");
+        Affinity<Object> aff = grid1.affinity(DEFAULT_CACHE_NAME);
 
-        for (int i = 1; i < 1000; i++) {
-            if (grid0.equals(grid(aff.mapKeyToNode(i)))) {
-                key0 = i;
+        assertFalse(
+            "Keys have the same mapping [key0=" + key0 + ", key1=" + key1 + ']',
+            aff.mapKeyToNode(key0).equals(aff.mapKeyToNode(key1))
+        );
 
-                break;
-            }
-        }
+        spi(grid0).blockMessages(GridNearTxFinishResponse.class, getTestIgniteInstanceName(1));
 
-        for (int i = key0; i < 1000; i++) {
-            if (grid1.equals(grid(aff.mapKeyToNode(i))) && !aff.mapKeyToNode(key0).equals(aff.mapKeyToNode(i))) {
-                key1 = i;
+        IgniteInternalFuture stopNodeFut = GridTestUtils.runAsync(() -> {
+                try {
+                    spi(grid0).waitForBlocked();
+                }
+                catch (InterruptedException e) {
+                    log.error("Waiting is interrupted.", e);
+                }
 
-                break;
-            }
-        }
+                info("Stopping node: [" + grid0.name() + ']');
 
-        assert !aff.mapKeyToNode(key0).equals(aff.mapKeyToNode(key1));
+                grid0.close();
+
+            },
+            "node-stopper"
+        );
 
         try (Transaction tx = grid1.transactions().txStart()) {
-            grid1.cache("cache").put(key0, 100);
-            grid1.cache("cache").put(key1, 200);
+            grid1.cache(DEFAULT_CACHE_NAME).put(key0, 100);
+            grid1.cache(DEFAULT_CACHE_NAME).put(key1, 200);
 
-            spi(grid0).blockMessages((node, msg) -> {
-                    if (msg instanceof GridNearTxFinishResponse) {
-                        new Thread(
-                            new Runnable() {
-                                @Override public void run() {
-                                    log().info("Stopping node: [" + grid0.name() + "]");
+            tx.commit();
 
-                                    IgnitionEx.stop(grid0.name(), true, null, true);
-                                }
-                            },
-                            "node-stopper"
-                        ).start();
+            fail("Transaction passed, but no one partition is alive.");
 
-                        return true;
-                    }
+        }
+        catch (Exception e) {
+            assertTrue(X.hasCause(e, CacheInvalidStateException.class));
 
-                    return false;
+            String msg = e.getMessage();
+
+            assertTrue(msg.contains(ALL_PARTITION_OWNERS_LEFT_GRID_MSG));
+
+            if (!mvccEnabled(grid1.context())) {
+                Pattern msgPtrn;
+
+                if (S.getSensitiveDataLogging() == PLAIN) {
+                    msgPtrn = Pattern.compile(" \\[cacheName=" + DEFAULT_CACHE_NAME +
+                        ", partition=\\d+, " +
+                        "key=KeyCacheObjectImpl \\[part=\\d+, val=" + key0 +
+                        ", hasValBytes=true\\]\\]");
                 }
-            );
-
-            boolean passed = false;
-
-            try {
-                tx.commit();
-            }
-            catch (Throwable e) {
-                String msg = e.getMessage();
-
-                Assert.isTrue(e.getCause() instanceof CacheInvalidStateException);
-
-                Assert.isTrue(msg.contains(ALL_PARTITION_OWNERS_LEFT_GRID_MSG));
-
-                if (!mvccEnabled(grid1.context())) {
-                    Pattern msgPtrn;
-
-                    if (S.getSensitiveDataLogging() == PLAIN) {
-                        msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " +
-                                "key=KeyCacheObjectImpl \\[part=\\d+, val=" + key0 +
-                                ", hasValBytes=true\\]\\]");
-                    }
-                    else if (S.getSensitiveDataLogging() == HASH) {
-                        msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " +
-                                "key=" + IgniteUtils.hash(key0) + "\\]");
-                    }
-                    else {
-                        msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " +
-                                "key=KeyCacheObject\\]");
-                    }
-
-                    Matcher matcher = msgPtrn.matcher(msg);
-
-                    Assert.isTrue(matcher.find(), msg);
+                else if (S.getSensitiveDataLogging() == HASH) {
+                    msgPtrn = Pattern.compile(" \\[cacheName=" + DEFAULT_CACHE_NAME +
+                        ", partition=\\d+, " +
+                        "key=" + IgniteUtils.hash(key0) + "\\]");
+                }
+                else {
+                    msgPtrn = Pattern.compile(" \\[cacheName=" + DEFAULT_CACHE_NAME +
+                        ", partition=\\d+, " +
+                        "key=KeyCacheObject\\]");
                 }
 
-                passed = true;
-            }
+                Matcher matcher = msgPtrn.matcher(msg);
 
-            Assert.isTrue(passed);
+                assertTrue("Message does not match: [msg=" + msg + ']', matcher.find());
+            }
+        }
+
+        stopNodeFut.get(10_000);
+    }
+
+    /**
+     * Test checks the all node leave detector when cache has backups enough.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void cacheWithBackups() throws Exception {
+        backups = 2;
+
+        IgniteEx ignite0 = startGrids(3);
+
+        ignite0.cluster().state(ClusterState.ACTIVE);
+
+        IgniteEx client = startClientGrid(CLIENT);
+
+        awaitPartitionMapExchange();
+
+        int key = primaryKey(ignite(1).cache(DEFAULT_CACHE_NAME));
+
+        spi(ignite(1)).blockMessages(GridNearTxFinishResponse.class, CLIENT);
+
+        spi(ignite(2)).blockMessages(GridDhtTxFinishResponse.class, CLIENT);
+
+        new TestDiscoveryNodeLeftListener(CLIENT);
+
+        IgniteInternalFuture stopNodeFut = GridTestUtils.runAsync(() -> {
+                try {
+                    spi(ignite(1)).waitForBlocked();
+                }
+                catch (InterruptedException e) {
+                    log.error("Waiting is interrupted.", e);
+                }
+
+                info("Stopping node: [" + ignite(2).name() + ']');
+
+                ignite(2).close();
+
+            },
+            "node-stopper"
+        );
+
+        try (Transaction tx = client.transactions().txStart()) {
+            client.cache(DEFAULT_CACHE_NAME).put(key, 100);
+
+            tx.commit();
+        }
+        catch (Exception e) {
+            log.error("Transaction was not committed.", e);
+
+            fail("Transaction should be committed while at last one owner present [err=" + e.getMessage() + ']');
+        }
+
+        assertEquals(100, client.cache(DEFAULT_CACHE_NAME).get(key));
+
+        stopNodeFut.get(10_000);
+    }
+
+    /**
+     * A test discovery listener to freeze handling node left events.
+     */
+    private class TestDiscoveryNodeLeftListener implements DiscoveryEventListener, HighPriorityListener {
+        /** Name node to subscribe listener. */
+        private final String nodeToSubscribe;
+
+        /**
+         * @param nodeToSubscribe Node to subscribe.
+         */
+        public TestDiscoveryNodeLeftListener(String nodeToSubscribe) {
+            this.nodeToSubscribe = nodeToSubscribe;
+
+            grid(nodeToSubscribe).context().event().addDiscoveryEventListener(this, TYPES);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
+            info("Stopping node: [" + ignite(1).name() + ']');
+
+            ignite(1).close();
+
+            grid(nodeToSubscribe).context().event().removeDiscoveryEventListener(this, TYPES);
+        }
+
+        /** {@inheritDoc} */
+        @Override public int order() {
+            return 0;
         }
     }
 }
