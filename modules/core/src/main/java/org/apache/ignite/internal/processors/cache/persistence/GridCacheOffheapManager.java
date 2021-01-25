@@ -1185,7 +1185,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             assert latestReservedPointer == null || latestReservedPointer.compareTo(minPtr) <= 0
                 : "Historical iterator tries to iterate WAL out of reservation [cache=" + grp.cacheOrGroupName()
-                + ", reservedPointer=" + database.latestWalPointerReservedForPreloading()
+                + ", reservedPointer=" + latestReservedPointer
                 + ", historicalPointer=" + minPtr + ']';
 
             if (latestReservedPointer == null)
