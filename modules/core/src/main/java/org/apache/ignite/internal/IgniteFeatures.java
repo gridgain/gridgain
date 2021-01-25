@@ -197,7 +197,10 @@ public enum IgniteFeatures {
     SAFE_CLUSTER_DEACTIVATION(51),
 
     /** Point-in-time distributed property. */
-    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54);
+    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54),
+
+    /** Node supports capturing incremental snapshot if previous snapshots mismatch from ones on another nodes. */
+    SMART_INCREMENTAL_SNAPSHOT(55);
 
     /**
      * Unique feature identifier.
