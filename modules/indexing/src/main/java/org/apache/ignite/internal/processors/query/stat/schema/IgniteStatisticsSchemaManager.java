@@ -26,16 +26,21 @@ import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsReposito
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepositoryImpl;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatisticsImpl;
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
+import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.function.Function;
 
 /** */
 public class IgniteStatisticsSchemaManager implements DistributedMetastorageLifecycleListener {
     /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
+
+    /** */
+    private static final String STAT_CACHE_GRP_PREFIX = "sql.stat.grp.";
 
     /** Distributed metastore. */
     private final DistributedMetaStorage distrMetaStorage;
@@ -67,6 +72,11 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
             (k, oldV, newV) -> onUpdateStatisticSchema(k, (TableStatisticsInfo)oldV, (TableStatisticsInfo)newV)
         );
 
+        distrMetaStorage.listen(
+            (metaKey) -> metaKey.startsWith(STAT_CACHE_GRP_PREFIX),
+            (k, oldV, newV) -> onUpdateStatisticSchema(k, (TableStatisticsInfo)oldV, (TableStatisticsInfo)newV)
+        );
+
         subscriptionProcessor.registerDistributedMetastorageListener(this);
     }
 
@@ -80,7 +90,12 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
     }
 
     /** */
-    public void updateStatistic(TableStatisticsInfo info) throws IgniteCheckedException {
+    public void updateStatistic(List<StatisticsTarget> targets, StatisticConfiguration cfg) {
+
+    }
+
+    /** */
+    public void updateStatisticXZ(TableStatisticsInfo info) throws IgniteCheckedException {
         String key = key2String(info.key());
 
         TableStatisticsInfo oldInfo = distrMetaStorage.read(key);
@@ -116,7 +131,6 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
         ObjectStatisticsImpl localStat = localRepo.getLocalStatistics(tblStatInfo.key());
 
         if (localStat != null && localStat.version() != tblStatInfo.version()) {
-            mgr.gatherObjectStatisticsAsync()
         }
     }
 
