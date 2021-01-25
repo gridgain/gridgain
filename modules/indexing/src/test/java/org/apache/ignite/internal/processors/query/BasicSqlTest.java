@@ -16,19 +16,45 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.util.ArrayList;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Basic simple tests for SQL.
  */
+@RunWith(Parameterized.class)
 public class BasicSqlTest extends AbstractIndexingCommonTest {
+    /** */
+    private static IgniteEx cli;
+
+    /** Repair algorithm. */
+    @Parameterized.Parameter(0)
+    public boolean client;
+
+    /**
+     *
+     */
+    @Parameterized.Parameters(name = "client = {0}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>();
+
+        params.add(new Object[] {true});
+        params.add(new Object[] {false});
+
+        return params;
+    }
+
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         stopAllGrids();
@@ -41,6 +67,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         super.beforeTestsStarted();
 
         startGrids(2);
+        cli = startClientGrid(2);
     }
 
     /** {@inheritDoc} */
@@ -82,7 +109,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         sql("CREATE INDEX IDX_VAL0_VAL1 ON TEST(VAL0, VAL1)");
 
         String plan = null;
-        plan = (String)execute(new SqlFieldsQuery(
+        plan = (String)executeOnSrv(new SqlFieldsQuery(
             "EXPLAIN SELECT VAL0, VAL1, VAL2 FROM TEST " +
             "WHERE VAL0 = 0 " +
             "ORDER BY VAL0, VAL1").setLocal(true)
@@ -90,7 +117,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
 
         assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
 
-        plan = (String)execute(new SqlFieldsQuery(
+        plan = (String)executeOnSrv(new SqlFieldsQuery(
             "EXPLAIN SELECT VAL0, VAL1, VAL2 FROM TEST " +
             "WHERE VAL0 = 0 " +
             "ORDER BY 1, 2").setLocal(true)
@@ -98,7 +125,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
 
         assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
 
-        plan = (String)execute(new SqlFieldsQuery(
+        plan = (String)executeOnSrv(new SqlFieldsQuery(
             "EXPLAIN SELECT VAL0, VAL1, VAL2 FROM TEST " +
                 "WHERE VAL0 = 0 " +
                 "ORDER BY VAL0, VAL1")
@@ -132,14 +159,45 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     /**
      */
     @Test
+    public void testDbg() throws Exception {
+        sql("CREATE TABLE TEST (ID0 INT, ID1 INT, VAL0 INT, VAL1 INT, PRIMARY KEY(ID0, ID1))");
+
+        sql("CREATE INDEX IDX_ID0 ON TEST(ID0)");
+        sql("CREATE INDEX IDX_ID1 ON TEST(ID1)");
+
+        for (int i = 0; i < 100000; ++i)
+            sql ("INSERT INTO TEST VALUES (?, ?, ?, ?)", 0, i, i, i);
+
+        U.sleep(1000);
+        log.info("+++ SELECT");
+        List<List<?>> res = sql("SELECT * FROM TEST WHERE VAL0 = 10").getAll();
+        log.info("+++ " + sql("EXPLAIN SELECT * FROM TEST WHERE VAL0 = 10").getAll());
+
+        assertEquals(1, res.size());
+
+        sql("DROP INDEX IDX_ID0");
+        res = sql("SELECT * FROM TEST WHERE VAL0 = 10").getAll();
+
+        assertEquals(1, res.size());
+
+        sql("DROP INDEX IDX_ID1");
+        res = sql("SELECT * FROM TEST WHERE VAL0 = 10").getAll();
+
+        assertEquals(1, res.size());
+
+    }
+
+    /**
+     */
+    @Test
     public void testSysdate() {
         sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS TIMESTAMP)");
 
         int rows = 100;
         for (int i = 0; i < rows; ++i) {
             sql("INSERT INTO TEST VALUES " +
-                    "(?, ?, ?)",
-                i, i, new Timestamp(ThreadLocalRandom.current().nextLong()));
+                            "(?, ?, ?)",
+                    i, i, new Timestamp(ThreadLocalRandom.current().nextLong()));
         }
 
         List<List<?>> res0 = sql("SELECT ID, SYSDATE, SYSDATE() FROM TEST").getAll();
@@ -151,15 +209,16 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         assertEquals(rows, res1.size());
 
         res1.forEach(r -> assertTrue("Invalid result type: " +
-            r.get(0) + ",\n at results: " + res1, r.get(0) instanceof Long));
+                r.get(0) + ",\n at results: " + res1, r.get(0) instanceof Long));
 
-        List<List<?>> res2 = execute(new SqlFieldsQuery("SELECT VAL_TS - SYSDATE() FROM TEST").setLocal(true)).getAll();
+        List<List<?>> res2 = executeOnSrv(new SqlFieldsQuery("SELECT VAL_TS - SYSDATE() FROM TEST").setLocal(true)).getAll();
 
         assertTrue(!res2.isEmpty());
 
         res2.forEach(r -> assertTrue("Invalid result type: " +
-            r.get(0) + ",\n at results: " + res2, r.get(0) instanceof Long));
+                r.get(0) + ",\n at results: " + res2, r.get(0) instanceof Long));
     }
+
 
     /**
      */
@@ -188,7 +247,9 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
-        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql)
+        IgniteEx ign = client ? cli : grid(0);
+
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setArgs(args), false);
     }
 
@@ -196,7 +257,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      * @param qry Query.
      * @return Results cursor.
      */
-    private FieldsQueryCursor<List<?>> execute(SqlFieldsQuery qry) {
+    private FieldsQueryCursor<List<?>> executeOnSrv(SqlFieldsQuery qry) {
         return grid(0).context().query().querySqlFields(qry, false);
     }
 }

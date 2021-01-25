@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
@@ -31,8 +29,6 @@ import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.h2.database.H2PkHashIndex;
-import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -40,7 +36,6 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneIndex;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
@@ -76,12 +71,6 @@ public class H2TableDescriptor {
 
     /** */
     private GridH2Table tbl;
-
-    /** */
-    private GridLuceneIndex luceneIdx;
-
-    /** */
-    private H2PkHashIndex pkHashIdx;
 
     /** Flag of table has been created from SQL*/
     private boolean isSql;
@@ -194,120 +183,12 @@ public class H2TableDescriptor {
      * @return Lucene index.
      */
     GridLuceneIndex luceneIndex() {
-        return luceneIdx;
+        return tbl.luceneIdx();
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(H2TableDescriptor.class, this);
-    }
-
-    /**
-     * Create list of indexes. First must be primary key, after that all unique indexes and only then non-unique
-     * indexes. All indexes must be subtypes of {@link H2TreeIndexBase}.
-     *
-     * @param tbl Table to create indexes for.
-     * @return List of indexes.
-     */
-    public ArrayList<Index> createSystemIndexes(GridH2Table tbl) {
-        ArrayList<Index> idxs = new ArrayList<>();
-
-        IndexColumn keyCol = tbl.indexColumn(QueryUtils.KEY_COL, SortOrder.ASCENDING);
-        IndexColumn affCol = tbl.getAffinityKeyColumn();
-
-        if (affCol != null && H2Utils.equals(affCol, keyCol))
-            affCol = null;
-
-        List<IndexColumn> unwrappedKeyAndAffinityCols = extractKeyColumns(tbl, keyCol, affCol);
-
-        List<IndexColumn> wrappedKeyCols = H2Utils.treeIndexColumns(tbl.rowDescriptor(),
-            new ArrayList<>(2), keyCol, affCol);
-
-        Index hashIdx = createHashIndex(
-            tbl,
-            wrappedKeyCols
-        );
-
-        if (hashIdx != null)
-            idxs.add(hashIdx);
-
-        // Add primary key index.
-        Index pkIdx = idx.createSortedIndex(
-            PK_IDX_NAME,
-            tbl,
-            true,
-            false,
-            unwrappedKeyAndAffinityCols,
-            wrappedKeyCols,
-            -1
-        );
-
-        idxs.add(pkIdx);
-
-        if (type().valueClass() == String.class) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
-        }
-
-        GridQueryIndexDescriptor textIdx = type.textIndex();
-
-        if (textIdx != null) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
-        }
-
-        // Locate index where affinity column is first (if any).
-        if (affCol != null) {
-            boolean affIdxFound = false;
-
-            for (GridQueryIndexDescriptor idxDesc : type.indexes().values()) {
-                if (idxDesc.type() != QueryIndexType.SORTED)
-                    continue;
-
-                String firstField = idxDesc.fields().iterator().next();
-
-                Column col = tbl.getColumn(firstField);
-
-                IndexColumn idxCol = tbl.indexColumn(col.getColumnId(),
-                    idxDesc.descending(firstField) ? SortOrder.DESCENDING : SortOrder.ASCENDING);
-
-                affIdxFound |= H2Utils.equals(idxCol, affCol);
-            }
-
-            // Add explicit affinity key index if nothing alike was found.
-            if (!affIdxFound) {
-                List<IndexColumn> unwrappedKeyCols = extractKeyColumns(tbl, keyCol, null);
-
-                ArrayList<IndexColumn> colsWithUnwrappedKey = new ArrayList<>(unwrappedKeyCols.size());
-
-                colsWithUnwrappedKey.add(affCol);
-
-                //We need to reorder PK columns to have affinity key as first column, that's why we can't use simple PK columns
-                H2Utils.addUniqueColumns(colsWithUnwrappedKey, unwrappedKeyCols);
-
-                List<IndexColumn> cols = H2Utils.treeIndexColumns(tbl.rowDescriptor(), new ArrayList<>(2), affCol, keyCol);
-
-                idxs.add(idx.createSortedIndex(
-                    AFFINITY_KEY_IDX_NAME,
-                    tbl,
-                    false,
-                    true,
-                    colsWithUnwrappedKey,
-                    cols,
-                    -1)
-                );
-            }
-        }
-
-        return idxs;
     }
 
     /**
@@ -319,7 +200,7 @@ public class H2TableDescriptor {
      *
      * @return List of key and affinity columns. Key's, if it possible, splitted into simple components.
      */
-    @NotNull private List<IndexColumn> extractKeyColumns(GridH2Table tbl, IndexColumn keyCol, IndexColumn affCol) {
+    @NotNull public List<IndexColumn> extractKeyColumns(GridH2Table tbl, IndexColumn keyCol, IndexColumn affCol) {
         ArrayList<IndexColumn> keyCols;
 
         if (isSql) {
@@ -425,7 +306,7 @@ public class H2TableDescriptor {
 
             H2Utils.addUniqueColumns(colsWithUnwrappedKey, unwrappedKeyCols);
 
-            cols = H2Utils.treeIndexColumns(desc, cols, keyCol, affCol);
+            cols = H2Utils.treeIndexColumns(desc, cols, keyCol);
 
             return idx.createSortedIndex(
                 idxDesc.name(),
@@ -444,31 +325,11 @@ public class H2TableDescriptor {
     }
 
     /**
-     * Create hash index.
-     *
-     * @param tbl Table.
-     * @param cols Columns.
-     * @return Index.
-     */
-    private Index createHashIndex(GridH2Table tbl, List<IndexColumn> cols) {
-        if (cacheInfo.affinityNode()) {
-            assert pkHashIdx == null : pkHashIdx;
-
-            pkHashIdx = new H2PkHashIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols,
-                tbl.rowDescriptor().context().config().getQueryParallelism());
-
-            return pkHashIdx;
-        }
-
-        return null;
-    }
-
-    /**
      * Handle drop.
      */
     void onDrop() {
         tbl.destroy();
 
-        U.closeQuiet(luceneIdx);
+        U.closeQuiet(tbl.luceneIdx());
     }
 }

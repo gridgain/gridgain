@@ -431,10 +431,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (tbl == null)
             return;
 
-        if (tbl.table().remove(row)) {
-            if (tbl.luceneIndex() != null)
-                tbl.luceneIndex().remove(row.key());
-        }
+        tbl.table().remove(row);
+
+        if (tbl.luceneIndex() != null)
+            tbl.luceneIndex().remove(row.key());
     }
 
     /** {@inheritDoc} */
@@ -478,7 +478,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Index.
      */
     @SuppressWarnings("ConstantConditions")
-    GridH2IndexBase createSortedIndex(String name, GridH2Table tbl, boolean pk, boolean affinityKey,
+    public GridH2IndexBase createSortedIndex(String name, GridH2Table tbl, boolean pk, boolean affinityKey,
         List<IndexColumn> unwrappedCols, List<IndexColumn> wrappedCols, int inlineSize) {
         try {
             GridCacheContextInfo cacheInfo = tbl.cacheInfo();
@@ -506,7 +506,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 );
             }
             else
-                return H2TreeClientIndex.createIndex(tbl, name, pk, unwrappedCols, inlineSize, log);
+                return H2TreeClientIndex.createIndex(tbl, name, pk, wrappedCols, inlineSize, log);
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

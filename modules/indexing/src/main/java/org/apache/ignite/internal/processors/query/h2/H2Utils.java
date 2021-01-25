@@ -310,18 +310,14 @@ public class H2Utils {
      * @param desc Row descriptor.
      * @param cols Columns list.
      * @param keyCol Primary key column.
-     * @param affCol Affinity key column.
      * @return The same list back.
      */
     public static List<IndexColumn> treeIndexColumns(GridH2RowDescriptor desc, List<IndexColumn> cols,
-        IndexColumn keyCol, IndexColumn affCol) {
+        IndexColumn keyCol) {
         assert keyCol != null;
 
         if (!containsKeyColumn(desc, cols))
             cols.add(keyCol);
-
-        if (affCol != null && !containsColumn(cols, affCol))
-            cols.add(affCol);
 
         return cols;
     }
@@ -1070,59 +1066,38 @@ public class H2Utils {
      * Create list of index columns. Where possible _KEY columns will be unwrapped.
      *
      * @param tbl GridH2Table instance
-     * @param idxCols List of index columns.
+     * @param colsOrig List of index columns.
      *
      * @return Array of key and affinity columns. Key's, if it possible, splitted into simple components.
      */
-    @NotNull public static IndexColumn[] unwrapKeyColumns(GridH2Table tbl, IndexColumn[] idxCols) {
-        ArrayList<IndexColumn> keyCols = new ArrayList<>();
+    @NotNull public static IndexColumn[] unwrapKeyColumns(GridH2Table tbl, IndexColumn[] colsOrig) {
+        IndexColumn[] colsInfo = new IndexColumn[colsOrig.length];
 
         boolean isSql = tbl.rowDescriptor().tableDescriptor().sql();
 
         if (!isSql)
-            return idxCols;
+            return colsOrig;
 
         GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
 
-        for (IndexColumn idxCol : idxCols) {
-            if (idxCol.column.getColumnId() == KEY_COL) {
-                if (QueryUtils.isSqlType(type.keyClass())) {
-                    int altKeyColId = tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
+        for (int i = 0; i < colsOrig.length; ++i) {
+            if (colsOrig[i].column.getColumnId() == KEY_COL && QueryUtils.isSqlType(type.keyClass())) {
+                int altKeyColId = tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
 
-                    //Remap simple key to alternative column.
-                    IndexColumn idxKeyCol = new IndexColumn();
+                //Remap simple key to alternative column.
+                IndexColumn idxKeyCol = new IndexColumn();
 
-                    idxKeyCol.column = tbl.getColumn(altKeyColId);
-                    idxKeyCol.columnName = idxKeyCol.column.getName();
-                    idxKeyCol.sortType = idxCol.sortType;
+                idxKeyCol.column = tbl.getColumn(altKeyColId);
+                idxKeyCol.columnName = idxKeyCol.column.getName();
+                idxKeyCol.sortType = colsOrig[i].sortType;
 
-                    keyCols.add(idxKeyCol);
-                }
-                else {
-                    boolean added = false;
-
-                    for (String propName : type.fields().keySet()) {
-                        GridQueryProperty prop = type.property(propName);
-
-                        if (prop.key()) {
-                            added = true;
-
-                            Column col = tbl.getColumn(propName);
-
-                            keyCols.add(tbl.indexColumn(col.getColumnId(), SortOrder.ASCENDING));
-                        }
-                    }
-
-                    // If key is object but the user has not specified any particular columns,
-                    // we have to fall back to whole-key index.
-                    if (!added)
-                        keyCols.add(idxCol);
-                }
-            } else
-                keyCols.add(idxCol);
+                colsInfo[i] = idxKeyCol;
+            }
+            else
+                colsInfo[i] = colsOrig[i];
         }
 
-        return keyCols.toArray(EMPTY_COLUMNS);
+        return colsInfo;
     }
 
     /**
