@@ -2,15 +2,15 @@
 
     <PropertyGroup>
         <PackageType>Template</PackageType>
-        <PackageVersion>2.11.0</PackageVersion>
-        <PackageId>Apache.Ignite.Examples</PackageId>
-        <Title>Apache Ignite Examples</Title>
-        <Authors>Apache Ignite</Authors>
-        <Description>Apache Ignite.NET example projects. This package is a convenient way to download and explore the examples. Documentation: https://ignite.apache.org/docs/latest/quick-start/dotnet</Description>
-        <PackageTags>apache;ignite;examples;distributed;cache;sql;nosql;linq;dotnet-new;templates;</PackageTags>
+        <PackageVersion>8.8.127</PackageVersion>
+        <PackageId>GridGain.Ignite.Examples</PackageId>
+        <Title>GridGain Examples</Title>
+        <Authors>GridGain</Authors>
+        <Description>GridGain Ignite.NET example projects. This package is a convenient way to download and explore the examples. Documentation: https://ignite.apache.org/docs/latest/quick-start/dotnet</Description>
+        <PackageTags>GridGain;ignite;examples;distributed;cache;sql;nosql;linq;dotnet-new;templates;</PackageTags>
         <TargetFramework>netcoreapp2.1</TargetFramework>
-        <PackageProjectUrl>https://ignite.apache.org</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/apache/ignite</RepositoryUrl>
+        <PackageProjectUrl>https://www.gridgain.com/products/software/community-edition</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/gridgain/gridgain</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
         <PackageIcon>logo_ignite_128x128.png</PackageIcon>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
