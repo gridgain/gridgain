@@ -1,4 +1,4 @@
-# Ignite.NET Examples
+# GridGain.NET Examples
 
 * Examples are grouped by Thick and Thin modes in corresponding folders.
 * `Shared` project contains common code, such as configuration and model classes.
@@ -14,8 +14,8 @@ Windows, Linux, and macOS are supported.
 # Download Examples
 
 * NuGet: 
-  * `dotnet new --install Apache.Ignite.Examples`
-  * `dotnet new ignite-examples`  
+  * `dotnet new --install GridGain.Ignite.Examples`
+  * `dotnet new gridgain-examples`  
 * Ignite website: https://ignite.apache.org/download.cgi
 * git: `git clone https://github.com/apache/ignite --depth=1`, `cd ignite/modules/platforms/dotnet/examples`
 

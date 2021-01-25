@@ -1,4 +1,4 @@
-# Apache Ignite Project Templates
+# GridGain Project Templates
 
 Templates for the `dotnet new` command.
 
