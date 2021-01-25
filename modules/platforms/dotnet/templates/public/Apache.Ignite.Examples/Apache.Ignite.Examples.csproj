@@ -6,7 +6,7 @@
         <PackageId>GridGain.Ignite.Examples</PackageId>
         <Title>GridGain Examples</Title>
         <Authors>GridGain</Authors>
-        <Description>GridGain Ignite.NET example projects. This package is a convenient way to download and explore the examples. Documentation: https://www.gridgain.com/docs/latest/getting-started/quick-start/dotnet</Description>
+        <Description>GridGain.NET example projects. This package is a convenient way to download and explore the examples. Documentation: https://www.gridgain.com/docs/latest/getting-started/quick-start/dotnet</Description>
         <PackageTags>GridGain;ignite;examples;distributed;cache;sql;nosql;linq;dotnet-new;templates;</PackageTags>
         <TargetFramework>netcoreapp2.1</TargetFramework>
         <PackageProjectUrl>https://www.gridgain.com/products/software/community-edition</PackageProjectUrl>
