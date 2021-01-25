@@ -21,13 +21,19 @@ import java.io.Serializable;
  *
  */
 public class ColumnStatisticsInfo implements Serializable {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
-    /**
-     *
-     */
+    /** */
     private String name;
+
+    /** */
+    public ColumnStatisticsInfo(String name) {
+        this.name = name;
+    }
+
+    /** */
+    public String name() {
+        return name;
+    }
 }

@@ -137,6 +137,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             gatMgmtPool, ctx::log);
 
         statSchemaMgr = new IgniteStatisticsSchemaManager(
+            schemaMgr,
             this,
             ctx.distributedMetastorage(),
             ctx.internalSubscriptionProcessor(),

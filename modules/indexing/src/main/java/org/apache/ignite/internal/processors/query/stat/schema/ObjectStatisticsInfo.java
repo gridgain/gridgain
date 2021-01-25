@@ -16,13 +16,16 @@
 package org.apache.ignite.internal.processors.query.stat.schema;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 
 /**
  *
  */
-public class TableStatisticsInfo implements Serializable {
+public class ObjectStatisticsInfo implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -33,16 +36,28 @@ public class TableStatisticsInfo implements Serializable {
     private final ColumnStatisticsInfo[] cols;
 
     /** */
-    private final StatisticConfiguration[] cfg;
+    private final StatisticConfiguration cfg;
 
     /** */
     private final long version;
 
     /** */
-    public TableStatisticsInfo(
+    public ObjectStatisticsInfo(
         StatisticsKey key,
         ColumnStatisticsInfo[] cols,
-        StatisticConfiguration[] cfg,
+        StatisticConfiguration cfg
+    ) {
+        this.key = key;
+        this.cols = cols;
+        this.cfg = cfg;
+        version = 1;
+    }
+
+    /** */
+    private ObjectStatisticsInfo(
+        StatisticsKey key,
+        ColumnStatisticsInfo[] cols,
+        StatisticConfiguration cfg,
         long version
     ) {
         this.key = key;
@@ -52,8 +67,25 @@ public class TableStatisticsInfo implements Serializable {
     }
 
     /** */
-    public static TableStatisticsInfo merge(TableStatisticsInfo info, TableStatisticsInfo info1) {
-        return null;
+    public static ObjectStatisticsInfo merge(ObjectStatisticsInfo oldInfo, ObjectStatisticsInfo newInfo) {
+        assert oldInfo.key.equals(newInfo.key) : "Invalid schema to merge: [oldKey=" + oldInfo.key
+            + ", newKey=" + newInfo.key + ']';
+
+        Set<String> cols = Arrays.stream(oldInfo.cols)
+            .map(ColumnStatisticsInfo::name).collect(Collectors.toSet());
+
+        cols.addAll(Arrays.stream(newInfo.cols)
+            .map(ColumnStatisticsInfo::name).collect(Collectors.toSet()));
+
+        return new ObjectStatisticsInfo(
+            newInfo.key,
+            cols.stream()
+                .map(ColumnStatisticsInfo::new)
+                .collect(Collectors.toList())
+                .toArray(new ColumnStatisticsInfo[cols.size()]),
+            newInfo.cfg,
+            oldInfo.version + 1
+        );
     }
 
     /** */
@@ -67,7 +99,7 @@ public class TableStatisticsInfo implements Serializable {
     }
 
     /** */
-    public StatisticConfiguration[] config() {
+    public StatisticConfiguration config() {
         return cfg;
     }
 

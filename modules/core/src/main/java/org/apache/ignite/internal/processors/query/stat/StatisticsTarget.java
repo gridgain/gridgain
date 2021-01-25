@@ -18,15 +18,14 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.apache.ignite.internal.stat.IoStatisticsHolderKey;
+
 /**
  * Target to collect statistics by.
  */
 public class StatisticsTarget {
-    /** Schema name. */
-    private final String schema;
-
-    /** Object (table or index) name. */
-    private final String obj;
+    /** Statistic key. */
+    private final StatisticsKey key;
 
     /**  */
     private final String[] columns;
@@ -39,8 +38,7 @@ public class StatisticsTarget {
      * @param columns Array of column names or {@code null} if target - all columns.
      */
     public StatisticsTarget(String schema, String obj, String... columns) {
-        this.schema = schema;
-        this.obj = obj;
+        key = new StatisticsKey(schema, obj);
         this.columns = columns;
     }
 
@@ -48,12 +46,12 @@ public class StatisticsTarget {
      * @return Schema name.
      */
     public String schema() {
-        return schema;
+        return key.schema();
     }
 
     /** Object name. */
     public String obj() {
-        return obj;
+        return key().obj();
     }
 
     /** Columns array. */
@@ -61,19 +59,23 @@ public class StatisticsTarget {
         return columns;
     }
 
+    /** Statistic key (schema and table name). */
+    public StatisticsKey key() {
+        return key;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         StatisticsTarget that = (StatisticsTarget) o;
-        return Objects.equals(schema, that.schema) &&
-                Objects.equals(obj, that.obj) &&
+        return Objects.equals(key, that.key) &&
                 Arrays.equals(columns, that.columns);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        int result = Objects.hash(schema, obj);
+        int result = Objects.hash(key);
         result = 31 * result + Arrays.hashCode(columns);
         return result;
     }
