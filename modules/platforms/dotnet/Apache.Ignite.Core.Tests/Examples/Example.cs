@@ -124,8 +124,7 @@ namespace Apache.Ignite.Core.Tests.Examples
         {
             var name = Path.GetFileNameWithoutExtension(projFile);
             var path = Path.GetDirectoryName(projFile);
-            var asmFile = Path.Combine(path, "bin", "Debug", "netcoreapp2.1", $"{name}.dll");
-
+            var asmFile = ExamplePaths.GetAssemblyPath(projFile);
             var sourceFile = Path.Combine(path, "Program.cs");
             var sourceCode = File.ReadAllText(sourceFile);
 
@@ -139,7 +138,7 @@ namespace Apache.Ignite.Core.Tests.Examples
         {
             var projFiles = Directory
                 .GetFiles(ExamplePaths.SourcesPath, "*.csproj", SearchOption.AllDirectories)
-                .Where(x => !x.EndsWith("Shared.csproj")).ToArray();
+                .Where(x => !x.EndsWith(ExamplePaths.SharedProjFileName)).ToArray();
 
             Assert.IsTrue(projFiles.Any());
 
