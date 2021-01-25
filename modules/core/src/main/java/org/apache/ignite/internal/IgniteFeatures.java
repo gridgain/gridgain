@@ -194,7 +194,11 @@ public enum IgniteFeatures {
     CACHE_GROUP_KEY_CHANGE(50),
 
     /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
-    SAFE_CLUSTER_DEACTIVATION(51);
+    SAFE_CLUSTER_DEACTIVATION(51),
+
+    /** Warning is shown in server log and after schedule and snapshot commands if PIRT is enabled and snapshot schedule
+     * is improper for PITR*/
+    IMPROPER_SCHEDULE_FOR_PITR_WARNING(56);
 
     /**
      * Unique feature identifier.
