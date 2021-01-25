@@ -310,6 +310,15 @@ public class SqlKeyword {
     /** Keyword: REVOKE. */
     public static final String REVOKE = "REVOKE";
 
+    /** Keyword: ANALYZE. */
+    public static final String ANALYZE = "ANALYZE";
+
+    /** Keyword: STATISTICS. */
+    public static final String STATISTICS = "STATISTICS";
+
+    /** Keyword: REFRESH. */
+    public static final String REFRESH = "REFRESH";
+
     /** All keywords. */
     private static final HashSet<String> KEYWORDS;
 

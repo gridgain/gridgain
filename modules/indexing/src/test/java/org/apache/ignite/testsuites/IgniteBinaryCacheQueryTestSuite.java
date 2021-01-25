@@ -295,11 +295,14 @@ import org.apache.ignite.internal.processors.sql.IgniteSQLColumnConstraintsTest;
 import org.apache.ignite.internal.processors.sql.IgniteTransactionSQLColumnConstraintTest;
 import org.apache.ignite.internal.processors.sql.SqlConnectorConfigurationValidationSelfTest;
 import org.apache.ignite.internal.product.IndexingFeatureIsAvailableTest;
+import org.apache.ignite.internal.sql.SqlParserAnalyzeSelfTest;
 import org.apache.ignite.internal.sql.SqlParserBulkLoadSelfTest;
 import org.apache.ignite.internal.sql.SqlParserCreateIndexSelfTest;
 import org.apache.ignite.internal.sql.SqlParserDropIndexSelfTest;
+import org.apache.ignite.internal.sql.SqlParserDropStatisticsSelfTest;
 import org.apache.ignite.internal.sql.SqlParserKillQuerySelfTest;
 import org.apache.ignite.internal.sql.SqlParserMultiStatementSelfTest;
+import org.apache.ignite.internal.sql.SqlParserRefreshStatisticsSelfTest;
 import org.apache.ignite.internal.sql.SqlParserSetStreamingSelfTest;
 import org.apache.ignite.internal.sql.SqlParserTransactionalKeywordsSelfTest;
 import org.apache.ignite.internal.sql.SqlParserUserSelfTest;
@@ -441,6 +444,10 @@ import org.junit.runners.Suite;
     QueryParserMetricsHolderSelfTest.class,
 
     GridSubqueryJoinOptimizerSelfTest.class,
+
+    SqlParserAnalyzeSelfTest.class,
+    SqlParserRefreshStatisticsSelfTest.class,
+    SqlParserDropStatisticsSelfTest.class,
 
     // DML.
     IgniteCacheMergeSqlQuerySelfTest.class,
