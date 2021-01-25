@@ -8,8 +8,8 @@
 
   <!-- Standalone examples mode: use NuGet -->
   <ItemGroup Condition="$(IgniteBinaryDistro) == '' And $(IgniteDevMode) == ''">
-    <PackageReference Include="Apache.Ignite" Version="2.*" />
-    <PackageReference Include="Apache.Ignite.Linq" Version="2.*" />
+    <PackageReference Include="GridGain.Ignite" Version="8.*" />
+    <PackageReference Include="GridGain.Ignite.Linq" Version="8.*" />
   </ItemGroup>
 
 </Project>
