@@ -1503,10 +1503,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 !grp.persistenceEnabled() || grp.hasAtomicCaches() ? new PartitionUpdateCounterVolatileImpl(grp) :
                             new PartitionUpdateCounterTrackingImpl(grp);
 
-            delegate = new PartitionUpdateCounterErrorWrapper(partId, delegate);
-
             pCntr = grp.shared().logger(PartitionUpdateCounterDebugWrapper.class).isDebugEnabled() ?
-                new PartitionUpdateCounterDebugWrapper(partId, delegate) : delegate;
+                new PartitionUpdateCounterDebugWrapper(partId, delegate) : new PartitionUpdateCounterErrorWrapper(partId, delegate);
 
             updateValSizeThreshold = grp.shared().database().pageSize() / 2;
 

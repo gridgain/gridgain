@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Iterator;
 
 /**
- * Update counter wrapper with logging capabilities for exceptions.
+ * Update counter wrapper for error logging.
  */
 public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounter  {
     /** */
@@ -42,7 +42,11 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
 
         sb.a("[op=reserve" +
                 ", grpId=" + grp.groupId() +
-                ", grp=" + grp.cacheOrGroupName() +
+                ", grpName=" + grp.cacheOrGroupName() +
+                ", caches=" + grp.caches() +
+                ", atomicity=" + grp.config().getAtomicityMode() +
+                ", syncMode=" + grp.config().getWriteSynchronizationMode() +
+                ", mode=" + grp.config().getCacheMode() +
                 ", partId=" + partId +
                 ", delta=" + delta +
                 ", before=" + toString());
