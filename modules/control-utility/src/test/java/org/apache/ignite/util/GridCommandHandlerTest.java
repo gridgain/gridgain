@@ -74,7 +74,6 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.client.GridClientFactory;
 import org.apache.ignite.internal.client.impl.GridClientImpl;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
-import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
@@ -809,8 +808,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String out = testOut.toString();
 
-        UUID clId = ((IgniteClusterEx)ignite.cluster()).id();
-        String clTag = ((IgniteClusterEx)ignite.cluster()).tag();
+        UUID clId = ignite.cluster().id();
+        String clTag = ignite.cluster().tag();
 
         assertContains(log, out, "Cluster is inactive");
         assertContains(log, out, "Cluster  ID: " + clId);
@@ -826,7 +825,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
             try {
-                ((IgniteClusterEx)ignite.cluster()).tag(newTag);
+                ignite.cluster().tag(newTag);
             }
             catch (IgniteCheckedException e) {
                 return false;

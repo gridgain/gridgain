@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.wal.serializer;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.managers.encryption.EncryptionCacheKeyProvider;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.MarshalledRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
@@ -45,22 +46,40 @@ public class RecordSerializerFactoryImpl implements RecordSerializerFactory {
     /** Skip position check flag. Should be set for reading compacted wal file with skipped physical records. */
     private boolean skipPositionCheck;
 
+    /** Key provider for WAL records related to encrypted caches. */
+    private final EncryptionCacheKeyProvider cacheKeyProvider;
+
     /**
-     * @param cctx Cctx.
+     * @param cctx Cache shared context.
      */
     public RecordSerializerFactoryImpl(GridCacheSharedContext cctx) {
         this(cctx, null);
     }
 
     /**
-     * @param cctx Cctx.
+     * @param cctx Cache shared context.
+     * @param readTypeFilter Type filter.
      */
     public RecordSerializerFactoryImpl(
         GridCacheSharedContext cctx,
         @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> readTypeFilter
     ) {
+        this(cctx, readTypeFilter, null);
+    }
+
+    /**
+     * @param cctx Cache shared context.
+     * @param readTypeFilter Type filter.
+     * @param cacheKeyProvider Provider of encryption keys.
+     */
+    public RecordSerializerFactoryImpl(
+        GridCacheSharedContext cctx,
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> readTypeFilter,
+        EncryptionCacheKeyProvider cacheKeyProvider
+    ) {
         this.cctx = cctx;
         this.recordDeserializeFilter = readTypeFilter;
+        this.cacheKeyProvider = cacheKeyProvider == null ? cctx.kernalContext().encryption() : cacheKeyProvider;
     }
 
     /** {@inheritDoc} */
@@ -71,7 +90,7 @@ public class RecordSerializerFactoryImpl implements RecordSerializerFactory {
         switch (ver) {
             case 1:
                 return new RecordV1Serializer(
-                    new RecordDataV1Serializer(cctx),
+                    new RecordDataV1Serializer(cctx, cacheKeyProvider),
                     needWritePointer,
                     marshalledMode,
                     skipPositionCheck,
@@ -79,7 +98,7 @@ public class RecordSerializerFactoryImpl implements RecordSerializerFactory {
 
             case 2:
                 return new RecordV2Serializer(
-                    new RecordDataV2Serializer(cctx),
+                    new RecordDataV2Serializer(cctx, cacheKeyProvider),
                     needWritePointer,
                     marshalledMode,
                     skipPositionCheck,
