@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -192,5 +193,25 @@ public class StatisticsUtils {
         StatisticsObjectData objData = data.data().get(0);
 
         return toObjectStatistics(ctx, objData);
+    }
+
+    /**
+     * Create statistics target from statistics key message.
+     *
+     * @param msg Source statistics key message;
+     * @return StatisticsTarget.
+     */
+    public static StatisticsTarget statisticsTarget(StatisticsKeyMessage msg) {
+        return new StatisticsTarget(msg.schema(), msg.obj(), msg.colNames().toArray(new String[0]));
+    }
+
+    /**
+     * Create statistics key message from statistics target.
+     *
+     * @param target Source statistics target.
+     * @return StatisticsKeyMessage.
+     */
+    public static StatisticsKeyMessage statisticsKeyMessage(StatisticsTarget target) {
+        return new StatisticsKeyMessage(target.schema(), target.obj(), Arrays.asList(target.columns()));
     }
 }

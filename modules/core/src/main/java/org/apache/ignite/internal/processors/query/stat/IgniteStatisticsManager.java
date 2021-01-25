@@ -37,11 +37,10 @@ public interface IgniteStatisticsManager {
      *
      * @param targets Gathering of targets to collect statistics by (schema, obj, columns).
      * @return Array of futures, to track progress and cancel collection on each of specified cache group.
-     * @throws IgniteCheckedException In case of errors.
      */
     public StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] gatherObjectStatisticsAsync(
         StatisticsTarget... targets
-    ) throws IgniteCheckedException;
+    );
 
     /**
      * Cancel object statistics gathering.

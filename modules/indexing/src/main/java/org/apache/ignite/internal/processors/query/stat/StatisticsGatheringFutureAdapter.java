@@ -26,18 +26,28 @@ public class StatisticsGatheringFutureAdapter<R> extends GridFutureAdapter<R> im
     /** Gathering id. */
     private final UUID gatId;
 
+    /** StatisticsTargets, covered by the future. */
+    private final StatisticsTarget[] targets;
+
     /**
      * Constructor.
      *
      * @param gatId Collection id.
+     * @param targets Statistics target, covered by the future.
      */
-    public StatisticsGatheringFutureAdapter(UUID gatId) {
+    public StatisticsGatheringFutureAdapter(UUID gatId, StatisticsTarget[] targets) {
         this.gatId = gatId;
+        this.targets = targets;
     }
 
     /** {@inheritDoc} */
     @Override public UUID gatId() {
         return gatId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public StatisticsTarget[] targets() {
+        return targets;
     }
 
     /** {@inheritDoc} */

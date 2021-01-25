@@ -197,7 +197,7 @@ public enum IgniteFeatures {
     SAFE_CLUSTER_DEACTIVATION(51),
 
     /** Statistics collection. */
-    STATISTICS_COLLECTION(52);
+    STATISTICS_COLLECTION(55);
 
     /**
      * Unique feature identifier.

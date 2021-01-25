@@ -447,7 +447,7 @@ public class StatisticsGatheringRequestCrawlerImpl implements StatisticsGatherin
     }
 
     /**
-     * Receive gathering response and math it to request, then process these couple.
+     * Receive gathering response and match it to request, then process these couple.
      *
      * @param nodeId Sender node id.
      * @param msg Statistics propagation message with partitions statistics to handle.

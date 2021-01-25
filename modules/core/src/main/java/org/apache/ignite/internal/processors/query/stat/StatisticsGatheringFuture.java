@@ -20,12 +20,17 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import java.util.UUID;
 
 /**
- * Future to track statistics gathering task. Allows to get collection id immediately.
+ * Future to track statistics gathering task. Allows to get collection id and targets immediately.
  */
 public interface StatisticsGatheringFuture<T> extends IgniteInternalFuture<T> {
     /**
      * @return Statistics gathering id.
      */
     public UUID gatId();
+
+    /**
+     * @return Targets, which covered by the future.
+     */
+    public StatisticsTarget[] targets();
 }
 
