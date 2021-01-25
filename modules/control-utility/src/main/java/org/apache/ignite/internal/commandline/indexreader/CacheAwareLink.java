@@ -25,9 +25,13 @@ class CacheAwareLink {
     /** */
     public final long link;
 
+    /** True if a link points to tombstone value. */
+    public final boolean tombstone;
+
     /** */
-    public CacheAwareLink(int cacheId, long link) {
+    public CacheAwareLink(int cacheId, long link, boolean tombstone) {
         this.cacheId = cacheId;
         this.link = link;
+        this.tombstone = tombstone;
     }
 }

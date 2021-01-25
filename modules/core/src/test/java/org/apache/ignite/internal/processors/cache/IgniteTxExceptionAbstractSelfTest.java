@@ -190,8 +190,6 @@ public abstract class IgniteTxExceptionAbstractSelfTest extends GridCacheAbstrac
      */
     @Test
     public void testRemoveNear() throws Exception {
-        checkRemove(false, keyForNode(grid(0).localNode(), NOT_PRIMARY_AND_BACKUP));
-
         checkRemove(true, keyForNode(grid(0).localNode(), NOT_PRIMARY_AND_BACKUP));
     }
 
@@ -200,8 +198,6 @@ public abstract class IgniteTxExceptionAbstractSelfTest extends GridCacheAbstrac
      */
     @Test
     public void testRemovePrimary() throws Exception {
-        checkRemove(false, keyForNode(grid(0).localNode(), PRIMARY));
-
         checkRemove(true, keyForNode(grid(0).localNode(), PRIMARY));
     }
 
@@ -210,8 +206,6 @@ public abstract class IgniteTxExceptionAbstractSelfTest extends GridCacheAbstrac
      */
     @Test
     public void testRemoveBackup() throws Exception {
-        checkRemove(false, keyForNode(grid(0).localNode(), BACKUP));
-
         checkRemove(true, keyForNode(grid(0).localNode(), BACKUP));
     }
 

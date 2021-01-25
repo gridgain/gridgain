@@ -62,7 +62,6 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDa
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV3;
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.DataRow;
@@ -736,7 +735,7 @@ public class CachePartitionDefragmentationManager {
                 partCtx.linkMap.put(leafIo.getLink(pageAddr, idx), newLink);
 
                 if (row.expireTime() != 0)
-                    newPendingTree.putx(new PendingRow(cacheId, row.expireTime(), newLink));
+                    newPendingTree.putx(new PendingRow(cacheId, row.tombstone(), row.expireTime(), newLink));
 
                 entriesProcessed.incrementAndGet();
 
@@ -776,7 +775,7 @@ public class CachePartitionDefragmentationManager {
                 PagePartitionMetaIO oldPartMetaIo = PageIO.getPageIO(oldPartMetaPageAddr);
 
             // Newer meta versions may contain new data that we don't copy during defragmentation.
-            assert Arrays.asList(1, 2, 3, GG_VERSION_OFFSET).contains(oldPartMetaIo.getVersion())
+            assert Arrays.asList(1, 2, 3, 4, GG_VERSION_OFFSET, GG_VERSION_OFFSET + 1).contains(oldPartMetaIo.getVersion())
                 : "IO version " + oldPartMetaIo.getVersion() + " is not supported by current defragmentation algorithm." +
                 " Please implement copying of all data added in new version.";
 
@@ -786,7 +785,7 @@ public class CachePartitionDefragmentationManager {
                     long newPartMetaPageAddr = partCtx.partPageMemory.writeLock(partCtx.grpId, partMetaPageId, newPartMetaPage);
 
                     try {
-                        PagePartitionMetaIOV3 newPartMetaIo = PageIO.getPageIO(newPartMetaPageAddr);
+                        PagePartitionMetaIO newPartMetaIo = PageIO.getPageIO(newPartMetaPageAddr);
 
                         // Copy partition state.
                         byte partState = oldPartMetaIo.getPartitionState(oldPartMetaPageAddr);
@@ -805,7 +804,7 @@ public class CachePartitionDefragmentationManager {
                         newPartMetaIo.setGlobalRemoveId(newPartMetaPageAddr, rmvId);
 
                         // Copy cache sizes for shared cache group.
-                        long oldCountersPageId = oldPartMetaIo.getCountersPageId(oldPartMetaPageAddr);
+                        long oldCountersPageId = oldPartMetaIo.getCacheSizesPageId(oldPartMetaPageAddr);
                         if (oldCountersPageId != 0L) {
                             Map<Integer, Long> sizes = GridCacheOffheapManager.readSharedGroupCacheSizes(
                                 partCtx.cachePageMemory,
@@ -821,7 +820,7 @@ public class CachePartitionDefragmentationManager {
                                 sizes
                             );
 
-                            newPartMetaIo.setCountersPageId(newPartMetaPageAddr, newCountersPageId);
+                            newPartMetaIo.setCacheSizesPageId(newPartMetaPageAddr, newCountersPageId);
                         }
 
                         // Copy counter gaps.
@@ -839,6 +838,9 @@ public class CachePartitionDefragmentationManager {
                         // Encryption stuff.
                         newPartMetaIo.setEncryptedPageCount(newPartMetaPageAddr, 0);
                         newPartMetaIo.setEncryptedPageIndex(newPartMetaPageAddr, 0);
+
+                        newPartMetaIo.setTombstonesCount(newPartMetaPageAddr,
+                            oldPartMetaIo.getTombstonesCount(oldPartMetaPageAddr));
                     }
                     finally {
                         partCtx.partPageMemory.writeUnlock(partCtx.grpId, partMetaPageId, newPartMetaPage, null, true);

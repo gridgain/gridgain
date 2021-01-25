@@ -24,25 +24,20 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /**
  *
  */
-@WithSystemProperty(key = IGNITE_CACHE_REMOVED_ENTRIES_TTL, value = "50")
 public class IgniteTxConcurrentRemoveObjectsTest extends GridCommonAbstractTest {
     /** Cache partitions. */
     private static final int CACHE_PARTITIONS = 16;
@@ -105,9 +100,7 @@ public class IgniteTxConcurrentRemoveObjectsTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Too many deletes in single transaction may overflow {@link GridDhtLocalPartition#rmvQueue} and entries will be
-     * deleted synchronously in {@link GridDhtLocalPartition#onDeferredDelete(int, KeyCacheObject, GridCacheVersion)}.
-     * This should not corrupt internal map state in {@link GridDhtLocalPartition}.
+     * Checks if too many deletes in single transaction doesn't corrupt internal map state in {@link GridDhtLocalPartition}.
      *
      * @throws Exception If failed.
      */
