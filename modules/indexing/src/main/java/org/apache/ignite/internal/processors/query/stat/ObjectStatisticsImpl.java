@@ -35,7 +35,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     private final StatisticConfiguration cfg;
 
     /** */
-    private final long version;
+    private final long ver;
 
     /**
      * Constructor.
@@ -47,7 +47,8 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
         long rowsCnt,
         Map<String, ColumnStatistics> colNameToStat,
         StatisticConfiguration cfg,
-        long ver) {
+        long ver
+    ) {
         assert rowsCnt >= 0 : "rowsCnt >= 0";
 
         assert colNameToStat != null : "colNameToStat != null";
@@ -55,7 +56,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
         this.rowsCnt = rowsCnt;
         this.colNameToStat = colNameToStat;
         this.cfg = cfg;
-        this.version = ver;
+        this.ver = ver;
     }
 
     /**
@@ -84,7 +85,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
 
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl clone() {
-        return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat));
+        return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat), cfg, ver);
     }
 
     /** */
@@ -94,7 +95,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
 
     /** */
     public long version() {
-        return version;
+        return ver;
     }
 
     /** {@inheritDoc} */

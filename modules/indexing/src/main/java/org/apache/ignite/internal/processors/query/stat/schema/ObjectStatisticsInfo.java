@@ -21,6 +21,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  *
@@ -30,40 +32,46 @@ public class ObjectStatisticsInfo implements Serializable {
     private static final long serialVersionUID = 0L;
 
     /** */
+    private int cacheGrpId;
+
+    /** */
+    @GridToStringInclude
     private final StatisticsKey key;
 
     /** */
+    @GridToStringInclude
     private final ColumnStatisticsInfo[] cols;
 
     /** */
+    @GridToStringInclude
     private final StatisticConfiguration cfg;
 
     /** */
-    private final long version;
+    private final long ver;
 
     /** */
     public ObjectStatisticsInfo(
+        int grpId,
         StatisticsKey key,
         ColumnStatisticsInfo[] cols,
         StatisticConfiguration cfg
     ) {
-        this.key = key;
-        this.cols = cols;
-        this.cfg = cfg;
-        version = 1;
+        this(grpId, key, cols, cfg, 0);
     }
 
     /** */
     private ObjectStatisticsInfo(
+        int grpId,
         StatisticsKey key,
         ColumnStatisticsInfo[] cols,
         StatisticConfiguration cfg,
-        long version
+        long ver
     ) {
+        this.cacheGrpId = grpId;
         this.key = key;
         this.cols = cols;
         this.cfg = cfg;
-        this.version = version;
+        this.ver = ver;
     }
 
     /** */
@@ -78,14 +86,20 @@ public class ObjectStatisticsInfo implements Serializable {
             .map(ColumnStatisticsInfo::name).collect(Collectors.toSet()));
 
         return new ObjectStatisticsInfo(
+            newInfo.cacheGrpId,
             newInfo.key,
             cols.stream()
                 .map(ColumnStatisticsInfo::new)
                 .collect(Collectors.toList())
                 .toArray(new ColumnStatisticsInfo[cols.size()]),
             newInfo.cfg,
-            oldInfo.version + 1
+            oldInfo.ver + 1
         );
+    }
+
+    /** */
+    public int cacheGroupId() {
+        return cacheGrpId;
     }
 
     /** */
@@ -105,6 +119,11 @@ public class ObjectStatisticsInfo implements Serializable {
 
     /** */
     public long version() {
-        return version;
+        return ver;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ObjectStatisticsInfo.class, this);
     }
 }

@@ -66,6 +66,13 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         assertTrue(SMALL_SIZE < MED_SIZE && MED_SIZE < BIG_SIZE);
     }
 
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        cleanPersistenceDir();
+    }
+
     /**
      * Compare different index used for the given query.
      *
@@ -311,7 +318,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0, 100,
             0, new byte[0]);
-        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
+        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics), null, 0);
     }
 
     /**
@@ -324,7 +331,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
             100, 0, new byte[0]);
         return new ObjectPartitionStatisticsImpl(partId, true, 0, 0,
-            Collections.singletonMap("col1", colStatistics));
+            Collections.singletonMap("col1", colStatistics), null, 0);
     }
 
     /**

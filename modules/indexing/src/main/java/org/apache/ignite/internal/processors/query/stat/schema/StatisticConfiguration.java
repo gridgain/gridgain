@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.query.stat.schema;
 import java.io.Serializable;
 import java.util.Objects;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
  *
  */
@@ -62,5 +64,10 @@ public class StatisticConfiguration implements Serializable {
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(samples);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(StatisticConfiguration.class, this);
     }
 }

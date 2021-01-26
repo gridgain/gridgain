@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.ignite.internal.processors.query.stat.schema.StatisticConfiguration;
+
 /**
  * Statistic for some partition of data object.
  */
@@ -46,9 +48,12 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
             boolean loc,
             long rowsCnt,
             long updCnt,
-            Map<String, ColumnStatistics> colNameToStat
+            Map<String, ColumnStatistics> colNameToStat,
+            StatisticConfiguration cfg,
+            long ver
+
     ) {
-        super(rowsCnt, colNameToStat);
+        super(rowsCnt, colNameToStat, cfg, ver);
 
         this.partId = partId;
         this.loc = loc;
@@ -78,7 +83,7 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
 
     /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl clone() {
-        return new ObjectPartitionStatisticsImpl(partId, loc, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
+        return new ObjectPartitionStatisticsImpl(partId, loc, rowCount(), updCnt, new HashMap<>(columnsStatistics()), config(), version());
     }
 
     /** {@inheritDoc} */

@@ -137,9 +137,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             gatMgmtPool, ctx::log);
 
         statSchemaMgr = new IgniteStatisticsSchemaManager(
+            ctx,
             schemaMgr,
             this,
-            ctx.distributedMetastorage(),
             ctx.internalSubscriptionProcessor(),
             statsRepos,
             ctx::log
@@ -488,6 +488,11 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         return stat;
    }
+
+   /** */
+    public IgniteStatisticsSchemaManager statisticSchemaManager() {
+        return statSchemaMgr;
+    }
 
     /** {@inheritDoc} */
     @Override public ObjectStatistics getGlobalStatistics(String schemaName, String objName) {
