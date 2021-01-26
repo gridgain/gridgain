@@ -485,11 +485,15 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         if (!idxCacheStores.containsKey(grpId)) {
             DataRegion dataRegion = cctx.database().dataRegion(GridCacheDatabaseSharedManager.METASTORE_DATA_REGION_NAME);
 
+            LongAdderMetric metric = dataRegion.memoryMetrics().totalAllocatedPages();
             CacheStoreHolder holder = initDir(
                 new File(storeWorkDir, META_STORAGE_NAME),
                 grpId,
                 PageIdAllocator.METASTORE_PARTITION + 1,
-                dataRegion.memoryMetrics().totalAllocatedPages()::add,
+                x ->
+                {
+                    metric.add(x);
+                },
                 false);
 
             CacheStoreHolder old = idxCacheStores.put(grpId, holder);

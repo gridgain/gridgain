@@ -16,107 +16,108 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.internal.pagemem.PageCategory;
-import org.apache.ignite.internal.pagemem.PageIdAllocator;
 
 public class PagesMetricNoStoreImpl implements PagesMetric {
-    /** groupId -> partId -> counter */
-    private Map<Integer, Map<Integer, AtomicInteger>> physicalMemoryDataPagesSize = new ConcurrentHashMap<>();
+    private AtomicLong physicalMemoryDataPagesSize = new AtomicLong(0);
     /** SQL indexes */
-    private long physicalMemoryIndexPagesSize = 0;
+    private AtomicLong physicalMemoryIndexPagesSize = new AtomicLong(0);
     /** Reuse list. */
-    private long physicalMemoryFreelistPagesSize = 0;
+    private AtomicLong physicalMemoryFreelistPagesSize = new AtomicLong(0);
     /** meta, tracking */
-    private long physicalMemoryMetaPagesSize = 0;
+    private AtomicLong physicalMemoryMetaPagesSize = new AtomicLong(0);
     /** Preallocated size */
-    private long physicalMemoryFreePagesSize = 0;
+    private AtomicLong physicalMemoryFreePagesSize = new AtomicLong(0);
 
     /** {@inheritDoc} */
     @Override public void pageAllocated(int grpId, int part, byte pageFlag, PageCategory category) {
-        physicalMemoryFreePagesSize--;
+        physicalMemoryFreePagesSize.decrementAndGet();
         switch (category) {
             case DATA:
-                physicalMemoryDataPagesSize
-                    .computeIfAbsent(grpId, id -> new ConcurrentHashMap<>())
-                    .computeIfAbsent(part, id -> new AtomicInteger(0)).getAndIncrement();
+                physicalMemoryDataPagesSize.getAndIncrement();
+                break;
+            case REUSE:
+                physicalMemoryDataPagesSize.getAndIncrement();
                 break;
             case INDEX:
-                physicalMemoryIndexPagesSize++;
+                physicalMemoryIndexPagesSize.incrementAndGet();
                 break;
             case META:
-                physicalMemoryMetaPagesSize++;
+                physicalMemoryMetaPagesSize.incrementAndGet();
+                break;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void pageFromReuseList(PageCategory category) {
+        physicalMemoryFreelistPagesSize.decrementAndGet();
+        switch (category) {
+            case META:
+                physicalMemoryMetaPagesSize.incrementAndGet();
+                break;
+            case INDEX:
+                physicalMemoryIndexPagesSize.incrementAndGet();
+                break;
+            case DATA:
+                physicalMemoryDataPagesSize.incrementAndGet();
+                break;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void reusePageIncreased(int count, PageCategory category) {
+        assert category != PageCategory.REUSE;
+
+        switch (category) {
+            case DATA:
+                physicalMemoryDataPagesSize.addAndGet(-count);
+                break;
+            case META:
+                physicalMemoryMetaPagesSize.addAndGet(-count);
+                break;
+
+            case INDEX:
+                physicalMemoryIndexPagesSize.addAndGet(-count);
                 break;
 
         }
-    }
 
-    /** {@inheritDoc} */
-    @Override public void pageFromReuseList(int grpId, int partId, byte pageFlag) {
-        physicalMemoryFreelistPagesSize--;
-        if (partId == PageIdAllocator.INDEX_PARTITION) {
-            //TODO: define index or metadata
-            physicalMemoryIndexPagesSize++;
-        } else {
-            physicalMemoryDataPagesSize
-                .computeIfAbsent(grpId, id -> new ConcurrentHashMap<>())
-                .computeIfAbsent(partId, id -> new AtomicInteger(0)).getAndIncrement();
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public void reusePageIncreased(int count, int grpId, int partId, byte flags) {
-        if (partId == PageIdAllocator.INDEX_PARTITION) {
-            //TODO: define index or metadata
-            physicalMemoryIndexPagesSize -= count;
-        } else {
-            physicalMemoryDataPagesSize
-                .computeIfAbsent(grpId, id -> new ConcurrentHashMap<>())
-                .computeIfAbsent(partId, id -> new AtomicInteger(0))
-                .addAndGet(-count);
-        }
-        physicalMemoryFreelistPagesSize += count;
+        physicalMemoryFreelistPagesSize.addAndGet(count);
     }
 
     /** {@inheritDoc} */
     @Override public void freePageUsed() {
-        physicalMemoryFreePagesSize--;
+        physicalMemoryFreePagesSize.decrementAndGet();
     }
 
     /** {@inheritDoc} */
     @Override public void freePagesIncreased(int count) {
-        physicalMemoryFreePagesSize += count;
+        physicalMemoryFreePagesSize.addAndGet(count);
     }
 
     /** {@inheritDoc} */
-    @Override public long physicalMemoryDataPagesSize(int grpId) {
-        Map<Integer, AtomicInteger> sizes = physicalMemoryDataPagesSize.get(grpId);
-        long result = 0;
-        for (AtomicInteger partValue : sizes.values()) {
-            result += partValue.get();
-        }
-        return result;
+    @Override public long physicalMemoryDataPagesSize() {
+        return physicalMemoryDataPagesSize.get();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalMemoryIndexPagesSize() {
-        return physicalMemoryIndexPagesSize;
+        return physicalMemoryIndexPagesSize.get();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalMemoryFreelistPagesSize() {
-        return physicalMemoryFreelistPagesSize;
+        return physicalMemoryFreelistPagesSize.get();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalMemoryMetaPagesSize() {
-        return physicalMemoryMetaPagesSize;
+        return physicalMemoryMetaPagesSize.get();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalMemoryFreePagesSize() {
-        return physicalMemoryFreePagesSize;
+        return physicalMemoryFreePagesSize.get();
     }
 }

@@ -23,10 +23,9 @@ public interface PagesMetric {
     /**
      * Gets pages count used by Data pages.
      *
-     * @param grpId Group Id.
      * @return Pages count used by Data pages.
      */
-    long physicalMemoryDataPagesSize(int grpId);
+    long physicalMemoryDataPagesSize();
 
     /**
      * Gets pages count used by Index pages.
@@ -74,11 +73,9 @@ public interface PagesMetric {
     /**
      * Page is reused from reuse list.
      *
-     * @param grpId Group id.
-     * @param partId Partition id.
-     * @param flags Flags.
+     * @param category Page category.
      */
-    void pageFromReuseList(int grpId, int partId, byte flags);
+    void pageFromReuseList(PageCategory category);
 
     /**
      * Increase free pages count.
@@ -91,9 +88,7 @@ public interface PagesMetric {
      * Pages are moved to reuse list.
      *
      * @param count Pages count.
-     * @param grpId Group id.
-     * @param partId Partition id.
-     * @param flags Flags.
+     * @param category Page category.
      */
-    void reusePageIncreased(int count, int grpId, int partId, byte flags);
+    void reusePageIncreased(int count, PageCategory category);
 }

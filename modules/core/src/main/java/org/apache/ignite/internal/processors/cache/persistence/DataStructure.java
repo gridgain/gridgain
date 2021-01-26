@@ -155,7 +155,7 @@ public abstract class DataStructure {
 
             // Recycled. "pollFreePage" result should be reinitialized to move rotatedId to itemId.
             if (pageId != 0) {
-                pageMetric.pageFromReuseList(grpId, partition, pageFlag);
+                pageMetric.pageFromReuseList(pageCategory());
                 pageId = reuseList.initRecycledPage(pageId, pageFlag, null);
             }
         }
@@ -179,17 +179,15 @@ public abstract class DataStructure {
      * @throws IgniteCheckedException If failed.
      */
     protected long allocatePageNoReuse() throws IgniteCheckedException {
-        return pageCategory() == null
-            ? pageMem.allocatePage(grpId, partition, pageFlag)
-            : pageMem.allocatePage(grpId, partition, pageFlag, pageCategory());
+        return pageMem.allocatePage(grpId, partition, pageFlag, pageCategory());
     }
 
 
     /**
-     * @return Page category. Null if can be defined by partition.
+     * @return Page category.
      */
     protected PageCategory pageCategory() {
-        return null;
+        return partition == INDEX_PARTITION ? PageCategory.INDEX : PageCategory.DATA;
     }
 
     /**

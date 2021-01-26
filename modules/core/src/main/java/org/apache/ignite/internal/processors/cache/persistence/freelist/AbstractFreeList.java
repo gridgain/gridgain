@@ -523,7 +523,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                         pageId = reuseList.takeRecycledPage();
 
                         if (pageId != 0) {
-                            pageMetric.pageFromReuseList(grpId, partition, FLAG_DATA);
+                            pageMetric.pageFromReuseList(PageCategory.DATA);
                             pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions().latest());
                         }
                     }
@@ -656,7 +656,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 assert nextLink != FAIL_L; // Can't fail here.
             }
 
-            pageMetric.reusePageIncreased(bag.size(), grpId, partition, pageFlag);
+            pageMetric.reusePageIncreased(bag.size(), PageCategory.DATA);
             reuseList.addForRecycle(bag);
         }
         catch (IgniteCheckedException | Error e) {

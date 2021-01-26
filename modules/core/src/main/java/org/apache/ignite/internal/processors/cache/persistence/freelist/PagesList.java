@@ -1438,7 +1438,7 @@ public abstract class PagesList extends DataStructure {
                 if (recycleId != 0L) {
                     assert !isReuseBucket(bucket);
 
-                    pageMetric.reusePageIncreased(1, grpId, partition, pageFlag);
+                    pageMetric.reusePageIncreased(1, pageCategory());
                     reuseList.addForRecycle(new SingletonReuseBag(recycleId));
                 }
 
@@ -1673,7 +1673,7 @@ public abstract class PagesList extends DataStructure {
                 recycleId = merge(pageId, page, nextId, bucket, statHolder);
 
             if (recycleId != 0L) {
-                pageMetric.reusePageIncreased(1, grpId, partition, pageFlag);
+                pageMetric.reusePageIncreased(1, pageCategory());
                 reuseList.addForRecycle(new SingletonReuseBag(recycleId));
             }
 
