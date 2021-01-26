@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,31 +15,33 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * Statistics key.
+ * Target to collect statistics by.
  */
-public class StatsKey implements Serializable {
-    /** */
-    private static final long serialVersionUID = 0L;
+public class StatisticsTarget {
+    /** Schema name. */
+    private final String schema;
 
-    /** Object schema. */
-    private String schema;
+    /** Object (table or index) name. */
+    private final String obj;
 
-    /** Object name. */
-    private String obj;
+    /**  */
+    private final String[] columns;
 
     /**
      * Constructor.
      *
-     * @param schema Object schema.
+     * @param schema Schema name.
      * @param obj Object name.
+     * @param columns Array of column names or {@code null} if target - all columns.
      */
-    public StatsKey(String schema, String obj) {
+    public StatisticsTarget(String schema, String obj, String... columns) {
         this.schema = schema;
         this.obj = obj;
+        this.columns = columns;
     }
 
     /**
@@ -49,32 +51,30 @@ public class StatsKey implements Serializable {
         return schema;
     }
 
-    /**
-     * @return Object name.
-     */
+    /** Object name. */
     public String obj() {
         return obj;
+    }
+
+    /** Columns array. */
+    public String[] columns() {
+        return columns;
     }
 
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        StatsKey statsKey = (StatsKey) o;
-        return Objects.equals(schema, statsKey.schema) &&
-                Objects.equals(obj, statsKey.obj);
+        StatisticsTarget that = (StatisticsTarget) o;
+        return Objects.equals(schema, that.schema) &&
+                Objects.equals(obj, that.obj) &&
+                Arrays.equals(columns, that.columns);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(schema, obj);
-    }
-
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        return "StatsKey{" +
-                "schema='" + schema + '\'' +
-                ", obj='" + obj + '\'' +
-                '}';
+        int result = Objects.hash(schema, obj);
+        result = 31 * result + Arrays.hashCode(columns);
+        return result;
     }
 }

@@ -15,31 +15,29 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.jetbrains.annotations.Nullable;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
- * Types of statistics width.
+ * Collector which scan local data to gather statistics.
  */
-public enum StatsType {
-    /** Statistics by some particular partition. */
-    PARTITION,
-
-    /** Statistics by some data node. */
-    LOCAL,
-
-    /** Statistics by whole object (table or index). */
-    GLOBAL;
-
-    /** Enumerated values. */
-    private static final StatsType[] VALUES = values();
-
+public interface StatisticsGathering {
     /**
-     * Efficiently gets enumerated value from its ordinal.
+     * Collect local statistics by specified keys and partitions
+     * and pass it to router to send in response to specified reqId.
      *
-     * @param ord Ordinal value.
-     * @return Enumerated value or {@code null} if ordinal out of range.
+     * @param reqId Request id.
+     * @param keys Keys to collect statistics by.
+     * @param parts Partitions to collect statistics by.
+     * @param cancelled Supplier to track cancelled state.
      */
-    @Nullable public static StatsType fromOrdinal(int ord) {
-        return ord >= 0 && ord < VALUES.length ? VALUES[ord] : null;
-    }
+    public void collectLocalObjectsStatisticsAsync(
+        UUID reqId,
+        Set<StatisticsKeyMessage> keys,
+        int[] parts,
+        Supplier<Boolean> cancelled
+    );
 }

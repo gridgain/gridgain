@@ -21,6 +21,9 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 
+/**
+ * Tests for IgniteStatisticsStorage implementations.
+ */
 public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -29,10 +32,7 @@ public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTe
         cfg.setConsistentId(igniteInstanceName);
 
         DataStorageConfiguration memCfg = new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(
-                        new DataRegionConfiguration()
-                                .setPersistenceEnabled(true)
-                );
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true));
 
         cfg.setDataStorageConfiguration(memCfg);
 
@@ -46,6 +46,7 @@ public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTe
 
         //startGridsMultiThreaded(1);
         startGrid(0);
+        startGrid(1);
         grid(0).cluster().state(ClusterState.ACTIVE);
 
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
@@ -63,7 +64,8 @@ public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTe
         for (int i = 0; i < SMALL_SIZE; i++)
             runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
 
-        grid(0).context().query().getIndexing().statsManager().collectObjectStatistics("PUBLIC", "SMALL");
+        grid(0).context().query().getIndexing().statsManager().gatherObjectStatistics(
+            new StatisticsTarget(SCHEMA, "SMALL"));
     }
 
     /** {@inheritDoc} */

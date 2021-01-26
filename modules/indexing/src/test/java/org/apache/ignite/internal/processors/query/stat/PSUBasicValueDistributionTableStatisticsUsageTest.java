@@ -41,8 +41,8 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     @Parameterized.Parameters(name = "cacheMode={0}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
-                { REPLICATED },
-                { PARTITIONED },
+            { REPLICATED },
+            { PARTITIONED },
         });
     }
 
@@ -58,7 +58,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
         runSql("DROP TABLE IF EXISTS digital_distribution");
 
         runSql("CREATE TABLE digital_distribution (ID INT PRIMARY KEY, col_a int, col_b int, col_c int, col_d int) " +
-                "WITH \"TEMPLATE=" + cacheMode + "\"");
+            "WITH \"TEMPLATE=" + cacheMode + "\"");
 
         runSql("CREATE INDEX digital_distribution_col_a ON digital_distribution(col_a)");
         runSql("CREATE INDEX digital_distribution_col_b ON digital_distribution(col_b)");
@@ -67,26 +67,26 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
 
         for (int i = 0; i < 100; i++) {
             String sql = String.format("INSERT INTO digital_distribution(id, col_a, col_b, col_c, col_d)" +
-                    " VALUES(%d, %d, %d, 1, null)", i, i, i + 200);
+                " VALUES(%d, %d, %d, 1, null)", i, i, i + 200);
             runSql(sql);
         }
         for (int i = 100; i < 110; i++) {
             String sql = String.format("INSERT INTO digital_distribution(id, col_a, col_b, col_c) " +
-                    "VALUES(%d, null, %d, 1)", i, i + 200);
+                "VALUES(%d, null, %d, 1)", i, i + 200);
             runSql(sql);
         }
 
         runSql("DROP TABLE IF EXISTS empty_distribution");
 
         runSql("CREATE TABLE empty_distribution (ID INT PRIMARY KEY, col_a int) " +
-                "WITH \"TEMPLATE=" + cacheMode + "\"");
+            "WITH \"TEMPLATE=" + cacheMode + "\"");
 
         runSql("CREATE INDEX empty_distribution_col_a ON empty_distribution(col_a)");
 
         runSql("DROP TABLE IF EXISTS empty_distribution_no_stat");
 
         runSql("CREATE TABLE empty_distribution_no_stat (ID INT PRIMARY KEY, col_a int) " +
-                "WITH \"TEMPLATE=" + cacheMode + "\"");
+            "WITH \"TEMPLATE=" + cacheMode + "\"");
 
         runSql("CREATE INDEX empty_distribution_no_stat_col_a ON empty_distribution_no_stat(col_a)");
 
@@ -103,7 +103,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectOverhightBorder() {
         String sql = "select count(*) from digital_distribution i1 where col_a > 200 and col_b > 200";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_A"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -113,10 +113,10 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
      * and check that second column index will be used.
      */
     @Test
-    public void selectOverlowBorder() {
+    public void selectOverflowBorder() {
         String sql = "select count(*) from digital_distribution i1 where col_a < 200 and col_b < 200";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_B"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -144,7 +144,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectNull() {
         String sql = "select count(*) from digital_distribution i1 where col_a is null and col_b is null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_B"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -155,7 +155,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectHigherFromSingleValue() {
         String sql = "select count(*) from digital_distribution i1 where col_c > 1";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_C"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -166,7 +166,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectLowerToSingleValue() {
         String sql = "select count(*) from digital_distribution i1 where col_c > 1";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_C"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -177,7 +177,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectNullFromNull() {
         String sql = "select count(*) from digital_distribution i1 where col_d is null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -188,7 +188,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectGreaterFromNull() {
         String sql = "select count(*) from digital_distribution i1 where col_d > 0";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -199,7 +199,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectLessOrEqualFromNull() {
         String sql = "select count(*) from digital_distribution i1 where col_d <= 1000";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DIGITAL_DISTRIBUTION_COL_D"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -210,7 +210,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectFromEmptyNoStatTable() {
         String sql = "select count(*) from empty_distribution_no_stat i1 where col_a <= 1000";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -221,7 +221,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectNullFromEmptyNoStatTable() {
         String sql = "select count(*) from empty_distribution_no_stat i1 where col_a is null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_NO_STAT_COL_A"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -238,10 +238,11 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
      * Select with "less or equal" clause from empty table
      * and check that column index will be used.
      */
-    @Test public void selectFromEmptyTable() {
+    @Test
+    public void selectFromEmptyTable() {
         String sql = "select count(*) from empty_distribution i1 where col_a <= 1000";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**
@@ -252,7 +253,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
     public void selectNullFromEmptyTable() {
         String sql = "select count(*) from empty_distribution i1 where col_a is null";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"EMPTY_DISTRIBUTION_COL_A"}, sql,
-                new String[1][]);
+            new String[1][]);
     }
 
     /**

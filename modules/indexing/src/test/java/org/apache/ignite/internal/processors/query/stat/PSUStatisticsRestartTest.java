@@ -16,12 +16,13 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
  * Test that statistics still used by planner after restart.
  */
-public class PSUStatistcsRestartTest extends StatisticsRestartAbstractTest {
+public class PSUStatisticsRestartTest extends StatisticsRestartAbstractTest {
     /**
      * Use select with two conditions which shows statistics presence.
      * 1) Check that select use correct index with statistics
@@ -42,12 +43,29 @@ public class PSUStatistcsRestartTest extends StatisticsRestartAbstractTest {
         startGrid(0);
 
         grid(0).cluster().state(ClusterState.ACTIVE);
-        Thread.sleep(100);
 
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_B"}, isNullSql, noHints);
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_B"}, isNullSql, noHints);
 
-        grid(0).context().query().getIndexing().statsManager().clearObjectStatistics("PUBLIC", "SMALL");
+                return true;
+            }
+            catch (AssertionError e) {
+                return false;
+            }
+        }, TIMEOUT);
 
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_C"}, isNullSql, noHints);
+        grid(0).context().query().getIndexing().statsManager().clearObjectStatistics(SMALL_TARGET);
+
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_C"}, isNullSql, noHints);
+
+                return true;
+            }
+            catch (AssertionError e) {
+                return false;
+            }
+        }, TIMEOUT);
     }
 }

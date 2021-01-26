@@ -379,6 +379,7 @@ public class GridIoMessageFactory implements MessageFactoryProvider {
 
         // [-3..119] [124..129] [-23..-28] [-36..-55] - this
         // [120..123] [177, 178] - DR
+        // [179..187] - Statistics
         // [-4..-22, -30..-35] - SQL
         // [2048..2053] - Snapshots
     }

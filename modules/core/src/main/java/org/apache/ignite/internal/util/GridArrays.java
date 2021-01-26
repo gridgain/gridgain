@@ -16,8 +16,15 @@
 
 package org.apache.ignite.internal.util;
 
+import org.apache.ignite.internal.util.typedef.F;
+
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Utility methods to work with arrays.
@@ -110,5 +117,39 @@ public final class GridArrays {
     public static void clearTail(Object[] arr, int fromIdx) {
         while (fromIdx < arr.length && arr[fromIdx] != null)
             arr[fromIdx++] = null;
+    }
+
+    /**
+     * Subtract b array from a array.
+     *
+     * @param a Base array.
+     * @param b Array to subtract from the base one.
+     * @return Subtraction result.
+     */
+    public static int[] subtract(int[] a, int[] b) {
+        Set<Integer> bSet = Arrays.stream(b).boxed().collect(Collectors.toSet());
+        List<Integer> res = new ArrayList<>();
+        for (int aVal : a)
+            if (!bSet.contains(aVal))
+                res.add(aVal);
+        return res.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    /**
+     * Convert specified integer array to list.
+     *
+     * @param arr Array to convert.
+     * @return List of integers.
+     */
+    public static List<Integer> list(int[] arr) {
+        if (F.isEmpty(arr))
+            return Collections.emptyList();
+
+        List<Integer> res = new ArrayList<>(arr.length);
+
+        for (int i = 0; i < arr.length; i++)
+            res.add(arr[i]);
+
+        return res;
     }
 }
