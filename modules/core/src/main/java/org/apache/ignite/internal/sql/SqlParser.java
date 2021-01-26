@@ -56,7 +56,6 @@ import static org.apache.ignite.internal.sql.SqlKeyword.SET;
 import static org.apache.ignite.internal.sql.SqlKeyword.SHOW;
 import static org.apache.ignite.internal.sql.SqlKeyword.SPATIAL;
 import static org.apache.ignite.internal.sql.SqlKeyword.START;
-import static org.apache.ignite.internal.sql.SqlKeyword.STATISTICS;
 import static org.apache.ignite.internal.sql.SqlKeyword.STREAMING;
 import static org.apache.ignite.internal.sql.SqlKeyword.TABLE;
 import static org.apache.ignite.internal.sql.SqlKeyword.TRANSACTION;
@@ -73,6 +72,9 @@ import static org.apache.ignite.internal.sql.SqlParserUtils.skipIfMatchesOptiona
  * SQL parser.
  */
 public class SqlParser {
+    /** Lexema: STATISTICS. */
+    public static final String STATISTICS = "STATISTICS";
+
     /** Scheme name. */
     private final String schemaName;
 

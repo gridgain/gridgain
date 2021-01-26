@@ -313,9 +313,6 @@ public class SqlKeyword {
     /** Keyword: ANALYZE. */
     public static final String ANALYZE = "ANALYZE";
 
-    /** Keyword: STATISTICS. */
-    public static final String STATISTICS = "STATISTICS";
-
     /** Keyword: REFRESH. */
     public static final String REFRESH = "REFRESH";
 

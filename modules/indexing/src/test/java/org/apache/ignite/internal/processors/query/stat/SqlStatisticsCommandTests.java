@@ -143,6 +143,35 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
     }
 
     /**
+     * Test ability to create table, index and statistics on table named STATISTICS:
+     *
+     * 1) Create table STATISTICS with column STATISTICS.
+     * 2) Create index STATISTICS_STATISTICS on STATISTICS(STATISTICS).
+     * 3) Analyze STATISTICS and check that statistics collected.
+     * 4) Refresh STATISTICS.
+     * 5) Drop statistics for table STATISTICS.
+     */
+    @Test
+    public void statisticsLexemaTest() throws IgniteInterruptedCheckedException {
+        runSql("CREATE TABLE STATISTICS(id int primary key, statistics varchar)");
+        runSql("CREATE INDEX STATISTICS_STATISTICS ON STATISTICS(STATISTICS);");
+
+        testStats(SCHEMA, "STATISTICS", true);
+
+        runSql("ANALYZE PUBLIC.STATISTICS(STATISTICS)");
+
+        testStats(SCHEMA, "STATISTICS", false);
+
+        runSql("REFRESH STATISTICS PUBLIC.STATISTICS(STATISTICS)");
+
+        testStats(SCHEMA, "STATISTICS", false);
+
+        runSql("DROP STATISTICS PUBLIC.STATISTICS(STATISTICS)");
+
+        testStats(SCHEMA, "STATISTICS", true);
+    }
+
+    /**
      * Clear statistics on two test tables;
      *
      * @throws IgniteCheckedException In case of errors.
