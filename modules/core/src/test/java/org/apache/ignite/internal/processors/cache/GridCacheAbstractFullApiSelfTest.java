@@ -394,7 +394,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
         assertEquals(0, cache.localSize());
         assertEquals(0, cache.size());
-        assertEquals(0, cache.size(ONHEAP));
+        // The check for empty heap is incorrect because entries can be enlisted any time during tombstone clearing.
 
         dfltIgnite = null;
     }
@@ -4481,13 +4481,9 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
                     // Get "cache" field from GridCacheProxyImpl.
                     GridCacheAdapter c0 = cacheFromCtx(c);
 
-                    if (!c0.context().deferredDelete()) {
-                        GridCacheEntryEx e0 = c0.peekEx(key);
+                    GridCacheEntryEx e0 = c0.peekEx(key);
 
-                        return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
-                    }
-                    else
-                        return true;
+                    return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
                 }
                 catch (GridCacheEntryRemovedException e) {
                     throw new RuntimeException(e);
@@ -6711,14 +6707,12 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
                 GridCacheContext<String, Integer> ctx = ((IgniteKernal)ignite).<String, Integer>internalCache(DEFAULT_CACHE_NAME).context();
 
-                GridCacheEntryEx entry = ctx.isNear() ? ctx.near().dht().peekEx(key) : ctx.cache().peekEx(key);
+                if (ctx.isNear())
+                    ctx = ctx.near().dht().context();
 
-                if (ignite.affinity(DEFAULT_CACHE_NAME).mapKeyToPrimaryAndBackups(key).contains(((IgniteKernal)ignite).localNode())) {
-                    assertNotNull(entry);
-                    assertTrue(entry.deleted());
-                }
-                else
-                    assertNull(entry);
+                GridCacheEntryEx entry = ctx.cache().peekEx(key);
+
+                assertNull(entry);
             }
         }
     }

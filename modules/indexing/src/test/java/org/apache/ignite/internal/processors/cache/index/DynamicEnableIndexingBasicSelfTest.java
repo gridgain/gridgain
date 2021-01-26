@@ -108,6 +108,8 @@ public class DynamicEnableIndexingBasicSelfTest extends DynamicEnableIndexingAbs
 
         node().getOrCreateCache(ccfg);
 
+        awaitPartitionMapExchange(); // Wait until the cache is propagated on all nodes.
+
         if (atomicityMode != CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT)
             grid(IDX_CLI_NEAR_ONLY).getOrCreateNearCache(POI_CACHE_NAME, new NearCacheConfiguration<>());
     }

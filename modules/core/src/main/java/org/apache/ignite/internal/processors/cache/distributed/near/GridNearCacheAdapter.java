@@ -318,7 +318,7 @@ public abstract class GridNearCacheAdapter<K, V> extends GridDistributedCacheAda
             @Override public boolean apply(GridCacheEntryEx entry) {
                 GridNearCacheEntry nearEntry = (GridNearCacheEntry)entry;
 
-                return !nearEntry.deleted() && nearEntry.visitable(CU.empty0()) && nearEntry.valid(topVer);
+                return nearEntry.hasValue() && nearEntry.visitable(CU.empty0()) && nearEntry.valid(topVer);
             }
         });
     }
@@ -330,7 +330,7 @@ public abstract class GridNearCacheAdapter<K, V> extends GridDistributedCacheAda
                 if (ex instanceof GridCacheMapEntry)
                     return ((GridCacheMapEntry)ex).visitable(filter);
                 else
-                    return !ex.deleted() && F.isAll(ex, filter);
+                    return ex.hasValue() && F.isAll(ex, filter);
             }
         };
 

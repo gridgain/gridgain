@@ -37,6 +37,9 @@ public class PendingRow {
     public int cacheId;
 
     /** */
+    public boolean tombstone;
+
+    /** */
     public KeyCacheObject key;
 
     /**
@@ -51,13 +54,13 @@ public class PendingRow {
 
     /**
      * @param cacheId Cache ID.
+     * @param tombstone {@code True} if the row is created for a tombstone.
      * @param expireTime Expire time.
      * @param link Link
      */
-    public PendingRow(int cacheId, long expireTime, long link) {
-        assert expireTime != 0;
-
+    public PendingRow(int cacheId, boolean tombstone, long expireTime, long link) {
         this.cacheId = cacheId;
+        this.tombstone = tombstone;
         this.expireTime = expireTime;
         this.link = link;
     }
@@ -78,6 +81,7 @@ public class PendingRow {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(PendingRow.class, this);
+        return S.toString(PendingRow.class, this, "expireTime", expireTime, "link", link, "cacheId", cacheId,
+            "tombstone", tombstone, "key", key);
     }
 }

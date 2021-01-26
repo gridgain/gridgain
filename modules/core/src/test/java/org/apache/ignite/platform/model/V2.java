@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
+package org.apache.ignite.platform.model;
 
-/**
- * Additional context for partition eviction process.
- */
-public interface EvictionContext {
-    /**
-     * @return {@code true} If eviction process should be stopped.
-     */
-    public boolean shouldStop();
+/** Test V2 object. */
+public class V2 {
+    /** */
+    private final String name;
+
+    /** */
+    public V2(String name) {
+        this.name = name;
+    }
+
+    /** */
+    public String getName() {
+        return name;
+    }
 }

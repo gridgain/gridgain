@@ -203,6 +203,11 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean tombstone() {
+        return row.tombstone();
+    }
+
+    /** {@inheritDoc} */
     @Override public KeyCacheObject key() {
         return row.key();
     }
@@ -250,6 +255,11 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
     /** {@inheritDoc} */
     @Override public int cacheId() {
         return row.cacheId();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void cacheId(int cacheId) {
+        row.cacheId(cacheId);
     }
 
     /** {@inheritDoc} */

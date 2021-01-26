@@ -32,6 +32,7 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -70,6 +71,7 @@ public class GridCacheVersionTopologyChangeTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testVersionIncreaseMvccTx() throws Exception {
         checkVersionIncrease(cacheConfigurations(TRANSACTIONAL_SNAPSHOT));
     }
