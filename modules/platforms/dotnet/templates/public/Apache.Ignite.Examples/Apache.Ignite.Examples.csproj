@@ -14,7 +14,7 @@
 		<RepositoryType>git</RepositoryType>
         <PackageIcon>logo_gg_64x64.png</PackageIcon>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-        <PackageLicense>LICENSE</PackageLicense>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
         <NoWarn>NU5119,NU5128</NoWarn>
 
         <IncludeContentInPack>true</IncludeContentInPack>
