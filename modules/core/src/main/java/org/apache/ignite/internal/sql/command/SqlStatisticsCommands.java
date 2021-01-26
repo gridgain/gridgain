@@ -1,7 +1,23 @@
+/*
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.ignite.internal.sql.command;
 
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
 import org.apache.ignite.internal.sql.SqlLexer;
+import org.apache.ignite.internal.sql.SqlLexerToken;
 import org.apache.ignite.internal.sql.SqlLexerTokenType;
 
 import java.util.ArrayList;
@@ -21,7 +37,6 @@ import static org.apache.ignite.internal.sql.SqlParserUtils.skipCommaOrRightPare
 public abstract class SqlStatisticsCommands implements SqlCommand {
     /** Schema name. */
     private String schemaName;
-
 
     /** Targets to analyze. */
     protected Collection<StatisticsTarget> targets = new ArrayList<>();
@@ -49,15 +64,11 @@ public abstract class SqlStatisticsCommands implements SqlCommand {
 
             SqlQualifiedName tblQName = parseQualifiedIdentifier(lex);
 
-            String cols[] = parseColumnList(lex);
+            String[] cols = parseColumnList(lex);
 
             targets.add(new StatisticsTarget(tblQName.schemaName(), tblQName.name(), cols));
 
-            if (lex.shift()) {
-                if (tryEnd(lex))
-                    return this;
-            }
-            else
+            if (tryEnd(lex))
                 return this;
         }
     }
@@ -69,17 +80,18 @@ public abstract class SqlStatisticsCommands implements SqlCommand {
      * @return {@code true} if end of command found, {@code false} - otherwise.
      */
     private boolean tryEnd(SqlLexer lex) {
-        return lex.tokenType() == SqlLexerTokenType.SEMICOLON;
+        return !lex.shift() || lex.tokenType() == SqlLexerTokenType.SEMICOLON;
     }
-
 
     /**
      * @param lex Lexer.
      */
     private String[] parseColumnList(SqlLexer lex) {
-        if (!lex.shift() || lex.tokenType() == SqlLexerTokenType.SEMICOLON)
+        SqlLexerToken nextTok = lex.lookAhead();
+        if (nextTok.token() == null || nextTok.tokenType() == SqlLexerTokenType.SEMICOLON
+            || nextTok.tokenType() == SqlLexerTokenType.COMMA)
             return null;
-
+        lex.shift();
 
         if (lex.tokenType() != SqlLexerTokenType.PARENTHESIS_LEFT)
             throw errorUnexpectedToken(lex, "(");
@@ -96,6 +108,8 @@ public abstract class SqlStatisticsCommands implements SqlCommand {
     }
 
     /**
+     * Parse column name.
+     *
      * @param lex Lexer.
      */
     private void parseColumn(SqlLexer lex, Set<String> cols) {

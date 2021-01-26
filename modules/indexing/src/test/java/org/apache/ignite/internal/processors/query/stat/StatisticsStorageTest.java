@@ -95,8 +95,8 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
 
         statsMgr.clearObjectStatistics(new StatisticsTarget(SCHEMA, "SMALL"));
 
-        GridTestUtils.waitForCondition(() ->
-            null == (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL"), TIMEOUT);
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            null == (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL"), TIMEOUT));
 
         statsMgr.clearObjectStatistics(new StatisticsTarget(SCHEMA, "SMALL"));
 
@@ -117,8 +117,8 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
 
         statsMgr.clearObjectStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
 
-        GridTestUtils.waitForCondition(() -> null == ((ObjectStatisticsImpl) statsMgr
-            .getLocalStatistics(SCHEMA, "SMALL")).columnsStatistics().get("B"), TIMEOUT);
+        assertTrue(GridTestUtils.waitForCondition(() -> null == ((ObjectStatisticsImpl) statsMgr
+            .getLocalStatistics(SCHEMA, "SMALL")).columnsStatistics().get("B"), TIMEOUT));
 
         ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
             .getLocalStatistics(SCHEMA, "SMALL");

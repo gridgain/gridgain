@@ -68,7 +68,7 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
 
         statMgr1.gatherObjectStatistics(targets[0]);
 
-        GridTestUtils.waitForCondition(() -> {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
             try {
                 checkStatTasksEmpty(0);
                 checkStatTasksEmpty(1);
@@ -77,7 +77,7 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
             catch (Throwable e) {
                 return false;
             }
-        }, TIMEOUT);
+        }, TIMEOUT * 10));
     }
 
     /**

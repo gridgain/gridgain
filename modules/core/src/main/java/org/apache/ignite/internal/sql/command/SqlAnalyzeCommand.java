@@ -15,23 +15,6 @@
  */
 package org.apache.ignite.internal.sql.command;
 
-import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
-import org.apache.ignite.internal.sql.SqlLexer;
-import org.apache.ignite.internal.sql.SqlLexerTokenType;
-import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-
-import static org.apache.ignite.internal.sql.SqlParserUtils.error;
-import static org.apache.ignite.internal.sql.SqlParserUtils.errorUnexpectedToken;
-import static org.apache.ignite.internal.sql.SqlParserUtils.parseIdentifier;
-import static org.apache.ignite.internal.sql.SqlParserUtils.parseQualifiedIdentifier;
-import static org.apache.ignite.internal.sql.SqlParserUtils.skipCommaOrRightParenthesis;
-import static org.apache.ignite.internal.sql.SqlParserUtils.skipIfMatches;
-
 /**
  * ANALYZE command to mark object for statistics collection.
  */
