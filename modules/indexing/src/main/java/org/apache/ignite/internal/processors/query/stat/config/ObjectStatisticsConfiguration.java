@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat.schema;
+package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -27,7 +27,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 /**
  *
  */
-public class ObjectStatisticsInfo implements Serializable {
+public class ObjectStatisticsConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -40,31 +40,31 @@ public class ObjectStatisticsInfo implements Serializable {
 
     /** */
     @GridToStringInclude
-    private final ColumnStatisticsInfo[] cols;
+    private final ColumnStatisticsConfiguration[] cols;
 
     /** */
     @GridToStringInclude
-    private final StatisticConfiguration cfg;
+    private final StatisticsCollectConfiguration cfg;
 
     /** */
     private final long ver;
 
     /** */
-    public ObjectStatisticsInfo(
+    public ObjectStatisticsConfiguration(
         int grpId,
         StatisticsKey key,
-        ColumnStatisticsInfo[] cols,
-        StatisticConfiguration cfg
+        ColumnStatisticsConfiguration[] cols,
+        StatisticsCollectConfiguration cfg
     ) {
         this(grpId, key, cols, cfg, 0);
     }
 
     /** */
-    private ObjectStatisticsInfo(
+    private ObjectStatisticsConfiguration(
         int grpId,
         StatisticsKey key,
-        ColumnStatisticsInfo[] cols,
-        StatisticConfiguration cfg,
+        ColumnStatisticsConfiguration[] cols,
+        StatisticsCollectConfiguration cfg,
         long ver
     ) {
         this.cacheGrpId = grpId;
@@ -75,23 +75,23 @@ public class ObjectStatisticsInfo implements Serializable {
     }
 
     /** */
-    public static ObjectStatisticsInfo merge(ObjectStatisticsInfo oldInfo, ObjectStatisticsInfo newInfo) {
+    public static ObjectStatisticsConfiguration merge(ObjectStatisticsConfiguration oldInfo, ObjectStatisticsConfiguration newInfo) {
         assert oldInfo.key.equals(newInfo.key) : "Invalid schema to merge: [oldKey=" + oldInfo.key
             + ", newKey=" + newInfo.key + ']';
 
         Set<String> cols = Arrays.stream(oldInfo.cols)
-            .map(ColumnStatisticsInfo::name).collect(Collectors.toSet());
+            .map(ColumnStatisticsConfiguration::name).collect(Collectors.toSet());
 
         cols.addAll(Arrays.stream(newInfo.cols)
-            .map(ColumnStatisticsInfo::name).collect(Collectors.toSet()));
+            .map(ColumnStatisticsConfiguration::name).collect(Collectors.toSet()));
 
-        return new ObjectStatisticsInfo(
+        return new ObjectStatisticsConfiguration(
             newInfo.cacheGrpId,
             newInfo.key,
             cols.stream()
-                .map(ColumnStatisticsInfo::new)
+                .map(ColumnStatisticsConfiguration::new)
                 .collect(Collectors.toList())
-                .toArray(new ColumnStatisticsInfo[cols.size()]),
+                .toArray(new ColumnStatisticsConfiguration[cols.size()]),
             newInfo.cfg,
             oldInfo.ver + 1
         );
@@ -108,12 +108,12 @@ public class ObjectStatisticsInfo implements Serializable {
     }
 
     /** */
-    public ColumnStatisticsInfo[] columns() {
+    public ColumnStatisticsConfiguration[] columns() {
         return cols;
     }
 
     /** */
-    public StatisticConfiguration config() {
+    public StatisticsCollectConfiguration config() {
         return cfg;
     }
 
@@ -124,6 +124,6 @@ public class ObjectStatisticsInfo implements Serializable {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(ObjectStatisticsInfo.class, this);
+        return S.toString(ObjectStatisticsConfiguration.class, this);
     }
 }

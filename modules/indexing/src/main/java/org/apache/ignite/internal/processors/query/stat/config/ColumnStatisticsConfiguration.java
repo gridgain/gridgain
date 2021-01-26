@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat.schema;
+package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
 
 /**
  *
  */
-public class ColumnStatisticsInfo implements Serializable {
+public class ColumnStatisticsConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -28,7 +28,7 @@ public class ColumnStatisticsInfo implements Serializable {
     private String name;
 
     /** */
-    public ColumnStatisticsInfo(String name) {
+    public ColumnStatisticsConfiguration(String name) {
         this.name = name;
     }
 

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat.schema;
+package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -43,7 +43,7 @@ import org.apache.ignite.internal.processors.subscription.GridInternalSubscripti
 /**
  *
  */
-public class IgniteStatisticsSchemaManager implements DistributedMetastorageLifecycleListener {
+public class IgniteStatisticsConfigurationManager implements DistributedMetastorageLifecycleListener {
     /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
 
@@ -71,7 +71,7 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
     /**
      *
      */
-    public IgniteStatisticsSchemaManager(
+    public IgniteStatisticsConfigurationManager(
         GridKernalContext ctx,
         SchemaManager schemaMgr,
         IgniteStatisticsManager mgr,
@@ -83,7 +83,7 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
         this.schemaMgr = schemaMgr;
         this.mgr = mgr;
         this.distrMetaStorage = distrMetaStorage;
-        log = logSupplier.apply(IgniteStatisticsSchemaManager.class);
+        log = logSupplier.apply(IgniteStatisticsConfigurationManager.class);
         this.localRepo = localRepo;
 
         subscriptionProcessor.registerDistributedMetastorageListener(this);
@@ -95,14 +95,14 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
 
         distrMetaStorage.listen(
             (metaKey) -> metaKey.startsWith(STAT_CACHE_GRP_PREFIX),
-            (k, oldV, newV) -> onUpdateStatisticSchema(k, (CacheGroupStatistics)oldV, (CacheGroupStatistics)newV)
+            (k, oldV, newV) -> onUpdateStatisticSchema(k, (CacheGroupStatisticsVersion)oldV, (CacheGroupStatisticsVersion)newV)
         );
     }
 
     /**
      *
      */
-    public void updateStatistics(List<StatisticsTarget> targets, StatisticConfiguration cfg) {
+    public void updateStatistics(List<StatisticsTarget> targets, StatisticsCollectConfiguration cfg) {
         Set<Integer> grpIds = new HashSet<>();
 
         for (StatisticsTarget target : targets) {
@@ -113,13 +113,13 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
             grpIds.add(tbl.cacheContext().groupId());
 
             updateObjectStatisticInfo(
-                new ObjectStatisticsInfo(
+                new ObjectStatisticsConfiguration(
                     tbl.cacheContext().groupId(),
                     target.key(),
                     Arrays.stream(target.columns())
-                        .map(ColumnStatisticsInfo::new)
+                        .map(ColumnStatisticsConfiguration::new)
                         .collect(Collectors.toList())
-                        .toArray(new ColumnStatisticsInfo[target.columns().length]),
+                        .toArray(new ColumnStatisticsConfiguration[target.columns().length]),
                     cfg
                 )
             );
@@ -160,15 +160,15 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
     /**
      *
      */
-    private void updateObjectStatisticInfo(ObjectStatisticsInfo info) {
+    private void updateObjectStatisticInfo(ObjectStatisticsConfiguration info) {
         try {
             while (true) {
                 String key = key2String(info.cacheGroupId(), info.key());
 
-                ObjectStatisticsInfo oldInfo = distrMetaStorage.read(key);
+                ObjectStatisticsConfiguration oldInfo = distrMetaStorage.read(key);
 
                 if (oldInfo != null)
-                    info = ObjectStatisticsInfo.merge(info, oldInfo);
+                    info = ObjectStatisticsConfiguration.merge(info, oldInfo);
 
                 if (distrMetaStorage.compareAndSet(key, oldInfo, info))
                     return;
@@ -187,14 +187,14 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
             while (true) {
                 String key = STAT_CACHE_GRP_PREFIX + cacheGroupId;
 
-                CacheGroupStatistics oldGrp = distrMetaStorage.read(key);
+                CacheGroupStatisticsVersion oldGrp = distrMetaStorage.read(key);
 
                 long ver = 0;
 
                 if (oldGrp != null)
                     ver = oldGrp.version() + 1;
 
-                if (distrMetaStorage.compareAndSet(key, oldGrp, new CacheGroupStatistics(cacheGroupId, ver)))
+                if (distrMetaStorage.compareAndSet(key, oldGrp, new CacheGroupStatisticsVersion(cacheGroupId, ver)))
                     return;
             }
         }
@@ -218,14 +218,14 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
     /**
      *
      */
-    private boolean isNeedToUpdateLocalStatistics(ObjectStatisticsInfo tblStatInfo) {
+    private boolean isNeedToUpdateLocalStatistics(ObjectStatisticsConfiguration tblStatInfo) {
         ObjectStatisticsImpl localStat = localRepo.getLocalStatistics(tblStatInfo.key());
 
         return localStat == null || localStat != null && localStat.version() != tblStatInfo.version();
     }
 
     /** */
-    private void onUpdateStatisticSchema(String key, CacheGroupStatistics ignore, CacheGroupStatistics grpStat) {
+    private void onUpdateStatisticSchema(String key, CacheGroupStatisticsVersion ignore, CacheGroupStatisticsVersion grpStat) {
         ctx.closure().callLocalSafe(
             () -> {
                 updateStatQQQ(STAT_OBJ_PREFIX + grpStat.cacheGroupId() + '.');
@@ -238,11 +238,11 @@ public class IgniteStatisticsSchemaManager implements DistributedMetastorageLife
 
     /***/
     private void updateStatQQQ(String keyPrefix) throws IgniteCheckedException {
-        Set<ObjectStatisticsInfo> updSet = new HashSet<>();
+        Set<ObjectStatisticsConfiguration> updSet = new HashSet<>();
 
         distrMetaStorage.iterate(keyPrefix, (s, tblStatInfo) -> {
-            if(isNeedToUpdateLocalStatistics((ObjectStatisticsInfo)tblStatInfo))
-                updSet.add((ObjectStatisticsInfo)tblStatInfo);
+            if(isNeedToUpdateLocalStatistics((ObjectStatisticsConfiguration)tblStatInfo))
+                updSet.add((ObjectStatisticsConfiguration)tblStatInfo);
         });
 
         log.info("+++ NEED TO UPDATE:" + updSet);

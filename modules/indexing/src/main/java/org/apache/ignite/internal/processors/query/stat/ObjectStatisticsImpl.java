@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.ignite.internal.processors.query.stat.schema.StatisticConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsCollectConfiguration;
 
 /**
  * All statistics by some object (table or index).
@@ -32,7 +32,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     private final Map<String, ColumnStatistics> colNameToStat;
 
     /** */
-    private final StatisticConfiguration cfg;
+    private final StatisticsCollectConfiguration cfg;
 
     /** */
     private final long ver;
@@ -46,7 +46,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     public ObjectStatisticsImpl(
         long rowsCnt,
         Map<String, ColumnStatistics> colNameToStat,
-        StatisticConfiguration cfg,
+        StatisticsCollectConfiguration cfg,
         long ver
     ) {
         assert rowsCnt >= 0 : "rowsCnt >= 0";
@@ -89,7 +89,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     }
 
     /** */
-    public StatisticConfiguration config() {
+    public StatisticsCollectConfiguration config() {
         return cfg;
     }
 

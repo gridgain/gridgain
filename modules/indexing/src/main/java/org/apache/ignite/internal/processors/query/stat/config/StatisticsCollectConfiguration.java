@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat.schema;
+package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -23,7 +23,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 /**
  *
  */
-public class StatisticConfiguration implements Serializable {
+public class StatisticsCollectConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -53,7 +53,7 @@ public class StatisticConfiguration implements Serializable {
         if (o == null || getClass() != o.getClass())
             return false;
 
-        StatisticConfiguration that = (StatisticConfiguration)o;
+        StatisticsCollectConfiguration that = (StatisticsCollectConfiguration)o;
 
         if (Double.compare(samples, that.samples) == 0)
             return false;
@@ -68,6 +68,6 @@ public class StatisticConfiguration implements Serializable {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(StatisticConfiguration.class, this);
+        return S.toString(StatisticsCollectConfiguration.class, this);
     }
 }

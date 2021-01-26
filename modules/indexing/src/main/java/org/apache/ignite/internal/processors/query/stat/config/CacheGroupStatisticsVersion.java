@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat.schema;
+package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
-
-import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 
 /**
  *
  */
-public class CacheGroupStatistics implements Serializable {
+public class CacheGroupStatisticsVersion implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -33,7 +31,7 @@ public class CacheGroupStatistics implements Serializable {
     private final long ver;
 
     /** */
-    public CacheGroupStatistics(
+    public CacheGroupStatisticsVersion(
         int grpId,
         long ver
     ) {
@@ -52,7 +50,7 @@ public class CacheGroupStatistics implements Serializable {
     }
 
     /** */
-    public CacheGroupStatistics incrementVersion() {
-        return new CacheGroupStatistics(grpId, ver + 1);
+    public CacheGroupStatisticsVersion incrementVersion() {
+        return new CacheGroupStatisticsVersion(grpId, ver + 1);
     }
 }

@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.ignite.internal.processors.query.stat.schema.StatisticConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsCollectConfiguration;
 
 /**
  * Statistic for some partition of data object.
@@ -49,7 +49,7 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
             long rowsCnt,
             long updCnt,
             Map<String, ColumnStatistics> colNameToStat,
-            StatisticConfiguration cfg,
+            StatisticsCollectConfiguration cfg,
             long ver
 
     ) {

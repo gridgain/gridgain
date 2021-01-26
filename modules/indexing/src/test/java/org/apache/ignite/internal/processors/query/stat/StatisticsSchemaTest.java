@@ -17,10 +17,8 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Collections;
 
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.stat.schema.IgniteStatisticsSchemaManager;
-import org.apache.ignite.internal.processors.query.stat.schema.StatisticConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.IgniteStatisticsConfigurationManager;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsCollectConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
@@ -35,10 +33,10 @@ public class StatisticsSchemaTest extends StatisticsStorageAbstractTest {
             .statisticSchemaManager()
             .updateStatistics(
                 Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL")),
-                new StatisticConfiguration()
+                new StatisticsCollectConfiguration()
             );
 
-        IgniteStatisticsSchemaManager mgr = ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing().statsManager())
+        IgniteStatisticsConfigurationManager mgr = ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing().statsManager())
             .statisticSchemaManager();
 
         U.sleep(500);

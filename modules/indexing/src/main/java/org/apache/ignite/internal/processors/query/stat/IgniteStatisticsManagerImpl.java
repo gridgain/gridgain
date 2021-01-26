@@ -44,7 +44,7 @@ import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
-import org.apache.ignite.internal.processors.query.stat.schema.IgniteStatisticsSchemaManager;
+import org.apache.ignite.internal.processors.query.stat.config.IgniteStatisticsConfigurationManager;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
@@ -81,7 +81,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Current collections, collection id to collection status map. */
     private final Map<UUID, StatisticsGatheringContext> currColls = new ConcurrentHashMap<>();
 
-    private final IgniteStatisticsSchemaManager statSchemaMgr;
+    private final IgniteStatisticsConfigurationManager statSchemaMgr;
 
     /**
      * Constructor.
@@ -136,7 +136,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), statsRepos, statCrawler,
             gatMgmtPool, ctx::log);
 
-        statSchemaMgr = new IgniteStatisticsSchemaManager(
+        statSchemaMgr = new IgniteStatisticsConfigurationManager(
             ctx,
             schemaMgr,
             this,
@@ -490,7 +490,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
    }
 
    /** */
-    public IgniteStatisticsSchemaManager statisticSchemaManager() {
+    public IgniteStatisticsConfigurationManager statisticSchemaManager() {
         return statSchemaMgr;
     }
 

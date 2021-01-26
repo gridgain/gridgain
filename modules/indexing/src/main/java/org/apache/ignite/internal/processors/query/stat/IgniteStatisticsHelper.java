@@ -20,7 +20,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsClearRequest;
@@ -28,7 +27,7 @@ import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGathe
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
-import org.apache.ignite.internal.processors.query.stat.schema.StatisticConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsCollectConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.Nullable;
@@ -118,7 +117,7 @@ public class IgniteStatisticsHelper {
         assert !stats.isEmpty();
 
         long ver = F.first(stats).version();
-        StatisticConfiguration cfg = F.first(stats).config();
+        StatisticsCollectConfiguration cfg = F.first(stats).config();
 
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedCols.length);
         long rowCnt = 0;

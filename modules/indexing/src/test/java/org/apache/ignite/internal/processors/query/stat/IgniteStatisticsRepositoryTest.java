@@ -19,7 +19,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
-import org.apache.ignite.internal.processors.query.stat.schema.StatisticConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsCollectConfiguration;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.gridgain.internal.h2.value.ValueInt;
 import org.junit.Test;
@@ -225,8 +225,8 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         colStat2.put("col2", cs3);
         colStat2.put("col3", cs4);
 
-        ObjectStatisticsImpl os1 = new ObjectStatisticsImpl(100, colStat1, new StatisticConfiguration(), 0);
-        ObjectStatisticsImpl os2 = new ObjectStatisticsImpl(101, colStat2, new StatisticConfiguration(), 0);
+        ObjectStatisticsImpl os1 = new ObjectStatisticsImpl(100, colStat1, new StatisticsCollectConfiguration(), 0);
+        ObjectStatisticsImpl os2 = new ObjectStatisticsImpl(101, colStat2, new StatisticsCollectConfiguration(), 0);
 
         ObjectStatisticsImpl sumStat1 = IgniteStatisticsRepositoryImpl.add(os1, os2);
 
@@ -235,7 +235,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         assertEquals(cs3, sumStat1.columnStatistics("col2"));
 
         // 2) Add statistics with new columns.
-        ObjectStatisticsImpl os3 = new ObjectStatisticsImpl(101, Collections.singletonMap("col3", cs3), new StatisticConfiguration(), 0);
+        ObjectStatisticsImpl os3 = new ObjectStatisticsImpl(101, Collections.singletonMap("col3", cs3), new StatisticsCollectConfiguration(), 0);
 
         ObjectStatisticsImpl sumStat2 = IgniteStatisticsRepositoryImpl.add(os1, os3);
 
@@ -246,7 +246,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         colStat3.put("col1", cs3);
         colStat3.put("col2", cs4);
 
-        ObjectStatisticsImpl os4 = new ObjectStatisticsImpl(99, colStat3, new StatisticConfiguration(), 0);
+        ObjectStatisticsImpl os4 = new ObjectStatisticsImpl(99, colStat3, new StatisticsCollectConfiguration(), 0);
 
         ObjectStatisticsImpl sumStat3 = IgniteStatisticsRepositoryImpl.add(os1, os4);
 
