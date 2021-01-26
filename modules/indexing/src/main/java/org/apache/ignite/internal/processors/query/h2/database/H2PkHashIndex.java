@@ -49,6 +49,8 @@ import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.TableFilter;
 
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.DATA;
+
 /**
  *
  */
@@ -125,7 +127,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
                     continue;
 
                 if (filter == null || filter.applyPartition(part))
-                    cursors.add(store.cursor(cctx.cacheId(), lowerObj, upperObj, null, mvccSnapshot));
+                    cursors.add(store.cursor(cctx.cacheId(), lowerObj, upperObj, null, mvccSnapshot, DATA));
             }
 
             return new H2PkHashIndexCursor(cursors.iterator());
@@ -206,7 +208,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
                 int part = store.partId();
 
                 if (partsFilter == null || partsFilter.applyPartition(part))
-                    cursors.add(store.cursor(cctx.cacheId()));
+                    cursors.add(store.cursor(cctx.cacheId(), DATA));
             }
 
             Cursor pkHashCursor = new H2PkHashIndexCursor(cursors.iterator());

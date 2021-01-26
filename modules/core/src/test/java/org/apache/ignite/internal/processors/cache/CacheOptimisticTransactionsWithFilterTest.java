@@ -384,6 +384,7 @@ public class CacheOptimisticTransactionsWithFilterTest extends GridCommonAbstrac
     private void executeTestForAllCaches(TestClosure c) throws Exception {
         for (CacheConfiguration ccfg : cacheConfigurations()) {
             ignite(0).createCache(ccfg);
+            awaitPartitionMapExchange();
 
             log.info("Run test for cache [cache=" + ccfg.getCacheMode() +
                 ", backups=" + ccfg.getBackups() +
