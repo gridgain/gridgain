@@ -2410,7 +2410,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      * @return {@code True} if replaced existing row.
      */
-    public boolean putx(T row) throws IgniteCheckedException {
+    public final boolean putx(T row) throws IgniteCheckedException {
         Boolean res = (Boolean)doPut(row, false);
 
         return res != null ? res : false;

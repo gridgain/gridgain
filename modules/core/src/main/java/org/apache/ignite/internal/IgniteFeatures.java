@@ -196,6 +196,12 @@ public enum IgniteFeatures {
     /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
     SAFE_CLUSTER_DEACTIVATION(51),
 
+    /** Custom snapshot operations. */
+    CUSTOM_SNAPSHOT_OPERATIONS(53),
+
+    /** Point-in-time distributed property. */
+    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54),
+
     /** Warning is shown in server log and after schedule and snapshot commands if PIRT is enabled and snapshot schedule
      * is improper for PITR*/
     IMPROPER_SCHEDULE_FOR_PITR_WARNING(56);

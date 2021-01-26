@@ -37,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.extras.GridCacheObsoleteEntryExtras;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -125,6 +124,11 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
             throw t;
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void removeValue(GridCacheVersion clearVer) throws IgniteCheckedException {
+        cctx.offheap().removeWithTombstone(cctx, key, clearVer, localPartition());
     }
 
     /** {@inheritDoc} */
@@ -360,29 +364,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public GridCacheMvccCandidate removeLock() {
-        GridCacheMvccCandidate ret = super.removeLock();
-
-        locPart.onUnlock();
-
-        return ret;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean removeLock(GridCacheVersion ver) throws GridCacheEntryRemovedException {
-        boolean ret = super.removeLock(ver);
-
-        locPart.onUnlock();
-
-        return ret;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onUnlock() {
-        locPart.onUnlock();
-    }
-
     /**
      * @param topVer Topology version.
      * @return Tuple with version and value of this entry, or {@code null} if entry is new.
@@ -394,7 +375,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         lockEntry();
 
         try {
-            if (isNew() || !valid(AffinityTopologyVersion.NONE) || deletedUnlocked())
+            if (isNew() || !valid(AffinityTopologyVersion.NONE))
                 return null;
             else {
                 CacheObject val0 = this.val;
@@ -636,16 +617,13 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
     /**
      * Marks entry as obsolete and, if possible or required, removes it
-     * from swap storage.
+     * from swap storage. Forces physical removal of tombstone.
      *
      * @param ver Obsolete version.
      * @return {@code True} if entry was not being used, passed the filter and could be removed.
      * @throws IgniteCheckedException If failed to remove from swap.
      */
-    public boolean clearInternal(
-        GridCacheVersion ver,
-        GridCacheObsoleteEntryExtras extras
-    ) throws IgniteCheckedException {
+    public boolean clearInternal(GridCacheVersion ver) throws IgniteCheckedException {
         boolean rmv = false;
 
         lockEntry();
@@ -653,7 +631,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         try {
             // Call markObsolete0 to avoid recursive calls to clear if
             // we are clearing dht local partition (onMarkedObsolete should not be called).
-            if (!markObsolete0(ver, false, extras)) {
+            if (!markObsolete0(ver, false, null)) {
                 if (log.isDebugEnabled())
                     log.debug("Entry could not be marked obsolete (it is still used or has readers): " + this);
 
@@ -674,7 +652,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
             if (cctx.mvccEnabled())
                 cctx.offheap().mvccRemoveAll(this);
             else
-                removeValue();
+                removeExpiredValue(ver);
 
             // Give to GC.
             update(null, 0L, 0L, ver, true);

@@ -2444,6 +2444,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         BaselineTopology blt = state.baselineTopology();
 
+        boolean fullBaseline = true;
+
         if (blt != null) {
             nodeIdToConsIdx = U.newHashMap(srvNodes.size());
             consIdxToNodeId = U.newHashMap(srvNodes.size());
@@ -2471,8 +2473,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                 if (srvNode != null)
                     baselineNodes0.add(srvNode);
-                else
+                else {
+                    fullBaseline = false;
                     baselineNodes0.add(blt.baselineNode(consId));
+                }
             }
 
             baselineNodes = baselineNodes0;
@@ -2480,7 +2484,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         else {
             nodeIdToConsIdx = null;
             consIdxToNodeId = null;
-
+            fullBaseline = false;
             baselineNodes = null;
         }
 
@@ -2508,7 +2512,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
             nodeIdToConsIdx == null ? null : Collections.unmodifiableMap(nodeIdToConsIdx),
             consIdxToNodeId == null ? null : Collections.unmodifiableMap(consIdxToNodeId),
             minVer,
-            minSrvVer);
+            minSrvVer,
+            fullBaseline);
     }
 
     /**
@@ -3535,6 +3540,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
             nodeIdToConsIdx,
             discoCache.consIdxToNodeId,
             discoCache.minimumNodeVersion(),
-            discoCache.minimumServerNodeVersion());
+            discoCache.minimumServerNodeVersion(),
+            discoCache.fullBaseline());
     }
 }

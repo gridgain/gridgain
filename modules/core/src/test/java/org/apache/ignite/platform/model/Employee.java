@@ -13,21 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.cache.distributed.rebalancing;
 
-import org.apache.ignite.cache.CacheAtomicityMode;
+package org.apache.ignite.platform.model;
 
-/**
- *
- */
-public class GridCacheRebalancingWithAsyncClearingMvccTest extends GridCacheRebalancingWithAsyncClearingTest {
-    /** {@inheritDoc} */
-    @Override protected CacheAtomicityMode atomicityMode() {
-        return CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
+/** Test value object. */
+public class Employee {
+    /** */
+    private String fio;
+
+    /** */
+    private long salary;
+
+    /** */
+    public String getFio() {
+        return fio;
     }
 
-    /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return super.getTestTimeout() * 2; // Parent test generates a lot of data and is inherently slow in mvcc mode.
+    /** */
+    public void setFio(String fio) {
+        this.fio = fio;
+    }
+
+    /** */
+    public long getSalary() {
+        return salary;
+    }
+
+    /** */
+    public void setSalary(long salary) {
+        this.salary = salary;
     }
 }

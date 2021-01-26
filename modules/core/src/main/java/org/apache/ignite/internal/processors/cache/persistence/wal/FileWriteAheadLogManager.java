@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -201,13 +201,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     private final boolean mmap = IgniteSystemProperties.getBoolean(IGNITE_WAL_MMAP, true);
 
     /**
-     * Percentage of archive size for checkpoint trigger. Need for calculate max size of WAL after last checkpoint.
-     * Checkpoint should be triggered when max size of WAL after last checkpoint more than maxWallArchiveSize * thisValue
-     */
-    private static final double CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE =
-        IgniteSystemProperties.getDouble(IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, 0.25);
-
-    /**
      * Percentage of WAL archive size to calculate threshold since which removing of old archive should be started.
      */
     private static final double THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE =
@@ -403,9 +396,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         fileHandleManagerFactory = new FileHandleManagerFactory(dsCfg);
 
-        maxSegCountWithoutCheckpoint =
-            (long)((U.adjustedWalHistorySize(dsCfg, log) * CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE)
-                / dsCfg.getWalSegmentSize());
+        double cpTriggerArchiveSizePercentage = IgniteSystemProperties.getDouble(
+            IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, 0.25);
+
+        maxSegCountWithoutCheckpoint = (long)((U.adjustedWalHistorySize(dsCfg, log) * cpTriggerArchiveSizePercentage)
+            / dsCfg.getWalSegmentSize());
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
     }
@@ -3188,6 +3183,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     FileDescriptor high = null;
 
                     long size = 0;
+                    long totalSize = totalSize(walArchiveFiles);
 
                     for (FileDescriptor fileDesc : walArchiveFiles) {
                         if (fileDesc.idx >= lastCheckpointPtr.index() || segmentAware.reserved(fileDesc.idx))
@@ -3196,7 +3192,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                             high = fileDesc;
 
                             // Ensure that there will be exactly removed at least one segment.
-                            if ((size += fileDesc.file.length()) > allowedThresholdWalArchiveSize)
+                            if (totalSize - (size += fileDesc.file.length()) < allowedThresholdWalArchiveSize)
                                 break;
                         }
                     }
@@ -3206,7 +3202,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                         if (log.isInfoEnabled()) {
                             log.info("Starting to clean WAL archive [highIdx=" + highPtr.index()
-                                + ", currSize=" + U.humanReadableByteCount(totalSize(walArchiveFiles))
+                                + ", currSize=" + U.humanReadableByteCount(totalSize)
                                 + ", maxSize=" + U.humanReadableByteCount(dsCfg.getMaxWalArchiveSize()) + ']');
                         }
 

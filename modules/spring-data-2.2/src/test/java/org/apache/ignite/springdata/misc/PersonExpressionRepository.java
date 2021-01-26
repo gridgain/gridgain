@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
+package org.apache.ignite.springdata.misc;
+
+import org.apache.ignite.springdata22.repository.IgniteRepository;
+import org.apache.ignite.springdata22.repository.config.RepositoryConfig;
 
 /**
- * Additional context for partition eviction process.
+ * Test spring-data repository with Person entity.
  */
-public interface EvictionContext {
-    /**
-     * @return {@code true} If eviction process should be stopped.
-     */
-    public boolean shouldStop();
+@RepositoryConfig(cacheName = "#{cacheNames.personCacheName}")
+public interface PersonExpressionRepository extends IgniteRepository<Person, Integer> {
 }

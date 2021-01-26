@@ -635,10 +635,16 @@ public class Checkpointer extends GridWorker {
     private void updateMetrics(Checkpoint chp, CheckpointMetricsTracker tracker) {
         if (persStoreMetrics.metricsEnabled()) {
             persStoreMetrics.onCheckpoint(
+                tracker.beforeLockDuration(),
                 tracker.lockWaitDuration(),
+                tracker.listenersExecuteDuration(),
                 tracker.markDuration(),
+                tracker.lockHoldDuration(),
                 tracker.pagesWriteDuration(),
                 tracker.fsyncDuration(),
+                tracker.walCpRecordFsyncDuration(),
+                tracker.writeCheckpointEntryDuration(),
+                tracker.splitAndSortCpPagesDuration(),
                 tracker.totalDuration(),
                 tracker.checkpointStartTime(),
                 chp.pagesSize,
@@ -762,7 +768,7 @@ public class Checkpointer extends GridWorker {
             log.debug("Partition file has been scheduled to destroy [grpId=" + grpId + ", partId=" + partId + "]");
 
         if (grpCtx != null)
-            scheduleCheckpoint(PARTITION_DESTROY_CHECKPOINT_TIMEOUT, "partition destroy");
+            scheduleCheckpoint(PARTITION_DESTROY_CHECKPOINT_TIMEOUT, "partition-destroy-" + grpId + "-" + partId);
     }
 
     /**

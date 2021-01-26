@@ -154,6 +154,8 @@ public class PageEvictionPagesRecyclingAndReusingTest extends PageEvictionAbstra
                 System.out.println(">>> Entries removed: " + i);
         }
 
+        clearTombstones(cache);
+
         System.out.println("### Recycled pages count: " + reuseList.recycledPagesCount());
 
         Random rnd = new Random();
@@ -173,6 +175,8 @@ public class PageEvictionPagesRecyclingAndReusingTest extends PageEvictionAbstra
             if (i % (SMALL_ENTRIES / 10) == 0)
                 System.out.println(">>> Small entries removed: " + i);
         }
+
+        clearTombstones(cache);
 
         System.out.println("### Recycled pages count: " + reuseList.recycledPagesCount());
     }
