@@ -1072,13 +1072,9 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
                     // Get "cache" field from GridCacheProxyImpl.
                     GridCacheAdapter c0 = cacheFromCtx(c);
 
-                    if (!c0.context().deferredDelete()) {
-                        GridCacheEntryEx e0 = c0.entryEx(key);
+                    GridCacheEntryEx e0 = c0.entryEx(key);
 
-                        return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
-                    }
-                    else
-                        return true;
+                    return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
                 }
                 catch (GridCacheEntryRemovedException e) {
                     throw new RuntimeException(e);

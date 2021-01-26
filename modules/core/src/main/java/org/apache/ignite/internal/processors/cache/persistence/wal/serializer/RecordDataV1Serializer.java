@@ -78,6 +78,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateNextSna
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecordV2;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecordV3;
+import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecordV4;
 import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageListMetaResetCountRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PagesListAddPageRecord;
@@ -404,6 +405,10 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
                     + /*allocatedIdxCandidate*/ 4 + /*link*/ 8 + /*encrypt page index*/ 4 + /*encrypt pages count*/4;
 
+            case PARTITION_META_PAGE_DELTA_RECORD_V4:
+                return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
+                    + /*allocatedIdxCandidate*/ 4 + /*link*/ 8 + /*encrypt page index*/ 4 + /*encrypt pages count*/4 + /*tombstones cnt*/ 8;
+
             case MEMORY_RECOVERY:
                 return 8;
 
@@ -652,6 +657,11 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
             case PARTITION_META_PAGE_DELTA_RECORD_V3:
                 res = new MetaPageUpdatePartitionDataRecordV3(in);
+
+                break;
+
+            case PARTITION_META_PAGE_DELTA_RECORD_V4:
+                res = new MetaPageUpdatePartitionDataRecordV4(in);
 
                 break;
 
@@ -1206,7 +1216,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 cacheId = in.readInt();
                 pageId = in.readLong();
 
-                byte rotatedIdPart = in.readByte();
+                int rotatedIdPart = in.readByte() & 0xFF;
 
                 res = new RotatedIdPartRecord(cacheId, pageId, rotatedIdPart);
 
@@ -1329,6 +1339,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case PARTITION_META_PAGE_UPDATE_COUNTERS:
             case PARTITION_META_PAGE_UPDATE_COUNTERS_V2:
             case PARTITION_META_PAGE_DELTA_RECORD_V3:
+            case PARTITION_META_PAGE_DELTA_RECORD_V4:
                 ((MetaPageUpdatePartitionDataRecord)rec).toBytes(buf);
 
                 break;

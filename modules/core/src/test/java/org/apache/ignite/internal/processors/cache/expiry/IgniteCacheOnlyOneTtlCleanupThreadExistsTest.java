@@ -23,8 +23,8 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 /**
- * Checks that one and only one Ttl cleanup worker thread must exists, and only
- * if at least one cache with set 'eagerTtl' flag exists.
+ * Checks that one and only one Ttl cleanup worker thread always exists (not depending
+ * on eagerTtl value).
  */
 public class IgniteCacheOnlyOneTtlCleanupThreadExistsTest extends GridCommonAbstractTest {
     /** */
@@ -39,11 +39,11 @@ public class IgniteCacheOnlyOneTtlCleanupThreadExistsTest extends GridCommonAbst
     @Test
     public void testOnlyOneTtlCleanupThreadExists() throws Exception {
         try (final Ignite g = startGrid(0)) {
-            checkCleanupThreadExists(false);
+            checkCleanupThreadExists(true);
 
             g.createCache(createCacheConfiguration(CACHE_NAME1, false));
 
-            checkCleanupThreadExists(false);
+            checkCleanupThreadExists(true);
 
             g.createCache(createCacheConfiguration(CACHE_NAME2, true));
 
@@ -63,7 +63,7 @@ public class IgniteCacheOnlyOneTtlCleanupThreadExistsTest extends GridCommonAbst
 
             g.destroyCache(CACHE_NAME2);
 
-            checkCleanupThreadExists(false);
+            checkCleanupThreadExists(true);
         }
     }
 

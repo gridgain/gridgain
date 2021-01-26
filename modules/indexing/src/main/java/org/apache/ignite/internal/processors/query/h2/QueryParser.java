@@ -82,6 +82,7 @@ import org.gridgain.internal.h2.command.Prepared;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlQuerySplitter.keyColumn;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PARSER_CACHE_HIT;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_PARSE;
 
 /**
@@ -206,6 +207,8 @@ public class QueryParser {
         if (cached != null) {
             metricsHolder.countCacheHit();
 
+            MTC.span().addTag(SQL_PARSER_CACHE_HIT, () -> "true");
+
             return new QueryParserResult(
                 qryDesc,
                 queryParameters(qry),
@@ -218,6 +221,8 @@ public class QueryParser {
         }
 
         metricsHolder.countCacheMiss();
+
+        MTC.span().addTag(SQL_PARSER_CACHE_HIT, () -> "false");
 
         // Try parsing as native command.
         QueryParserResult parseRes = parseNative(schemaName, qry, remainingAllowed);

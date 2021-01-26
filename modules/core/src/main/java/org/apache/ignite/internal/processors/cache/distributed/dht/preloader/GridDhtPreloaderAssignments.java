@@ -47,14 +47,20 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
     /** Some of owned by affinity partitions were changed state to moving. */
     private final boolean affinityReassign;
 
+    /** Force partition clearing before full rebalancing. */
+    private final boolean forceClear;
+
     /**
      * @param exchangeId Exchange ID.
      * @param topVer Last join order.
+     * @param affinityReassign {@code True} to force partitions reassigning.
+     * @param forceClear {@code True} to force partition clearing before full rebalance.
      */
     public GridDhtPreloaderAssignments(
         GridDhtPartitionExchangeId exchangeId,
         AffinityTopologyVersion topVer,
-        boolean affinityReassign
+        boolean affinityReassign,
+        boolean forceClear
     ) {
         assert exchangeId != null;
         assert topVer.topologyVersion() > 0 : topVer;
@@ -62,6 +68,7 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
         this.exchangeId = exchangeId;
         this.topVer = topVer;
         this.affinityReassign = affinityReassign;
+        this.forceClear = forceClear;
     }
 
     /**
@@ -69,6 +76,13 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
      */
     public boolean affinityReassign() {
         return affinityReassign;
+    }
+
+    /**
+     * @return True if force clearing requested.
+     */
+    public boolean forceClear() {
+        return forceClear;
     }
 
     /**
