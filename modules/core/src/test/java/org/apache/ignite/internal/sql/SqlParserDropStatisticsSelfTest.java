@@ -44,7 +44,7 @@ public class SqlParserDropStatisticsSelfTest extends SqlParserAbstractSelfTest {
             new StatisticsTarget(null, "TBL", "A"),
             new StatisticsTarget("SCHEMA", "TBL2", "A", "B"));
 
-        assertParseError(null, "DROP STATISTICS p,", "Unexpected token: \",\"");
+        assertParseError(null, "DROP STATISTICS p,", "Unexpected end of command");
         assertParseError(null, "DROP STATISTICS p()", "Unexpected token: \")\"");
     }
 

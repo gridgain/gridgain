@@ -48,7 +48,7 @@ public class SqlParserRefreshStatisticsSelfTest extends SqlParserAbstractSelfTes
             new StatisticsTarget(null, "TBL", "A"),
             new StatisticsTarget("SCHEMA", "TBL2", "A", "B"));
 
-        assertParseError(null, "REFRESH STATISTICS p,", "Unexpected token: \",\"");
+        assertParseError(null, "REFRESH STATISTICS p,", "Unexpected end of command");
         assertParseError(null, "REFRESH STATISTICS p()", "Unexpected token: \")\"");
     }
 
