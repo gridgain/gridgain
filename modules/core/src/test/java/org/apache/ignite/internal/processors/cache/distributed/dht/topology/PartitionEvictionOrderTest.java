@@ -19,9 +19,9 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -42,6 +42,7 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.PRELOADER_FORCE_CLEAR;
 
 /**
  * Tests that {@link CacheRebalanceMode#SYNC} caches are evicted at first.
@@ -81,11 +82,11 @@ public class PartitionEvictionOrderTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Tests that {@link CacheRebalanceMode#SYNC} caches are evicted at first.
+     * Tests that {@link CacheRebalanceMode#SYNC} caches are cleared before full rebalancing at first.
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_EVICTION_PERMITS, value = "1")
     @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "500_000")
+    @WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
     public void testSyncCachesEvictedAtFirst() throws Exception {
         IgniteEx node0 = startGrid(0);
 
@@ -120,7 +121,7 @@ public class PartitionEvictionOrderTest extends GridCommonAbstractTest {
                 utilCache1.put(i, i + 1);
             }
             catch (IgniteCheckedException e) {
-                e.printStackTrace();
+                log.error("Failed to update a cache", e);
             }
         }
 
@@ -132,10 +133,10 @@ public class PartitionEvictionOrderTest extends GridCommonAbstractTest {
                     GridDhtPartitionTopologyImpl top = (GridDhtPartitionTopologyImpl) instance;
 
                     top.partitionFactory((ctx, grp, id, recovery) -> new GridDhtLocalPartition(ctx, grp, id, recovery) {
-                        @Override public long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
+                        @Override public long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.PartitionEvictionTask task) throws NodeStoppingException {
                             evictionOrder.add(new T2<>(grp.groupId(), id));
 
-                            return super.clearAll(evictionCtx);
+                            return super.clearAll(stopClo, task);
                         }
                     });
                 }

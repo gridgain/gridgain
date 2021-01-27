@@ -115,7 +115,7 @@ public class PartitionUpdateCounterDebugWrapper implements PartitionUpdateCounte
             ", before=" + toString());
 
         try {
-            return delegate.next();
+            return delegate.next(delta);
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
@@ -264,6 +264,17 @@ public class PartitionUpdateCounterDebugWrapper implements PartitionUpdateCounte
     /** {@inheritDoc} */
     @Override public CacheGroupContext context() {
         return delegate.context();
+    }
+
+    /** {@inheritDoc}
+     * @param cntr*/
+    @Override public void updateTombstoneClearCounter(long cntr) {
+        delegate.updateTombstoneClearCounter(cntr);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long tombstoneClearCounter() {
+        return delegate.tombstoneClearCounter();
     }
 
     /** {@inheritDoc} */

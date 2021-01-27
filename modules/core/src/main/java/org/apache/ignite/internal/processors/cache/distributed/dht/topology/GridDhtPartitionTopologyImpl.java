@@ -780,7 +780,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         ctx.database().checkpointReadLock();
 
         try {
-
             lock.writeLock().lock();
 
             try {
@@ -809,26 +808,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         GridDhtLocalPartition locPart = localPartition0(p, topVer, false, true);
 
                         if (partitionLocalNode(p, topVer)) {
-                            // Prepare partition to rebalance if it's not happened on full map update phase.
-                            if (locPart == null || locPart.state() == RENTING || locPart.state() == EVICTED)
-                                locPart = rebalancePartition(p, true, exchFut);
-
-                            GridDhtPartitionState state = locPart.state();
-
-                            if (state == MOVING) {
-                                if (grp.rebalanceEnabled()) {
-                                    Collection<ClusterNode> owners = owners(p);
-
-                                    // If an owner node left during exchange, then new exchange should be started with detecting lost partitions.
-                                    if (!F.isEmpty(owners)) {
-                                        if (log.isDebugEnabled())
-                                            log.debug("Will not own partition (there are owners to rebalance from) " +
-                                                "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", owners = " + owners + ']');
-                                    }
-                                }
-                                else
-                                    updateSeq = updateLocal(p, locPart.state(), updateSeq, topVer);
-                            }
+                            assert locPart != null && locPart.state() != RENTING && locPart.state() != EVICTED : locPart;
                         }
                         else {
                             if (locPart != null) {
@@ -1692,11 +1672,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         else if (state == MOVING) {
                             GridDhtLocalPartition locPart = locParts.get(p);
 
-                            rebalancePartition(p, partsToReload.contains(p) ||
-                                locPart != null && locPart.state() == MOVING && exchFut.localJoinExchange(), exchFut);
+                            GridDhtPartitionState prevState = locPart.state();
 
-                            changed = true;
+                            rebalancePartition(p);
+
+                            changed = prevState != locPart.state();
                         }
+
+                        if (partsToReload.contains(p))
+                            exchFut.addClearingPartition(grp.groupId(), p);
                     }
                 }
 
@@ -2057,6 +2041,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             // Own orphan moving partitions (having no suppliers).
             if (fut != null && (fut.events().hasServerJoin() || fut.changedBaseline()))
                 ownOrphans();
+
+            // Resume eviction of RENTING partitions on first PME.
+            if (fut != null && grp.localStartVersion().equals(fut.initialVersion()) && grp.persistenceEnabled()) {
+                for (GridDhtLocalPartition part : localPartitions()) {
+                    if (part.state() == RENTING)
+                        part.evictAsync();
+                }
+            }
         }
         finally {
             lock.writeLock().unlock();
@@ -2402,7 +2394,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                     // Partition state should be mutated only on joining nodes if they are exists for the exchange.
                     if (joinedNodes.isEmpty() && !maxCntrPartOwners.contains(locNodeId)) {
-                        rebalancePartition(part, !haveHist.contains(part), exchFut);
+                        rebalancePartition(part);
 
                         res.computeIfAbsent(locNodeId, n -> new HashSet<>()).add(part);
                     }
@@ -2494,13 +2486,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * Prepares given partition {@code p} for rebalance.
      * Changes partition state to MOVING and starts clearing if needed.
      * Prevents ongoing renting if required.
-     *
      * @param p Partition id.
-     * @param clear If {@code true} partition have to be cleared before rebalance (full rebalance or rebalance restart
-     * after cancellation).
-     * @param exchFut Future related to partition state change.
+     *
+     * @return Partition instance.
      */
-    private GridDhtLocalPartition rebalancePartition(int p, boolean clear, GridDhtPartitionsExchangeFuture exchFut) {
+    private GridDhtLocalPartition rebalancePartition(int p) {
         GridDhtLocalPartition part = getOrCreatePartition(p);
 
         if (part.state() == LOST)
@@ -2521,9 +2511,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         if (part.state() != MOVING)
             part.moving();
 
-        if (clear)
-            exchFut.addClearingPartition(grp, part.id());
-
         assert part.state() == MOVING : part;
 
         return part;
@@ -2536,7 +2523,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * @param aff Affinity assignments.
      * @return {@code True} if there are local partitions need to be evicted.
      */
-    @SuppressWarnings("unchecked")
     private boolean checkEvictions(long updateSeq, AffinityAssignment aff) {
         assert lock.isWriteLockedByCurrentThread();
 
@@ -2563,6 +2549,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             Collection<UUID> nodeIds = F.nodeIds(nodes);
 
             // If all affinity nodes are owners, then evict partition from local node.
+            // The preloading should be already finished for this topVer.
             if (nodeIds.containsAll(F.nodeIds(affNodes))) {
                 GridDhtPartitionState state0 = part.state();
 
@@ -2583,9 +2570,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 int ownerCnt = nodeIds.size();
                 int affCnt = affNodes.size();
 
+                // Keep owners count as defined by affinity configuration. This can happen during preloading.
                 if (ownerCnt > affCnt) {
                     // Sort by node orders in ascending order.
-                    Collections.sort(nodes, CU.nodeComparator(true));
+                    nodes.sort(CU.nodeComparator(true));
 
                     int diff = nodes.size() - affCnt;
 
@@ -2826,8 +2814,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     log.error("Unable to destroy cache data store on partition eviction [id=" + part.id() + "]", e);
                 }
 
-                part.clearDeferredDeletes();
-
                 List<GridDhtLocalPartition> parts = localPartitions();
 
                 boolean renting = false;
@@ -2983,6 +2969,42 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             res.trim();
 
             return res;
+        }
+        finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public Map<Integer, Long> clearCountersMap() {
+        lock.readLock().lock();
+
+        try {
+            int locPartCnt = 0;
+
+            for (int i = 0; i < locParts.length(); i++) {
+                GridDhtLocalPartition part = locParts.get(i);
+
+                if (part != null)
+                    locPartCnt++;
+            }
+
+            Map<Integer, Long> map = U.newHashMap(locPartCnt);
+
+            for (int i = 0; i < locParts.length(); i++) {
+                GridDhtLocalPartition part = locParts.get(i);
+
+                if (part == null)
+                    continue;
+
+                long cntr = part.dataStore().partUpdateCounter() == null ? 0 :
+                    part.dataStore().partUpdateCounter().tombstoneClearCounter();
+
+                if (cntr != 0)
+                    map.put(part.id(), cntr);
+            }
+
+            return map;
         }
         finally {
             lock.readLock().unlock();

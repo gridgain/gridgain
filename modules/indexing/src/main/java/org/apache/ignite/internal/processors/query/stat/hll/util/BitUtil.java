@@ -68,8 +68,4 @@ public class BitUtil {
         if((value & 0xFFFFFFFFFFFFFFL) != 0) return LEAST_SIGNIFICANT_BIT[(int)( (value >>> 48) & 0xFF)] + 48;
         return LEAST_SIGNIFICANT_BIT[(int)( (value >>> 56) & 0xFFL)] + 56;
     }
-
-    public static void main(String[] args) {
-        System.out.println("dsaf");
-    }
 }

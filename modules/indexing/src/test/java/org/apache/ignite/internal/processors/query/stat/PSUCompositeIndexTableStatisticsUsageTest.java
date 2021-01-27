@@ -43,8 +43,8 @@ public class PSUCompositeIndexTableStatisticsUsageTest extends StatisticsAbstrac
     @Parameterized.Parameters(name = "cacheMode={0}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
-                { REPLICATED },
-                { PARTITIONED },
+            { REPLICATED },
+            { PARTITIONED },
         });
     }
 
@@ -60,13 +60,13 @@ public class PSUCompositeIndexTableStatisticsUsageTest extends StatisticsAbstrac
         runSql("DROP TABLE IF EXISTS ci_table");
 
         runSql("CREATE TABLE ci_table (ID INT, col_a int, col_b int, col_c int, col_d int, " +
-                "PRIMARY key (ID, col_a, col_b, col_c)) WITH \"TEMPLATE=" + cacheMode + "\"");
+            "PRIMARY key (ID, col_a, col_b, col_c)) WITH \"TEMPLATE=" + cacheMode + "\"");
 
         runSql("CREATE INDEX ci_table_abc ON ci_table(col_a, col_b, col_c)");
 
         for (int i = 0; i < BIG_SIZE; i++) {
             String sql = String.format("INSERT INTO ci_table(id, col_a, col_b, col_c) VALUES(%d, %d, %d, %d)", i, i,
-                    i * 2, i * 10);
+                i * 2, i * 10);
             runSql(sql);
         }
         updateStatistics("ci_table");

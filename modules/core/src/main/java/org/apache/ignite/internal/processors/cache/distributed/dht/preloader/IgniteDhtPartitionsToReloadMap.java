@@ -66,21 +66,9 @@ public class IgniteDhtPartitionsToReloadMap implements Serializable {
         if (map == null)
             map = new HashMap<>();
 
-        Map<Integer, Set<Integer>> nodeMap = map.get(nodeId);
+        Map<Integer, Set<Integer>> nodeMap = map.computeIfAbsent(nodeId, k -> new HashMap<>());
 
-        if (nodeMap == null) {
-            nodeMap = new HashMap<>();
-
-            map.put(nodeId, nodeMap);
-        }
-
-        Set<Integer> parts = nodeMap.get(cacheId);
-
-        if (parts == null) {
-            parts = new HashSet<>();
-
-            nodeMap.put(cacheId, parts);
-        }
+        Set<Integer> parts = nodeMap.computeIfAbsent(cacheId, k -> new HashSet<>());
 
         parts.add(partId);
     }
