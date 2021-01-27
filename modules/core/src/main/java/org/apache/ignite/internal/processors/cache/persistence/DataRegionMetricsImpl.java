@@ -440,9 +440,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         return grpAllocationTrackers.computeIfAbsent(grpName,
             id -> mmgr.registry(cacheGroupMetricsRegistryName(grpName)).longAdderMetric(
                 "TotalAllocatedPages",
-                t -> {
-                    totalAllocatedPages.add(t);
-                    },
+                totalAllocatedPages::add,
                 "Cache group total allocated pages."));
     }
 

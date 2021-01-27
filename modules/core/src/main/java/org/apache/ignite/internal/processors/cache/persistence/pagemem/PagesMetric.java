@@ -19,6 +19,9 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 
+/**
+ * Provides {@link PageCategory} statistic.
+ */
 public interface PagesMetric {
     /**
      * Gets pages count used by Data pages.

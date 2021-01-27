@@ -19,15 +19,19 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.internal.pagemem.PageCategory;
 
-public class PagesMetricNoStoreImpl implements PagesMetric {
+/**
+ * Collects metrics per data region.
+ */
+public class PagesMetricImpl implements PagesMetric {
+    /** Data pages. */
     private AtomicLong physicalMemoryDataPagesSize = new AtomicLong(0);
-    /** SQL indexes */
+    /** Indexes. */
     private AtomicLong physicalMemoryIndexPagesSize = new AtomicLong(0);
     /** Reuse list. */
     private AtomicLong physicalMemoryFreelistPagesSize = new AtomicLong(0);
-    /** meta, tracking */
+    /** Meta, tracking. */
     private AtomicLong physicalMemoryMetaPagesSize = new AtomicLong(0);
-    /** Preallocated size */
+    /** Preallocated size. */
     private AtomicLong physicalMemoryFreePagesSize = new AtomicLong(0);
 
     /** {@inheritDoc} */

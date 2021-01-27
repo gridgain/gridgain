@@ -37,7 +37,7 @@ import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetricNoStoreImpl;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetricImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -144,7 +144,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     private final AtomicInteger allocatedPages = new AtomicInteger();
 
     /** */
-    private final PagesMetric pageMetric = new PagesMetricNoStoreImpl();
+    private final PagesMetric pageMetric = new PagesMetricImpl();
 
     /** */
     private final LongAdderMetric totalAllocatedPagesMetric;
@@ -759,7 +759,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         /**
          * Initializes page memory segment.
          *
-         * @return max pages
+         * @return Allocated free pages count.
          */
         private int init() {
             long base = region.address();

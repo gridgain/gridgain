@@ -44,41 +44,50 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "test-cache";
 
+    /** */
     private PagesMetric metric;
     private DataRegionMetricsImpl oldMetrics;
     private final List<StatisticData> statistic = new ArrayList<>();
 
-    /** */
+    /** Statistic "snapshot". */
     public static class StatisticData {
-
+        /** */
         long dataPages;
 
+        /** */
         long indexPages;
 
+        /** */
         long freePages;
 
+        /** */
         long freelistPages;
 
+        /** */
         long metaPages;
 
+        /** */
         public long getAll() {
             return dataPages + indexPages + freePages + freelistPages + metaPages;
         }
 
-        public long getUsedAndInFreeListPages() {
-            return dataPages + indexPages + freelistPages + metaPages;
-        }
-
+        /** */
         public long getUsedPages() {
             return dataPages + indexPages + metaPages;
         }
+
+        /** */
+        public long getUsedAndInFreeListPages() {
+            return getUsedPages() + freelistPages;
+        }
     }
 
-    /** */
-    public static class Data {
-
+    /** Test entry. */
+    public static class CacheDataEntry {
+        /** */
         String data;
 
+        /** */
         @QuerySqlField(index = true)
         long indexedValue;
     }
@@ -90,6 +99,8 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        statistic.clear();
     }
 
     /** {@inheritDoc} */
@@ -116,10 +127,24 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
         return cfg;
     }
 
+    /** Persistence region. */
     protected boolean persistenceRegion() {
         return false;
     }
 
+    private CacheConfiguration<Integer, CacheDataEntry> getCacheCfg() {
+        return new CacheConfiguration<Integer, CacheDataEntry>()
+            .setName(CACHE)
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(2))
+            .setOnheapCacheEnabled(false);
+    }
+
+    /**
+     * Checks page metrics in following scenario:
+     * 1) Creates grid.
+     * 2) Creates cache.
+     * 3) Fills data.
+     */
     @Test
     public void allocateDataPagesTest() throws Exception {
         IgniteEx ig = prepareGrid();
@@ -128,14 +153,14 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
 
         Assert.assertEquals(oldMetrics.getPhysicalMemoryPages(), statistic.get(0).getAll());
 
-        IgniteCache<Integer, Data> cache = ig
+        IgniteCache<Integer, CacheDataEntry> cache = ig
             .getOrCreateCache(getCacheCfg());
 
         applyStatistic();
         Assert.assertEquals(oldMetrics.getPhysicalMemoryPages(), statistic.get(1).getUsedAndInFreeListPages());
 
         for (int i = 0; i < 100_000; i++) {
-            Data data = new Data();
+            CacheDataEntry data = new CacheDataEntry();
             data.data = "ASDkjsahdfjashdgfkhgHJFJHGHjhkjvhdgsaKJASHGDHSAGFDkhasgdSHJGSAD" + i;
             data.indexedValue = i % 5;
             cache.put(i, data);
@@ -157,13 +182,12 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
             > statistic.get(2).indexPages - statistic.get(1).indexPages);
     }
 
-    private CacheConfiguration<Integer, Data> getCacheCfg() {
-        return new CacheConfiguration<Integer, Data>()
-            .setName(CACHE)
-            .setAffinity(new RendezvousAffinityFunction().setPartitions(1))
-            .setOnheapCacheEnabled(false);
-    }
-
+    /**
+     * Checks page metrics in following scenario:
+     * 1) Creates grid.
+     * 2) Creates cache.
+     * 3) Drop cache.
+     */
     @Test
     public void createDropCacheTest() throws Exception {
         IgniteEx ig = prepareGrid();
@@ -172,7 +196,7 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
 
         Assert.assertEquals(oldMetrics.getPhysicalMemoryPages(), statistic.get(0).getAll());
 
-        IgniteCache<Integer, Data> cache = ig
+        IgniteCache<Integer, CacheDataEntry> cache = ig
             .getOrCreateCache(getCacheCfg());
 
         applyStatistic();
@@ -187,6 +211,13 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
         Assert.assertEquals(statistic.get(0).metaPages, statistic.get(2).metaPages);
     }
 
+    /**
+     * Checks page metrics in following scenario:
+     * 1) Creates grid.
+     * 2) Creates cache.
+     * 3) Fills data.
+     * 4) Drop cache.
+     */
     @Test
     public void dropCacheTest() throws Exception {
         allocateDataPagesTest();

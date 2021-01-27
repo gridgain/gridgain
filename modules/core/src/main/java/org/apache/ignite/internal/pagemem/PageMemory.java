@@ -69,9 +69,7 @@ public interface PageMemory extends PageIdAllocator, PageSupport {
     public int checkpointBufferPagesCount();
 
     /**
-     * The given page is free now.
-     *
-     * @return page metric
+     * Pages metric.
      */
     PagesMetric getPageMetric();
 }

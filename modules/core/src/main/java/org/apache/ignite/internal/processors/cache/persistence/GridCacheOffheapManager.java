@@ -2051,8 +2051,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         }
                     };
 
-                    //freeList.bucketSize(255)
-
                     RootPage partMetastoreReuseListRoot = metas.partMetastoreReuseListRoot;
 
                     String partMetastoreName = partitionMetaStoreName();

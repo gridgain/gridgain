@@ -75,6 +75,8 @@ public interface PageIdAllocator {
      *
      * @param grpId Cache Group ID.
      * @param partId Partition ID.
+     * @param flags Flags.
+     * @param category Page category.
      * @return Allocated page ID.
      */
     public long allocatePage(int grpId, int partId, byte flags, PageCategory category) throws IgniteCheckedException;

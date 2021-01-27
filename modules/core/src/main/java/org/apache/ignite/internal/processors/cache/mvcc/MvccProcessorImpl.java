@@ -83,7 +83,6 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccLinkAwareSearchRow;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
@@ -404,11 +403,8 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
         assert CU.isPersistenceEnabled(ctx.config());
 
         //noinspection ConstantConditions
-        LongAdderMetric metric = mgr.dataRegion(TX_LOG_CACHE_NAME).memoryMetrics().totalAllocatedPages();
         ctx.cache().context().pageStore().initialize(TX_LOG_CACHE_ID, 0,
-            TX_LOG_CACHE_NAME, x -> {
-            metric.add(x);
-            });
+            TX_LOG_CACHE_NAME, mgr.dataRegion(TX_LOG_CACHE_NAME).memoryMetrics().totalAllocatedPages()::add);
     }
 
     /** {@inheritDoc} */

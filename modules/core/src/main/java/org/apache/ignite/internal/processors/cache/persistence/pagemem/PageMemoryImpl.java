@@ -206,7 +206,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private final DirectMemoryProvider directMemoryProvider;
 
     /** */
-    private final PagesMetric pageMetric = new PagesMetricNoStoreImpl();
+    private final PagesMetric pageMetric = new PagesMetricImpl();
 
     /** Segments array. */
     private volatile Segment[] segments;
@@ -779,7 +779,6 @@ public class PageMemoryImpl implements PageMemoryEx {
                 if (relPtr == INVALID_REL_PTR) {
                     relPtr = seg.removePageForReplacement(delayedWriter == null ? flushDirtyPage : delayedWriter);
                     // TODO: define concreate type
-                    // its wrong - page can change category
                     // need to define page type by content
                     // pageMetric.reusePageIncreased(1, PageCategory.DATA);
                     // pageMetric.pageAllocated(PageCategory.DATA);
@@ -2079,7 +2078,6 @@ public class PageMemoryImpl implements PageMemoryEx {
             maxDirtyPages = throttlingPlc != ThrottlingPolicy.DISABLED
                 ? pool.pages() * 3L / 4
                 : Math.min(pool.pages() * 2L / 3, cpPoolPages);
-
         }
 
         /**
