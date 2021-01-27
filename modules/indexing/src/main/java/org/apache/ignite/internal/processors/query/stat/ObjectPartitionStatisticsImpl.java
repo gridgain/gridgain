@@ -19,7 +19,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.ignite.internal.processors.query.stat.config.ObjectStatisticsConfiguration;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsCollectConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Statistic for some partition of data object.
@@ -100,5 +102,10 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(super.hashCode(), partId, updCnt, loc);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ObjectPartitionStatisticsImpl.class, this);
     }
 }

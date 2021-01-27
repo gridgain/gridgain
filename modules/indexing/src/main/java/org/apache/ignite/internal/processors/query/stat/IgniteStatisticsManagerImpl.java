@@ -42,9 +42,9 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.stat.config.IgniteStatisticsConfigurationManager;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
-import org.apache.ignite.internal.processors.query.stat.config.IgniteStatisticsConfigurationManager;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
@@ -73,7 +73,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     private final IgniteStatisticsHelper helper;
 
     /** Statistics collector. */
-    private final StatisticsGathering statGathering;
+    private final StatisticsGatherer gatherer;
 
     /** Statistics crawler. */
     private final StatisticsGatheringRequestCrawler statCrawler;
@@ -109,7 +109,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                 ctx.uncaughtExceptionHandler()
         );
 
-        IgniteThreadPoolExecutor msgMgmtPool = new IgniteThreadPoolExecutor("stat-msg-mgmt-pool",
+        IgniteThreadPoolExecutor mgmtPool = new IgniteThreadPoolExecutor("stat-msg-mgmt-pool",
                 ctx.igniteInstanceName(),
                 0,
                 1,
@@ -132,16 +132,26 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         statsRepos = new IgniteStatisticsRepositoryImpl(store, helper, ctx::log);
 
         statCrawler = new StatisticsGatheringRequestCrawlerImpl(ctx.localNodeId(), this, ctx.event(), ctx.io(),
-            helper, msgMgmtPool, ctx::log);
-        statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), statsRepos, statCrawler,
-            gatMgmtPool, ctx::log);
+            helper, mgmtPool, ctx::log);
+
+        gatherer = new StatisticsGatherer(
+            schemaMgr,
+            ctx.discovery(),
+            ctx.cache(),
+            ctx.query(),
+            statsRepos,
+            statCrawler,
+            store,
+            gatMgmtPool,
+            ctx::log);
 
         statSchemaMgr = new IgniteStatisticsConfigurationManager(
-            ctx,
             schemaMgr,
             this,
             ctx.internalSubscriptionProcessor(),
             statsRepos,
+            gatherer,
+            mgmtPool,
             ctx::log
         );
     }
@@ -264,13 +274,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         Collection<StatisticsKeyMessage> keys,
         int[] parts
     ) {
-        int partsCnt = (int)Arrays.stream(parts).count();
-        Set<StatisticsKeyMessage> keysSet = new HashSet<>(keys);
-
-        StatisticsGatheringContext gCtx = currColls.computeIfAbsent(gatId, k ->
-            new StatisticsGatheringContext(gatId, keysSet, partsCnt));
-
-        statGathering.collectLocalObjectsStatisticsAsync(reqId, keysSet, parts, () -> gCtx.doneFuture().isCancelled());
+        assert false: "OLD";
     }
 
     /** {@inheritDoc} */

@@ -16,16 +16,17 @@
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
@@ -36,9 +37,11 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepository;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatisticsImpl;
+import org.apache.ignite.internal.processors.query.stat.StatisticsGatherer;
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
 /**
  *
@@ -51,9 +54,6 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
     private static final String STAT_CACHE_GRP_PREFIX = "sql.stat.grp.";
 
     /** */
-    private final GridKernalContext ctx;
-
-    /** */
     private final IgniteStatisticsRepository localRepo;
 
     /** */
@@ -62,36 +62,41 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
     /** Schema manager. */
     private final SchemaManager schemaMgr;
 
+    /** */
+    private final StatisticsGatherer gatherer;
+
+    /** */
+    private final IgniteThreadPoolExecutor mgmtPool;
+
     /** Logger. */
     private final IgniteLogger log;
 
     /** Distributed metastore. */
     private volatile DistributedMetaStorage distrMetaStorage;
 
-    /**
-     *
-     */
+    /** */
     public IgniteStatisticsConfigurationManager(
-        GridKernalContext ctx,
         SchemaManager schemaMgr,
         IgniteStatisticsManager mgr,
         GridInternalSubscriptionProcessor subscriptionProcessor,
         IgniteStatisticsRepository localRepo,
+        StatisticsGatherer gatherer,
+        IgniteThreadPoolExecutor mgmtPool,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
-        this.ctx = ctx;
         this.schemaMgr = schemaMgr;
         this.mgr = mgr;
-        this.distrMetaStorage = distrMetaStorage;
         log = logSupplier.apply(IgniteStatisticsConfigurationManager.class);
         this.localRepo = localRepo;
+        this.mgmtPool = mgmtPool;
+        this.gatherer = gatherer;
 
         subscriptionProcessor.registerDistributedMetastorageListener(this);
     }
 
     /** {@inheritDoc} */
     @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-        distrMetaStorage = ctx.distributedMetastorage();
+        distrMetaStorage = (DistributedMetaStorage)metastorage;
 
         distrMetaStorage.listen(
             (metaKey) -> metaKey.startsWith(STAT_CACHE_GRP_PREFIX),
@@ -132,17 +137,6 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
     /**
      *
      */
-    private int cacheGroupId(StatisticsTarget target) {
-        GridH2Table tbl = schemaMgr.dataTable(target.schema(), target.obj());
-
-        validate(target, tbl);
-
-        return tbl.cacheContext().groupId();
-    }
-
-    /**
-     *
-     */
     private void validate(StatisticsTarget target, GridH2Table tbl) {
         if (tbl == null) {
             throw new IgniteSQLException(
@@ -160,17 +154,17 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
     /**
      *
      */
-    private void updateObjectStatisticInfo(ObjectStatisticsConfiguration info) {
+    private void updateObjectStatisticInfo(ObjectStatisticsConfiguration statObjCfg) {
         try {
             while (true) {
-                String key = key2String(info.cacheGroupId(), info.key());
+                String key = key2String(statObjCfg.cacheGroupId(), statObjCfg.key());
 
-                ObjectStatisticsConfiguration oldInfo = distrMetaStorage.read(key);
+                ObjectStatisticsConfiguration oldCfg = distrMetaStorage.read(key);
 
-                if (oldInfo != null)
-                    info = ObjectStatisticsConfiguration.merge(info, oldInfo);
+                if (oldCfg != null)
+                    statObjCfg = ObjectStatisticsConfiguration.merge(statObjCfg, oldCfg);
 
-                if (distrMetaStorage.compareAndSet(key, oldInfo, info))
+                if (distrMetaStorage.compareAndSet(key, oldCfg, statObjCfg))
                     return;
             }
         }
@@ -205,47 +199,85 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
 
     /** {@inheritDoc} */
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
-        ctx.closure().callLocalSafe(
-            () -> {
-                updateStatQQQ(STAT_OBJ_PREFIX);
-
-                return null;
-            },
-            GridIoPolicy.MANAGEMENT_POOL
-        );
-    }
-
-    /**
-     *
-     */
-    private boolean isNeedToUpdateLocalStatistics(ObjectStatisticsConfiguration tblStatInfo) {
-        ObjectStatisticsImpl localStat = localRepo.getLocalStatistics(tblStatInfo.key());
-
-        return localStat == null || localStat != null && localStat.version() != tblStatInfo.version();
+        mgmtPool.submit(() -> {
+            try {
+                checkAndUpdateLocalStatistics(STAT_OBJ_PREFIX);
+            }
+            catch (IgniteCheckedException e) {
+                log.warning("Unexpected exception on check local statistic on start", e);
+            }
+        });
     }
 
     /** */
     private void onUpdateStatisticSchema(String key, CacheGroupStatisticsVersion ignore, CacheGroupStatisticsVersion grpStat) {
-        ctx.closure().callLocalSafe(
-            () -> {
-                updateStatQQQ(STAT_OBJ_PREFIX + grpStat.cacheGroupId() + '.');
-
-                return null;
-            },
-            GridIoPolicy.MANAGEMENT_POOL
-        );
+        mgmtPool.submit(() -> {
+            try {
+                checkAndUpdateLocalStatistics(STAT_OBJ_PREFIX + grpStat.cacheGroupId() + '.');
+            }
+            catch (IgniteCheckedException e) {
+                log.warning("Unexpected exception on check local statistic for cache group [grpId="
+                    + grpStat.cacheGroupId() + ']', e);
+            }
+        });
     }
 
     /***/
-    private void updateStatQQQ(String keyPrefix) throws IgniteCheckedException {
-        Set<ObjectStatisticsConfiguration> updSet = new HashSet<>();
+    private void checkAndUpdateLocalStatistics(String keyPrefix) throws IgniteCheckedException {
+        Map<Integer, Set<ObjectStatisticsConfiguration>> updSets = new HashMap<>();
 
-        distrMetaStorage.iterate(keyPrefix, (s, tblStatInfo) -> {
-            if(isNeedToUpdateLocalStatistics((ObjectStatisticsConfiguration)tblStatInfo))
-                updSet.add((ObjectStatisticsConfiguration)tblStatInfo);
+        Map<StatisticsKey, Set<String>> rmvColsMap = new HashMap<>();
+
+        distrMetaStorage.iterate(keyPrefix, (key, val) -> {
+            ObjectStatisticsConfiguration tblStatInfo = (ObjectStatisticsConfiguration)val;
+            ObjectStatisticsImpl localStat = localRepo.getLocalStatistics(tblStatInfo.key());
+
+            if(isNeedToUpdateLocalStatistics(tblStatInfo, localStat)) {
+                Set<ObjectStatisticsConfiguration> objSet = new HashSet<>();
+
+                Set<ObjectStatisticsConfiguration> oldSet = updSets.put(tblStatInfo.cacheGroupId(), objSet);
+
+                if (oldSet != null)
+                    objSet = oldSet;
+
+                objSet.add(tblStatInfo);
+            }
+
+            if (localStat != null)
+                rmvColsMap.putAll(columnsToRemove(tblStatInfo, localStat));
         });
 
-        log.info("+++ NEED TO UPDATE:" + updSet);
+        rmvColsMap.forEach((key, colSet) -> {
+            log.info("+++ DELETE:" + rmvColsMap);
+            localRepo.clearLocalStatistics(key, colSet.toArray(new String[colSet.size()]));
+
+            localRepo.clearLocalPartitionsStatistics(key, colSet.toArray(new String[colSet.size()]));
+        });
+
+        for (Set<ObjectStatisticsConfiguration> updSet : updSets.values()) {
+            log.info("+++ UPDATE:" + updSet);
+
+            gatherer.collectLocalObjectsStatisticsAsync(updSet);
+        }
+    }
+
+    /** */
+    private boolean isNeedToUpdateLocalStatistics(
+        ObjectStatisticsConfiguration tblStatInfo,
+        ObjectStatisticsImpl localStat
+    ) {
+        return localStat == null || localStat != null && localStat.version() != tblStatInfo.version();
+    }
+
+    /** */
+    private Map<StatisticsKey, Set<String>> columnsToRemove(ObjectStatisticsConfiguration statObjCfg,
+        ObjectStatisticsImpl localStat) {
+        Set<String> cols = localStat.columnsStatistics().keySet();
+
+        for (ColumnStatisticsConfiguration colCfg : statObjCfg.columns())
+            cols.remove(colCfg.name());
+
+        return cols.isEmpty() ? Collections.emptyMap() : Collections.singletonMap(statObjCfg.key(), cols);
     }
 
     /** */

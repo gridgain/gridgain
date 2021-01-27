@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.gridgain.internal.h2.value.Value;
 
 import java.util.Arrays;
@@ -137,5 +138,10 @@ public class ColumnStatistics {
         int result = Objects.hash(min, max, nulls, cardinality, total, size);
         result = 31 * result + Arrays.hashCode(raw);
         return result;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ColumnStatistics.class, this);
     }
 }

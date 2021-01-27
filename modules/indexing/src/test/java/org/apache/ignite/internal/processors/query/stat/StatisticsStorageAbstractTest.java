@@ -59,13 +59,8 @@ public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTe
 
         runSql("CREATE INDEX small_c ON small(c)");
 
-        IgniteCache<Integer, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
-
         for (int i = 0; i < SMALL_SIZE; i++)
             runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
-
-        grid(0).context().query().getIndexing().statsManager().gatherObjectStatistics(
-            new StatisticsTarget(SCHEMA, "SMALL"));
     }
 
     /** {@inheritDoc} */

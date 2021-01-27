@@ -48,9 +48,4 @@ public class CacheGroupStatisticsVersion implements Serializable {
     public long version() {
         return ver;
     }
-
-    /** */
-    public CacheGroupStatisticsVersion incrementVersion() {
-        return new CacheGroupStatisticsVersion(grpId, ver + 1);
-    }
 }

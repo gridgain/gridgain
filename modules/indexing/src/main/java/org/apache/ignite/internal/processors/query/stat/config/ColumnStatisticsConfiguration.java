@@ -17,6 +17,8 @@ package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
  *
  */
@@ -36,4 +38,10 @@ public class ColumnStatisticsConfiguration implements Serializable {
     public String name() {
         return name;
     }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ColumnStatisticsConfiguration.class, this);
+    }
+
 }
