@@ -19,6 +19,7 @@ package org.apache.ignite.internal.pagemem.metrics;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -33,16 +34,21 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Tests for {@link PagesMetric} without persistence data region.
+ */
 public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
-
+    /** */
     private static final String REGION = "default-region";
 
+    /** */
     private static final String CACHE = "test-cache";
 
     private PagesMetric metric;
     private DataRegionMetricsImpl oldMetrics;
     private final List<StatisticData> statistic = new ArrayList<>();
 
+    /** */
     public static class StatisticData {
 
         long dataPages;
@@ -68,6 +74,7 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
     public static class Data {
 
         String data;
@@ -106,7 +113,6 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
                     .setMetricsEnabled(true)
                     .setMaxSize(1024 * 1024 * 1024)
                     .setInitialSize(1024 * 1024 * 1024)));
-
         return cfg;
     }
 
@@ -120,12 +126,10 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
 
         applyStatistic();
 
-        Assert.assertEquals(oldMetrics.getTotalAllocatedPages(), statistic.get(0).getAll());
+        Assert.assertEquals(oldMetrics.getPhysicalMemoryPages(), statistic.get(0).getAll());
 
         IgniteCache<Integer, Data> cache = ig
-            .getOrCreateCache(new CacheConfiguration<Integer, Data>()
-                .setName(CACHE)
-                .setOnheapCacheEnabled(false));
+            .getOrCreateCache(getCacheCfg());
 
         applyStatistic();
         Assert.assertEquals(oldMetrics.getPhysicalMemoryPages(), statistic.get(1).getUsedAndInFreeListPages());
@@ -138,16 +142,26 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
         }
 
         applyStatistic();
-        Assert.assertEquals(oldMetrics.getTotalAllocatedPages(), statistic.get(2).getUsedPages());
-        // some pages were allocated for PK
-        Assert.assertTrue(statistic.get(1).indexPages < statistic.get(2).indexPages);
+        Assert.assertEquals(oldMetrics.getPhysicalMemoryPages(), statistic.get(2).getUsedPages());
+        // some pages were allocated for PK()
+        if (persistenceRegion()) {
+            Assert.assertEquals(statistic.get(1).indexPages, statistic.get(2).indexPages);
+        } else {
+            Assert.assertTrue(statistic.get(1).indexPages < statistic.get(2).indexPages);
+        }
         Assert.assertEquals(statistic.get(1).metaPages, statistic.get(2).metaPages);
         // check data pages
         Assert.assertTrue(statistic.get(1).dataPages < statistic.get(2).dataPages);
         // logically data pages should glow faster
         Assert.assertTrue(statistic.get(2).dataPages - statistic.get(1).dataPages
             > statistic.get(2).indexPages - statistic.get(1).indexPages);
+    }
 
+    private CacheConfiguration<Integer, Data> getCacheCfg() {
+        return new CacheConfiguration<Integer, Data>()
+            .setName(CACHE)
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(1))
+            .setOnheapCacheEnabled(false);
     }
 
     @Test
@@ -159,9 +173,7 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
         Assert.assertEquals(oldMetrics.getPhysicalMemoryPages(), statistic.get(0).getAll());
 
         IgniteCache<Integer, Data> cache = ig
-            .getOrCreateCache(new CacheConfiguration<Integer, Data>()
-                .setName(CACHE)
-                .setOnheapCacheEnabled(false));
+            .getOrCreateCache(getCacheCfg());
 
         applyStatistic();
 

@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.pagemem.metrics;
+package org.apache.ignite.internal.processors.cache.metric;
 
+import org.apache.ignite.internal.pagemem.metrics.NoPersistenceDataRegionMetricsTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
 
 /**
- * Tests for {@link PagesMetric} with persistence data region.
+ * Tests for {@link PagesMetric} without persistence data region and with indexing module.
  */
-public class PersistenceDataRegionMetricsTest extends NoPersistenceDataRegionMetricsTest {
-    /** */
-    @Override protected boolean persistenceRegion() {
-        return true;
-    }
+public class NoPersistenceDataRegionMetricsWithIndexingTest extends NoPersistenceDataRegionMetricsTest {
+
 }

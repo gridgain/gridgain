@@ -577,7 +577,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             setDirty(fullId, absPtr, true, true);
 
             if (isTrackingPage) {
-                pageMetric.pageAllocated(grpId, partId, flags, PageCategory.META);
+                pageMetric.pageAllocated(PageCategory.META);
 
                 long pageAddr = absPtr + PAGE_OVERHEAD;
 
@@ -602,8 +602,9 @@ public class PageMemoryImpl implements PageMemoryEx {
                         }
                     }
                 }
-            } else
-                pageMetric.pageAllocated(grpId, partId, flags, category);
+            } else {
+                pageMetric.pageAllocated(category);
+            }
 
             seg.loadedPages.put(grpId, PageIdUtils.effectivePageId(pageId), relPtr, seg.partGeneration(grpId, partId));
         }
@@ -775,8 +776,18 @@ public class PageMemoryImpl implements PageMemoryEx {
                 if (pageAllocated != null)
                     pageAllocated.set(true);
 
-                if (relPtr == INVALID_REL_PTR)
+                if (relPtr == INVALID_REL_PTR) {
                     relPtr = seg.removePageForReplacement(delayedWriter == null ? flushDirtyPage : delayedWriter);
+                    // TODO: define concreate type
+                    // its wrong - page can change category
+                    // need to define page type by content
+                    // pageMetric.reusePageIncreased(1, PageCategory.DATA);
+                    // pageMetric.pageAllocated(PageCategory.DATA);
+                } else {
+                    // TODO: define concreate type
+                    // it may be wrong
+                    pageMetric.pageAllocated(PageCategory.META);
+                }
 
                 absPtr = seg.absolute(relPtr);
 

@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -283,6 +284,11 @@ public class IndexStorageImpl implements IndexStorage {
         @Override public IndexItem getRow(final BPlusIO<IndexItem> io, final long pageAddr,
             final int idx, Object ignore) throws IgniteCheckedException {
             return readRow(pageAddr, ((IndexIO)io).getOffset(pageAddr, idx));
+        }
+
+        /** {@inheritDoc} */
+        @Override protected PageCategory pageCategory() {
+            return PageCategory.INDEX;
         }
     }
 

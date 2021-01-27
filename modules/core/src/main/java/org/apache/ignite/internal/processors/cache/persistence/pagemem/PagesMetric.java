@@ -63,12 +63,9 @@ public interface PagesMetric {
     /**
      * Page is in use.
      *
-     * @param grpId Group id.
-     * @param partId Partition id.
-     * @param flags Flags.
      * @param category Page category.
      */
-    void pageAllocated(int grpId, int partId, byte flags, PageCategory category);
+    void pageAllocated(PageCategory category);
 
     /**
      * Page is reused from reuse list.

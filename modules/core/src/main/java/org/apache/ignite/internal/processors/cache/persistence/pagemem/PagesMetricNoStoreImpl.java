@@ -31,7 +31,7 @@ public class PagesMetricNoStoreImpl implements PagesMetric {
     private AtomicLong physicalMemoryFreePagesSize = new AtomicLong(0);
 
     /** {@inheritDoc} */
-    @Override public void pageAllocated(int grpId, int part, byte pageFlag, PageCategory category) {
+    @Override public void pageAllocated(PageCategory category) {
         physicalMemoryFreePagesSize.decrementAndGet();
         switch (category) {
             case DATA:

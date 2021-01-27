@@ -2077,11 +2077,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                             return super.allocatePageNoReuse();
                         }
-
-                        /** {@inheritDoc} */
-                        @Override protected PageCategory pageCategory() {
-                            return PageCategory.META;
-                        }
                     };
 
                     String dataTreeName = dataTreeName();
@@ -2106,11 +2101,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                             return super.allocatePageNoReuse();
                         }
-
-                        /** {@inheritDoc} */
-                        @Override protected PageCategory pageCategory() {
-                            return PageCategory.META;
-                        }
                     };
 
                     String pendingEntriesTreeName = pendingEntriesTreeName();
@@ -2133,11 +2123,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                             return super.allocatePageNoReuse();
                         }
-
-                        /** {@inheritDoc} */
-                        @Override protected PageCategory pageCategory() {
-                            return PageCategory.META;
-                        }
                     };
 
                     String logTreeName = updateLogTreeName();
@@ -2159,11 +2144,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             assert grp.shared().database().checkpointLockIsHeldByThread();
 
                             return super.allocatePageNoReuse();
-                        }
-
-                        /** {@inheritDoc} */
-                        @Override protected PageCategory pageCategory() {
-                            return PageCategory.META;
                         }
                     };
 
@@ -2321,9 +2301,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     if (PageIO.getType(pageAddr) != PageIO.T_PART_META) {
                         io.initNewPage(pageAddr, partMetaId, pageMem.realPageSize(grpId));
 
-                        treeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.META);
+                        treeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.DATA);
                         reuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.REUSE);
-                        pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.META);
+                        pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.DATA);
                         partMetaStoreReuseListRoot = pageMem
                             .allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.META);
                         updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX, PageCategory.META);
