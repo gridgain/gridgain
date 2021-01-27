@@ -40,7 +40,7 @@ import org.yardstickframework.BenchmarkConfiguration;
 import static org.yardstickframework.BenchmarkUtils.println;
 
 /**
- * Ignite benchmark for composite PK.
+ * Ignite benchmark for single PK.
  */
 
 public class IgniteSinglePkIndexBenchmark {
@@ -99,9 +99,9 @@ public class IgniteSinglePkIndexBenchmark {
         super.setUp(cfg);
 
         range = args.range();
-        String keyClsName = args.getStringParameter("keyClass", IgniteCompositePkIndexBenchmark.TestKey2Integers.class.getSimpleName());
+        String keyClsName = args.getStringParameter("keyClass", IgniteSinglePkIndexBenchmark.TestKey.class.getSimpleName());
 
-        keyCls = Class.forName(IgniteCompositePkIndexBenchmark.class.getName() + "$" + keyClsName);
+        keyCls = Class.forName(IgniteSinglePkIndexBenchmark.class.getName() + "$" + keyClsName);
         final Constructor<?> keyConstructor = keyCls.getConstructor(int.class);
 
         keyCreator = (key) -> {
@@ -115,7 +115,7 @@ public class IgniteSinglePkIndexBenchmark {
 
         addIndexes = args.getBooleanParameter("addIndexes", false);
 
-        testAct = IgniteCompositePkIndexBenchmark.TestAction.valueOf(args.getStringParameter("action", "PUT").toUpperCase());
+        testAct = IgniteSinglePkIndexBenchmark.TestAction.valueOf(args.getStringParameter("action", "PUT").toUpperCase());
         whereBuilder = whereBuilders.get(keyCls);
 
         assert whereBuilder != null;
