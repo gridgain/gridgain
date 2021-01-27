@@ -113,10 +113,8 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
+import org.apache.ignite.internal.processors.cache.verify.ConsistencyUtils;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
-import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2;
-import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
-import org.apache.ignite.internal.processors.cache.verify.PartitionKeyV2;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -128,9 +126,6 @@ import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
-import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTask;
-import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTaskArg;
-import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTaskResult;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskV2;
 import org.apache.ignite.lang.IgniteBiInClosure;
@@ -2326,6 +2321,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * Compares checksums between primary and backup partitions of specified caches.
      * Works properly only on idle cluster - there may be false positive conflict reports if data in cluster is being
      * concurrently updated.
+     * <p>
+     * Note: tombstones are excluded from validation due to it's volatile nature.
      *
      * @param ig Ignite instance.
      * @param caches Cache names (if null, all user caches will be verified).
@@ -2536,43 +2533,18 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      */
     protected void assertPartitionsSame(IdleVerifyResultV2 res) throws AssertionFailedError {
         if (res.hasConflicts()) {
-            printDivergedKeyAfterUnsuccessfulIdleVerify(res);
+            try {
+                ConsistencyUtils.printDivergenceDetailsForKey(res, log);
+            }
+            catch (Throwable e) {
+                log.error("Cannot print diverged key history", e);
+            }
 
             StringBuilder b = new StringBuilder();
 
             res.print(b::append);
 
             fail(b.toString());
-        }
-    }
-
-    /**
-     * Call this method to find and log first diverged key after unsuccessful idle_verify check.
-     * @param res Result of idle_verify.
-     */
-    protected void printDivergedKeyAfterUnsuccessfulIdleVerify(IdleVerifyResultV2 res) {
-        if (res.hasConflicts()) {
-            Map<PartitionKeyV2, List<PartitionHashRecordV2>> conflicts = res.hashConflicts();
-
-            if (F.isEmpty(conflicts))
-                conflicts = res.counterConflicts();
-
-            PartitionKeyV2 partKeyV2 = conflicts.keySet().iterator().next();
-
-            VisorIdleAnalyzeTaskArg taskArg = new VisorIdleAnalyzeTaskArg(new PartitionKey(
-                partKeyV2.groupId(), partKeyV2.partitionId(), partKeyV2.groupName()));
-
-            Ignite node = G.allGrids().stream()
-                .filter(ig -> !ig.cluster().localNode().isClient())
-                .findAny()
-                .orElseThrow(() -> new AssertionError("No server node found to execute analyze task"));
-
-            VisorIdleAnalyzeTaskResult analyzeRes = node.compute().execute(
-                VisorIdleAnalyzeTask.class.getName(),
-                new VisorTaskArgument<>(node.cluster().localNode().id(), taskArg, false)
-            );
-
-            log.error("Idle analyze result: " + analyzeRes.toString());
         }
     }
 
@@ -2847,5 +2819,24 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 s.addData(key, key);
             }
         }
+    }
+
+    /**
+     * Clears tombstones on a DHT node.
+     *
+     * @param cache Cache.
+     */
+    protected void clearTombstones(IgniteCache<?, ?> cache) throws IgniteCheckedException {
+        IgniteEx ignite = cache.unwrap(IgniteEx.class);
+
+        GridCacheContext<Object, Object> grpCtx = ignite.cachex(cache.getName()).context();
+
+        if (!grpCtx.group().supportsTombstone())
+            return;
+
+        List<GridDhtLocalPartition> locParts = grpCtx.topology().localPartitions();
+
+        for (GridDhtLocalPartition locPart : locParts)
+            locPart.clearTombstonesAsync().get();
     }
 }

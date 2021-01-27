@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -41,8 +42,8 @@ import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -112,7 +113,9 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testStopCache_Volatile() throws Exception {
         testOperationDuringEviction(false, 1, new Runnable() {
             @Override public void run() {
-                grid(0).cache(DEFAULT_CACHE_NAME).close();
+                IgniteInternalFuture fut = runAsync(() -> grid(0).cache(DEFAULT_CACHE_NAME).close());
+
+                doSleep(500);
             }
         });
 
@@ -129,7 +132,9 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testStopCache_Persistence() throws Exception {
         testOperationDuringEviction(true, 1, new Runnable() {
             @Override public void run() {
-                grid(0).cache(DEFAULT_CACHE_NAME).close();
+                IgniteInternalFuture fut = runAsync(() -> grid(0).cache(DEFAULT_CACHE_NAME).close());
+
+                doSleep(500);
             }
         });
 
@@ -261,7 +266,8 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         try {
             ref.get().get(10_000);
-        } catch (IgniteFutureTimeoutCheckedException e) {
+        }
+        catch (IgniteFutureTimeoutCheckedException e) {
             fail(X.getFullStackTrace(e));
         }
 
@@ -270,11 +276,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         // Group eviction context should remain in map.
         Map evictionGroupsMap = U.field(mgr, "evictionGroupsMap");
 
-        assertEquals("Group context must be cleaned up", 0, evictionGroupsMap.size());
+        assertFalse("Group context must be cleaned up", evictionGroupsMap.containsKey(CU.cacheId(DEFAULT_CACHE_NAME)));
 
         grid(0).getOrCreateCache(cacheConfiguration());
 
-        assertEquals(0, evictionGroupsMap.size());
+        assertEquals(2, evictionGroupsMap.size());
 
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
@@ -383,9 +389,10 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         GridDhtLocalPartition part = g0.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(p0);
 
-        AtomicReference<GridFutureAdapter<?>> ref = U.field(part, "finishFutRef");
+        PartitionsEvictManager.PartitionEvictionTask task =
+            g0.context().cache().context().evict().clearingTask(CU.cacheId(DEFAULT_CACHE_NAME), p0);
 
-        GridFutureAdapter<?> finishFut = ref.get();
+        IgniteInternalFuture<Void> finishFut = task.finishFuture();
 
         IgniteInternalFuture fut = runAsync(g0::close);
 
@@ -399,6 +406,46 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         // Partition clearing future should be finished with NodeStoppingException.
         assertTrue(finishFut.error().getMessage(),
             finishFut.error() != null && X.hasCause(finishFut.error(), NodeStoppingException.class));
+    }
+
+    /** */
+    @Test
+    public void testCheckpoint() throws Exception {
+        testOperationDuringEviction(true, 1, new Runnable() {
+            @Override public void run() {
+                doSleep(500);
+
+                grid(0).context().cache().context().database().wakeupForCheckpoint("Forced checkpoint");
+
+                doSleep(500);
+            }
+        });
+
+        awaitPartitionMapExchange(true, true, null);
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+    }
+
+    /** */
+    @Test
+    public void testRestart() throws Exception {
+        persistence = true;
+
+        AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
+
+        testOperationDuringEviction(true, 1, new Runnable() {
+            @Override public void run() {
+                IgniteInternalFuture fut = runAsync(() -> stopAllGrids());
+
+                ref.set(fut);
+            }
+        });
+
+        ref.get().get();
+
+        IgniteEx crd = startGrids(3);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        awaitPartitionMapExchange();
     }
 
     /**
@@ -475,6 +522,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     protected CacheConfiguration<Object, Object> cacheConfiguration() {
         return new CacheConfiguration<>(DEFAULT_CACHE_NAME).
             setCacheMode(CacheMode.PARTITIONED).
+            setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC).
             setBackups(1).
             setStatisticsEnabled(stats).
             setAffinity(new RendezvousAffinityFunction(false, persistence ? 64 : 1024));

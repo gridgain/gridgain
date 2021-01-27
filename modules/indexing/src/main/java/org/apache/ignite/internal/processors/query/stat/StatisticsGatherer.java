@@ -31,7 +31,6 @@ import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.stat.config.ObjectStatisticsConfiguration;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -44,7 +43,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -80,7 +78,7 @@ public class StatisticsGatherer {
     private final IgniteStatisticsRepository statRepo;
 
     /** Statistics crawler. */
-    private final StatisticsGatheringRequestCrawler statCrawler;
+    private final StatisticsRequestProcessor reqProc;
 
     /** Ignite Thread pool executor to do statistics collection tasks. */
     private final IgniteThreadPoolExecutor gatherPool;
@@ -98,7 +96,7 @@ public class StatisticsGatherer {
      * @param discoMgr Discovery manager.
      * @param qryProcessor Query processor.
      * @param repo IgniteStatisticsRepository.
-     * @param statCrawler Statistics request crawler.
+     * @param reqProc Statistics request crawler.
      * @param gatherPool Thread pool to gather statistics in.
      * @param logSupplier Log supplier function.
      */
@@ -108,7 +106,7 @@ public class StatisticsGatherer {
         GridCacheProcessor cacheProc,
         GridQueryProcessor qryProcessor,
         IgniteStatisticsRepository repo,
-        StatisticsGatheringRequestCrawler statCrawler,
+        StatisticsRequestProcessor reqProc,
         IgniteStatisticsStore statStore,
         IgniteThreadPoolExecutor gatherPool,
         Function<Class<?>, IgniteLogger> logSupplier
@@ -120,7 +118,7 @@ public class StatisticsGatherer {
         this.qryProcessor = qryProcessor;
         this.statRepo = repo;
         this.statStore = statStore;
-        this.statCrawler = statCrawler;
+        this.reqProc = reqProc;
         this.gatherPool = gatherPool;
     }
 

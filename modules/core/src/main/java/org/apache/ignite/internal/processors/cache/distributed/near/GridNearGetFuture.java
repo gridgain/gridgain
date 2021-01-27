@@ -724,7 +724,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
             if (entry != null) {
                 entry.releaseEviction();
 
-                if (tx == null)
+                if (tx == null && !entry.deleted())
                     entry.touch();
             }
         }

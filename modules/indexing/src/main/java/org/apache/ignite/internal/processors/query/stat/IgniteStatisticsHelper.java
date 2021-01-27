@@ -153,7 +153,8 @@ public class IgniteStatisticsHelper {
             colStats.put(col.getName(), stat);
         }
 
-        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats, cfg, ver);
+        // TODO:
+        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats, null, 0);
 
         return tblStats;
     }

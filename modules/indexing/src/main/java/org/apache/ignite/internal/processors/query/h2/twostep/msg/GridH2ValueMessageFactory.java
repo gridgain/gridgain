@@ -74,15 +74,15 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
         factory.register((short)-57, GridH2SelectForUpdateTxDetails::new);
 
         // Statistics related messages.
-        factory.register(StatisticsGatheringRequest.TYPE_CODE, StatisticsGatheringRequest::new);
-        factory.register(StatisticsGatheringResponse.TYPE_CODE, StatisticsGatheringResponse::new);
         factory.register(CancelStatisticsGatheringRequest.TYPE_CODE, CancelStatisticsGatheringRequest::new);
         factory.register(StatisticsPropagationMessage.TYPE_CODE, StatisticsPropagationMessage::new);
         factory.register(StatisticsGetRequest.TYPE_CODE, StatisticsGetRequest::new);
         factory.register(StatisticsKeyMessage.TYPE_CODE, StatisticsKeyMessage::new);
         factory.register(StatisticsObjectData.TYPE_CODE, StatisticsObjectData::new);
         factory.register(StatisticsColumnData.TYPE_CODE, StatisticsColumnData::new);
+        factory.register(StatisticsGatheringResponse.TYPE_CODE, StatisticsGatheringResponse::new);
         factory.register(StatisticsClearRequest.TYPE_CODE, StatisticsClearRequest::new);
+        factory.register(StatisticsGatheringRequest.TYPE_CODE, StatisticsGatheringRequest::new);
     }
 
     /** {@inheritDoc} */

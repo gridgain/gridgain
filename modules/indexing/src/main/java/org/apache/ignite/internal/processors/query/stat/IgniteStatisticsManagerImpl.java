@@ -75,13 +75,14 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Statistics collector. */
     private final StatisticsGatherer gatherer;
 
-    /** Statistics crawler. */
-    private final StatisticsGatheringRequestCrawler statCrawler;
+    /** Statistics message processor. */
+    private final StatisticsRequestProcessor reqProc;
 
     /** Current collections, collection id to collection status map. */
     private final Map<UUID, StatisticsGatheringContext> currColls = new ConcurrentHashMap<>();
 
-    private final IgniteStatisticsConfigurationManager statSchemaMgr;
+    /** Statistics configuration manager. */
+    private final IgniteStatisticsConfigurationManager statCfgMgr;
 
     /**
      * Constructor.
@@ -131,7 +132,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         statsRepos = new IgniteStatisticsRepositoryImpl(store, helper, ctx::log);
 
-        statCrawler = new StatisticsGatheringRequestCrawlerImpl(ctx.localNodeId(), this, ctx.event(), ctx.io(),
+        reqProc = new StatisticsRequestProcessor(ctx.localNodeId(), this, ctx.event(), ctx.io(),
             helper, mgmtPool, ctx::log);
 
         gatherer = new StatisticsGatherer(
@@ -140,12 +141,12 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             ctx.cache(),
             ctx.query(),
             statsRepos,
-            statCrawler,
+            reqProc,
             store,
             gatMgmtPool,
             ctx::log);
 
-        statSchemaMgr = new IgniteStatisticsConfigurationManager(
+        statCfgMgr = new IgniteStatisticsConfigurationManager(
             schemaMgr,
             this,
             ctx.internalSubscriptionProcessor(),
@@ -177,7 +178,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     private void clearObjectStatistics(Collection<StatisticsKeyMessage> keys) throws IgniteCheckedException {
         checkStatisticsSupport("clear statistics");
 
-        statCrawler.sendClearStatisticsAsync(keys);
+        reqProc.sendClearStatisticsAsync(keys);
     }
 
     /**
@@ -239,7 +240,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * @param status Collection status to collect statistics by.
      */
     private void collectObjectStatistics(StatisticsGatheringContext status) {
-        statCrawler.sendGatheringRequestsAsync(status.gatheringId(), status.keys(), null);
+        reqProc.sendGatheringRequestsAsync(status.gatheringId(), status.keys(), null);
     }
 
     /** {@inheritDoc} */
@@ -347,7 +348,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
             res = stCtx.doneFuture().cancel();
             if (res)
-                statCrawler.sendCancelGatheringAsync(gatId);
+                reqProc.sendCancelGatheringAsync(gatId);
         }
         return res;
     }
@@ -421,7 +422,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             keysStats.put(keyStats.getKey(), globalStat);
         }
 
-        statCrawler.sendGlobalStatAsync(keysStats);
+        reqProc.sendGlobalStatAsync(keysStats);
 
         stCtx.doneFuture().onDone(targetStats);
     }
@@ -495,7 +496,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
    /** */
     public IgniteStatisticsConfigurationManager statisticSchemaManager() {
-        return statSchemaMgr;
+        return statCfgMgr;
     }
 
     /** {@inheritDoc} */

@@ -55,16 +55,16 @@ public class IgniteDhtPartitionHistorySuppliersMap implements Serializable {
      */
     public synchronized List<UUID> getSupplier(int grpId, int partId, long cntrSince) {
         if (map == null)
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
 
         List<UUID> suppliers = new ArrayList<>();
 
         for (Map.Entry<UUID, Map<T2<Integer, Integer>, Long>> e : map.entrySet()) {
             UUID supplierNode = e.getKey();
 
-            Long historyCounter = e.getValue().get(new T2<>(grpId, partId));
+            Long histCntr = e.getValue().get(new T2<>(grpId, partId));
 
-            if (historyCounter != null && historyCounter <= cntrSince)
+            if (histCntr != null && histCntr <= cntrSince)
                 suppliers.add(supplierNode);
         }
 
@@ -92,15 +92,26 @@ public class IgniteDhtPartitionHistorySuppliersMap implements Serializable {
         if (map == null)
             map = new HashMap<>();
 
-        Map<T2<Integer, Integer>, Long> nodeMap = map.get(nodeId);
-
-        if (nodeMap == null) {
-            nodeMap = new HashMap<>();
-
-            map.put(nodeId, nodeMap);
-        }
+        Map<T2<Integer, Integer>, Long> nodeMap = map.computeIfAbsent(nodeId, k -> new HashMap<>());
 
         nodeMap.put(new T2<>(grpId, partId), cntr);
+    }
+
+    /**
+     * @param nodeId Node id.
+     * @param grpId Group id.
+     * @param partId Partition id.
+     */
+    public synchronized void remove(UUID nodeId, int grpId, int partId) {
+        if (map == null)
+            return;
+
+        Map<T2<Integer, Integer>, Long> nodeMap = map.get(nodeId);
+
+        if (nodeMap == null)
+            return;
+
+        nodeMap.remove(new T2<>(grpId, partId));
     }
 
     /**

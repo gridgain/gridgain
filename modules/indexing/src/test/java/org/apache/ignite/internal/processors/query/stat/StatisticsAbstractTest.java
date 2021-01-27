@@ -343,7 +343,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected void checkStatTasksEmpty(int nodeIdx) throws Exception {
         IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
             .statsManager();
-        StatisticsGatheringRequestCrawlerImpl crawler = GridTestUtils.getFieldValue(statMgr, "statCrawler");
+        StatisticsRequestProcessor crawler = GridTestUtils.getFieldValue(statMgr, "statCrawler");
 
         ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests = GridTestUtils
             .getFieldValue(crawler, "remainingRequests");

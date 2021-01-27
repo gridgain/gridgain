@@ -167,6 +167,13 @@ public class CheckpointTimeoutLock {
     }
 
     /**
+     * @return {@code} True if checkpoint read lock is acquired.
+     */
+    public boolean tryCheckpointReadLock() {
+        return checkpointReadWriteLock.tryReadLock();
+    }
+
+    /**
      * @return {@code true} if all PageMemory instances are safe to update.
      */
     private boolean safeToUpdatePageMemories() {
