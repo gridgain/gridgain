@@ -22,6 +22,15 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
+import org.apache.ignite.internal.processors.query.stat.messages.CancelStatisticsGatheringRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsClearRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringResponse;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsColumnData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGetRequest;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
@@ -63,6 +72,17 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
         factory.register((short)-55, GridH2DmlRequest::new);
         factory.register((short)-56, GridH2DmlResponse::new);
         factory.register((short)-57, GridH2SelectForUpdateTxDetails::new);
+
+        // Statistics related messages.
+        factory.register(CancelStatisticsGatheringRequest.TYPE_CODE, CancelStatisticsGatheringRequest::new);
+        factory.register(StatisticsPropagationMessage.TYPE_CODE, StatisticsPropagationMessage::new);
+        factory.register(StatisticsGetRequest.TYPE_CODE, StatisticsGetRequest::new);
+        factory.register(StatisticsKeyMessage.TYPE_CODE, StatisticsKeyMessage::new);
+        factory.register(StatisticsObjectData.TYPE_CODE, StatisticsObjectData::new);
+        factory.register(StatisticsColumnData.TYPE_CODE, StatisticsColumnData::new);
+        factory.register(StatisticsGatheringResponse.TYPE_CODE, StatisticsGatheringResponse::new);
+        factory.register(StatisticsClearRequest.TYPE_CODE, StatisticsClearRequest::new);
+        factory.register(StatisticsGatheringRequest.TYPE_CODE, StatisticsGatheringRequest::new);
     }
 
     /** {@inheritDoc} */

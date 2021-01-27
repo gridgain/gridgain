@@ -165,8 +165,8 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)));
+            new DataStorageConfiguration().setDefaultDataRegionConfiguration(new DataRegionConfiguration().
+                setPersistenceEnabled(true)).setWalSegmentSize(4 * 1024 * 1024));
 
         return cfg;
     }

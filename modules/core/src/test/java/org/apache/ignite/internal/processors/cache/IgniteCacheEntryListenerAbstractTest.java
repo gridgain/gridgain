@@ -909,7 +909,8 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
 
         expirePlcCache.put(key(key), value(10));
 
-        U.sleep(700);
+        // Give enought time for TTL worker to trigger expiration event if eagerTtl=true.
+        U.sleep(1100);
 
         if (!eagerTtl())
             assertNull(primaryCache(key(key), cache.getName()).get(key(key))); // Provoke expire event if eager ttl is disabled.
@@ -919,6 +920,7 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
         if (gridCount() > 1)
             cache1 = jcache(1); // Do updates from another node.
 
+        // Key expected to be expired, create should not use TTL.
         cache1.put(key(key), value(1));
 
         cache1.put(key(key), value(2));
@@ -930,7 +932,8 @@ public abstract class IgniteCacheEntryListenerAbstractTest extends IgniteCacheAb
 
         expirePlcCache1.put(key(key), value(20));
 
-        U.sleep(200);
+        // Give enought time for TTL worker to trigger expiration event if eagerTtl=true.
+        U.sleep(1100);
 
         if (!eagerTtl())
             assertNull(primaryCache(key(key), cache.getName()).get(key(key))); // Provoke expire event if eager ttl is disabled.

@@ -13,16 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.util;
 
 import java.util.Arrays;
+
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.GridArrays.clearTail;
 import static org.apache.ignite.internal.util.GridArrays.remove;
 import static org.apache.ignite.internal.util.GridArrays.set;
+import static org.apache.ignite.internal.util.GridArrays.subtract;
 
 /**
  */
@@ -129,5 +130,30 @@ public class GridArraysSelfTest extends GridCommonAbstractTest {
         assertTrue(Arrays.equals(new Integer[]{0,1,2,3,5,6}, remove(arr, 4)));
         assertTrue(Arrays.equals(new Integer[]{0,1,2,3,4,5}, remove(arr, 6)));
         assertTrue(Arrays.equals(new Integer[0], remove(new Integer[]{1}, 0)));
+    }
+
+    /**
+     * Test array intersection.
+     *
+     * 1) Subtract empty array.
+     * 2) Subtract all elements.
+     * 3) Subtract some elements.
+     */
+    @Test
+    public void subtractTest() {
+        int[] a123 = new int[]{1, 2, 3};
+        int[] a13 = new int[]{1, 3};
+        int[] b123 = new int[]{1, 2, 3};
+        int[] b2 = new int[]{2};
+        int[] z = new int[0];
+
+        // 1) Subtract empty array.
+        assertTrue(Arrays.equals(a123, subtract(a123, z)));
+
+        // 2) Subtract all elements.
+        assertEquals(0, subtract(a123, b123).length);
+
+        // 3) Subtract some elements.
+        assertTrue(Arrays.equals(a13, subtract(a123, b2)));
     }
 }
