@@ -44,31 +44,31 @@ import java.util.UUID;
  * Test different scenario with column statistics collection.
  */
 public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
-    /** Types with its comparators for tests. */
+    /** Types with its comparators for tests.  */
     private static final Map<Value[], Comparator<Value>> types = new HashMap<>();
 
     static {
         types.put(new Value[]{ValueBoolean.get(false), ValueBoolean.get(true)},
-                (v1, v2) -> Boolean.compare(v1.getBoolean(), v2.getBoolean()));
+            (v1, v2) -> Boolean.compare(v1.getBoolean(), v2.getBoolean()));
         types.put(new Value[]{ValueInt.get(1), ValueInt.get(2), ValueInt.get(10)},
-                (v1, v2) -> Integer.compare(v1.getInt(), v2.getInt()));
+            (v1, v2) -> Integer.compare(v1.getInt(), v2.getInt()));
         types.put(new Value[]{ValueShort.get((short)1), ValueShort.get((short)3)},
-                (v1, v2) -> Short.compare(v1.getShort(), v2.getShort()));
+            (v1, v2) -> Short.compare(v1.getShort(), v2.getShort()));
         types.put(new Value[]{ValueString.get("1"), ValueString.get("9")},
-                (v1, v2) -> v1.getString().compareTo(v2.getString()));
+            (v1, v2) -> v1.getString().compareTo(v2.getString()));
         types.put(new Value[]{ValueDecimal.get(BigDecimal.ONE), ValueDecimal.get(BigDecimal.TEN)},
-                (v1, v2) -> v1.getBigDecimal().compareTo(v2.getBigDecimal()));
+            (v1, v2) -> v1.getBigDecimal().compareTo(v2.getBigDecimal()));
         types.put(new Value[]{ValueDate.fromMillis(1), ValueDate.fromMillis(10000), ValueDate.fromMillis(9999999)},
-                (v1, v2) -> v1.getDate().compareTo(v2.getDate()));
+            (v1, v2) -> v1.getDate().compareTo(v2.getDate()));
         types.put(new Value[]{ValueUuid.get(1,2), ValueUuid.get(2,1), ValueUuid.get(2,2)},
-                (v1, v2) -> new UUID(((ValueUuid)v1).getHigh(),((ValueUuid)v1).getLow())
-                        .compareTo(new UUID(((ValueUuid)v2).getHigh(),((ValueUuid)v2).getLow())));
+            (v1, v2) -> new UUID(((ValueUuid)v1).getHigh(),((ValueUuid)v1).getLow())
+                .compareTo(new UUID(((ValueUuid)v2).getHigh(),((ValueUuid)v2).getLow())));
         types.put(new Value[]{ValueFloat.get(1f), ValueFloat.get(10f)},
-                (v1, v2) -> Float.compare(v1.getFloat(), v2.getFloat()));
+            (v1, v2) -> Float.compare(v1.getFloat(), v2.getFloat()));
         types.put(new Value[]{ValueDouble.get(1.), ValueDouble.get(10.)},
-                (v1, v2) -> Double.compare(v1.getDouble(), v2.getDouble()));
+            (v1, v2) -> Double.compare(v1.getDouble(), v2.getDouble()));
         types.put(new Value[]{ValueByte.get((byte)1), ValueByte.get((byte)2)},
-                (v1, v2) -> Byte.compare(v1.getByte(), v2.getByte()));
+            (v1, v2) -> Byte.compare(v1.getByte(), v2.getByte()));
     }
 
     /**
@@ -109,9 +109,10 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSingleAggregation() {
-        for (Map.Entry<Value[], Comparator<Value>> type : types.entrySet())
+        for (Map.Entry<Value[], Comparator<Value>> type : types.entrySet()) {
             for (Value v : type.getKey())
                 testAggregation(type.getValue(), v.getType(), 0, v);
+        }
     }
 
     /**
@@ -121,7 +122,7 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
     @Test
     public void testMultipleAggregation() {
         for (Map.Entry<Value[], Comparator<Value>> type : types.entrySet()) {
-            Value vals[] = type.getKey();
+            Value[] vals = type.getKey();
             testAggregation(type.getValue(), vals[0].getType(),0, vals);
         }
     }
@@ -133,7 +134,7 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
     @Test
     public void testMultipleWithNullsAggregation() {
         for (Map.Entry<Value[], Comparator<Value>> type : types.entrySet()) {
-            Value vals[] = type.getKey();
+            Value[] vals = type.getKey();
             testAggregation(type.getValue(), vals[0].getType(),vals.length, vals);
         }
     }
