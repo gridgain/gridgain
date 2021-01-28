@@ -253,9 +253,8 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testQueryWithGroupByPrimaryKey() throws Exception {
-        //TODO: GG-19071: make next test pass without hint.
         // OOM on reducer.
-        checkQueryExpectOOM("select K.indexed, sum(K.id) from K USE INDEX (K_IDX) GROUP BY K.indexed", true);
+        checkQueryExpectOOM("select K.indexed, sum(K.id) from K GROUP BY K.indexed", true);
 
         assertEquals(1, localResults.size());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
