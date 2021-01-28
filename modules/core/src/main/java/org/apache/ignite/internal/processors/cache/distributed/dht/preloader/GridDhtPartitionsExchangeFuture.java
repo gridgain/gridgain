@@ -1755,6 +1755,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         changeWalModeIfNeeded();
 
 //        if (events().hasServerLeft())//
+        if (!events().hasServerJoin())//
             finalizePartitionCounters();
 
         cctx.exchange().exchangerBlockingSectionBegin();
