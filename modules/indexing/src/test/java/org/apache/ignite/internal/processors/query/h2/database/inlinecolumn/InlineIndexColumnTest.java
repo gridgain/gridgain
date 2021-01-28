@@ -34,6 +34,7 @@ import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.database.NoOpPagesMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn;
 import org.apache.ignite.testframework.junits.GridTestBinaryMarshaller;
@@ -226,7 +227,8 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
             PAGE_SIZE,
             plcCfg,
             new LongAdderMetric("NO_OP", null),
-            false);
+            false,
+            new NoOpPagesMetric());
 
         pageMem.start();
 
@@ -278,7 +280,8 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
             PAGE_SIZE,
             plcCfg,
             new LongAdderMetric("NO_OP", null),
-            false);
+            false,
+            new NoOpPagesMetric());
 
         pageMem.start();
 
@@ -327,7 +330,8 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
             PAGE_SIZE,
             plcCfg,
             new LongAdderMetric("NO_OP", null),
-            false);
+            false,
+            new NoOpPagesMetric());
 
         pageMem.start();
 
@@ -383,7 +387,8 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
             PAGE_SIZE,
             plcCfg,
             new LongAdderMetric("NO_OP", null),
-            false);
+            false,
+            new NoOpPagesMetric());
 
         pageMem.start();
 
@@ -441,7 +446,8 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
             PAGE_SIZE,
             plcCfg,
             new LongAdderMetric("NO_OP", null),
-            false);
+            false,
+            new NoOpPagesMetric());
 
         pageMem.start();
 
@@ -769,7 +775,8 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
             PAGE_SIZE,
             plcCfg,
             new LongAdderMetric("NO_OP", null),
-            false);
+            false,
+            new NoOpPagesMetric());
 
         pageMem.start();
 

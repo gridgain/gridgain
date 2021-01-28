@@ -37,7 +37,6 @@ import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetricImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -144,7 +143,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     private final AtomicInteger allocatedPages = new AtomicInteger();
 
     /** */
-    private final PagesMetric pageMetric = new PagesMetricImpl();
+    private final PagesMetric pageMetric;
 
     /** */
     private final LongAdderMetric totalAllocatedPagesMetric;
@@ -188,7 +187,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         int pageSize,
         DataRegionConfiguration dataRegionCfg,
         LongAdderMetric totalAllocatedPagesMetric,
-        boolean trackAcquiredPages
+        boolean trackAcquiredPages,
+        PagesMetric metrics
     ) {
         assert log != null || sharedCtx != null;
         assert pageSize % 8 == 0;
@@ -198,6 +198,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         this.trackAcquiredPages = trackAcquiredPages;
         this.totalAllocatedPagesMetric = totalAllocatedPagesMetric;
         this.dataRegionCfg = dataRegionCfg;
+
+        pageMetric = metrics;
 
         sysPageSize = pageSize + PAGE_OVERHEAD;
 

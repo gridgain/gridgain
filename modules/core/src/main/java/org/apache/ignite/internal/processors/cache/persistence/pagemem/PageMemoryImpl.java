@@ -205,9 +205,6 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** Direct memory allocator. */
     private final DirectMemoryProvider directMemoryProvider;
 
-    /** */
-    private final PagesMetric pageMetric = new PagesMetricImpl();
-
     /** Segments array. */
     private volatile Segment[] segments;
 
@@ -577,7 +574,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             setDirty(fullId, absPtr, true, true);
 
             if (isTrackingPage) {
-                pageMetric.pageAllocated(PageCategory.META);
+                memMetrics.pageAllocated(PageCategory.META);
 
                 long pageAddr = absPtr + PAGE_OVERHEAD;
 
@@ -603,7 +600,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                     }
                 }
             } else {
-                pageMetric.pageAllocated(category);
+                memMetrics.pageAllocated(category);
             }
 
             seg.loadedPages.put(grpId, PageIdUtils.effectivePageId(pageId), relPtr, seg.partGeneration(grpId, partId));
@@ -780,12 +777,12 @@ public class PageMemoryImpl implements PageMemoryEx {
                     relPtr = seg.removePageForReplacement(delayedWriter == null ? flushDirtyPage : delayedWriter);
                     // TODO: define concreate type
                     // need to define page type by content
-                    // pageMetric.reusePageIncreased(1, PageCategory.DATA);
-                    // pageMetric.pageAllocated(PageCategory.DATA);
+                    // memMetrics.reusePageIncreased(1, PageCategory.DATA);
+                    // memMetrics.pageAllocated(PageCategory.DATA);
                 } else {
                     // TODO: define concreate type
                     // it may be wrong
-                    pageMetric.pageAllocated(PageCategory.META);
+                    memMetrics.pageAllocated(PageCategory.META);
                 }
 
                 absPtr = seg.absolute(relPtr);
@@ -1850,7 +1847,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** {@inheritDoc} */
     @Override public PagesMetric getPageMetric() {
-        return pageMetric;
+        return memMetrics;
     }
 
     /**
@@ -2053,7 +2050,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             int pages = (int)(totalMemory / sysPageSize);
 
-            pageMetric.freePagesIncreased(pages);
+            memMetrics.freePagesIncreased(pages);
 
             acquiredPagesPtr = region.address();
 

@@ -339,7 +339,8 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
             pageSize,
             plcCfg,
             new LongAdderMetric("NO_OP", null),
-            true);
+            true,
+            new NoOpPagesMetric());
 
         pageMem.start();
 

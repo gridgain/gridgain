@@ -1393,7 +1393,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             memCfg.getPageSize(),
             memPlcCfg,
             memMetrics.totalAllocatedPages(),
-            false
+            false,
+            memMetrics
         );
 
         memMetrics.pageMemory(pageMem);

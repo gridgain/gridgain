@@ -227,7 +227,7 @@ public class BPlusTreeBenchmark extends JmhAbstractBenchmark {
         for (int i = 0; i < sizes.length; i++)
             sizes[i] = 1024 * MB / CPUS;
 
-        DataRegionConfiguration plcCfg = new DataRegionConfiguration().setMaxSize(1024 * MB);
+        DataRegionConfiguration plcCfg = new DataRegionConfiguration().setMaxSize(1024 * MB).setMetricsEnabled(false);
 
         PageMemory pageMem = new PageMemoryNoStoreImpl(new JavaLogger(),
             new UnsafeMemoryProvider(new JavaLogger()),
@@ -235,7 +235,8 @@ public class BPlusTreeBenchmark extends JmhAbstractBenchmark {
             PAGE_SIZE,
             plcCfg,
             new LongAdderMetric("NO_OP", null),
-            false);
+            false,
+            new NoOpPagesMetric());
 
         pageMem.start();
 

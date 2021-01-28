@@ -137,6 +137,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** System metrics prefix. */
     public static final String SYS_METRICS = "sys";
 
+    /** System metrics prefix. */
+    public static final String IO_METRICS = "io.dataregion";
+
     /** Ignite node metrics prefix. */
     public static final String IGNITE_METRICS = "ignite";
 

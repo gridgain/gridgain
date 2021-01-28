@@ -178,6 +178,7 @@ public class IndexStorageSelfTest extends GridCommonAbstractTest {
             PAGE_SIZE,
             plcCfg,
             new LongAdderMetric("NO_OP", null),
-            true);
+            true,
+            new NoOpPagesMetric());
     }
 }

@@ -20,7 +20,9 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
@@ -36,7 +38,7 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
 /**
  *
  */
-public class DataRegionMetricsImpl implements DataRegionMetrics {
+public class DataRegionMetricsImpl implements DataRegionMetrics, PagesMetric {
     /**
      * Data region metrics prefix.
      * Full name will contain {@link DataRegionConfiguration#getName()} also.
@@ -99,6 +101,21 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
 
     /** Total throttling threads time in milliseconds. */
     private final LongAdderMetric totalThrottlingTime;
+
+    /** Data pages. */
+    private final LongAdderMetric physicalMemoryDataPagesSize;
+
+    /** Indexes. */
+    private final LongAdderMetric physicalMemoryIndexPagesSize;
+
+    /** Reuse list. */
+    private final LongAdderMetric physicalMemoryFreelistPagesSize;
+
+    /** Meta, tracking. */
+    private final LongAdderMetric physicalMemoryMetaPagesSize;
+
+    /** Preallocated size. */
+    private final LongAdderMetric physicalMemoryFreePagesSize;
 
     /** */
     private final DataRegionConfiguration memPlcCfg;
@@ -187,6 +204,17 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         totalThrottlingTime = mreg.longAdderMetric("TotalThrottlingTime",
             "Total throttling threads time in milliseconds. The Ignite throttles threads that generate " +
                 "dirty pages during the ongoing checkpoint.");
+
+        physicalMemoryDataPagesSize = mreg
+            .longAdderMetric("PhysicalMemoryDataPagesSize", "Pages amount used for DATA.");
+        physicalMemoryIndexPagesSize = mreg
+            .longAdderMetric("PhysicalMemoryIndexPagesSize", "Pages amount used for indexes.");
+        physicalMemoryFreelistPagesSize = mreg
+            .longAdderMetric("PhysicalMemoryFreelistPagesSize", "Free pages count.");
+        physicalMemoryMetaPagesSize = mreg
+            .longAdderMetric("PhysicalMemoryMetaPagesSize", "Pages amount used for metadata.");
+        physicalMemoryFreePagesSize = mreg
+            .longAdderMetric("PhysicalMemoryFreePagesSize", "Preallocated pages count.");
     }
 
     /** {@inheritDoc} */
@@ -428,6 +456,127 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     /** */
     public LongAdderMetric totalAllocatedPages() {
         return totalAllocatedPages;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void pageAllocated(PageCategory category) {
+        if (!metricsEnabled)
+            return;
+
+        physicalMemoryFreePagesSize.decrement();
+        switch (category) {
+            case DATA:
+                physicalMemoryDataPagesSize.increment();
+                break;
+            case REUSE:
+                physicalMemoryDataPagesSize.increment();
+                break;
+            case INDEX:
+                physicalMemoryIndexPagesSize.increment();
+                break;
+            case META:
+                physicalMemoryMetaPagesSize.increment();
+                break;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void pageFromReuseList(PageCategory category) {
+        if (!metricsEnabled)
+            return;
+
+        physicalMemoryFreelistPagesSize.decrement();
+        switch (category) {
+            case META:
+                physicalMemoryMetaPagesSize.increment();
+                break;
+            case INDEX:
+                physicalMemoryIndexPagesSize.increment();
+                break;
+            case DATA:
+                physicalMemoryDataPagesSize.increment();
+                break;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void reusePageIncreased(int count, PageCategory category) {
+        if (!metricsEnabled)
+            return;
+
+        assert category != PageCategory.REUSE;
+
+        switch (category) {
+            case DATA:
+                physicalMemoryDataPagesSize.add(-count);
+                break;
+            case META:
+                physicalMemoryMetaPagesSize.add(-count);
+                break;
+
+            case INDEX:
+                physicalMemoryIndexPagesSize.add(-count);
+                break;
+
+        }
+
+        physicalMemoryFreelistPagesSize.add(count);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void freePageUsed() {
+        if (!metricsEnabled)
+            return;
+
+        physicalMemoryFreePagesSize.decrement();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void freePagesIncreased(int count) {
+        if (!metricsEnabled)
+            return;
+
+        physicalMemoryFreePagesSize.add(count);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long physicalMemoryDataPagesSize() {
+        if (!metricsEnabled)
+            return 0L;
+
+        return physicalMemoryDataPagesSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long physicalMemoryIndexPagesSize() {
+        if (!metricsEnabled)
+            return 0L;
+
+        return physicalMemoryIndexPagesSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long physicalMemoryFreelistPagesSize() {
+        if (!metricsEnabled)
+            return 0L;
+
+        return physicalMemoryFreelistPagesSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long physicalMemoryMetaPagesSize() {
+        if (!metricsEnabled)
+            return 0L;
+
+        return physicalMemoryMetaPagesSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long physicalMemoryFreePagesSize() {
+        if (!metricsEnabled)
+            return 0L;
+
+        return physicalMemoryFreePagesSize.value();
     }
 
     /**
