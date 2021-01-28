@@ -32,12 +32,6 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /** Map columnKey to its statistic. */
     private final Map<String, ColumnStatistics> colNameToStat;
 
-    /** */
-    private final StatisticsCollectConfiguration cfg;
-
-    /** */
-    private final long ver;
-
     /**
      * Constructor.
      *
@@ -46,9 +40,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
      */
     public ObjectStatisticsImpl(
         long rowsCnt,
-        Map<String, ColumnStatistics> colNameToStat,
-        StatisticsCollectConfiguration cfg,
-        long ver
+        Map<String, ColumnStatistics> colNameToStat
     ) {
         assert rowsCnt >= 0 : "rowsCnt >= 0";
 
@@ -56,8 +48,6 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
 
         this.rowsCnt = rowsCnt;
         this.colNameToStat = colNameToStat;
-        this.cfg = cfg;
-        this.ver = ver;
     }
 
     /**
@@ -86,17 +76,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
 
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl clone() {
-        return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat), cfg, ver);
-    }
-
-    /** */
-    public StatisticsCollectConfiguration config() {
-        return cfg;
-    }
-
-    /** */
-    public long version() {
-        return ver;
+        return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat));
     }
 
     /** {@inheritDoc} */

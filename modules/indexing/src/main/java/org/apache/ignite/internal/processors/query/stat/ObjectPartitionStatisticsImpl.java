@@ -44,11 +44,9 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
             int partId,
             long rowsCnt,
             long updCnt,
-            Map<String, ColumnStatistics> colNameToStat,
-            StatisticsCollectConfiguration cfg,
-            long ver
+            Map<String, ColumnStatistics> colNameToStat
     ) {
-        super(rowsCnt, colNameToStat, cfg, ver);
+        super(rowsCnt, colNameToStat);
 
         this.partId = partId;
         this.updCnt = updCnt;
@@ -70,7 +68,7 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
 
     /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl clone() {
-        return new ObjectPartitionStatisticsImpl(partId, rowCount(), updCnt, new HashMap<>(columnsStatistics()), config(), version());
+        return new ObjectPartitionStatisticsImpl(partId, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
     }
 
     /** {@inheritDoc} */

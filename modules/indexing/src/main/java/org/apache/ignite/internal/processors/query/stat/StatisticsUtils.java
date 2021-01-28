@@ -155,14 +155,12 @@ public class StatisticsUtils {
         for (Map.Entry<String, StatisticsColumnData> cs : objData.data().entrySet())
             colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
 
-        // TODO: version & cfg
         return new ObjectPartitionStatisticsImpl(
             objData.partId(),
             objData.rowsCnt(),
             objData.updCnt(),
-            colNameToStat,
-            null,
-            0);
+            colNameToStat
+        );
     }
 
     /**
@@ -182,8 +180,7 @@ public class StatisticsUtils {
         for (Map.Entry<String, StatisticsColumnData> cs : data.data().entrySet())
             colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
 
-        // TODO: cfg + ver
-        return new ObjectStatisticsImpl(data.rowsCnt(), colNameToStat, null, 0);
+        return new ObjectStatisticsImpl(data.rowsCnt(), colNameToStat);
     }
 
     /**

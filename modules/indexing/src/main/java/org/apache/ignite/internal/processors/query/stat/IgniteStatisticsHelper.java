@@ -15,24 +15,6 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.query.h2.SchemaManager;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsClearRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
-import org.apache.ignite.internal.processors.query.stat.config.StatisticsCollectConfiguration;
-import org.apache.ignite.internal.util.typedef.F;
-import org.gridgain.internal.h2.table.Column;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,6 +28,24 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.query.h2.SchemaManager;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsCollectConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsClearRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
+import org.apache.ignite.internal.util.typedef.F;
+import org.gridgain.internal.h2.table.Column;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Utility methods to statistics messages generation.
@@ -85,8 +85,8 @@ public class IgniteStatisticsHelper {
      * @return Local level aggregated statistics.
      */
     public ObjectStatisticsImpl aggregateLocalStatistics(
-            StatisticsKeyMessage keyMsg,
-            Collection<? extends ObjectStatisticsImpl> stats
+        StatisticsKeyMessage keyMsg,
+        Collection<? extends ObjectStatisticsImpl> stats
     ) {
         // For now there can be only tables
         GridH2Table tbl = schemaMgr.dataTable(keyMsg.schema(), keyMsg.obj());
@@ -117,8 +117,6 @@ public class IgniteStatisticsHelper {
     ) {
         assert !stats.isEmpty();
 
-        long ver = F.first(stats).version();
-        StatisticsCollectConfiguration cfg = F.first(stats).config();
 
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedCols.length);
         long rowCnt = 0;
@@ -126,11 +124,6 @@ public class IgniteStatisticsHelper {
             colPartStats.put(col, new ArrayList<>());
 
         for (ObjectStatisticsImpl partStat : stats) {
-            if (ver != partStat.version()) {
-                log.warning("Statistics versions or configuration are different: [stat0=" + F.first(stats)
-                    + ", stat1=" + partStat);
-            }
-
             for (Column col : selectedCols) {
                 ColumnStatistics colPartStat = partStat.columnStatistics(col.getName());
 
@@ -153,8 +146,7 @@ public class IgniteStatisticsHelper {
             colStats.put(col.getName(), stat);
         }
 
-        // TODO:
-        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats, null, 0);
+        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
 
         return tblStats;
     }

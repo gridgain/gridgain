@@ -232,7 +232,8 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
             StatisticsObjectConfiguration tblStatInfo = (StatisticsObjectConfiguration)val;
             ObjectStatisticsImpl localStat = localRepo.getLocalStatistics(tblStatInfo.key());
 
-            if(isNeedToUpdateLocalStatistics(tblStatInfo, localStat)) {
+            if(true) {
+//                if(isNeedToUpdateLocalStatistics(tblStatInfo, localStat)) {
                 Set<StatisticsObjectConfiguration> objSet = new HashSet<>();
 
                 Set<StatisticsObjectConfiguration> oldSet = updSets.put(tblStatInfo.cacheGroupId(), objSet);
@@ -259,14 +260,6 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
 
             gatherer.collectLocalObjectsStatisticsAsync(grpId, updSet);
         });
-    }
-
-    /** */
-    private boolean isNeedToUpdateLocalStatistics(
-        StatisticsObjectConfiguration tblStatInfo,
-        ObjectStatisticsImpl localStat
-    ) {
-        return localStat == null || localStat != null && localStat.version() != tblStatInfo.version();
     }
 
     /** */

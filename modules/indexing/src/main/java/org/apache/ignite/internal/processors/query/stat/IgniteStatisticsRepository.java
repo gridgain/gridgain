@@ -15,11 +15,6 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
-import org.apache.ignite.internal.util.typedef.F;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -28,6 +23,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.util.typedef.F;
 
 /**
  * Statistics repository implementation.
@@ -370,5 +370,23 @@ public class IgniteStatisticsRepository {
 
             saveLocalStatistics(objStatCfg.key(), locStat);
         }
+    }
+
+    /** */
+    public ObjectStatisticsImpl aggregatePartitionedStatistics(Set<Integer> parts, StatisticsObjectConfiguration cfg) {
+        Collection<ObjectPartitionStatisticsImpl> stats = store.getLocalPartitionsStatistics(cfg.key());
+
+        Collection<ObjectPartitionStatisticsImpl> statsToAgg = stats.stream()
+            .filter(s -> parts.contains(s.partId()))
+            .collect(Collectors.toList());
+
+        assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough partitioned statistics";
+
+        ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(
+            StatisticsUtils.statisticsObjectConfiguration2Key(cfg),
+            statsToAgg
+        );
+
+        return locStat;
     }
 }

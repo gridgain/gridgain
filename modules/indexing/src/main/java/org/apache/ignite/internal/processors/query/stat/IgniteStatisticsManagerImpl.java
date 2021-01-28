@@ -142,7 +142,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             ctx.query(),
             statsRepos,
             reqProc,
-            store,
             gatMgmtPool,
             ctx::log);
 

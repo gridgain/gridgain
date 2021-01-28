@@ -83,9 +83,6 @@ public class StatisticsGatherer {
     /** Ignite Thread pool executor to do statistics collection tasks. */
     private final IgniteThreadPoolExecutor gatherPool;
 
-    /** */
-    private final IgniteStatisticsStore statStore;
-
     /** (cacheGroupId -> gather context) */
     private final ConcurrentMap<Integer, LocalStatisticsGatheringContext> gatheringInProgress = new ConcurrentHashMap<>();
 
@@ -107,7 +104,6 @@ public class StatisticsGatherer {
         GridQueryProcessor qryProcessor,
         IgniteStatisticsRepository repo,
         StatisticsRequestProcessor reqProc,
-        IgniteStatisticsStore statStore,
         IgniteThreadPoolExecutor gatherPool,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
@@ -117,7 +113,6 @@ public class StatisticsGatherer {
         this.cacheProc = cacheProc;
         this.qryProcessor = qryProcessor;
         this.statRepo = repo;
-        this.statStore = statStore;
         this.reqProc = reqProc;
         this.gatherPool = gatherPool;
     }
@@ -190,7 +185,7 @@ public class StatisticsGatherer {
 
                 if (partStats != null) {
                     for (Map.Entry<GridH2Table, ObjectPartitionStatisticsImpl> tblStat : partStats.entrySet()) {
-                        statStore.saveLocalPartitionStatistics(
+                        statRepo.saveLocalPartitionStatistics(
                             new StatisticsKey(tblStat.getKey().getSchema().getName(), tblStat.getKey().getName()),
                             tblStat.getValue()
                         );
@@ -301,14 +296,11 @@ public class StatisticsGatherer {
                 Map<String, ColumnStatistics> colStats = tblCollectors.getValue().stream().collect(
                         Collectors.toMap(csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
 
-                // TODO: VER & CFG
                 ObjectPartitionStatisticsImpl tblStat = new ObjectPartitionStatisticsImpl(
                     partId,
                     colStats.values().iterator().next().total(),
                     locPart.updateCounter(),
-                    colStats,
-                    null,
-                    0
+                    colStats
                 );
 
                 res.put(tblCollectors.getKey(), tblStat);
@@ -331,14 +323,5 @@ public class StatisticsGatherer {
             if (!unfinishedTasks.isEmpty())
                 log.warning(String.format("%d statistics collection request cancelled.", unfinishedTasks.size()));
         }
-    }
-
-    /** */
-    private static class PartitionGatheringKey {
-        /** */
-        private int cacheGrpId;
-
-        /** */
-        private int part;
     }
 }
