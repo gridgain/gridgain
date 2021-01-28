@@ -33,10 +33,12 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -315,6 +317,93 @@ public class StatisticsGatherer {
     }
 
     /**
+     * Collect single partition level statistics by the given table.
+     *
+     * @param partId Partition id to collect statistics by.
+     * @param cancelled Supplier to check if collection was cancelled.
+     * @return Map of table to Collection of partition level statistics by local primary partitions.
+     */
+    private static ObjectPartitionStatisticsImpl collectPartitionStatistics(
+        GridH2Table tbl,
+        Column[] cols,
+        int partId,
+        Supplier<Boolean> cancelled,
+        IgniteLogger log
+    ) {
+        CacheGroupContext grp = tbl.cacheContext().group();
+
+        GridDhtPartitionTopology top = grp.topology();
+        AffinityTopologyVersion topVer = top.readyTopologyVersion();
+
+        GridDhtLocalPartition locPart = top.localPartition(partId, topVer, false);
+
+        if (locPart == null)
+            return null;
+
+        boolean reserved = locPart.reserve();
+
+        try {
+            if (!reserved || (locPart.state() != OWNING)) {
+                // TODO: RETRY
+                if (locPart.state() == LOST)
+                    return null;
+
+                return null;
+            }
+
+            ColumnStatisticsCollector[] collectors = new ColumnStatisticsCollector[cols.length];
+
+            for (int i = 0; i < cols.length; ++i)
+                collectors[i] = new ColumnStatisticsCollector(cols[i], tbl::compareValues);
+
+            GridQueryTypeDescriptor typeDesc = tbl.rowDescriptor().type();
+
+            long time = U.currentTimeMillis();
+
+            try {
+                int checkInt = CANCELLED_CHECK_INTERVAL;
+
+                for (CacheDataRow row : grp.offheap().cachePartitionIterator(
+                    tbl.cacheId(), partId, null, false))
+                {
+                    if (--checkInt == 0) {
+                        if (cancelled.get())
+                            return null;
+
+                        checkInt = CANCELLED_CHECK_INTERVAL;
+                    }
+
+                    if (!typeDesc.matchType(row.value()) || !wasExpired(row, time))
+                        continue;
+
+                    H2Row h2row = tbl.rowDescriptor().createRow(row);
+
+                    for (ColumnStatisticsCollector colStat : collectors)
+                        colStat.add(h2row.getValue(colStat.col().getColumnId()));
+                }
+            }
+            catch (IgniteCheckedException e) {
+                log.warning(String.format("Unable to collect partition level statistics by %s.%s:%d due to %s",
+                    tbl.identifier().schema(), tbl.identifier().table(), partId, e.getMessage()));
+            }
+
+            Map<String, ColumnStatistics> colStats = Arrays.stream(collectors).collect(
+                Collectors.toMap(csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
+
+            return new ObjectPartitionStatisticsImpl(
+                partId,
+                colStats.values().iterator().next().total(),
+                locPart.updateCounter(),
+                colStats
+            );
+        }
+        finally {
+            if (reserved)
+                locPart.release();
+        }
+    }
+
+    /**
      * Stop request crawler manager.
      */
     public void stop() {
@@ -323,5 +412,10 @@ public class StatisticsGatherer {
             if (!unfinishedTasks.isEmpty())
                 log.warning(String.format("%d statistics collection request cancelled.", unfinishedTasks.size()));
         }
+    }
+
+    /** */
+    private static boolean wasExpired(CacheDataRow row, long time) {
+        return row.expireTime() > 0 && row.expireTime() <= time;
     }
 }

@@ -33,9 +33,6 @@ public class StatisticsObjectConfiguration implements Serializable {
     private static final long serialVersionUID = 0L;
 
     /** */
-    private int cacheGrpId;
-
-    /** */
     @GridToStringInclude
     private final StatisticsKey key;
 
@@ -44,63 +41,46 @@ public class StatisticsObjectConfiguration implements Serializable {
     private final StatisticsColumnConfiguration[] cols;
 
     /** */
-    @GridToStringInclude
-    private final StatisticsCollectConfiguration cfg;
-
-    /** */
     private final long ver;
 
     /** */
     public StatisticsObjectConfiguration(
-        int grpId,
         StatisticsKey key,
-        StatisticsColumnConfiguration[] cols,
-        StatisticsCollectConfiguration cfg
+        StatisticsColumnConfiguration[] cols
     ) {
-        this(grpId, key, cols, cfg, 0);
+        this(key, cols, 0);
     }
 
     /** */
-    private StatisticsObjectConfiguration(
-        int grpId,
+    public StatisticsObjectConfiguration(
         StatisticsKey key,
         StatisticsColumnConfiguration[] cols,
-        StatisticsCollectConfiguration cfg,
         long ver
     ) {
-        this.cacheGrpId = grpId;
         this.key = key;
         this.cols = cols;
-        this.cfg = cfg;
         this.ver = ver;
     }
 
     /** */
-    public static StatisticsObjectConfiguration merge(StatisticsObjectConfiguration oldInfo, StatisticsObjectConfiguration newInfo) {
-        assert oldInfo.key.equals(newInfo.key) : "Invalid schema to merge: [oldKey=" + oldInfo.key
-            + ", newKey=" + newInfo.key + ']';
+    public static StatisticsObjectConfiguration merge(StatisticsObjectConfiguration oldCfg, StatisticsObjectConfiguration newCfg) {
+        assert oldCfg.key.equals(newCfg.key) : "Invalid schema to merge: [oldKey=" + oldCfg.key
+            + ", newKey=" + newCfg.key + ']';
 
-        Set<String> cols = Arrays.stream(oldInfo.cols)
+        Set<String> cols = Arrays.stream(oldCfg.cols)
             .map(StatisticsColumnConfiguration::name).collect(Collectors.toSet());
 
-        cols.addAll(Arrays.stream(newInfo.cols)
+        cols.addAll(Arrays.stream(newCfg.cols)
             .map(StatisticsColumnConfiguration::name).collect(Collectors.toSet()));
 
         return new StatisticsObjectConfiguration(
-            newInfo.cacheGrpId,
-            newInfo.key,
+            newCfg.key,
             cols.stream()
                 .map(StatisticsColumnConfiguration::new)
                 .collect(Collectors.toList())
                 .toArray(new StatisticsColumnConfiguration[cols.size()]),
-            newInfo.cfg,
-            oldInfo.ver + 1
+            oldCfg.ver + 1
         );
-    }
-
-    /** */
-    public int cacheGroupId() {
-        return cacheGrpId;
     }
 
     /** */
@@ -111,11 +91,6 @@ public class StatisticsObjectConfiguration implements Serializable {
     /** */
     public StatisticsColumnConfiguration[] columns() {
         return cols;
-    }
-
-    /** */
-    public StatisticsCollectConfiguration config() {
-        return cfg;
     }
 
     /** */
@@ -133,16 +108,14 @@ public class StatisticsObjectConfiguration implements Serializable {
 
         StatisticsObjectConfiguration that = (StatisticsObjectConfiguration)o;
 
-        return cacheGrpId == that.cacheGrpId
-            && ver == that.ver
+        return ver == that.ver
             && Objects.equals(key, that.key)
-            && Arrays.equals(cols, that.cols)
-            && Objects.equals(cfg, that.cfg);
+            && Arrays.equals(cols, that.cols);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        int result = Objects.hash(cacheGrpId, key, cfg, ver);
+        int result = Objects.hash(ver, key);
 
         result = 31 * result + Arrays.hashCode(cols);
 

@@ -32,8 +32,7 @@ public class StatisticsSchemaTest extends StatisticsStorageAbstractTest {
         ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing().statsManager())
             .statisticSchemaManager()
             .updateStatistics(
-                Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL")),
-                new StatisticsCollectConfiguration()
+                Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL"))
             );
 
         U.sleep(500);
@@ -41,12 +40,12 @@ public class StatisticsSchemaTest extends StatisticsStorageAbstractTest {
         ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing().statsManager())
             .statisticSchemaManager()
             .updateStatistics(
-                Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL")),
-                new StatisticsCollectConfiguration()
+                Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL"))
             );
 
 
-        IgniteStatisticsConfigurationManager mgr = ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing().statsManager())
+        IgniteStatisticsConfigurationManager mgr = ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing()
+            .statsManager())
             .statisticSchemaManager();
 
         U.sleep(500);
