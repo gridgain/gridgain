@@ -343,15 +343,18 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests = GridTestUtils
             .getFieldValue(crawler, "remainingRequests");
 
-        assertTrue(remainingRequests.isEmpty());
+        assertTrue("node " + nodeIdx + " StatisticsGatheringRequestCrawlerImpl.remainingRequests.size() = " +
+                remainingRequests.size(), remainingRequests.isEmpty());
 
         IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(crawler, "msgMgmtPool");
 
-        assertTrue(pool.getQueue().isEmpty());
+        assertTrue("node " + nodeIdx + " StatisticsGatheringRequestCrawlerImpl.msgMgmtPool.queue.size() = " +
+                pool.getQueue().size(), pool.getQueue().isEmpty());
 
         Map<UUID, StatisticsGatheringContext> currColls = GridTestUtils.getFieldValue(statMgr, "currColls");
 
-        assertTrue(currColls.isEmpty());
+        assertTrue("node " + nodeIdx + " IgniteStatisticsManagerImpl.currColls.size() = " + currColls.size(),
+            currColls.isEmpty());
     }
 
     /**
