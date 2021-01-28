@@ -340,18 +340,20 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
 
     /** {@inheritDoc} */
     @Override public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl stat) {
-        log.info("+++ SAVE " + key + " " + stat);
-
         if (!checkMetastore("Unable to store local partition statistics %s.%s:%d", key.schema(), key.obj(),
                 stat.partId()))
             return;
 
         String partKey = getPartKeyPrefix(key) + stat.partId();
+
         StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(key.schema(), key.obj(), null);
+
         try {
             StatisticsObjectData statsMsg = StatisticsUtils.toObjectData(keyMsg, StatisticsType.PARTITION, stat);
+
             if (log.isTraceEnabled())
                 log.trace("Writing statistics by key " + partKey);
+
             writeMeta(partKey, statsMsg);
         }
         catch (IgniteCheckedException e) {

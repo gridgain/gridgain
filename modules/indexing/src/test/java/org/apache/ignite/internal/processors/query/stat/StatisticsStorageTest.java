@@ -36,7 +36,7 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     @Test
     public void clearAllTest() throws IgniteCheckedException {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsRepositoryImpl statsRepo = (IgniteStatisticsRepositoryImpl)
+        IgniteStatisticsRepository statsRepo = (IgniteStatisticsRepository)
             ((IgniteStatisticsManagerImpl) statsMgr).statisticsRepository();
         IgniteStatisticsStore statsStore = statsRepo.statisticsStore();
 

@@ -55,7 +55,7 @@ public class StatisticsCollectConfiguration implements Serializable {
 
         StatisticsCollectConfiguration that = (StatisticsCollectConfiguration)o;
 
-        if (Double.compare(samples, that.samples) == 0)
+        if (Double.compare(samples, that.samples) != 0)
             return false;
 
         return true;

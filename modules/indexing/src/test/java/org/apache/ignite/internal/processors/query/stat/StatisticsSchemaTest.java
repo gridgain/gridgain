@@ -36,6 +36,16 @@ public class StatisticsSchemaTest extends StatisticsStorageAbstractTest {
                 new StatisticsCollectConfiguration()
             );
 
+        U.sleep(500);
+
+        ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing().statsManager())
+            .statisticSchemaManager()
+            .updateStatistics(
+                Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL")),
+                new StatisticsCollectConfiguration()
+            );
+
+
         IgniteStatisticsConfigurationManager mgr = ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing().statsManager())
             .statisticSchemaManager();
 

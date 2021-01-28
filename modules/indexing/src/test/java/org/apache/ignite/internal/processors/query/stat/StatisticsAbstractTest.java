@@ -330,8 +330,11 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
             100, 0, new byte[0]);
-        return new ObjectPartitionStatisticsImpl(partId, true, 0, 0,
-            Collections.singletonMap("col1", colStatistics), null, 0);
+        return new ObjectPartitionStatisticsImpl(
+            partId,  0, 0,
+            Collections.singletonMap("col1", colStatistics),
+            null, 0
+        );
     }
 
     /**

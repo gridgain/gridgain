@@ -130,7 +130,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db,
                 (k, s) -> this.statisticsRepository().cacheLocalStatistics(k, s), ctx::log);
 
-        statsRepos = new IgniteStatisticsRepositoryImpl(store, helper, ctx::log);
+        statsRepos = new IgniteStatisticsRepository(store, helper, ctx::log);
 
         reqProc = new StatisticsRequestProcessor(ctx.localNodeId(), this, ctx.event(), ctx.io(),
             helper, mgmtPool, ctx::log);

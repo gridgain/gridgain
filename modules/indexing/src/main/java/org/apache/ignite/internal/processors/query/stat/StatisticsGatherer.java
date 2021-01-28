@@ -30,7 +30,7 @@ import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
-import org.apache.ignite.internal.processors.query.stat.config.ObjectStatisticsConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -122,94 +122,91 @@ public class StatisticsGatherer {
         this.gatherPool = gatherPool;
     }
 
-    /** */
+    /**
+     * Collect statistic per partition for specified objects on the same cache group.
+     */
     public void collectLocalObjectsStatisticsAsync(
-        final Set<ObjectStatisticsConfiguration> objectStatCfgs
-    ) throws IgniteCheckedException {
-        assert !F.isEmpty(objectStatCfgs);
+        int cacheGrpId,
+        final Set<StatisticsObjectConfiguration> objStatCfgs
+    ) {
+        assert !F.isEmpty(objStatCfgs);
 
-        int cacheGroupId = F.first(objectStatCfgs).cacheGroupId();
-
-        CacheGroupContext grpCtx = cacheProc.cacheGroup(cacheGroupId);
+        CacheGroupContext grpCtx = cacheProc.cacheGroup(cacheGrpId);
 
         Set<Integer> parts = grpCtx.affinity().primaryPartitions(discoMgr.localNode().id(), grpCtx.affinity().lastVersion());
 
-        final LocalStatisticsGatheringContext newCtx = new LocalStatisticsGatheringContext(objectStatCfgs, parts.size());
+        final LocalStatisticsGatheringContext newCtx = new LocalStatisticsGatheringContext(objStatCfgs, parts.size());
 
-        LocalStatisticsGatheringContext inProgressCtx = gatheringInProgress.put(cacheGroupId, newCtx);
+        LocalStatisticsGatheringContext inProgressCtx = gatheringInProgress.put(cacheGrpId, newCtx);
 
-        if (inProgressCtx != null)
-            inProgressCtx.future().cancel();
-
-        gatherPool.submit(() -> collectLocalObjectsStatistics(objectStatCfgs, parts, () -> newCtx.future().isCancelled()));
-    }
-
-    /** */
-    private void collectLocalObjectsStatistics(
-        Set<ObjectStatisticsConfiguration> objectStatCfgs,
-        Set<Integer> parts,
-        Supplier<Boolean> cancelled
-    ) {
-        Map<GridH2Table, Column[]> targets = new HashMap<>(objectStatCfgs.size());
-        Map<GridH2Table, ObjectStatisticsConfiguration> tblObjStatCfg = new HashMap<>(objectStatCfgs.size());
-
-        for (ObjectStatisticsConfiguration statCfg : objectStatCfgs) {
-            GridH2Table tbl = schemaMgr.dataTable(statCfg.key().schema(), statCfg.key().obj());
-
-            assert tbl != null : "Unable to find to gather statistics [key=" + statCfg.key() + ']';
-
-            targets.put(tbl, IgniteStatisticsHelper.filterColumns(tbl.getColumns(), statCfg.columns()));
-
-            if (tblObjStatCfg.put(tbl, statCfg) != null)
-                log.warning(String.format("Unable to collect statistics by same table %s.%s twice in single gathering task",
-                    statCfg.key().schema(), statCfg.key().obj()));
-        }
-
-        Map<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> tblPartStat = new HashMap<>(objectStatCfgs.size());
-        List<Integer> collectedParts = new ArrayList<>(parts.size());
-
-        for (int partId : parts) {
-            Map<GridH2Table, ObjectPartitionStatisticsImpl> partStats = collectPartitionStatistics(
-                targets, partId, cancelled
-            );
-
-            if (cancelled.get())
-                return;
-
-            if (partStats != null) {
-                collectedParts.add(partId);
-
-                for (Map.Entry<GridH2Table, ObjectPartitionStatisticsImpl> tblStat : partStats.entrySet()) {
-                    statStore.saveLocalPartitionStatistics(
-                        new StatisticsKey(tblStat.getKey().getSchema().getName(), tblStat.getKey().getName()),
-                        tblStat.getValue()
-                    );
-
-                    tblPartStat.computeIfAbsent(tblStat.getKey(), k -> new ArrayList<>(parts.size()))
-                        .add(tblStat.getValue());
-                }
+        if (inProgressCtx != null) {
+            try {
+                inProgressCtx.future().cancel();
+            }
+            catch (IgniteCheckedException ex) {
+                log.warning("Unexpected exception on cancel gathering: [ctx=" + inProgressCtx + ']', ex);
             }
         }
 
-        Map<StatisticsKey, ObjectStatisticsImpl> res = new HashMap<>();
+        gatherPool.submit(() -> {
+            collectLocalObjectsStatistics(objStatCfgs, parts, newCtx);
 
-        for (Map.Entry<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> partStats : tblPartStat.entrySet()) {
-            ObjectStatisticsImpl locStat = IgniteStatisticsHelper.aggregateLocalStatistics(
-                partStats.getKey(),
-                targets.get(partStats.getKey()),
-                partStats.getValue(),
-                log);
+            statRepo.refreshAggregatedLocalStatistics(parts, objStatCfgs);
+        });
+    }
 
-            ObjectStatisticsConfiguration objStatCfg = tblObjStatCfg.get(partStats.getKey());
+    /**
+     * Collect statistic per partition for specified objects on the same cache group.
+     */
+    private void collectLocalObjectsStatistics(
+        Set<StatisticsObjectConfiguration> objStatCfgs,
+        Set<Integer> parts,
+        LocalStatisticsGatheringContext gathCtx
+    ) {
+        try {
+            log.info("+++ COLLECT " + objStatCfgs);
 
-            statRepo.mergeLocalStatistics(objStatCfg.key(), locStat);
+            Supplier<Boolean> cancelled = () -> gathCtx.future().isCancelled();
 
-            Collection<ObjectPartitionStatisticsImpl> mergedStats = statRepo.mergeLocalPartitionsStatistics(
-                objStatCfg.key(),
-                partStats.getValue()
-            );
+            Map<GridH2Table, Column[]> targets = new HashMap<>(objStatCfgs.size());
 
-            res.put(objStatCfg.key(), locStat);
+            for (StatisticsObjectConfiguration statCfg : objStatCfgs) {
+                GridH2Table tbl = schemaMgr.dataTable(statCfg.key().schema(), statCfg.key().obj());
+
+                assert tbl != null : "Unable to find to gather statistics [key=" + statCfg.key() + ']';
+
+                targets.put(tbl, IgniteStatisticsHelper.filterColumns(tbl.getColumns(), statCfg.columns()));
+            }
+
+            Map<GridH2Table, Collection<ObjectPartitionStatisticsImpl>> tblPartStat = new HashMap<>(objStatCfgs.size());
+
+            for (int partId : parts) {
+                Map<GridH2Table, ObjectPartitionStatisticsImpl> partStats = collectPartitionStatistics(
+                    targets, partId, cancelled
+                );
+
+                if (cancelled.get())
+                    return;
+
+                if (partStats != null) {
+                    for (Map.Entry<GridH2Table, ObjectPartitionStatisticsImpl> tblStat : partStats.entrySet()) {
+                        statStore.saveLocalPartitionStatistics(
+                            new StatisticsKey(tblStat.getKey().getSchema().getName(), tblStat.getKey().getName()),
+                            tblStat.getValue()
+                        );
+
+                        // TODO: propagate stat to backups nodes
+                        tblPartStat.computeIfAbsent(tblStat.getKey(), k -> new ArrayList<>(parts.size()))
+                            .add(tblStat.getValue());
+                    }
+                }
+
+                gathCtx.decrement();
+            }
+        }
+        catch (Throwable ex) {
+            log.warning("Unexpected exception on collect statistic [objs=" + objStatCfgs +
+                ", parts=" + parts + ']', ex);
         }
     }
 
@@ -305,8 +302,14 @@ public class StatisticsGatherer {
                         Collectors.toMap(csc -> csc.col().getName(), ColumnStatisticsCollector::finish));
 
                 // TODO: VER & CFG
-                ObjectPartitionStatisticsImpl tblStat = new ObjectPartitionStatisticsImpl(partId, true,
-                        colStats.values().iterator().next().total(), locPart.updateCounter(), colStats, null, 0);
+                ObjectPartitionStatisticsImpl tblStat = new ObjectPartitionStatisticsImpl(
+                    partId,
+                    colStats.values().iterator().next().total(),
+                    locPart.updateCounter(),
+                    colStats,
+                    null,
+                    0
+                );
 
                 res.put(tblCollectors.getKey(), tblStat);
             }
@@ -328,5 +331,14 @@ public class StatisticsGatherer {
             if (!unfinishedTasks.isEmpty())
                 log.warning(String.format("%d statistics collection request cancelled.", unfinishedTasks.size()));
         }
+    }
+
+    /** */
+    private static class PartitionGatheringKey {
+        /** */
+        private int cacheGrpId;
+
+        /** */
+        private int part;
     }
 }

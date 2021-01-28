@@ -118,13 +118,13 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
             grpIds.add(tbl.cacheContext().groupId());
 
             updateObjectStatisticInfo(
-                new ObjectStatisticsConfiguration(
+                new StatisticsObjectConfiguration(
                     tbl.cacheContext().groupId(),
                     target.key(),
                     Arrays.stream(target.columns())
-                        .map(ColumnStatisticsConfiguration::new)
+                        .map(StatisticsColumnConfiguration::new)
                         .collect(Collectors.toList())
-                        .toArray(new ColumnStatisticsConfiguration[target.columns().length]),
+                        .toArray(new StatisticsColumnConfiguration[target.columns().length]),
                     cfg
                 )
             );
@@ -154,15 +154,15 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
     /**
      *
      */
-    private void updateObjectStatisticInfo(ObjectStatisticsConfiguration statObjCfg) {
+    private void updateObjectStatisticInfo(StatisticsObjectConfiguration statObjCfg) {
         try {
             while (true) {
                 String key = key2String(statObjCfg.cacheGroupId(), statObjCfg.key());
 
-                ObjectStatisticsConfiguration oldCfg = distrMetaStorage.read(key);
+                StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
 
                 if (oldCfg != null)
-                    statObjCfg = ObjectStatisticsConfiguration.merge(statObjCfg, oldCfg);
+                    statObjCfg = StatisticsObjectConfiguration.merge(statObjCfg, oldCfg);
 
                 if (distrMetaStorage.compareAndSet(key, oldCfg, statObjCfg))
                     return;
@@ -224,18 +224,18 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
 
     /***/
     private void checkAndUpdateLocalStatistics(String keyPrefix) throws IgniteCheckedException {
-        Map<Integer, Set<ObjectStatisticsConfiguration>> updSets = new HashMap<>();
+        Map<Integer, Set<StatisticsObjectConfiguration>> updSets = new HashMap<>();
 
         Map<StatisticsKey, Set<String>> rmvColsMap = new HashMap<>();
 
         distrMetaStorage.iterate(keyPrefix, (key, val) -> {
-            ObjectStatisticsConfiguration tblStatInfo = (ObjectStatisticsConfiguration)val;
+            StatisticsObjectConfiguration tblStatInfo = (StatisticsObjectConfiguration)val;
             ObjectStatisticsImpl localStat = localRepo.getLocalStatistics(tblStatInfo.key());
 
             if(isNeedToUpdateLocalStatistics(tblStatInfo, localStat)) {
-                Set<ObjectStatisticsConfiguration> objSet = new HashSet<>();
+                Set<StatisticsObjectConfiguration> objSet = new HashSet<>();
 
-                Set<ObjectStatisticsConfiguration> oldSet = updSets.put(tblStatInfo.cacheGroupId(), objSet);
+                Set<StatisticsObjectConfiguration> oldSet = updSets.put(tblStatInfo.cacheGroupId(), objSet);
 
                 if (oldSet != null)
                     objSet = oldSet;
@@ -247,34 +247,34 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
                 rmvColsMap.putAll(columnsToRemove(tblStatInfo, localStat));
         });
 
-        rmvColsMap.forEach((key, colSet) -> {
-            log.info("+++ DELETE:" + rmvColsMap);
-            localRepo.clearLocalStatistics(key, colSet.toArray(new String[colSet.size()]));
+//        rmvColsMap.forEach((key, colSet) -> {
+//            log.info("+++ DELETE:" + rmvColsMap);
+//            localRepo.clearLocalStatistics(key, colSet.toArray(new String[colSet.size()]));
+//
+//            localRepo.clearLocalPartitionsStatistics(key, colSet.toArray(new String[colSet.size()]));
+//        });
 
-            localRepo.clearLocalPartitionsStatistics(key, colSet.toArray(new String[colSet.size()]));
-        });
-
-        for (Set<ObjectStatisticsConfiguration> updSet : updSets.values()) {
+        updSets.forEach((grpId, updSet) -> {
             log.info("+++ UPDATE:" + updSet);
 
-            gatherer.collectLocalObjectsStatisticsAsync(updSet);
-        }
+            gatherer.collectLocalObjectsStatisticsAsync(grpId, updSet);
+        });
     }
 
     /** */
     private boolean isNeedToUpdateLocalStatistics(
-        ObjectStatisticsConfiguration tblStatInfo,
+        StatisticsObjectConfiguration tblStatInfo,
         ObjectStatisticsImpl localStat
     ) {
         return localStat == null || localStat != null && localStat.version() != tblStatInfo.version();
     }
 
     /** */
-    private Map<StatisticsKey, Set<String>> columnsToRemove(ObjectStatisticsConfiguration statObjCfg,
+    private Map<StatisticsKey, Set<String>> columnsToRemove(StatisticsObjectConfiguration statObjCfg,
         ObjectStatisticsImpl localStat) {
         Set<String> cols = localStat.columnsStatistics().keySet();
 
-        for (ColumnStatisticsConfiguration colCfg : statObjCfg.columns())
+        for (StatisticsColumnConfiguration colCfg : statObjCfg.columns())
             cols.remove(colCfg.name());
 
         return cols.isEmpty() ? Collections.emptyMap() : Collections.singletonMap(statObjCfg.key(), cols);

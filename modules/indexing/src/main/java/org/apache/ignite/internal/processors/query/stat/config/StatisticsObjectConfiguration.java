@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,7 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 /**
  *
  */
-public class ObjectStatisticsConfiguration implements Serializable {
+public class StatisticsObjectConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -40,7 +41,7 @@ public class ObjectStatisticsConfiguration implements Serializable {
 
     /** */
     @GridToStringInclude
-    private final ColumnStatisticsConfiguration[] cols;
+    private final StatisticsColumnConfiguration[] cols;
 
     /** */
     @GridToStringInclude
@@ -50,20 +51,20 @@ public class ObjectStatisticsConfiguration implements Serializable {
     private final long ver;
 
     /** */
-    public ObjectStatisticsConfiguration(
+    public StatisticsObjectConfiguration(
         int grpId,
         StatisticsKey key,
-        ColumnStatisticsConfiguration[] cols,
+        StatisticsColumnConfiguration[] cols,
         StatisticsCollectConfiguration cfg
     ) {
         this(grpId, key, cols, cfg, 0);
     }
 
     /** */
-    private ObjectStatisticsConfiguration(
+    private StatisticsObjectConfiguration(
         int grpId,
         StatisticsKey key,
-        ColumnStatisticsConfiguration[] cols,
+        StatisticsColumnConfiguration[] cols,
         StatisticsCollectConfiguration cfg,
         long ver
     ) {
@@ -75,23 +76,23 @@ public class ObjectStatisticsConfiguration implements Serializable {
     }
 
     /** */
-    public static ObjectStatisticsConfiguration merge(ObjectStatisticsConfiguration oldInfo, ObjectStatisticsConfiguration newInfo) {
+    public static StatisticsObjectConfiguration merge(StatisticsObjectConfiguration oldInfo, StatisticsObjectConfiguration newInfo) {
         assert oldInfo.key.equals(newInfo.key) : "Invalid schema to merge: [oldKey=" + oldInfo.key
             + ", newKey=" + newInfo.key + ']';
 
         Set<String> cols = Arrays.stream(oldInfo.cols)
-            .map(ColumnStatisticsConfiguration::name).collect(Collectors.toSet());
+            .map(StatisticsColumnConfiguration::name).collect(Collectors.toSet());
 
         cols.addAll(Arrays.stream(newInfo.cols)
-            .map(ColumnStatisticsConfiguration::name).collect(Collectors.toSet()));
+            .map(StatisticsColumnConfiguration::name).collect(Collectors.toSet()));
 
-        return new ObjectStatisticsConfiguration(
+        return new StatisticsObjectConfiguration(
             newInfo.cacheGrpId,
             newInfo.key,
             cols.stream()
-                .map(ColumnStatisticsConfiguration::new)
+                .map(StatisticsColumnConfiguration::new)
                 .collect(Collectors.toList())
-                .toArray(new ColumnStatisticsConfiguration[cols.size()]),
+                .toArray(new StatisticsColumnConfiguration[cols.size()]),
             newInfo.cfg,
             oldInfo.ver + 1
         );
@@ -108,7 +109,7 @@ public class ObjectStatisticsConfiguration implements Serializable {
     }
 
     /** */
-    public ColumnStatisticsConfiguration[] columns() {
+    public StatisticsColumnConfiguration[] columns() {
         return cols;
     }
 
@@ -123,7 +124,33 @@ public class ObjectStatisticsConfiguration implements Serializable {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        StatisticsObjectConfiguration that = (StatisticsObjectConfiguration)o;
+
+        return cacheGrpId == that.cacheGrpId
+            && ver == that.ver
+            && Objects.equals(key, that.key)
+            && Arrays.equals(cols, that.cols)
+            && Objects.equals(cfg, that.cfg);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        int result = Objects.hash(cacheGrpId, key, cfg, ver);
+
+        result = 31 * result + Arrays.hashCode(cols);
+
+        return result;
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(ObjectStatisticsConfiguration.class, this);
+        return S.toString(StatisticsObjectConfiguration.class, this);
     }
 }

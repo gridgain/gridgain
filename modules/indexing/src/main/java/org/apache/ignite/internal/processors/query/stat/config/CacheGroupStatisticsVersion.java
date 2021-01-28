@@ -16,6 +16,9 @@
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
+import java.util.Objects;
+
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  *
@@ -47,5 +50,25 @@ public class CacheGroupStatisticsVersion implements Serializable {
     /** */
     public long version() {
         return ver;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        CacheGroupStatisticsVersion version = (CacheGroupStatisticsVersion)o;
+        return grpId == version.grpId && ver == version.ver;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(grpId, ver);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(CacheGroupStatisticsVersion.class, this);
     }
 }

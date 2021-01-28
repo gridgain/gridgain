@@ -19,11 +19,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
@@ -87,13 +90,16 @@ public class StatisticsUtils {
             colData.put(ts.getKey(), toMessage(ts.getValue()));
 
         StatisticsObjectData data;
+
         if (stat instanceof ObjectPartitionStatisticsImpl) {
             ObjectPartitionStatisticsImpl partStats = (ObjectPartitionStatisticsImpl) stat;
+
             data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, partStats.partId(),
                     partStats.updCnt(), colData);
         }
         else
             data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, 0,0, colData);
+
         return data;
     }
 
@@ -152,7 +158,6 @@ public class StatisticsUtils {
         // TODO: version & cfg
         return new ObjectPartitionStatisticsImpl(
             objData.partId(),
-            true,
             objData.rowsCnt(),
             objData.updCnt(),
             colNameToStat,
@@ -221,5 +226,14 @@ public class StatisticsUtils {
      */
     public static StatisticsKeyMessage statisticsKeyMessage(StatisticsTarget target) {
         return new StatisticsKeyMessage(target.schema(), target.obj(), Arrays.asList(target.columns()));
+    }
+
+    /** */
+    public static StatisticsKeyMessage statisticsObjectConfiguration2Key(StatisticsObjectConfiguration cfg) {
+        return new StatisticsKeyMessage(
+            cfg.key().schema(),
+            cfg.key().obj(),
+            Arrays.stream(cfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toList())
+        );
     }
 }

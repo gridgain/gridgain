@@ -19,17 +19,17 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
-import org.apache.ignite.internal.processors.query.stat.config.ObjectStatisticsConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Statistics gathering context.
  */
 public class LocalStatisticsGatheringContext {
     /** Keys to collect statistics by. */
-    private final Set<ObjectStatisticsConfiguration> objStatCfgs;
+    private final Set<StatisticsObjectConfiguration> objStatCfgs;
 
     /** Amount of remaining partitions */
     private int remainingParts;
@@ -41,7 +41,7 @@ public class LocalStatisticsGatheringContext {
     private final GridFutureAdapter<Void> fut;
 
     /** */
-    public LocalStatisticsGatheringContext(Set<ObjectStatisticsConfiguration> objStatCfgs, int remainingParts) {
+    public LocalStatisticsGatheringContext(Set<StatisticsObjectConfiguration> objStatCfgs, int remainingParts) {
         collectedStatistics = new HashMap<>();
         this.objStatCfgs = objStatCfgs;
         this.remainingParts = remainingParts;
@@ -49,19 +49,15 @@ public class LocalStatisticsGatheringContext {
     }
 
     /** */
-    public Set<ObjectStatisticsConfiguration> objectStatisticsConfigurations() {
+    public Set<StatisticsObjectConfiguration> objectStatisticsConfigurations() {
         return objStatCfgs;
     }
 
     /**
-     * Decrement remaining parts and tell if all required partitions are collected.
-     *
-     * @param parts Decrement.
-     * @return {@code true} if all required partition collected, {@code false} otherwise.
+     * Decrement remaining.
      */
-    private synchronized boolean decrement(int parts) {
-        this.remainingParts -= parts;
-        return remainingParts == 0;
+    public synchronized void decrement() {
+        remainingParts--;
     }
 
     /**
@@ -69,5 +65,10 @@ public class LocalStatisticsGatheringContext {
      */
     public GridFutureAdapter<Void> future() {
         return fut;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(LocalStatisticsGatheringContext.class, this);
     }
 }

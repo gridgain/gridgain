@@ -16,13 +16,14 @@
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  *
  */
-public class ColumnStatisticsConfiguration implements Serializable {
+public class StatisticsColumnConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -30,7 +31,7 @@ public class ColumnStatisticsConfiguration implements Serializable {
     private String name;
 
     /** */
-    public ColumnStatisticsConfiguration(String name) {
+    public StatisticsColumnConfiguration(String name) {
         this.name = name;
     }
 
@@ -40,8 +41,25 @@ public class ColumnStatisticsConfiguration implements Serializable {
     }
 
     /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(ColumnStatisticsConfiguration.class, this);
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        StatisticsColumnConfiguration that = (StatisticsColumnConfiguration)o;
+
+        return Objects.equals(name, that.name);
     }
 
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(name);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(StatisticsColumnConfiguration.class, this);
+    }
 }

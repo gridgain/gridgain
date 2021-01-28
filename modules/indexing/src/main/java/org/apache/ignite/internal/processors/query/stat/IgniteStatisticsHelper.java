@@ -22,7 +22,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.stat.config.ColumnStatisticsConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsClearRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
@@ -463,11 +463,11 @@ public class IgniteStatisticsHelper {
      * @param cols Columns to filter.
      * @return Column with specified names.
      */
-    public static Column[] filterColumns(Column[] cols, @Nullable ColumnStatisticsConfiguration[] colCfgs) {
+    public static Column[] filterColumns(Column[] cols, @Nullable StatisticsColumnConfiguration[] colCfgs) {
         if (F.isEmpty(colCfgs))
             return cols;
 
-        Set<String> colNamesSet = Arrays.stream(colCfgs).map(ColumnStatisticsConfiguration::name).collect(Collectors.toSet());
+        Set<String> colNamesSet = Arrays.stream(colCfgs).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet());
 
         return Arrays.stream(cols).filter(c -> colNamesSet.contains(c.getName())).toArray(Column[]::new);
     }

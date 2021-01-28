@@ -41,7 +41,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
     private IgniteStatisticsPersistenceStoreImpl statStore;
 
     /** Default statistics repository mock. */
-    private IgniteStatisticsRepositoryImpl statsRepos;
+    private IgniteStatisticsRepository statsRepos;
 
     /** All default statistics repository.cacheLocalStatistics arguments. */
     private List<Object[]> cacheArguments = new ArrayList<>();
@@ -64,7 +64,7 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
     /** {@inheritDoc} */
     @Override public void beforeTest() {
         subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
-        statsRepos = Mockito.mock(IgniteStatisticsRepositoryImpl.class);
+        statsRepos = Mockito.mock(IgniteStatisticsRepository.class);
         Mockito.doAnswer(ans -> cacheArguments.add(ans.getArguments())).when(statsRepos)
             .cacheLocalStatistics(Mockito.any(StatisticsKey.class), Mockito.anyCollection());
         metastorage = new ReadWriteMetaStorageMock();
