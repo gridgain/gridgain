@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import org.apache.ignite.internal.pagemem.PageCategory;
 
 /**
@@ -24,47 +24,47 @@ import org.apache.ignite.internal.pagemem.PageCategory;
  */
 public class PagesMetricImpl implements PagesMetric {
     /** Data pages. */
-    private AtomicLong physicalMemoryDataPagesSize = new AtomicLong(0);
+    private final LongAdder physicalMemoryDataPagesSize = new LongAdder();
     /** Indexes. */
-    private AtomicLong physicalMemoryIndexPagesSize = new AtomicLong(0);
+    private final LongAdder physicalMemoryIndexPagesSize = new LongAdder();
     /** Reuse list. */
-    private AtomicLong physicalMemoryFreelistPagesSize = new AtomicLong(0);
+    private final LongAdder physicalMemoryFreelistPagesSize = new LongAdder();
     /** Meta, tracking. */
-    private AtomicLong physicalMemoryMetaPagesSize = new AtomicLong(0);
+    private final LongAdder physicalMemoryMetaPagesSize = new LongAdder();
     /** Preallocated size. */
-    private AtomicLong physicalMemoryFreePagesSize = new AtomicLong(0);
+    private final LongAdder physicalMemoryFreePagesSize = new LongAdder();
 
     /** {@inheritDoc} */
     @Override public void pageAllocated(PageCategory category) {
-        physicalMemoryFreePagesSize.decrementAndGet();
+        physicalMemoryFreePagesSize.decrement();
         switch (category) {
             case DATA:
-                physicalMemoryDataPagesSize.getAndIncrement();
+                physicalMemoryDataPagesSize.increment();
                 break;
             case REUSE:
-                physicalMemoryDataPagesSize.getAndIncrement();
+                physicalMemoryDataPagesSize.increment();
                 break;
             case INDEX:
-                physicalMemoryIndexPagesSize.incrementAndGet();
+                physicalMemoryIndexPagesSize.increment();
                 break;
             case META:
-                physicalMemoryMetaPagesSize.incrementAndGet();
+                physicalMemoryMetaPagesSize.increment();
                 break;
         }
     }
 
     /** {@inheritDoc} */
     @Override public void pageFromReuseList(PageCategory category) {
-        physicalMemoryFreelistPagesSize.decrementAndGet();
+        physicalMemoryFreelistPagesSize.decrement();
         switch (category) {
             case META:
-                physicalMemoryMetaPagesSize.incrementAndGet();
+                physicalMemoryMetaPagesSize.increment();
                 break;
             case INDEX:
-                physicalMemoryIndexPagesSize.incrementAndGet();
+                physicalMemoryIndexPagesSize.increment();
                 break;
             case DATA:
-                physicalMemoryDataPagesSize.incrementAndGet();
+                physicalMemoryDataPagesSize.increment();
                 break;
         }
     }
@@ -75,53 +75,53 @@ public class PagesMetricImpl implements PagesMetric {
 
         switch (category) {
             case DATA:
-                physicalMemoryDataPagesSize.addAndGet(-count);
+                physicalMemoryDataPagesSize.add(-count);
                 break;
             case META:
-                physicalMemoryMetaPagesSize.addAndGet(-count);
+                physicalMemoryMetaPagesSize.add(-count);
                 break;
 
             case INDEX:
-                physicalMemoryIndexPagesSize.addAndGet(-count);
+                physicalMemoryIndexPagesSize.add(-count);
                 break;
 
         }
 
-        physicalMemoryFreelistPagesSize.addAndGet(count);
+        physicalMemoryFreelistPagesSize.add(count);
     }
 
     /** {@inheritDoc} */
     @Override public void freePageUsed() {
-        physicalMemoryFreePagesSize.decrementAndGet();
+        physicalMemoryFreePagesSize.decrement();
     }
 
     /** {@inheritDoc} */
     @Override public void freePagesIncreased(int count) {
-        physicalMemoryFreePagesSize.addAndGet(count);
+        physicalMemoryFreePagesSize.add(count);
     }
 
     /** {@inheritDoc} */
     @Override public long physicalMemoryDataPagesSize() {
-        return physicalMemoryDataPagesSize.get();
+        return physicalMemoryDataPagesSize.sum();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalMemoryIndexPagesSize() {
-        return physicalMemoryIndexPagesSize.get();
+        return physicalMemoryIndexPagesSize.sum();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalMemoryFreelistPagesSize() {
-        return physicalMemoryFreelistPagesSize.get();
+        return physicalMemoryFreelistPagesSize.sum();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalMemoryMetaPagesSize() {
-        return physicalMemoryMetaPagesSize.get();
+        return physicalMemoryMetaPagesSize.sum();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalMemoryFreePagesSize() {
-        return physicalMemoryFreePagesSize.get();
+        return physicalMemoryFreePagesSize.sum();
     }
 }
