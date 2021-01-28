@@ -358,7 +358,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "50") // Disable cleanup by unwindEvicts.
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "50")
     @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
     @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
@@ -434,7 +434,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "50") // Disable cleanup by unwindEvicts.
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "50")
     @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
     @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
