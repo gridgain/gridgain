@@ -218,9 +218,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
 
     /** Check GROUP BY operation on indexed col. */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-19071")
     public void testQueryWithGroupByPrimaryKey() throws Exception {
-        //TODO: GG-19071: make next query use correct index (K_IDX instead of primary).
         execQuery("select K.indexed, sum(K.id) from K GROUP BY K.indexed", true);
 
         assertEquals(0, localResults.size());
