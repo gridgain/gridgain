@@ -25,7 +25,6 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
