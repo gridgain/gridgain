@@ -361,7 +361,7 @@ public class IgniteStatisticsRepository {
                 .filter(s -> parts.contains(s.partId()))
                 .collect(Collectors.toList());
 
-            assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough primary partition statistics";
+            assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough partitioned statistics";
 
             ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(
                 StatisticsUtils.statisticsObjectConfiguration2Key(objStatCfg),
