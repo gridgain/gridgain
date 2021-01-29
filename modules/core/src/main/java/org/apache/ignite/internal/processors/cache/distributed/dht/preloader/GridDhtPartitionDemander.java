@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -781,11 +781,12 @@ public class GridDhtPartitionDemander {
     /**
      * Adds mvcc entries with theirs history to partition p.
      *
+     * @param topVer Topology version.
      * @param node Node which sent entry.
      * @param p Partition id.
      * @param infos Entries info for preload.
-     * @param topVer Topology version.
      * @throws IgniteInterruptedCheckedException If interrupted.
+     * @throws IgniteCheckedException If failed.
      */
     private void mvccPreloadEntries(
         AffinityTopologyVersion topVer,
@@ -796,84 +797,94 @@ public class GridDhtPartitionDemander {
         if (!infos.hasNext())
             return;
 
-        List<GridCacheMvccEntryInfo> entryHist = new ArrayList<>();
+        // Received keys by caches, for statistics.
+        Map<Integer, AtomicLong> receivedKeys = new HashMap<>();
 
-        GridCacheContext cctx = grp.sharedGroup() ? null : grp.singleCacheContext();
+        try {
+            List<GridCacheMvccEntryInfo> entryHist = new ArrayList<>();
 
-        // Loop through all received entries and try to preload them.
-        while (infos.hasNext() || !entryHist.isEmpty()) {
-            ctx.database().checkpointReadLock();
+            GridCacheContext<?, ?> cctx = grp.sharedGroup() ? null : grp.singleCacheContext();
 
-            try {
-                for (int i = 0; i < 100; i++) {
-                    boolean hasMore = infos.hasNext();
+            // Loop through all received entries and try to preload them.
+            while (infos.hasNext() || !entryHist.isEmpty()) {
+                ctx.database().checkpointReadLock();
 
-                    assert hasMore || !entryHist.isEmpty();
+                try {
+                    for (int i = 0; i < 100; i++) {
+                        boolean hasMore = infos.hasNext();
 
-                    GridCacheMvccEntryInfo entry = null;
+                        assert hasMore || !entryHist.isEmpty();
 
-                    boolean flushHistory;
+                        GridCacheMvccEntryInfo entry = null;
 
-                    if (hasMore) {
-                        entry = (GridCacheMvccEntryInfo)infos.next();
+                        boolean flushHistory;
 
-                        GridCacheMvccEntryInfo prev = entryHist.isEmpty() ? null : entryHist.get(0);
+                        if (hasMore) {
+                            entry = (GridCacheMvccEntryInfo)infos.next();
 
-                        flushHistory = prev != null && ((grp.sharedGroup() && prev.cacheId() != entry.cacheId())
-                            || !prev.key().equals(entry.key()));
-                    }
-                    else
-                        flushHistory = true;
+                            GridCacheMvccEntryInfo prev = entryHist.isEmpty() ? null : entryHist.get(0);
 
-                    if (flushHistory) {
-                        assert !entryHist.isEmpty();
-
-                        int cacheId = entryHist.get(0).cacheId();
-
-                        if (grp.sharedGroup() && (cctx == null || cacheId != cctx.cacheId())) {
-                            assert cacheId != CU.UNDEFINED_CACHE_ID;
-
-                            cctx = grp.shared().cacheContext(cacheId);
+                            flushHistory = prev != null && ((grp.sharedGroup() && prev.cacheId() != entry.cacheId())
+                                || !prev.key().equals(entry.key()));
                         }
+                        else
+                            flushHistory = true;
 
-                        if (cctx != null) {
-                            if (!mvccPreloadEntry(cctx, node, entryHist, topVer, p)) {
-                                if (log.isTraceEnabled())
-                                    log.trace("Got entries for invalid partition during " +
-                                        "preloading (will skip) [p=" + p +
-                                        ", entry=" + entryHist.get(entryHist.size() - 1) + ']');
+                        if (flushHistory) {
+                            assert !entryHist.isEmpty();
 
-                                return; // Skip current partition.
+                            int cacheId = entryHist.get(0).cacheId();
+
+                            if (grp.sharedGroup() && (cctx == null || cacheId != cctx.cacheId())) {
+                                assert cacheId != CU.UNDEFINED_CACHE_ID;
+
+                                cctx = grp.shared().cacheContext(cacheId);
                             }
 
-                            rebalanceFut.onReceivedKeys(p, 1, node);
+                            if (cctx != null) {
+                                if (!mvccPreloadEntry(cctx, node, entryHist, topVer, p)) {
+                                    if (log.isTraceEnabled()) {
+                                        log.trace("Got entries for invalid partition during " +
+                                            "preloading (will skip) [p=" + p +
+                                            ", entry=" + entryHist.get(entryHist.size() - 1) + ']');
+                                    }
 
-                            updateGroupMetrics();
+                                    return; // Skip current partition.
+                                }
+
+                                rebalanceFut.onReceivedKeys(p, 1, node);
+
+                                receivedKeys.computeIfAbsent(cacheId, cid -> new AtomicLong()).incrementAndGet();
+                            }
+
+                            if (!hasMore)
+                                return;
+
+                            entryHist.clear();
                         }
 
-                        if (!hasMore)
-                            return;
-
-                        entryHist.clear();
+                        entryHist.add(entry);
                     }
-
-                    entryHist.add(entry);
+                }
+                finally {
+                    ctx.database().checkpointReadUnlock();
                 }
             }
-            finally {
-                ctx.database().checkpointReadUnlock();
-            }
+        }
+        finally {
+            updateKeyReceivedMetrics(grp, F.viewReadOnly(receivedKeys, AtomicLong::get));
         }
     }
 
     /**
      * Adds entries with theirs history to partition p.
      *
-     * @param node Node which sent entry.
+     * @param topVer Topology version.
+     * @param node Node which sent entries.
      * @param p Partition id.
      * @param infos Entries info for preload.
-     * @param topVer Topology version.
      * @throws IgniteInterruptedCheckedException If interrupted.
+     * @throws IgniteCheckedException If failed.
      */
     private void preloadEntries(
         AffinityTopologyVersion topVer,
@@ -881,46 +892,53 @@ public class GridDhtPartitionDemander {
         int p,
         Iterator<GridCacheEntryInfo> infos
     ) throws IgniteCheckedException {
-        GridCacheContext cctx = null;
+        // Received keys by caches, for statistics.
+        Map<Integer, AtomicLong> receivedKeys = new HashMap<>();
 
-        // Loop through all received entries and try to preload them.
-        while (infos.hasNext()) {
-            ctx.database().checkpointReadLock();
+        try {
+            GridCacheContext<?, ?> cctx = null;
 
-            try {
-                for (int i = 0; i < 100; i++) {
-                    if (!infos.hasNext())
-                        break;
+            // Loop through all received entries and try to preload them.
+            while (infos.hasNext()) {
+                ctx.database().checkpointReadLock();
 
-                    GridCacheEntryInfo entry = infos.next();
+                try {
+                    for (int i = 0; i < 100; i++) {
+                        if (!infos.hasNext())
+                            break;
 
-                    if (cctx == null || (grp.sharedGroup() && entry.cacheId() != cctx.cacheId())) {
-                        cctx = grp.sharedGroup() ? grp.shared().cacheContext(entry.cacheId()) : grp.singleCacheContext();
+                        GridCacheEntryInfo entry = infos.next();
 
-                        if (cctx == null)
-                            continue;
-                        else if (cctx.isNear())
-                            cctx = cctx.dhtCache().context();
-                    }
+                        int cacheId = entry.cacheId();
 
-                    if (!preloadEntry(node, p, entry, topVer, cctx)) {
-                        if (log.isTraceEnabled())
-                            log.trace("Got entries for invalid partition during " +
-                                "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
+                        if (cctx == null || (grp.sharedGroup() && cacheId != cctx.cacheId())) {
+                            cctx = grp.sharedGroup() ? grp.shared().cacheContext(cacheId) : grp.singleCacheContext();
 
-                        return;
-                    }
+                            if (cctx == null)
+                                continue;
+                            else if (cctx.isNear())
+                                cctx = cctx.dhtCache().context();
+                        }
 
-                    //TODO: IGNITE-11330: Update metrics for touched cache only.
-                    for (GridCacheContext ctx : grp.caches()) {
-                        if (ctx.statisticsEnabled())
-                            ctx.cache().metrics0().onRebalanceKeyReceived();
+                        if (!preloadEntry(node, p, entry, topVer, cctx)) {
+                            if (log.isTraceEnabled()) {
+                                log.trace("Got entries for invalid partition during " +
+                                    "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
+                            }
+
+                            return;
+                        }
+
+                        receivedKeys.computeIfAbsent(cacheId, id -> new AtomicLong()).incrementAndGet();
                     }
                 }
+                finally {
+                    ctx.database().checkpointReadUnlock();
+                }
             }
-            finally {
-                ctx.database().checkpointReadUnlock();
-            }
+        }
+        finally {
+            updateKeyReceivedMetrics(grp, F.viewReadOnly(receivedKeys, AtomicLong::get));
         }
     }
 
@@ -940,12 +958,10 @@ public class GridDhtPartitionDemander {
         int p,
         GridCacheEntryInfo entry,
         AffinityTopologyVersion topVer,
-        GridCacheContext cctx
+        @Nullable GridCacheContext<?, ?> cctx
     ) throws IgniteCheckedException {
         assert !grp.mvccEnabled();
         assert ctx.database().checkpointLockIsHeldByThread();
-
-        updateGroupMetrics();
 
         if (cctx == null)
             return false;
@@ -1111,15 +1127,17 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Update rebalancing metrics.
+     * Updating metrics of received keys on rebalance.
+     *
+     * @param grpCtx Cache group context.
+     * @param receivedKeys Statistics of received keys by caches.
      */
-    private void updateGroupMetrics() {
-        // TODO: IGNITE-11330: Update metrics for touched cache only.
-        // Due to historical rebalancing "EstimatedRebalancingKeys" metric is currently calculated for the whole cache
-        // group (by partition counters), so "RebalancedKeys" and "RebalancingKeysRate" is calculated in the same way.
-        for (GridCacheContext cctx0 : grp.caches()) {
-            if (cctx0.statisticsEnabled())
-                cctx0.cache().metrics0().onRebalanceKeyReceived();
+    private void updateKeyReceivedMetrics(CacheGroupContext grpCtx, Map<Integer, Long> receivedKeys) {
+        if (!receivedKeys.isEmpty()) {
+            for (GridCacheContext<?, ?> cacheCtx : grpCtx.caches()) {
+                if (cacheCtx.statisticsEnabled() && receivedKeys.containsKey(cacheCtx.cacheId()))
+                    cacheCtx.cache().metrics0().onRebalanceKeyReceived(receivedKeys.get(cacheCtx.cacheId()));
+            }
         }
     }
 
