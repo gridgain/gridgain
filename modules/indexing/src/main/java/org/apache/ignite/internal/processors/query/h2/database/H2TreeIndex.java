@@ -117,6 +117,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_TABLE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_IDX_RANGE_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_IDX_RANGE_RESP;
 import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
+import static org.apache.ignite.spi.tracing.SpanStatus.UNAVAILABLE;
 import static org.gridgain.internal.h2.result.Row.MEMORY_CALCULATE;
 
 /**
@@ -790,8 +791,11 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 msg.originSegmentId()
             );
 
-            if (qctx == null)
+            if (qctx == null) {
                 res.status(STATUS_NOT_FOUND);
+
+                span.setStatus(UNAVAILABLE);
+            }
             else {
                 DistributedJoinContext joinCtx = qctx.distributedJoinContext();
 
