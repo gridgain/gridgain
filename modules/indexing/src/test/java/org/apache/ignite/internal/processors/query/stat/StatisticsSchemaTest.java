@@ -16,9 +16,12 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.stat.config.IgniteStatisticsConfigurationManager;
-import org.apache.ignite.internal.processors.query.stat.config.StatisticsCollectConfiguration;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
@@ -43,13 +46,9 @@ public class StatisticsSchemaTest extends StatisticsStorageAbstractTest {
                 Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL"))
             );
 
+        U.sleep(5000);
 
-        IgniteStatisticsConfigurationManager mgr = ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing()
-            .statsManager())
-            .statisticSchemaManager();
-
-        U.sleep(500);
-
+        checkStats();
         System.out.println("+++ RESTART");
 
         stopGrid(0);
@@ -57,5 +56,14 @@ public class StatisticsSchemaTest extends StatisticsStorageAbstractTest {
         U.sleep(500);
 
         startGrid(0);
+    }
+
+    /** */
+    private void checkStats() {
+        List<IgniteStatisticsManager> mgrs = G.allGrids().stream()
+            .map(ign-> ((IgniteEx)ign).context().query().getIndexing().statsManager())
+            .collect(Collectors.toList());
+
+        System.out.println();
     }
 }

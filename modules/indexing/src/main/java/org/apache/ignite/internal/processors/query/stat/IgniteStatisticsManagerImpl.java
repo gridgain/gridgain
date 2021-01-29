@@ -146,6 +146,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             ctx::log);
 
         statCfgMgr = new IgniteStatisticsConfigurationManager(
+            ctx,
             schemaMgr,
             this,
             ctx.internalSubscriptionProcessor(),
@@ -434,7 +435,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     public void saveGlobalStatistics(Collection<StatisticsObjectData> data) {
         for (StatisticsObjectData objData : data) {
             try {
-                ObjectStatisticsImpl objStat = StatisticsUtils.toObjectStatistics(this.ctx, objData);
+                ObjectStatisticsImpl objStat = StatisticsUtils.toObjectStatistics(ctx, objData);
 
                 statsRepos.saveGlobalStatistics(new StatisticsKey(objData.key().schema(), objData.key().obj()), objStat);
             }

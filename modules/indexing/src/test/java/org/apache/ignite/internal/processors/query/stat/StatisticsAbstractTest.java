@@ -318,7 +318,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0, 100,
             0, new byte[0]);
-        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
+        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics), 0);
     }
 
     /**
@@ -332,7 +332,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             100, 0, new byte[0]);
         return new ObjectPartitionStatisticsImpl(
             partId,  0, 0,
-            Collections.singletonMap("col1", colStatistics)
+            Collections.singletonMap("col1", colStatistics),
+            0
         );
     }
 

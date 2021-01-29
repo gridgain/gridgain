@@ -95,10 +95,10 @@ public class StatisticsUtils {
             ObjectPartitionStatisticsImpl partStats = (ObjectPartitionStatisticsImpl) stat;
 
             data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, partStats.partId(),
-                    partStats.updCnt(), colData);
+                    partStats.updCnt(), colData, partStats.version());
         }
         else
-            data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, 0,0, colData);
+            data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, 0, 0, colData, stat.version());
 
         return data;
     }
@@ -159,7 +159,8 @@ public class StatisticsUtils {
             objData.partId(),
             objData.rowsCnt(),
             objData.updCnt(),
-            colNameToStat
+            colNameToStat,
+            objData.version()
         );
     }
 
@@ -180,7 +181,7 @@ public class StatisticsUtils {
         for (Map.Entry<String, StatisticsColumnData> cs : data.data().entrySet())
             colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
 
-        return new ObjectStatisticsImpl(data.rowsCnt(), colNameToStat);
+        return new ObjectStatisticsImpl(data.rowsCnt(), colNameToStat, data.version());
     }
 
     /**

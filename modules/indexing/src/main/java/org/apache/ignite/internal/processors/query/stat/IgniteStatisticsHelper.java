@@ -116,13 +116,17 @@ public class IgniteStatisticsHelper {
     ) {
         assert !stats.isEmpty();
 
+        long ver = F.first(stats).version();
 
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedCols.length);
         long rowCnt = 0;
+
         for (Column col : selectedCols)
             colPartStats.put(col, new ArrayList<>());
 
         for (ObjectStatisticsImpl partStat : stats) {
+            assert partStat.version() == ver : "Different partition statistic version";
+
             for (Column col : selectedCols) {
                 ColumnStatistics colPartStat = partStat.columnStatistics(col.getName());
 
@@ -145,7 +149,7 @@ public class IgniteStatisticsHelper {
             colStats.put(col.getName(), stat);
         }
 
-        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
+        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats, ver);
 
         return tblStats;
     }

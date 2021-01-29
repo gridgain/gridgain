@@ -31,6 +31,9 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     /** Map columnKey to its statistic. */
     private final Map<String, ColumnStatistics> colNameToStat;
 
+    /** */
+    private final long ver;
+
     /**
      * Constructor.
      *
@@ -39,7 +42,8 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
      */
     public ObjectStatisticsImpl(
         long rowsCnt,
-        Map<String, ColumnStatistics> colNameToStat
+        Map<String, ColumnStatistics> colNameToStat,
+        long ver
     ) {
         assert rowsCnt >= 0 : "rowsCnt >= 0";
 
@@ -47,6 +51,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
 
         this.rowsCnt = rowsCnt;
         this.colNameToStat = colNameToStat;
+        this.ver = ver;
     }
 
     /**
@@ -73,17 +78,27 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
         return colNameToStat;
     }
 
+    /** */
+    public long version() {
+        return ver;
+    }
+
     /** {@inheritDoc} */
     @Override public ObjectStatisticsImpl clone() {
-        return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat));
+        return new ObjectStatisticsImpl(rowsCnt, new HashMap<>(colNameToStat), ver);
     }
 
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
         ObjectStatisticsImpl that = (ObjectStatisticsImpl) o;
-        return rowsCnt == that.rowsCnt &&
+
+        return ver == that.ver &&
+                rowsCnt == that.rowsCnt &&
                 Objects.equals(colNameToStat, that.colNameToStat);
     }
 

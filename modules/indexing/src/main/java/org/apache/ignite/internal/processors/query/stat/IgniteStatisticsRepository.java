@@ -351,25 +351,23 @@ public class IgniteStatisticsRepository {
     }
 
     /** */
-    public void refreshAggregatedLocalStatistics(Set<Integer> parts, Set<StatisticsObjectConfiguration> cfgs) {
+    public void refreshAggregatedLocalStatistics(Set<Integer> parts, StatisticsObjectConfiguration objStatCfg) {
         log.info("+++ REFRESH");
 
-        for (StatisticsObjectConfiguration objStatCfg : cfgs) {
-            Collection<ObjectPartitionStatisticsImpl> stats = store.getLocalPartitionsStatistics(objStatCfg.key());
+        Collection<ObjectPartitionStatisticsImpl> stats = store.getLocalPartitionsStatistics(objStatCfg.key());
 
-            Collection<ObjectPartitionStatisticsImpl> statsToAgg = stats.stream()
-                .filter(s -> parts.contains(s.partId()))
-                .collect(Collectors.toList());
+        Collection<ObjectPartitionStatisticsImpl> statsToAgg = stats.stream()
+            .filter(s -> parts.contains(s.partId()))
+            .collect(Collectors.toList());
 
-            assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough partitioned statistics";
+        assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough partitioned statistics";
 
-            ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(
-                StatisticsUtils.statisticsObjectConfiguration2Key(objStatCfg),
-                statsToAgg
-            );
+        ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(
+            StatisticsUtils.statisticsObjectConfiguration2Key(objStatCfg),
+            statsToAgg
+        );
 
-            saveLocalStatistics(objStatCfg.key(), locStat);
-        }
+        saveLocalStatistics(objStatCfg.key(), locStat);
     }
 
     /** */

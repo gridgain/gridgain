@@ -16,18 +16,19 @@
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
@@ -38,11 +39,12 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepository;
-import org.apache.ignite.internal.processors.query.stat.ObjectStatisticsImpl;
+import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatisticsImpl;
 import org.apache.ignite.internal.processors.query.stat.StatisticsGatherer;
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
 
@@ -51,13 +53,14 @@ import org.gridgain.internal.h2.table.Column;
  */
 public class IgniteStatisticsConfigurationManager implements DistributedMetastorageLifecycleListener {
     /** */
+    public static final String[] EMPTY_STR_ARRAY = new String[0];
+    public static final Column[] EMPTY_COLUMNS_ARR = new Column[0];
+
+    /** */
     private final GridKernalContext ctx;
 
     /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
-
-    /** */
-    private static final String STAT_CACHE_GRP_PREFIX = "sql.stat.grp.";
 
     /** */
     private final IgniteStatisticsRepository localRepo;
@@ -107,8 +110,21 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
         distrMetaStorage = (DistributedMetaStorage)metastorage;
 
         distrMetaStorage.listen(
-            (metaKey) -> metaKey.startsWith(STAT_CACHE_GRP_PREFIX),
-            (k, oldV, newV) -> onUpdateStatisticSchema(k, (CacheGroupStatisticsVersion)oldV, (CacheGroupStatisticsVersion)newV)
+            (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
+            (k, oldV, newV) ->  {
+                mgmtPool.submit(() -> {
+                    try {
+                        onUpdateStatisticConfiguration(
+                            (StatisticsObjectConfiguration)oldV,
+                            (StatisticsObjectConfiguration)newV
+                        );
+                    }
+                    catch (IgniteCheckedException e) {
+                        log.warning("Unexpected exception on check local statistic for cache group [old="
+                            + oldV + ", new=" + newV + ']');
+                    }
+                });
+            }
         );
     }
 
@@ -139,9 +155,6 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
                 )
             );
         }
-
-        for (int grpId : grpIds)
-            updateCacheGroupStatisticVersion(grpId);
     }
 
     /** */
@@ -181,35 +194,11 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
         }
     }
 
-    /**
-     *
-     */
-    private void updateCacheGroupStatisticVersion(int cacheGroupId) {
-        try {
-            while (true) {
-                String key = STAT_CACHE_GRP_PREFIX + cacheGroupId;
-
-                CacheGroupStatisticsVersion oldGrp = distrMetaStorage.read(key);
-
-                long ver = 0;
-
-                if (oldGrp != null)
-                    ver = oldGrp.version() + 1;
-
-                if (distrMetaStorage.compareAndSet(key, oldGrp, new CacheGroupStatisticsVersion(cacheGroupId, ver)))
-                    return;
-            }
-        }
-        catch (IgniteCheckedException ex) {
-            throw new IgniteSQLException("Error on get or update statistic schema", IgniteQueryErrorCode.UNKNOWN, ex);
-        }
-    }
-
     /** {@inheritDoc} */
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
         mgmtPool.submit(() -> {
             try {
-                // TODO: check all
+                distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> checkLocalStatistics((StatisticsObjectConfiguration)v));
             }
             catch (IgniteCheckedException e) {
                 log.warning("Unexpected exception on check local statistic on start", e);
@@ -217,56 +206,85 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
         });
     }
 
-
     /** */
-    private void updateLocalStatistics(int cacheGrpId) throws IgniteCheckedException {
-        Set<StatisticsObjectConfiguration> updSet = new HashSet<>();
+    private void checkLocalStatistics(StatisticsObjectConfiguration cfg) {
+        GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
+        GridCacheContext cctx = tbl.cacheContext();
 
-        Map<StatisticsKey, Set<String>> rmvColsMap = new HashMap<>();
+        final Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());
 
-        distrMetaStorage.iterate(STAT_OBJ_PREFIX + cacheGrpId + '.', (key, val) -> {
-            StatisticsObjectConfiguration objCfg = (StatisticsObjectConfiguration)val;
-            ObjectStatisticsImpl localStat = localRepo.getLocalStatistics(objCfg.key());
+        Collection<ObjectPartitionStatisticsImpl> partStats = localRepo.getLocalPartitionsStatistics(cfg.key());
 
-            updSet.add(objCfg);
+        Set<Integer> partsToRemove;
+        Set<Integer> partsToCollect;
 
-            if (localStat != null)
-                rmvColsMap.putAll(columnsToRemove(objCfg, localStat));
-        });
+        if (!F.isEmpty(partStats)) {
+            Set<Integer> storedParts = partStats.stream()
+                .mapToInt(ObjectPartitionStatisticsImpl::partId)
+                .boxed()
+                .collect(Collectors.toSet());
 
-        rmvColsMap.forEach((key, colSet) -> {
-            log.info("+++ DELETE:" + rmvColsMap);
-            localRepo.clearLocalStatistics(key, colSet.toArray(new String[colSet.size()]));
+            partsToRemove = new HashSet<>(storedParts);
+            partsToRemove.removeAll(parts);
 
-            localRepo.clearLocalPartitionsStatistics(key, colSet.toArray(new String[colSet.size()]));
-        });
+            partsToCollect = new HashSet<>(parts);
+            partsToCollect.removeAll(storedParts);
 
-        gatherer.collectLocalObjectsStatisticsAsync(cacheGrpId, updSet);
-    }
-
-    /** */
-    private void onUpdateStatisticSchema(String key, CacheGroupStatisticsVersion ignore, CacheGroupStatisticsVersion grpStat) {
-        mgmtPool.submit(() -> {
-            try {
-                updateLocalStatistics(grpStat.cacheGroupId());
+            for (ObjectPartitionStatisticsImpl pstat : partStats) {
+                if (pstat.version() != cfg.version())
+                    partsToCollect.add(pstat.partId());
             }
-            catch (IgniteCheckedException e) {
-                log.warning("Unexpected exception on check local statistic for cache group [grpId="
-                    + grpStat.cacheGroupId() + ']', e);
-            }
+        }
+        else {
+            partsToCollect = parts;
+            partsToRemove = Collections.emptySet();
+        }
+
+        partsToRemove.forEach(p -> localRepo.clearLocalPartitionStatistics(cfg.key(), p));
+
+        Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), cfg.columns());
+
+        CompletableFuture<Void> f = gatherer.collectLocalObjectsStatisticsAsync(
+            tbl,
+            cols,
+            partsToCollect,
+            cfg.version()
+        );
+
+        f.thenAccept((v) -> {
+            localRepo.refreshAggregatedLocalStatistics(parts, cfg);
         });
     }
 
     /** */
-    private Map<StatisticsKey, Set<String>> columnsToRemove(StatisticsObjectConfiguration statObjCfg,
-        ObjectStatisticsImpl localStat) {
-        Set<String> cols = localStat.columnsStatistics().keySet();
+    private void onUpdateStatisticConfiguration(
+        StatisticsObjectConfiguration oldCfg,
+        final StatisticsObjectConfiguration newCfg
+    ) throws IgniteCheckedException {
+        Set<String> newCols = Arrays.stream(newCfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet());
+        Set<String> oldCols = Arrays.stream(oldCfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet());
 
-        for (StatisticsColumnConfiguration colCfg : statObjCfg.columns())
-            cols.remove(colCfg.name());
+        oldCols.removeAll(newCols);
 
-        return cols.isEmpty() ? Collections.emptyMap() : Collections.singletonMap(statObjCfg.key(), cols);
+        String[] rmCols = oldCols.toArray(EMPTY_STR_ARRAY);
+
+        localRepo.clearLocalStatistics(newCfg.key(), rmCols);
+        localRepo.clearLocalPartitionsStatistics(newCfg.key(), rmCols);
+
+        GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
+        GridCacheContext cctx = tbl.cacheContext();
+
+        Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());
+
+        Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), newCfg.columns());
+
+        CompletableFuture<Void> f = gatherer.collectLocalObjectsStatisticsAsync(tbl, cols, parts, newCfg.version());
+
+        f.thenAccept((v) -> {
+            localRepo.refreshAggregatedLocalStatistics(parts, newCfg);
+        });
     }
+
 
     /** */
     private static String key2String(StatisticsKey key) {

@@ -43,9 +43,10 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
             int partId,
             long rowsCnt,
             long updCnt,
-            Map<String, ColumnStatistics> colNameToStat
+            Map<String, ColumnStatistics> colNameToStat,
+            long ver
     ) {
-        super(rowsCnt, colNameToStat);
+        super(rowsCnt, colNameToStat, ver);
 
         this.partId = partId;
         this.updCnt = updCnt;
@@ -67,15 +68,22 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
 
     /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl clone() {
-        return new ObjectPartitionStatisticsImpl(partId, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
+        return new ObjectPartitionStatisticsImpl(partId, rowCount(), updCnt, new HashMap<>(columnsStatistics()), version());
     }
 
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        if (!super.equals(o))
+            return false;
+
         ObjectPartitionStatisticsImpl that = (ObjectPartitionStatisticsImpl) o;
+
         return partId == that.partId &&
                 updCnt == that.updCnt;
     }

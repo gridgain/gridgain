@@ -58,6 +58,9 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
     private final int partId;
 
     /** */
+    private final long ver;
+
+    /** */
     private final Supplier<Boolean> cancelled;
 
     /** */
@@ -71,12 +74,14 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
         GridH2Table tbl,
         Column[] cols,
         int partId,
+        long ver,
         Supplier<Boolean> cancelled,
         IgniteLogger log
     ) {
         this.tbl = tbl;
         this.cols = cols;
         this.partId = partId;
+        this.ver = ver;
         this.cancelled = cancelled;
         this.log = log;
     }
@@ -97,7 +102,7 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
 
         try {
             if (!reserved || (locPart.state() != OWNING)) {
-                // TODO: RETRY
+                log.info("+++ RETRY!!!");
                 if (locPart.state() == LOST)
                     return null;
 
@@ -124,7 +129,7 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
                         checkInt = CANCELLED_CHECK_INTERVAL;
                     }
 
-                    if (!typeDesc.matchType(row.value()) || !wasExpired(row))
+                    if (!typeDesc.matchType(row.value()) || wasExpired(row))
                         continue;
 
                     H2Row h2row = tbl.rowDescriptor().createRow(row);
@@ -145,7 +150,8 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
                 partId,
                 colStats.values().iterator().next().total(),
                 locPart.updateCounter(),
-                colStats
+                colStats,
+                ver
             );
         }
         finally {

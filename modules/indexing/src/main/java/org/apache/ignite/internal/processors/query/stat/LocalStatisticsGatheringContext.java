@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -28,29 +29,16 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Statistics gathering context.
  */
 public class LocalStatisticsGatheringContext {
-    /** Keys to collect statistics by. */
-    private final Set<StatisticsObjectConfiguration> objStatCfgs;
-
     /** Amount of remaining partitions */
     private int remainingParts;
-
-    /** Collected local statistics. */
-    private final Map<StatisticsKey, Collection<ObjectStatisticsImpl>> collectedStatistics;
 
     /** Done future adapter. */
     private final GridFutureAdapter<Void> fut;
 
     /** */
-    public LocalStatisticsGatheringContext(Set<StatisticsObjectConfiguration> objStatCfgs, int remainingParts) {
-        collectedStatistics = new HashMap<>();
-        this.objStatCfgs = objStatCfgs;
+    public LocalStatisticsGatheringContext(int remainingParts) {
         this.remainingParts = remainingParts;
         this.fut = new GridFutureAdapter<>();
-    }
-
-    /** */
-    public Set<StatisticsObjectConfiguration> objectStatisticsConfigurations() {
-        return objStatCfgs;
     }
 
     /**
