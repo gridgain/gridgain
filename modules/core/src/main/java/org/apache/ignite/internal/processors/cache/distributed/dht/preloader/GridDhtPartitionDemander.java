@@ -786,7 +786,6 @@ public class GridDhtPartitionDemander {
      * @param p Partition id.
      * @param infos Entries info for preload.
      * @throws IgniteInterruptedCheckedException If interrupted.
-     * @throws IgniteCheckedException If failed.
      */
     private void mvccPreloadEntries(
         AffinityTopologyVersion topVer,
@@ -800,80 +799,77 @@ public class GridDhtPartitionDemander {
         // Received keys by caches, for statistics.
         Map<Integer, AtomicLong> receivedKeys = new HashMap<>();
 
-        try {
-            List<GridCacheMvccEntryInfo> entryHist = new ArrayList<>();
+        List<GridCacheMvccEntryInfo> entryHist = new ArrayList<>();
 
-            GridCacheContext<?, ?> cctx = grp.sharedGroup() ? null : grp.singleCacheContext();
+        GridCacheContext<?, ?> cctx = grp.sharedGroup() ? null : grp.singleCacheContext();
 
-            // Loop through all received entries and try to preload them.
-            while (infos.hasNext() || !entryHist.isEmpty()) {
-                ctx.database().checkpointReadLock();
+        // Loop through all received entries and try to preload them.
+        while (infos.hasNext() || !entryHist.isEmpty()) {
+            ctx.database().checkpointReadLock();
 
-                try {
-                    for (int i = 0; i < 100; i++) {
-                        boolean hasMore = infos.hasNext();
+            try {
+                for (int i = 0; i < 100; i++) {
+                    boolean hasMore = infos.hasNext();
 
-                        assert hasMore || !entryHist.isEmpty();
+                    assert hasMore || !entryHist.isEmpty();
 
-                        GridCacheMvccEntryInfo entry = null;
+                    GridCacheMvccEntryInfo entry = null;
 
-                        boolean flushHistory;
+                    boolean flushHistory;
 
-                        if (hasMore) {
-                            entry = (GridCacheMvccEntryInfo)infos.next();
+                    if (hasMore) {
+                        entry = (GridCacheMvccEntryInfo)infos.next();
 
-                            GridCacheMvccEntryInfo prev = entryHist.isEmpty() ? null : entryHist.get(0);
+                        GridCacheMvccEntryInfo prev = entryHist.isEmpty() ? null : entryHist.get(0);
 
-                            flushHistory = prev != null && ((grp.sharedGroup() && prev.cacheId() != entry.cacheId())
-                                || !prev.key().equals(entry.key()));
+                        flushHistory = prev != null && ((grp.sharedGroup() && prev.cacheId() != entry.cacheId())
+                            || !prev.key().equals(entry.key()));
+                    }
+                    else
+                        flushHistory = true;
+
+                    if (flushHistory) {
+                        assert !entryHist.isEmpty();
+
+                        int cacheId = entryHist.get(0).cacheId();
+
+                        if (grp.sharedGroup() && (cctx == null || cacheId != cctx.cacheId())) {
+                            assert cacheId != CU.UNDEFINED_CACHE_ID;
+
+                            cctx = grp.shared().cacheContext(cacheId);
                         }
-                        else
-                            flushHistory = true;
 
-                        if (flushHistory) {
-                            assert !entryHist.isEmpty();
-
-                            int cacheId = entryHist.get(0).cacheId();
-
-                            if (grp.sharedGroup() && (cctx == null || cacheId != cctx.cacheId())) {
-                                assert cacheId != CU.UNDEFINED_CACHE_ID;
-
-                                cctx = grp.shared().cacheContext(cacheId);
-                            }
-
-                            if (cctx != null) {
-                                if (!mvccPreloadEntry(cctx, node, entryHist, topVer, p)) {
-                                    if (log.isTraceEnabled()) {
-                                        log.trace("Got entries for invalid partition during " +
-                                            "preloading (will skip) [p=" + p +
-                                            ", entry=" + entryHist.get(entryHist.size() - 1) + ']');
-                                    }
-
-                                    return; // Skip current partition.
+                        if (cctx != null) {
+                            if (!mvccPreloadEntry(cctx, node, entryHist, topVer, p)) {
+                                if (log.isTraceEnabled()) {
+                                    log.trace("Got entries for invalid partition during " +
+                                        "preloading (will skip) [p=" + p +
+                                        ", entry=" + entryHist.get(entryHist.size() - 1) + ']');
                                 }
 
-                                rebalanceFut.onReceivedKeys(p, 1, node);
-
-                                receivedKeys.computeIfAbsent(cacheId, cid -> new AtomicLong()).incrementAndGet();
+                                return; // Skip current partition.
                             }
 
-                            if (!hasMore)
-                                return;
+                            rebalanceFut.onReceivedKeys(p, 1, node);
 
-                            entryHist.clear();
+                            receivedKeys.computeIfAbsent(cacheId, cid -> new AtomicLong()).incrementAndGet();
                         }
 
-                        entryHist.add(entry);
+                        entryHist.clear();
+
+                        if (!hasMore)
+                            break;
                     }
-                }
-                finally {
-                    ctx.database().checkpointReadUnlock();
+
+                    entryHist.add(entry);
                 }
             }
+            finally {
+                ctx.database().checkpointReadUnlock();
+            }
         }
-        finally {
-            updateKeyReceivedMetrics(grp, F.viewReadOnly(receivedKeys, AtomicLong::get));
-        }
+
+        updateKeyReceivedMetrics(grp, F.viewReadOnly(receivedKeys, AtomicLong::get));
     }
 
     /**
@@ -884,7 +880,6 @@ public class GridDhtPartitionDemander {
      * @param p Partition id.
      * @param infos Entries info for preload.
      * @throws IgniteInterruptedCheckedException If interrupted.
-     * @throws IgniteCheckedException If failed.
      */
     private void preloadEntries(
         AffinityTopologyVersion topVer,
@@ -895,51 +890,48 @@ public class GridDhtPartitionDemander {
         // Received keys by caches, for statistics.
         Map<Integer, AtomicLong> receivedKeys = new HashMap<>();
 
-        try {
-            GridCacheContext<?, ?> cctx = null;
+        GridCacheContext<?, ?> cctx = null;
 
-            // Loop through all received entries and try to preload them.
-            while (infos.hasNext()) {
-                ctx.database().checkpointReadLock();
+        // Loop through all received entries and try to preload them.
+        while (infos.hasNext()) {
+            ctx.database().checkpointReadLock();
 
-                try {
-                    for (int i = 0; i < 100; i++) {
-                        if (!infos.hasNext())
-                            break;
+            try {
+                for (int i = 0; i < 100; i++) {
+                    if (!infos.hasNext())
+                        break;
 
-                        GridCacheEntryInfo entry = infos.next();
+                    GridCacheEntryInfo entry = infos.next();
 
-                        int cacheId = entry.cacheId();
+                    int cacheId = entry.cacheId();
 
-                        if (cctx == null || (grp.sharedGroup() && cacheId != cctx.cacheId())) {
-                            cctx = grp.sharedGroup() ? grp.shared().cacheContext(cacheId) : grp.singleCacheContext();
+                    if (cctx == null || (grp.sharedGroup() && cacheId != cctx.cacheId())) {
+                        cctx = grp.sharedGroup() ? grp.shared().cacheContext(cacheId) : grp.singleCacheContext();
 
-                            if (cctx == null)
-                                continue;
-                            else if (cctx.isNear())
-                                cctx = cctx.dhtCache().context();
-                        }
-
-                        if (!preloadEntry(node, p, entry, topVer, cctx)) {
-                            if (log.isTraceEnabled()) {
-                                log.trace("Got entries for invalid partition during " +
-                                    "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
-                            }
-
-                            return;
-                        }
-
-                        receivedKeys.computeIfAbsent(cacheId, id -> new AtomicLong()).incrementAndGet();
+                        if (cctx == null)
+                            continue;
+                        else if (cctx.isNear())
+                            cctx = cctx.dhtCache().context();
                     }
-                }
-                finally {
-                    ctx.database().checkpointReadUnlock();
+
+                    if (!preloadEntry(node, p, entry, topVer, cctx)) {
+                        if (log.isTraceEnabled()) {
+                            log.trace("Got entries for invalid partition during " +
+                                "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
+                        }
+
+                        return;
+                    }
+
+                    receivedKeys.computeIfAbsent(cacheId, id -> new AtomicLong()).incrementAndGet();
                 }
             }
+            finally {
+                ctx.database().checkpointReadUnlock();
+            }
         }
-        finally {
-            updateKeyReceivedMetrics(grp, F.viewReadOnly(receivedKeys, AtomicLong::get));
-        }
+
+        updateKeyReceivedMetrics(grp, F.viewReadOnly(receivedKeys, AtomicLong::get));
     }
 
     /**
