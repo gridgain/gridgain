@@ -22,11 +22,6 @@
            http://maven.apache.org/xsd/component-1.1.2.xsd">
     <files>
         <file>
-            <source>README.txt</source>
-            <outputDirectory>/</outputDirectory>
-        </file>
-
-        <file>
             <source>modules/h2/target/ignite-h2-${project.version}.jar</source>
             <outputDirectory>/libs/ignite-indexing</outputDirectory>
         </file>
