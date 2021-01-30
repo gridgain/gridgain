@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.stat.config.IgniteStatisticsConfigurationManager;
 import org.apache.ignite.internal.util.typedef.G;
@@ -48,14 +49,35 @@ public class StatisticsSchemaTest extends StatisticsStorageAbstractTest {
 
         U.sleep(5000);
 
+        startGrid(2);
+
+//        checkStats();
+
+        startGrid(3);
+
+        U.sleep(1000);
+
+        grid(0).cluster().setBaselineTopology(grid(0).context().discovery().topologyVersion());
+
+        U.sleep(1000);
+
         checkStats();
-        System.out.println("+++ RESTART");
 
-        stopGrid(0);
+//        System.out.println("+++ RESTART");
+//
+//        stopAllGrids();
+//
+//        U.sleep(500);
+//
+//        startGrid(0);
+//
+//        grid(0).context().query().querySqlFields(
+//            new SqlFieldsQuery("CREATE TABLE TEST(ID INT PRIMARY KEY, VAL INT)"),
+//            false
+//        );
+//
+        U.sleep(5000);
 
-        U.sleep(500);
-
-        startGrid(0);
     }
 
     /** */
