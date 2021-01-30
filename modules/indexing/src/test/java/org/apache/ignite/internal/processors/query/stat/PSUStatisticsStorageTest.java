@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
@@ -44,25 +45,33 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_B"}, lessSql, noHints);
 
         // 2) partially remove statistics for one extra column and check chat the rest statistics still can be used
-        statsMgr.clearObjectStatistics("PUBLIC", "SMALL", "A");
+        statsMgr.clearObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_B"}, lessSql, noHints);
 
         // 3) partially remove necessarily for the query statistics and check that query plan will be changed
-        statsMgr.clearObjectStatistics("PUBLIC", "SMALL", "B");
+        statsMgr.clearObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "B"));
 
-        checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_C"}, lessSql, noHints);
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_C"}, lessSql, noHints);
+                return true;
+            }
+            catch (AssertionError e) {
+                return false;
+            }
+        }, TIMEOUT);
 
         // 4) partially collect statistics for extra column and check that query plan still unable to get all statistics
         //      it wants
 
-        statsMgr.collectObjectStatistics("PUBLIC", "SMALL", "A");
+        statsMgr.gatherObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_C"}, lessSql, noHints);
 
         // 5) partially collect statistics for the necessarily column and check that the query plan will restore to optimal
 
-        statsMgr.collectObjectStatistics("PUBLIC", "SMALL", "B");
+        statsMgr.gatherObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "B"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_B"}, lessSql, noHints);
     }

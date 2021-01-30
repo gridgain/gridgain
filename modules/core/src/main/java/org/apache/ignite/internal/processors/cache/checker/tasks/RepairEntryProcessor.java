@@ -29,8 +29,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
-
 /** Entry processor to repair inconsistent entries. */
 public class RepairEntryProcessor implements EntryProcessor {
     /** Value to set. */
@@ -122,20 +120,8 @@ public class RepairEntryProcessor implements EntryProcessor {
         }
         else {
             if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
-                long recheckStartTime = minValue(VersionedValue::recheckStartTime);
-
-                boolean inEntryTTLBounds =
-                    (System.currentTimeMillis() - recheckStartTime) < Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000);
-
-                // Min available update counter for the key at all nodes.
-                // It just fast solution for null value problem. We should use other way to fix it (versionedVal.updateCounter()).
-                long minUpdateCntr = minValue(VersionedValue::updateCounter);
-                long currUpdateCntr = updateCounter(cctx, entry.getKey());
-
-                boolean inDeferredDelQueueBounds = ((currUpdateCntr - minUpdateCntr) < rmvQueueMaxSize);
-
-                //TODO Remove it after fixes: https://ggsystems.atlassian.net/browse/GG-27419
-                if (cctx.config().getAtomicityMode() != CacheAtomicityMode.ATOMIC || inEntryTTLBounds && inDeferredDelQueueBounds) {
+                // TODO https://ggsystems.atlassian.net/browse/GG-27419
+                if (cctx.config().getAtomicityMode() != CacheAtomicityMode.ATOMIC) {
                     if (val == null)
                         entry.remove();
                     else

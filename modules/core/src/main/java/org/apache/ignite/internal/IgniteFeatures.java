@@ -200,7 +200,10 @@ public enum IgniteFeatures {
     CUSTOM_SNAPSHOT_OPERATIONS(53),
 
     /** Point-in-time distributed property. */
-    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54);
+    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54),
+
+    /** Statistics collection. */
+    STATISTICS_COLLECTION(55);
 
     /**
      * Unique feature identifier.

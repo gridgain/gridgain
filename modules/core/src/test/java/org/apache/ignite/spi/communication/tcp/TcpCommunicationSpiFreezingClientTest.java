@@ -22,18 +22,22 @@ import java.util.Iterator;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.util.lang.gridfunc.NoOpClosure;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -44,6 +48,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 /**
  * Tests that freezing due to JVM STW client will be failed if connection can't be established.
  */
+@WithSystemProperty(key = "IGNITE_ENABLE_FORCIBLE_NODE_KILL", value = "true")
 public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTest {
     /** */
     private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
@@ -77,20 +82,6 @@ public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTes
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        System.setProperty(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL, "true");
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
-    }
-
-    /** {@inheritDoc} */
     @Override protected boolean isMultiJvm() {
         return true;
     }
@@ -101,9 +92,9 @@ public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTes
     @Test
     public void testFreezingClient() throws Exception {
         try {
-            final IgniteEx srv = startGrids(2);
+            final IgniteEx srv = startGrids(1);
 
-            final IgniteEx client = startClientGrid(3);
+            final IgniteEx client = startClientGrid(2);
 
             final int keysCnt = 100_000;
 
@@ -112,19 +103,42 @@ public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTes
                     streamer.addData(i, new byte[512]);
             }
 
+            log.info("Data loaded");
+
             // Wait for connections go idle.
             doSleep(1000);
 
-            srv.compute(srv.cluster().forNode(client.localNode())).withNoFailover().call(new ClientClosure());
+            IgniteInternalFuture scanFut = GridTestUtils.runAsync(new Runnable() {
+                @Override public void run() {
+                    try {
+                        // Try execute scan query from client. Server node will try to connect on query response.
+                        srv.compute(srv.cluster().forNode(client.localNode())).withNoFailover().call(new ClientClosure());
 
-            fail("Client node must be kicked from topology");
-        }
-        catch (ClusterTopologyException e) {
-            // Expected.
+                        fail("Client node must be kicked from topology");
+                    }
+                    catch (ClusterTopologyException e) {
+                        log.info("Expected " + X.getFullStackTrace(e));
+                    }
+                }
+            });
 
-            e.printStackTrace();
+            doSleep(1000);
 
-            System.out.println(e);
+            IgniteInternalFuture<?> connFut = multithreadedAsync(new Runnable() {
+                @Override public void run() {
+                    try {
+                        srv.compute(srv.cluster().forNode(client.localNode())).withNoFailover().run(new NoOpClosure());
+
+                        fail("Client node must be kicked from topology");
+                    }
+                    catch (Exception ignored) {
+                        // Expected.
+                    }
+                }
+            }, 32, "connect-thread");
+
+            scanFut.get();
+            connFut.get();
         }
         finally {
             stopAllGrids();
@@ -169,7 +183,7 @@ public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTes
         }
 
         /**
-         *
+         * This will prevent threads to enter STW state.
          */
         public static double simulateLoad() {
             double d = 0;

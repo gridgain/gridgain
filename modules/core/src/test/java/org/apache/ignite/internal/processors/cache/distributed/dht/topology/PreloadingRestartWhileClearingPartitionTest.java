@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
@@ -29,21 +28,26 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloaderAssignments;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.PRELOADER_FORCE_CLEAR;
 
 /**
  * Tests if a rebalancing was cancelled and restarted during partition pre-clearing caused by full rebalancing.
  */
+@WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
 public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstractTest {
     /**
      * {@inheritDoc}
@@ -134,22 +138,26 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
 
         assertTrue(U.await(lock, GridDhtLocalPartitionSyncEviction.TIMEOUT, TimeUnit.MILLISECONDS));
 
-        // Stop supplier for clearingPart.
-        GridCacheContext<Object, Object> ctx = g2.cachex(DEFAULT_CACHE_NAME).context();
+        // Stop a supplier for the #clearingPart.
+        GridCacheContext<Object, Object> ctx2 = g2.cachex(DEFAULT_CACHE_NAME).context();
         GridDhtPartitionDemander.RebalanceFuture rebFut =
-            (GridDhtPartitionDemander.RebalanceFuture) ctx.preloader().rebalanceFuture();
+            (GridDhtPartitionDemander.RebalanceFuture) ctx2.preloader().rebalanceFuture();
 
         GridDhtPreloaderAssignments assignments = U.field(rebFut, "assignments");
 
         ClusterNode supplier = assignments.supplier(clearingPart);
 
-        AtomicReference<GridFutureAdapter<?>> ref = U.field(ctx.topology().localPartition(clearingPart), "finishFutRef");
+        PartitionsEvictManager.PartitionEvictionTask task =
+            g2.context().cache().context().evict().clearingTask(CU.cacheId(DEFAULT_CACHE_NAME), clearingPart);
 
-        GridFutureAdapter clearFut = ref.get();
+        IgniteInternalFuture<Void> clearFut = task.finishFuture();
 
         assertFalse(clearFut.isDone());
 
         grid(supplier).close();
+
+        // On rebalancing restart due to cancellation, method GridDhtLocalPartition.clearAsync will be called again,
+        // but the partition is already cleared by previous (delayed) attempt.
 
         doSleep(1000);
 

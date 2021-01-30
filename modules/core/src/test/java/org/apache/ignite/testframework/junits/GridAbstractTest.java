@@ -994,6 +994,25 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Starts new grid with given configuration and overriding {@link DependencyResolver}.
+     *
+     * @param cfg Configuration.
+     * @param rslvr Dependency provider.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(IgniteConfiguration cfg, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
+
+        try {
+            return (IgniteEx)startGrid(cfg.getIgniteInstanceName(), cfg, null);
+        }
+        finally {
+            IgnitionEx.dependencyResolver(null);
+        }
+    }
+
+    /**
      * Starts new grid with given index.
      *
      * @param idx Index of the grid to start.

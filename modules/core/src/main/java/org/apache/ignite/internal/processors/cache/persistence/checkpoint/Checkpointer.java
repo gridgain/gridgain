@@ -768,7 +768,7 @@ public class Checkpointer extends GridWorker {
             log.debug("Partition file has been scheduled to destroy [grpId=" + grpId + ", partId=" + partId + "]");
 
         if (grpCtx != null)
-            scheduleCheckpoint(PARTITION_DESTROY_CHECKPOINT_TIMEOUT, "partition destroy");
+            scheduleCheckpoint(PARTITION_DESTROY_CHECKPOINT_TIMEOUT, "partition-destroy-" + grpId + "-" + partId);
     }
 
     /**

@@ -1612,17 +1612,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
             Collections.<GridCacheClearAllRunnable<K, V>>emptyList();
     }
 
-    /** {@inheritDoc} */
-    @Override public void onDeferredDelete(GridCacheEntryEx entry, GridCacheVersion ver) {
-        assert entry.isDht();
-
-        GridDhtLocalPartition part = topology().localPartition(entry.partition(), AffinityTopologyVersion.NONE,
-            false);
-
-        if (part != null)
-            part.onDeferredDelete(entry.context().cacheId(), entry.key(), ver);
-    }
-
     /**
      * @param mapVer Mapped topology version.
      * @param curVer Current topology version.

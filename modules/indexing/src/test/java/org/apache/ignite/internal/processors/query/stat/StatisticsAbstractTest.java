@@ -19,23 +19,34 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
 /**
  * Base test for table statistics.
  */
 public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
+    /** Default SQL schema. */
+    public static final String SCHEMA = "PUBLIC";
+
     /** Counter to avoid query caching. */
     private static final AtomicInteger queryRandomizer = new AtomicInteger(0);
 
@@ -47,6 +58,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
     /** Small table size. */
     static final int SMALL_SIZE = 100;
+
+    /** Async operation timeout for test */
+    static final int TIMEOUT = 1_000;
 
     static {
         assertTrue(SMALL_SIZE < MED_SIZE && MED_SIZE < BIG_SIZE);
@@ -60,7 +74,12 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @param sql Query with placeholders to hint indexes (i1, i2, ...).
      * @param indexes Arrays of indexes to put into placeholders.
      */
-    protected void checkOptimalPlanChosenForDifferentIndexes(IgniteEx grid, String[] optimal, String sql, String[][] indexes) {
+    protected void checkOptimalPlanChosenForDifferentIndexes(
+        IgniteEx grid,
+        String[] optimal,
+        String sql,
+        String[][] indexes
+    ) {
         int size = -1;
         for (String[] idxs : indexes) {
             if (size == -1)
@@ -80,7 +99,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         String actual[] = runLocalExplainIdx(grid, sql);
 
         assertTrue(String.format("got %s, expected %s in query %s", Arrays.asList(actual), Arrays.asList(optimal), sql),
-                Arrays.equals(actual, optimal));
+            Arrays.equals(actual, optimal));
     }
 
     /**
@@ -124,7 +143,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         int cntStats = runLocalExplainAnalyze(grid, false, sql);
 
         String res = "Scanned rows count [noStats=" + cntNoStats + ", withStats=" + cntStats +
-                ", diff=" + (cntNoStats - cntStats) + ']';
+            ", diff=" + (cntNoStats - cntStats) + ']';
 
         if (log.isInfoEnabled())
             log.info(res);
@@ -141,7 +160,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected String[] runLocalExplainIdx(Ignite grid, String sql) {
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("EXPLAIN " + sql).setLocal(true))
-                .getAll();
+            .getAll();
         String explainRes = (String)res.get(0).get(0);
 
         // Extract scan count from EXPLAIN ANALYZE with regex: return all numbers after "scanCount: ".
@@ -162,10 +181,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected int runLocalExplainAnalyze(Ignite grid, boolean enfJoinOrder, String sql) {
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME)
-                .query(new SqlFieldsQueryEx("EXPLAIN ANALYZE " + sql, null)
-                        .setEnforceJoinOrder(enfJoinOrder)
-                        .setLocal(true))
-                .getAll();
+            .query(new SqlFieldsQueryEx("EXPLAIN ANALYZE " + sql, null).setEnforceJoinOrder(enfJoinOrder)
+                .setLocal(true))
+            .getAll();
 
         if (log.isDebugEnabled())
             log.debug("ExplainAnalyze enfJoinOrder=" + enfJoinOrder + ", res=" + res);
@@ -270,13 +288,14 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         if (null != tables)
             allTbls.addAll(Arrays.asList(tables));
 
+        StatisticsTarget[] targets = allTbls.stream().map(tbl -> new StatisticsTarget(SCHEMA, tbl.toUpperCase()))
+            .toArray(StatisticsTarget[]::new);
+
         try {
-            for (String tbl : allTbls) {
-                for (Ignite node : G.allGrids()) {
-                    IgniteStatisticsManager statsMgr = ((IgniteEx)node).context().query().getIndexing().statsManager();
-                    statsMgr.collectObjectStatistics("PUBLIC", tbl.toUpperCase());
-                }
-            }
+            StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context()
+                .query().getIndexing().statsManager().gatherObjectStatisticsAsync(targets);
+            for (StatisticsGatheringFuture<?> fut : futures)
+                fut.get();
         }
         catch (IgniteCheckedException ex) {
             throw new IgniteException(ex);
@@ -291,7 +310,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0, 100,
-                0, new byte[0]);
+            0, new byte[0]);
         return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
     }
 
@@ -303,8 +322,77 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
-                100, 0, new byte[0]);
+            100, 0, new byte[0]);
         return new ObjectPartitionStatisticsImpl(partId, true, 0, 0,
-                Collections.singletonMap("col1", colStatistics));
+            Collections.singletonMap("col1", colStatistics));
+    }
+
+    /**
+     * Check that all statistics collections related tasks is empty in specified node.
+     *
+     * @param nodeIdx Node idx.
+     * @throws Exception In case of errors.
+     */
+    protected void checkStatTasksEmpty(int nodeIdx) throws Exception {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
+            .statsManager();
+        StatisticsGatheringRequestCrawlerImpl crawler = GridTestUtils.getFieldValue(statMgr, "statCrawler");
+
+        ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests = GridTestUtils
+            .getFieldValue(crawler, "remainingRequests");
+
+        assertTrue(remainingRequests.isEmpty());
+
+        IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(crawler, "msgMgmtPool");
+
+        assertTrue(pool.getQueue().isEmpty());
+
+        Map<UUID, StatisticsGatheringContext> currColls = GridTestUtils.getFieldValue(statMgr, "currColls");
+
+        assertTrue(currColls.isEmpty());
+    }
+
+    /**
+     * Get nodes StatisticsGatheringRequestCrawlerImpl.msgMgmtPool lock.
+     * Put additional task into it and return lock to complete these task.
+     *
+     * @param nodeIdx Node idx.
+     * @return Lock to complete pool task and allow it to process next one.
+     */
+    protected Lock nodeMsgsLock(int nodeIdx) throws Exception {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
+            .statsManager();
+        IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(statMgr, "statCrawler", "msgMgmtPool");
+
+        return lockPool(pool);
+    }
+
+    /**
+     * Get nodes StatisticsGatheringImpl.gatMgmtPool lock.
+     * Put additional task into it and return lock to complete these task.
+     *
+     * @param nodeIdx Node idx.
+     * @return Lock to complete pool task and allow it to process next one.
+     */
+    protected Lock nodeGathLock(int nodeIdx) throws Exception {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
+            .statsManager();
+        IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(statMgr, "statGathering", "gatMgmtPool");
+
+        return lockPool(pool);
+    }
+
+    /**
+     * Lock specified pool with task, waiting for lock release.
+     *
+     * @param pool Pool to block.
+     * @return Lock.
+     */
+    private Lock lockPool(IgniteThreadPoolExecutor pool) {
+        Lock res = new ReentrantLock();
+        res.lock();
+        pool.submit(res::lock);
+
+        return res;
     }
 }

@@ -247,6 +247,18 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
 
             clientCache.putIfAbsentAsync(key, i).get();
             assertOpOnChannel(opCh, ClientOperation.CACHE_PUT_IF_ABSENT);
+
+            clientCache.getAndPutIfAbsent(key, i);
+            assertOpOnChannel(opCh, ClientOperation.CACHE_GET_AND_PUT_IF_ABSENT);
+
+            clientCache.getAndPutIfAbsentAsync(key, i).get();
+            assertOpOnChannel(opCh, ClientOperation.CACHE_GET_AND_PUT_IF_ABSENT);
+
+            clientCache.clear(key);
+            assertOpOnChannel(opCh, ClientOperation.CACHE_CLEAR_KEY);
+
+            clientCache.clearAsync(key);
+            assertOpOnChannel(opCh, ClientOperation.CACHE_CLEAR_KEY);
         }
     }
 }
