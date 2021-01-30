@@ -1405,8 +1405,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         boolean tombstone,
         long upper
     ) throws IgniteCheckedException {
-        GridCacheVersion obsoleteVer = cctx.versions().startVersion();
-
         GridCursor<PendingRow> cur;
 
         cctx.shared().database().checkpointReadLock();

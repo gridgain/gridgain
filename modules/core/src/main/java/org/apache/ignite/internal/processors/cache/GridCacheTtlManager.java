@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -59,6 +61,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
     /** */
     private GridCacheContext dhtCtx;
+
+    /** */
+    private ReadWriteLock stopGuard = new ReentrantReadWriteLock();
 
     /** */
     private final IgniteClosure2X<GridCacheEntryEx, Long, Boolean> expireC =
@@ -116,6 +121,8 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
         // Ignoring attempt to unregister manager that has never been started.
         if (!starting.get())
             return;
+
+        stopGuard.writeLock().lock();
 
         cctx.shared().ttl().unregister(this);
     }
@@ -199,7 +206,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     public boolean expire(int amount) {
         assert cctx != null;
 
-        if (amount == 0)
+        if (amount == 0 || cctx.gate().isStopped() || !stopGuard.readLock().tryLock())
             return false;
 
         long now = U.currentTimeMillis();
@@ -259,6 +266,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             }
             else
                 throw e;
+        }
+        finally {
+            stopGuard.readLock().unlock();
         }
 
         return false;
