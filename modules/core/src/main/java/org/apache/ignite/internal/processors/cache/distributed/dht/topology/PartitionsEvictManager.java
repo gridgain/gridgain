@@ -278,8 +278,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         // Ignore cancel flag for group eviction because it may take a while.
         for (GroupEvictionContext evictionGrp : evictionGrps)
             evictionGrp.stop(ex);
-
-        executor = null;
     }
 
     /**
@@ -509,7 +507,14 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             if (!state.compareAndSet(null, Boolean.TRUE))
                 return false;
 
-            executor.submit(this);
+            try {
+                executor.submit(this);
+            }
+            catch (Exception ignored) {
+                log.error("Failed to submit the task for the execution [task=" + this + ']');
+
+                return false;
+            }
 
             synchronized (mux) {
                 logEvictPartByGrps.computeIfAbsent(grpEvictionCtx.grp.groupId(),
