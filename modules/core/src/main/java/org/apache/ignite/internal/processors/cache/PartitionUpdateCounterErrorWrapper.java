@@ -136,12 +136,12 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public boolean empty() {
-        return false;
+        return delegate.empty();
     }
 
     /** {@inheritDoc} */
     @Override public Iterator<long[]> iterator() {
-        return null;
+        return delegate.iterator();
     }
 
     /** {@inheritDoc} */
