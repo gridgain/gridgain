@@ -179,12 +179,12 @@ public interface SqlQueryMXBean {
     String getSqlQueryMemoryQuota();
 
     /**
-     * Gets the amount of memory available for sql queries.
+     * Gets the amount of memory available for SQL queries. This is equal to the {@link #getSqlGlobalMemoryQuotaBytes()} minus the amount of memory currently occupied by the queries.
      *
-     * @return sql query available memory as a long.
+     * @return the amount of memory available for SQL queries as the number of bytes.
      */
-    @MXBeanDescription("How much memory in bytes currently left available for the queries on this node.")
-    Long getSqlFreeMem();
+    @MXBeanDescription("The amount of memory available for SQL queries. This is equal to SqlGlobalMemoryQuotaBytes minus the amount of memory currently occupied by the queries.")
+    Long getSqlFreeMemoryBytes();
 
     /**
      * Sets per-query memory quota.
