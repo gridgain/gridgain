@@ -53,8 +53,10 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadCacheWriter;
@@ -715,7 +717,7 @@ public class CommandProcessor {
                             cmd.tableName());
                 }
                 else {
-                    QueryEntity e = toQueryEntity(cmd);
+                    QueryEntity e = toQueryEntity(ctx, cmd);
 
                     CacheConfiguration<?, ?> ccfg = new CacheConfiguration<>(cmd.tableName());
 
@@ -999,8 +1001,8 @@ public class CommandProcessor {
      * Convert this statement to query entity and do Ignite specific sanity checks on the way.
      * @return Query entity mimicking this SQL statement.
      */
-    private static QueryEntity toQueryEntity(GridSqlCreateTable createTbl) {
-        QueryEntity res = new QueryEntity();
+    private static QueryEntity toQueryEntity(GridKernalContext ctx, GridSqlCreateTable createTbl) {
+        QueryEntityEx res = new QueryEntityEx();
 
         res.setTableName(createTbl.tableName());
 
@@ -1075,8 +1077,14 @@ public class CommandProcessor {
 
             res.setKeyFieldName(pkCol.columnName());
         }
-        else
+        else {
             res.setKeyFields(createTbl.primaryKeyColumns());
+
+            if (IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
+                IgniteDiscoverySpi.SRV_NODES), IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)
+            )
+                res.setPreserveKeysOrder(true);
+        }
 
         if (!createTbl.wrapValue()) {
             GridSqlColumn valCol = null;

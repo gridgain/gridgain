@@ -329,11 +329,7 @@ public class H2TableDescriptor {
             if (QueryUtils.isSqlType(type.keyClass()))
                 keyCols.add(keyCol);
             else {
-                // SPECIFIED_SEQ_PK_KEYS check guarantee that request running on heterogeneous (RU) cluster can
-                // perform equally on all nodes.
-                if (!idx.kernalContext().recoveryMode() && IgniteFeatures.allNodesSupports(idx.kernalContext(),
-                    F.view(idx.kernalContext().discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
-                    IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
+                if (!type.primaryKeyFields().isEmpty()) {
                     for (String keyName : type.primaryKeyFields()) {
                         GridQueryProperty prop = type.property(keyName);
 
