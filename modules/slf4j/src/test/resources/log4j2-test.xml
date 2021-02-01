@@ -29,6 +29,9 @@
     </Appenders>
 
     <Loggers>
+        <Logger name="org.springframework" level="WARN"/>
+        <Logger name="org.eclipse.jetty" level="WARN"/>
+
         <Root level="TRACE">
             <AppenderRef ref="FILTERED"/>
             <AppenderRef ref="ALL"/>
