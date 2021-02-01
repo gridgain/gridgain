@@ -90,8 +90,6 @@ import org.apache.ignite.internal.processors.query.messages.GridQueryKillRequest
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillResponse;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
-import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
-import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringFuture;
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
 import org.apache.ignite.internal.sql.command.SqlAlterTableCommand;
 import org.apache.ignite.internal.sql.command.SqlAlterUserCommand;
@@ -514,17 +512,9 @@ public class CommandProcessor {
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
-        try {
-            StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures =
-                statMgr.gatherObjectStatisticsAsync(targets);
 
-            for (StatisticsGatheringFuture<?> fut : futures)
-                fut.get();
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteSQLException("Failed to analyze targets " + cmd.targets() + ", err=" + e.getMessage() + "]",
-                e);
-        }
+        // TODO: save config after GG-32420
+        statMgr.gatherObjectStatisticsAsync(targets);
     }
 
     /**
@@ -540,17 +530,7 @@ public class CommandProcessor {
             .toArray(StatisticsTarget[]::new);
 
         // TODO: load config after GG-32420
-        try {
-            StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures =
-                statMgr.gatherObjectStatisticsAsync(targets);
-
-            for (StatisticsGatheringFuture<?> fut : futures)
-                fut.get();
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteSQLException("Failed to refresh statistics on targets " + cmd.targets() + ", err="
-                + e.getMessage() + "]", e);
-        }
+        statMgr.gatherObjectStatisticsAsync(targets);
     }
 
     /**
