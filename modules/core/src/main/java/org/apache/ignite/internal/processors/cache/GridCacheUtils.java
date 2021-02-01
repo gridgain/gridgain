@@ -885,6 +885,28 @@ public class GridCacheUtils {
     }
 
     /**
+     * @param ctx Cache context.
+     */
+    public static void unwindEvictsSafe(GridCacheContext ctx) {
+        assert ctx != null;
+
+        if (ctx.started()) {
+            try {
+                if (!ctx.gate().enterIfNotStopped()) // Will acquire gate lock.
+                    return; // Stopped.
+
+                ctx.ttl().expire();
+            }
+            catch (CacheException ignored) {
+                // Disconnected.
+            }
+            finally {
+                ctx.gate().leave();
+            }
+        }
+    }
+
+    /**
      * @param ctx Shared cache context.
      */
     public static <K, V> void unwindEvicts(GridCacheSharedContext<K, V> ctx) {

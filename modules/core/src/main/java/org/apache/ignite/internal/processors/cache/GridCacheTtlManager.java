@@ -231,9 +231,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (!hasPendingEntries || nextCleanTime > U.currentTimeMillis())
                 return false;
 
-            if (cctx.gate().isStopped()) // Fast check to prevent expiration on stopping cache.
-                return false;
-
             if (cctx.offheap().expire(dhtCtx, expireC, amount))
                 return true;
 
