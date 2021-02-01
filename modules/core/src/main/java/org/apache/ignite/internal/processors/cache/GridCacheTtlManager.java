@@ -199,7 +199,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     public boolean expire(int amount) {
         assert cctx != null;
 
-        if (amount == 0 || cctx.gate().isStopped())
+        if (amount == 0)
             return false;
 
         long now = U.currentTimeMillis();
@@ -229,6 +229,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                 return false;  /* Pending tree never contains entries for that cache */
 
             if (!hasPendingEntries || nextCleanTime > U.currentTimeMillis())
+                return false;
+
+            if (cctx.gate().isStopped()) // Fast check to prevent expiration on stopping cache.
                 return false;
 
             if (cctx.offheap().expire(dhtCtx, expireC, amount))
