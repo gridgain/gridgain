@@ -102,7 +102,7 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
 
         try {
             if (!reserved || (locPart.state() != OWNING)) {
-                log.info("+++ RETRY!!!");
+                log.error("+++ RETRY!!!" + partId + " " + tbl.getName());
                 if (locPart.state() == LOST)
                     return null;
 

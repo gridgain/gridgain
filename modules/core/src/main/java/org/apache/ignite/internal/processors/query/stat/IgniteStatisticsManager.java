@@ -77,4 +77,9 @@ public interface IgniteStatisticsManager {
      * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
      */
     public void clearObjectStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+
+    /**
+     * Stop statistic manager.
+     */
+    public void stop();
 }

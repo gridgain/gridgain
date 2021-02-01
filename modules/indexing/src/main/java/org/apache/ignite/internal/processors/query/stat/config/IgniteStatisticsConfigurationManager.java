@@ -27,13 +27,11 @@ import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.events.Event;
-import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.managers.discovery.DiscoveryLocalJoinData;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
@@ -56,7 +54,7 @@ import org.gridgain.internal.h2.table.Column;
 /**
  *
  */
-public class IgniteStatisticsConfigurationManager implements DistributedMetastorageLifecycleListener {
+public class IgniteStatisticsConfigurationManager {
     /** */
     public static final String[] EMPTY_STR_ARRAY = new String[0];
 
@@ -90,6 +88,8 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
     /** Distributed metastore. */
     private volatile DistributedMetaStorage distrMetaStorage;
 
+    private volatile boolean started;
+
     /** */
     public IgniteStatisticsConfigurationManager(
         GridKernalContext ctx,
@@ -109,66 +109,48 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
         this.mgmtPool = mgmtPool;
         this.gatherer = gatherer;
 
-        subscriptionProcessor.registerDistributedMetastorageListener(this);
+        subscriptionProcessor.registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
+            @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+                distrMetaStorage = (DistributedMetaStorage)metastorage;
 
-        ctx.event().addLocalEventListener(this::onAssignmentChange,
-            EventType.EVT_NODE_JOINED,
-            EventType.EVT_NODE_FAILED,
-            EventType.EVT_NODE_LEFT,
-            EventType.EVT_BASELINE_CHANGED,
-            EventType.EVT_CLUSTER_ACTIVATED
-        );
+                distrMetaStorage.listen(
+                    (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
+                    (k, oldV, newV) ->  {
+                        if (!started)
+                            return;
 
-        ctx.discovery().localJoinFuture().listen((f) -> {
-            mgmtPool.submit(() -> {
-                try {
-                    onUpdateStatisticOnLocalJoin(f);
-                }
-                catch (IgniteCheckedException e) {
-                    log.warning("Unexpected exception on check local statistic on local join");
-                }
-            });
+                        mgmtPool.submit(() -> {
+                            try {
+                                onUpdateStatisticConfiguration(
+                                    (StatisticsObjectConfiguration)oldV,
+                                    (StatisticsObjectConfiguration)newV
+                                );
+                            }
+                            catch (Throwable e) {
+                                log.warning("Unexpected exception on check local statistic for cache group [old="
+                                    + oldV + ", new=" + newV + ']');
+                            }
+                        });
+                    }
+                );
+            }
         });
-    }
 
-    /***/
-    private void onUpdateStatisticOnLocalJoin(IgniteInternalFuture<DiscoveryLocalJoinData> f) throws IgniteCheckedException {
-        log.info("+++ onUpdateStatisticOnLocalJoin " + f.get().joinTopologyVersion());
+        ctx.cache().context().exchange().registerExchangeAwareComponent(
+            new PartitionsExchangeAware() {
 
-        scanAndCheckLocalStatistic(f.get().joinTopologyVersion());
-    }
+                @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
+                    started = true;
 
-    /** {@inheritDoc} */
-    @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-        distrMetaStorage = (DistributedMetaStorage)metastorage;
+//                    if (fut.rebalanced())
+//                        return;
 
-        distrMetaStorage.listen(
-            (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
-            (k, oldV, newV) ->  {
-                mgmtPool.submit(() -> {
-                    try {
-                        onUpdateStatisticConfiguration(
-                            (StatisticsObjectConfiguration)oldV,
-                            (StatisticsObjectConfiguration)newV
-                        );
-                    }
-                    catch (Throwable e) {
-                        log.warning("Unexpected exception on check local statistic for cache group [old="
-                            + oldV + ", new=" + newV + ']');
-                    }
-                });
+                    log.info("+++ onDoneAfterTopologyUnlock " + fut);
+
+                    scanAndCheckLocalStatistic(fut.topologyVersion());
+                }
             }
         );
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
-        // No-op.
-    }
-
-    /** */
-    private void onAssignmentChange(Event event) {
-        scanAndCheckLocalStatistic(ctx.discovery().topologyVersionEx());
     }
 
     /** */
@@ -254,14 +236,10 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
             GridCacheContext cctx = tbl.cacheContext();
 
-            log.info("+++ checkLocalStatistics");
             topVer = cctx.affinity().affinityReadyFuture(topVer).get();
-            log.info("+++ checkLocalStatistics" + topVer);
-
-            if (topVer.topologyVersion() == -1)
-                System.out.println();
 
             final Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer);
+            log.info("+++ checkLocalStatistics " + topVer + ", " + parts);
 
             Collection<ObjectPartitionStatisticsImpl> partStats = localRepo.getLocalPartitionsStatistics(cfg.key());
 
@@ -331,6 +309,8 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
 
         GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
         GridCacheContext cctx = tbl.cacheContext();
+
+        cctx.affinity().affinityReadyFuture(cctx.affinity().affinityTopologyVersion()).get();
 
         Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());
 

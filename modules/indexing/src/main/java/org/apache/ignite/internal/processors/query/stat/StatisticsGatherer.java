@@ -130,6 +130,7 @@ public class StatisticsGatherer {
         Set<Integer> parts,
         long ver
     ) {
+        log.info("+++ collectLocalObjectsStatisticsAsync " + tbl.getName() + ", " + parts);
         final LocalStatisticsGatheringContext newCtx = new LocalStatisticsGatheringContext(parts.size());
 
         List<CompletableFuture<ObjectPartitionStatisticsImpl>> futs = new ArrayList<>(parts.size());
@@ -162,17 +163,6 @@ public class StatisticsGatherer {
 
             return null;
         }, gatherPool);
-    }
-
-    /**
-     * Stop request crawler manager.
-     */
-    public void stop() {
-        if (gatherPool != null) {
-            List<Runnable> unfinishedTasks = gatherPool.shutdownNow();
-            if (!unfinishedTasks.isEmpty())
-                log.warning(String.format("%d statistics collection request cancelled.", unfinishedTasks.size()));
-        }
     }
 
     /** */

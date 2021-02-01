@@ -118,18 +118,6 @@ public class StatisticsRequestProcessor implements GridLocalEventListener, GridM
     }
 
     /**
-     * Stop request crawler manager.
-     */
-    public void stop() {
-        if (msgMgmtPool != null) {
-            List<Runnable> unfinishedTasks = msgMgmtPool.shutdownNow();
-            if (!unfinishedTasks.isEmpty())
-                log.warning(String.format("%d statistics collection request cancelled.", unfinishedTasks.size()));
-        }
-        evtMgr.removeLocalEventListener(this, EventType.EVT_NODE_FAILED, EventType.EVT_NODE_LEFT);
-    }
-
-    /**
      * Convert collection of addressed gathering request to map reqId to addressed request.
      *
      * @param reqs Collection of request to convert.

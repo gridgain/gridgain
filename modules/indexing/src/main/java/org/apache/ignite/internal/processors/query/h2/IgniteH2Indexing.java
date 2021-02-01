@@ -2542,6 +2542,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         memoryMgr.close();
 
+        statsMgr.stop();
+
         if (log.isDebugEnabled())
             log.debug("Cache query index stopped.");
     }

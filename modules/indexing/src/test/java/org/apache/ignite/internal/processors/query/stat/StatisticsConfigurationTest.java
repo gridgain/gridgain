@@ -32,6 +32,20 @@ import org.junit.Test;
  * Tests for statistics schema.
  */
 public class StatisticsConfigurationTest extends StatisticsAbstractTest {
+    private Consumer<List<ObjectStatisticsImpl>> checkTotalRows = stats -> {
+        long rows = stats.stream()
+            .mapToLong(s -> {
+                log.info("+++ STAT " + s);
+
+                assertNotNull(s);
+
+                return s.rowCount();
+            })
+            .sum();
+
+        assertEquals(SMALL_SIZE, rows);
+    };
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
@@ -52,13 +66,40 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
                 Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL"))
             );
 
+        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
 
-        waitForStats("PUBLIC", "SMALL", 5000);
-
+        System.out.println("+++ START 1");
         startGrid(1);
 
-        waitForStats("PUBLIC", "SMALL", 5000);
+        createSmallTable("A");
+        createSmallTable("B");
 
+        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+
+        System.out.println("+++ START 2");
+        startGrid(2);
+
+        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+
+        System.out.println("+++ START 3");
+        startGrid(3);
+
+        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+
+        System.out.println("+++ STOP 0");
+        stopGrid(0);
+
+        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+
+        System.out.println("+++ STOP 2");
+        stopGrid(2);
+
+        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+
+        System.out.println("+++ STOP 3");
+        stopGrid(3);
+
+        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
     }
 
     /** */
@@ -75,11 +116,9 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
                     .map(m -> (ObjectStatisticsImpl)m.getLocalStatistics(schema, objName))
                     .collect(Collectors.toList());
 
-                long rows = stats.stream()
-                    .mapToLong(s -> s != null ? s.rowCount() : 0)
-                    .sum();
 
-                assertEquals(SMALL_SIZE, rows);
+                for (Consumer<List<ObjectStatisticsImpl>> statChecker : statsCheckers)
+                    statChecker.accept(stats);
 
                 return;
             } catch (Throwable ex) {

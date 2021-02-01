@@ -84,6 +84,12 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Statistics configuration manager. */
     private final IgniteStatisticsConfigurationManager statCfgMgr;
 
+    /** Management pool. */
+    private final IgniteThreadPoolExecutor mgmtPool;
+
+    /** Gathering pool. */
+    private final  IgniteThreadPoolExecutor gatherPool;
+
     /**
      * Constructor.
      *
@@ -100,7 +106,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         IgniteCacheDatabaseSharedManager db = (GridCacheUtils.isPersistenceEnabled(ctx.config())) ?
                 ctx.cache().context().database() : null;
 
-        IgniteThreadPoolExecutor gatMgmtPool = new IgniteThreadPoolExecutor("stat-gat-mgmt-pool",
+        gatherPool = new IgniteThreadPoolExecutor("stat-gather",
                 ctx.igniteInstanceName(),
                 0,
                 STATS_POOL_SIZE,
@@ -110,7 +116,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                 ctx.uncaughtExceptionHandler()
         );
 
-        IgniteThreadPoolExecutor mgmtPool = new IgniteThreadPoolExecutor("stat-msg-mgmt-pool",
+        mgmtPool = new IgniteThreadPoolExecutor("stat-mgmt",
                 ctx.igniteInstanceName(),
                 0,
                 1,
@@ -142,7 +148,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             ctx.query(),
             statsRepos,
             reqProc,
-            gatMgmtPool,
+            gatherPool,
             ctx::log);
 
         statCfgMgr = new IgniteStatisticsConfigurationManager(
@@ -218,6 +224,21 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             target.obj(), Arrays.asList(target.columns()))).collect(Collectors.toList());
 
         clearObjectStatistics(keys);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void stop() {
+        if (gatherPool != null) {
+            List<Runnable> unfinishedTasks = gatherPool.shutdownNow();
+            if (!unfinishedTasks.isEmpty())
+                log.warning(String.format("%d statistics collection cancelled.", unfinishedTasks.size()));
+        }
+
+        if (mgmtPool != null) {
+            List<Runnable> unfinishedTasks = mgmtPool.shutdownNow();
+            if (!unfinishedTasks.isEmpty())
+                log.warning(String.format("%d statistics configuration change handler cancelled.", unfinishedTasks.size()));
+        }
     }
 
     /**
