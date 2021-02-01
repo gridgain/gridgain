@@ -38,7 +38,7 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
         int tCnt = 10;
         StatisticsTarget[] targets = new StatisticsTarget[tCnt];
         for (int i = 0; i < tCnt; i++)
-            targets[i] = createSmallTable(i);
+            targets[i] = createStatisticTarget(i);
 
         return targets;
     }

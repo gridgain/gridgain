@@ -32,16 +32,16 @@ public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        runSql("DROP TABLE IF EXISTS TBL_SELECT");
+        sql("DROP TABLE IF EXISTS TBL_SELECT");
 
-        runSql("CREATE TABLE TBL_SELECT (ID INT PRIMARY KEY, lo_select int, med_select int, hi_select int)");
+        sql("CREATE TABLE TBL_SELECT (ID INT PRIMARY KEY, lo_select int, med_select int, hi_select int)");
 
-        runSql("CREATE INDEX TBL_SELECT_LO_IDX ON TBL_SELECT(lo_select)");
-        runSql("CREATE INDEX TBL_SELECT_MED_IDX ON TBL_SELECT(med_select)");
-        runSql("CREATE INDEX TBL_SELECT_HI_IDX ON TBL_SELECT(hi_select)");
+        sql("CREATE INDEX TBL_SELECT_LO_IDX ON TBL_SELECT(lo_select)");
+        sql("CREATE INDEX TBL_SELECT_MED_IDX ON TBL_SELECT(med_select)");
+        sql("CREATE INDEX TBL_SELECT_HI_IDX ON TBL_SELECT(hi_select)");
 
         for (int i = 0; i < 1000; i++)
-            runSql(String.format("insert into tbl_select(id, lo_select, med_select, hi_select) values(%d, %d, %d, %d)",
+            sql(String.format("insert into tbl_select(id, lo_select, med_select, hi_select) values(%d, %d, %d, %d)",
                     i, i % 10, i % 100, i % 1000));
 
         updateStatistics("tbl_select");
@@ -69,7 +69,7 @@ public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
                 String.format(lo_med_select, 5, 5), noHints);
 
-        runSql("UPDATE TBL_SELECT SET lo_select = hi_select");
+        sql("UPDATE TBL_SELECT SET lo_select = hi_select");
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
                 String.format(lo_med_select, 6, 6), noHints);

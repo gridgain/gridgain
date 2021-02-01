@@ -69,8 +69,8 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
      */
     @Test
     public void testGroupGathering() throws Exception {
-        StatisticsTarget t100 = createSmallTable(100);
-        StatisticsTarget t101 = createSmallTable(101);
+        StatisticsTarget t100 = createStatisticTarget(100);
+        StatisticsTarget t101 = createStatisticTarget(101);
         StatisticsTarget tWrong = new StatisticsTarget(t101.schema(), t101.obj() + "wrong");
 
         StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context().query()

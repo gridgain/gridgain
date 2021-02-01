@@ -152,7 +152,7 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
                             (StatisticsObjectConfiguration)newV
                         );
                     }
-                    catch (IgniteCheckedException e) {
+                    catch (Throwable e) {
                         log.warning("Unexpected exception on check local statistic for cache group [old="
                             + oldV + ", new=" + newV + ']');
                     }
@@ -202,7 +202,7 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
                 .collect(Collectors.toList())
                 .toArray(new StatisticsColumnConfiguration[cols.length]);
 
-            updateObjectStatisticInfo(
+            updateObjectStatisticConfiguration(
                 new StatisticsObjectConfiguration(
                     target.key(),
                     colCfgs
@@ -229,7 +229,7 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
     /**
      *
      */
-    private void updateObjectStatisticInfo(StatisticsObjectConfiguration statObjCfg) {
+    private void updateObjectStatisticConfiguration(StatisticsObjectConfiguration statObjCfg) {
         try {
             while (true) {
                 String key = key2String(statObjCfg.key());
@@ -316,7 +316,9 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
         final StatisticsObjectConfiguration newCfg
     ) throws IgniteCheckedException {
         Set<String> newCols = Arrays.stream(newCfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet());
-        Set<String> oldCols = Arrays.stream(oldCfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet());
+        Set<String> oldCols = oldCfg != null ?
+            Arrays.stream(oldCfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet()) :
+            Collections.emptySet();
 
         oldCols.removeAll(newCols);
 
@@ -324,6 +326,8 @@ public class IgniteStatisticsConfigurationManager implements DistributedMetastor
 
         localRepo.clearLocalStatistics(newCfg.key(), rmCols);
         localRepo.clearLocalPartitionsStatistics(newCfg.key(), rmCols);
+
+        ctx.cache().awaitStarted();
 
         GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
         GridCacheContext cctx = tbl.cacheContext();

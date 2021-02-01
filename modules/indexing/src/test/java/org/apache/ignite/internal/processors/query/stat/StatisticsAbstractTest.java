@@ -29,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -223,9 +224,30 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      *
      * @param sql Statement to execute.
      */
-    protected void runSql(String sql) {
-        grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(sql)).getAll();
+    protected void sql(String sql) {
+        grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
     }
+
+    /**
+     * Create SQL table with the given index.
+     *
+     * @param suffix Table idx, if {@code null} - name "SMALL" without index will be used.
+     */
+    protected void createSmallTable(String suffix) {
+        sql("DROP TABLE IF EXISTS small" + suffix);
+
+        sql(String.format("CREATE TABLE small%s (a INT PRIMARY KEY, b INT, c INT) with \"BACKUPS=1\"", suffix));
+
+        sql(String.format("CREATE INDEX small%s_b ON small%s(b)", suffix, suffix));
+
+        sql(String.format("CREATE INDEX small%s_c ON small%s(c)", suffix, suffix));
+
+        IgniteCache<Integer, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+
+        for (int i = 0; i < SMALL_SIZE; i++)
+            sql(String.format("INSERT INTO small%s(a, b, c) VALUES(%d, %d, %d)", suffix, i, i, i % 10));
+    }
+
 
     /**
      * Replaces index hint placeholder like "i1", "i2" with specified index names in the ISQL query.

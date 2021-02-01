@@ -579,27 +579,27 @@ public class StatisticsRequestProcessor implements GridLocalEventListener, GridM
 
     /** {@inheritDoc} */
     @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-        if (msg instanceof StatisticsPropagationMessage) {
-            StatisticsPropagationMessage propMsg = (StatisticsPropagationMessage) msg;
-            if (propMsg.data().iterator().next().type() == StatisticsType.GLOBAL)
-                msgMgmtPool.submit(() -> statMgr.saveGlobalStatistics(propMsg.data()));
-            else
-                msgMgmtPool.submit(() -> statMgr.receivePartitionsStatistics(propMsg.data()));
-        }
-        else if (msg instanceof StatisticsGatheringResponse)
-            receiveLocalStatistics(nodeId, (StatisticsGatheringResponse) msg);
-        else if (msg instanceof StatisticsGetRequest)
-            msgMgmtPool.submit(() -> supplyStatistics(nodeId, (StatisticsGetRequest) msg));
-        else if (msg instanceof StatisticsGetResponse)
-            msgMgmtPool.submit(() -> statMgr.saveGlobalStatistics(((StatisticsGetResponse)msg).data()));
-        else if (msg instanceof StatisticsGatheringRequest)
-            handleGatheringRequest(nodeId, (StatisticsGatheringRequest)msg);
-        else if (msg instanceof CancelStatisticsGatheringRequest)
-            cancelStatisticsCollection(nodeId, (CancelStatisticsGatheringRequest) msg);
-        else if (msg instanceof StatisticsClearRequest)
-            msgMgmtPool.submit(() -> clearObjectStatistics(nodeId, (StatisticsClearRequest)msg));
-        else
-            log.warning("Unknown msg " + msg + " in statistics topic " + TOPIC_STATISTICS + " from node " + nodeId);
+//        if (msg instanceof StatisticsPropagationMessage) {
+//            StatisticsPropagationMessage propMsg = (StatisticsPropagationMessage) msg;
+//            if (propMsg.data().iterator().next().type() == StatisticsType.GLOBAL)
+//                msgMgmtPool.submit(() -> statMgr.saveGlobalStatistics(propMsg.data()));
+//            else
+//                msgMgmtPool.submit(() -> statMgr.receivePartitionsStatistics(propMsg.data()));
+//        }
+//        else if (msg instanceof StatisticsGatheringResponse)
+//            receiveLocalStatistics(nodeId, (StatisticsGatheringResponse) msg);
+//        else if (msg instanceof StatisticsGetRequest)
+//            msgMgmtPool.submit(() -> supplyStatistics(nodeId, (StatisticsGetRequest) msg));
+//        else if (msg instanceof StatisticsGetResponse)
+//            msgMgmtPool.submit(() -> statMgr.saveGlobalStatistics(((StatisticsGetResponse)msg).data()));
+//        else if (msg instanceof StatisticsGatheringRequest)
+//            handleGatheringRequest(nodeId, (StatisticsGatheringRequest)msg);
+//        else if (msg instanceof CancelStatisticsGatheringRequest)
+//            cancelStatisticsCollection(nodeId, (CancelStatisticsGatheringRequest) msg);
+//        else if (msg instanceof StatisticsClearRequest)
+//            msgMgmtPool.submit(() -> clearObjectStatistics(nodeId, (StatisticsClearRequest)msg));
+//        else
+//            log.warning("Unknown msg " + msg + " in statistics topic " + TOPIC_STATISTICS + " from node " + nodeId);
     }
 
     /**
