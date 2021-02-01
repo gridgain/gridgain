@@ -36,8 +36,8 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
         this.delegate = delegate;
     }
 
-    @Override
-    public long reserve(long delta) {
+    /** {@inheritDoc} */
+    @Override public long reserve(long delta) {
         SB sb = new SB();
 
         sb.a("[op=reserve" +
@@ -145,6 +145,14 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
     /** {@inheritDoc} */
     @Override public CacheGroupContext context() {
         return delegate.context();
+    }
+
+    @Override public void updateTombstoneClearCounter(long cntr) {
+        delegate.updateTombstoneClearCounter(cntr);
+    }
+
+    @Override public long tombstoneClearCounter() {
+        return delegate.tombstoneClearCounter();
     }
 
     /** {@inheritDoc} */
