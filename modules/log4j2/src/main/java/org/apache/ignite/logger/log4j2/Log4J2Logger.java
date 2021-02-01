@@ -128,6 +128,8 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = path;
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -156,6 +158,8 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = path;
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -184,6 +188,8 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = cfgFile.getPath();
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -207,6 +213,8 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = cfgUrl.getPath();
+
+        Log4jBridgeHandler.install();
     }
 
     /**
