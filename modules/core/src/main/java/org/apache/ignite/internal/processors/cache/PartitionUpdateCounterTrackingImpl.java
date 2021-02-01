@@ -32,6 +32,7 @@ import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerImpl;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -454,8 +455,17 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "Counter [lwm=" + get() + ", holes=" + queue +
-            ", maxApplied=" + highestAppliedCounter() + ", hwm=" + reserveCntr.get() + ']';
+        return new SB()
+            .a("Counter [lwm=")
+            .a(get())
+            .a(", holes=")
+            .a(queue)
+            .a(", maxApplied=")
+            .a(highestAppliedCounter())
+            .a(", hwm=")
+            .a(reserveCntr.get())
+            .a(']')
+            .toString();
     }
 
     /** {@inheritDoc} */

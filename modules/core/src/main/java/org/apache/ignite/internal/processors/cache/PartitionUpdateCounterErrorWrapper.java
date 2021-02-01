@@ -38,9 +38,14 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public long reserve(long delta) {
-        SB sb = new SB();
+        String before = toString();
 
-        sb.a("[op=reserve" +
+        try {
+            return delegate.reserve(delta);
+        } catch (AssertionError e) {
+            SB sb = new SB();
+
+            sb.a("[op=reserve" +
                 ", grpId=" + grp.groupId() +
                 ", grpName=" + grp.cacheOrGroupName() +
                 ", caches=" + grp.caches() +
@@ -49,11 +54,8 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
                 ", mode=" + grp.config().getCacheMode() +
                 ", partId=" + partId +
                 ", delta=" + delta +
-                ", before=" + toString());
+                ", before=" + before);
 
-        try {
-            return delegate.reserve(delta);
-        } catch (AssertionError e) {
             U.error(log, sb.a(", after=" + toString() +
                     ']').toString());
 
