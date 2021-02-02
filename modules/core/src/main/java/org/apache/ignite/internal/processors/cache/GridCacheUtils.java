@@ -892,13 +892,16 @@ public class GridCacheUtils {
 
         if (ctx.started()) {
             try {
-                if (!ctx.gate().enterIfNotStopped()) // Will acquire gate lock.
+                if (!ctx.gate().enterIfNotStopped())
                     return; // Stopped.
-
-                ctx.ttl().expire();
             }
             catch (CacheException ignored) {
-                // Disconnected.
+                return; // Disconnected.
+            }
+
+            // Locked.
+            try {
+                ctx.ttl().expire();
             }
             finally {
                 ctx.gate().leave();
