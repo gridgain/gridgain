@@ -666,6 +666,8 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         assertNull(rslvr.reason);
 
         assertFalse("Expecting tombstones are not removed during PME", wasEmpty);
+
+        CU.unwindEvicts(ctx0);
     }
 
     /**

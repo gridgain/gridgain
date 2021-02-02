@@ -269,7 +269,21 @@ public class PartitionUpdateCounterDebugWrapper implements PartitionUpdateCounte
     /** {@inheritDoc}
      * @param cntr*/
     @Override public void updateTombstoneClearCounter(long cntr) {
-        delegate.updateTombstoneClearCounter(cntr);
+        SB sb = new SB();
+
+        sb.a("[op=updateTCS" +
+            ", grpId=" + grp.groupId() +
+            ", partId=" + partId +
+            ", cntr=" + cntr +
+            ", before=" + toString());
+
+        try {
+            delegate.updateTombstoneClearCounter(cntr);
+        }
+        finally {
+            log.debug(sb.a(", after=" + toString() +
+                ']').toString());
+        }
     }
 
     /** {@inheritDoc} */
