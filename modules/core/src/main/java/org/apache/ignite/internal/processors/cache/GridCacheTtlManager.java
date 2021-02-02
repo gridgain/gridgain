@@ -184,7 +184,23 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * @return {@code True} if unprocessed expired entries remains.
      */
     public boolean expire() {
-        return expire(ttlBatchSize);
+        return expire(ttlBatchSize, false);
+    }
+
+    /**
+     * Processes expired entries with default batch size.
+     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     */
+    public boolean expire(int amount) {
+        return expire(amount, false);
+    }
+
+    /**
+     * Processes expired entries with default batch size under cache gate lock.
+     * @return {@code True} if unprocessed expired entries remains.
+     */
+    public boolean expireSafe() {
+        return expire(ttlBatchSize, true);
     }
 
     /**
@@ -194,9 +210,10 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * and tombstones cleanup is executed, so the real amount of deleted entries can be up to {@code amount * 2}.
      *
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     * @param lock {@code True} to acquire cache gate lock.
      * @return {@code True} if unprocessed expired entries remains.
      */
-    public boolean expire(int amount) {
+    public boolean expire(int amount, boolean lock) {
         assert cctx != null;
 
         if (amount == 0)
@@ -231,8 +248,17 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (!hasPendingEntries || nextCleanTime > U.currentTimeMillis())
                 return false;
 
-            if (cctx.offheap().expire(dhtCtx, expireC, amount))
-                return true;
+            if (lock && !dhtCtx.gate().enterIfNotStopped())
+                return false; // Stopped.
+
+            // Locked.
+            try {
+                cctx.offheap().expire(dhtCtx, expireC, amount);
+            }
+            finally {
+                if (lock)
+                    dhtCtx.gate().leave();
+            }
 
             // There is nothing to clean, so the next clean up can be postponed.
             nextCleanTime = U.currentTimeMillis() + unwindThrottlingTimeout;

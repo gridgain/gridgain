@@ -890,23 +890,8 @@ public class GridCacheUtils {
     public static void unwindEvictsSafe(GridCacheContext ctx) {
         assert ctx != null;
 
-        if (ctx.started()) {
-            try {
-                if (!ctx.gate().enterIfNotStopped())
-                    return; // Stopped.
-            }
-            catch (CacheException ignored) {
-                return; // Disconnected.
-            }
-
-            // Locked.
-            try {
-                ctx.ttl().expire();
-            }
-            finally {
-                ctx.gate().leave();
-            }
-        }
+        if (ctx.started())
+            ctx.ttl().expireSafe();
     }
 
     /**
