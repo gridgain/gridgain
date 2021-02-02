@@ -190,6 +190,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     /**
      * Processes expired entries with default batch size.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     * @return {@code True} if unprocessed expired entries remains.
      */
     public boolean expire(int amount) {
         return expire(amount, false);
