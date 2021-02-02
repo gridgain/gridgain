@@ -253,7 +253,8 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
             // Locked.
             try {
-                cctx.offheap().expire(dhtCtx, expireC, amount);
+                if (cctx.offheap().expire(dhtCtx, expireC, amount))
+                    return true;
             }
             finally {
                 if (lock)
