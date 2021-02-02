@@ -1107,13 +1107,8 @@ public class CommandProcessor {
         res.setValueType(valTypeName);
         res.setKeyType(keyTypeName);
 
-        if (!F.isEmpty(notNullFields)) {
-            QueryEntityEx res0 = new QueryEntityEx(res);
-
-            res0.setNotNullFields(notNullFields);
-
-            res = res0;
-        }
+        if (!F.isEmpty(notNullFields))
+            res.setNotNullFields(notNullFields);
 
         return res;
     }

@@ -350,8 +350,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         ));
 
         ig0.cluster().state(ClusterState.ACTIVE);
-        {
 
+        {
             GridQueryProcessor qryProc = ig0.context().query();
 
             IgniteH2Indexing idx = (IgniteH2Indexing)(ig0).context().query().getIndexing();
@@ -380,8 +380,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             IgniteH2Indexing idx = (IgniteH2Indexing)(ig0).context().query().getIndexing();
 
             String tblName = "T1";
-
-            idx = (IgniteH2Indexing)(ig0).context().query().getIndexing();
 
             List<String> expect = Arrays.asList("F2", "F1");
 
@@ -430,7 +428,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             checkPkFldSequence(tblName, Arrays.asList("F1", "F2"), idx);
         }
-
     }
 
     /**
