@@ -502,6 +502,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         /**
          * Submits the task for execution.
+         *
+         * @return {@code True} if the task was submitted for execution.
          */
         public boolean start() {
             if (!state.compareAndSet(null, Boolean.TRUE))
