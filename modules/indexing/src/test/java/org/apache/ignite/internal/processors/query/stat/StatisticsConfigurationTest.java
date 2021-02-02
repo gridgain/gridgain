@@ -35,8 +35,6 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     private Consumer<List<ObjectStatisticsImpl>> checkTotalRows = stats -> {
         long rows = stats.stream()
             .mapToLong(s -> {
-                log.info("+++ STAT " + s);
-
                 assertNotNull(s);
 
                 return s.rowCount();
@@ -70,9 +68,6 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         System.out.println("+++ START 1");
         startGrid(1);
-
-        createSmallTable("A");
-        createSmallTable("B");
 
         waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
 

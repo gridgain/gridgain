@@ -116,6 +116,9 @@ public class IgniteStatisticsConfigurationManager {
                 distrMetaStorage.listen(
                     (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
                     (k, oldV, newV) ->  {
+                        // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
+                        // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
+                        // called on exchange done.
                         if (!started)
                             return;
 
@@ -138,14 +141,8 @@ public class IgniteStatisticsConfigurationManager {
 
         ctx.cache().context().exchange().registerExchangeAwareComponent(
             new PartitionsExchangeAware() {
-
                 @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
                     started = true;
-
-//                    if (fut.rebalanced())
-//                        return;
-
-                    log.info("+++ onDoneAfterTopologyUnlock " + fut);
 
                     scanAndCheckLocalStatistic(fut.topologyVersion());
                 }
@@ -239,7 +236,9 @@ public class IgniteStatisticsConfigurationManager {
             topVer = cctx.affinity().affinityReadyFuture(topVer).get();
 
             final Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer);
-            log.info("+++ checkLocalStatistics " + topVer + ", " + parts);
+
+            if (log.isDebugEnabled())
+                log.debug("Check local statistics [key=" + cfg.key() + ", parts=" + parts + ']');
 
             Collection<ObjectPartitionStatisticsImpl> partStats = localRepo.getLocalPartitionsStatistics(cfg.key());
 
@@ -268,20 +267,34 @@ public class IgniteStatisticsConfigurationManager {
                 partsToRemove = Collections.emptySet();
             }
 
+            if (log.isDebugEnabled()) {
+                log.debug("Remove local partitioned statistics [key=" + cfg.key() +
+                    ", part=" + partsToRemove + ']');
+            }
+
             partsToRemove.forEach(p -> localRepo.clearLocalPartitionStatistics(cfg.key(), p));
 
             Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), cfg.columns());
 
-            CompletableFuture<Void> f = gatherer.collectLocalObjectsStatisticsAsync(
-                tbl,
-                cols,
-                partsToCollect,
-                cfg.version()
-            );
+            if (!F.isEmpty(partsToCollect)) {
+                CompletableFuture<Void> f = gatherer.collectLocalObjectsStatisticsAsync(
+                    tbl,
+                    cols,
+                    partsToCollect,
+                    cfg.version()
+                );
 
-            f.thenAccept((v) -> {
-                localRepo.refreshAggregatedLocalStatistics(parts, cfg);
-            });
+                f.thenAccept((v) -> {
+                    // TODO: error handling
+                    localRepo.refreshAggregatedLocalStatistics(parts, cfg);
+                });
+            }
+            else {
+                gatherer.submit(() -> {
+                    // TODO: error handling
+                    localRepo.refreshAggregatedLocalStatistics(parts, cfg);
+                });
+            }
         }
         catch (IgniteCheckedException ex) {
             log.error("Unexpected error on check local statistics", ex);

@@ -55,7 +55,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  */
 public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Size of statistics collection pool. */
-    private static final int STATS_POOL_SIZE = 1;
+    private static final int STATS_POOL_SIZE = 4;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -142,10 +142,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             helper, mgmtPool, ctx::log);
 
         gatherer = new StatisticsGatherer(
-            schemaMgr,
-            ctx.discovery(),
-            ctx.cache(),
-            ctx.query(),
             statsRepos,
             reqProc,
             gatherPool,

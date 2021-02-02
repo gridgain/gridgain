@@ -15,109 +15,51 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
-import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.query.GridQueryProcessor;
-import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
-import org.apache.ignite.internal.processors.query.h2.SchemaManager;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
-import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
-import org.apache.ignite.internal.processors.query.stat.task.CollectPartitionStatistics;
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.thread.IgniteThreadPoolExecutor;
-import org.gridgain.internal.h2.table.Column;
-
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.stat.task.CollectPartitionStatistics;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.gridgain.internal.h2.table.Column;
 
 /**
  * Implementation of statistic collector.
  */
 public class StatisticsGatherer {
-    /** Canceled check interval. */
-    private static final int CANCELLED_CHECK_INTERVAL = 100;
-
     /** Logger. */
     private final IgniteLogger log;
 
-    /** Schema manager. */
-    private final SchemaManager schemaMgr;
-
-    /** Discovery manager. */
-    private final GridDiscoveryManager discoMgr;
-
-    /**  */
-    private final GridCacheProcessor cacheProc;
-
-    /** Query processor */
-    private final GridQueryProcessor qryProcessor;
-
     /** Ignite statistics repository. */
     private final IgniteStatisticsRepository statRepo;
-
-    /** Statistics crawler. */
-    private final StatisticsRequestProcessor reqProc;
 
     /** Ignite Thread pool executor to do statistics collection tasks. */
     private final IgniteThreadPoolExecutor gatherPool;
 
     /** (cacheGroupId -> gather context) */
-    private final ConcurrentMap<Integer, LocalStatisticsGatheringContext> gatheringInProgress = new ConcurrentHashMap<>();
+    private final ConcurrentMap<StatisticsKey, LocalStatisticsGatheringContext> gatheringInProgress = new ConcurrentHashMap<>();
 
     /**
      * Constructor.
      *
-     * @param schemaMgr Schema manager.
-     * @param discoMgr Discovery manager.
-     * @param qryProcessor Query processor.
      * @param repo IgniteStatisticsRepository.
      * @param reqProc Statistics request crawler.
      * @param gatherPool Thread pool to gather statistics in.
      * @param logSupplier Log supplier function.
      */
     public StatisticsGatherer(
-        SchemaManager schemaMgr,
-        GridDiscoveryManager discoMgr,
-        GridCacheProcessor cacheProc,
-        GridQueryProcessor qryProcessor,
         IgniteStatisticsRepository repo,
         StatisticsRequestProcessor reqProc,
         IgniteThreadPoolExecutor gatherPool,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.log = logSupplier.apply(StatisticsGatherer.class);
-        this.schemaMgr = schemaMgr;
-        this.discoMgr = discoMgr;
-        this.cacheProc = cacheProc;
-        this.qryProcessor = qryProcessor;
         this.statRepo = repo;
-        this.reqProc = reqProc;
         this.gatherPool = gatherPool;
     }
 
@@ -130,43 +72,74 @@ public class StatisticsGatherer {
         Set<Integer> parts,
         long ver
     ) {
-        log.info("+++ collectLocalObjectsStatisticsAsync " + tbl.getName() + ", " + parts);
-        final LocalStatisticsGatheringContext newCtx = new LocalStatisticsGatheringContext(parts.size());
+        StatisticsKey key = new StatisticsKey(tbl.getSchema().getName(), tbl.getName());
 
-        List<CompletableFuture<ObjectPartitionStatisticsImpl>> futs = new ArrayList<>(parts.size());
+        if (log.isDebugEnabled()) {
+            log.debug("Start statistics gathering [key=" + key +
+                ", cols=" + Arrays.toString(cols) +
+                ", parts=" + parts + ']');
+        }
+
+        final LocalStatisticsGatheringContext newCtx = new LocalStatisticsGatheringContext(parts);
+
+        LocalStatisticsGatheringContext oldCtx = gatheringInProgress.put(key, newCtx);
+
+        if (oldCtx != null) {
+            if (log.isDebugEnabled())
+                log.debug("Cancel previous statistic gathering for [key=" + key + ']');
+
+            oldCtx.future().cancel(false);
+        }
 
         for (int part : parts) {
             CollectPartitionStatistics task = new CollectPartitionStatistics(
-                tbl,
+                newCtx, tbl,
                 cols,
                 part,
                 ver,
-                () -> newCtx.future().isCancelled(),
                 log
             );
 
             CompletableFuture<ObjectPartitionStatisticsImpl> f = CompletableFuture.supplyAsync(task::call, gatherPool);
 
             f.thenAccept((partStat) -> {
-                statRepo.saveLocalPartitionStatistics(
-                    new StatisticsKey(tbl.getSchema().getName(), tbl.getName()),
-                    partStat
-                );
-            });
+                try {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Start saving local partitioned statistic [key=" + key +
+                            ", part=" + part + ']');
+                    }
 
-            futs.add(f);
+                    if (partStat == null) {
+                        if (log.isDebugEnabled())
+                            log.debug("Gathering was canceled [key=" + key + ", part=" + part + ']');
+
+                        return;
+                    }
+
+                    statRepo.saveLocalPartitionStatistics(
+                        new StatisticsKey(tbl.getSchema().getName(), tbl.getName()),
+                        partStat
+                    );
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("Save local partitioned statistic done [key=" + key +
+                            ", part=" + part + ']');
+                    }
+
+                    newCtx.partitionDone(part);
+                }
+                catch (Throwable ex) {
+                    log.error("Unexpected error os statistic save", ex);
+                }
+            });
         }
 
         // Wait all partition gathering tasks.
-        return CompletableFuture.supplyAsync(() -> {
-            futs.forEach(CompletableFuture::join);
-
-            return null;
-        }, gatherPool);
+        return newCtx.future();
     }
 
     /** */
-    private static boolean wasExpired(CacheDataRow row, long time) {
-        return row.expireTime() > 0 && row.expireTime() <= time;
+    public void submit(Runnable task) {
+        gatherPool.submit(task);
     }
 }

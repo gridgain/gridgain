@@ -16,7 +16,6 @@
 package org.apache.ignite.internal.processors.query.stat.task;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
@@ -34,6 +33,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatistics;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollector;
+import org.apache.ignite.internal.processors.query.stat.LocalStatisticsGatheringContext;
 import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatisticsImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.table.Column;
@@ -47,6 +47,9 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 public class CollectPartitionStatistics implements Callable<ObjectPartitionStatisticsImpl> {
     /** Canceled check interval. */
     private static final int CANCELLED_CHECK_INTERVAL = 100;
+
+    /** */
+    private final LocalStatisticsGatheringContext  gathCtx;
 
     /** */
     private final GridH2Table tbl;
@@ -71,18 +74,19 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
 
     /** */
     public CollectPartitionStatistics(
+        LocalStatisticsGatheringContext gathCtx,
         GridH2Table tbl,
         Column[] cols,
         int partId,
         long ver,
-        Supplier<Boolean> cancelled,
         IgniteLogger log
     ) {
+        this.gathCtx  = gathCtx;
         this.tbl = tbl;
         this.cols = cols;
         this.partId = partId;
         this.ver = ver;
-        this.cancelled = cancelled;
+        cancelled = () -> gathCtx.future().isCancelled();
         this.log = log;
     }
 
@@ -102,9 +106,10 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
 
         try {
             if (!reserved || (locPart.state() != OWNING)) {
-                log.error("+++ RETRY!!!" + partId + " " + tbl.getName());
-                if (locPart.state() == LOST)
-                    return null;
+                if (log.isDebugEnabled()) {
+                    log.debug("Partition not owning. Need to retry [part=" + partId +
+                        ", tbl=" + tbl.identifier() + ']');
+                }
 
                 return null;
             }
@@ -118,6 +123,11 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
 
             try {
                 int checkInt = CANCELLED_CHECK_INTERVAL;
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Start partition scan [part=" + partId +
+                        ", tbl=" + tbl.identifier() + ']');
+                }
 
                 for (CacheDataRow row : grp.offheap().cachePartitionIterator(
                     tbl.cacheId(), partId, null, false))

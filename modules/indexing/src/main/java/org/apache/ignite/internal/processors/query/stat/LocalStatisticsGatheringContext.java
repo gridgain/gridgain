@@ -15,13 +15,10 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -30,28 +27,31 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class LocalStatisticsGatheringContext {
     /** Amount of remaining partitions */
-    private int remainingParts;
+    private Set<Integer> remainingParts;
 
-    /** Done future adapter. */
-    private final GridFutureAdapter<Void> fut;
+    /** Done future. */
+    private final CompletableFuture<Void> fut;
 
     /** */
-    public LocalStatisticsGatheringContext(int remainingParts) {
-        this.remainingParts = remainingParts;
-        this.fut = new GridFutureAdapter<>();
+    public LocalStatisticsGatheringContext(Set<Integer> remainingParts) {
+        this.remainingParts = new HashSet<>(remainingParts);
+        this.fut = new CompletableFuture<>();
     }
 
     /**
      * Decrement remaining.
      */
-    public synchronized void decrement() {
-        remainingParts--;
+    public synchronized void partitionDone(int partId) {
+        remainingParts.remove(partId);
+
+        if (remainingParts.isEmpty())
+            fut.complete(null);
     }
 
     /**
      * @return Collection control future.
      */
-    public GridFutureAdapter<Void> future() {
+    public CompletableFuture<Void> future() {
         return fut;
     }
 

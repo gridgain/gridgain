@@ -352,7 +352,10 @@ public class IgniteStatisticsRepository {
 
     /** */
     public void refreshAggregatedLocalStatistics(Set<Integer> parts, StatisticsObjectConfiguration objStatCfg) {
-        log.info("+++ REFRESH");
+        if (log.isDebugEnabled()) {
+            log.debug("Refresh local aggregated statistic [key=" + objStatCfg.key() +
+                ", part=" + parts + ']');
+        }
 
         Collection<ObjectPartitionStatisticsImpl> stats = store.getLocalPartitionsStatistics(objStatCfg.key());
 
