@@ -25,8 +25,10 @@ import java.util.function.Function;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.task.CollectPartitionStatistics;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Implementation of statistic collector.
@@ -92,7 +94,7 @@ public class StatisticsGatherer {
         }
 
         for (int part : parts) {
-            CollectPartitionStatistics task = new CollectPartitionStatistics(
+            final CollectPartitionStatistics task = new CollectPartitionStatistics(
                 newCtx, tbl,
                 cols,
                 part,
@@ -100,42 +102,81 @@ public class StatisticsGatherer {
                 log
             );
 
-            CompletableFuture<ObjectPartitionStatisticsImpl> f = CompletableFuture.supplyAsync(task::call, gatherPool);
-
-            f.thenAccept((partStat) -> {
-                try {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Start saving local partitioned statistic [key=" + key +
-                            ", part=" + part + ']');
-                    }
-
-                    if (partStat == null) {
-                        if (log.isDebugEnabled())
-                            log.debug("Gathering was canceled [key=" + key + ", part=" + part + ']');
-
-                        return;
-                    }
-
-                    statRepo.saveLocalPartitionStatistics(
-                        new StatisticsKey(tbl.getSchema().getName(), tbl.getName()),
-                        partStat
-                    );
-
-                    if (log.isDebugEnabled()) {
-                        log.debug("Save local partitioned statistic done [key=" + key +
-                            ", part=" + part + ']');
-                    }
-
-                    newCtx.partitionDone(part);
-                }
-                catch (Throwable ex) {
-                    log.error("Unexpected error os statistic save", ex);
-                }
-            });
+            submitTask(tbl, key, newCtx, part, task);
         }
 
         // Wait all partition gathering tasks.
         return newCtx.future();
+    }
+
+    /** */
+    private void submitTask(
+        final GridH2Table tbl,
+        final StatisticsKey key,
+        final LocalStatisticsGatheringContext newCtx,
+        final int part,
+        final CollectPartitionStatistics task)
+    {
+        CompletableFuture<ObjectPartitionStatisticsImpl> f = CompletableFuture.supplyAsync(task::call, gatherPool);
+
+        f.thenAccept((partStat) -> {
+            completePartitionStatistic(tbl, key, newCtx, part, partStat);
+        });
+
+        f.exceptionally((ex) -> {
+            if (ex instanceof GatherStatisticRetryException) {
+                if (log.isDebugEnabled())
+                    log.debug("Retry collect statistics task [key=" + key + ", part=" + part + ']');
+
+                submitTask(tbl, key, newCtx, part, task);
+            }
+            if (ex instanceof GatherStatisticCancelException) {
+                if (log.isDebugEnabled())
+                    log.debug("Collect statistics task was cancelled [key=" + key + ", part=" + part + ']');
+            }
+            else {
+                log.error("Unexpected error on statistic gathering");
+
+                newCtx.future().obtrudeException(ex);
+            }
+
+            return null;
+        });
+    }
+
+
+    /** */
+    private void completePartitionStatistic(
+        GridH2Table tbl,
+        StatisticsKey key,
+        LocalStatisticsGatheringContext newCtx,
+        int part,
+        ObjectPartitionStatisticsImpl partStat)
+    {
+        try {
+            if (partStat == null)
+                return;
+
+            if (log.isDebugEnabled()) {
+                log.debug("Start saving local partitioned statistic [key=" + key +
+                    ", part=" + part + ']');
+            }
+
+            statRepo.saveLocalPartitionStatistics(
+                new StatisticsKey(tbl.getSchema().getName(), tbl.getName()),
+                partStat
+            );
+
+            if (log.isDebugEnabled()) {
+                log.debug("Save local partitioned statistic done [key=" + key +
+                    ", part=" + part + ']');
+            }
+
+            newCtx.partitionDone(part);
+        }
+        catch (Throwable ex) {
+            log.error("Unexpected error os statistic save", ex);
+        }
     }
 
     /** */

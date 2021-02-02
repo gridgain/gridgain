@@ -284,16 +284,11 @@ public class IgniteStatisticsConfigurationManager {
                     cfg.version()
                 );
 
-                f.thenAccept((v) -> {
-                    // TODO: error handling
-                    localRepo.refreshAggregatedLocalStatistics(parts, cfg);
-                });
+                f.thenAccept((v) -> localRepo.refreshAggregatedLocalStatistics(parts, cfg));
             }
             else {
-                gatherer.submit(() -> {
-                    // TODO: error handling
-                    localRepo.refreshAggregatedLocalStatistics(parts, cfg);
-                });
+                // TODO: error handling
+                gatherer.submit(() -> localRepo.refreshAggregatedLocalStatistics(parts, cfg));
             }
         }
         catch (IgniteCheckedException ex) {

@@ -33,6 +33,8 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatistics;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollector;
+import org.apache.ignite.internal.processors.query.stat.GatherStatisticCancelException;
+import org.apache.ignite.internal.processors.query.stat.GatherStatisticRetryException;
 import org.apache.ignite.internal.processors.query.stat.LocalStatisticsGatheringContext;
 import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatisticsImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -111,7 +113,7 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
                         ", tbl=" + tbl.identifier() + ']');
                 }
 
-                return null;
+                throw new GatherStatisticRetryException();
             }
 
             ColumnStatisticsCollector[] collectors = new ColumnStatisticsCollector[cols.length];
@@ -134,7 +136,7 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
                 {
                     if (--checkInt == 0) {
                         if (cancelled.get())
-                            return null;
+                            throw new GatherStatisticCancelException();
 
                         checkInt = CANCELLED_CHECK_INTERVAL;
                     }
