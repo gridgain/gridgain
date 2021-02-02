@@ -126,6 +126,8 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         testStats(SCHEMA, "TEST", false);
         testStats(SCHEMA, "TEST2", false);
 
+        U.sleep(TIMEOUT);
+
         runSql("DROP STATISTICS PUBLIC.TEST;");
 
         testStats(SCHEMA, "TEST", true);
@@ -165,6 +167,8 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         runSql("REFRESH STATISTICS PUBLIC.STATISTICS(STATISTICS)");
 
         testStats(SCHEMA, "STATISTICS", false);
+
+        U.sleep(TIMEOUT);
 
         runSql("DROP STATISTICS PUBLIC.STATISTICS(STATISTICS)");
 
