@@ -37,11 +37,8 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsClearRequest;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.Nullable;
@@ -284,136 +281,6 @@ public class IgniteStatisticsHelper {
             }
         }
         return res;
-    }
-
-    /**
-     * Generate statistics clear requests.
-     *
-     * @param keys Keys to clean statistics by.
-     * @return Collection of addressed statistics clear requests.
-     * @throws IgniteCheckedException In case of errors.
-     */
-    public Collection<StatisticsAddrRequest<StatisticsClearRequest>> generateClearRequests(
-        Collection<StatisticsKeyMessage> keys
-    ) throws IgniteCheckedException {
-        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpContexts = mapToCacheGroups(keys);
-        Map<UUID, Collection<StatisticsKeyMessage>> nodeKeys = nodeKeys(grpContexts);
-
-        return nodeKeys.entrySet().stream().map(node -> new StatisticsAddrRequest<>(
-            new StatisticsClearRequest(UUID.randomUUID(), new ArrayList<>(node.getValue())), locNodeId, node.getKey()))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Generate collection of statistics propagation messages to send collected partiton level statistics to backup
-     * nodes. Can be called for single cache group and partition statistics only.
-     *
-     * @param key Statistics key by which it was collected.
-     * @param objStats Collection of object statistics (for the same partition).
-     * @return Collection of propagation messages.
-     */
-    public Collection<StatisticsAddrRequest<StatisticsPropagationMessage>> generatePropagationMessages(
-        StatisticsKeyMessage key,
-        Collection<ObjectPartitionStatisticsImpl> objStats
-    ) throws IgniteCheckedException {
-        List<StatisticsObjectData> objData = new ArrayList<>(objStats.size());
-        for (ObjectPartitionStatisticsImpl ops : objStats) {
-            try {
-                objData.add(StatisticsUtils.toObjectData(key, StatisticsType.PARTITION, ops));
-            }
-            catch (IgniteCheckedException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("Unable to format statistics propagation message for %s.%s object: %s",
-                            key.schema(), key.obj(), e.getMessage()));
-                }
-            }
-        }
-
-        StatisticsPropagationMessage msg = new StatisticsPropagationMessage(objData);
-
-        int partId = objStats.iterator().next().partId();
-        CacheGroupContext grpCtx = getGroupContext(key);
-        Map<UUID, int[]> nodePartitions = nodePartitions(grpCtx, Collections.singleton(partId), false);
-
-        return nodePartitions.keySet().stream().map(nodeId -> new StatisticsAddrRequest<>(msg, locNodeId, nodeId))
-            .collect(Collectors.toList());
-    }
-
-    /**
-     * Generate global statistics propagation message.
-     *
-     * @param objStats Map of statistics to propagate.
-     * @return Collection of addressed messages with specified statistics.
-     * @throws IgniteCheckedException In case of error.
-     */
-    public Collection<StatisticsAddrRequest<StatisticsPropagationMessage>> generateGlobalPropagationMessages(
-        Map<StatisticsKeyMessage, ObjectStatisticsImpl> objStats
-    ) throws IgniteCheckedException {
-        Map<StatisticsKeyMessage, StatisticsObjectData> objData = new HashMap<>(objStats.size());
-        for (Map.Entry<StatisticsKeyMessage, ObjectStatisticsImpl> objStat : objStats.entrySet()) {
-            StatisticsKeyMessage key = objStat.getKey();
-            try {
-                objData.put(key, StatisticsUtils.toObjectData(key, StatisticsType.GLOBAL, objStat.getValue()));
-            }
-            catch (IgniteCheckedException e) {
-                if (log.isDebugEnabled())
-                    log.debug(String.format("Unable to generage object data by key %s.%s", key.schema(), key.obj()));
-            }
-        }
-
-        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = mapToCacheGroups(objStats.keySet());
-        Map<CacheGroupContext, Collection<StatisticsObjectData>> grpsData = new HashMap<>(grpsKeys.size());
-
-        for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys : grpsKeys.entrySet()) {
-            Collection<StatisticsObjectData> stats = grpKeys.getValue().stream().map(objData::get)
-                .collect(Collectors.toList());
-            grpsData.put(grpKeys.getKey(), stats);
-        }
-
-        Map<UUID, Collection<StatisticsObjectData>> reqMap = new HashMap<>();
-        for (Map.Entry<CacheGroupContext, Collection<StatisticsObjectData>> grpKeys : grpsData.entrySet()) {
-            Set<UUID> grpNodes = nodes(grpKeys.getKey());
-            for (UUID node : grpNodes)
-                reqMap.computeIfAbsent(node, k -> new HashSet<>()).addAll(grpKeys.getValue());
-        }
-
-        List<StatisticsAddrRequest<StatisticsPropagationMessage>> res = new ArrayList<>(reqMap.size());
-        for (Map.Entry<UUID, Collection<StatisticsObjectData>> nodeReq : reqMap.entrySet()) {
-            StatisticsPropagationMessage msg = new StatisticsPropagationMessage(new ArrayList<>(nodeReq.getValue()));
-            res.add(new StatisticsAddrRequest<>(msg, locNodeId, nodeReq.getKey()));
-        }
-
-        return res;
-    }
-
-    /**
-     * Generate statistics collection requests by given keys.
-     *
-     * @param gatId Gathering id.
-     * @param keys Collection of keys to collect statistics by.
-     * @param partitions Partitions to collect statistics by.
-     * @return Collection of statistics collection addressed request.
-     * @throws IgniteCheckedException In case of errors.
-     */
-    protected Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> generateCollectionRequests(
-            UUID gatId,
-            Collection<StatisticsKeyMessage> keys,
-            Collection<Integer> partitions
-    ) throws IgniteCheckedException {
-        Map<UUID, Map<StatisticsKeyMessage, int[]>> reqMap = new HashMap<>();
-        CacheGroupContext grpCtx = getGroupContext(keys.iterator().next());
-
-        Map<UUID, int[]> reqNodes = nodePartitions(grpCtx, partitions, true);
-
-        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = new ArrayList<>();
-
-        for (Map.Entry<UUID, int[]> nodeParts: reqNodes.entrySet()) {
-            StatisticsGatheringRequest req = new StatisticsGatheringRequest(gatId, UUID.randomUUID(),
-                new HashSet<>(keys), nodeParts.getValue());
-            reqs.add(new StatisticsAddrRequest<>(req, locNodeId, nodeParts.getKey()));
-        }
-
-        return reqs;
     }
 
     /**

@@ -25,8 +25,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -34,9 +36,11 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -236,7 +240,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected void createSmallTable(String suffix) {
         sql("DROP TABLE IF EXISTS small" + suffix);
 
-        sql(String.format("CREATE TABLE small%s (a INT PRIMARY KEY, b INT, c INT) with \"BACKUPS=1\"", suffix));
+        sql(String.format("CREATE TABLE small%s (a INT PRIMARY KEY, b INT, c INT)" +
+                " with \"BACKUPS=1,CACHE_NAME=SMALL%s\"",
+            suffix, suffix));
 
         sql(String.format("CREATE INDEX small%s_b ON small%s(b)", suffix, suffix));
 
@@ -321,12 +327,11 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             .toArray(StatisticsTarget[]::new);
 
         try {
-            StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context()
-                .query().getIndexing().statsManager().gatherObjectStatisticsAsync(targets);
-            for (StatisticsGatheringFuture<?> fut : futures)
-                fut.get();
+            grid(0).context().query().getIndexing().statsManager().updateStatistics(targets);
+
+            awaitStatistics(TIMEOUT);
         }
-        catch (IgniteCheckedException ex) {
+        catch (Exception ex) {
             throw new IgniteException(ex);
         }
     }
@@ -359,29 +364,61 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         );
     }
 
-    /**
-     * Check that all statistics collections related tasks is empty in specified node.
-     *
-     * @param nodeIdx Node idx.
-     * @throws Exception In case of errors.
-     */
-    protected void checkStatTasksEmpty(int nodeIdx) throws Exception {
-        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
+    /** Check that all statistics collections related tasks is empty in specified node. */
+    protected void checkStatisticTasksEmpty(IgniteEx ign) {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)ign.context().query().getIndexing()
             .statsManager();
-        StatisticsRequestProcessor crawler = GridTestUtils.getFieldValue(statMgr, "statCrawler");
 
-        ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests = GridTestUtils
-            .getFieldValue(crawler, "remainingRequests");
-
-        assertTrue(remainingRequests.isEmpty());
-
-        IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(crawler, "msgMgmtPool");
-
-        assertTrue(pool.getQueue().isEmpty());
-
-        Map<UUID, StatisticsGatheringContext> currColls = GridTestUtils.getFieldValue(statMgr, "currColls");
+        Map<StatisticsKey, LocalStatisticsGatheringContext> currColls = GridTestUtils.getFieldValue(
+            statMgr,
+            "gatherer", "gatheringInProgress"
+        );
 
         assertTrue(currColls.isEmpty());
+
+        IgniteThreadPoolExecutor mgmtPool = GridTestUtils.getFieldValue(
+            statMgr,
+            "mgmtPool");
+
+        assertTrue(mgmtPool.getQueue().isEmpty());
+
+        IgniteThreadPoolExecutor gatherPool = GridTestUtils.getFieldValue(
+            statMgr,
+            "gatherPool");
+
+        assertTrue(gatherPool.getQueue().isEmpty());
+    }
+
+    /**
+     * Await statistic gathering is complete on whole cluster.
+     *
+     * @throws Exception In case of errors.
+     */
+    protected void awaitStatistics(long timeout) throws Exception {
+        for(Ignite ign : G.allGrids())
+            awaitStatistics(timeout, (IgniteEx)ign);
+    }
+
+    /**
+     * Await statistic gathering is complete on specified node.
+     *
+     * @throws Exception In case of errors.
+     */
+    protected void awaitStatistics(long timeout, IgniteEx ign) throws Exception {
+        long t0 = U.currentTimeMillis();
+
+        while (true) {
+            try {
+                checkStatisticTasksEmpty(ign);
+
+                return;
+            } catch (Throwable ex) {
+                if (t0 + timeout < U.currentTimeMillis())
+                    throw ex;
+                else
+                    U.sleep(200);
+            }
+        }
     }
 
     /**

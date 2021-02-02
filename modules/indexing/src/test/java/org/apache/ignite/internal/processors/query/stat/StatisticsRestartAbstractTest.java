@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -71,7 +70,7 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws IgniteCheckedException {
-        grid(0).context().query().getIndexing().statsManager().gatherObjectStatistics(SMALL_TARGET);
+        grid(0).context().query().getIndexing().statsManager().updateStatistics(SMALL_TARGET);
     }
 
     /**

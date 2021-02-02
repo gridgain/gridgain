@@ -15,23 +15,54 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
- * Tests for statistics schema.
+ * Tests for statistics configuration.
  */
+@RunWith(Parameterized.class)
 public class StatisticsConfigurationTest extends StatisticsAbstractTest {
+    /** Statistics await timeout.*/
+    private static final long STAT_TIMEOUT = 5_000;
+
+    /** Columns to check.*/
+    private static final String[] COLUMNS = {"A", "B", "C"};
+
+    /** Lazy mode. */
+    @Parameterized.Parameter(value = 0)
+    public boolean persist;
+
+    /** */
+    @Parameterized.Parameters(name = "persist={0}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>();
+
+        boolean[] arrBool = new boolean[] {true, false};
+
+        for (boolean persist0 : arrBool)
+            params.add(new Object[] {persist0});
+
+        return params;
+    }
+
+    /** Statistic checker: total row count. */
     private Consumer<List<ObjectStatisticsImpl>> checkTotalRows = stats -> {
         long rows = stats.stream()
             .mapToLong(s -> {
@@ -44,11 +75,71 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         assertEquals(SMALL_SIZE, rows);
     };
 
+    /** Statistic checker. */
+    private Consumer<List<ObjectStatisticsImpl>> checkColumStats = stats -> {
+        for (ObjectStatisticsImpl stat : stats) {
+            for (String col : COLUMNS) {
+                ColumnStatistics colStat = stat.columnStatistics(col);
+                assertNotNull("Column: " + col, colStat);
+
+                assertTrue("Column: " + col, colStat.cardinality() > 0);
+                assertTrue("Column: " + col, colStat.max().getInt() > 0);
+                assertTrue("Column: " + col, colStat.total() == stat.rowCount());
+            }
+        }
+    };
+
+    /** */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setDataStorageConfiguration(
+                new DataStorageConfiguration()
+                    .setDefaultDataRegionConfiguration(
+                        new DataRegionConfiguration()
+                            .setPersistenceEnabled(persist)
+                    )
+            );
+    }
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         super.afterTest();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteEx startGrid(int nodeIdx) throws Exception {
+        System.out.println("+++ START " + nodeIdx);
+
+        IgniteEx ign = super.startGrid(nodeIdx);
+
+        ign.cluster().state(ClusterState.ACTIVE);
+
+        if (persist)
+            ign.cluster().setBaselineTopology(ign.cluster().topologyVersion());
+
+        awaitPartitionMapExchange();
+
+        return ign;
+    }
+
+
+    /** {@inheritDoc} */
+    @Override protected void stopGrid(int nodeIdx) {
+        System.out.println("+++ STOP " + nodeIdx);
+
+        super.stopGrid(nodeIdx);
+
+        if (persist)
+            F.first(G.allGrids()).cluster().setBaselineTopology(F.first(G.allGrids()).cluster().topologyVersion());
+
+        try {
+            awaitPartitionMapExchange();
+        }
+        catch (InterruptedException e) {
+            // No-op.
+        }
     }
 
     /** */
@@ -59,46 +150,49 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         createSmallTable("");
 
         ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing().statsManager())
-            .statisticSchemaManager()
+            .statisticConfiguration()
             .updateStatistics(
                 Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL"))
             );
 
-        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        System.out.println("+++ START 1");
         startGrid(1);
 
-        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        System.out.println("+++ START 2");
         startGrid(2);
 
-        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        System.out.println("+++ START 3");
         startGrid(3);
 
-        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        System.out.println("+++ STOP 0");
         stopGrid(0);
 
-        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        System.out.println("+++ STOP 2");
         stopGrid(2);
 
-        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        System.out.println("+++ STOP 3");
         stopGrid(3);
 
-        waitForStats("PUBLIC", "SMALL", 5000, checkTotalRows);
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        stopGrid(3);
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
     }
 
     /** */
-    private void waitForStats(String schema, String objName, long timeout, Consumer<List<ObjectStatisticsImpl>>... statsCheckers) {
+    private void waitForStats(
+        String schema,
+        String objName,
+        long timeout,
+        Consumer<List<ObjectStatisticsImpl>>... statsCheckers
+    ) {
         long t0 = U.currentTimeMillis();
 
         while (true) {

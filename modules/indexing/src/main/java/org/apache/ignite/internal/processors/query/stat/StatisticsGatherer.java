@@ -50,13 +50,11 @@ public class StatisticsGatherer {
      * Constructor.
      *
      * @param repo IgniteStatisticsRepository.
-     * @param reqProc Statistics request crawler.
      * @param gatherPool Thread pool to gather statistics in.
      * @param logSupplier Log supplier function.
      */
     public StatisticsGatherer(
         IgniteStatisticsRepository repo,
-        StatisticsRequestProcessor reqProc,
         IgniteThreadPoolExecutor gatherPool,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
@@ -135,7 +133,7 @@ public class StatisticsGatherer {
                     log.debug("Collect statistics task was cancelled [key=" + key + ", part=" + part + ']');
             }
             else {
-                log.error("Unexpected error on statistic gathering");
+                log.error("Unexpected error on statistic gathering", ex);
 
                 newCtx.future().obtrudeException(ex);
             }
@@ -173,6 +171,9 @@ public class StatisticsGatherer {
             }
 
             newCtx.partitionDone(part);
+
+            if (newCtx.future().isDone())
+                gatheringInProgress.remove(key, newCtx);
         }
         catch (Throwable ex) {
             log.error("Unexpected error os statistic save", ex);

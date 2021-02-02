@@ -25,7 +25,6 @@ import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeMan
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -130,104 +129,6 @@ public class IgniteStatisticsHelperTest extends GridCommonAbstractTest {
         List<String> cols = (subId == null) ? null : Arrays.stream(subId).boxed().map(s -> ("COL" + s))
                 .collect(Collectors.toList());
         return new StatisticsKeyMessage("SCHEMA", "OBJECT" + keyId, cols);
-    }
-
-    /**
-     * Simple test to generate statistics collection requests for single key on single node.
-     *
-     * @throws IgniteCheckedException In case of errors.
-     */
-    @Test
-    public void testGenerateCollectionRequestsSingle() throws IgniteCheckedException {
-        UUID gatId = UUID.randomUUID();
-        StatisticsKeyMessage k1 = keyMsg(1);
-        CacheGroupContext cgc1 = cgc(Collections.singletonMap(node1, new int[]{0, 1, 2, 3}), 0);
-        schema.put(k1.obj(), cgc1);
-
-        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = helper
-                .generateCollectionRequests(gatId, Collections.singletonList(k1), null);
-
-        assertEquals(1, reqs.size());
-
-        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r ->
-            node1.equals(r.targetNodeId())).findAny().orElse(null);
-
-        assertNotNull(req);
-        assertTrue(Arrays.equals(new int[]{0, 1, 2, 3}, req.req().parts()));
-    }
-
-    /**
-     * Test generateCollectionRequests for two keys and two nodes and check that generated requests contains all
-     * required keys and partitions.
-     *
-     * @throws IgniteCheckedException In case of errors.
-     */
-    @Test
-    public void testGenerateCollectionRequests() throws IgniteCheckedException {
-        UUID gatId = UUID.randomUUID();
-        StatisticsKeyMessage k1 = keyMsg(1);
-
-        CacheGroupContext cgc1 = cgc(nodeParts, 0);
-
-        schema.put(k1.obj(), cgc1);
-        schema.put(k2.obj(), cgc1);
-
-        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = helper.generateCollectionRequests(gatId,
-                Arrays.asList(k1, k2), null);
-
-        assertEquals(2, reqs.size());
-
-        StatisticsAddrRequest<StatisticsGatheringRequest> req1 = reqs.stream().filter(req ->
-            node1.equals(req.targetNodeId())).findAny().orElse(null);
-        StatisticsAddrRequest<StatisticsGatheringRequest> req2 = reqs.stream().filter(req ->
-            node2.equals(req.targetNodeId())).findAny().orElse(null);
-
-        assertNotNull(req1);
-        assertNotNull(req2);
-        assertTrue(reqs.stream().allMatch(req -> req.req().keys().size() == 2));
-        assertTrue(Arrays.equals(nodeParts.get(node1), req1.req().parts()));
-        assertTrue(Arrays.equals(nodeParts.get(node2), req2.req().parts()));
-    }
-
-    /**
-     * Test generateCollectionRequests for two keys and two nodes with only one failed partition and check that
-     * generated requests contains request to regenerate only that one partition.
-     */
-    @Test
-    public void testGenerateCollectionRequestsFailedPartitions() throws IgniteCheckedException {
-        Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> reqs = testGenerateCollectionRequests(new int[]{1});
-
-        assertEquals(1, reqs.size());
-
-        StatisticsAddrRequest<StatisticsGatheringRequest> req = reqs.stream().filter(r -> node2.equals(
-            r.targetNodeId())).findAny().orElse(null);
-
-        assertNotNull(req);
-
-        int[] k1parts = req.req().parts();
-
-        assertTrue(Arrays.equals(new int[]{1}, k1parts));
-    }
-
-    /**
-     * Prepare and generate statistics collection requests for two keys and two nodes.
-     *
-     * @param failedPartitions Failed partitions to generate requests only by it.
-     * @return Collection of statistics collection requests.
-     * @throws IgniteCheckedException In case of errors.
-     */
-    private Collection<StatisticsAddrRequest<StatisticsGatheringRequest>> testGenerateCollectionRequests(
-        int[] failedPartitions
-    ) throws IgniteCheckedException {
-        schema.put(k1.obj(), cgc1);
-        schema.put(k2.obj(), cgc2);
-
-        List<StatisticsKeyMessage> keys = new ArrayList<>();
-        keys.add(k1);
-        keys.add(k2);
-
-        return helper.generateCollectionRequests(c1, keys, Arrays.stream(failedPartitions).boxed().collect(
-            Collectors.toList()));
     }
 
     /**

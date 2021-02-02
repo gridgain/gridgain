@@ -47,28 +47,17 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
 
-        statMgr0.gatherObjectStatistics(SMALL_TARGET);
+        statMgr0.updateStatistics(SMALL_TARGET);
 
         Assert.assertNotNull(statMgr0.getLocalStatistics(SCHEMA, "SMALL"));
-        Assert.assertNotNull(statMgr0.getGlobalStatistics(SCHEMA, "SMALL"));
 
         Assert.assertNotNull(statMgr1.getLocalStatistics(SCHEMA, "SMALL"));
-        Assert.assertNotNull(statMgr1.getGlobalStatistics(SCHEMA, "SMALL"));
 
-        statMgr1.clearObjectStatistics(SMALL_TARGET);
+        statMgr1.dropStatistics(SMALL_TARGET);
 
-        GridTestUtils.waitForCondition(() -> {
-            try {
-                return null == statMgr0.getLocalStatistics(SCHEMA, "SMALL")
-                    && null == statMgr1.getLocalStatistics(SCHEMA, "SMALL")
-                    && null == statMgr0.getGlobalStatistics(SCHEMA, "SMALL")
-                    && null == statMgr1.getGlobalStatistics(SCHEMA, "SMALL");
-            }
-            catch (IgniteCheckedException e) {
-                fail(e.getMessage());
-            }
-            return false;
-        }, TIMEOUT);
+        GridTestUtils.waitForCondition(
+            () -> null == statMgr0.getLocalStatistics(SCHEMA, "SMALL")
+            && null == statMgr1.getLocalStatistics(SCHEMA, "SMALL"), TIMEOUT);
     }
 
     /**
@@ -82,13 +71,10 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
 
-        statMgr1.clearObjectStatistics(SMALL_TARGET);
+        statMgr1.dropStatistics(SMALL_TARGET);
 
         Assert.assertNull(statMgr0.getLocalStatistics(SCHEMA, "NO_NAME"));
         Assert.assertNull(statMgr1.getLocalStatistics(SCHEMA, "NO_NAME"));
-
-        Assert.assertNull(statMgr0.getGlobalStatistics(SCHEMA, "NO_NAME"));
-        Assert.assertNull(statMgr1.getGlobalStatistics(SCHEMA, "NO_NAME"));
     }
 
 

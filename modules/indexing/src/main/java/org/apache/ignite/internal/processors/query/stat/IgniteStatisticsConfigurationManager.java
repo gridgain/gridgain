@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat.config;
+package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,9 +27,9 @@ import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -39,13 +39,8 @@ import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMeta
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepository;
-import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatisticsImpl;
-import org.apache.ignite.internal.processors.query.stat.StatisticsGatherer;
-import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
-import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -59,19 +54,10 @@ public class IgniteStatisticsConfigurationManager {
     public static final String[] EMPTY_STR_ARRAY = new String[0];
 
     /** */
-    public static final Column[] EMPTY_COLUMNS_ARR = new Column[0];
-
-    /** */
-    private final GridKernalContext ctx;
-
-    /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
 
     /** */
-    private final IgniteStatisticsRepository localRepo;
-
-    /** */
-    private final IgniteStatisticsManager mgr;
+    private final IgniteStatisticsRepository repo;
 
     /** Schema manager. */
     private final SchemaManager schemaMgr;
@@ -88,24 +74,22 @@ public class IgniteStatisticsConfigurationManager {
     /** Distributed metastore. */
     private volatile DistributedMetaStorage distrMetaStorage;
 
+    /** */
     private volatile boolean started;
 
     /** */
     public IgniteStatisticsConfigurationManager(
-        GridKernalContext ctx,
         SchemaManager schemaMgr,
-        IgniteStatisticsManager mgr,
         GridInternalSubscriptionProcessor subscriptionProcessor,
-        IgniteStatisticsRepository localRepo,
+        GridCachePartitionExchangeManager exchange,
+        IgniteStatisticsRepository repo,
         StatisticsGatherer gatherer,
         IgniteThreadPoolExecutor mgmtPool,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
-        this.ctx = ctx;
         this.schemaMgr = schemaMgr;
-        this.mgr = mgr;
         log = logSupplier.apply(IgniteStatisticsConfigurationManager.class);
-        this.localRepo = localRepo;
+        this.repo = repo;
         this.mgmtPool = mgmtPool;
         this.gatherer = gatherer;
 
@@ -139,7 +123,7 @@ public class IgniteStatisticsConfigurationManager {
             }
         });
 
-        ctx.cache().context().exchange().registerExchangeAwareComponent(
+        exchange.registerExchangeAwareComponent(
             new PartitionsExchangeAware() {
                 @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
                     started = true;
@@ -240,7 +224,7 @@ public class IgniteStatisticsConfigurationManager {
             if (log.isDebugEnabled())
                 log.debug("Check local statistics [key=" + cfg.key() + ", parts=" + parts + ']');
 
-            Collection<ObjectPartitionStatisticsImpl> partStats = localRepo.getLocalPartitionsStatistics(cfg.key());
+            Collection<ObjectPartitionStatisticsImpl> partStats = repo.getLocalPartitionsStatistics(cfg.key());
 
             Set<Integer> partsToRemove;
             Set<Integer> partsToCollect;
@@ -272,7 +256,7 @@ public class IgniteStatisticsConfigurationManager {
                     ", part=" + partsToRemove + ']');
             }
 
-            partsToRemove.forEach(p -> localRepo.clearLocalPartitionStatistics(cfg.key(), p));
+            partsToRemove.forEach(p -> repo.clearLocalPartitionStatistics(cfg.key(), p));
 
             Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), cfg.columns());
 
@@ -284,11 +268,11 @@ public class IgniteStatisticsConfigurationManager {
                     cfg.version()
                 );
 
-                f.thenAccept((v) -> localRepo.refreshAggregatedLocalStatistics(parts, cfg));
+                f.thenAccept((v) -> repo.refreshAggregatedLocalStatistics(parts, cfg));
             }
             else {
                 // TODO: error handling
-                gatherer.submit(() -> localRepo.refreshAggregatedLocalStatistics(parts, cfg));
+                gatherer.submit(() -> repo.refreshAggregatedLocalStatistics(parts, cfg));
             }
         }
         catch (IgniteCheckedException ex) {
@@ -310,12 +294,11 @@ public class IgniteStatisticsConfigurationManager {
 
         String[] rmCols = oldCols.toArray(EMPTY_STR_ARRAY);
 
-        localRepo.clearLocalStatistics(newCfg.key(), rmCols);
-        localRepo.clearLocalPartitionsStatistics(newCfg.key(), rmCols);
-
-        ctx.cache().awaitStarted();
+        repo.clearLocalStatistics(newCfg.key(), rmCols);
+        repo.clearLocalPartitionsStatistics(newCfg.key(), rmCols);
 
         GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
+
         GridCacheContext cctx = tbl.cacheContext();
 
         cctx.affinity().affinityReadyFuture(cctx.affinity().affinityTopologyVersion()).get();
@@ -327,7 +310,7 @@ public class IgniteStatisticsConfigurationManager {
         CompletableFuture<Void> f = gatherer.collectLocalObjectsStatisticsAsync(tbl, cols, parts, newCfg.version());
 
         f.thenAccept((v) -> {
-            localRepo.refreshAggregatedLocalStatistics(parts, newCfg);
+            repo.refreshAggregatedLocalStatistics(parts, newCfg);
         });
     }
 
