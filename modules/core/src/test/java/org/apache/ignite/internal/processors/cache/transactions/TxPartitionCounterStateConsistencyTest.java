@@ -135,14 +135,25 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         crd.cluster().state(ClusterState.ACTIVE);
         IgniteEx cl = startClientGrid("client");
         IgniteCache<Object, Object> cache = cl.cache(DEFAULT_CACHE_NAME);
+
         cache.put(part, 100);
         cache.put(part, 101);
         cache.put(part, 102);
 
+        cntr0 = counter(part, grid(0).name());
+        cntr1 = counter(part, grid(1).name());
+
+        assertTrue("Counter is not broken: lwm = " + cntr0.get() + ", hwm = " + cntr0.reserved(), cntr0.get() > cntr0.reserved());
+        assertTrue("Counter is not broken: lwm = " + cntr1.get() + ", hwm = " + cntr1.reserved(), cntr1.get() > cntr1.reserved());
+
         //repair counters
-        crd.context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+        grid(1).context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+
+        GridTestUtils.waitForCondition(() -> grid(1).context().cache().context().exchange().lastTopologyFuture().topologyVersion().equals(new AffinityTopologyVersion(3, 1)), 5000);
 
         cache.put(part, 103);
+
+        grid(0).context().discovery().alive(grid(1).cluster().localNode());
     }
 
     /**
