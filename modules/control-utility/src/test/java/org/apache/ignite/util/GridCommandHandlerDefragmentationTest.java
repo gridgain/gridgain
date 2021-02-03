@@ -341,7 +341,7 @@ public class GridCommandHandlerDefragmentationTest extends GridCommandHandlerClu
 
         String grid0ConsId = ig.configuration().getConsistentId().toString();
 
-        ListeningTestLogger testLog = new ListeningTestLogger();
+        ListeningTestLogger testLog = new ListeningTestLogger(log);
 
         CommandHandler cmd = createCommandHandler(testLog);
 
