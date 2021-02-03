@@ -1206,7 +1206,6 @@ public class TxRollbackOnTimeoutTest extends GridCommonAbstractTest {
         IgniteInternalFuture<Void> fut = runAsync(new Callable<Void>() {
             @Override public Void call() {
                 try (Transaction tx0 = client.transactions().txStart()) {
-                    log.info("zzzz Started tx with 1 key, tx=" + tx0);
                     client.cache(CACHE_NAME).put(pk0, 0);
 
                     locked.countDown();
@@ -1225,7 +1224,6 @@ public class TxRollbackOnTimeoutTest extends GridCommonAbstractTest {
         IgniteInternalFuture fut2 = runAsync(new Runnable() {
             @Override public void run() {
                 try (Transaction tx1 = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ, 1000, 0)) {
-                    log.info("zzzz Started tx with 2 keys, tx=" + tx1);
                     awaitQuiet(locked);
 
                     client.cache(CACHE_NAME).put(pk1, 1);
