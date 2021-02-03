@@ -74,7 +74,7 @@ public class FreeListCachingTest extends GridCommonAbstractTest {
 
         dsCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setPersistenceEnabled(true)
-                .setMaxSize(pageSize * 40_000L));
+                .setMaxSize(pageSize * 50_000L));
 
         cfg.setDataStorageConfiguration(dsCfg);
 
