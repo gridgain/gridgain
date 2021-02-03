@@ -340,10 +340,10 @@ public abstract class PagesList extends DataStructure {
 
         assert nextPageId != 0;
 
-        flushBucketsCache(statHolder);
-
         if (!changed)
             return;
+
+        flushBucketsCache(statHolder);
 
         // This guaranteed that any concurrently changes of list will be detected.
         changed = false;
