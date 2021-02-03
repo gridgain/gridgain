@@ -3254,7 +3254,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                                     });
                                 }
                                 // If we could not mark tx as rollback, it means that transaction is being committed.
-                                else if (tx.setRollbackOnly())
+                                else if (tx.setRollbackOnly() || tx.isRollbackOnly())
                                     tx.rollbackAsync();
                             }
                         }
