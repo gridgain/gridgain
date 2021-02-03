@@ -4193,6 +4193,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (msg instanceof TxTimeoutOnPartitionMapExchangeChangeMessage)
             sharedCtx.tm().onTxTimeoutOnPartitionMapExchangeChange((TxTimeoutOnPartitionMapExchangeChangeMessage)msg);
 
+        if (msg instanceof FinalizeCountersDiscoveryMessage)
+            return true;
+
         return false;
     }
 

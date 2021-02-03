@@ -82,6 +82,7 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.ExchangeContext;
 import org.apache.ignite.internal.processors.cache.ExchangeDiscoveryEvents;
+import org.apache.ignite.internal.processors.cache.FinalizeCountersDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
@@ -972,6 +973,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     exchange = onCustomMessageNoAffinityChange();
                 else if (msg instanceof WalStateAbstractMessage)
                     exchange = onCustomMessageNoAffinityChange();
+                else if (msg instanceof FinalizeCountersDiscoveryMessage)
+                    exchange = onFinilizeCountersRequest();
                 else {
                     assert affChangeMsg != null : this;
 
@@ -1481,6 +1484,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         return cctx.kernalContext().clientNode() ? ExchangeType.CLIENT : ExchangeType.ALL;
     }
 
+    private ExchangeType onFinilizeCountersRequest() {
+        return cctx.kernalContext().clientNode() ? ExchangeType.CLIENT : ExchangeType.ALL;
+    }
+
     /**
      * @return Exchange type.
      */
@@ -1754,8 +1761,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         changeWalModeIfNeeded();
 
-//        if (events().hasServerLeft())//
-        if (!events().hasServerJoin())//
+        if (events().hasServerLeft())
             finalizePartitionCounters();
 
         cctx.exchange().exchangerBlockingSectionBegin();

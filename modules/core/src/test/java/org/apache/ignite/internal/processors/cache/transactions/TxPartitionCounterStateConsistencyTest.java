@@ -41,6 +41,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -58,6 +59,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.internal.processors.cache.FinalizeCountersDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
@@ -111,6 +113,36 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         }
 
         return cfg;
+    }
+
+    @Test
+    public void testBrokenCounter() throws Exception {
+        backups = 1;
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+        IgniteEx prim = grid(1);
+        int part = primaryKey(prim.cache(DEFAULT_CACHE_NAME));
+        for (int i = 0; i < 10; i++)
+            crd.cache(DEFAULT_CACHE_NAME).put(part, i);
+        PartitionUpdateCounter cntr0 = counter(part, grid(0).name());
+        PartitionUpdateCounter cntr1 = counter(part, grid(1).name());
+        cntr0.update(12, 4);
+        cntr1.update(13, 3);
+        forceCheckpoint();
+        stopGrid(0);
+        stopGrid(1);
+        crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+        IgniteEx cl = startClientGrid("client");
+        IgniteCache<Object, Object> cache = cl.cache(DEFAULT_CACHE_NAME);
+        cache.put(part, 100);
+        cache.put(part, 101);
+        cache.put(part, 102);
+
+        //repair counters
+        crd.context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+
+        cache.put(part, 103);
     }
 
     /**
