@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -34,17 +35,19 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
      * @throws IgniteCheckedException In case of errors.
      */
     @Test
-    public void clearAllTest() throws IgniteCheckedException {
+    public void clearAllTest() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsRepository statsRepo = (IgniteStatisticsRepository)
-            ((IgniteStatisticsManagerImpl) statsMgr).statisticsRepository();
-        IgniteStatisticsStore statsStore = statsRepo.statisticsStore();
 
-        statsStore.clearAllStatistics();
+        statsMgr.dropAll();
+
+        awaitStatistics(TIMEOUT);
 
         ObjectStatistics locStat = statsMgr.getLocalStatistics("PUBLIC", "SMALL");
 
-        assertNotNull(locStat);
+        while (true)
+            U.sleep(1000);
+
+     //   assertNull(locStat);
     }
 
     /**

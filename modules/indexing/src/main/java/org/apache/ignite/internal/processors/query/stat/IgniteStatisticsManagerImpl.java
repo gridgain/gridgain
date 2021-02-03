@@ -147,7 +147,15 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** {@inheritDoc} */
     @Override public void dropStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
         checkStatisticsSupport("drop statistics");
-        // TODO:
+
+        statCfgMgr.dropStatistics(Arrays.asList(targets));
+    }
+
+    /** {@inheritDoc} */
+    @Override public void dropAll() throws IgniteCheckedException {
+        checkStatisticsSupport("drop all statistics");
+
+        statCfgMgr.dropAll();
     }
 
     /** {@inheritDoc} */

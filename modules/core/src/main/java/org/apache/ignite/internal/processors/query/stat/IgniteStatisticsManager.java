@@ -40,6 +40,9 @@ public interface IgniteStatisticsManager {
      */
     public void dropStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
 
+    /** Drop all statistics. */
+    void dropAll() throws IgniteCheckedException;
+
     /**
      * Get local statistics by object.
      *
