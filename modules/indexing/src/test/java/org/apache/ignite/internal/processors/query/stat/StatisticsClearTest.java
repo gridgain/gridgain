@@ -140,7 +140,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
     private void testRestartVersion(Consumer<MetaStorage> verCorruptor) throws Exception {
         IgniteCacheDatabaseSharedManager db = grid(0).context().cache().context().database();
 
-        checkStatisticsExist(db);
+        checkStatisticsExist(db, TIMEOUT);
 
         db.checkpointReadLock();
 
@@ -170,7 +170,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
 
         db = grid(0).context().cache().context().database();
 
-        checkStatisticsExist(db);
+        checkStatisticsExist(db, TIMEOUT);
     }
 
     /**
@@ -179,17 +179,30 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
      * @param db IgniteCacheDatabaseSharedManager to test in.
      * @throws IgniteCheckedException In case of errors.
      */
-    private void checkStatisticsExist(IgniteCacheDatabaseSharedManager db) throws IgniteCheckedException {
-        db.checkpointReadLock();
-        try {
-            boolean found[] = new boolean[1];
+    private void checkStatisticsExist(IgniteCacheDatabaseSharedManager db, long timeout) throws IgniteCheckedException {
+        long t0 = U.currentTimeMillis();
 
-            db.metaStorage().iterate("stats.data.PUBLIC.SMALL.", (k, v) -> found[0] = true, true);
+        while (true) {
+            db.checkpointReadLock();
 
-            Assert.assertTrue(found[0]);
-        }
-        finally {
-            db.checkpointReadUnlock();
+            try {
+                boolean found[] = new boolean[1];
+
+                db.metaStorage().iterate("stats.data.PUBLIC.SMALL.", (k, v) -> found[0] = true, true);
+
+                Assert.assertTrue(found[0]);
+
+                return;
+            }
+            catch (Throwable ex) {
+                if (t0 + timeout < U.currentTimeMillis())
+                    throw ex;
+                else
+                    U.sleep(200);
+            }
+            finally {
+                db.checkpointReadUnlock();
+            }
         }
     }
 }
