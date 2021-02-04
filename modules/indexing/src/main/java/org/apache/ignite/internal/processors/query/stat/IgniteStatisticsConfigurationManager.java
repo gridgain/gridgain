@@ -155,7 +155,7 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     public void updateStatistics(List<StatisticsTarget> targets) {
         if (log.isDebugEnabled())
-            log.debug("Update statistics [targets= " + targets + ']');
+            log.debug("Update statistics [targets=" + targets + ']');
 
         for (StatisticsTarget target : targets) {
             GridH2Table tbl = schemaMgr.dataTable(target.schema(), target.obj());
@@ -266,17 +266,17 @@ public class IgniteStatisticsConfigurationManager {
     /**
      *
      */
-    private void updateObjectStatisticConfiguration(StatisticsObjectConfiguration statObjCfg) {
+    private void updateObjectStatisticConfiguration(StatisticsObjectConfiguration cfg) {
         try {
             while (true) {
-                String key = key2String(statObjCfg.key());
+                String key = key2String(cfg.key());
 
                 StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
 
                 if (oldCfg != null)
-                    statObjCfg = StatisticsObjectConfiguration.merge(statObjCfg, oldCfg);
+                    cfg = StatisticsObjectConfiguration.merge(oldCfg, cfg);
 
-                if (distrMetaStorage.compareAndSet(key, oldCfg, statObjCfg))
+                if (distrMetaStorage.compareAndSet(key, oldCfg, cfg))
                     return;
             }
         }
@@ -360,6 +360,9 @@ public class IgniteStatisticsConfigurationManager {
         assert oldCfg == null || oldCfg.version() <= newCfg.version() : "Invalid statistic configuration version: " +
             "[old=" + oldCfg + ", new=" + newCfg + ']';
 
+        if (log.isDebugEnabled())
+            log.debug("Statistic configuration changed [old=" + oldCfg + ", new=" + newCfg + ']');
+
         if (oldCfg != null && oldCfg.version() == newCfg.version()) {
             if (F.isEmpty(newCfg.columns())) {
                 LocalStatisticsGatheringContext gctx = gatherer.gatheringInProgress(newCfg.key());
@@ -397,11 +400,13 @@ public class IgniteStatisticsConfigurationManager {
 
             cctx.affinity().affinityReadyFuture(cctx.affinity().affinityTopologyVersion()).get();
 
-            Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());
+            Set<Integer> parts = cctx.affinity().primaryPartitions(
+                cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());
 
             Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), newCfg.columns());
 
-            LocalStatisticsGatheringContext ctx = gatherer.collectLocalObjectsStatisticsAsync(tbl, cols, parts, newCfg.version());
+            LocalStatisticsGatheringContext ctx = gatherer
+                .collectLocalObjectsStatisticsAsync(tbl, cols, parts, newCfg.version());
 
             ctx.future().thenAccept((v) -> {
                 onFinishLocalGathering(newCfg.key(), parts);

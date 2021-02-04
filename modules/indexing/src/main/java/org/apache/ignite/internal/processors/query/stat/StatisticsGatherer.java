@@ -77,7 +77,8 @@ public class StatisticsGatherer {
         if (log.isDebugEnabled()) {
             log.debug("Start statistics gathering [key=" + key +
                 ", cols=" + Arrays.toString(cols) +
-                ", parts=" + parts + ']');
+                ", parts=" + parts +
+                ", ver=" + ver + ']');
         }
 
         final LocalStatisticsGatheringContext newCtx = new LocalStatisticsGatheringContext(parts);
@@ -158,7 +159,8 @@ public class StatisticsGatherer {
 
             if (log.isDebugEnabled()) {
                 log.debug("Start saving local partitioned statistic [key=" + key +
-                    ", part=" + part + ']');
+                    ", part=" + part +
+                    ", ver=" + partStat.version() + ']');
             }
 
             statRepo.saveLocalPartitionStatistics(

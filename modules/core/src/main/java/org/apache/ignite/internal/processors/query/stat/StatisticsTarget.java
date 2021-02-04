@@ -19,15 +19,20 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import org.apache.ignite.internal.stat.IoStatisticsHolderKey;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Target to collect statistics by.
  */
 public class StatisticsTarget {
     /** Statistic key. */
+    @GridToStringInclude
     private final StatisticsKey key;
 
     /**  */
+    @GridToStringInclude
     private final String[] columns;
 
     /**
@@ -78,5 +83,10 @@ public class StatisticsTarget {
         int result = Objects.hash(key);
         result = 31 * result + Arrays.hashCode(columns);
         return result;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(StatisticsTarget.class, this);
     }
 }
