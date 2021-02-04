@@ -65,24 +65,20 @@ public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
     @Test
     public void compareSelectWithIntConditions() throws IgniteCheckedException {
         String[][] noHints = new String[1][];
-        String lo_med_select = "select * from TBL_SELECT i1 where lo_select = %d and med_select = %d";
+        String sql = "select * from TBL_SELECT i1 where lo_select = %d and med_select = %d";
+
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
-                String.format(lo_med_select, 5, 5), noHints);
+                String.format(sql, 5, 5), noHints);
 
         sql("UPDATE TBL_SELECT SET lo_select = hi_select");
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
-                String.format(lo_med_select, 6, 6), noHints);
+                String.format(sql, 6, 6), noHints);
 
-        IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
+        // All columns set up before also will be updated
         updateStatistics(new StatisticsTarget("PUBLIC", "TBL_SELECT", "HI_SELECT"));
 
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
-                String.format(lo_med_select, 7, 7), noHints);
-
-        updateStatistics(new StatisticsTarget("PUBLIC", "TBL_SELECT", "LO_SELECT"));
-
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_LO_IDX"},
-                String.format(lo_med_select, 8, 8), noHints);
+                String.format(sql, 8, 8), noHints);
     }
 }

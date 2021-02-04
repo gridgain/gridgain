@@ -192,4 +192,9 @@ public class StatisticsGatherer {
     public void submit(Runnable task) {
         gatherPool.submit(task);
     }
+
+    /** */
+    public void stop() {
+        gatheringInProgress.values().forEach(ctx -> ctx.future().cancel(true));
+    }
 }
