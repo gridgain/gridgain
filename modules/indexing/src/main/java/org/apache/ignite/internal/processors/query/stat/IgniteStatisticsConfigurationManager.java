@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -180,6 +179,9 @@ public class IgniteStatisticsConfigurationManager {
 
     /** */
     public void dropStatistics(List<StatisticsTarget> targets) {
+        if (log.isDebugEnabled())
+            log.debug("Drop statistics [targets=" + targets + ']');
+
         for (StatisticsTarget target : targets) {
             String key = key2String(target.key());
 
@@ -286,7 +288,7 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /** */
-    private void checkLocalStatistics(StatisticsObjectConfiguration cfg, AffinityTopologyVersion topVer) {
+    private void checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
         try {
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
 
@@ -296,9 +298,9 @@ public class IgniteStatisticsConfigurationManager {
 
             GridCacheContext cctx = tbl.cacheContext();
 
-            topVer = cctx.affinity().affinityReadyFuture(topVer).get();
+            AffinityTopologyVersion topVer0 = cctx.affinity().affinityReadyFuture(topVer).get();
 
-            final Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer);
+            final Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer0);
 
             if (log.isDebugEnabled())
                 log.debug("Check local statistics [key=" + cfg.key() + ", parts=" + parts + ']');
@@ -408,7 +410,7 @@ public class IgniteStatisticsConfigurationManager {
                 Collections.emptySet();
 
             if (log.isDebugEnabled()) {
-                log.debug("Remove local partitioned statistics [key=" + newCfg.key() +
+                log.debug("Remove local statistics [key=" + newCfg.key() +
                     ", columns=" + colsToRemove + ']');
             }
 
@@ -440,10 +442,34 @@ public class IgniteStatisticsConfigurationManager {
         try {
             StatisticsObjectConfiguration cfg = distrMetaStorage.read(key2String(key));
 
-            if (cfg == null || F.isEmpty(cfg.columns()))
+            if (cfg == null || F.isEmpty(cfg.columns())) {
                 repo.clearLocalStatistics(key);
 
+                return;
+            }
+
             repo.refreshAggregatedLocalStatistics(partsToAggregate, cfg);
+
+            // Drop column statistics if need
+            Set<String> targetCols = Arrays.stream(cfg.columns())
+                .map(StatisticsColumnConfiguration::name)
+                .collect(Collectors.toSet());
+
+            ObjectStatisticsImpl stat = repo.getLocalStatistics(cfg.key());
+
+            Set<String> colsToRmv = new HashSet<>(stat.columnsStatistics().keySet());
+
+            colsToRmv.removeAll(targetCols);
+
+            if (!F.isEmpty(colsToRmv)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Remove local statistics [key=" + cfg.key() +
+                        ", columns=" + colsToRmv + ']');
+                }
+
+                repo.clearLocalStatistics(cfg.key(), colsToRmv);
+                repo.clearLocalPartitionsStatistics(cfg.key(), colsToRmv);
+            }
         }
         catch (IgniteCheckedException e) {
             log.error("Error on aggregate statistic on finish local statistics collection" +

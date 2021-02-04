@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -29,6 +30,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     private final long rowsCnt;
 
     /** Map columnKey to its statistic. */
+    @GridToStringInclude
     private final Map<String, ColumnStatistics> colNameToStat;
 
     /** */

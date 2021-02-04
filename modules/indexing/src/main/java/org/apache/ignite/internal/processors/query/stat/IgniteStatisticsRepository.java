@@ -204,6 +204,11 @@ public class IgniteStatisticsRepository {
      * @param colNames Only statistics by specified columns will be cleared.
      */
     public void clearLocalStatistics(StatisticsKey key, Set<String> colNames) {
+        if (log.isDebugEnabled()) {
+            log.debug("Clear local statistics [key=" + key +
+                ", columns=" + colNames + ']');
+        }
+
         if (locStats == null) {
             log.warning("Unable to clear local statistics for " + key + " on non server node.");
 

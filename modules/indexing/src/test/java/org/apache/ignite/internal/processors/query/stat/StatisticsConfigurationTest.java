@@ -16,20 +16,24 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -115,11 +119,11 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         cleanPersistenceDir();
     }
 
-    /** {@inheritDoc} */
-    @Override protected IgniteEx startGrid(int nodeIdx) throws Exception {
+    /** */
+    protected IgniteEx startGridAndChangeBaseline(int nodeIdx) throws Exception {
         System.out.println("+++ START " + nodeIdx);
 
-        IgniteEx ign = super.startGrid(nodeIdx);
+        IgniteEx ign = startGrid(nodeIdx);
 
         ign.cluster().state(ClusterState.ACTIVE);
 
@@ -132,11 +136,11 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     }
 
 
-    /** {@inheritDoc} */
-    @Override protected void stopGrid(int nodeIdx) {
+    /** */
+    protected void stopGridAndChangeBaseline(int nodeIdx) {
         System.out.println("+++ STOP " + nodeIdx);
 
-        super.stopGrid(nodeIdx);
+        stopGrid(nodeIdx);
 
         if (persist)
             F.first(G.allGrids()).cluster().setBaselineTopology(F.first(G.allGrids()).cluster().topologyVersion());
@@ -152,7 +156,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     /** */
     @Test
     public void updateStatisticsOnChangeTopology() throws Exception {
-        startGrid(0);
+        startGridAndChangeBaseline(0);
 
         createSmallTable("");
 
@@ -160,31 +164,31 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        startGrid(1);
+        startGridAndChangeBaseline(1);
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        startGrid(2);
+        startGridAndChangeBaseline(2);
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        startGrid(3);
+        startGridAndChangeBaseline(3);
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        stopGrid(0);
+        stopGridAndChangeBaseline(0);
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        stopGrid(2);
+        stopGridAndChangeBaseline(2);
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        stopGrid(3);
+        stopGridAndChangeBaseline(3);
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
-        stopGrid(3);
+        startGridAndChangeBaseline(3);
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
     }
@@ -193,6 +197,8 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     @Test
     public void dropUpdate() throws Exception {
         startGrids(3);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
 
         createSmallTable("");
 
@@ -208,6 +214,79 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+    }
+
+    /** */
+    @Test
+    public void dropSingleColumnStatisticWhileNodeDown() throws Exception {
+        startGrids(3);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        createSmallTable("");
+
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        stopGrid(1);
+
+        grid(0).context().query().getIndexing().statsManager()
+            .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
+
+        checkStatisticsExistInMetastore(grid(0).context().cache().context().database(), STAT_TIMEOUT);
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+            (stats) -> stats.forEach(s -> assertNull(s.columnStatistics("A"))));
+
+        startGrid(1);
+
+        checkStatisticsExistInMetastore(grid(1).context().cache().context().database(), STAT_TIMEOUT);
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows,
+            (stats) -> {
+                assertEquals(3, stats.size());
+                stats.forEach(s -> assertNull(s.columnStatistics("A")));
+            }
+        );
+    }
+
+    /**
+     * Test that statistics for table SMALL exists in local metastorage.
+     *
+     * @param db IgniteCacheDatabaseSharedManager to test in.
+     * @throws IgniteCheckedException In case of errors.
+     */
+    private void checkStatisticsExistInMetastore(
+        IgniteCacheDatabaseSharedManager db,
+        long timeout
+    ) throws IgniteCheckedException {
+        if (!persist)
+            return;
+
+        long t0 = U.currentTimeMillis();
+
+        while (true) {
+            db.checkpointReadLock();
+
+            try {
+                db.metaStorage().iterate(
+                    "stats.data.PUBLIC.SMALL.",
+                    (k, v) -> assertNull(((StatisticsObjectData)v).data().get("A")),
+                    true);
+
+                return;
+            }
+            catch (Throwable ex) {
+                if (t0 + timeout < U.currentTimeMillis())
+                    throw ex;
+                else
+                    U.sleep(200);
+            }
+            finally {
+                db.checkpointReadUnlock();
+            }
+        }
     }
 
     /** */
