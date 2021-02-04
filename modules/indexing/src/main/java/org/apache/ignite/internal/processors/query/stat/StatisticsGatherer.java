@@ -157,21 +157,13 @@ public class StatisticsGatherer {
             if (partStat == null)
                 return;
 
-            if (log.isDebugEnabled()) {
-                log.debug("Start saving local partitioned statistic [key=" + key +
-                    ", part=" + part +
-                    ", ver=" + partStat.version() + ']');
-            }
-
             statRepo.saveLocalPartitionStatistics(
                 new StatisticsKey(tbl.getSchema().getName(), tbl.getName()),
                 partStat
             );
 
-            if (log.isDebugEnabled()) {
-                log.debug("Save local partitioned statistic done [key=" + key +
-                    ", part=" + part + ']');
-            }
+            if (log.isDebugEnabled())
+                log.debug("Local partitioned statistic saved [stat=" + partStat + ']');
 
             newCtx.partitionDone(part);
 

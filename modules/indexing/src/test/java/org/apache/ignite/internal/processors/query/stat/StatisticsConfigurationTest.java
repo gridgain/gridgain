@@ -237,7 +237,11 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         checkStatisticsExistInMetastore(grid(0).context().cache().context().database(), STAT_TIMEOUT);
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
-            (stats) -> stats.forEach(s -> assertNull(s.columnStatistics("A"))));
+            (stats) -> {
+                assertEquals(2, stats.size());
+                stats.forEach(s -> assertNull(s.columnStatistics("A")));
+            }
+        );
 
         startGrid(1);
 

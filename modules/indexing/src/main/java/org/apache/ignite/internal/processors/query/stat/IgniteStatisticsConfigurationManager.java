@@ -351,12 +351,14 @@ public class IgniteStatisticsConfigurationManager {
                 partsToRemove = Collections.emptySet();
             }
 
-            if (log.isDebugEnabled()) {
-                log.debug("Remove local partitioned statistics [key=" + cfg.key() +
-                    ", part=" + partsToRemove + ']');
-            }
+            if (!partsToRemove.isEmpty()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Remove local partitioned statistics [key=" + cfg.key() +
+                        ", part=" + partsToRemove + ']');
+                }
 
-            partsToRemove.forEach(p -> repo.clearLocalPartitionStatistics(cfg.key(), p));
+                partsToRemove.forEach(p -> repo.clearLocalPartitionStatistics(cfg.key(), p));
+            }
 
             Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), cfg.columns());
 
