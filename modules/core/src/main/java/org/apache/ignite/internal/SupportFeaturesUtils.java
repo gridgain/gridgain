@@ -57,6 +57,11 @@ public class SupportFeaturesUtils {
     public static final String IGNITE_PME_FREE_SWITCH_DISABLED = "IGNITE_PME_FREE_SWITCH_DISABLED";
 
     /**
+     * Disables keys order preserving for compound .
+     */
+    public static final String IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED = "IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED";
+
+    /**
      * @param featureName System property feature name.
      * @return {@code true} If given feature is enabled.
      */
