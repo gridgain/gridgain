@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -47,7 +48,9 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
 
         cleanPersistenceDir();
 
-        startGridsMultiThreaded(nodes());
+        startGrids(nodes());
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
 
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
@@ -70,7 +73,7 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws IgniteCheckedException {
-        grid(0).context().query().getIndexing().statsManager().updateStatistics(SMALL_TARGET);
+        updateStatistics(SMALL_TARGET);
     }
 
     /**

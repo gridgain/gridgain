@@ -104,7 +104,7 @@ public class IgniteStatisticsConfigurationManager {
 
                 distrMetaStorage.listen(
                     (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
-                    (k, oldV, newV) ->  {
+                    (k, oldV, newV) -> {
                         // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
                         // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
                         // called on exchange done.
@@ -113,14 +113,14 @@ public class IgniteStatisticsConfigurationManager {
 
                         mgmtPool.submit(() -> {
                             try {
-                                onUpdateStatisticConfiguration(
+                                onChangeStatisticConfiguration(
                                     (StatisticsObjectConfiguration)oldV,
                                     (StatisticsObjectConfiguration)newV
                                 );
                             }
                             catch (Throwable e) {
-                                log.warning("Unexpected exception on check local statistic for cache group [old="
-                                    + oldV + ", new=" + newV + ']');
+                                log.warning("Unexpected exception on change statistic configuration [old="
+                                    + oldV + ", new=" + newV + ']', e);
                             }
                         });
                     }
@@ -154,6 +154,9 @@ public class IgniteStatisticsConfigurationManager {
 
     /** */
     public void updateStatistics(List<StatisticsTarget> targets) {
+        if (log.isDebugEnabled())
+            log.debug("Update statistics [targets= " + targets + ']');
+
         for (StatisticsTarget target : targets) {
             GridH2Table tbl = schemaMgr.dataTable(target.schema(), target.obj());
 
@@ -332,19 +335,17 @@ public class IgniteStatisticsConfigurationManager {
             Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), cfg.columns());
 
             if (!F.isEmpty(partsToCollect)) {
-                CompletableFuture<Void> f = gatherer.collectLocalObjectsStatisticsAsync(
+                LocalStatisticsGatheringContext ctx = gatherer.collectLocalObjectsStatisticsAsync(
                     tbl,
                     cols,
                     partsToCollect,
                     cfg.version()
                 );
 
-                f.thenAccept((v) -> repo.refreshAggregatedLocalStatistics(parts, cfg));
+                ctx.future().thenAccept((v) -> onFinishLocalGathering(cfg.key(), parts));
             }
-            else {
-                // TODO: error handling
-                gatherer.submit(() -> repo.refreshAggregatedLocalStatistics(parts, cfg));
-            }
+            else
+                gatherer.submit(() -> onFinishLocalGathering(cfg.key(), parts));
         }
         catch (IgniteCheckedException ex) {
             log.error("Unexpected error on check local statistics", ex);
@@ -352,30 +353,44 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /** */
-    private void onUpdateStatisticConfiguration(
+    private void onChangeStatisticConfiguration(
         StatisticsObjectConfiguration oldCfg,
         final StatisticsObjectConfiguration newCfg
     ) throws IgniteCheckedException {
-        Set<String> newCols = Arrays.stream(newCfg.columns())
-            .map(StatisticsColumnConfiguration::name)
-            .collect(Collectors.toSet());
-        Set<String> oldCols = oldCfg != null ?
-            Arrays.stream(oldCfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet()) :
-            Collections.emptySet();
+        assert oldCfg == null || oldCfg.version() <= newCfg.version() : "Invalid statistic configuration version: " +
+            "[old=" + oldCfg + ", new=" + newCfg + ']';
 
-        oldCols.removeAll(newCols);
+        if (oldCfg != null && oldCfg.version() == newCfg.version()) {
+            if (F.isEmpty(newCfg.columns())) {
+                LocalStatisticsGatheringContext gctx = gatherer.gatheringInProgress(newCfg.key());
 
-        String[] rmCols = oldCols.toArray(EMPTY_STR_ARRAY);
+                if (gctx != null)
+                    gctx.future().cancel(false);
+            }
 
-        if (log.isDebugEnabled()) {
-            log.debug("Remove local partitioned statistics [key=" + newCfg.key() +
-                ", columns=" + Arrays.toString(rmCols) + ']');
+            // Drop statistics
+            Set<String> newCols = Arrays.stream(newCfg.columns())
+                .map(StatisticsColumnConfiguration::name)
+                .collect(Collectors.toSet());
+
+            Set<String> oldCols = oldCfg != null ?
+                Arrays.stream(oldCfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet()) :
+                Collections.emptySet();
+
+            oldCols.removeAll(newCols);
+
+            String[] rmCols = oldCols.toArray(EMPTY_STR_ARRAY);
+
+            if (log.isDebugEnabled()) {
+                log.debug("Remove local partitioned statistics [key=" + newCfg.key() +
+                    ", columns=" + Arrays.toString(rmCols) + ']');
+            }
+
+            repo.clearLocalStatistics(newCfg.key(), rmCols);
+            repo.clearLocalPartitionsStatistics(newCfg.key(), rmCols);
         }
-
-        repo.clearLocalStatistics(newCfg.key(), rmCols);
-        repo.clearLocalPartitionsStatistics(newCfg.key(), rmCols);
-
-        if (oldCfg.version() < newCfg.version()) {
+        else {
+            // Update statistics
             GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
 
             GridCacheContext cctx = tbl.cacheContext();
@@ -386,12 +401,42 @@ public class IgniteStatisticsConfigurationManager {
 
             Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), newCfg.columns());
 
-            CompletableFuture<Void> f = gatherer.collectLocalObjectsStatisticsAsync(tbl, cols, parts, newCfg.version());
+            LocalStatisticsGatheringContext ctx = gatherer.collectLocalObjectsStatisticsAsync(tbl, cols, parts, newCfg.version());
 
-            f.thenAccept((v) -> {
-                repo.refreshAggregatedLocalStatistics(parts, newCfg);
+            ctx.future().thenAccept((v) -> {
+                onFinishLocalGathering(newCfg.key(), parts);
             });
         }
+    }
+
+    /** */
+    private void onFinishLocalGathering(StatisticsKey key, Set<Integer> partsToAggregate) {
+        try {
+            StatisticsObjectConfiguration cfg = distrMetaStorage.read(key2String(key));
+
+            if (cfg == null || F.isEmpty(cfg.columns()))
+                repo.clearLocalStatistics(key);
+
+            repo.refreshAggregatedLocalStatistics(partsToAggregate, cfg);
+        }
+        catch (IgniteCheckedException e) {
+            log.error("Error on aggregate statistic on finish local statistics collection" +
+                " [key=" + key + ", parts=" + partsToAggregate, e);
+        }
+    }
+
+    /** */
+    public StatisticsObjectConfiguration config(StatisticsKey key) throws IgniteCheckedException {
+        return distrMetaStorage.read(key2String(key));
+    }
+
+    /** */
+    public List<StatisticsObjectConfiguration> config() throws IgniteCheckedException {
+        List<StatisticsObjectConfiguration> cfgs = new ArrayList<>();
+
+        distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> cfgs.add((StatisticsObjectConfiguration)v));
+
+        return cfgs;
     }
 
     /** */

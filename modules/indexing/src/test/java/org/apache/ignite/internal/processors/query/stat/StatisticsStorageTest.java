@@ -25,8 +25,8 @@ import org.junit.Test;
  */
 public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTest {
     /** {@inheritDoc} */
-    @Override public void beforeTest() throws IgniteCheckedException {
-        grid(0).context().query().getIndexing().statsManager().updateStatistics(
+    @Override public void beforeTest() throws Exception {
+        updateStatistics(
             new StatisticsTarget("PUBLIC", "SMALL"));
     }
 
@@ -37,17 +37,14 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     @Test
     public void clearAllTest() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
+        IgniteStatisticsRepository statsRepo = ((IgniteStatisticsManagerImpl) statsMgr).statisticsRepository();
+        IgniteStatisticsStore statsStore = statsRepo.statisticsStore();
 
-        statsMgr.dropAll();
-
-        awaitStatistics(TIMEOUT);
+        statsStore.clearAllStatistics();
 
         ObjectStatistics locStat = statsMgr.getLocalStatistics("PUBLIC", "SMALL");
 
-        while (true)
-            U.sleep(1000);
-
-     //   assertNull(locStat);
+        assertNotNull(locStat);
     }
 
     /**

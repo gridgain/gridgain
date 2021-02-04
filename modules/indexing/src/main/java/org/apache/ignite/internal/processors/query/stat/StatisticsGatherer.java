@@ -66,7 +66,7 @@ public class StatisticsGatherer {
     /**
      * Collect statistic per partition for specified objects on the same cache group.
      */
-    public CompletableFuture<Void> collectLocalObjectsStatisticsAsync(
+    public LocalStatisticsGatheringContext collectLocalObjectsStatisticsAsync(
         GridH2Table tbl,
         Column[] cols,
         Set<Integer> parts,
@@ -93,7 +93,8 @@ public class StatisticsGatherer {
 
         for (int part : parts) {
             final CollectPartitionStatistics task = new CollectPartitionStatistics(
-                newCtx, tbl,
+                newCtx,
+                tbl,
                 cols,
                 part,
                 ver,
@@ -104,7 +105,7 @@ public class StatisticsGatherer {
         }
 
         // Wait all partition gathering tasks.
-        return newCtx.future();
+        return newCtx;
     }
 
     /** */
@@ -178,6 +179,11 @@ public class StatisticsGatherer {
         catch (Throwable ex) {
             log.error("Unexpected error os statistic save", ex);
         }
+    }
+
+    /** */
+    public LocalStatisticsGatheringContext gatheringInProgress(StatisticsKey key) {
+        return gatheringInProgress.get(key);
     }
 
     /** */

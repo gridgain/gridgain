@@ -144,16 +144,12 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
     /** */
     @Test
-    public void updateStatOnChangeTopology() throws Exception {
+    public void updateStatisticsOnChangeTopology() throws Exception {
         startGrid(0);
 
         createSmallTable("");
 
-        ((IgniteStatisticsManagerImpl)grid(0).context().query().getIndexing().statsManager())
-            .statisticConfiguration()
-            .updateStatistics(
-                Collections.singletonList(new StatisticsTarget("PUBLIC", "SMALL"))
-            );
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
@@ -187,6 +183,27 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     }
 
     /** */
+    @Test
+    public void dropUpdate() throws Exception {
+        startGrids(3);
+
+        createSmallTable("");
+
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        grid(0).context().query().getIndexing().statsManager()
+            .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, (stats) -> stats.forEach(s -> assertNull(s)));
+
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+    }
+
+    /** */
     private void waitForStats(
         String schema,
         String objName,
@@ -204,7 +221,6 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
                 List<ObjectStatisticsImpl> stats = mgrs.stream()
                     .map(m -> (ObjectStatisticsImpl)m.getLocalStatistics(schema, objName))
                     .collect(Collectors.toList());
-
 
                 for (Consumer<List<ObjectStatisticsImpl>> statChecker : statsCheckers)
                     statChecker.accept(stats);

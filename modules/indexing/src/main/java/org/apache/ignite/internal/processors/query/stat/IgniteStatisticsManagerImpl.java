@@ -104,8 +104,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         else if (db == null)
             store = new IgniteStatisticsInMemoryStoreImpl(ctx::log);
         else
-            store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db,
-                (k, s) -> this.statisticsRepository().cacheLocalStatistics(k, s), ctx::log);
+            store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db, ctx::log);
 
         statsRepos = new IgniteStatisticsRepository(store, helper, ctx::log);
 

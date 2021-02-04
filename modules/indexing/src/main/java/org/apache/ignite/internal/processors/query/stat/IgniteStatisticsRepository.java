@@ -45,9 +45,6 @@ public class IgniteStatisticsRepository {
     /** Statistics gathering. */
     private final IgniteStatisticsHelper helper;
 
-    /** Global (for whole cluster) object statistics. */
-    private final Map<StatisticsKey, ObjectStatisticsImpl> globalStats = new ConcurrentHashMap<>();
-
     /**
      * Constructor.
      *
@@ -77,24 +74,6 @@ public class IgniteStatisticsRepository {
             Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
         store.replaceLocalPartitionsStatistics(key, statistics);
-    }
-
-    /** {@inheritDoc} */
-    public Collection<ObjectPartitionStatisticsImpl> mergeLocalPartitionsStatistics(
-            StatisticsKey key,
-            Collection<ObjectPartitionStatisticsImpl> statistics
-    ) {
-        List<ObjectPartitionStatisticsImpl> res = new ArrayList<>();
-        for (ObjectPartitionStatisticsImpl newStat : statistics) {
-            ObjectPartitionStatisticsImpl oldStat = store.getLocalPartitionStatistics(key, newStat.partId());
-            if (oldStat != null)
-                newStat = add(oldStat, newStat);
-
-            res.add(newStat);
-            store.saveLocalPartitionStatistics(key, newStat);
-        }
-
-        return res;
     }
 
     /**
@@ -196,39 +175,6 @@ public class IgniteStatisticsRepository {
     }
 
     /**
-     * Merge local object statistics.
-     *
-     * @param key Object key.
-     * @param statistics Statistics to merge.
-     * @return Merged statistics.
-     */
-    public ObjectStatisticsImpl mergeLocalStatistics(StatisticsKey key, ObjectStatisticsImpl statistics) {
-        if (locStats == null) {
-            log.warning("Unable to merge local statistics for " + key + " on non server node.");
-
-            return null;
-        }
-        return locStats.compute(key, (k, v) -> (v == null) ? statistics : add(v, statistics));
-    }
-
-    /**
-     * Calculate and cache saved local statistics.
-     *
-     * @param key Object key.
-     * @param statistics Collection of partitions statistics.
-     */
-    public void cacheLocalStatistics(StatisticsKey key, Collection<ObjectPartitionStatisticsImpl> statistics) {
-        if (locStats == null) {
-            log.warning("Unable to cache local statistics for " + key + " on non server node.");
-
-            return;
-        }
-        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(key.schema(), key.obj(), null);
-
-        locStats.put(key, helper.aggregateLocalStatistics(keyMsg, statistics));
-    }
-
-    /**
      * Get local statistics.
      *
      * @param key Object key to load statistics by.
@@ -261,54 +207,6 @@ public class IgniteStatisticsRepository {
                 ObjectStatisticsImpl locStatNew = subtract(v, colNames);
                 return locStatNew.columnsStatistics().isEmpty() ? null : locStatNew;
             });
-    }
-
-    /**
-     * Save global statistics.
-     *
-     * @param key Object key.
-     * @param statistics Statistics to save.
-     */
-    public void saveGlobalStatistics(StatisticsKey key, ObjectStatisticsImpl statistics) {
-        globalStats.put(key, statistics);
-    }
-
-    /**
-     * Merge global statistics.
-     *
-     * @param key Object key.
-     * @param statistics Statistics to merge.
-     * @return Merged statistics.
-     */
-    public ObjectStatisticsImpl mergeGlobalStatistics(StatisticsKey key, ObjectStatisticsImpl statistics) {
-        return globalStats.compute(key, (k, v) -> (v == null) ? statistics : add(v, statistics));
-    }
-
-    /**
-     * Get global statistics by object.
-     *
-     * @param key To get global statistics by.
-     * @return Object statistics of {@code null} if there are no global statistics for specified object.
-     */
-    public ObjectStatisticsImpl getGlobalStatistics(StatisticsKey key) {
-        return globalStats.get(key);
-    }
-
-    /**
-     * Clear global statistics by object.
-     *
-     * @param key Object key.
-     * @param colNames If specified - only statistics by specified columns will be cleared.
-     */
-    public void clearGlobalStatistics(StatisticsKey key, String... colNames) {
-        if (F.isEmpty(colNames))
-            globalStats.remove(key);
-        else {
-            globalStats.computeIfPresent(key, (k, v) -> {
-                ObjectStatisticsImpl newStat = subtract(v, colNames);
-                return newStat.columnsStatistics().isEmpty() ? null : newStat;
-            });
-        }
     }
 
     /**
@@ -371,23 +269,5 @@ public class IgniteStatisticsRepository {
         );
 
         saveLocalStatistics(objStatCfg.key(), locStat);
-    }
-
-    /** */
-    public ObjectStatisticsImpl aggregatePartitionedStatistics(Set<Integer> parts, StatisticsObjectConfiguration cfg) {
-        Collection<ObjectPartitionStatisticsImpl> stats = store.getLocalPartitionsStatistics(cfg.key());
-
-        Collection<ObjectPartitionStatisticsImpl> statsToAgg = stats.stream()
-            .filter(s -> parts.contains(s.partId()))
-            .collect(Collectors.toList());
-
-        assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough partitioned statistics";
-
-        ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(
-            StatisticsUtils.statisticsObjectConfiguration2Key(cfg),
-            statsToAgg
-        );
-
-        return locStat;
     }
 }

@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.Objects;
 import java.util.function.Function;
 
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -45,17 +46,6 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         testCond(stat -> stat.columnsStatistics().size() == stats[0].columnsStatistics().size(), stats);
 
         testCond(this::checkStat, stats);
-
-        GridTestUtils.waitForCondition(() -> {
-            ObjectStatisticsImpl globalStats[] = getStats("SMALL", StatisticsType.GLOBAL);
-            try {
-                testCond(stat -> stat.equals(globalStats[0]), globalStats);
-                return true;
-            }
-            catch (Exception e) {
-                return false;
-            }
-        }, 1000);
     }
 
     /**
@@ -69,8 +59,14 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         StatisticsTarget t101 = createStatisticTarget(101);
         StatisticsTarget tWrong = new StatisticsTarget(t101.schema(), t101.obj() + "wrong");
 
-        grid(0).context().query().getIndexing().statsManager().updateStatistics(t100, t101, tWrong);
-        awaitStatistics(TIMEOUT * 5);
+        GridTestUtils.assertThrows(
+            log,
+            () -> grid(0).context().query().getIndexing().statsManager().updateStatistics(t100, t101, tWrong),
+            IgniteSQLException.class,
+            "Table doesn't exist [schema=PUBLIC, table=SMALL101wrong]"
+        );
+
+        grid(0).context().query().getIndexing().statsManager().updateStatistics(t100, t101);
 
         ObjectStatisticsImpl[] stats100 = getStats(t100.obj(), StatisticsType.LOCAL);
         ObjectStatisticsImpl[] stats101 = getStats(t101.obj(), StatisticsType.LOCAL);

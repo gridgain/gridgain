@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,6 +39,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -326,12 +328,27 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         StatisticsTarget[] targets = allTbls.stream().map(tbl -> new StatisticsTarget(SCHEMA, tbl.toUpperCase()))
             .toArray(StatisticsTarget[]::new);
 
+        updateStatistics(targets);
+    }
+
+    /**
+     * Update statistics on specified objects.
+     */
+    protected void updateStatistics(StatisticsTarget... targets) {
         try {
+            Map<StatisticsTarget, Long> expectedVersion = new HashMap<>();
+
+            for (StatisticsTarget t : targets) {
+                StatisticsObjectConfiguration cfg = ((IgniteStatisticsManagerImpl)
+                    (grid(0).context().query().getIndexing().statsManager()))
+                    .statisticConfiguration().config(t.key());
+
+                expectedVersion.put(t, cfg != null ? cfg.version() + 1 : 0);
+            }
+
             grid(0).context().query().getIndexing().statsManager().updateStatistics(targets);
 
-            U.sleep(500);
-
-            awaitStatistics(TIMEOUT);
+            awaitStatistics(TIMEOUT, expectedVersion);
         }
         catch (Exception ex) {
             throw new IgniteException(ex);
@@ -396,9 +413,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      *
      * @throws Exception In case of errors.
      */
-    protected void awaitStatistics(long timeout) throws Exception {
-        for(Ignite ign : G.allGrids())
-            awaitStatistics(timeout, (IgniteEx)ign);
+    protected void awaitStatistics(long timeout, Map<StatisticsTarget, Long> expectedVersions) throws Exception {
+        for (Ignite ign : G.allGrids())
+            awaitStatistics(timeout, expectedVersions, (IgniteEx)ign);
     }
 
     /**
@@ -406,19 +423,28 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      *
      * @throws Exception In case of errors.
      */
-    protected void awaitStatistics(long timeout, IgniteEx ign) throws Exception {
+    protected void awaitStatistics(long timeout, Map<StatisticsTarget, Long> expectedVersions, IgniteEx ign) throws Exception {
         long t0 = U.currentTimeMillis();
 
         while (true) {
             try {
                 checkStatisticTasksEmpty(ign);
 
+                expectedVersions.forEach((k, ver) -> {
+                    ObjectStatisticsImpl s = (ObjectStatisticsImpl)ign.context().query().getIndexing().statsManager()
+                        .getLocalStatistics(k.schema(), k.obj());
+
+                    assertEquals((long)ver, s.version());
+                });
+
                 return;
             } catch (Throwable ex) {
                 if (t0 + timeout < U.currentTimeMillis())
                     throw ex;
-                else
+                else {
                     U.sleep(200);
+                    log.info("+++ " + ex.getMessage());
+                }
             }
         }
     }

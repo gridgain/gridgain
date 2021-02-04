@@ -25,10 +25,7 @@ public enum StatisticsType {
     PARTITION,
 
     /** Statistics by some data node. */
-    LOCAL,
-
-    /** Statistics by whole object (table or index). */
-    GLOBAL;
+    LOCAL;
 
     /** Enumerated values. */
     private static final StatisticsType[] VALUES = values();

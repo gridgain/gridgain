@@ -67,7 +67,7 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
 
         IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
         IgniteStatisticsPersistenceStoreImpl persStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-            dbMgr, statsRepos::cacheLocalStatistics, cls -> new GridTestLog4jLogger());
+            dbMgr, cls -> new GridTestLog4jLogger());
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);

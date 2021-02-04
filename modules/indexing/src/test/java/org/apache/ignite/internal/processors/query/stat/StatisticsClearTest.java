@@ -19,6 +19,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,7 +48,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
 
-        statMgr0.updateStatistics(SMALL_TARGET);
+        updateStatistics(SMALL_TARGET);
 
         Assert.assertNotNull(statMgr0.getLocalStatistics(SCHEMA, "SMALL"));
 
@@ -71,7 +72,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
 
-        statMgr1.dropStatistics(SMALL_TARGET);
+        statMgr1.dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME"));
 
         Assert.assertNull(statMgr0.getLocalStatistics(SCHEMA, "NO_NAME"));
         Assert.assertNull(statMgr1.getLocalStatistics(SCHEMA, "NO_NAME"));
@@ -80,13 +81,12 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
 
     /**
      * 1) Restart without statistics version
-     * 2) Check that statistics was cleared
+     * 2) Check that statistics was refreshed.
      *
      * @throws Exception In case of error.
      */
     @Test
     public void testRestartWrongVersion() throws Exception {
-
         testRestartVersion(metaStorage -> {
             try {
                 metaStorage.write("stats.version", 2);
@@ -143,6 +143,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         checkStatisticsExist(db);
 
         db.checkpointReadLock();
+
         try {
             verCorruptor.accept(db.metaStorage());
         }
@@ -151,19 +152,25 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         }
 
         stopGrid(0);
-
+        U.sleep(500);
         startGrid(0);
 
         grid(0).cluster().state(ClusterState.ACTIVE);
 
         db = grid(0).context().cache().context().database();
+
+        db.checkpointReadLock();
+
         try {
-            checkStatisticsExist(db);
-            throw new Exception("Statistics exists after restart.");
+            assertEquals(1, db.metaStorage().read("stats.version"));
         }
-        catch (AssertionError e) {
-            // NoOp.
+        finally {
+            db.checkpointReadUnlock();
         }
+
+        db = grid(0).context().cache().context().database();
+
+        checkStatisticsExist(db);
     }
 
     /**
