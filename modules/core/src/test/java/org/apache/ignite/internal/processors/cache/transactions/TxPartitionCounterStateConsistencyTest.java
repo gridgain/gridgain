@@ -61,6 +61,7 @@ import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.FinalizeCountersDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
@@ -116,7 +117,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     @Test
-    public void testBrokenCounter() throws Exception {
+    public void testRepairBrokenCounters() throws Exception {
         backups = 1;
         IgniteEx crd = startGrids(2);
         crd.cluster().state(ClusterState.ACTIVE);
@@ -143,17 +144,61 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         cntr0 = counter(part, grid(0).name());
         cntr1 = counter(part, grid(1).name());
 
-        assertTrue("Counter is not broken: lwm = " + cntr0.get() + ", hwm = " + cntr0.reserved(), cntr0.get() > cntr0.reserved());
-        assertTrue("Counter is not broken: lwm = " + cntr1.get() + ", hwm = " + cntr1.reserved(), cntr1.get() > cntr1.reserved());
+        assertTrue("Counter is not broken: lwm = " + cntr0.get() + ", hwm = " + cntr0.reserved(),
+            cntr0.get() > cntr0.reserved());
+        assertTrue("Counter is not broken: lwm = " + cntr1.get() + ", hwm = " + cntr1.reserved(),
+            cntr1.get() > cntr1.reserved());
+
+        GridCachePartitionExchangeManager<Object, Object> exchangeMgr = grid(1).context().cache().context().exchange();
+
+        AffinityTopologyVersion topVerBeforeRepair = exchangeMgr.lastTopologyFuture().topologyVersion();
 
         //repair counters
         grid(1).context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
 
-        GridTestUtils.waitForCondition(() -> grid(1).context().cache().context().exchange().lastTopologyFuture().topologyVersion().equals(new AffinityTopologyVersion(3, 1)), 5000);
+        exchangeMgr.lastTopologyFuture().get();
 
-        cache.put(part, 103);
+        GridTestUtils.waitForCondition(() -> exchangeMgr.lastTopologyFuture().topologyVersion()
+            .equals(topVerBeforeRepair.nextMinorVersion()), 5000);
 
-        grid(0).context().discovery().alive(grid(1).cluster().localNode());
+        assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1));
+    }
+
+    @Test
+    public void testBrokenCounter1() throws Exception {
+        backups = 1;
+
+        IgniteEx crd = startGrids(2);
+
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteEx prim = grid(1);
+
+        int part = primaryKey(prim.cache(DEFAULT_CACHE_NAME));
+
+        crd.cache(DEFAULT_CACHE_NAME).put(part, 1);
+
+        PartitionUpdateCounter cntr0 = counter(part, grid(0).name());
+        PartitionUpdateCounter cntr1 = counter(part, grid(1).name());
+
+        cntr0.init(7, null);
+        cntr1.init(5, null);
+
+        assertFalse("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1));
+
+        GridCachePartitionExchangeManager<Object, Object> exchangeMgr = grid(1).context().cache().context().exchange();
+
+        AffinityTopologyVersion topVerBeforeRepair = exchangeMgr.lastTopologyFuture().topologyVersion();
+
+        //repair counters
+        grid(1).context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+
+        exchangeMgr.lastTopologyFuture().get();
+
+        GridTestUtils.waitForCondition(() -> exchangeMgr.lastTopologyFuture().topologyVersion()
+            .equals(topVerBeforeRepair.nextMinorVersion()), 5000);
+
+        assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1) && cntr0.get() == 7);
     }
 
     /**
