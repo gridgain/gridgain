@@ -66,7 +66,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
             "Table doesn't exist [schema=PUBLIC, table=SMALL101wrong]"
         );
 
-        grid(0).context().query().getIndexing().statsManager().updateStatistics(t100, t101);
+        updateStatistics(t100, t101);
 
         ObjectStatisticsImpl[] stats100 = getStats(t100.obj(), StatisticsType.LOCAL);
         ObjectStatisticsImpl[] stats101 = getStats(t101.obj(), StatisticsType.LOCAL);

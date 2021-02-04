@@ -65,13 +65,13 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
         // 4) partially collect statistics for extra column and check that query plan still unable to get all statistics
         //      it wants
 
-        statsMgr.updateStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_C"}, lessSql, noHints);
 
         // 5) partially collect statistics for the necessarily column and check that the query plan will restore to optimal
 
-        statsMgr.updateStatistics(new StatisticsTarget("PUBLIC", "SMALL", "B"));
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL", "B"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_B"}, lessSql, noHints);
     }

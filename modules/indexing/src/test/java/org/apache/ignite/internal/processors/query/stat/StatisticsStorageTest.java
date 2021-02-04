@@ -56,16 +56,18 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     @Test
     public void testRecollection() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
-        statsMgr.updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
         ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
             .getLocalStatistics("PUBLIC", "SMALL");
 
-        statsMgr.updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
             .getLocalStatistics("PUBLIC", "SMALL");
 
-        assertEquals(locStat, locStat2);
+        ObjectStatisticsImpl locStat2WithPrevVersion = new ObjectStatisticsImpl(locStat2.rowCount(), locStat2.columnsStatistics(), locStat.version());
+
+        assertEquals(locStat, locStat2WithPrevVersion);
     }
 
     /**
@@ -78,12 +80,16 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     @Test
     public void testPartialRecollection() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
-        statsMgr.updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
+
+        updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
         ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL");
-        statsMgr.updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
+
+        updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL");
 
-        assertEquals(locStat, locStat2);
+        ObjectStatisticsImpl locStat2WithPrevVersion = new ObjectStatisticsImpl(locStat2.rowCount(), locStat2.columnsStatistics(), locStat.version());
+
+        assertEquals(locStat, locStat2WithPrevVersion);
     }
 
     /**
