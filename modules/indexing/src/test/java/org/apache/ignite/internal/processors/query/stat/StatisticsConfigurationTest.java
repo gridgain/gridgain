@@ -109,6 +109,13 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     }
 
     /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
     @Override protected IgniteEx startGrid(int nodeIdx) throws Exception {
         System.out.println("+++ START " + nodeIdx);
 

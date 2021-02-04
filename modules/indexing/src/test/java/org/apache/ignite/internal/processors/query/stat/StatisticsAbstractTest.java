@@ -101,10 +101,12 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
             assert idxs == null || idxs.length == size;
         }
+
         sql = replaceIndexHintPlaceholders(sql, indexes);
 
         int spaces = queryRandomizer.incrementAndGet();
         StringBuilder spaceBuilder = new StringBuilder(spaces);
+
         for (int i = 0; i < spaces; i++)
             spaceBuilder.append(' ');
 

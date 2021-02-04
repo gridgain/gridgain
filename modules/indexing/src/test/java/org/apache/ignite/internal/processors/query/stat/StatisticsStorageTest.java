@@ -56,7 +56,9 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     @Test
     public void testRecollection() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
+
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
         ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
             .getLocalStatistics("PUBLIC", "SMALL");
 

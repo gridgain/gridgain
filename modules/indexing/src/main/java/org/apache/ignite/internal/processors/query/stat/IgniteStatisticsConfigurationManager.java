@@ -398,8 +398,6 @@ public class IgniteStatisticsConfigurationManager {
 
             GridCacheContext cctx = tbl.cacheContext();
 
-            cctx.affinity().affinityReadyFuture(cctx.affinity().affinityTopologyVersion()).get();
-
             Set<Integer> parts = cctx.affinity().primaryPartitions(
                 cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());
 
