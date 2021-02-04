@@ -40,6 +40,10 @@ public class IgniteDhtDemandedPartitionsMap implements Serializable {
     @GridToStringInclude
     private Set<Integer> full;
 
+    /**
+     * @param historical Historical set.
+     * @param full Full set.
+     */
     public IgniteDhtDemandedPartitionsMap(
         @Nullable CachePartitionPartialCountersMap historical,
         @Nullable Set<Integer> full)
@@ -48,6 +52,9 @@ public class IgniteDhtDemandedPartitionsMap implements Serializable {
         this.full = full;
     }
 
+    /**
+     * Default constructor.
+     */
     public IgniteDhtDemandedPartitionsMap() {
         // No-op.
     }

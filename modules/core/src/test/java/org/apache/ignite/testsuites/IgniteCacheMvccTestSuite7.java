@@ -32,7 +32,6 @@ import org.apache.ignite.internal.processors.cache.distributed.Cache64kPartition
 import org.apache.ignite.internal.processors.cache.distributed.CachePartitionLostAfterSupplierHasLeftTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingPartitionCountersMvccTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingPartitionCountersTest;
-import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingWithAsyncClearingMvccTest;
 import org.apache.ignite.internal.processors.cache.eviction.paged.PageEvictionMultinodeMixedRegionsTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.CheckpointBufferDeadlockTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCacheMapOnInvalidTopologyTest;
@@ -80,7 +79,6 @@ public class IgniteCacheMvccTestSuite7 {
         // Add Mvcc clones.
         suite.add(MvccCacheGroupMetricsTest.class);
         suite.add(GridCacheRebalancingPartitionCountersMvccTest.class);
-        suite.add(GridCacheRebalancingWithAsyncClearingMvccTest.class);
 
         return suite;
     }

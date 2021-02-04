@@ -16,8 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.GridEmptyIterator;
 import org.apache.ignite.internal.util.GridLongList;
 import org.jetbrains.annotations.Nullable;
@@ -27,6 +33,9 @@ import org.jetbrains.annotations.Nullable;
  * Doesn't track gaps in update sequence.
  */
 public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounter {
+    /** */
+    private static final byte VERSION = 1;
+
     /** Counter of applied updates in partition. */
     private final AtomicLong cntr = new AtomicLong();
 
@@ -38,6 +47,9 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
     /** */
     private final CacheGroupContext grp;
 
+    /** */
+    private long clearCntr;
+
     /**
      * @param grp Group.
      */
@@ -46,10 +58,12 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
     }
 
     /** {@inheritDoc} */
-    @Override public void init(long initUpdCntr, @Nullable byte[] cntrUpdData) {
+    @Override public synchronized void init(long initUpdCntr, @Nullable byte[] cntrUpdData) {
         cntr.set(initUpdCntr);
 
         initCntr = initUpdCntr;
+
+        fromBytes(cntrUpdData);
     }
 
     /** {@inheritDoc} */
@@ -116,8 +130,26 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable byte[] getBytes() {
-        return null;
+    @Override public synchronized @Nullable byte[] getBytes() {
+        if (clearCntr == 0)
+            return null;
+
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+
+            DataOutputStream dos = new DataOutputStream(bos);
+
+            dos.writeByte(VERSION);
+
+            dos.writeLong(clearCntr);
+
+            bos.close();
+
+            return bos.toByteArray();
+        }
+        catch (IOException e) {
+            throw new IgniteException(e);
+        }
     }
 
     /** {@inheritDoc} */
@@ -167,5 +199,42 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
     /** {@inheritDoc} */
     @Override public CacheGroupContext context() {
         return grp;
+    }
+
+    /** {@inheritDoc}
+     * @param cntr*/
+    @Override public synchronized void updateTombstoneClearCounter(long cntr) {
+        if (cntr > clearCntr)
+            clearCntr = cntr;
+        else if (cntr == 0)
+            clearCntr = get(); // Pessimitic approach to handle compatibility.
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized long tombstoneClearCounter() {
+        return clearCntr;
+    }
+
+    /**
+     * Initializes state from raw bytes.
+     *
+     * @param raw Raw bytes.
+     */
+    private void fromBytes(@Nullable byte[] raw) {
+        if (raw == null)
+            return;
+
+        try {
+            ByteArrayInputStream bis = new ByteArrayInputStream(raw);
+
+            DataInputStream dis = new DataInputStream(bis);
+
+            dis.readByte();// Version.
+
+            clearCntr = dis.readLong();
+        }
+        catch (IOException e) {
+            throw new IgniteException(e);
+        }
     }
 }

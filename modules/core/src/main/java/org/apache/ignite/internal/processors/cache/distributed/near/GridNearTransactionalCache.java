@@ -735,11 +735,6 @@ public class GridNearTransactionalCache<K, V> extends GridNearCacheAdapter<K, V>
     }
 
     /** {@inheritDoc} */
-    @Override public void onDeferredDelete(GridCacheEntryEx entry, GridCacheVersion ver) {
-        assert false : "Should not be called";
-    }
-
-    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridNearTransactionalCache.class, this);
     }

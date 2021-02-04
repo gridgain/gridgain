@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -603,7 +604,8 @@ public class GridDhtPartitionSupplier {
             }
         }
 
-        info.value(row.value());
+        // Do not preload tombstones. TODO get rid of isTobmstone ? obj comparison should always work.
+        info.value(row.value() == TombstoneCacheObject.INSTANCE ? null : row.value());
         info.version(row.version());
         info.expireTime(row.expireTime());
 

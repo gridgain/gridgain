@@ -273,11 +273,14 @@ import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsReposito
 import org.apache.ignite.internal.processors.query.stat.ManagerStatisticsTypesTest;
 import org.apache.ignite.internal.processors.query.stat.PSUBasicValueDistributionTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.stat.PSUCompositeIndexTableStatisticsUsageTest;
-import org.apache.ignite.internal.processors.query.stat.PSUStatistcsRestartTest;
+import org.apache.ignite.internal.processors.query.stat.PSUStatisticsRestartTest;
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticsStorageTest;
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticsTypesTest;
-import org.apache.ignite.internal.processors.query.stat.PSUStatisticPartialCollectionTest;
+import org.apache.ignite.internal.processors.query.stat.PSUStatisticPartialGatheringTest;
 import org.apache.ignite.internal.processors.query.stat.PSUValueDistributionTableStatisticsUsageTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsClearTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringCancelTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageInMemoryTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStoragePersistenceTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageRestartTest;
@@ -675,17 +678,20 @@ import org.junit.runners.Suite;
     ManagerStatisticsTypesTest.class,
     IgniteStatisticsRepositoryTest.class,
     StatisticsStorageRestartTest.class,
+    StatisticsGatheringTest.class,
+    StatisticsClearTest.class,
+    StatisticsGatheringCancelTest.class,
 
     // Table statistics usage.
     RowCountTableStatisticsUsageTest.class,
     RowCountTableStatisticsSurvivesNodeRestartTest.class,
     PSUStatisticsTypesTest.class,
-    PSUStatisticPartialCollectionTest.class,
+    PSUStatisticPartialGatheringTest.class,
     PSUBasicValueDistributionTableStatisticsUsageTest.class,
     PSUValueDistributionTableStatisticsUsageTest.class,
     PSUCompositeIndexTableStatisticsUsageTest.class,
     PSUStatisticsStorageTest.class,
-    PSUStatistcsRestartTest.class,
+    PSUStatisticsRestartTest.class,
 
     // Statistics collection components tests
     StatisticsStorageInMemoryTest.class,

@@ -539,7 +539,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         batchStoreCommit(writeMap().values(), taskName);
 
-                        // Node that for near transactions we grab all entries.
+                        // Note that for near transactions we grab all entries.
                         for (IgniteTxEntry txEntry : entries) {
                             GridCacheContext cacheCtx = txEntry.context();
 

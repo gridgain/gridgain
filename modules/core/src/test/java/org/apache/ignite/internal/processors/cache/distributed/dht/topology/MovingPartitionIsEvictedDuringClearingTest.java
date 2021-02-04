@@ -36,15 +36,14 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.PRELOADER_FORCE_CLEAR;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 
 /**
- * Tests a scenario when a clearing partition is attempted to evict after a call to
- * {@link GridDhtPartitionTopology#tryFinishEviction(GridDhtLocalPartition)}.
- *
- * Such a scenario can leave a partition in RENTING state until the next exchange. It's actually acceptable behavior.
+ * Tests a scenario when a clearing partition is attempted to evict in the middle of clearing.
  */
 @WithSystemProperty(key = "IGNITE_PRELOAD_RESEND_TIMEOUT", value = "0")
+@WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
 public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -104,7 +103,7 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
 
         loadDataToPartition(evictingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, delta, cnt, 3);
 
-        // Removal required for triggering full rebalancing.
+        // Removal required for triggering full rebalancing to satisfy heuristic.
         List<Integer> clearKeys = partitionKeys(grid(0).cache(DEFAULT_CACHE_NAME), evictingPart, rmv, cnt);
 
         for (Integer clearKey : clearKeys)
@@ -134,11 +133,13 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
 
         assertTrue(U.await(lock, GridDhtLocalPartitionSyncEviction.TIMEOUT, TimeUnit.MILLISECONDS));
 
+        GridDhtLocalPartition evicting = g2.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(evictingPart);
+
+        assertEquals(MOVING, evicting.state());
+
         startGrid(4);
 
         resetBaselineTopology();
-
-        awaitPartitionMapExchange();
 
         // Give some time for partition state messages to process.
         doSleep(3_000);
@@ -147,9 +148,6 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
         unlock.countDown();
 
         awaitPartitionMapExchange();
-
-        // Partition will remaing in renting state until next exchange.
-        assertEquals(RENTING, g2.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(evictingPart).state());
 
         validadate(cnt + delta - rmv);
 

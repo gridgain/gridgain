@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDestroyC
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDestroyCacheWithoutCheckpointsTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsDataRegionMetricsTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.file.DefaultPageSizeBackwardsCompatibilityTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsCheckpointSimpleTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsCheckpointSimulationWithRealCpDisabledTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsPageReplacementTest;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.IgniteMetaStorageBasicTest;
@@ -81,6 +82,7 @@ public class IgnitePdsMvccTestSuite {
 
         ignoredTests.add(IgnitePdsDestroyCacheTest.class);
         ignoredTests.add(IgnitePdsDestroyCacheWithoutCheckpointsTest.class);
+        ignoredTests.add(IgnitePdsCheckpointSimpleTest.class);
 
         return new ArrayList<>(IgnitePdsTestSuite.suite(ignoredTests));
     }

@@ -1371,11 +1371,12 @@ public class Select extends Query {
         }
         if (!isQuickAggregateQuery && isGroupQuery &&
                 getGroupByExpressionCount() > 0) {
-            Index index = getGroupSortedIndex();
-            Index current = topTableFilter.getIndex();
-            if (index != null && current != null && (current.getIndexType().isScan() ||
-                    current == index)) {
-                topTableFilter.setIndex(index);
+            Index current = topTableFilter.getIndex(), groupIndex;
+            if (current != null && !current.getIndexType().isScan() && isGroupSortedIndex(topTableFilter, current)) {
+                isGroupSortedQuery = true;
+            }
+            else if ((groupIndex = getGroupSortedIndex()) != null) {
+                topTableFilter.setIndex(groupIndex);
                 isGroupSortedQuery = true;
             }
         }
