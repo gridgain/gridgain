@@ -441,10 +441,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             } catch (Throwable ex) {
                 if (t0 + timeout < U.currentTimeMillis())
                     throw ex;
-                else {
+                else
                     U.sleep(200);
-                    log.info("+++ " + ex.getMessage());
-                }
             }
         }
     }
