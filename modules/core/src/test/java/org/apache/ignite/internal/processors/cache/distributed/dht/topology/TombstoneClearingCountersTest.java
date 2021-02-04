@@ -148,6 +148,46 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "1000")
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
+    @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
+    public void testConsistencyOnCounterTriggeredRebalanceCleanupNotFullBaseline() throws Exception {
+        int id = CU.cacheId("cache_group_173");
+
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        int testPart = 0;
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        cache.put(testPart, 0);
+
+        stopGrid(1);
+        awaitPartitionMapExchange();
+
+        crd.cache(DEFAULT_CACHE_NAME).remove(testPart);
+
+        doSleep(1100);
+
+        // Tombstone shouldn't be removed if not full baseline.
+        CU.unwindEvicts(crd.cachex(DEFAULT_CACHE_NAME).context());
+
+        TrackingResolver rslvr = new TrackingResolver(testPart);
+        IgniteEx g2 = startGrid(1, rslvr);
+
+        awaitPartitionMapExchange();
+
+        assertTrue(historical(1).isEmpty());
+        assertNull(rslvr.reason); // Expecting fast full rebalancing.
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testConsistencyOnCounterTriggeredRebalanceClearTombstones() throws Exception {
         IgniteEx crd = startGrids(2);
         crd.cluster().state(ClusterState.ACTIVE);

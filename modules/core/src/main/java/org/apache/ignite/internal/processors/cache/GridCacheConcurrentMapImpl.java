@@ -175,7 +175,15 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
             sizeChange = 0;
 
             if (doomed != null) {
-                sizeChange--;
+                doomed.lockEntry();
+
+                try {
+                    if (!doomed.deleted())
+                        sizeChange--;
+                }
+                finally {
+                    doomed.unlockEntry();
+                }
 
                 if (ctx.events().isRecordable(EVT_CACHE_ENTRY_DESTROYED))
                     ctx.events().addEvent(doomed.partition(),
