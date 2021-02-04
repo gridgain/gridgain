@@ -324,7 +324,6 @@ public class GridCommandHandlerDefragmentationTest extends GridCommandHandlerClu
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-32592")
     public void testDefragmentationStatus() throws Exception {
         IgniteEx ig = startGrid(0);
 
@@ -343,7 +342,7 @@ public class GridCommandHandlerDefragmentationTest extends GridCommandHandlerClu
 
         String grid0ConsId = ig.configuration().getConsistentId().toString();
 
-        ListeningTestLogger testLog = new ListeningTestLogger(log);
+        ListeningTestLogger testLog = new ListeningTestLogger();
 
         CommandHandler cmd = createCommandHandler(testLog);
 

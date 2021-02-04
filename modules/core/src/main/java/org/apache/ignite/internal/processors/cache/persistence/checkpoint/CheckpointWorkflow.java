@@ -261,6 +261,10 @@ public class CheckpointWorkflow {
             for (CheckpointListener lsnr : dbLsnrs)
                 lsnr.beforeCheckpointBegin(ctx0);
 
+            // Double flushing memory buckets for decrease a time on write lock.
+            for (CheckpointListener lsnr : dbLsnrs)
+                lsnr.beforeCheckpointBegin(ctx0);
+
             ctx0.awaitPendingTasksFinished();
         }
         finally {

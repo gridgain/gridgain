@@ -343,10 +343,18 @@ public abstract class PagesList extends DataStructure {
         if (!changed)
             return;
 
-        flushBucketsCache(statHolder);
-
         // This guaranteed that any concurrently changes of list will be detected.
         changed = false;
+
+        int lockedPages = flushBucketsCache(statHolder);
+
+        if (lockedPages != 0) {
+            if (log.isInfoEnabled())
+                log.info("Several pages were locked and weren't flushed on disk [grp=" + grpName
+                    + ", lockedPages=" + lockedPages + ']');
+
+            changed = true;
+        }
 
         try {
             long unusedPageId = writeFreeList(nextPageId);
@@ -362,12 +370,18 @@ public abstract class PagesList extends DataStructure {
 
     /**
      * Flush onheap cached pages lists to page memory.
+     *
+     * @param statHolder Statistic holder.
+     * @return Count of pages which weren't flushed.
+     * @throws IgniteCheckedException
      */
-    private void flushBucketsCache(IoStatisticsHolder statHolder) throws IgniteCheckedException {
+    private int flushBucketsCache(IoStatisticsHolder statHolder) throws IgniteCheckedException {
         if (!isCachingApplicable())
-            return;
+            return 0;
 
         onheapListCachingEnabled = false;
+
+        int lockedPages = 0;
 
         try {
             for (int bucket = 0; bucket < buckets; bucket++) {
@@ -392,6 +406,8 @@ public abstract class PagesList extends DataStructure {
                         if (res == null) {
                             // Return page to onheap pages list if can't lock it.
                             pagesCache.add(pageId);
+
+                            lockedPages++;
                         }
                     }
                 }
@@ -400,6 +416,8 @@ public abstract class PagesList extends DataStructure {
         finally {
             onheapListCachingEnabled = true;
         }
+
+        return lockedPages;
     }
 
     /**
@@ -973,6 +991,8 @@ public abstract class PagesList extends DataStructure {
                 if (needWalDeltaRecord(dataId, dataPage, null))
                     wal.log(new DataPageSetFreeListPageRecord(grpId, dataId, 0L));
             }
+
+            changed();
 
             return true;
         }
