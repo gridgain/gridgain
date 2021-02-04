@@ -1429,8 +1429,6 @@ public class GridDhtPartitionDemander {
                         if (grp.mvccEnabled() || assignments.forceClear() || exchFut.isClearingPartition(grp, partId)) {
                             IgniteInternalFuture<Void> fut0 = part.clearAsync();
 
-                            log.info("DBG: clearAsync grp=" + grp.cacheOrGroupName() + ", part=" + partId + ", cntr=" + part.dataStore().partUpdateCounter());
-
                             fut0.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                                 @Override public void apply(IgniteInternalFuture<?> fut) {
                                     if (fut.error() != null) {
