@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
@@ -64,19 +62,6 @@ public class IgniteStatisticsRepository {
     }
 
     /**
-     * Replace all object statistics with specified ones.
-     *
-     * @param key Object key.
-     * @param statistics Collection of tables partition statistics.
-     */
-    public void saveLocalPartitionsStatistics(
-            StatisticsKey key,
-            Collection<ObjectPartitionStatisticsImpl> statistics
-    ) {
-        store.replaceLocalPartitionsStatistics(key, statistics);
-    }
-
-    /**
      * Get local partition statistics by specified object.
      *
      * @param key Object to get statistics by.
@@ -92,7 +77,7 @@ public class IgniteStatisticsRepository {
      * @param key Object to clear statistics by.
      * @param colNames if specified - only statistics by specified columns will be cleared.
      */
-    public void clearLocalPartitionsStatistics(StatisticsKey key, String... colNames) {
+    public void clearLocalPartitionsStatistics(StatisticsKey key, Set<String> colNames) {
         if (F.isEmpty(colNames))
             store.clearLocalPartitionsStatistics(key);
         else {
@@ -127,7 +112,10 @@ public class IgniteStatisticsRepository {
      * @param key Object key.
      * @param statistics Statistics to save.
      */
-    public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics) {
+    public void saveLocalPartitionStatistics(
+        StatisticsKey key,
+        ObjectPartitionStatisticsImpl statistics
+    ) {
         ObjectPartitionStatisticsImpl oldPartStat = store.getLocalPartitionStatistics(key, statistics.partId());
         if (oldPartStat == null)
             store.saveLocalPartitionStatistics(key, statistics);
@@ -135,6 +123,19 @@ public class IgniteStatisticsRepository {
             ObjectPartitionStatisticsImpl combinedStats = add(oldPartStat, statistics);
             store.saveLocalPartitionStatistics(key, combinedStats);
         }
+    }
+
+    /**
+     * Replace all object statistics with specified ones.
+     *
+     * @param key Object key.
+     * @param statistics Collection of tables partition statistics.
+     */
+    public void saveLocalPartitionsStatistics(
+        StatisticsKey key,
+        Collection<ObjectPartitionStatisticsImpl> statistics
+    ) {
+        store.replaceLocalPartitionsStatistics(key, statistics);
     }
 
     /**
@@ -191,22 +192,28 @@ public class IgniteStatisticsRepository {
      * Clear local object statistics.
      *
      * @param key Object key to clear local statistics by.
-     * @param colNames If specified - only statistics by specified columns will be cleared.
      */
-    public void clearLocalStatistics(StatisticsKey key, String... colNames) {
+    public void clearLocalStatistics(StatisticsKey key) {
+        locStats.remove(key);
+    }
+
+    /**
+     * Clear local object statistics.
+     *
+     * @param key Object key to clear local statistics by.
+     * @param colNames Only statistics by specified columns will be cleared.
+     */
+    public void clearLocalStatistics(StatisticsKey key, Set<String> colNames) {
         if (locStats == null) {
             log.warning("Unable to clear local statistics for " + key + " on non server node.");
 
             return;
         }
 
-        if (F.isEmpty(colNames))
-            locStats.remove(key);
-        else
-            locStats.computeIfPresent(key, (k, v) -> {
-                ObjectStatisticsImpl locStatNew = subtract(v, colNames);
-                return locStatNew.columnsStatistics().isEmpty() ? null : locStatNew;
-            });
+        locStats.computeIfPresent(key, (k, v) -> {
+            ObjectStatisticsImpl locStatNew = subtract(v, colNames);
+            return locStatNew.columnsStatistics().isEmpty() ? null : locStatNew;
+        });
     }
 
     /**
@@ -239,7 +246,7 @@ public class IgniteStatisticsRepository {
      * @param cols Columns to remove.
      * @return Cloned object without specified columns statistics.
      */
-    public static <T extends ObjectStatisticsImpl> T subtract(T base, String[] cols) {
+    public static <T extends ObjectStatisticsImpl> T subtract(T base, Set<String> cols) {
         T res = (T)base.clone();
 
         for (String col : cols)

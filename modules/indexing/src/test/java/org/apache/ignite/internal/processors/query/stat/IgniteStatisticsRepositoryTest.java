@@ -26,6 +26,7 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 /**
  * Test for statistics repository.
@@ -193,18 +194,19 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         ObjectStatisticsImpl os = new ObjectStatisticsImpl(100, colStat1, 0);
 
         // 1) Remove not existing column.
-        ObjectStatisticsImpl os1 = IgniteStatisticsRepository.subtract(os, new String[]{"col0"});
+        ObjectStatisticsImpl os1 = IgniteStatisticsRepository.subtract(os, Collections.singleton("col0"));
 
         assertEquals(os, os1);
 
         // 2) Remove some columns.
-        ObjectStatisticsImpl os2 = IgniteStatisticsRepository.subtract(os, new String[]{"col1"});
+        ObjectStatisticsImpl os2 = IgniteStatisticsRepository.subtract(os, Collections.singleton("col1"));
 
         assertEquals(1, os2.columnsStatistics().size());
         assertEquals(cs2, os2.columnStatistics("col2"));
 
         // 3) Remove all columns.
-        ObjectStatisticsImpl os3 = IgniteStatisticsRepository.subtract(os, new String[]{"col2","col1"});
+        ObjectStatisticsImpl os3 = IgniteStatisticsRepository.subtract(os,
+            Arrays.stream(new String[] {"col2", "col1"}).collect(Collectors.toSet()));
 
         assertTrue(os3.columnsStatistics().isEmpty());
     }

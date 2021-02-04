@@ -289,6 +289,11 @@ public class IgniteStatisticsConfigurationManager {
     private void checkLocalStatistics(StatisticsObjectConfiguration cfg, AffinityTopologyVersion topVer) {
         try {
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
+
+            if (tbl == null) {
+                // TODO: Table removed. Drop statistics
+            }
+
             GridCacheContext cctx = tbl.cacheContext();
 
             topVer = cctx.affinity().affinityReadyFuture(topVer).get();
@@ -299,6 +304,10 @@ public class IgniteStatisticsConfigurationManager {
                 log.debug("Check local statistics [key=" + cfg.key() + ", parts=" + parts + ']');
 
             Collection<ObjectPartitionStatisticsImpl> partStats = repo.getLocalPartitionsStatistics(cfg.key());
+
+            Set<String> targetColumns = Arrays.stream(cfg.columns())
+                .map(StatisticsColumnConfiguration::name)
+                .collect(Collectors.toSet());
 
             Set<Integer> partsToRemove;
             Set<Integer> partsToCollect;
@@ -316,8 +325,23 @@ public class IgniteStatisticsConfigurationManager {
                 partsToCollect.removeAll(storedParts);
 
                 for (ObjectPartitionStatisticsImpl pstat : partStats) {
-                    if (pstat.version() != cfg.version())
+                    Set<String> existColumns = pstat.columnsStatistics().keySet();
+                    if (pstat.version() != cfg.version() || !existColumns.containsAll(targetColumns)) {
                         partsToCollect.add(pstat.partId());
+
+                        continue;
+                    }
+
+                    Set<String> colToRemove = new HashSet<>(existColumns);
+                    colToRemove.removeAll(targetColumns);
+
+                    if (!F.isEmpty(colToRemove)) {
+                        ObjectPartitionStatisticsImpl newPstat = IgniteStatisticsRepository.subtract(pstat, colToRemove);
+
+                        // TODO: save (REPLACE)
+                        //repo.saveLocalPartitionsStatistics();
+
+                    }
                 }
             }
             else {
@@ -376,21 +400,20 @@ public class IgniteStatisticsConfigurationManager {
                 .map(StatisticsColumnConfiguration::name)
                 .collect(Collectors.toSet());
 
-            Set<String> oldCols = oldCfg != null ?
-                Arrays.stream(oldCfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet()) :
+            Set<String> colsToRemove = oldCfg != null ?
+                Arrays.stream(oldCfg.columns())
+                    .map(StatisticsColumnConfiguration::name)
+                    .filter(c -> !newCols.contains(c))
+                    .collect(Collectors.toSet()) :
                 Collections.emptySet();
-
-            oldCols.removeAll(newCols);
-
-            String[] rmCols = oldCols.toArray(EMPTY_STR_ARRAY);
 
             if (log.isDebugEnabled()) {
                 log.debug("Remove local partitioned statistics [key=" + newCfg.key() +
-                    ", columns=" + Arrays.toString(rmCols) + ']');
+                    ", columns=" + colsToRemove + ']');
             }
 
-            repo.clearLocalStatistics(newCfg.key(), rmCols);
-            repo.clearLocalPartitionsStatistics(newCfg.key(), rmCols);
+            repo.clearLocalStatistics(newCfg.key(), colsToRemove);
+            repo.clearLocalPartitionsStatistics(newCfg.key(), colsToRemove);
         }
         else {
             // Update statistics
