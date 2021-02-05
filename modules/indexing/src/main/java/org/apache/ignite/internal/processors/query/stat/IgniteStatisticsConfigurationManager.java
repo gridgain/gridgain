@@ -340,9 +340,7 @@ public class IgniteStatisticsConfigurationManager {
                     if (!F.isEmpty(colToRemove)) {
                         ObjectPartitionStatisticsImpl newPstat = IgniteStatisticsRepository.subtract(pstat, colToRemove);
 
-                        // TODO: save (REPLACE)
-                        //repo.saveLocalPartitionsStatistics();
-
+                        repo.replaceLocalPartitionStatistics(cfg.key(), newPstat);
                     }
                 }
             }
@@ -416,8 +414,18 @@ public class IgniteStatisticsConfigurationManager {
                     ", columns=" + colsToRemove + ']');
             }
 
-            repo.clearLocalStatistics(newCfg.key(), colsToRemove);
-            repo.clearLocalPartitionsStatistics(newCfg.key(), colsToRemove);
+            LocalStatisticsGatheringContext gCtx = gatherer.gatheringInProgress(newCfg.key());
+
+            if (gCtx != null) {
+                gCtx.future().thenAccept((v) -> {
+                    repo.clearLocalStatistics(newCfg.key(), colsToRemove);
+                    repo.clearLocalPartitionsStatistics(newCfg.key(), colsToRemove);
+                });
+            }
+            else {
+                repo.clearLocalStatistics(newCfg.key(), colsToRemove);
+                repo.clearLocalPartitionsStatistics(newCfg.key(), colsToRemove);
+            }
         }
         else {
             // Update statistics
@@ -444,13 +452,15 @@ public class IgniteStatisticsConfigurationManager {
         try {
             StatisticsObjectConfiguration cfg = distrMetaStorage.read(key2String(key));
 
+            repo.refreshAggregatedLocalStatistics(partsToAggregate, cfg);
+
+            cfg = distrMetaStorage.read(key2String(key));
+
             if (cfg == null || F.isEmpty(cfg.columns())) {
                 repo.clearLocalStatistics(key);
 
                 return;
             }
-
-            repo.refreshAggregatedLocalStatistics(partsToAggregate, cfg);
 
             // Drop column statistics if need
             Set<String> targetCols = Arrays.stream(cfg.columns())

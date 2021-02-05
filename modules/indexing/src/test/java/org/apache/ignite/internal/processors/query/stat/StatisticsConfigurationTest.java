@@ -16,9 +16,10 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
@@ -33,7 +34,6 @@ import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjec
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -234,23 +234,25 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         grid(0).context().query().getIndexing().statsManager()
             .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
-        checkStatisticsExistInMetastore(grid(0).context().cache().context().database(), STAT_TIMEOUT);
-
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
             (stats) -> {
-                assertEquals(2, stats.size());
-                stats.forEach(s -> assertNull(s.columnStatistics("A")));
+                stats.forEach(s -> assertNull("Invalid stats: " + stats, s.columnStatistics("A")));
             }
         );
 
+        checkStatisticsInMetastore(grid(0).context().cache().context().database(), STAT_TIMEOUT,
+            "PUBLIC", "SMALL", (s -> assertNull(s.data().get("A"))));
+        checkStatisticsInMetastore(grid(2).context().cache().context().database(), STAT_TIMEOUT,
+            "PUBLIC", "SMALL", (s -> assertNull(s.data().get("A"))));
+
         startGrid(1);
 
-        checkStatisticsExistInMetastore(grid(1).context().cache().context().database(), STAT_TIMEOUT);
+        checkStatisticsInMetastore(grid(1).context().cache().context().database(), STAT_TIMEOUT,
+            "PUBLIC", "SMALL", (s -> assertNull(s.data().get("A"))));
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows,
             (stats) -> {
-                assertEquals(3, stats.size());
-                stats.forEach(s -> assertNull(s.columnStatistics("A")));
+                stats.forEach(s -> assertNull("Invalid stats: " + stats, s.columnStatistics("A")));
             }
         );
     }
@@ -261,9 +263,12 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
      * @param db IgniteCacheDatabaseSharedManager to test in.
      * @throws IgniteCheckedException In case of errors.
      */
-    private void checkStatisticsExistInMetastore(
+    private void checkStatisticsInMetastore(
         IgniteCacheDatabaseSharedManager db,
-        long timeout
+        long timeout,
+        String schema,
+        String obj,
+        Consumer<StatisticsObjectData>... checkers
     ) throws IgniteCheckedException {
         if (!persist)
             return;
@@ -275,8 +280,8 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
             try {
                 db.metaStorage().iterate(
-                    "stats.data.PUBLIC.SMALL.",
-                    (k, v) -> assertNull(((StatisticsObjectData)v).data().get("A")),
+                    "stats.data." + schema + '.' + obj + '.',
+                    (k, v) -> Arrays.stream(checkers).forEach(ch -> ch.accept((StatisticsObjectData)v)),
                     true);
 
                 return;

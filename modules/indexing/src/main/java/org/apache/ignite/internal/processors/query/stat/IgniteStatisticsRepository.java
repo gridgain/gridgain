@@ -126,6 +126,19 @@ public class IgniteStatisticsRepository {
     }
 
     /**
+     * Save specified local partition statistics.
+     *
+     * @param key Object key.
+     * @param statistics Statistics to save.
+     */
+    public void replaceLocalPartitionStatistics(
+        StatisticsKey key,
+        ObjectPartitionStatisticsImpl statistics
+    ) {
+        store.saveLocalPartitionStatistics(key, statistics);
+    }
+
+    /**
      * Replace all object statistics with specified ones.
      *
      * @param key Object key.
@@ -263,7 +276,7 @@ public class IgniteStatisticsRepository {
     /** */
     public void refreshAggregatedLocalStatistics(Set<Integer> parts, StatisticsObjectConfiguration objStatCfg) {
         if (log.isDebugEnabled()) {
-            log.debug("Refresh local aggregated statistic [key=" + objStatCfg.key() +
+            log.debug("Refresh local aggregated statistic [cfg=" + objStatCfg +
                 ", part=" + parts + ']');
         }
 
