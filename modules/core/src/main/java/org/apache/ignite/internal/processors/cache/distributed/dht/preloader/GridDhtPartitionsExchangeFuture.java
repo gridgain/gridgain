@@ -5447,8 +5447,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     public void markRebalanced() {
         assert !rebalanced;
 
-        log.warning("DBG: mark rebalanced ver=" + initialVersion(), new Exception());
-
         rebalanced = true;
     }
 
