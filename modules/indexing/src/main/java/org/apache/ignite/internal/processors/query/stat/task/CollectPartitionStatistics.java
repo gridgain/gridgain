@@ -40,7 +40,6 @@ import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatistic
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.table.Column;
 
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
 /**

@@ -52,9 +52,6 @@ import org.gridgain.internal.h2.table.Column;
  */
 public class IgniteStatisticsConfigurationManager {
     /** */
-    public static final String[] EMPTY_STR_ARRAY = new String[0];
-
-    /** */
     public static final StatisticsColumnConfiguration[] EMPTY_COLUMN_CFGS_ARR = new StatisticsColumnConfiguration[0];
 
     /** */

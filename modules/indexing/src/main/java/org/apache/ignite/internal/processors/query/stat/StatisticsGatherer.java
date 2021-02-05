@@ -25,10 +25,8 @@ import java.util.function.Function;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.task.CollectPartitionStatistics;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Implementation of statistic collector.

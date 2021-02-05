@@ -15,6 +15,9 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
@@ -25,8 +28,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
-import java.util.Arrays;
-import java.util.Collection;
 
 /**
  * Unit tests for statistics store.

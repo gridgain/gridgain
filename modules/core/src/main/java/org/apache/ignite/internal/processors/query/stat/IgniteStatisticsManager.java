@@ -17,9 +17,6 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
 
-import java.util.Map;
-import java.util.UUID;
-
 /**
  * Statistics manager. Coordinate statistics collection and act as source of statistics.
  */

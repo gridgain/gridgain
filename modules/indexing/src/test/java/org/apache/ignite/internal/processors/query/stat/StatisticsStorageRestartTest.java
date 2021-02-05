@@ -40,9 +40,6 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
     /** Default statistics store. */
     private IgniteStatisticsPersistenceStoreImpl statStore;
 
-    /** Default statistics repository mock. */
-    private IgniteStatisticsRepository statsRepos;
-
     /** Test statistics key1. */
     private StatisticsKey k1 = new StatisticsKey("A", "B");
 
@@ -61,7 +58,6 @@ public class StatisticsStorageRestartTest extends StatisticsAbstractTest {
     /** {@inheritDoc} */
     @Override public void beforeTest() {
         subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
-        statsRepos = Mockito.mock(IgniteStatisticsRepository.class);
         metastorage = new ReadWriteMetaStorageMock();
         statStore = new IgniteStatisticsPersistenceStoreImpl(
             subscriptionProcessor,

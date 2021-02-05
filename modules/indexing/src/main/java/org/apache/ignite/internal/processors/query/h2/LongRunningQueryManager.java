@@ -28,7 +28,7 @@ import org.apache.ignite.thread.IgniteThread;
 /**
  * Long running query manager.
  */
-public final class  LongRunningQueryManager {
+public final class LongRunningQueryManager {
     /** Check period in ms. */
     private static final long CHECK_PERIOD = 1_000;
 
