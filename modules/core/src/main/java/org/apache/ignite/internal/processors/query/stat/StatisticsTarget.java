@@ -18,8 +18,6 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.apache.ignite.internal.stat.IoStatisticsHolderKey;
-import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
