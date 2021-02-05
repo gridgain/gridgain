@@ -45,8 +45,8 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.cache.query.QueryCancelledException;
-import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
@@ -640,7 +640,7 @@ public class QueryUtils {
             d.addProperty(prop, false);
         }
 
-        if (!isKeyClsSqlType)
+        if (!isKeyClsSqlType && qryEntity instanceof QueryEntityEx && ((QueryEntityEx)qryEntity).isPreserveKeysOrder())
             d.primaryKeyFields(keyFields);
 
         // Sql-typed key/value doesn't have field property, but they may have precision and scale constraints.
@@ -1125,6 +1125,11 @@ public class QueryUtils {
      * @return Type name.
      */
     public static String typeName(String clsName) {
+        int genericStart = clsName.indexOf('`');  // .NET generic, not valid for Java class name.
+
+        if (genericStart >= 0)
+            clsName = clsName.substring(0, genericStart);
+
         int pkgEnd = clsName.lastIndexOf('.');
 
         if (pkgEnd >= 0 && pkgEnd < clsName.length() - 1)
