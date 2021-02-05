@@ -28,7 +28,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
@@ -384,7 +383,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             100, 0, new byte[0]);
 
         return new ObjectPartitionStatisticsImpl(
-            partId,  0, 0,
+            partId, 0, 0,
             Collections.singletonMap("col1", colStatistics),
             0
         );
