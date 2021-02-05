@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -141,6 +142,10 @@ public class SchemaManager {
 
     /** */
     private final Set<BiConsumer<GridH2Table, List<String>>> dropColsLsnrs = Collections.newSetFromMap(
+        new ConcurrentHashMap<>());
+
+    /** */
+    private final Set<BiConsumer<String, String>> dropTblLsnrs = Collections.newSetFromMap(
         new ConcurrentHashMap<>());
 
     /**
@@ -576,6 +581,8 @@ public class SchemaManager {
                     log.debug("Dropping database index table with SQL: " + sql);
 
                 stmt.executeUpdate(sql);
+
+                dropTblLsnrs.forEach(l -> l.accept(tbl.schemaName(), tbl.tableName()));
             }
             catch (SQLException e) {
                 throw new IgniteSQLException("Failed to drop database index table [type=" + tbl.type().name() +
@@ -840,5 +847,10 @@ public class SchemaManager {
     /** */
     public void registerDropColumnsListener(BiConsumer<GridH2Table, List<String>> lsnr) {
         dropColsLsnrs.add(lsnr);
+    }
+
+    /** */
+    public void registerDropTable(BiConsumer<String, String> lsnr) {
+        dropTblLsnrs.add(lsnr);
     }
 }

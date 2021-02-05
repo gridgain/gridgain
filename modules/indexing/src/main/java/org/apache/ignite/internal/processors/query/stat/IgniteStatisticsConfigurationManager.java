@@ -140,7 +140,8 @@ public class IgniteStatisticsConfigurationManager {
             }
         );
 
-        schemaMgr.registerDropColumnsListener(this::onDropColumn);
+        schemaMgr.registerDropColumnsListener(this::onDropColumns);
+        schemaMgr.registerDropTable(this::onDropTable);
     }
 
     /** */
@@ -148,8 +149,7 @@ public class IgniteStatisticsConfigurationManager {
         mgmtPool.submit(() -> {
             try {
                 distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) ->
-                    mgmtPool.submit(() ->
-                        checkLocalStatistics((StatisticsObjectConfiguration)v, topVer)));
+                    checkLocalStatistics((StatisticsObjectConfiguration)v, topVer));
             }
             catch (IgniteCheckedException e) {
                 log.warning("Unexpected exception on check local statistic on start", e);
@@ -301,8 +301,7 @@ public class IgniteStatisticsConfigurationManager {
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
 
             if (tbl == null) {
-                dropStatistics(Collections.singletonList(new StatisticsTarget(cfg.key())));
-
+                // Drop tables handle by onDropTable
                 return;
             }
 
@@ -460,7 +459,7 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /** */
-    private void onDropColumn(GridH2Table tbl, List<String> cols) {
+    private void onDropColumns(GridH2Table tbl, List<String> cols) {
         assert !F.isEmpty(cols);
 
         dropStatistics(Collections.singletonList(
@@ -470,6 +469,13 @@ public class IgniteStatisticsConfigurationManager {
                 cols.toArray(EMPTY_STRING_ARR)
             )
         ));
+    }
+
+    /** */
+    private void onDropTable(String schema, String name) {
+        assert !F.isEmpty(schema) && !F.isEmpty(name) : schema + ":" + name;
+
+        dropStatistics(Collections.singletonList(new StatisticsTarget(schema, name)));
     }
 
     /** */
