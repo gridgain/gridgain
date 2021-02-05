@@ -80,7 +80,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         assertEquals(SMALL_SIZE, rows);
     };
 
-    /** Statistic checker. */
+    /** Statistic checker: check columns statistic. */
     private Consumer<List<ObjectStatisticsImpl>> checkColumStats = stats -> {
         for (ObjectStatisticsImpl stat : stats) {
             for (String col : COLUMNS) {
@@ -154,7 +154,13 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         }
     }
 
-    /** */
+    /**
+     * Check statistics on cluster after change topology.
+     * 1. Create statistic for a table;
+     * 2. Check statistics on all nodes of the cluster;
+     * 3. Change topology (add or remove node);
+     * 4. Go to p.2;
+     */
     @Test
     public void updateStatisticsOnChangeTopology() throws Exception {
         startGridAndChangeBaseline(0);
@@ -194,7 +200,15 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
     }
 
-    /** */
+    /**
+     * Check drop statistics.
+     * - Create statistic for a table;
+     * - Check statistics on all nodes of the cluster;
+     * - Drop stat for one columns
+     * - Check that statistic is dropped for specified column on all nodes of the cluster;
+     * - Re-create statistics
+     * - Check statistics on all nodes of the cluster;
+     */
     @Test
     public void dropUpdate() throws Exception {
         startGrids(3);
@@ -217,7 +231,18 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
     }
 
-    /** */
+    /**
+     * Check drop statistics and topology change.
+     * - Create statistic for a table;
+     * - Check statistics on all nodes of the cluster;
+     * - stop a node;
+     * - Drop stat for one columns
+     * - Check that statistic is dropped for specified column on all nodes of the cluster
+     * and check statistic local storage;
+     * - Starting the node that was stopped;
+     * - Check that statistic is dropped for specified column on all nodes of the cluster;
+     * and check statistic local storage on started node;
+     */
     @Test
     public void dropSingleColumnStatisticWhileNodeDown() throws Exception {
         startGrids(3);
@@ -258,7 +283,9 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         );
     }
 
-    /** */
+    /**
+     * Check drop statistics when table is dropped.
+     */
     @Test
     public void dropTable() throws Exception {
         startGrids(3);
@@ -288,7 +315,41 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         }
     }
 
-    /** */
+    /**
+     * Check drop statistics when table's column is dropped.
+     */
+    @Test
+    public void dropColumn() throws Exception {
+        startGrids(3);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        createSmallTable(null);
+
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        sql("DROP INDEX SMALL_B");
+        sql("ALTER TABLE SMALL DROP COLUMN B");
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+            (stats) -> stats.forEach(s -> {
+                assertNotNull(s.columnStatistics("A"));
+                assertNotNull(s.columnStatistics("C"));
+                assertNull(s.columnStatistics("B"));
+            }));
+
+        for (Ignite ign : G.allGrids()) {
+            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), STAT_TIMEOUT,
+                "PUBLIC", "SMALL", (s -> assertNull(s.data().get("B"))));
+        }
+    }
+
+    /**
+     * Check drop statistics when table's column is dropped and node with old statistics joins to cluster
+     * after drop the column.
+     */
     @Test
     public void dropColumnWhileNodeDown() throws Exception {
         if (persist)
@@ -310,35 +371,6 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         sql("ALTER TABLE SMALL DROP COLUMN B");
 
         startGrid(2);
-
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
-            (stats) -> stats.forEach(s -> {
-                assertNotNull(s.columnStatistics("A"));
-                assertNotNull(s.columnStatistics("C"));
-                assertNull(s.columnStatistics("B"));
-            }));
-
-        for (Ignite ign : G.allGrids()) {
-            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), STAT_TIMEOUT,
-                "PUBLIC", "SMALL", (s -> assertNull(s.data().get("B"))));
-        }
-    }
-
-    /** */
-    @Test
-    public void dropColumn() throws Exception {
-        startGrids(3);
-
-        grid(0).cluster().state(ClusterState.ACTIVE);
-
-        createSmallTable(null);
-
-        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
-
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
-
-        sql("DROP INDEX SMALL_B");
-        sql("ALTER TABLE SMALL DROP COLUMN B");
 
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
             (stats) -> stats.forEach(s -> {
