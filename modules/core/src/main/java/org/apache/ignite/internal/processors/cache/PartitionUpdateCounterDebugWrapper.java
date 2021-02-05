@@ -19,7 +19,9 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Iterator;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.util.GridLongList;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
 
@@ -271,9 +273,15 @@ public class PartitionUpdateCounterDebugWrapper implements PartitionUpdateCounte
     @Override public void updateTombstoneClearCounter(long cntr) {
         SB sb = new SB();
 
+        GridDhtPartitionsExchangeFuture fut = grp.shared().exchange().lastFinishedFuture();
+        boolean reb = fut.rebalanced();
+
         sb.a("[op=updateTCS" +
             ", grpId=" + grp.groupId() +
             ", partId=" + partId +
+            ", ver=" + grp.topology().readyTopologyVersion() +
+            ", initVer=" + fut.initialVersion() +
+            ", rebalanced=" + reb +
             ", cntr=" + cntr +
             ", before=" + toString());
 
@@ -281,8 +289,14 @@ public class PartitionUpdateCounterDebugWrapper implements PartitionUpdateCounte
             delegate.updateTombstoneClearCounter(cntr);
         }
         finally {
-            log.debug(sb.a(", after=" + toString() +
-                ']').toString());
+            if (reb) {
+                log.debug(sb.a(", after=" + toString() +
+                    ']').toString());
+            }
+            else {
+                log.debug(sb.a(", after=" + toString() +
+                    ']').a(", stack=" + X.getFullStackTrace(new Exception())).toString());
+            }
         }
     }
 
