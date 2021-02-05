@@ -242,6 +242,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @param suffix Table idx, if {@code null} - name "SMALL" without index will be used.
      */
     protected void createSmallTable(String suffix) {
+        suffix = suffix != null ? suffix : "";
+
         sql("DROP TABLE IF EXISTS small" + suffix);
 
         sql(String.format("CREATE TABLE small%s (a INT PRIMARY KEY, b INT, c INT)" +
@@ -258,6 +260,16 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
             sql(String.format("INSERT INTO small%s(a, b, c) VALUES(%d, %d, %d)", suffix, i, i, i % 10));
     }
 
+    /**
+     * Drop SQL table with the given index.
+     *
+     * @param suffix Table idx, if {@code null} - name "SMALL" without index will be used.
+     */
+    protected void dropSmallTable(String suffix) {
+        suffix = suffix != null ? suffix : "";
+
+        sql("DROP TABLE IF EXISTS small" + suffix);
+    }
 
     /**
      * Replaces index hint placeholder like "i1", "i2" with specified index names in the ISQL query.

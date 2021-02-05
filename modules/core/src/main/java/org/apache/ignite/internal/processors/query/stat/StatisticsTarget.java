@@ -43,7 +43,17 @@ public class StatisticsTarget {
      * @param columns Array of column names or {@code null} if target - all columns.
      */
     public StatisticsTarget(String schema, String obj, String... columns) {
-        key = new StatisticsKey(schema, obj);
+        this(new StatisticsKey(schema, obj), columns);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param key Statistic key.
+     * @param columns Array of column names or {@code null} if target - all columns.
+     */
+    public StatisticsTarget(StatisticsKey key, String... columns) {
+        this.key = key;
         this.columns = columns;
     }
 

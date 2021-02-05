@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -41,6 +42,7 @@ import org.junit.runners.Parameterized;
  * Tests for statistics configuration.
  */
 @RunWith(Parameterized.class)
+@SuppressWarnings("unchecked")
 public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     /** Statistics await timeout.*/
     private static final long STAT_TIMEOUT = 5_000;
@@ -157,7 +159,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     public void updateStatisticsOnChangeTopology() throws Exception {
         startGridAndChangeBaseline(0);
 
-        createSmallTable("");
+        createSmallTable(null);
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
@@ -199,7 +201,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         grid(0).cluster().state(ClusterState.ACTIVE);
 
-        createSmallTable("");
+        createSmallTable(null);
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
@@ -222,7 +224,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         grid(0).cluster().state(ClusterState.ACTIVE);
 
-        createSmallTable("");
+        createSmallTable(null);
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
@@ -256,12 +258,102 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         );
     }
 
-    /**
-     * Test that statistics for table SMALL exists in local metastorage.
-     *
-     * @param db IgniteCacheDatabaseSharedManager to test in.
-     * @throws IgniteCheckedException In case of errors.
-     */
+    /** */
+    @Test
+    public void dropTable() throws Exception {
+        startGrids(3);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        createSmallTable(null);
+        createSmallTable("_A");
+
+        updateStatistics(
+            new StatisticsTarget("PUBLIC", "SMALL"),
+            new StatisticsTarget("PUBLIC", "SMALL_A"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL_A", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        dropSmallTable(null);
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+            (stats) -> stats.forEach(s -> assertNull(s)));
+
+        waitForStats("PUBLIC", "SMALL_A", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        for (Ignite ign : G.allGrids()) {
+            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), STAT_TIMEOUT,
+                "PUBLIC", "SMALL", (s -> assertNull(s)));
+        }
+    }
+
+    /** */
+    @Test
+    public void dropColumnWhileNodeDown() throws Exception {
+        if (persist)
+            return;
+
+        startGrids(3);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        createSmallTable(null);
+
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        stopGrid(2);
+
+        sql("DROP INDEX SMALL_B");
+        sql("ALTER TABLE SMALL DROP COLUMN B");
+
+        startGrid(2);
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+            (stats) -> stats.forEach(s -> {
+                assertNotNull(s.columnStatistics("A"));
+                assertNotNull(s.columnStatistics("C"));
+                assertNull(s.columnStatistics("B"));
+            }));
+
+        for (Ignite ign : G.allGrids()) {
+            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), STAT_TIMEOUT,
+                "PUBLIC", "SMALL", (s -> assertNull(s.data().get("B"))));
+        }
+    }
+
+    /** */
+    @Test
+    public void dropColumn() throws Exception {
+        startGrids(3);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        createSmallTable(null);
+
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        sql("DROP INDEX SMALL_B");
+        sql("ALTER TABLE SMALL DROP COLUMN B");
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+            (stats) -> stats.forEach(s -> {
+                assertNotNull(s.columnStatistics("A"));
+                assertNotNull(s.columnStatistics("C"));
+                assertNull(s.columnStatistics("B"));
+            }));
+
+        for (Ignite ign : G.allGrids()) {
+            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), STAT_TIMEOUT,
+                "PUBLIC", "SMALL", (s -> assertNull(s.data().get("B"))));
+        }
+    }
+
+    /** */
     private void checkStatisticsInMetastore(
         IgniteCacheDatabaseSharedManager db,
         long timeout,

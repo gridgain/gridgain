@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -136,6 +138,10 @@ public class SchemaManager {
 
     /** Logger. */
     private final IgniteLogger log;
+
+    /** */
+    private final Set<BiConsumer<GridH2Table, List<String>>> dropColsLsnrs = Collections.newSetFromMap(
+        new ConcurrentHashMap<>());
 
     /**
      * Constructor.
@@ -743,6 +749,8 @@ public class SchemaManager {
         }
 
         desc.table().dropColumns(cols, ifColExists);
+
+        dropColsLsnrs.forEach(l -> l.accept(desc.table(), cols));
     }
 
     /**
@@ -827,5 +835,10 @@ public class SchemaManager {
         }
 
         return null;
+    }
+
+    /** */
+    public void registerDropColumnsListener(BiConsumer<GridH2Table, List<String>> lsnr) {
+        dropColsLsnrs.add(lsnr);
     }
 }
