@@ -56,6 +56,8 @@ public class IgniteStatisticsConfigurationManager {
 
     /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
+
+    /** */
     public static final String[] EMPTY_STRING_ARR = new String[0];
 
     /** */
@@ -79,7 +81,7 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private volatile boolean started;
 
-    /** */
+    /** Monitor to synchronize changes repository: aggregate after collects and drop statistics. */
     private final Object mux = new Object();
 
     /** */
