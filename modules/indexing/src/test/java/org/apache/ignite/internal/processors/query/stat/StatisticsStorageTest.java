@@ -16,7 +16,6 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -67,7 +66,10 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
             .getLocalStatistics("PUBLIC", "SMALL");
 
-        ObjectStatisticsImpl locStat2WithPrevVersion = new ObjectStatisticsImpl(locStat2.rowCount(), locStat2.columnsStatistics(), locStat.version());
+        ObjectStatisticsImpl locStat2WithPrevVersion = new ObjectStatisticsImpl(
+            locStat2.rowCount(),
+            locStat2.columnsStatistics(),
+            locStat.version());
 
         assertEquals(locStat, locStat2WithPrevVersion);
     }

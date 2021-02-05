@@ -15,17 +15,14 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.Arrays;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * Test statistics storage itself for restart cases.

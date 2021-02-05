@@ -60,7 +60,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     private final IgniteThreadPoolExecutor mgmtPool;
 
     /** Gathering pool. */
-    private final  IgniteThreadPoolExecutor gatherPool;
+    private final IgniteThreadPoolExecutor gatherPool;
 
     /**
      * Constructor.

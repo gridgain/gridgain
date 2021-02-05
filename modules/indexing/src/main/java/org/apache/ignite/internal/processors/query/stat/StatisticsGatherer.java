@@ -142,7 +142,6 @@ public class StatisticsGatherer {
         });
     }
 
-
     /** */
     private void completePartitionStatistic(
         GridH2Table tbl,

@@ -50,9 +50,6 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
     private static final int CANCELLED_CHECK_INTERVAL = 100;
 
     /** */
-    private final LocalStatisticsGatheringContext  gathCtx;
-
-    /** */
     private final GridH2Table tbl;
 
     /** */
@@ -82,7 +79,6 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
         long ver,
         IgniteLogger log
     ) {
-        this.gathCtx  = gathCtx;
         this.tbl = tbl;
         this.cols = cols;
         this.partId = partId;

@@ -24,10 +24,10 @@ import org.junit.Test;
  */
 public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
     /** */
-    private final static String SQL = "select * from SMALL i1 where b < 2 and c < 2";
+    private static final String SQL = "select * from SMALL i1 where b < 2 and c < 2";
 
     /** */
-    private final static String[][] NO_HINTS = new String[1][];
+    private static final String[][] NO_HINTS = new String[1][];
 
     /**
      * Check that statistics will be used correctly after partial removing and partial collection.
@@ -42,7 +42,6 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
     @Test
     public void testPartialDeletionCollection() throws Exception {
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
-
 
         IgniteEx ign = grid(0);
 

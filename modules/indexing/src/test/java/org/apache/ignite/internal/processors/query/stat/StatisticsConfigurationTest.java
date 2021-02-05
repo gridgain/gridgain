@@ -136,7 +136,6 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         return ign;
     }
 
-
     /** */
     protected void stopGridAndChangeBaseline(int nodeIdx) {
         System.out.println("+++ STOP " + nodeIdx);

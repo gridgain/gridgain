@@ -21,23 +21,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
@@ -254,8 +248,6 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
         sql(String.format("CREATE INDEX small%s_c ON small%s(c)", suffix, suffix));
 
-        IgniteCache<Integer, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
-
         for (int i = 0; i < SMALL_SIZE; i++)
             sql(String.format("INSERT INTO small%s(a, b, c) VALUES(%d, %d, %d)", suffix, i, i, i % 10));
     }
@@ -390,6 +382,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
             100, 0, new byte[0]);
+
         return new ObjectPartitionStatisticsImpl(
             partId,  0, 0,
             Collections.singletonMap("col1", colStatistics),

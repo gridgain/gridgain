@@ -192,7 +192,7 @@ public class IgniteStatisticsConfigurationManager {
             String key = key2String(target.key());
 
             try {
-                while(true) {
+                while (true) {
                     StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
 
                     if (oldCfg == null)
