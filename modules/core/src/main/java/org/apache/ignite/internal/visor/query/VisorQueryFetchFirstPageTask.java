@@ -95,7 +95,15 @@ public class VisorQueryFetchFirstPageTask extends VisorOneNodeTask<VisorQueryNex
                 log(ignite.log(), "Fetch query first page finished: " + qryId, getClass(), start);
 
             return new VisorEither<>(
-                new VisorQueryResult(ignite.localNode().id(), qryId, cols, rows, hasMore, holder.duration()));
+                new VisorQueryResult(
+                    ignite.localNode().id(),
+                    qryId,
+                    cols,
+                    rows,
+                    hasMore,
+                    holder.duration() + System.currentTimeMillis() - start
+                )
+            );
         }
 
         /** {@inheritDoc} */
