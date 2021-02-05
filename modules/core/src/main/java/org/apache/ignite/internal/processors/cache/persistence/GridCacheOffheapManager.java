@@ -252,7 +252,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         syncMetadata(ctx);
 
         // Double flushing memory buckets for decrease a time on write lock.
-        syncMetadata(ctx);
+        syncMetadata(ctx, ctx.executor(), false);
     }
 
     /** {@inheritDoc} */
