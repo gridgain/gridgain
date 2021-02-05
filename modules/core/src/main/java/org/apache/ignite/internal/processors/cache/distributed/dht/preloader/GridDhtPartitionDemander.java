@@ -68,6 +68,8 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
+import org.apache.ignite.internal.util.GridMutableLong;
+import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridCompoundIdentityFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -797,7 +799,7 @@ public class GridDhtPartitionDemander {
             return;
 
         // Received keys by caches, for statistics.
-        Map<Integer, AtomicLong> receivedKeys = new HashMap<>();
+        IntHashMap<GridMutableLong> receivedKeys = new IntHashMap<>();
 
         List<GridCacheMvccEntryInfo> entryHist = new ArrayList<>();
 
@@ -852,7 +854,7 @@ public class GridDhtPartitionDemander {
 
                             rebalanceFut.onReceivedKeys(p, 1, node);
 
-                            receivedKeys.computeIfAbsent(cacheId, cid -> new AtomicLong()).incrementAndGet();
+                            receivedKeys.computeIfAbsent(cacheId, cid -> new GridMutableLong()).incrementAndGet();
                         }
 
                         entryHist.clear();
@@ -869,7 +871,7 @@ public class GridDhtPartitionDemander {
             }
         }
 
-        updateKeyReceivedMetrics(grp, F.viewReadOnly(receivedKeys, AtomicLong::get));
+        updateKeyReceivedMetrics(grp, receivedKeys);
     }
 
     /**
@@ -888,7 +890,7 @@ public class GridDhtPartitionDemander {
         Iterator<GridCacheEntryInfo> infos
     ) throws IgniteCheckedException {
         // Received keys by caches, for statistics.
-        Map<Integer, AtomicLong> receivedKeys = new HashMap<>();
+        IntHashMap<GridMutableLong> receivedKeys = new IntHashMap<>();
 
         GridCacheContext<?, ?> cctx = null;
 
@@ -923,7 +925,7 @@ public class GridDhtPartitionDemander {
                         return;
                     }
 
-                    receivedKeys.computeIfAbsent(cacheId, id -> new AtomicLong()).incrementAndGet();
+                    receivedKeys.computeIfAbsent(cacheId, id -> new GridMutableLong()).incrementAndGet();
                 }
             }
             finally {
@@ -931,7 +933,7 @@ public class GridDhtPartitionDemander {
             }
         }
 
-        updateKeyReceivedMetrics(grp, F.viewReadOnly(receivedKeys, AtomicLong::get));
+        updateKeyReceivedMetrics(grp, receivedKeys);
     }
 
     /**
@@ -1124,11 +1126,11 @@ public class GridDhtPartitionDemander {
      * @param grpCtx Cache group context.
      * @param receivedKeys Statistics of received keys by caches.
      */
-    private void updateKeyReceivedMetrics(CacheGroupContext grpCtx, Map<Integer, Long> receivedKeys) {
+    private void updateKeyReceivedMetrics(CacheGroupContext grpCtx, IntHashMap<GridMutableLong> receivedKeys) {
         if (!receivedKeys.isEmpty()) {
             for (GridCacheContext<?, ?> cacheCtx : grpCtx.caches()) {
                 if (cacheCtx.statisticsEnabled() && receivedKeys.containsKey(cacheCtx.cacheId()))
-                    cacheCtx.cache().metrics0().onRebalanceKeyReceived(receivedKeys.get(cacheCtx.cacheId()));
+                    cacheCtx.cache().metrics0().onRebalanceKeyReceived(receivedKeys.get(cacheCtx.cacheId()).get());
             }
         }
     }
