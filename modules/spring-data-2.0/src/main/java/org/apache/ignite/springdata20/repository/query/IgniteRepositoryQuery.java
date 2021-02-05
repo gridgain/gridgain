@@ -825,7 +825,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
                 queryString = (String)eval;
             }
 
-            TextQuery textQuery = new TextQuery(type, queryString, config.limit());
+            TextQuery textQuery = new TextQuery(type, queryString);
 
             textQuery.setLocal(config.local());
 
