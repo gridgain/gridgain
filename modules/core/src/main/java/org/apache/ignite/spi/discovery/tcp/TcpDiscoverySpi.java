@@ -1920,9 +1920,20 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
         Collection<InetSocketAddress> addrs;
 
+        int attemptsCnt = 0;
+
+        int maxResolveAttempts = getReconnectCount() > 0 ? getReconnectCount() : 2;
+
         // Get consistent addresses collection.
         while (true) {
             try {
+                if(++attemptsCnt > maxResolveAttempts){
+                    LT.info(log, "Unable to get registered addresses from IP finder. " +
+                            "Maximum attempt count has reached " + attemptsCnt + "/" + maxResolveAttempts);
+                    addrs = res;
+                    break;
+                }
+
                 addrs = registeredAddresses();
 
                 break;
