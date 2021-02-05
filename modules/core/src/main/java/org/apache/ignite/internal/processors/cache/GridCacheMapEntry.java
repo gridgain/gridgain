@@ -3856,6 +3856,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     @Override public boolean onTtlExpired(long expireTime) throws GridCacheEntryRemovedException {
         boolean obsolete = false;
 
+        assert !cctx.mvccEnabled();
+
         GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
         lockEntry();
@@ -3871,10 +3873,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (!(expireTime0 > 0 && expireTime0 <= expireTime))
                 return false;
 
-            CacheObject expiredVal = this.val;
-
-            if (onExpired(expiredVal, obsoleteVer))
+            if (markObsolete0(obsoleteVer, true, null))
                 obsolete = true;
+
+            removeExpiredValue(obsoleteVer);
+
+            updatePlatformCache(null, null);
         }
         catch (NodeStoppingException e) {
             if (log.isDebugEnabled())
@@ -3900,7 +3904,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * @param expiredVal Expired value, will be null if a tombstone has expired.
+     * @param expiredVal Expired value, will be null for the tombstone.
      * @param obsoleteVer Version.
      * @return {@code True} if entry was marked as removed.
      * @throws IgniteCheckedException If failed.
@@ -3908,11 +3912,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     private boolean onExpired(@Nullable CacheObject expiredVal, GridCacheVersion obsoleteVer) throws IgniteCheckedException {
         boolean rmvd = false;
 
-        if (mvccExtras() != null)
+        if (mvccExtras() != null || expiredVal == null) // Tombstone shouldn't expire here.
             return false;
 
         if (obsoleteVer == null)
-            obsoleteVer = nextVersion();
+            obsoleteVer = cctx.versions().startVersion();
 
         if (markObsolete0(obsoleteVer, true, null))
             rmvd = true;
@@ -3925,25 +3929,23 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         else
             removeExpiredValue(obsoleteVer);
 
-        if (expiredVal != null) { // Do not trigger events for tombstones.
-            if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
-                cctx.events().addEvent(partition(),
-                    key,
-                    cctx.localNodeId(),
-                    null,
-                    EVT_CACHE_OBJECT_EXPIRED,
-                    null,
-                    false,
-                    expiredVal,
-                    expiredVal != null,
-                    null,
-                    null,
-                    null,
-                    true);
-            }
-
-            cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
+        if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
+            cctx.events().addEvent(partition(),
+                key,
+                cctx.localNodeId(),
+                null,
+                EVT_CACHE_OBJECT_EXPIRED,
+                null,
+                false,
+                expiredVal,
+                expiredVal != null,
+                null,
+                null,
+                null,
+                true);
         }
+
+        cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
 
         updatePlatformCache(null, null);
 
