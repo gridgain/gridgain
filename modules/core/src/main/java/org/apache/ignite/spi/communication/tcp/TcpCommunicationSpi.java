@@ -951,9 +951,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
         spiCtx.addLocalEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
-        ctxInitLatch.countDown();
-
         metricsLsnr = new TcpCommunicationMetricsListener(ignite, spiCtx);
+
+        ctxInitLatch.countDown();
     }
 
     /** {@inheritDoc} */
