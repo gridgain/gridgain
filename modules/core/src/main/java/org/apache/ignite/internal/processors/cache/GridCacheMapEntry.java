@@ -3873,10 +3873,32 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (!(expireTime0 > 0 && expireTime0 <= expireTime))
                 return false;
 
+            CacheObject expiredVal = this.val;
+
             if (markObsolete0(obsoleteVer, true, null))
                 obsolete = true;
 
             removeExpiredValue(obsoleteVer);
+
+            if (expiredVal != null) { // Do not trigger events for tombstones.
+                if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
+                    cctx.events().addEvent(partition(),
+                        key,
+                        cctx.localNodeId(),
+                        null,
+                        EVT_CACHE_OBJECT_EXPIRED,
+                        null,
+                        false,
+                        expiredVal,
+                        expiredVal != null,
+                        null,
+                        null,
+                        null,
+                        true);
+                }
+
+                cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
+            }
 
             updatePlatformCache(null, null);
         }
@@ -3904,7 +3926,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * @param expiredVal Expired value, will be null for the tombstone.
+     * @param expiredVal Expired value, will be null if a tombstone has expired.
      * @param obsoleteVer Version.
      * @return {@code True} if entry was marked as removed.
      * @throws IgniteCheckedException If failed.
