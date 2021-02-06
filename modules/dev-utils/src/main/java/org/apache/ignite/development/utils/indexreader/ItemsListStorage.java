@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Stores all index items.
  */
-class ItemsListStorage<T> implements ItemStorage<T> {
+public class ItemsListStorage<T> implements ItemStorage<T> {
     private final List<T> store = new LinkedList<>();
 
     /** {@inheritDoc} */

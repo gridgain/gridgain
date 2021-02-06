@@ -22,7 +22,7 @@ import java.util.Set;
 /**
  * This class is used to store result of tree traversal.
  */
-class TreeTraversalInfo {
+public class TreeTraversalInfo {
     /** Page type statistics. */
     final Map<Class, Long> ioStat;
 
@@ -38,7 +38,7 @@ class TreeTraversalInfo {
     /**
      * List of items storage.
      */
-    final ItemStorage itemStorage;
+    public final ItemStorage itemStorage;
 
     /** */
     public TreeTraversalInfo(
