@@ -34,6 +34,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
@@ -45,12 +46,14 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.Thread.sleep;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.DATA;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
@@ -58,7 +61,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  * Collects and returns a set of keys that have conflicts with {@link GridCacheVersion}.
  */
 @GridInternal
-public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>>> {
+public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>>>> {
     /**
      *
      */
@@ -109,7 +112,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> reduce(
+    @Override public @Nullable ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>>> reduce(
         List<ComputeJobResult> results) throws IgniteException {
         assert partBatch != null;
 
@@ -119,18 +122,22 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
         KeyCacheObject lastKey = null;
 
+        Map<UUID, Long> partSizesMap = new HashMap<>();
+
         for (int i = 0; i < results.size(); i++) {
+            UUID nodeId = results.get(i).getNode().id();
+
             IgniteException exc = results.get(i).getException();
 
             if (exc != null)
                 return new ExecutionResult<>(exc.getMessage());
 
-            ExecutionResult<List<VersionedKey>> nodeRes = results.get(i).getData();
+            ExecutionResult<T2<List<VersionedKey>, Long>> nodeRes = results.get(i).getData();
 
             if (nodeRes.errorMessage() != null)
                 return new ExecutionResult<>(nodeRes.errorMessage());
 
-            for (VersionedKey partKeyVer : nodeRes.result()) {
+            for (VersionedKey partKeyVer : nodeRes.result().get1()) {
                 try {
                     KeyCacheObject key = unmarshalKey(partKeyVer.key(), ctx);
 
@@ -149,9 +156,11 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     return new ExecutionResult<>(e.getMessage());
                 }
             }
+
+            partSizesMap.put(nodeId, nodeRes.result().get2());
         }
 
-        return new ExecutionResult<>(new T2<>(lastKey, totalRes));
+        return new ExecutionResult<>(new T3<>(lastKey, totalRes, partSizesMap));
     }
 
     /**
@@ -196,7 +205,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
         }
 
         /** {@inheritDoc} */
-        @Override protected ExecutionResult<List<VersionedKey>> execute0() {
+        @Override protected ExecutionResult<T2<List<VersionedKey>, Long>> execute0() {
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();
@@ -227,10 +236,49 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                 List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
+                Long partSize = partBatch.partSizesMap().get(ignite.localNode().id());
+
+                if (partSize == null)
+                    partSize = 0L;
+
+                IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
+
+                if (lowerKey == null)
+                    cacheDataStore.isReconciliationInProgress(true);
+
                 for (int i = 0; i < batchSize && cursor.next(); i++) {
-                    CacheDataRow row = cursor.get();
+
+                    CacheDataRow row;
+
+                    try {
+                        sleep(100);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    synchronized (cacheDataStore.reconciliationMux()) {
+                        row = cursor.get();
+
+                        if (cacheDataStore.lastKey() == null || KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key()) < 0) {
+                            cacheDataStore.lastKey(row.key());
+                            System.out.println("qqedfks reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
+                                " ||| _row.key()_:" + row.key() +
+                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
+                                " ||| partId: " + part +
+                                " ||| partSize: " + partSize);
+                        }
+                        else
+                            System.out.println("qftsbg reconcilation execute0 else. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
+                                " ||| _row.key()_:" + row.key() +
+                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
+                                " ||| partId: " + part +
+                                " ||| partSize: " + partSize);
+                    }
 
                     if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) != 0) {
+                        partSize++;
+//                        System.out.println("qwerdcs");
                         partEntryHashRecords.add(new VersionedKey(
                             ignite.localNode().id(),
                             row.key(),
@@ -241,7 +289,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         i--;
                 }
 
-                return new ExecutionResult<>(partEntryHashRecords);
+                return new ExecutionResult<>(new T2<>(partEntryHashRecords, partSize));
             }
             catch (Exception e) {
                 String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor.workload;
 
+import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWorkload;
@@ -34,6 +35,9 @@ public class Batch extends PipelineWorkload {
     /** Lower key, uses for pagination. The first request should set this value to null. */
     private final KeyCacheObject lowerKey;
 
+    /** */
+    private final Map<UUID, Long> partSizesMap;
+
     /**
      * @param sesId Session id.
      * @param workloadChainId Workload chain id.
@@ -41,12 +45,13 @@ public class Batch extends PipelineWorkload {
      * @param partId Partition id.
      * @param lowerKey Lower key.
      */
-    public Batch(long sesId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey) {
+    public Batch(long sesId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey, Map<UUID, Long> partSizesMap) {
         super(sesId, workloadChainId);
 
         this.cacheName = cacheName;
         this.partId = partId;
         this.lowerKey = lowerKey;
+        this.partSizesMap = partSizesMap;
     }
 
     /**
@@ -68,5 +73,12 @@ public class Batch extends PipelineWorkload {
      */
     public KeyCacheObject lowerKey() {
         return lowerKey;
+    }
+
+    /**
+     *
+     */
+    public Map<UUID, Long> partSizesMap() {
+        return partSizesMap;
     }
 }

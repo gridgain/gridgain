@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
+import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -45,6 +46,11 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     private final KeyCacheObject lowerKey;
 
     /**
+     *
+     */
+    private final Map<UUID, Long> partSizesMap;
+
+    /**
      * Reconciliation start topology version.
      */
     private final AffinityTopologyVersion startTopVer;
@@ -65,6 +71,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
         int partId,
         int batchSize,
         KeyCacheObject lowerKey,
+        Map<UUID, Long> partSizesMap,
         AffinityTopologyVersion startTopVer
     ) {
         super(sesId, workloadChainId);
@@ -72,6 +79,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
         this.partId = partId;
         this.batchSize = batchSize;
         this.lowerKey = lowerKey;
+        this.partSizesMap = partSizesMap;
         this.startTopVer = startTopVer;
     }
 
@@ -97,6 +105,13 @@ public class PartitionBatchRequest extends CachePartitionRequest {
      */
     public KeyCacheObject lowerKey() {
         return lowerKey;
+    }
+
+    /**
+     *
+     */
+    public Map<UUID, Long> partSizesMap() {
+        return partSizesMap;
     }
 
     /**

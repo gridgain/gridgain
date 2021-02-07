@@ -48,6 +48,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccMarkUpdat
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateNewTxStateHintRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateTxStateHintRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtDetachedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
@@ -124,6 +125,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Boolean.TRUE;
+import static java.lang.Thread.sleep;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -1532,6 +1534,46 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** Tombstones counter. */
         private final AtomicLong tombstonesCnt = new AtomicLong();
 
+        /** */
+        private volatile boolean isReconciliationInProgress;
+
+        /** */
+        private Object reconciliationMux = new Object();
+
+        /** */
+        private final AtomicLong storageSizeDelta = new AtomicLong();
+
+        /** */
+        private volatile KeyCacheObject lastKey;
+
+        /** */
+        private static final KeyComparator KEY_COMPARATOR = new KeyComparator();
+
+        /** */
+        @Override public boolean isReconciliationInProgress() {
+            return isReconciliationInProgress;
+        }
+
+        /** */
+        @Override public void isReconciliationInProgress(boolean b) {
+            this.isReconciliationInProgress = b;
+        }
+
+        /** */
+        @Override public Object reconciliationMux() {
+            return reconciliationMux;
+        }
+
+        /** */
+        @Override public KeyCacheObject lastKey() {
+            return lastKey;
+        }
+
+        /** */
+        @Override public void lastKey(KeyCacheObject key) {
+            lastKey = key;
+        }
+
         /**
          * @param partId Partition number.
          * @param rowStore Row store.
@@ -1578,6 +1620,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /**
          * @param cacheId Cache ID.
          */
+        void incrementSize(int cacheId, KeyCacheObject key) {
+            updateSize(cacheId, 1, key);
+        }
         void incrementSize(int cacheId) {
             updateSize(cacheId, 1);
         }
@@ -1585,6 +1630,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /**
          * @param cacheId Cache ID.
          */
+        void decrementSize(int cacheId, KeyCacheObject key) {
+            updateSize(cacheId, -1, key);
+        }
         void decrementSize(int cacheId) {
             updateSize(cacheId, -1);
         }
@@ -1645,6 +1693,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
         }
 
+//        /** */
+//        public void processReconcilation(int cacheId, long delta, KeyCacheObject key) {
+//
+//        }
+
         /** {@inheritDoc} */
         @Override public void updateSize(int cacheId, long delta) {
             storageSize.addAndGet(delta);
@@ -1662,6 +1715,75 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 size.addAndGet(delta);
             }
         }
+
+        /** {@inheritDoc} */
+        @Override public void updateSize(int cacheId, long delta, KeyCacheObject key) {
+            synchronized (reconciliationMux) {
+                if (isReconciliationInProgress) {
+                    if (lastKey != null && KEY_COMPARATOR.compare(key, lastKey) < 0) {
+                        storageSizeDelta.addAndGet(delta);
+
+                        storageSize.addAndGet(delta);
+
+                        System.out.println("qergdf updateSize inner if. _key_: " + key +
+                            " ||| _lastKey_:" + (lastKey == null ? "null" : lastKey) +
+                            " ||| compare: " + (lastKey == null ? "null" : KEY_COMPARATOR.compare(key, lastKey)) +
+                            " ||| storageSize:" + storageSize.get() +
+                            " ||| storageSizeDelta:" + storageSizeDelta.get());
+                    }
+                    else {
+                        storageSize.addAndGet(delta);
+
+                        System.out.println("qksadgf updateSize inner else. _key_: " + key +
+                            " ||| _lastKey_:" + (lastKey == null ? "null" : lastKey) +
+                            " ||| compare: " + (lastKey == null ? "null" : KEY_COMPARATOR.compare(key, lastKey)) +
+                            " ||| storageSize:" + storageSize.get() +
+                            " ||| storageSizeDelta:" + storageSizeDelta.get());
+                    }
+                }
+                else {
+                    storageSize.addAndGet(delta);
+
+                    System.out.println("qjnghdae updateSize else. _key_: " + key +
+                        " ||| _lastKey_:" + (lastKey == null ? "null" : lastKey) +
+                        " ||| compare: " + (lastKey == null ? "null" : KEY_COMPARATOR.compare(key, lastKey)) +
+                        " ||| storageSize:" + storageSize.get() +
+                        " ||| storageSizeDelta:" + storageSizeDelta.get());
+                }
+            }
+//            storageSize.addAndGet(delta);
+
+            if (grp.sharedGroup()) {
+                AtomicLong size = cacheSizes.get(cacheId);
+
+                if (size == null) {
+                    AtomicLong old = cacheSizes.putIfAbsent(cacheId, size = new AtomicLong());
+
+                    if (old != null)
+                        size = old;
+                }
+
+                size.addAndGet(delta);
+            }
+        }
+
+//        /** {@inheritDoc} */
+//        @Override public void updateSize(int cacheId, long delta) {
+//            storageSize.addAndGet(delta);
+//
+//            if (grp.sharedGroup()) {
+//                AtomicLong size = cacheSizes.get(cacheId);
+//
+//                if (size == null) {
+//                    AtomicLong old = cacheSizes.putIfAbsent(cacheId, size = new AtomicLong());
+//
+//                    if (old != null)
+//                        size = old;
+//                }
+//
+//                size.addAndGet(delta);
+//            }
+//        }
 
         /** {@inheritDoc} */
         @Override public long nextUpdateCounter() {
@@ -1832,14 +1954,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                         tombstoneCreated();
 
-                        decrementSize(cctx.cacheId());
+                        decrementSize(cctx.cacheId(), c.newRow().key());
                     }
                     else if (oldRow.tombstone() && !newRow.tombstone()) {
                         clearPendingEntries(cctx, c.oldRow());
 
                         tombstoneRemoved();
 
-                        incrementSize(cctx.cacheId());
+                        incrementSize(cctx.cacheId(), c.oldRow().key());
                     }
 
                     if (isIncrementalDrEnabled(cctx)) {
@@ -1982,7 +2104,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     dataTree.putx(updateRow);
 
-                    incrementSize(cctx.cacheId());
+                    incrementSize(cctx.cacheId(), key);
 
                     if (cctx.queries().enabled())
                         cctx.queries().store(updateRow, null, true);
@@ -2507,7 +2629,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 // first == true means there were no row versions
                 if (!first)
-                    decrementSize(cctx.cacheId());
+                    decrementSize(cctx.cacheId(), key);
 
             }
             finally {
@@ -2742,8 +2864,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean hasOldVal = oldRow != null && !oldRow.tombstone();
 
-            if (!hasOldVal)
-                incrementSize(cctx.cacheId());
+            if (!hasOldVal) {
+                incrementSize(cctx.cacheId(), newRow.key());
+            }
 
             GridCacheQueryManager qryMgr = cctx.queries();
 
@@ -2933,7 +3056,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldVal) {
                 clearPendingEntries(cctx, oldRow);
 
-                decrementSize(cctx.cacheId());
+                decrementSize(cctx.cacheId(), oldRow.key());
             }
 
             GridCacheQueryManager qryMgr = cctx.queries();
@@ -3268,7 +3391,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     rowStore.removeRow(row.link(), grp.statisticsHolderData());
 
                     if (!row.tombstone())
-                        decrementSize(cacheId);
+                        decrementSize(cacheId, row.key());
                 }
                 catch (IgniteCheckedException e) {
                     U.error(log, "Fail remove row [link=" + row.link() + "]");

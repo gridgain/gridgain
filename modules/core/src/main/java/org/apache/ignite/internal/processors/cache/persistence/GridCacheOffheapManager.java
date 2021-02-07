@@ -2536,6 +2536,39 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
         }
 
+        /** */
+        @Override public boolean isReconciliationInProgress() {
+            CacheDataStore delegate0 = delegate;
+
+            return delegate0 != null && delegate0.isReconciliationInProgress();
+        }
+
+        /** */
+        @Override public void isReconciliationInProgress(boolean b) {
+            CacheDataStore delegate0 = delegate;
+
+            if (delegate0 != null)
+                delegate0.isReconciliationInProgress(b);
+        }
+
+        @Override public Object reconciliationMux() {
+            CacheDataStore delegate0 = delegate;
+
+            return delegate0 == null ? null : delegate0.reconciliationMux();
+        }
+
+        @Override public KeyCacheObject lastKey() {
+            CacheDataStore delegate0 = delegate;
+
+            return delegate0 == null ? null : delegate0.lastKey();
+        }
+
+        /** */
+        @Override public void lastKey(KeyCacheObject key) {
+            if (delegate != null)
+                delegate.lastKey(key);
+        }
+
         @Override public CacheDataTree tree() {
             return dataTree;
         }
@@ -2629,6 +2662,19 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                 if (delegate0 != null)
                     delegate0.updateSize(cacheId, delta);
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void updateSize(int cacheId, long delta, KeyCacheObject key) {
+            try {
+                CacheDataStore delegate0 = init0(false);
+
+                if (delegate0 != null)
+                    delegate0.updateSize(cacheId, delta, key);
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);

@@ -125,6 +125,8 @@ public interface ReconciliationResultCollector {
      */
     File flushResultsToFile(LocalDateTime startTime);
 
+    Map<Integer, Map<UUID, Long>> partSizesMap();
+
     /**
      * Represents a collector of inconsistent and repaired entries.
      */
@@ -146,6 +148,8 @@ public interface ReconciliationResultCollector {
 
         /** Entries that were detected as inconsistent but weren't repaired due to some reason. */
         protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
+
+        public static final Map<Integer, Map<UUID, Long>> partSizesMap = new HashMap();
 
         /**
          * Creates a new SimpleCollector.
@@ -171,6 +175,20 @@ public interface ReconciliationResultCollector {
                     reconciliationDir.mkdir();
             }
         }
+
+        /**
+         *
+         */
+        @Override public Map<Integer, Map<UUID, Long>> partSizesMap() {
+            return partSizesMap;
+        }
+
+//        /**
+//         *
+//         */
+//        public void partSizesMap(Map<Integer, Map<UUID, Long>> partSizesMap) {
+//            this.partSizesMap.putAll(partSizesMap);
+//        }
 
         /** {@inheritDoc} */
         @Override public void appendSkippedEntries(

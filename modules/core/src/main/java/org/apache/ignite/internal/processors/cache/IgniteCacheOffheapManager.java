@@ -623,6 +623,20 @@ public interface IgniteCacheOffheapManager {
      *
      */
     interface CacheDataStore {
+        /** */
+        public boolean isReconciliationInProgress();
+
+        /** */
+        public void isReconciliationInProgress(boolean b);
+
+        /** */
+        public Object reconciliationMux();
+
+        /** */
+        public KeyCacheObject lastKey();
+
+        /** */
+        public void lastKey(KeyCacheObject key);
 
         /**
          * @return Cache data tree object.
@@ -669,6 +683,8 @@ public interface IgniteCacheOffheapManager {
          * @param delta Size delta.
          */
         public void updateSize(int cacheId, long delta);
+
+        public void updateSize(int cacheId, long delta, KeyCacheObject key);
 
         /**
          * @return Update counter (LWM).

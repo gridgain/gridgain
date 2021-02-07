@@ -192,13 +192,30 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         //repair counters
         grid(1).context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
-
         exchangeMgr.lastTopologyFuture().get();
 
         GridTestUtils.waitForCondition(() -> exchangeMgr.lastTopologyFuture().topologyVersion()
             .equals(topVerBeforeRepair.nextMinorVersion()), 5000);
 
         assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1) && cntr0.get() == 7);
+
+        stopAllGrids();
+
+        startGrids(2);
+
+        cntr0 = counter(part, grid(0).name());
+        cntr1 = counter(part, grid(1).name());
+
+        assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1) && cntr0.get() == 7);
+
+    }
+
+    @Test
+    public void test1() throws Exception {
+        backups = 1;
+        IgniteEx crd = startGrids(1);
+        crd.cluster().state(ClusterState.ACTIVE);
+        crd.cache(DEFAULT_CACHE_NAME).put(1, 1);
     }
 
     /**

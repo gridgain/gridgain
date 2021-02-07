@@ -20,6 +20,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatc
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
@@ -90,12 +92,12 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         CollectPartitionKeysByBatchTask task = new CollectPartitionKeysByBatchTask();
         task.map(Collections.EMPTY_LIST, new PartitionBatchRequest(
             ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-            DEFAULT_CACHE_NAME, 1, 1000, null, ver));
+            DEFAULT_CACHE_NAME, 1, 1000, null, new HashMap<>(), ver));
         Field igniteField = U.findField(task.getClass(), "ignite");
         igniteField.set(task, node);
 
         {
-            T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> reduce = task
+            T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> reduce = task
                 .reduce(values(new int[][] {{EMPTY}, {EMPTY}, {EMPTY}}, ctxo))
                 .result();
 
@@ -104,7 +106,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         }
 
         {
-            T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> reduce = task
+            T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> reduce = task
                 .reduce(values(new int[][] {{EMPTY}, {132}, {EMPTY}}, ctxo))
                 .result();
 
@@ -117,7 +119,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         }
 
         {
-            T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> reduce = task
+            T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> reduce = task
                 .reduce(values(new int[][] {{500}, {500}, {EMPTY}}, ctxo))
                 .result();
 
@@ -130,7 +132,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         }
 
         {
-            T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> reduce = task
+            T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> reduce = task
                 .reduce(values(new int[][] {{100}, {200}, {EMPTY}}, ctxo))
                 .result();
 
@@ -145,7 +147,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         }
 
         {
-            T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> reduce = task
+            T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> reduce = task
                 .reduce(values(new int[][] {{9}, {9}, {9}}, ctxo))
                 .result();
 
@@ -156,7 +158,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         }
 
         {
-            T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> reduce = task
+            T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> reduce = task
                 .reduce(valuesDiffVersion(new int[][] {{1}, {1}, {1}}, ctxo))
                 .result();
 
@@ -174,7 +176,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         };
 
         {
-            T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> reduce = task
+            T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> reduce = task
                 .reduce(valuesDiffVersion(bigDataset, ctxo))
                 .result();
 
@@ -192,7 +194,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         }
 
         {
-            T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> reduce = task
+            T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> reduce = task
                 .reduce(values(bigDataset, ctxo))
                 .result();
 
@@ -238,30 +240,30 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
         Set<KeyCacheObject> fetched = new HashSet<>();
 
-        T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> firstBatch = node.compute(group(node, nodes)).execute(
+        T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> firstBatch = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByBatchTask.class,
             new PartitionBatchRequest(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, null, ver)
+                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, null, new HashMap<>(), ver)
         ).result();
 
         fetched.addAll(firstBatch.get2().keySet());
 
         KeyCacheObject firstMaxKey = firstBatch.get1();
 
-        T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> secondBatch = node.compute(group(node, nodes)).execute(
+        T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> secondBatch = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByBatchTask.class,
             new PartitionBatchRequest(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, firstMaxKey, ver)
+                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, firstMaxKey, new HashMap<>(), ver)
         ).result();
 
         KeyCacheObject secondMaxKey = secondBatch.get1();
 
         fetched.addAll(secondBatch.get2().keySet());
 
-        T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> thirdBatch = node.compute(group(node, nodes)).execute(
+        T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>> thirdBatch = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByBatchTask.class,
             new PartitionBatchRequest(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, secondMaxKey, ver)
+                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, secondMaxKey, new HashMap<>(), ver)
         ).result();
 
         assertNull(thirdBatch.get1());

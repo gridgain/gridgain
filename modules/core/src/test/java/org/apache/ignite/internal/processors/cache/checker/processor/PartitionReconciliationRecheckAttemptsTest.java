@@ -24,11 +24,13 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
@@ -36,6 +38,7 @@ import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
+import static java.lang.Thread.sleep;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHED;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.READY;
 
@@ -44,7 +47,7 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
  */
 public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static final int NODES_CNT = 4;
+    protected static final int NODES_CNT = 1;
 
     /** Crd server node. */
     protected IgniteEx ig;
@@ -59,7 +62,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
         CacheConfiguration ccfg = new CacheConfiguration();
         ccfg.setName(DEFAULT_CACHE_NAME);
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 10));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, 3));
         ccfg.setBackups(NODES_CNT - 1);
 
         cfg.setCacheConfiguration(ccfg);
@@ -158,6 +161,68 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
         GridTestUtils.waitForCondition(() -> res.get() != null, 40_000);
 
         assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());
+    }
+
+    @Test
+    public void test1() throws Exception {
+
+        for (int i = 0; i < 100; i++) {
+            client.cache(DEFAULT_CACHE_NAME).put(i, i);
+        }
+
+//        doSleep(500);
+
+        VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
+        builder.repair(false);
+        builder.parallelism(1);
+        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));
+        builder.recheckAttempts(3);
+        builder.recheckDelay(0);
+
+        AtomicReference<ReconciliationResult> res = new AtomicReference<>();
+
+        IgniteInternalFuture loadFut = GridTestUtils.runAsync(() -> {
+            System.out.println("qdrvlikt loadFut");
+
+            for (int i = 100; i < 300; i++) {
+                client.cache(DEFAULT_CACHE_NAME).put(i, i);
+
+                try {
+                    sleep(100);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            for (int i = 0; i < 10; i++) {
+                client.cache(DEFAULT_CACHE_NAME).remove(i);
+
+//                try {
+//                    sleep(100);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+            }
+
+            System.out.println("qfrbdiu loadFut");
+        });
+
+        GridTestUtils.runMultiThreadedAsync(() -> res.set(partitionReconciliation(client, builder)), 1, "reconciliation");
+
+        GridTestUtils.waitForCondition(() -> res.get() != null, 40_000);
+
+        loadFut.get();
+
+//        doSleep(5000);
+
+        System.out.println();
+//        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());
+//        org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResultCollector.Simple.partSizesMap
+//        internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0)
+//        PartitionReconciliationProcessor#execute
+//        CollectPartitionKeysByBatchTask.CollectPartitionKeysByBatchJob.execute0
     }
 
     /**
