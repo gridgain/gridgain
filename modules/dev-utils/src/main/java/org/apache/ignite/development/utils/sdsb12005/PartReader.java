@@ -5,19 +5,20 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.development.utils.arguments.CLIArgument;
 import org.apache.ignite.development.utils.arguments.CLIArgumentParser;
 import org.apache.ignite.development.utils.indexreader.IgniteIndexReader;
-import org.apache.ignite.development.utils.indexreader.ItemsListStorage;
-import org.apache.ignite.development.utils.indexreader.TreeTraversalInfo;
+import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV2;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.*;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -28,10 +29,13 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
+import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
+import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
 
 public class PartReader extends IgniteIndexReader {
     private final FilePageStore partStore;
     private final File partPath;
+    private final long metaPageId;
     /** {@link FilePageStore} factory by page store version. */
     private final FileVersionCheckingFactory storeFactory;
     /** Metrics updater. */
@@ -42,17 +46,28 @@ public class PartReader extends IgniteIndexReader {
     public PartReader(
         @Nullable PrintStream outStream,
         int pageSize,
-        File path,
+        File pathDir,
         int filePageStoreVer
+       // long metaPageId
     ) throws IgniteCheckedException {
         super(pageSize, outStream);
-        partPath = path;
+        this.metaPageId = 0; //metaPageId;
 
-        if (partPath.isDirectory() || !partPath.getName().contains("part-"))
-            throw new IllegalArgumentException("Wrong file name argument(shouldn't be a directory and has spacial name format).");
+        if (!pathDir.isDirectory())
+            throw new IllegalArgumentException("Wrong directory name argument.");
 
-        String partFileName = partPath.getName();
-        partNumber = Integer.parseInt(partFileName.substring(partFileName.lastIndexOf("-") + 1, partFileName.indexOf(".bin")));
+        partNumber = 0; //PageIdUtils.partId(metaPageId);
+        String partFileName = String.format(FilePageStoreManager.PART_FILE_TEMPLATE, partNumber);
+
+        partPath = new File(pathDir, partFileName);
+
+        if (!partPath.exists()) {
+            throw new IllegalArgumentException("Specified directory="
+                + pathDir
+                + " does not contain partition file="
+                + partFileName
+                + ", which stores metaPage=" + U.hexLong(metaPageId));
+        }
 
         storeFactory = new FileVersionCheckingFactory(
             new AsyncFileIOFactory(),
@@ -68,7 +83,6 @@ public class PartReader extends IgniteIndexReader {
         partStore = (FilePageStore)storeFactory.createPageStore(FLAG_DATA, partPath, allocationTracker);
         if (nonNull(partStore))
             partStore.ensure();
-
     }
 
     public void read() {
@@ -79,27 +93,68 @@ public class PartReader extends IgniteIndexReader {
 
             long partMetaId = metaPages.get(PagePartitionMetaIOV2.class);
 
-            long realSize = doWithBuffer((buf, addr) -> {
+            doWithBuffer((buf, addr) -> {
                 readPage(partStore, partMetaId, buf);
 
-                PagePartitionMetaIO partMetaIO = PageIO.getPageIO(addr);
+                PagePartitionMetaIOV2 partMetaIO = PageIO.getPageIO(addr);
 
-                outStream.println("Meta page size=" + partMetaIO.getSize(addr));
+                outStream.println(partMetaIO.printPage(addr, 4096));
 
-                long cacheDataTreeRoot = partMetaIO.getTreeRoot(addr);
+                long partMetaStoreReuseListRoot = partMetaIO.getPartitionMetaStoreReuseListRoot(addr);
 
-                TreeTraversalInfo cacheDataTreeInfo =
-                    horizontalTreeScan(partStore, cacheDataTreeRoot, "dataTree-" + partNumber, new ItemsListStorage());
+//                if (partMetaStoreReuseListRoot != metaPageId) {
+//                    outStream.println("Input meta page id does belong to analyzed partition, partPath=" + partPath);
+//
+//                    return null;
+//                }
 
-                return cacheDataTreeInfo.itemStorage.size();
+                printGapsLink(partMetaIO.getGapsLink(addr));
+
+                printPagesListsInfo(getPageListsInfo(partMetaStoreReuseListRoot, partStore));
+//
+//                ByteBuffer partMetaStoreBuf = allocateBuffer(pageSize);
+//
+//                long partMetaStoreAddr = bufferAddress(partMetaStoreBuf);
+//
+//                //вытащили мета страницу partitionMetaStrorage
+//                readPage(partStore, partMetaStoreReuseListRoot, partMetaStoreBuf);
+//
+                return null;
             });
-
-            outStream.println("Real size=" + realSize);
 
         } catch (IgniteCheckedException e) {
             e.printStackTrace();
         }
 
+    }
+
+    /** */
+    private void printGapsLink(long gapsLink) throws IgniteCheckedException {
+        SB sb = new SB();
+
+        sb.a("Gaps Link content:").a("\n");
+
+        long pageId = PageIdUtils.pageId(gapsLink);
+        int itemId = PageIdUtils.itemId(gapsLink);
+
+        sb.a("pageId=").a(pageId).a(",\n");
+        sb.a("itemId=").a(itemId).a(",\n");
+
+        ByteBuffer cntrUpdDataBuf = allocateBuffer(pageSize);
+
+        long cntrUpdDataAddr = bufferAddress(cntrUpdDataBuf);
+
+        readPage(partStore, pageId, cntrUpdDataBuf);
+
+        AbstractDataPageIO dataPageIO = PageIO.getPageIO(cntrUpdDataAddr);
+
+        sb.a("freeSpace=").a(dataPageIO.getFreeSpace(cntrUpdDataAddr)).a(",\n");
+
+        sb.a("page = [\n\t").a(PageIO.printPage(cntrUpdDataAddr, pageSize)).a("],\n");
+
+        sb.a("binPage=").a(U.toHexString(cntrUpdDataAddr, pageSize)).a("\n");
+
+        outStream.println(sb.toString());
     }
 
     /**
@@ -112,9 +167,14 @@ public class PartReader extends IgniteIndexReader {
         AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
 
         List<CLIArgument> argsConfiguration = asList(
+//            CLIArgument.mandatoryArg(
+//                 Args.META_PAGE.arg(),
+//                 "meta page id from error",
+//                 String.class
+//            ),
             CLIArgument.mandatoryArg(
                 Args.PART_PATH.arg(),
-                "partition directory, where " + INDEX_FILE_NAME + " and (optionally) partition files are located.",
+                "partition path, where " + INDEX_FILE_NAME + " and partition files are located.",
                 String.class
             ),
             CLIArgument.optionalArg(Args.PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
@@ -135,6 +195,15 @@ public class PartReader extends IgniteIndexReader {
 
         p.parse(asList(args).iterator());
 
+//        String metaPageHex = p.get(Args.META_PAGE.arg());
+//        long metaPage;
+//        try {
+//            metaPage = Long.parseLong(metaPageHex);
+//        }
+//        catch (NumberFormatException e) {
+//            throw new IgniteCheckedException("Meta page string does not contain parsable Long:  " + metaPageHex);
+//        }
+
         String partPath = p.get(Args.PART_PATH.arg());
         int pageSize = p.get(Args.PAGE_SIZE.arg());
         int pageStoreVer = p.get(Args.PAGE_STORE_VER.arg());
@@ -145,6 +214,7 @@ public class PartReader extends IgniteIndexReader {
             pageSize,
             new File(partPath),
             pageStoreVer
+          //  metaPage
         )) {
             reader.read();
         }
@@ -154,6 +224,7 @@ public class PartReader extends IgniteIndexReader {
      * Enum of possible utility arguments.
      */
     public enum Args {
+        META_PAGE("--metaPAgeId"),
         /** */
         PART_PATH("--partPath"),
         /** */

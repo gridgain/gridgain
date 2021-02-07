@@ -173,7 +173,7 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /** Page size. */
-    private final int pageSize;
+    protected final int pageSize;
 
     /** Partition count. */
     private final int partCnt;
@@ -188,7 +188,7 @@ public class IgniteIndexReader implements AutoCloseable {
     private final PrintStream outErrStream;
 
     /** Page store of {@link FilePageStoreManager#INDEX_FILE_NAME}. */
-    @Nullable private final FilePageStore idxStore;
+    @Nullable protected final FilePageStore idxStore;
 
     /** Partitions page stores, may contains {@code null}. */
     @Nullable private final FilePageStore[] partStores;
@@ -407,7 +407,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
             // Scanning page reuse lists.
             if (pageListMetaPageId != null)
-                pageListsInfo.set(getPageListsInfo(pageListMetaPageId));
+                pageListsInfo.set(getPageListsInfo(pageListMetaPageId, idxStore));
 
             ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Reading pages sequentially", pagesNum);
 
@@ -760,7 +760,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param metaPageListId Page list meta id.
      * @return Page list info.
      */
-    private PageListsInfo getPageListsInfo(long metaPageListId) {
+    protected PageListsInfo getPageListsInfo(long metaPageListId, FilePageStore store) {
         Map<IgniteBiTuple<Long, Integer>, List<Long>> bucketsData = new HashMap<>();
 
         Set<Long> allPages = new HashSet<>();
@@ -777,7 +777,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     try {
                         buf.rewind();
 
-                        readPage(idxStore, nextMetaId, buf);
+                        readPage(store, nextMetaId, buf);
 
                         PagesListMetaIO io = PageIO.getPageIO(addr);
 
@@ -1030,7 +1030,7 @@ public class IgniteIndexReader implements AutoCloseable {
      *
      * @param pageListsInfo Page lists info.
      */
-    private void printPagesListsInfo(PageListsInfo pageListsInfo) {
+    protected void printPagesListsInfo(PageListsInfo pageListsInfo) {
         String prefix = PAGE_LISTS_PREFIX;
 
         print("\n" + prefix + "Page lists info.");
