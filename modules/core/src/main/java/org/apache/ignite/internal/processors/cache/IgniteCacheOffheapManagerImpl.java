@@ -141,6 +141,7 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.isVisib
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccVersionIsValid;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.state;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.unexpectedStateException;
+import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.FULL_WITH_HINTS;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO.MVCC_INFO_SIZE;
 import static org.apache.ignite.internal.util.IgniteTree.OperationType.NOOP;
 import static org.apache.ignite.internal.util.IgniteTree.OperationType.PUT;
@@ -1185,7 +1186,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             @Override protected boolean onHasNext() throws IgniteCheckedException {
                 if (cur == null)
-                    cur = data.cursor(CacheDataRowAdapter.RowData.FULL_WITH_HINTS);
+                    cur = grp.mvccEnabled() ? data.cursor(FULL_WITH_HINTS) :
+                        data.cursor(IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
 
                 if (next != null)
                     return true;
