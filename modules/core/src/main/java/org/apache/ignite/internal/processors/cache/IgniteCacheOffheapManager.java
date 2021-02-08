@@ -64,7 +64,7 @@ public interface IgniteCacheOffheapManager {
     public static final int TOMBSTONES = 2;
 
     /** Scan for both. */
-    public static final int DATA_AND_TOMBSONES = DATA | TOMBSTONES;
+    public static final int DATA_AND_TOMBSTONES = DATA | TOMBSTONES;
 
     /**
      * @param ctx Context.

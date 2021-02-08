@@ -1171,7 +1171,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         CacheDataStore data = partitionData(part);
 
         final GridCursor<? extends CacheDataRow> cur = grp.mvccEnabled() ? data.cursor(FULL_WITH_HINTS) :
-            data.cursor(IgniteCacheOffheapManager.DATA_AND_TOMBSONES);
+            data.cursor(IgniteCacheOffheapManager.DATA_AND_TOMBSTONES);
 
         return new GridCloseableIteratorAdapter<CacheDataRow>() {
             /** */
@@ -1375,7 +1375,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         // We need to keep tombstones during rebalancing because they are used to handle put-remove conflicts.
         if (tsCnt <= tsLimit &&
-            (!ctx.exchange().lastFinishedFuture().rebalanced() || ctx.ttl().tombstoneCleanupSuspended()))
+            (!ctx.exchange().lastFinishedFuture().rebalanced() ||
+                !ctx.exchange().lastTopologyFuture().isDone() || // Additional safety from hanging PME.
+                ctx.ttl().tombstoneCleanupSuspended()))
             return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
 
         if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
@@ -3115,7 +3117,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Override public GridCursor<? extends CacheDataRow> cursor(int flags) throws IgniteCheckedException {
             GridCursor<? extends CacheDataRow> cur = dataTree.find(null, null, null);
 
-            return flags == DATA ? cursorSkipTombstone(cur) : flags == DATA_AND_TOMBSONES ? cur : cursorSkipData(cur);
+            return flags == DATA ? cursorSkipTombstone(cur) : flags == DATA_AND_TOMBSTONES ? cur : cursorSkipData(cur);
         }
 
         /** {@inheritDoc} */
@@ -3242,7 +3244,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             // Tombstones require value, this can be optimized to avoid full row for non-tombstones.
             GridCursor<? extends CacheDataRow> cur =
-                cursor(cacheId, null, null, CacheDataRowAdapter.RowData.FULL, null, DATA_AND_TOMBSONES);
+                cursor(cacheId, null, null, CacheDataRowAdapter.RowData.FULL, null, DATA_AND_TOMBSTONES);
 
             int rmv = 0;
 

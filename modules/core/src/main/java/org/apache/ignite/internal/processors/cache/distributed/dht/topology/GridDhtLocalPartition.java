@@ -77,7 +77,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELET
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
-import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.DATA_AND_TOMBSONES;
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.DATA_AND_TOMBSTONES;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.TOMBSTONES;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
@@ -922,7 +922,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         try {
             GridIterator<CacheDataRow> it0 = task.reason() == PartitionsEvictManager.EvictReason.TOMBSTONE ?
                 grp.offheap().partitionIterator(id, TOMBSTONES) :
-                grp.offheap().partitionIterator(id, DATA_AND_TOMBSONES);
+                grp.offheap().partitionIterator(id, DATA_AND_TOMBSTONES);
 
             while (it0.hasNext()) {
                 if (stopClo.getAsBoolean() || state0 != state())

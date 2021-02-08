@@ -1326,8 +1326,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
             // This will allow offline node to join faster using fast full rebalancing.
-            if (tsCnt <= tsLimit && (!discoCache.fullBaseline() || !ctx.exchange().lastFinishedFuture().rebalanced() ||
-                ctx.ttl().tombstoneCleanupSuspended()))
+            if (tsCnt <= tsLimit &&
+                (!discoCache.fullBaseline() ||
+                    !ctx.exchange().lastFinishedFuture().rebalanced() ||
+                    !ctx.exchange().lastTopologyFuture().isDone() ||
+                    ctx.ttl().tombstoneCleanupSuspended()))
                 return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
 
             if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
@@ -3259,8 +3262,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     if (!cur.next())
                         return 0;
-
-                    GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
                     int cleared = 0;
 

@@ -199,7 +199,7 @@ public class ConsistencyUtils {
             new CacheQueryObjectValueContext(grpCtx.cacheObjectContext().kernalContext());
 
         List<CacheDataRow> rows = new ArrayList<>();
-        grpCtx.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA_AND_TOMBSONES).forEach(rows::add);
+        grpCtx.offheap().partitionIterator(part, IgniteCacheOffheapManager.DATA_AND_TOMBSTONES).forEach(rows::add);
 
         for (CacheDataRow row : rows) {
             row.key().value(cacheObjCtx, false); // Unmarshal key.
