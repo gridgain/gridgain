@@ -47,11 +47,11 @@ public class PartReader extends IgniteIndexReader {
         @Nullable PrintStream outStream,
         int pageSize,
         File pathDir,
-        int filePageStoreVer
-       // long metaPageId
+        int filePageStoreVer,
+        long metaPageId
     ) throws IgniteCheckedException {
         super(pageSize, outStream);
-        this.metaPageId = 0; //metaPageId;
+        this.metaPageId = metaPageId;
 
         if (!pathDir.isDirectory())
             throw new IllegalArgumentException("Wrong directory name argument.");
@@ -91,6 +91,12 @@ public class PartReader extends IgniteIndexReader {
         try {
             Map<Class, Long> metaPages = findPages(partNumber, FLAG_DATA, partStore, singleton(PagePartitionMetaIOV2.class));
 
+            if(metaPages == null || metaPages.isEmpty()){
+
+                outStream.println("Meta pages is empty! Return.");
+                return;
+            }
+
             long partMetaId = metaPages.get(PagePartitionMetaIOV2.class);
 
             doWithBuffer((buf, addr) -> {
@@ -98,27 +104,15 @@ public class PartReader extends IgniteIndexReader {
 
                 PagePartitionMetaIOV2 partMetaIO = PageIO.getPageIO(addr);
 
-                outStream.println(partMetaIO.printPage(addr, 4096));
+                outStream.println(partMetaIO.printPage(addr, pageSize));
 
                 long partMetaStoreReuseListRoot = partMetaIO.getPartitionMetaStoreReuseListRoot(addr);
 
-//                if (partMetaStoreReuseListRoot != metaPageId) {
-//                    outStream.println("Input meta page id does belong to analyzed partition, partPath=" + partPath);
-//
-//                    return null;
-//                }
-
+                outStream.println("partMetaStoreReuseListRoot = " + partMetaStoreReuseListRoot + "partPath=" + partPath);
                 printGapsLink(partMetaIO.getGapsLink(addr));
 
                 printPagesListsInfo(getPageListsInfo(partMetaStoreReuseListRoot, partStore));
-//
-//                ByteBuffer partMetaStoreBuf = allocateBuffer(pageSize);
-//
-//                long partMetaStoreAddr = bufferAddress(partMetaStoreBuf);
-//
-//                //вытащили мета страницу partitionMetaStrorage
-//                readPage(partStore, partMetaStoreReuseListRoot, partMetaStoreBuf);
-//
+
                 return null;
             });
 
@@ -167,11 +161,6 @@ public class PartReader extends IgniteIndexReader {
         AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
 
         List<CLIArgument> argsConfiguration = asList(
-//            CLIArgument.mandatoryArg(
-//                 Args.META_PAGE.arg(),
-//                 "meta page id from error",
-//                 String.class
-//            ),
             CLIArgument.mandatoryArg(
                 Args.PART_PATH.arg(),
                 "partition path, where " + INDEX_FILE_NAME + " and partition files are located.",
@@ -209,12 +198,14 @@ public class PartReader extends IgniteIndexReader {
         int pageStoreVer = p.get(Args.PAGE_STORE_VER.arg());
         String destFile = p.get(Args.DEST_FILE.arg());
 
+        long metaPageID = 0L;
+
         try (PartReader reader = new PartReader(
             isNull(destFile) ? null : new PrintStream(destFile),
             pageSize,
             new File(partPath),
-            pageStoreVer
-          //  metaPage
+            pageStoreVer,
+            metaPageID
         )) {
             reader.read();
         }
@@ -224,7 +215,6 @@ public class PartReader extends IgniteIndexReader {
      * Enum of possible utility arguments.
      */
     public enum Args {
-        META_PAGE("--metaPAgeId"),
         /** */
         PART_PATH("--partPath"),
         /** */
