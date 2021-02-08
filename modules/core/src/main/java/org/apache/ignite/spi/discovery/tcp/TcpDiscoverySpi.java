@@ -1937,12 +1937,12 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             }
             catch (IgniteSpiException e) {
                 LT.error(log, e, "Failed to get registered addresses from IP finder on start " +
-                    "(retrying every " + getReconnectDelay() + "ms; change 'reconnectDelay' to configure " +
-                    "the frequency of retries).");
+                        "(retrying every " + getReconnectDelay() + "ms; change 'reconnectDelay' to configure " +
+                        "the frequency of retries).");
             }
 
             try {
-                if(attemptsCnt >= maxResolveAttempts){
+                if (attemptsCnt >= maxResolveAttempts) {
                     LT.info(log, "Unable to get registered addresses from IP finder. " +
                             "Maximum attempts count (" + attemptsCnt + ") has reached.");
                     addrs = res;
@@ -1961,7 +1961,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
             try {
                 InetSocketAddress resolved = addr.isUnresolved() ?
-                    new InetSocketAddress(InetAddress.getByName(addr.getHostName()), addr.getPort()) : addr;
+                        new InetSocketAddress(InetAddress.getByName(addr.getHostName()), addr.getPort()) : addr;
 
                 if (locNodeAddrs == null || !locNodeAddrs.contains(resolved))
                     res.add(resolved);
