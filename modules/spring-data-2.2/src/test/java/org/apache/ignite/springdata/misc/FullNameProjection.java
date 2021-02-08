@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.ignite.springdata.misc;
 
-package org.apache.ignite.springdata20.repository.support;
-
-import org.springframework.context.annotation.Condition;
-import org.springframework.context.annotation.ConditionContext;
-import org.springframework.core.type.AnnotatedTypeMetadata;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
- * Always false condition. Tells spring context never load bean with such Condition.
+ * Advanced SpEl Expressions into projection
+ *
+ * @author Manuel Núñez Sánchez (manuel.nunez@hawkore.com)
  */
-public class ConditionFalse implements Condition {
-    /** {@inheritDoc} */
-    @Override public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
-        return false;
-    }
+public interface FullNameProjection {
+    /**
+     * Sample of using SpEL expression
+     * @return
+     */
+    @Value("#{target.firstName + ' ' + target.secondName}")
+    String getFullName();
 }

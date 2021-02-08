@@ -13,25 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.springdata.misc;
 
 import java.util.Collection;
 import java.util.List;
 
 import javax.cache.Cache;
-import org.apache.ignite.springdata22.repository.IgniteRepository;
-import org.apache.ignite.springdata22.repository.config.Query;
-import org.apache.ignite.springdata22.repository.config.RepositoryConfig;
+import org.apache.ignite.springdata20.repository.IgniteRepository;
+import org.apache.ignite.springdata20.repository.config.Query;
+import org.apache.ignite.springdata20.repository.config.RepositoryConfig;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.repository.query.Param;
 
 /**
- * Test repository.
+ *
  */
-@RepositoryConfig(cacheName = "PersonCache")
-public interface PersonRepository extends IgniteRepository<Person, Integer> {
+@RepositoryConfig(igniteInstance = "igniteInstanceTWO", cacheName = "PersonCache")
+public interface PersonRepositoryOtherIgniteInstance extends IgniteRepository<Person, Integer> {
     /** */
     public List<Person> findByFirstName(String val);
 
@@ -42,14 +41,6 @@ public interface PersonRepository extends IgniteRepository<Person, Integer> {
     /** */
     @Query("firstName = :firstname")
     public List<PersonProjection> queryByFirstNameWithProjectionNamedParameter(@Param("firstname") String val);
-
-    /** */
-    @Query("firstName = :firstname")
-    public <P> List<P> queryByFirstNameWithProjectionNamedParameter(Class<P> dynamicProjection, @Param("firstname") String val);
-
-    /** */
-    @Query("firstName = :firstname")
-    public <P> P queryOneByFirstNameWithProjectionNamedParameter(Class<P> dynamicProjection, @Param("firstname") String val);
 
     /** */
     @Query("firstName = ?#{[1]}")

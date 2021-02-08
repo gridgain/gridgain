@@ -18,6 +18,7 @@ package org.apache.ignite.springdata.misc;
 
 import java.util.Objects;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.cache.query.annotations.QueryTextField;
 
 /**
  * DTO class.
@@ -25,6 +26,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 public class Person {
     /** First name. */
     @QuerySqlField(index = true)
+    @QueryTextField
     private String firstName;
 
     /** Second name. */
