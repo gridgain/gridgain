@@ -56,7 +56,8 @@ public class PartReader extends IgniteIndexReader {
         if (!pathDir.isDirectory())
             throw new IllegalArgumentException("Wrong directory name argument.");
 
-        partNumber = 0; //PageIdUtils.partId(metaPageId);
+        //TODO: Fix
+        partNumber = (int)metaPageId;//PageIdUtils.partId(metaPageId);
         String partFileName = String.format(FilePageStoreManager.PART_FILE_TEMPLATE, partNumber);
 
         partPath = new File(pathDir, partFileName);
@@ -108,7 +109,8 @@ public class PartReader extends IgniteIndexReader {
 
                 long partMetaStoreReuseListRoot = partMetaIO.getPartitionMetaStoreReuseListRoot(addr);
 
-                outStream.println("partMetaStoreReuseListRoot = " + partMetaStoreReuseListRoot + "partPath=" + partPath);
+                outStream.println("partMetaStoreReuseListRoot = " + partMetaStoreReuseListRoot + " partPath=" + partPath);
+
                 printGapsLink(partMetaIO.getGapsLink(addr));
 
                 printPagesListsInfo(getPageListsInfo(partMetaStoreReuseListRoot, partStore));
@@ -140,14 +142,21 @@ public class PartReader extends IgniteIndexReader {
 
         readPage(partStore, pageId, cntrUpdDataBuf);
 
-        AbstractDataPageIO dataPageIO = PageIO.getPageIO(cntrUpdDataAddr);
+        Object pageIO = PageIO.getPageIO(cntrUpdDataAddr);
 
-        sb.a("freeSpace=").a(dataPageIO.getFreeSpace(cntrUpdDataAddr)).a(",\n");
+        //TODO: Fix
+        System.out.println("pageIO = " + pageIO);
+        try {
+            AbstractDataPageIO dataPageIO = PageIO.getPageIO(cntrUpdDataAddr);
 
-        sb.a("page = [\n\t").a(PageIO.printPage(cntrUpdDataAddr, pageSize)).a("],\n");
+            sb.a("freeSpace=").a(dataPageIO.getFreeSpace(cntrUpdDataAddr)).a(",\n");
 
-        sb.a("binPage=").a(U.toHexString(cntrUpdDataAddr, pageSize)).a("\n");
+            sb.a("page = [\n\t").a(PageIO.printPage(cntrUpdDataAddr, pageSize)).a("],\n");
 
+            sb.a("binPage=").a(U.toHexString(cntrUpdDataAddr, pageSize)).a("\n");
+        } catch (Exception e){
+            sb.a("Error in reading dataPAGEIO : " + e.getMessage());
+        }
         outStream.println(sb.toString());
     }
 
@@ -184,15 +193,6 @@ public class PartReader extends IgniteIndexReader {
 
         p.parse(asList(args).iterator());
 
-//        String metaPageHex = p.get(Args.META_PAGE.arg());
-//        long metaPage;
-//        try {
-//            metaPage = Long.parseLong(metaPageHex);
-//        }
-//        catch (NumberFormatException e) {
-//            throw new IgniteCheckedException("Meta page string does not contain parsable Long:  " + metaPageHex);
-//        }
-
         String partPath = p.get(Args.PART_PATH.arg());
         int pageSize = p.get(Args.PAGE_SIZE.arg());
         int pageStoreVer = p.get(Args.PAGE_STORE_VER.arg());
@@ -200,14 +200,19 @@ public class PartReader extends IgniteIndexReader {
 
         long metaPageID = 0L;
 
-        try (PartReader reader = new PartReader(
-            isNull(destFile) ? null : new PrintStream(destFile),
-            pageSize,
-            new File(partPath),
-            pageStoreVer,
-            metaPageID
-        )) {
-            reader.read();
+        while(metaPageID < 1_000) {
+
+            try (PartReader reader = new PartReader(
+                    isNull(destFile) ? null : new PrintStream(destFile),
+                    pageSize,
+                    new File(partPath),
+                    pageStoreVer,
+                    metaPageID
+            )) {
+                reader.read();
+            }
+
+            metaPageID++;
         }
     }
 
