@@ -1916,23 +1916,20 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
      * @throws org.apache.ignite.spi.IgniteSpiException If an error occurs.
      */
     protected Collection<InetSocketAddress> resolvedAddresses() throws IgniteSpiException {
+        // Default max attempts if other not specified.
+        final int dfltMaxAttempts = 2;
+
         List<InetSocketAddress> res = new ArrayList<>();
 
         Collection<InetSocketAddress> addrs;
 
         int attemptsCnt = 0;
-
-        int maxResolveAttempts = getReconnectCount() > 0 ? getReconnectCount() : 2;
+        int maxResolveAttempts = !failureDetectionTimeoutEnabled() ? getReconnectCount() : dfltMaxAttempts;
 
         // Get consistent addresses collection.
         while (true) {
             try {
-                if(++attemptsCnt > maxResolveAttempts){
-                    LT.info(log, "Unable to get registered addresses from IP finder. " +
-                            "Maximum attempt count has reached " + attemptsCnt + "/" + maxResolveAttempts);
-                    addrs = res;
-                    break;
-                }
+                attemptsCnt++;
 
                 addrs = registeredAddresses();
 
@@ -1945,6 +1942,13 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             }
 
             try {
+                if(attemptsCnt >= maxResolveAttempts){
+                    LT.info(log, "Unable to get registered addresses from IP finder. " +
+                            "Maximum attempts count (" + attemptsCnt + ") has reached.");
+                    addrs = res;
+                    break;
+                }
+
                 U.sleep(getReconnectDelay());
             }
             catch (IgniteInterruptedCheckedException e) {
