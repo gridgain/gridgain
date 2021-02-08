@@ -105,9 +105,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     public static final int PARTS = 64;
 
     /** */
-    private static final int WAIT_FOR_EAGER_TTL_CLEANUP = 1100;
-
-    /** */
     private static final String TS_METRIC_NAME = "Tombstones";
 
     /** */
@@ -686,9 +683,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test an entry deleted by cleanup worker is not keeping tombstone.
+     * Tests if TTL cleanup worker doesn't create tombstone on entry expiration.
      */
     @Test
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "10000000") // Disable timeout for async clearing.
+    @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
     public void testWithTTLNoNear_EagerTTL() throws Exception {
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);
@@ -702,11 +701,14 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         int part = 0;
         cache.put(part, 0);
 
-        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 0, 1);
+        GridCacheContext<Object, Object> ctx = grid(0).cachex(DEFAULT_CACHE_NAME).context();
+        validateCache(ctx.group(), part, 0, 1);
 
-        doSleep(WAIT_FOR_EAGER_TTL_CLEANUP);
+        doSleep(600);
 
-        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 0, 0);
+        CU.unwindEvicts(ctx);
+
+        validateCache(ctx.group(), part, 0, 0);
     }
 
     /** */
@@ -952,10 +954,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         cache.put(part, 0);
         cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))).remove(part);
 
-        doSleep(WAIT_FOR_EAGER_TTL_CLEANUP);
-
-        CacheGroupContext grpCtx = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
-        validateCache(grpCtx, part, 1, 0);
+        validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 1, 0);
     }
 
     /**
@@ -1499,7 +1498,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500") // Reduce tombstone TTL
-    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "1") // Disable timeout for async clearing.
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "1")
     @WithSystemProperty(key = "REBALANCE_DELAY", value = "1000") // Wait one second before generating assignments.
     public void testOutdatedTombstoneNotExpired() throws Exception {
         assumeTrue(persistence);
