@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
@@ -160,6 +161,11 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             partSizesMap.put(nodeId, nodeRes.result().get2());
         }
 
+//         if (lastKey == null)
+//             System.out.println("qgrtsngd null");
+//         else
+//             System.out.println("qgrtsngd " + ((KeyCacheObjectImpl)lastKey).value());
+
         return new ExecutionResult<>(new T3<>(lastKey, totalRes, partSizesMap));
     }
 
@@ -226,13 +232,27 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             GridDhtLocalPartition part = grpCtx.topology().localPartition(partBatch.partitionId());
 
+            IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
+
             assert part != null;
 
             part.reserve();
 
-            try (GridCursor<? extends CacheDataRow> cursor = lowerKey == null ?
+            KeyCacheObject lastKeyForSizes = cacheDataStore.lastKey();
+
+            KeyCacheObject keyToStart = null;
+
+            if (lowerKey != null && lastKeyForSizes !=  null)
+                keyToStart = KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
+            else if (lowerKey != null)
+                keyToStart = lowerKey;
+            else if (lowerKey != null)
+                keyToStart = lastKeyForSizes;
+
+
+            try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
                 grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), DATA) :
-                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), lowerKey, null)) {
+                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), keyToStart, null)) {
 
                 List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
@@ -241,17 +261,16 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 if (partSize == null)
                     partSize = 0L;
 
-                IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
-
                 if (lowerKey == null)
                     cacheDataStore.isReconciliationInProgress(true);
 
                 for (int i = 0; i < batchSize && cursor.next(); i++) {
+//                    System.out.println("qfvndrfg");
 
                     CacheDataRow row;
 
                     try {
-                        sleep(100);
+                        sleep(10);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();
@@ -262,23 +281,40 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                         if (cacheDataStore.lastKey() == null || KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key()) < 0) {
                             cacheDataStore.lastKey(row.key());
-                            System.out.println("qqedfks reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
-                                " ||| _row.key()_:" + row.key() +
-                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
-                                " ||| partId: " + part +
-                                " ||| partSize: " + partSize);
+//                            System.out.println("qqedfks1 " + ignite.localNode().id() +
+//                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
+//                                " ||| _row.key()_:" + row.key() +
+//                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
+//                                " ||| partId: " + part +
+//                                " ||| partSize: " + partSize);
+//                            System.out.println("qqedfks2 " + ignite.localNode().id() +
+//                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (((KeyCacheObjectImpl)cacheDataStore.lastKey()).value() == null ? "null" : ((KeyCacheObjectImpl)cacheDataStore.lastKey()).value()) +
+//                                " ||| _row.key()_:" + ((KeyCacheObjectImpl) row.key()).value() +
+//                                " ||| compare: " + (((KeyCacheObjectImpl) cacheDataStore.lastKey()).value() == null ? "null" : ((Integer)((KeyCacheObjectImpl) cacheDataStore.lastKey()).value()) > ((Integer)((KeyCacheObjectImpl) row.key()).value())) +
+//                                " ||| partId: " + part +
+//                                " ||| partSize: " + partSize);
                         }
-                        else
-                            System.out.println("qftsbg reconcilation execute0 else. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
-                                " ||| _row.key()_:" + row.key() +
-                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
-                                " ||| partId: " + part +
-                                " ||| partSize: " + partSize);
+                        else {
+//                            System.out.println("qftsbg1 " + ignite.localNode().id() +
+//                                " reconcilation execute0 else. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
+//                                " ||| _row.key()_:" + cacheDataStore.lastKey() +
+//                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
+//                                " ||| partId: " + part +
+//                                " ||| partSize: " + partSize);
+//                            System.out.println("qftsbg2 " + ignite.localNode().id() +
+//                                " reconcilation execute0 else. _cacheDataStore.lastKey()_: " + (((KeyCacheObjectImpl)cacheDataStore.lastKey()).value() == null ? "null" : ((KeyCacheObjectImpl)cacheDataStore.lastKey()).value()) +
+//                                " ||| _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() +
+//                                " ||| compare: " + (((KeyCacheObjectImpl)cacheDataStore.lastKey()).value() == null ? "null" : ((Integer)((KeyCacheObjectImpl)cacheDataStore.lastKey()).value()) > ((Integer)((KeyCacheObjectImpl)row.key()).value())) +
+//                                " ||| partId: " + part +
+//                                " ||| partSize: " + partSize);
+                        }
                     }
-
+                    System.out.println("qdvrfgad " + ignite.localNode().id() + " _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() + ", lowerKey: " + (lowerKey == null ? "null" : ((KeyCacheObjectImpl)lowerKey).value()) + ", row.key(): " + row.key() + ", lowerKey: " + lowerKey);
                     if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) != 0) {
+//                    if (lowerKey == null || !((KeyCacheObjectImpl)row.key()).value().equals(((KeyCacheObjectImpl)lowerKey).value())) {
                         partSize++;
-//                        System.out.println("qwerdcs");
+//                        System.out.println("qdrvgsrwe partSize: " + partSize);
+                        System.out.println("qwerdcs " + ignite.localNode().id() + " _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value());
                         partEntryHashRecords.add(new VersionedKey(
                             ignite.localNode().id(),
                             row.key(),
@@ -288,6 +324,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     else
                         i--;
                 }
+
+//                System.out.println("qflyruc cursor.next(): " + cursor.next());
 
                 return new ExecutionResult<>(new T2<>(partEntryHashRecords, partSize));
             }

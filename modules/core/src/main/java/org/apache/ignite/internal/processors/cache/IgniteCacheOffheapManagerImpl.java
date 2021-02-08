@@ -1541,7 +1541,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private Object reconciliationMux = new Object();
 
         /** */
-        private final AtomicLong storageSizeDelta = new AtomicLong();
+        public final AtomicLong storageSizeDelta = new AtomicLong();
 
         /** */
         private volatile KeyCacheObject lastKey;
@@ -1725,18 +1725,34 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                         storageSize.addAndGet(delta);
 
-                        System.out.println("qergdf updateSize inner if. _key_: " + key +
-                            " ||| _lastKey_:" + (lastKey == null ? "null" : lastKey) +
-                            " ||| compare: " + (lastKey == null ? "null" : KEY_COMPARATOR.compare(key, lastKey)) +
+//                        System.out.println("qergdf1 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                            "updateSize inner if. _key_: " + key +
+//                            " ||| _lastKey_:" + (lastKey == null ? "null" : lastKey) +
+//                            " ||| compare: " + (lastKey == null ? "null" : KEY_COMPARATOR.compare(key, lastKey)) +
+//                            " ||| storageSize:" + storageSize.get() +
+//                            " ||| storageSizeDelta:" + storageSizeDelta.get());
+
+                        System.out.println("qergdf2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)key).value() +
+                            " ||| _lastKey_:" + (lastKey == null ? "null" : ((KeyCacheObjectImpl)lastKey).value()) +
+                            " ||| compare: " + (lastKey == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) lastKey).value())) +
                             " ||| storageSize:" + storageSize.get() +
                             " ||| storageSizeDelta:" + storageSizeDelta.get());
                     }
                     else {
                         storageSize.addAndGet(delta);
 
-                        System.out.println("qksadgf updateSize inner else. _key_: " + key +
-                            " ||| _lastKey_:" + (lastKey == null ? "null" : lastKey) +
-                            " ||| compare: " + (lastKey == null ? "null" : KEY_COMPARATOR.compare(key, lastKey)) +
+//                        System.out.println("qksadgf1 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                            " updateSize inner else. _key_: " + key +
+//                            " ||| _lastKey_:" + (lastKey == null ? "null" : lastKey) +
+//                            " ||| compare: " + (lastKey == null ? "null" : KEY_COMPARATOR.compare(key, lastKey)) +
+//                            " ||| storageSize:" + storageSize.get() +
+//                            " ||| storageSizeDelta:" + storageSizeDelta.get());
+
+                        System.out.println("qksadgf2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                            " updateSize inner else. _key_: " + ((KeyCacheObjectImpl)key).value() +
+                            " ||| _lastKey_:" + (lastKey == null ? "null" : ((KeyCacheObjectImpl)lastKey).value()) +
+                            " ||| compare: " + (lastKey == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) lastKey).value())) +
                             " ||| storageSize:" + storageSize.get() +
                             " ||| storageSizeDelta:" + storageSizeDelta.get());
                     }
@@ -1744,9 +1760,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 else {
                     storageSize.addAndGet(delta);
 
-                    System.out.println("qjnghdae updateSize else. _key_: " + key +
-                        " ||| _lastKey_:" + (lastKey == null ? "null" : lastKey) +
-                        " ||| compare: " + (lastKey == null ? "null" : KEY_COMPARATOR.compare(key, lastKey)) +
+//                    System.out.println("qjnghdae1 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                        " updateSize else. _key_: " + key +
+//                        " ||| _lastKey_:" + (lastKey == null ? "null" : lastKey) +
+//                        " ||| compare: " + (lastKey == null ? "null" : KEY_COMPARATOR.compare(key, lastKey)) +
+//                        " ||| storageSize:" + storageSize.get() +
+//                        " ||| storageSizeDelta:" + storageSizeDelta.get());
+
+                    System.out.println("qjnghdae2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                        " updateSize else. _key_: " + ((KeyCacheObjectImpl)key).value() +
+                        " ||| _lastKey_:" + (lastKey == null ? "null" : ((KeyCacheObjectImpl)lastKey).value()) +
+                        " ||| compare: " + (lastKey == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) lastKey).value())) +
                         " ||| storageSize:" + storageSize.get() +
                         " ||| storageSizeDelta:" + storageSizeDelta.get());
                 }

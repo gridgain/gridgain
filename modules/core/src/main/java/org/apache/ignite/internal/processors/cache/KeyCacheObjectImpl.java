@@ -47,6 +47,10 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
         // No-op.
     }
 
+    public Object value() {
+        return val;
+    }
+
     /**
      * @param val Value.
      * @param valBytes Value bytes.
