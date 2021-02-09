@@ -259,10 +259,10 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
             assertTrue(iterator.next() == 300);
             assertTrue(iterator.next() == 300);
 
-        long delta00 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).storageSizeDelta.get();
-        long delta01 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).storageSizeDelta.get();
-        long delta10 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).storageSizeDelta.get();
-        long delta11 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).storageSizeDelta.get();
+        long delta00 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta.get();
+        long delta01 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta.get();
+        long delta10 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta.get();
+        long delta11 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta.get();
 
         assertFalse(delta00 == 0);
         assertFalse(delta01 == 0);

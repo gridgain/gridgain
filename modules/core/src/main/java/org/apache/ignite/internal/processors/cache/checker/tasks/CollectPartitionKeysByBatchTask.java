@@ -35,6 +35,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
@@ -238,7 +239,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             part.reserve();
 
-            KeyCacheObject lastKeyForSizes = cacheDataStore.lastKey();
+            IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = cacheDataStore.reconciliationCtx();
+
+            KeyCacheObject lastKeyForSizes = partReconciliationCtx.lastKey();
 
             KeyCacheObject keyToStart = null;
 
@@ -262,7 +265,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     partSize = 0L;
 
                 if (lowerKey == null)
-                    cacheDataStore.isReconciliationInProgress(true);
+                    partReconciliationCtx.isReconciliationInProgress(true);
 
                 for (int i = 0; i < batchSize && cursor.next(); i++) {
 //                    System.out.println("qfvndrfg");
@@ -276,11 +279,11 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         e.printStackTrace();
                     }
 
-                    synchronized (cacheDataStore.reconciliationMux()) {
+                    synchronized (partReconciliationCtx.reconciliationMux()) {
                         row = cursor.get();
 
-                        if (cacheDataStore.lastKey() == null || KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key()) < 0) {
-                            cacheDataStore.lastKey(row.key());
+                        if (partReconciliationCtx.lastKey() == null || KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(), row.key()) < 0) {
+                            partReconciliationCtx.lastKey(row.key());
 //                            System.out.println("qqedfks1 " + ignite.localNode().id() +
 //                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
 //                                " ||| _row.key()_:" + row.key() +

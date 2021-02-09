@@ -2536,37 +2536,16 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
         }
 
-        /** */
-        @Override public boolean isReconciliationInProgress() {
-            CacheDataStore delegate0 = delegate;
-
-            return delegate0 != null && delegate0.isReconciliationInProgress();
-        }
-
-        /** */
-        @Override public void isReconciliationInProgress(boolean b) {
-            CacheDataStore delegate0 = delegate;
-
-            if (delegate0 != null)
-                delegate0.isReconciliationInProgress(b);
-        }
-
-        @Override public Object reconciliationMux() {
-            CacheDataStore delegate0 = delegate;
-
-            return delegate0 == null ? null : delegate0.reconciliationMux();
-        }
-
-        @Override public KeyCacheObject lastKey() {
-            CacheDataStore delegate0 = delegate;
-
-            return delegate0 == null ? null : delegate0.lastKey();
-        }
-
-        /** */
-        @Override public void lastKey(KeyCacheObject key) {
+        @Override public void startReconciliation() {
             if (delegate != null)
-                delegate.lastKey(key);
+                delegate.startReconciliation();
+        }
+
+        @Override public CacheDataStoreImpl.ReconciliationContext reconciliationCtx() {
+            if (delegate != null)
+                return delegate.reconciliationCtx();
+            else
+                return null;
         }
 
         @Override public CacheDataTree tree() {

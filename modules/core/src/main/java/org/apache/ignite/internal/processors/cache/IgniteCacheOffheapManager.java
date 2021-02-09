@@ -624,19 +624,10 @@ public interface IgniteCacheOffheapManager {
      */
     interface CacheDataStore {
         /** */
-        public boolean isReconciliationInProgress();
+        public void startReconciliation();
 
         /** */
-        public void isReconciliationInProgress(boolean b);
-
-        /** */
-        public Object reconciliationMux();
-
-        /** */
-        public KeyCacheObject lastKey();
-
-        /** */
-        public void lastKey(KeyCacheObject key);
+        public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx();
 
         /**
          * @return Cache data tree object.

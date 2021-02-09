@@ -98,6 +98,7 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccTreeClos
 import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.transactions.IgniteTxUnexpectedStateCheckedException;
 import org.apache.ignite.internal.util.GridAtomicLong;
@@ -1534,45 +1535,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** Tombstones counter. */
         private final AtomicLong tombstonesCnt = new AtomicLong();
 
-        /** */
-        private volatile boolean isReconciliationInProgress;
-
-        /** */
-        private Object reconciliationMux = new Object();
-
-        /** */
-        public final AtomicLong storageSizeDelta = new AtomicLong();
-
-        /** */
-        private volatile KeyCacheObject lastKey;
-
-        /** */
-        private static final KeyComparator KEY_COMPARATOR = new KeyComparator();
-
-        /** */
-        @Override public boolean isReconciliationInProgress() {
-            return isReconciliationInProgress;
-        }
-
-        /** */
-        @Override public void isReconciliationInProgress(boolean b) {
-            this.isReconciliationInProgress = b;
-        }
-
-        /** */
-        @Override public Object reconciliationMux() {
-            return reconciliationMux;
-        }
-
-        /** */
-        @Override public KeyCacheObject lastKey() {
-            return lastKey;
-        }
-
-        /** */
-        @Override public void lastKey(KeyCacheObject key) {
-            lastKey = key;
-        }
+        private volatile ReconciliationContext reconciliationCtx;
 
         /**
          * @param partId Partition number.
@@ -1611,6 +1574,22 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             mvccUpdateMarker = new MvccMarkUpdatedHandler(grp);
             mvccUpdateTxStateHint = new MvccUpdateTxStateHintHandler(grp);
             mvccApplyChanges = new MvccApplyChangesHandler(grp);
+
+            reconciliationCtx = new ReconciliationContext();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void startReconciliation() {
+            reconciliationCtx = new ReconciliationContext();
+
+        }
+
+        /** {@inheritDoc} */
+        @Override public ReconciliationContext reconciliationCtx() {
+            assert reconciliationCtx != null;
+
+            return reconciliationCtx;
+
         }
 
         @Override public CacheDataTree tree() {
@@ -1718,10 +1697,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void updateSize(int cacheId, long delta, KeyCacheObject key) {
-            synchronized (reconciliationMux) {
-                if (isReconciliationInProgress) {
-                    if (lastKey != null && KEY_COMPARATOR.compare(key, lastKey) < 0) {
-                        storageSizeDelta.addAndGet(delta);
+            synchronized (reconciliationCtx.reconciliationMux()) {
+                if (reconciliationCtx.isReconciliationInProgress()) {
+                    if (reconciliationCtx.lastKey() != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey()) < 0) {
+                        reconciliationCtx.storageSizeDelta.addAndGet(delta);
 
                         storageSize.addAndGet(delta);
 
@@ -1734,10 +1713,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                         System.out.println("qergdf2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                             " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)key).value() +
-                            " ||| _lastKey_:" + (lastKey == null ? "null" : ((KeyCacheObjectImpl)lastKey).value()) +
-                            " ||| compare: " + (lastKey == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) lastKey).value())) +
+                            " ||| _lastKey_:" + (reconciliationCtx.lastKey() == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey()).value()) +
+                            " ||| compare: " + (reconciliationCtx.lastKey() == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) reconciliationCtx.lastKey()).value())) +
                             " ||| storageSize:" + storageSize.get() +
-                            " ||| storageSizeDelta:" + storageSizeDelta.get());
+                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta().get());
                     }
                     else {
                         storageSize.addAndGet(delta);
@@ -1751,10 +1730,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                         System.out.println("qksadgf2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                             " updateSize inner else. _key_: " + ((KeyCacheObjectImpl)key).value() +
-                            " ||| _lastKey_:" + (lastKey == null ? "null" : ((KeyCacheObjectImpl)lastKey).value()) +
-                            " ||| compare: " + (lastKey == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) lastKey).value())) +
+                            " ||| _lastKey_:" + (reconciliationCtx.lastKey() == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey()).value()) +
+                            " ||| compare: " + (reconciliationCtx.lastKey() == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) reconciliationCtx.lastKey()).value())) +
                             " ||| storageSize:" + storageSize.get() +
-                            " ||| storageSizeDelta:" + storageSizeDelta.get());
+                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta().get());
                     }
                 }
                 else {
@@ -1769,10 +1748,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     System.out.println("qjnghdae2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                         " updateSize else. _key_: " + ((KeyCacheObjectImpl)key).value() +
-                        " ||| _lastKey_:" + (lastKey == null ? "null" : ((KeyCacheObjectImpl)lastKey).value()) +
-                        " ||| compare: " + (lastKey == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) lastKey).value())) +
+                        " ||| _lastKey_:" + (reconciliationCtx.lastKey() == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey()).value()) +
+                        " ||| compare: " + (reconciliationCtx.lastKey() == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) reconciliationCtx.lastKey()).value())) +
                         " ||| storageSize:" + storageSize.get() +
-                        " ||| storageSizeDelta:" + storageSizeDelta.get());
+                        " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta().get());
                 }
             }
 //            storageSize.addAndGet(delta);
@@ -2967,6 +2946,53 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
             finally {
                 busyLock.leaveBusy();
+            }
+        }
+
+        public static class ReconciliationContext {
+            /** */
+            private volatile boolean isReconciliationInProgress;
+
+            /** */
+            private Object reconciliationMux = new Object();
+
+            /** */
+            public final AtomicLong storageSizeDelta = new AtomicLong();
+
+            /** */
+            private volatile KeyCacheObject lastKey;
+
+            /** */
+            private static final KeyComparator KEY_COMPARATOR = new KeyComparator();
+
+            /** */
+            public boolean isReconciliationInProgress() {
+                return isReconciliationInProgress;
+            }
+
+            /** */
+            public void isReconciliationInProgress(boolean b) {
+                this.isReconciliationInProgress = b;
+            }
+
+            /** */
+            public AtomicLong storageSizeDelta() {
+                return storageSizeDelta;
+            }
+
+            /** */
+            public Object reconciliationMux() {
+                return reconciliationMux;
+            }
+
+            /** */
+            public KeyCacheObject lastKey() {
+                return lastKey;
+            }
+
+            /** */
+            public void lastKey(KeyCacheObject key) {
+                lastKey = key;
             }
         }
 
