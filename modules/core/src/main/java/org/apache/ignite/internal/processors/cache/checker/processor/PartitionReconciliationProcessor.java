@@ -166,7 +166,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      * @return Partition reconciliation result
      */
-    public ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<UUID, Long>>>> execute() {
+    public ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, Long>>>>> execute() {
         if (log.isInfoEnabled()) {
             log.info(String.format(
                 START_EXECUTION_MSG,
@@ -192,8 +192,10 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 int[] partitions = partitions(cache);
 
+                int cacheId = cachex.context().cacheId();
+
                 for (int partId : partitions) {
-                    Batch workload = new Batch(sesId, UUID.randomUUID(), cache, partId, null, new HashMap<>());
+                    Batch workload = new Batch(sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -312,10 +314,13 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 if (nextBatchKey != null)
-                    schedule(new Batch(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), nextBatchKey, res.get3()));
+                    schedule(new Batch(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
 
-                if (nextBatchKey == null)
-                    collector.partSizesMap().put(workload.partitionId(), res.get3());
+                if (nextBatchKey == null) {
+                    collector.partSizesMap().putIfAbsent(workload.cacheId(), new HashMap<>());
+
+                    collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.get3());
+                }
 
                 if (!recheckKeys.isEmpty()) {
                     schedule(

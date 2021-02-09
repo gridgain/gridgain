@@ -29,6 +29,9 @@ public class Batch extends PipelineWorkload {
     /** Cache name. */
     private final String cacheName;
 
+    /** Cache name. */
+    private final int cacheId;
+
     /** Partition id. */
     private final int partId;
 
@@ -45,11 +48,12 @@ public class Batch extends PipelineWorkload {
      * @param partId Partition id.
      * @param lowerKey Lower key.
      */
-    public Batch(long sesId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey, Map<UUID, Long> partSizesMap) {
+    public Batch(long sesId, UUID workloadChainId, String cacheName, int cacheId, int partId, KeyCacheObject lowerKey, Map<UUID, Long> partSizesMap) {
         super(sesId, workloadChainId);
 
         this.cacheName = cacheName;
         this.partId = partId;
+        this.cacheId = cacheId;
         this.lowerKey = lowerKey;
         this.partSizesMap = partSizesMap;
     }
@@ -59,6 +63,11 @@ public class Batch extends PipelineWorkload {
      */
     public String cacheName() {
         return cacheName;
+    }
+
+    /** */
+    public int cacheId() {
+        return cacheId;
     }
 
     /**

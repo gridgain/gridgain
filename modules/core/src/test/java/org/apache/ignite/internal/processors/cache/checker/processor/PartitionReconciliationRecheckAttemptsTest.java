@@ -16,11 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -37,6 +40,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
@@ -68,6 +73,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
         CacheConfiguration ccfg = new CacheConfiguration();
         ccfg.setName(DEFAULT_CACHE_NAME);
+        ccfg.setGroupName("zzz");
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
         ccfg.setAffinity(new RendezvousAffinityFunction(false, 2));
         ccfg.setBackups(NODES_CNT - 1);
@@ -173,6 +179,19 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
     @Test
     public void test1() throws Exception {
+        CacheConfiguration ccfg = new CacheConfiguration();
+        ccfg.setName("qqq");
+        ccfg.setGroupName("zzz");
+        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, 2));
+        ccfg.setBackups(NODES_CNT - 1);
+        ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
+
+        client.createCache(ccfg);
+
+        for (int i = 0; i < 500; i++) {
+            client.cache("qqq").put(i, i);
+        }
 
         for (int i = 100; i < 200; i++) {
             client.cache(DEFAULT_CACHE_NAME).put(i, i);
@@ -183,7 +202,11 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(false);
         builder.parallelism(1);
-        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));
+//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
+        Set<String> objects = new HashSet<>();
+        objects.add(DEFAULT_CACHE_NAME);
+        objects.add("qqq");
+        builder.caches(objects);
         builder.recheckAttempts(3);
         builder.recheckDelay(0);
 
@@ -243,26 +266,30 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
 //        doSleep(5000);
 
+        int cacheId = client.context().cache().cache(DEFAULT_CACHE_NAME).context().cacheId();
+
         ReconciliationResult reconciliationRes = res.get();
 
-        Map<UUID, Long> map = reconciliationRes.partSizesMap().get(0);
+        Map<Integer, Map<UUID, Long>> map0 = reconciliationRes.partSizesMap().get(cacheId);
+
+        Map<UUID, Long> map = map0.get(0);
             Collection<Long> values = map.values();
             Iterator<Long> iterator = values.iterator();
 
             assertTrue(iterator.next() == 300);
             assertTrue(iterator.next() == 300);
 
-        map = reconciliationRes.partSizesMap().get(1);
+        map = map0.get(1);
             values = map.values();
             iterator = values.iterator();
 
             assertTrue(iterator.next() == 300);
             assertTrue(iterator.next() == 300);
 
-        long delta00 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta.get();
-        long delta01 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta.get();
-        long delta10 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta.get();
-        long delta11 = ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta.get();
+        long delta00 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
+        long delta01 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
+        long delta10 = ((internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
+        long delta11 = ((internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
 
         assertFalse(delta00 == 0);
         assertFalse(delta01 == 0);

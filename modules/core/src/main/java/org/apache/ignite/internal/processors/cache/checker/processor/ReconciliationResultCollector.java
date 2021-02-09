@@ -56,6 +56,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.io.File.separatorChar;
@@ -126,7 +127,7 @@ public interface ReconciliationResultCollector {
     File flushResultsToFile(LocalDateTime startTime);
 
     /** */
-    Map<Integer, Map<UUID, Long>> partSizesMap();
+    Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap();
 
     /**
      * Represents a collector of inconsistent and repaired entries.
@@ -150,7 +151,8 @@ public interface ReconciliationResultCollector {
         /** Entries that were detected as inconsistent but weren't repaired due to some reason. */
         protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
 
-        public final Map<Integer, Map<UUID, Long>> partSizesMap = new HashMap();
+        /** */
+        public final Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = new HashMap();
 
         /**
          * Creates a new SimpleCollector.
@@ -180,7 +182,7 @@ public interface ReconciliationResultCollector {
         /**
          *
          */
-        @Override public Map<Integer, Map<UUID, Long>> partSizesMap() {
+        @Override public Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap() {
             return partSizesMap;
         }
 

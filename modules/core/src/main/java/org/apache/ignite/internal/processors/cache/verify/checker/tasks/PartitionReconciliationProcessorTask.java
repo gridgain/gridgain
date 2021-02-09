@@ -133,7 +133,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
         List<String> errors = new ArrayList<>();
 
-        Map<Integer, Map<UUID, Long>> partSizesMap = new HashMap<>();
+        Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = new HashMap<>();
 
         for (ComputeJobResult result : results) {
             UUID nodeId = result.getNode().id();
@@ -145,7 +145,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 continue;
             }
 
-            T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<UUID, Long>>>>> data = result.getData();
+            T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, Long>>>>>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
             res.merge(data.get2().result().get1());
@@ -213,7 +213,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         /** {@inheritDoc} */
-        @Override public T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<UUID, Long>>>>> execute() throws IgniteException {
+        @Override public T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, Long>>>>>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
@@ -249,7 +249,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     !reconciliationTaskArg.locOutput(),
                     reconciliationTaskArg.includeSensitive());
 
-                ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<UUID, Long>>>> reconciliationRes = proc.execute();
+                ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, Long>>>>> reconciliationRes = proc.execute();
 
                 File path = proc.collector().flushResultsToFile(startTime);
 

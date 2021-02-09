@@ -37,7 +37,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     private ReconciliationAffectedEntries res;
 
     /** */
-    private Map<Integer, Map<UUID, Long>> partSizesMap = new HashMap();
+    private Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = new HashMap();
 
     /** Folders with local results. */
     private Map<UUID, String> nodeIdToFolder;
@@ -58,7 +58,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
      */
     public ReconciliationResult(
         ReconciliationAffectedEntries partReconciliationRes,
-        Map<Integer, Map<UUID, Long>> partSizesMap,
+        Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap,
         Map<UUID, String> nodeIdToFolder,
         List<String> errors
     ) {
@@ -92,7 +92,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     }
 
     /** */
-    public Map<Integer, Map<UUID, Long>>  partSizesMap() {
+    public Map<Integer, Map<Integer, Map<UUID, Long>>>  partSizesMap() {
         return partSizesMap;
     }
 

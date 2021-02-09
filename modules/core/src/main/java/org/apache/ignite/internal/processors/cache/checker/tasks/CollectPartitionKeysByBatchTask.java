@@ -217,6 +217,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             CacheGroupContext grpCtx = cctx.group();
 
+            int cacheId = cctx.cacheId();
+
             final int batchSize = partBatch.batchSize();
             final KeyCacheObject lowerKey;
 
@@ -244,7 +246,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             if (lowerKey == null)
                 partReconciliationCtx.isReconciliationInProgress(true);
 
-            KeyCacheObject lastKeyForSizes = partReconciliationCtx.lastKey();
+            KeyCacheObject lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
 
             KeyCacheObject keyToStart = null;
 
@@ -257,8 +259,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
 
             try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
-                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), DATA) :
-                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), keyToStart, null)) {
+                grpCtx.offheap().dataStore(part).cursor(cacheId, DATA) :
+                grpCtx.offheap().dataStore(part).cursor(cacheId, keyToStart, null)) {
 
                 List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
@@ -282,8 +284,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     synchronized (partReconciliationCtx.reconciliationMux()) {
                         row = cursor.get();
 
-                        if (partReconciliationCtx.lastKey() == null || KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(), row.key()) < 0) {
-                            partReconciliationCtx.lastKey(row.key());
+                        if (partReconciliationCtx.lastKey(cacheId) == null || KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(cacheId), row.key()) < 0) {
+                            partReconciliationCtx.lastKey(cacheId, row.key());
 //                            System.out.println("qqedfks1 " + ignite.localNode().id() +
 //                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
 //                                " ||| _row.key()_:" + row.key() +
