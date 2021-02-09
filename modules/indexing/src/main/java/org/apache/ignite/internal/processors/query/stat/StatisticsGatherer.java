@@ -146,7 +146,7 @@ public class StatisticsGatherer {
     private void completePartitionStatistic(
         GridH2Table tbl,
         StatisticsKey key,
-        LocalStatisticsGatheringContext newCtx,
+        LocalStatisticsGatheringContext ctx,
         int part,
         ObjectPartitionStatisticsImpl partStat)
     {
@@ -162,10 +162,10 @@ public class StatisticsGatherer {
             if (log.isDebugEnabled())
                 log.debug("Local partitioned statistic saved [stat=" + partStat + ']');
 
-            newCtx.partitionDone(part);
+            ctx.partitionDone(part);
 
-            if (newCtx.future().isDone())
-                gatheringInProgress.remove(key, newCtx);
+            if (ctx.future().isDone())
+                gatheringInProgress.remove(key, ctx);
         }
         catch (Throwable ex) {
             log.error("Unexpected error os statistic save", ex);
