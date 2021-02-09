@@ -294,6 +294,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
         private boolean repair;
 
+        private boolean repairSizes;
+
         /** Print result to locOutput. */
         private boolean locOutput;
 

@@ -50,6 +50,7 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitio
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.util.Collections.EMPTY_SET;
@@ -165,7 +166,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      * @return Partition reconciliation result
      */
-    public ExecutionResult<ReconciliationAffectedEntries> execute() {
+    public ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<UUID, Long>>>> execute() {
         if (log.isInfoEnabled()) {
             log.info(String.format(
                 START_EXECUTION_MSG,
@@ -250,7 +251,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 }
             }
 
-            return new ExecutionResult<>(collector.result());
+            return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()));
         }
         catch (InterruptedException | IgniteException e) {
             String errMsg = "Partition reconciliation was interrupted.";
@@ -259,14 +260,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
             log.warning(errMsg, e);
 
-            return new ExecutionResult<>(collector.result(), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+            return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
         catch (Exception e) {
             String errMsg = "Unexpected error.";
 
             log.error(errMsg, e);
 
-            return new ExecutionResult<>(collector.result(), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+            return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
     }
 

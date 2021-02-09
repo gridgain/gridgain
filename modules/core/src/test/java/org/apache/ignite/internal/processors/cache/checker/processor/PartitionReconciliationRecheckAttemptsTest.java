@@ -243,16 +243,16 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
 //        doSleep(5000);
 
+        ReconciliationResult reconciliationRes = res.get();
 
-
-        Map<UUID, Long> map = ReconciliationResultCollector.Simple.partSizesMap.get(0);
+        Map<UUID, Long> map = reconciliationRes.partSizesMap().get(0);
             Collection<Long> values = map.values();
             Iterator<Long> iterator = values.iterator();
 
             assertTrue(iterator.next() == 300);
             assertTrue(iterator.next() == 300);
 
-        map = ReconciliationResultCollector.Simple.partSizesMap.get(1);
+        map = reconciliationRes.partSizesMap().get(1);
             values = map.values();
             iterator = values.iterator();
 

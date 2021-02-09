@@ -241,6 +241,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = cacheDataStore.reconciliationCtx();
 
+            if (lowerKey == null)
+                partReconciliationCtx.isReconciliationInProgress(true);
+
             KeyCacheObject lastKeyForSizes = partReconciliationCtx.lastKey();
 
             KeyCacheObject keyToStart = null;
@@ -263,9 +266,6 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                 if (partSize == null)
                     partSize = 0L;
-
-                if (lowerKey == null)
-                    partReconciliationCtx.isReconciliationInProgress(true);
 
                 for (int i = 0; i < batchSize && cursor.next(); i++) {
 //                    System.out.println("qfvndrfg");

@@ -125,6 +125,7 @@ public interface ReconciliationResultCollector {
      */
     File flushResultsToFile(LocalDateTime startTime);
 
+    /** */
     Map<Integer, Map<UUID, Long>> partSizesMap();
 
     /**
@@ -149,7 +150,7 @@ public interface ReconciliationResultCollector {
         /** Entries that were detected as inconsistent but weren't repaired due to some reason. */
         protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
 
-        public static final Map<Integer, Map<UUID, Long>> partSizesMap = new HashMap();
+        public final Map<Integer, Map<UUID, Long>> partSizesMap = new HashMap();
 
         /**
          * Creates a new SimpleCollector.

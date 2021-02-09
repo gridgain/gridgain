@@ -133,6 +133,8 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
         List<String> errors = new ArrayList<>();
 
+        Map<Integer, Map<UUID, Long>> partSizesMap = new HashMap<>();
+
         for (ComputeJobResult result : results) {
             UUID nodeId = result.getNode().id();
             IgniteException exc = result.getException();
@@ -143,16 +145,18 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 continue;
             }
 
-            T2<String, ExecutionResult<ReconciliationAffectedEntries>> data = result.getData();
+            T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<UUID, Long>>>>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
-            res.merge(data.get2().result());
+            res.merge(data.get2().result().get1());
 
             if (data.get2().errorMessage() != null)
                 errors.add(nodeId + " - " + data.get2().errorMessage());
+
+            partSizesMap.putAll(data.get2().result().get2());
         }
 
-        return new ReconciliationResult(res, nodeIdToFolder, errors);
+        return new ReconciliationResult(res, partSizesMap, nodeIdToFolder, errors);
     }
 
     /** {@inheritDoc} */
@@ -209,7 +213,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         /** {@inheritDoc} */
-        @Override public T2<String, ExecutionResult<ReconciliationAffectedEntries>> execute() throws IgniteException {
+        @Override public T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<UUID, Long>>>>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
@@ -224,7 +228,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     }
 
                     if (acceptedCaches.isEmpty())
-                        return new T2<>(null, new ExecutionResult<>(new ReconciliationAffectedEntriesExtended(), "The cache '" + cacheRegexp + "' doesn't exist."));
+                        return new T2<>(null, new ExecutionResult<>(new T2(new ReconciliationAffectedEntriesExtended(), new HashMap()), "The cache '" + cacheRegexp + "' doesn't exist."));
 
                     caches.addAll(acceptedCaches);
                 }
@@ -245,7 +249,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     !reconciliationTaskArg.locOutput(),
                     reconciliationTaskArg.includeSensitive());
 
-                ExecutionResult<ReconciliationAffectedEntries> reconciliationRes = proc.execute();
+                ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<UUID, Long>>>> reconciliationRes = proc.execute();
 
                 File path = proc.collector().flushResultsToFile(startTime);
 
