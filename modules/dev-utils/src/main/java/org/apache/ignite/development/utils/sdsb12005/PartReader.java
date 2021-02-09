@@ -44,22 +44,36 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class PartReader extends IgniteIndexReader {
-    private final FilePageStore partStore;
-    private final File partPath;
-//    private final long metaPageId;
-    /** {@link FilePageStore} factory by page store version. */
-    private final FileVersionCheckingFactory storeFactory;
-    /** Metrics updater. */
-    private final LongAdderMetric allocationTracker = new LongAdderMetric("n", "d");
-    private final int partNumber;
 
     /** */
+    private final FilePageStore partStore;
+
+    /** */
+    private final File partPath;
+//    private final long metaPageId;
+
+    /**
+     * {@link FilePageStore} factory by page store version.
+     */
+    private final FileVersionCheckingFactory storeFactory;
+
+    /**
+     * Metrics updater.
+     */
+    private final LongAdderMetric allocationTracker = new LongAdderMetric("n", "d");
+
+    /** */
+    private final int partNumber;
+
+    /**
+     *
+     */
     public PartReader(
-        @Nullable PrintStream outStream,
-        int pageSize,
-        File pathDir,
-        int filePageStoreVer,
-        int partNumber
+            @Nullable PrintStream outStream,
+            int pageSize,
+            File pathDir,
+            int filePageStoreVer,
+            int partNumber
     ) throws IgniteCheckedException {
         super(pageSize, outStream);
 
@@ -73,16 +87,16 @@ public class PartReader extends IgniteIndexReader {
 
         if (!partPath.exists()) {
             throw new IllegalArgumentException("Specified directory="
-                + pathDir
-                + " does not contain partition file="
-                + partFileName
-                + ", which stores metaPage="/* + U.hexLong(metaPageId)*/);
+                    + pathDir
+                    + " does not contain partition file="
+                    + partFileName
+                    + ", which stores metaPage="/* + U.hexLong(metaPageId)*/);
         }
 
         storeFactory = new FileVersionCheckingFactory(
-            new AsyncFileIOFactory(),
-            new AsyncFileIOFactory(),
-            new DataStorageConfiguration().setPageSize(pageSize)
+                new AsyncFileIOFactory(),
+                new AsyncFileIOFactory(),
+                new DataStorageConfiguration().setPageSize(pageSize)
         ) {
             /** {@inheritDoc} */
             @Override public int latestVersion() {
@@ -95,13 +109,14 @@ public class PartReader extends IgniteIndexReader {
             partStore.ensure();
     }
 
+    /** */
     public void read() {
         outStream.println("Check part=" + partNumber);
 
         try {
             Map<Class, Long> metaPages = findPages(partNumber, FLAG_DATA, partStore, /*singleton(PagePartitionMetaIOV2.class)*/ new HashSet<>(Arrays.asList(PagePartitionMetaIOV2.class, MetastoreDataPageIO.class)));
 
-            if(metaPages == null || metaPages.isEmpty()){
+            if (metaPages == null || metaPages.isEmpty()) {
 
                 outStream.println("Meta pages is empty! Return.");
                 return;
@@ -134,7 +149,9 @@ public class PartReader extends IgniteIndexReader {
 
     }
 
-    /** */
+    /**
+     *
+     */
     private void printGapsLink(long gapsLink, Map<Class, Long> metaPages) throws IgniteCheckedException {
         SB sb = new SB();
 
@@ -184,7 +201,7 @@ public class PartReader extends IgniteIndexReader {
 
             sb.a("pageIds=").a(pageIds).a("\n");
 
-        } catch (Exception e){
+        } catch (Exception e) {
             sb.a("Error in reading dataPAGEIO : " + e.getMessage());
         }
         outStream.println(sb.toString());
@@ -200,15 +217,15 @@ public class PartReader extends IgniteIndexReader {
         AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
 
         List<CLIArgument> argsConfiguration = asList(
-            CLIArgument.mandatoryArg(
-                Args.PART_PATH.arg(),
-                "partition path, where " + INDEX_FILE_NAME + " and partition files are located.",
-                String.class
-            ),
-            CLIArgument.optionalArg(Args.PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
-            CLIArgument.optionalArg(Args.PAGE_STORE_VER.arg(), "page store version.", Integer.class, () -> 2),
-            CLIArgument.optionalArg(Args.DEST_FILE.arg(),
-                "file to print the report to (by default report is printed to console).", String.class, () -> null)
+                CLIArgument.mandatoryArg(
+                        Args.PART_PATH.arg(),
+                        "partition path, where " + INDEX_FILE_NAME + " and partition files are located.",
+                        String.class
+                ),
+                CLIArgument.optionalArg(Args.PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
+                CLIArgument.optionalArg(Args.PAGE_STORE_VER.arg(), "page store version.", Integer.class, () -> 2),
+                CLIArgument.optionalArg(Args.DEST_FILE.arg(),
+                        "file to print the report to (by default report is printed to console).", String.class, () -> null)
         );
 
         CLIArgumentParser p = new CLIArgumentParser(argsConfiguration);
@@ -245,24 +262,38 @@ public class PartReader extends IgniteIndexReader {
      * Enum of possible utility arguments.
      */
     public enum Args {
-        /** */
+        /**
+         *
+         */
         PART_PATH("--partPath"),
-        /** */
+        /**
+         *
+         */
         PAGE_SIZE("--pageSize"),
-        /** */
+        /**
+         *
+         */
         PAGE_STORE_VER("--pageStoreVer"),
-        /** */
+        /**
+         *
+         */
         DEST_FILE("--destFile");
 
-        /** */
+        /**
+         *
+         */
         private final String arg;
 
-        /** */
+        /**
+         *
+         */
         Args(String arg) {
             this.arg = arg;
         }
 
-        /** */
+        /**
+         *
+         */
         public String arg() {
             return arg;
         }
