@@ -17,14 +17,12 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
 /**
  * Test cluster wide gathering.
@@ -50,7 +48,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
 
         testCond(this::checkStat, stats);
 
-        GridTestUtils.waitForCondition(() -> {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
             ObjectStatisticsImpl globalStats[] = getStats("SMALL", StatisticsType.GLOBAL);
             try {
                 testCond(stat -> stat.equals(globalStats[0]), globalStats);
@@ -59,7 +57,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
             catch (Exception e) {
                 return false;
             }
-        }, 1000);
+        }, 1000));
     }
 
     /**
@@ -111,17 +109,18 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
 
         // 0) check statistics exists.
         assertNotNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL));
-        assertNotNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL));
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            null != getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL), TIMEOUT));
 
         // 1) clear statistics and check last node lack it.
         statMgr.clearObjectStatistics(SMALL_TARGET);
 
-        GridTestUtils.waitForCondition(() ->
-            null == getStatsFromNode(0, "SMALL", StatisticsType.LOCAL), TIMEOUT);
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            null == getStatsFromNode(0, "SMALL", StatisticsType.LOCAL), TIMEOUT));
         assertNull(getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL));
 
-        GridTestUtils.waitForCondition(() ->
-            null == getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL), TIMEOUT);
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            null == getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL), TIMEOUT));
         assertNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL));
 
         // 2) stop last node and gather statistics again.
@@ -142,12 +141,12 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         statMgr.gatherObjectStatistics(SMALL_TARGET);
 
         assertNotNull(stat0local = getStatsFromNode(0, "SMALL", StatisticsType.LOCAL));
-        GridTestUtils.waitForCondition(() ->
-            null != getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL), TIMEOUT);
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            null != getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL), TIMEOUT));
 
         assertNotNull(statNlocal = getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL));
-        GridTestUtils.waitForCondition(() ->
-            null != getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL), TIMEOUT);
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            null != getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL), TIMEOUT));
 
         assertTrue(stat0local.columnsStatistics().size() == statNlocal.columnsStatistics().size());
         assertEquals(stat0global = getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL),
@@ -193,60 +192,5 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         assertTrue(statC.total() == stat.rowCount());
 
         return true;
-    }
-
-    /**
-     * Get local object statistics from all server nodes.
-     *
-     * @param tblName Object name to get statistics by.
-     * @param type Desired statistics type.
-     * @return Array of local statistics from nodes.
-     */
-    private ObjectStatisticsImpl[] getStats(String tblName, StatisticsType type) {
-        ObjectStatisticsImpl res[] = new ObjectStatisticsImpl[nodes()];
-
-        for (int i = 0; i < nodes(); i++)
-            res[i] = getStatsFromNode(i, tblName, type);
-
-        return res;
-    }
-
-    /**
-     * Test specified predicate on each object statistics.
-     *
-     * @param cond Predicate to test.
-     * @param stats Statistics to test on.
-     */
-    private void testCond(Function<ObjectStatisticsImpl, Boolean> cond, ObjectStatisticsImpl... stats) {
-        assertFalse(F.isEmpty(stats));
-
-        for (ObjectStatisticsImpl stat : stats)
-            assertTrue(cond.apply(stat));
-    }
-
-    /**
-     * Get local table statistics by specified node.
-     *
-     * @param nodeIdx Node index to get statistics from.
-     * @param tblName Table name.
-     * @param type Desired statistics type.
-     * @return Local table statistics or {@code null} if there are no such statistics in specified node.
-     */
-    private ObjectStatisticsImpl getStatsFromNode(int nodeIdx, String tblName, StatisticsType type) {
-        IgniteStatisticsManager statMgr = grid(nodeIdx).context().query().getIndexing().statsManager();
-        try {
-            switch (type) {
-                case LOCAL:
-                    return (ObjectStatisticsImpl) statMgr.getLocalStatistics(SCHEMA, tblName);
-                case GLOBAL:
-                    return (ObjectStatisticsImpl) statMgr.getGlobalStatistics(SCHEMA, tblName);
-                default:
-                    throw new UnsupportedOperationException();
-            }
-        }
-        catch (IgniteCheckedException e) {
-            fail(e.getMessage());
-        }
-        return null;
     }
 }

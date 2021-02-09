@@ -192,8 +192,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     @Override public void clearObjectStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
         checkStatisticsSupport("clear statistics");
 
-        List<StatisticsKeyMessage> keys = Arrays.stream(targets).map(target -> new StatisticsKeyMessage(target.schema(),
-            target.obj(), Arrays.asList(target.columns()))).collect(Collectors.toList());
+        List<StatisticsKeyMessage> keys = Arrays.stream(targets).map(StatisticsUtils::statisticsKeyMessage)
+            .collect(Collectors.toList());
 
         clearObjectStatistics(keys);
     }
@@ -205,7 +205,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      */
     private void clearObjectStatisticsLocal(StatisticsKeyMessage keyMsg) {
         StatisticsKey key = new StatisticsKey(keyMsg.schema(), keyMsg.obj());
-        String[] colNames = keyMsg.colNames().toArray(new String[0]);
+        String[] colNames = (keyMsg.colNames() == null) ? null : keyMsg.colNames().toArray(new String[0]);
 
         statsRepos.clearLocalPartitionsStatistics(key, colNames);
         statsRepos.clearLocalStatistics(key, colNames);
@@ -225,8 +225,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     @Override public void gatherObjectStatistics(StatisticsTarget target) throws IgniteCheckedException {
         checkStatisticsSupport("collect statistics");
 
-        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(target.schema(), target.obj(),
-            Arrays.asList(target.columns()));
+        StatisticsKeyMessage keyMsg = StatisticsUtils.statisticsKeyMessage(target);
         CacheGroupContext grpCtx = helper.getGroupContext(keyMsg);
 
         StatisticsGatheringContext status = new StatisticsGatheringContext(UUID.randomUUID(),

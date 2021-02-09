@@ -91,8 +91,11 @@ import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillRequest;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillResponse;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
 import org.apache.ignite.internal.sql.command.SqlAlterTableCommand;
 import org.apache.ignite.internal.sql.command.SqlAlterUserCommand;
+import org.apache.ignite.internal.sql.command.SqlAnalyzeCommand;
 import org.apache.ignite.internal.sql.command.SqlBeginTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
 import org.apache.ignite.internal.sql.command.SqlCommand;
@@ -100,9 +103,11 @@ import org.apache.ignite.internal.sql.command.SqlCommitTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlCreateIndexCommand;
 import org.apache.ignite.internal.sql.command.SqlCreateUserCommand;
 import org.apache.ignite.internal.sql.command.SqlDropIndexCommand;
+import org.apache.ignite.internal.sql.command.SqlDropStatisticsCommand;
 import org.apache.ignite.internal.sql.command.SqlDropUserCommand;
 import org.apache.ignite.internal.sql.command.SqlIndexColumn;
 import org.apache.ignite.internal.sql.command.SqlKillQueryCommand;
+import org.apache.ignite.internal.sql.command.SqlRefreshStatitsicsCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -379,7 +384,10 @@ public class CommandProcessor {
             || cmd instanceof SqlAlterTableCommand
             || cmd instanceof SqlCreateUserCommand
             || cmd instanceof SqlAlterUserCommand
-            || cmd instanceof SqlDropUserCommand;
+            || cmd instanceof SqlDropUserCommand
+            || cmd instanceof SqlAnalyzeCommand
+            || cmd instanceof SqlRefreshStatitsicsCommand
+            || cmd instanceof SqlDropStatisticsCommand;
     }
 
     /**
@@ -492,6 +500,58 @@ public class CommandProcessor {
         catch (IgniteCheckedException e) {
             throw new IgniteSQLException("Failed to cancel query [nodeId=" + cmd.nodeId() + ",qryId="
                 + cmd.nodeQueryId() + ",err=" + e + "]", e);
+        }
+    }
+
+    /**
+     * Process analyze command.
+     *
+     * @param cmd Sql analyze command.
+     */
+    private void processAnalyzeCommand(SqlAnalyzeCommand cmd) {
+        ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
+        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+        StatisticsTarget[] targets = cmd.targets().stream()
+            .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
+            .toArray(StatisticsTarget[]::new);
+
+        // TODO: save config after GG-32420
+        statMgr.gatherObjectStatisticsAsync(targets);
+    }
+
+    /**
+     * Process refresh statistics command.
+     *
+     * @param cmd Refresh statistics command.
+     */
+    private void processRefreshStatisticsCommand(SqlRefreshStatitsicsCommand cmd) {
+        ctx.security().authorize(SecurityPermission.REFRESH_STATISTICS);
+        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+        StatisticsTarget[] targets = cmd.targets().stream()
+            .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
+            .toArray(StatisticsTarget[]::new);
+
+        // TODO: load config after GG-32420
+        statMgr.gatherObjectStatisticsAsync(targets);
+    }
+
+    /**
+     * Process drop statistics command.
+     *
+     * @param cmd Drop statistics command.
+     */
+    private void processDropStatisticsCommand(SqlDropStatisticsCommand cmd) {
+        ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
+        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+        StatisticsTarget[] targets = cmd.targets().stream()
+            .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
+            .toArray(StatisticsTarget[]::new);
+        try {
+            // TODO: clean config after GG-32420
+            statMgr.clearObjectStatistics(targets);
+        } catch (IgniteCheckedException e) {
+            throw new IgniteSQLException("Failed to drop statistics on targets " + cmd.targets() + ", err="
+                + e.getMessage() + "]", e);
         }
     }
 
@@ -612,6 +672,12 @@ public class CommandProcessor {
 
                 ctx.authentication().removeUser(dropCmd.userName());
             }
+            else if (cmd instanceof SqlAnalyzeCommand)
+                processAnalyzeCommand((SqlAnalyzeCommand) cmd);
+            else if (cmd instanceof SqlRefreshStatitsicsCommand)
+                processRefreshStatisticsCommand((SqlRefreshStatitsicsCommand) cmd);
+            else if (cmd instanceof SqlDropStatisticsCommand)
+                processDropStatisticsCommand((SqlDropStatisticsCommand) cmd);
             else
                 throw new IgniteSQLException("Unsupported DDL operation: " + sql,
                     IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
