@@ -85,7 +85,7 @@ public class GridSqlCreateTable extends GridSqlStatement {
     private List<String> params;
 
     /** Encrypted flag. */
-    private boolean encrypted;
+    private Boolean encrypted;
 
     /** See {@link CacheConfiguration#getQueryParallelism()}. */
     private Integer parallelism;
@@ -345,7 +345,7 @@ public class GridSqlCreateTable extends GridSqlStatement {
     /**
      * @return Encrypted flag.
      */
-    public boolean encrypted() {
+    public Boolean encrypted() {
         return encrypted;
     }
 

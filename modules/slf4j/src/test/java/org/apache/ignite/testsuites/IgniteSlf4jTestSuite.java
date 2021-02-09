@@ -17,6 +17,7 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.logger.slf4j.Slf4jLoggerMarkerTest;
+import org.apache.ignite.logger.slf4j.Slf4jLoggerSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -25,7 +26,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    Slf4jLoggerMarkerTest.class
+    Slf4jLoggerMarkerTest.class,
+    Slf4jLoggerSelfTest.class
 })
 public class IgniteSlf4jTestSuite {
 }

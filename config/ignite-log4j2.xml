@@ -58,6 +58,7 @@
 
         <Logger name="org.springframework" level="WARN"/>
         <Logger name="org.eclipse.jetty" level="WARN"/>
+        <Logger name="org.glassfish.grizzly" level="WARN"/>
 
         <!--
         Avoid warnings about failed bind attempt when multiple nodes running on the same host.

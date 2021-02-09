@@ -98,6 +98,9 @@ public abstract class PagesList extends DataStructure {
     /** */
     protected volatile boolean changed;
 
+    /** Page cache changed. */
+    protected volatile boolean pageCacheChanged;
+
     /** Page ID to store list metadata. */
     private final long metaPageId;
 
@@ -362,12 +365,19 @@ public abstract class PagesList extends DataStructure {
 
     /**
      * Flush onheap cached pages lists to page memory.
+     *
+     * @param statHolder Statistic holder.
+     * @throws IgniteCheckedException
      */
     private void flushBucketsCache(IoStatisticsHolder statHolder) throws IgniteCheckedException {
-        if (!isCachingApplicable())
+        if (!isCachingApplicable() || !pageCacheChanged)
             return;
 
+        pageCacheChanged = false;
+
         onheapListCachingEnabled = false;
+
+        int lockedPages = 0;
 
         try {
             for (int bucket = 0; bucket < buckets; bucket++) {
@@ -392,6 +402,8 @@ public abstract class PagesList extends DataStructure {
                         if (res == null) {
                             // Return page to onheap pages list if can't lock it.
                             pagesCache.add(pageId);
+
+                            lockedPages++;
                         }
                     }
                 }
@@ -399,6 +411,14 @@ public abstract class PagesList extends DataStructure {
         }
         finally {
             onheapListCachingEnabled = true;
+        }
+
+        if (lockedPages != 0) {
+            if (log.isInfoEnabled())
+                log.info("Several pages were locked and weren't flushed on disk [grp=" + grpName
+                    + ", lockedPages=" + lockedPages + ']');
+
+            pageCacheChanged = true;
         }
     }
 
@@ -973,6 +993,8 @@ public abstract class PagesList extends DataStructure {
                 if (needWalDeltaRecord(dataId, dataPage, null))
                     wal.log(new DataPageSetFreeListPageRecord(grpId, dataId, 0L));
             }
+
+            pageCacheChanged();
 
             return true;
         }
@@ -1913,6 +1935,15 @@ public abstract class PagesList extends DataStructure {
     }
 
     /**
+     * Mark free list page cache was changed.
+     */
+    private void pageCacheChanged() {
+        // Ok to have a race here, see the field javadoc.
+        if (!pageCacheChanged)
+            pageCacheChanged = true;
+    }
+
+    /**
      * Pages list name.
      */
     public String name() {
@@ -2107,7 +2138,7 @@ public abstract class PagesList extends DataStructure {
             if (size == 0) {
                 boolean stripesChanged = false;
 
-                if (++emptyFlushCnt >= EMPTY_FLUSH_GC_THRESHOLD) {
+                if (emptyFlushCnt >= 0 && ++emptyFlushCnt >= EMPTY_FLUSH_GC_THRESHOLD) {
                     for (int i = 0; i < STRIPES_COUNT; i++) {
                         synchronized (stripeLocks[i]) {
                             GridLongList stripe = stripes[i];
@@ -2124,6 +2155,9 @@ public abstract class PagesList extends DataStructure {
                             }
                         }
                     }
+
+                    if (!stripesChanged)
+                        emptyFlushCnt = -1;
                 }
 
                 if (!stripesChanged)
