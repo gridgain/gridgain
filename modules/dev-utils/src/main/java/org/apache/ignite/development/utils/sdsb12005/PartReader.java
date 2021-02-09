@@ -1,5 +1,15 @@
 package org.apache.ignite.development.utils.sdsb12005;
 
+import static java.util.Arrays.asList;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
+import static org.apache.ignite.internal.pagemem.PageIdUtils.itemId;
+import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
+import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
+import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.development.utils.arguments.CLIArgument;
@@ -10,7 +20,11 @@ import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOF
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.*;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastoreDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV2;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -19,23 +33,20 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.singleton;
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
-import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
-import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
-import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
-import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
-
 public class PartReader extends IgniteIndexReader {
     private final FilePageStore partStore;
     private final File partPath;
-    private final long metaPageId;
+//    private final long metaPageId;
     /** {@link FilePageStore} factory by page store version. */
     private final FileVersionCheckingFactory storeFactory;
     /** Metrics updater. */
@@ -48,16 +59,14 @@ public class PartReader extends IgniteIndexReader {
         int pageSize,
         File pathDir,
         int filePageStoreVer,
-        long metaPageId
+        int partNumber
     ) throws IgniteCheckedException {
         super(pageSize, outStream);
-        this.metaPageId = metaPageId;
 
         if (!pathDir.isDirectory())
             throw new IllegalArgumentException("Wrong directory name argument.");
 
-        //TODO: Fix
-        partNumber = (int)metaPageId;//PageIdUtils.partId(metaPageId);
+        this.partNumber = partNumber;
         String partFileName = String.format(FilePageStoreManager.PART_FILE_TEMPLATE, partNumber);
 
         partPath = new File(pathDir, partFileName);
@@ -67,7 +76,7 @@ public class PartReader extends IgniteIndexReader {
                 + pathDir
                 + " does not contain partition file="
                 + partFileName
-                + ", which stores metaPage=" + U.hexLong(metaPageId));
+                + ", which stores metaPage="/* + U.hexLong(metaPageId)*/);
         }
 
         storeFactory = new FileVersionCheckingFactory(
@@ -81,7 +90,7 @@ public class PartReader extends IgniteIndexReader {
             }
         };
 
-        partStore = (FilePageStore)storeFactory.createPageStore(FLAG_DATA, partPath, allocationTracker);
+        partStore = (FilePageStore) storeFactory.createPageStore(FLAG_DATA, partPath, allocationTracker);
         if (nonNull(partStore))
             partStore.ensure();
     }
@@ -90,7 +99,7 @@ public class PartReader extends IgniteIndexReader {
         outStream.println("Check part=" + partNumber);
 
         try {
-            Map<Class, Long> metaPages = findPages(partNumber, FLAG_DATA, partStore, singleton(PagePartitionMetaIOV2.class));
+            Map<Class, Long> metaPages = findPages(partNumber, FLAG_DATA, partStore, /*singleton(PagePartitionMetaIOV2.class)*/ new HashSet<>(Arrays.asList(PagePartitionMetaIOV2.class, MetastoreDataPageIO.class)));
 
             if(metaPages == null || metaPages.isEmpty()){
 
@@ -111,13 +120,14 @@ public class PartReader extends IgniteIndexReader {
 
                 outStream.println("partMetaStoreReuseListRoot = " + partMetaStoreReuseListRoot + " partPath=" + partPath);
 
-                printGapsLink(partMetaIO.getGapsLink(addr));
+                final long gapsLink = partMetaIO.getGapsLink(addr);
 
                 printPagesListsInfo(getPageListsInfo(partMetaStoreReuseListRoot, partStore));
 
+                printGapsLink(gapsLink, metaPages);
+
                 return null;
             });
-
         } catch (IgniteCheckedException e) {
             e.printStackTrace();
         }
@@ -125,12 +135,12 @@ public class PartReader extends IgniteIndexReader {
     }
 
     /** */
-    private void printGapsLink(long gapsLink) throws IgniteCheckedException {
+    private void printGapsLink(long gapsLink, Map<Class, Long> metaPages) throws IgniteCheckedException {
         SB sb = new SB();
 
         sb.a("Gaps Link content:").a("\n");
 
-        long pageId = PageIdUtils.pageId(gapsLink);
+        Long pageId = metaPages.get(MetastoreDataPageIO.class);
         int itemId = PageIdUtils.itemId(gapsLink);
 
         sb.a("pageId=").a(pageId).a(",\n");
@@ -144,16 +154,36 @@ public class PartReader extends IgniteIndexReader {
 
         Object pageIO = PageIO.getPageIO(cntrUpdDataAddr);
 
-        //TODO: Fix
         System.out.println("pageIO = " + pageIO);
         try {
-            AbstractDataPageIO dataPageIO = PageIO.getPageIO(cntrUpdDataAddr);
+            AbstractDataPageIO dataPageIO = PageIO.getPageIO(cntrUpdDataBuf);
 
             sb.a("freeSpace=").a(dataPageIO.getFreeSpace(cntrUpdDataAddr)).a(",\n");
 
             sb.a("page = [\n\t").a(PageIO.printPage(cntrUpdDataAddr, pageSize)).a("],\n");
 
             sb.a("binPage=").a(U.toHexString(cntrUpdDataAddr, pageSize)).a("\n");
+
+            long nextLink = gapsLink;
+
+            Collection<Long> pageIds = new ArrayList<>();
+            do {
+                pageIds.add(pageId);
+
+                cntrUpdDataBuf = allocateBuffer(pageSize);
+
+                cntrUpdDataAddr = bufferAddress(cntrUpdDataBuf);
+
+                readPage(partStore, pageId, cntrUpdDataBuf);
+
+                DataPagePayload data = dataPageIO.readPayload(cntrUpdDataAddr, itemId(nextLink), pageSize);
+
+                nextLink = data.nextLink();
+                pageId = pageId(nextLink);
+            } while (nextLink != 0);
+
+            sb.a("pageIds=").a(pageIds).a("\n");
+
         } catch (Exception e){
             sb.a("Error in reading dataPAGEIO : " + e.getMessage());
         }
@@ -198,21 +228,16 @@ public class PartReader extends IgniteIndexReader {
         int pageStoreVer = p.get(Args.PAGE_STORE_VER.arg());
         String destFile = p.get(Args.DEST_FILE.arg());
 
-        long metaPageID = 0L;
-
-        while(metaPageID < 1_000) {
-
+        for (int i = 0; i < Files.list(Paths.get(partPath)).count(); i++) {
             try (PartReader reader = new PartReader(
                     isNull(destFile) ? null : new PrintStream(destFile),
                     pageSize,
                     new File(partPath),
                     pageStoreVer,
-                    metaPageID
+                    i
             )) {
                 reader.read();
             }
-
-            metaPageID++;
         }
     }
 
