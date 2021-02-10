@@ -218,7 +218,7 @@ public class Checkpointer extends GridWorker {
         this.checkpointWritePageThreads = Math.max(checkpointWritePageThreads, 1);
         this.checkpointWritePagesPool = initializeCheckpointPool();
 
-        scheduledCp = new CheckpointProgressImpl(checkpointFreq);
+        scheduledCp = new CheckpointProgressImpl(nextCheckpointInterval());
     }
 
     /**
@@ -243,8 +243,6 @@ public class Checkpointer extends GridWorker {
         Throwable err = null;
 
         try {
-            delayedStart();
-
             while (!isCancelled()) {
                 waitCheckpointEvent();
 
@@ -267,7 +265,7 @@ public class Checkpointer extends GridWorker {
                     doCheckpoint();
                 else {
                     synchronized (this) {
-                        scheduledCp.nextCpNanos(System.nanoTime() + U.millisToNanos(checkpointFreq));
+                        scheduledCp.nextCpNanos(System.nanoTime() + U.millisToNanos(nextCheckpointInterval()));
                     }
                 }
             }
@@ -297,20 +295,15 @@ public class Checkpointer extends GridWorker {
     }
 
     /**
-     * Waiting time before Checkpointing by timeout was started.
-     * It helps when the cluster starts a checkpoint in the same time in every node.
+     * Gets a checkpoint interval with a randomized delay.
+     * It helps when the cluster makes a checkpoint in the same time in every node.
      *
-     * @throws IgniteException It throws when the delay was interrupted.
+     * @return Next checkpoint interval.
      */
-    private void delayedStart() throws IgniteException {
-        long startDelay = ThreadLocalRandom.current().nextLong(checkpointFreq);
+    private long nextCheckpointInterval() {
+        long startDelay = ThreadLocalRandom.current().nextLong(checkpointFreq / 2) - checkpointFreq / 4;
 
-        try {
-            U.sleep(startDelay);
-        }
-        catch (IgniteInterruptedCheckedException e) {
-            throw new IgniteException(e);
-        }
+        return checkpointFreq + startDelay;
     }
 
     /**
@@ -895,7 +888,7 @@ public class Checkpointer extends GridWorker {
                 curr.reason("timeout");
 
             // It is important that we assign a new progress object before checkpoint mark in page memory.
-            scheduledCp = new CheckpointProgressImpl(checkpointFreq);
+            scheduledCp = new CheckpointProgressImpl(nextCheckpointInterval());
 
             curCpProgress = curr;
         }
