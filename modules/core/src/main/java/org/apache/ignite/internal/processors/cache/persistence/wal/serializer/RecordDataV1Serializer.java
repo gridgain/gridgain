@@ -29,6 +29,7 @@ import java.util.Map.Entry;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.managers.encryption.EncryptionCacheKeyProvider;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.encryption.GroupKey;
 import org.apache.ignite.internal.managers.encryption.GroupKeyEncrypted;
@@ -77,6 +78,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdateNextSna
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecordV2;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecordV3;
+import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageUpdatePartitionDataRecordV4;
 import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageListMetaResetCountRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PagesListAddPageRecord;
@@ -157,7 +159,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     private final EncryptionSpi encSpi;
 
     /** Encryption manager. */
-    private final GridEncryptionManager encMgr;
+    private final EncryptionCacheKeyProvider encMgr;
 
     /** */
     private final boolean encryptionDisabled;
@@ -170,14 +172,15 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
     /**
      * @param cctx Cache shared context.
+     * @param keyProvider Cache key provider.
      */
-    public RecordDataV1Serializer(GridCacheSharedContext cctx) {
+    public RecordDataV1Serializer(GridCacheSharedContext cctx, EncryptionCacheKeyProvider keyProvider) {
         this.cctx = cctx;
         this.txRecordSerializer = new TxRecordSerializer();
         this.co = cctx.kernalContext().cacheObjects();
         this.pageSize = cctx.database().pageSize();
         this.encSpi = cctx.gridConfig().getEncryptionSpi();
-        this.encMgr = cctx.kernalContext().encryption();
+        this.encMgr = keyProvider;
 
         encryptionDisabled = encSpi instanceof NoopEncryptionSpi;
 
@@ -268,7 +271,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
         GridEncryptionManager encMgr = cctx.kernalContext().encryption();
 
-        return encMgr != null && encMgr.groupKey(grpId) != null;
+        return encMgr != null && encMgr.getActiveKey(grpId) != null;
     }
 
     /**
@@ -351,7 +354,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         if (plainRecType != null)
             putRecordType(dst, plainRecType);
 
-        GroupKey grpKey = encMgr.groupKey(grpId);
+        GroupKey grpKey = encMgr.getActiveKey(grpId);
 
         dst.put(grpKey.id());
 
@@ -401,6 +404,10 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case PARTITION_META_PAGE_DELTA_RECORD_V3:
                 return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
                     + /*allocatedIdxCandidate*/ 4 + /*link*/ 8 + /*encrypt page index*/ 4 + /*encrypt pages count*/4;
+
+            case PARTITION_META_PAGE_DELTA_RECORD_V4:
+                return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
+                    + /*allocatedIdxCandidate*/ 4 + /*link*/ 8 + /*encrypt page index*/ 4 + /*encrypt pages count*/4 + /*tombstones cnt*/ 8;
 
             case MEMORY_RECOVERY:
                 return 8;
@@ -650,6 +657,11 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
             case PARTITION_META_PAGE_DELTA_RECORD_V3:
                 res = new MetaPageUpdatePartitionDataRecordV3(in);
+
+                break;
+
+            case PARTITION_META_PAGE_DELTA_RECORD_V4:
+                res = new MetaPageUpdatePartitionDataRecordV4(in);
 
                 break;
 
@@ -1204,7 +1216,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 cacheId = in.readInt();
                 pageId = in.readLong();
 
-                byte rotatedIdPart = in.readByte();
+                int rotatedIdPart = in.readByte() & 0xFF;
 
                 res = new RotatedIdPartRecord(cacheId, pageId, rotatedIdPart);
 
@@ -1327,6 +1339,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case PARTITION_META_PAGE_UPDATE_COUNTERS:
             case PARTITION_META_PAGE_UPDATE_COUNTERS_V2:
             case PARTITION_META_PAGE_DELTA_RECORD_V3:
+            case PARTITION_META_PAGE_DELTA_RECORD_V4:
                 ((MetaPageUpdatePartitionDataRecord)rec).toBytes(buf);
 
                 break;

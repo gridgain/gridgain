@@ -86,6 +86,12 @@ public enum SecurityPermission {
     /** Permission to execute KILL QUERY command.*/
     KILL_QUERY,
 
+    /** Permission to execute REFRESH STATISTICS command. */
+    REFRESH_STATISTICS,
+
+    /** Permission to execute ANALYZE and DROP STATISTICS command. */
+    CHANGE_STATISTICS,
+
     /** Administration operation with cluster metadata (REMOVE, UPDATE). */
     ADMIN_METADATA_OPS,
 

@@ -65,6 +65,15 @@ public class GridRunningQueryInfo {
     /** Span of the running query. */
     private final Span span;
 
+    /** Enforce join order flag. */
+    private final boolean enforceJoinOrder;
+
+    /** Lazy flag. */
+    private final boolean lazy;
+
+    /** Distributed joins flag. */
+    private final boolean distributedJoins;
+
     /**
      * Constructor.
      *
@@ -77,6 +86,9 @@ public class GridRunningQueryInfo {
      * @param cancel Query cancel.
      * @param loc Local query flag.
      * @param qryInitiatorId Query's initiator identifier.
+     * @param enforceJoinOrder Enforce join order flag.
+     * @param lazy Lazy flag.
+     * @param distributedJoins Distributed joins flag.
      */
     public GridRunningQueryInfo(
         long id,
@@ -88,7 +100,10 @@ public class GridRunningQueryInfo {
         GridQueryCancel cancel,
         boolean loc,
         GridQueryMemoryMetricProvider memMetricProvider,
-        String qryInitiatorId
+        String qryInitiatorId,
+        boolean enforceJoinOrder,
+        boolean lazy,
+        boolean distributedJoins
     ) {
         this.id = id;
         this.nodeId = nodeId;
@@ -100,6 +115,9 @@ public class GridRunningQueryInfo {
         this.loc = loc;
         this.memMetricProvider = memMetricProvider;
         this.qryInitiatorId = qryInitiatorId;
+        this.enforceJoinOrder = enforceJoinOrder;
+        this.lazy = lazy;
+        this.distributedJoins = distributedJoins;
         this.span = MTC.span();
     }
 
@@ -203,6 +221,13 @@ public class GridRunningQueryInfo {
         return qryInitiatorId;
     }
 
+    /**
+     * @return Distributed joins.
+     */
+    public boolean distributedJoins() {
+        return distributedJoins;
+    }
+
     /**{@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridRunningQueryInfo.class, this);
@@ -214,4 +239,19 @@ public class GridRunningQueryInfo {
     public Span span() {
         return span;
     }
+
+    /**
+     * @return Enforce join order flag.
+     */
+    public boolean enforceJoinOrder() {
+        return enforceJoinOrder;
+    }
+
+    /**
+     * @return Lazy flag.
+     */
+    public boolean lazy() {
+        return lazy;
+    }
+
 }

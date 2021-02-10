@@ -68,7 +68,8 @@ class QueryHistoryMetricsValue {
      */
     public QueryHistoryMetricsValue(long execs, long failures, long minTime, long maxTime, long lastStartTime,
         long minMemory, long maxMemory, long minBytesAllocatedOnDisk, long maxBytesAllocatedOnDisk,
-        long minTotalBytesWrittenOnDisk, long maxTotalBytesWrittenOnDisk) {
+        long minTotalBytesWrittenOnDisk, long maxTotalBytesWrittenOnDisk
+        ) {
         this.execs = execs;
         this.failures = failures;
         this.minTime = minTime;
@@ -180,4 +181,5 @@ class QueryHistoryMetricsValue {
     public long maxTotalBytesWrittenOnDisk() {
         return maxTotalBytesWrittenOnDisk;
     }
+
 }

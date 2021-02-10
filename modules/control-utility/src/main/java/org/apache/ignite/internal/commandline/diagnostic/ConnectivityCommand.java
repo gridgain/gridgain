@@ -29,6 +29,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientNode;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.TaskExecutor;
 import org.apache.ignite.internal.visor.diagnostic.availability.VisorConnectivityArgs;
@@ -43,7 +44,7 @@ import static org.apache.ignite.internal.commandline.diagnostic.DiagnosticSubCom
 /**
  * Command to check connectivity between every node.
  */
-public class ConnectivityCommand implements Command<Void> {
+public class ConnectivityCommand extends AbstractCommand<Void> {
     /**
      * Header of output table.
      */

@@ -190,11 +190,14 @@ public class RunningQueryManager {
      * @param schemaName Schema name.
      * @param loc Local query flag.
      * @param cancel Query cancel. Should be passed in case query is cancelable, or {@code null} otherwise.
+     * @param enforceJoinOrder Enforce join order flag.
+     * @param lazy Lazy flag.
+     * @param distributedJoins Distributed joins flag.
      * @return Id of registered query.
      */
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
         @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel,
-        String qryInitiatorId) {
+        String qryInitiatorId, boolean enforceJoinOrder, boolean lazy, boolean distributedJoins) {
         long qryId = qryIdGen.incrementAndGet();
 
         if (qryInitiatorId == null)
@@ -210,7 +213,10 @@ public class RunningQueryManager {
             cancel,
             loc,
             memTracker == null ? DUMMY_TRACKER : memTracker,
-            qryInitiatorId
+            qryInitiatorId,
+            enforceJoinOrder,
+            lazy,
+            distributedJoins
         );
 
         GridRunningQueryInfo preRun = runs.putIfAbsent(qryId, run);

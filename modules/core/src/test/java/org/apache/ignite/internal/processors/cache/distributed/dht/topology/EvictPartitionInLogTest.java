@@ -23,13 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -44,7 +47,6 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.of;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
 /**
  * Class checks the presence of evicted partitions in log.
@@ -66,7 +68,7 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
 
         clearStaticLog(GridDhtLocalPartition.class);
 
-        testLog = new ListeningTestLogger(false, log);
+        testLog = new ListeningTestLogger(log);
     }
 
     /** {@inheritDoc} */
@@ -106,21 +108,31 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
 
         Map<Integer, Collection<Integer>> parseParts = new ConcurrentHashMap<>();
 
-        LogListener logLsnr = logListener("eviction", parseParts, DEFAULT_CACHE_NAMES);
+        LogListener logLsnr = logListener(PartitionsEvictManager.EvictReason.EVICTION.toString(),
+            parseParts, DEFAULT_CACHE_NAMES);
+
         testLog.registerListener(logLsnr);
 
         List<GridDhtLocalPartition> parts = of(DEFAULT_CACHE_NAMES)
             .map(node::cache)
             .map(GridCommonAbstractTest::internalCache0)
             .flatMap(internalCache -> internalCache.context().topology().localPartitions().stream())
-            .peek(p -> p.setState(RENTING))
             .collect(toList());
 
-        parts.subList(0, parts.size() - 1).forEach(GridDhtLocalPartition::clearAsync);
+        parts.subList(0, parts.size() - 1).forEach(new Consumer<GridDhtLocalPartition>() {
+            @Override public void accept(GridDhtLocalPartition part) {
+                try {
+                    part.rent().get();
+                }
+                catch (IgniteCheckedException e) {
+                    fail(X.getFullStackTrace(e));
+                }
+            }
+        });
 
         doSleep(500);
 
-        parts.get(parts.size() - 1).clearAsync();
+        parts.get(parts.size() - 1).rent().get();
 
         check(logLsnr, parts, parseParts);
     }
@@ -138,7 +150,9 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
 
         Map<Integer, Collection<Integer>> parseParts = new ConcurrentHashMap<>();
 
-        LogListener logLsnr = logListener("clearing", parseParts, DEFAULT_CACHE_NAMES);
+        LogListener logLsnr = logListener(PartitionsEvictManager.EvictReason.CLEARING.toString(),
+            parseParts, DEFAULT_CACHE_NAMES);
+
         testLog.registerListener(logLsnr);
 
         List<GridDhtLocalPartition> parts = of(DEFAULT_CACHE_NAMES)
@@ -153,6 +167,39 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
         doSleep(500);
 
         parts.get(parts.size() - 1).clearAsync();
+
+        check(logLsnr, parts, parseParts);
+    }
+
+    /**
+     * Tests if a tombstone clearing is logged properly.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTombstoneClearingLogging() throws Exception {
+        backups = 1;
+
+        IgniteEx node = startGrid();
+
+        Map<Integer, Collection<Integer>> parseParts = new ConcurrentHashMap<>();
+
+        LogListener logLsnr = logListener(PartitionsEvictManager.EvictReason.TOMBSTONE.toString(),
+            parseParts, DEFAULT_CACHE_NAMES);
+
+        testLog.registerListener(logLsnr);
+
+        List<GridDhtLocalPartition> parts = of(DEFAULT_CACHE_NAMES)
+            .map(node::cache)
+            .map(GridCommonAbstractTest::internalCache0)
+            .flatMap(internalCache -> internalCache.context().topology().localPartitions().stream())
+            .collect(toList());
+
+        parts.subList(0, parts.size() - 1).forEach(GridDhtLocalPartition::clearTombstonesAsync);
+
+        doSleep(500);
+
+        parts.get(parts.size() - 1).clearTombstonesAsync();
 
         check(logLsnr, parts, parseParts);
     }

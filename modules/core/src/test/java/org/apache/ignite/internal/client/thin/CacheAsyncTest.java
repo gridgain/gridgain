@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.client.thin;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
@@ -36,7 +37,10 @@ import org.apache.ignite.client.Person;
 import org.apache.ignite.client.PersonBinarylizable;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 
 /**
  * Thin client async cache tests.
@@ -353,6 +357,7 @@ public class CacheAsyncTest extends AbstractThinClientTest {
      * Tests that request encode errors are handled correctly.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testPutAsyncThrowsExceptionOnFailedSerialization() {
         ClientCache<Integer, PersonBinarylizable> cache = client.createCache(TMP_CACHE_NAME);
 
@@ -401,6 +406,11 @@ public class CacheAsyncTest extends AbstractThinClientTest {
         strCache.putAllAsync(ImmutableMap.of(4, "4", 5, "5")).get();
         assertEquals("4", strCache.get(4));
         assertEquals("5", strCache.get(5));
+
+        // ContainsKeys.
+        assertTrue(strCache.containsKeysAsync(ImmutableSet.of(4, 5)).get());
+        assertFalse(strCache.containsKeysAsync(ImmutableSet.of(4, 5, 6)).get());
+        assertTrue(strCache.containsKeysAsync(Collections.emptySet()).get());
 
         // Replace(k, v).
         assertTrue(strCache.replaceAsync(4, "6").get());
@@ -456,6 +466,23 @@ public class CacheAsyncTest extends AbstractThinClientTest {
 
         // Clear.
         strCache.clearAsync().get();
+        assertEquals(0, strCache.size());
+
+        // GetAnfPutIfAbsent.
+        strCache.putAll(ImmutableMap.of(1, "1", 2, "2", 3, "3"));
+        assertEquals("1", strCache.getAndPutIfAbsentAsync(1, "2").get());
+        assertEquals("1", strCache.get(1));
+        assertNull(strCache.getAndPutIfAbsentAsync(4, "4").get());
+        assertEquals("4", strCache.get(4));
+
+        // Clear(k).
+        assertEquals("1", strCache.get(1));
+        strCache.clearAsync(1).get();
+        assertNull(strCache.get(1));
+
+        // ClearAll(k).
+        assertEquals(3, strCache.size());
+        strCache.clearAllAsync(ImmutableSet.of(2, 3, 4)).get();
         assertEquals(0, strCache.size());
     }
 }
