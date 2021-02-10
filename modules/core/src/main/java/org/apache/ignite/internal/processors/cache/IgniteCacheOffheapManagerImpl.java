@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1578,9 +1579,54 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             reconciliationCtx = new ReconciliationContext();
         }
 
+//        /** {@inheritDoc} */
+//        @Override public void startReconciliation() {
+//            reconciliationCtx = new ReconciliationContext();
+//
+//        }
+
         /** {@inheritDoc} */
-        @Override public void startReconciliation() {
-            reconciliationCtx = new ReconciliationContext();
+        @Override public void finishReconciliation(Map<Integer, Long> reconciliationCacheSizes) {
+            synchronized (reconciliationCtx.reconciliationMux()) {
+                if (reconciliationCacheSizes != null) {
+                    if (grp.sharedGroup()) {
+                        for (Map.Entry<Integer, Long> reconciliationCacheSize : reconciliationCacheSizes.entrySet()) {
+                            cacheSizes.get(reconciliationCacheSize.getKey()).set(
+                                reconciliationCacheSize.getValue() +
+                                    reconciliationCtx.storageSizeDeltas().get(reconciliationCacheSize.getKey()).get());
+                        }
+
+                        storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
+                    }
+                    else {
+                        Map.Entry<Integer, Long> cacheSizeEntry = reconciliationCacheSizes.entrySet().iterator().next();
+
+                        storageSize.set(cacheSizeEntry.getValue() + reconciliationCtx.storageSizeDeltas().get(cacheSizeEntry.getKey()).get());
+                    }
+                }
+
+                reconciliationCtx.storageSizeDeltas().clear();
+
+                reconciliationCtx.isReconciliationInProgress(false);
+            }
+
+        }
+
+        /** {@inheritDoc} */
+        @Override public void flushReconciliationResult(Integer cacheId, Long reconciliationCacheSize) {
+            synchronized (reconciliationCtx.reconciliationMux()) {
+                    if (grp.sharedGroup()) {
+                            cacheSizes.get(cacheId).set(
+                                reconciliationCacheSize +
+                                    reconciliationCtx.storageSizeDeltas().get(cacheId).get());
+
+                        storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
+                    }
+                    else
+                        storageSize.set(reconciliationCacheSize + reconciliationCtx.storageSizeDeltas().get(cacheId).get());
+
+                reconciliationCtx.storageSizeDeltas().remove(cacheId);
+            }
 
         }
 

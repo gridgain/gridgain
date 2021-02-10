@@ -199,6 +199,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                     workloadTracker.addTrackingChain(workload);
 
+                    workloadChainIdsInProgress.put(workload.workloadChainId(), new AtomicInteger());
+
                     schedule(workload);
                 }
             }
@@ -330,6 +332,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                         TimeUnit.SECONDS
                     );
                 }
+
+                workloadChainIdsInProgress.get(workload.workloadChainId()).decrementAndGet();
             }
         );
     }
@@ -374,6 +378,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                             actualKeys);
                     }
                 }
+
+                workloadChainIdsInProgress.get(workload.workloadChainId()).decrementAndGet();
             });
     }
 
@@ -426,6 +432,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                             ));
                     }
                 }
+
+                workloadChainIdsInProgress.get(workload.workloadChainId()).decrementAndGet();
             });
     }
 
@@ -450,6 +458,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         }
 
         return new Repair(sesId, workloadChainId, cacheName, partId, res, repairAttempts);
+    }
+
+    private Repair repairSizes(UUID chainId, String cacheName, int partId) {
+        Map<Integer, Map<Integer, Map<UUID, Long>>> sizesMap = collector.partSizesMap();
+
     }
 
     /**

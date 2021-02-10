@@ -59,7 +59,7 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
  */
 public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static final int NODES_CNT = 2;
+    protected static final int NODES_CNT = 4;
 
     /** Crd server node. */
     protected IgniteEx ig;
@@ -253,6 +253,21 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
                 transaction.commit();
             }
 
+            client.cache(DEFAULT_CACHE_NAME).invoke(300, (e, o) -> {
+                e.remove();
+                return new Object();
+            });
+
+            client.cache(DEFAULT_CACHE_NAME).invoke(301, (e, o) -> {
+                e.remove();
+                return new Object();
+            });
+
+            client.cache(DEFAULT_CACHE_NAME).invoke(302, (e, o) -> {
+                e.remove();
+                return new Object();
+            });
+
 //            doSleep(2000);
 
             System.out.println("qfrbdiu loadFut");
@@ -299,7 +314,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
         assertTrue(300+300+delta00+delta01 == client.cache(DEFAULT_CACHE_NAME).size());
         assertTrue(300+300+delta10+delta11 == client.cache(DEFAULT_CACHE_NAME).size());
 
-        System.out.println();
+        System.out.println("qsfgrvd size() " + client.cache(DEFAULT_CACHE_NAME).size());
 //        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());
 //        org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResultCollector.Simple.partSizesMap
 //        internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0)

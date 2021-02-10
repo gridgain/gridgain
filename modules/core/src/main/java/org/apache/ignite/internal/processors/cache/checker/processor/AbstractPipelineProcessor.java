@@ -17,11 +17,15 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -61,6 +65,9 @@ public class AbstractPipelineProcessor {
 
     /** Maximum number of workloads that can be handled simultaneously. */
     protected final int parallelismLevel;
+
+    /** */
+    final Map<UUID, AtomicInteger> workloadChainIdsInProgress = new HashMap();
 
     /** Latest affinity changed topology version that was available at the processor initialization. */
     protected final AffinityTopologyVersion startTopVer;
@@ -221,6 +228,8 @@ public class AbstractPipelineProcessor {
                 lsnr.apply(res.result());
 
                 evtLsnr.onEvent(FINISHED, workload);
+
+                evtLsnr.
             }
             finally {
                 liveListeners.release();
@@ -243,6 +252,8 @@ public class AbstractPipelineProcessor {
     protected void scheduleHighPriority(PipelineWorkload task) {
         evtLsnr.onEvent(SCHEDULED, task);
 
+        workloadChainIdsInProgress.get(task.workloadChainId()).incrementAndGet();
+
         highPriorityQueue.offer(new DelayedHolder<>(-1, task));
     }
 
@@ -257,6 +268,8 @@ public class AbstractPipelineProcessor {
         long finishTime = U.currentTimeMillis() + timeUnit.toMillis(duration);
 
         evtLsnr.onEvent(SCHEDULED, task);
+
+        workloadChainIdsInProgress.get(task.workloadChainId()).incrementAndGet();
 
         queue.offer(new DelayedHolder<>(finishTime, task));
     }

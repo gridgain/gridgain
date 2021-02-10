@@ -2536,9 +2536,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
         }
 
-        @Override public void startReconciliation() {
+        @Override public void finishReconciliation(Map<Integer, Long> reconciliationCacheSizes) {
             if (delegate != null)
-                delegate.startReconciliation();
+                delegate.finishReconciliation(reconciliationCacheSizes);
+        }
+
+        @Override public void flushReconciliationResult(Integer cacheId, Long reconciliationCacheSize) {
+            if (delegate != null)
+                delegate.flushReconciliationResult(cacheId, reconciliationCacheSize);
         }
 
         @Override public CacheDataStoreImpl.ReconciliationContext reconciliationCtx() {
