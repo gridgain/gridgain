@@ -106,7 +106,7 @@ public class VisorQueryCleanupTask extends VisorMultiNodeTask<VisorQueryCleanupT
 
         /** {@inheritDoc} */
         @Override protected Void run(Collection<String> qryIds) {
-            long start = U.currentTimeMillis();
+            long start = System.currentTimeMillis();
 
             if (debug) {
                 start = log(

@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.rest;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URLEncoder;
@@ -37,6 +36,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -120,6 +120,7 @@ import org.apache.ignite.internal.visor.query.VisorQueryCleanupTask;
 import org.apache.ignite.internal.visor.query.VisorQueryCleanupTaskArg;
 import org.apache.ignite.internal.visor.query.VisorQueryDetailMetricsCollectorTask;
 import org.apache.ignite.internal.visor.query.VisorQueryDetailMetricsCollectorTaskArg;
+import org.apache.ignite.internal.visor.query.VisorQueryFetchFirstPageTask;
 import org.apache.ignite.internal.visor.query.VisorQueryNextPageTask;
 import org.apache.ignite.internal.visor.query.VisorQueryNextPageTaskArg;
 import org.apache.ignite.internal.visor.query.VisorQueryResetMetricsTask;
@@ -128,6 +129,7 @@ import org.apache.ignite.internal.visor.query.VisorQueryTask;
 import org.apache.ignite.internal.visor.query.VisorQueryTaskArg;
 import org.apache.ignite.internal.visor.query.VisorRunningQueriesCollectorTask;
 import org.apache.ignite.internal.visor.query.VisorRunningQueriesCollectorTaskArg;
+import org.apache.ignite.jdbc.thin.JdbcThinStatementCancelSelfTest;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
@@ -138,7 +140,6 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
@@ -172,6 +173,9 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
     /** */
     private static final AtomicInteger KEY_GEN = new AtomicInteger(0);
+
+    /** Expected minimal query duration of query execution with sleep. */
+    private static final int EXPECTED_MIN_DURATION = 100;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -2314,6 +2318,64 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     }
 
     /**
+     * Check that duration of query execution includes row fetching time.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testQueryDurationCalculation() throws Exception {
+        ClusterNode locNode = grid(1).localNode();
+
+        String ret = content(new VisorGatewayArgument(VisorQueryTask.class)
+            .setNode(locNode)
+            .setTaskArgument(
+                VisorQueryTaskArg.class,
+                "person",
+                URLEncoder.encode(
+                    String.format(
+                        "(select *, sleep_func(%s) from Person) limit 1",
+                        EXPECTED_MIN_DURATION),
+                    CHARSET
+                ),
+                false,
+                false,
+                false,
+                false,
+                1
+            )
+        );
+
+        info("VisorQueryTask result: " + ret);
+
+        JsonNode res = jsonTaskResult(ret);
+
+        final String qryId = res.get("result").get("queryId").asText();
+        boolean qrySuccessfull = false;
+
+        do {
+            ret = content(new VisorGatewayArgument(VisorQueryFetchFirstPageTask.class)
+                .setNode(locNode)
+                .setTaskArgument(VisorQueryNextPageTaskArg.class, qryId, 1));
+
+            jsonTaskResult(ret);
+
+            res = jsonTaskResult(ret);
+
+            if (!res.get("error").isNull())
+                break;
+
+            res = res.get("result");
+
+            qrySuccessfull = !res.get("rows").isNull();
+        } while (!qrySuccessfull);
+
+        info("Last VisorQueryFetchFirstPageTask result: " + ret);
+
+        assertTrue(qrySuccessfull);
+        assertTrue(res.get("duration").intValue() > EXPECTED_MIN_DURATION);
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
@@ -3147,6 +3209,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         CacheConfiguration<Integer, Person> personCacheCfg = new CacheConfiguration<>("person");
 
         personCacheCfg.setIndexedTypes(Integer.class, Person.class);
+        personCacheCfg.setSqlFunctionClasses(JdbcThinStatementCancelSelfTest.TestSQLFunctions.class);
 
         IgniteCache<Integer, Person> personCache = grid(0).getOrCreateCache(personCacheCfg);
 
