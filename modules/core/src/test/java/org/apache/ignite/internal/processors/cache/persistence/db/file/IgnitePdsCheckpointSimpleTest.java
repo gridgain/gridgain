@@ -98,7 +98,7 @@ public class IgnitePdsCheckpointSimpleTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testStartCheckpointDalay() throws Exception {
+    public void testStartCheckpointDelay() throws Exception {
         cpFrequency = TimeUnit.SECONDS.toMillis(2);
 
         int nodes = 4;

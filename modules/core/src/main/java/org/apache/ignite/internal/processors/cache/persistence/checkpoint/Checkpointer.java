@@ -303,10 +303,10 @@ public class Checkpointer extends GridWorker {
      * @throws IgniteException It throws when the delay was interrupted.
      */
     private void delayedStart() throws IgniteException {
-        long startDalay = ThreadLocalRandom.current().nextLong(checkpointFreq);
+        long startDelay = ThreadLocalRandom.current().nextLong(checkpointFreq);
 
         try {
-            U.sleep(startDalay);
+            U.sleep(startDelay);
         }
         catch (IgniteInterruptedCheckedException e) {
             throw new IgniteException(e);
