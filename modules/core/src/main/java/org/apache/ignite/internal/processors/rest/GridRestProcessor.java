@@ -488,7 +488,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
                 UUID sesId = clientId2SesId.get(clientId);
 
                 if (sesId == null || !sesId.equals(U.bytesToUuid(sesTok, 0)))
-                    throw new IgniteCheckedException("Failed to handle request - unsupported case (mismatched " +
+                    throw new IgniteAuthenticationException("Failed to handle request - unsupported case (mismatched " +
                         "clientId and session token) [clientId=" + clientId + ", sesTok=" +
                         U.byteArray2HexString(sesTok) + "]");
 
