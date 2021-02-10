@@ -23,6 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
@@ -242,6 +243,8 @@ public class Checkpointer extends GridWorker {
         Throwable err = null;
 
         try {
+            delayedStart();
+
             while (!isCancelled()) {
                 waitCheckpointEvent();
 
@@ -290,6 +293,23 @@ public class Checkpointer extends GridWorker {
                 failureProcessor.process(new FailureContext(SYSTEM_WORKER_TERMINATION, err));
 
             scheduledCp.fail(new NodeStoppingException("Node is stopping."));
+        }
+    }
+
+    /**
+     * Waiting time before Checkpointing by timeout was started.
+     * It helps when the cluster starts a checkpoint in the same time in every node.
+     *
+     * @throws IgniteException It throws when the delay was interrupted.
+     */
+    private void delayedStart() throws IgniteException {
+        long startDalay = ThreadLocalRandom.current().nextLong(checkpointFreq);
+
+        try {
+            U.sleep(startDalay);
+        }
+        catch (IgniteInterruptedCheckedException e) {
+            throw new IgniteException(e);
         }
     }
 
