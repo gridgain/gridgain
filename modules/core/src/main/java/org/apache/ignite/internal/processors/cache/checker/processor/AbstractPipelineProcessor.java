@@ -66,9 +66,6 @@ public class AbstractPipelineProcessor {
     /** Maximum number of workloads that can be handled simultaneously. */
     protected final int parallelismLevel;
 
-    /** */
-    final Map<UUID, AtomicInteger> workloadChainIdsInProgress = new HashMap();
-
     /** Latest affinity changed topology version that was available at the processor initialization. */
     protected final AffinityTopologyVersion startTopVer;
 
@@ -77,6 +74,12 @@ public class AbstractPipelineProcessor {
 
     /** Event listener that allows to track the execution of workload. */
     protected volatile ReconciliationEventListener evtLsnr = ReconciliationEventListenerProvider.defaultListenerInstance();
+
+    /** */
+    final Map<UUID, AtomicInteger> workloadChainIdsInProgress = new HashMap();
+
+    /** Tracks workload chains based on its lifecycle. */
+    protected final WorkloadsInProgressTracker workloadsInProgressTracker = new WorkloadsInProgressTracker();
 
     /** Error. */
     protected final AtomicReference<String> error = new AtomicReference<>();
@@ -110,6 +113,8 @@ public class AbstractPipelineProcessor {
         this.liveListeners = new Semaphore(parallelismLevel);
         this.ignite = ignite;
         this.log = ignite.log().getLogger(getClass());
+
+        evtLsnr.andThen(workloadsInProgressTracker);
     }
 
     /**
@@ -229,7 +234,7 @@ public class AbstractPipelineProcessor {
 
                 evtLsnr.onEvent(FINISHED, workload);
 
-                evtLsnr.
+//                evtLsnr.isWorkloadInProgress(workload.workloadChainId());
             }
             finally {
                 liveListeners.release();
@@ -281,5 +286,61 @@ public class AbstractPipelineProcessor {
         Collection<ClusterNode> nodes = ignite.cachex(cacheName).context().topology().owners(partId, startTopVer);
 
         return ignite.cluster().forNodes(nodes);
+    }
+
+    /**
+     * This class allows tracking workload chains based on its lifecycle.
+     */
+    protected static class WorkloadsInProgressTracker implements ReconciliationEventListener {
+        /** */
+        final Map<UUID, AtomicInteger> workloadChainIdsInProgress = new HashMap();
+
+        /** {@inheritDoc} */
+        @Override public void onEvent(WorkLoadStage stage, PipelineWorkload workload) {
+            switch (stage) {
+                case SCHEDULED:
+                    attachWorkload(workload.workloadChainId());
+
+                    break;
+
+                case FINISHED:
+                    detachWorkload(workload.workloadChainId());
+
+                    break;
+                default:
+                    // There is no need to process other stages.
+            }
+        }
+
+        /** */
+        protected void addTrackingChain(UUID workloadId) {
+            workloadChainIdsInProgress.putIfAbsent(
+                workloadId,
+                new AtomicInteger());
+        }
+
+        /** */
+        protected void attachWorkload(UUID workloadId) {
+            // It should be guaranteed that the workload can be scheduled
+            // strictly before its parent workload is finished.
+            workloadChainIdsInProgress.get(workloadId).incrementAndGet();
+        }
+
+        /** */
+        protected boolean detachWorkload(UUID workloadId) {
+            // It should be guaranteed that the workload can be finished
+            // strictly after all subsequent workloads are scheduled.
+            AtomicInteger workloadCntr = workloadChainIdsInProgress.get(workloadId);
+
+            workloadCntr.decrementAndGet();
+
+            if (workloadCntr.get() == 0) {
+                workloadChainIdsInProgress.remove(workloadId);
+
+                return true;
+            }
+            else
+                return false;
+        }
     }
 }

@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * This listener allows tracking the lifecycle stages of a workload.
@@ -47,6 +48,9 @@ public interface ReconciliationEventListener {
      * @param workload Workload.
      */
     void onEvent(WorkLoadStage stage, PipelineWorkload workload);
+
+//    /** */
+//    public boolean isWorkloadInProgress(UUID workloadChainId);
 
     /**
      * Returns a composed ReconciliationEventListener that performs, in sequence, this

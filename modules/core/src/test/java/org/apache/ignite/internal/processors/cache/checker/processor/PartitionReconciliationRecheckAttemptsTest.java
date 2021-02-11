@@ -42,6 +42,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
@@ -73,7 +74,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
         CacheConfiguration ccfg = new CacheConfiguration();
         ccfg.setName(DEFAULT_CACHE_NAME);
-        ccfg.setGroupName("zzz");
+//        ccfg.setGroupName("zzz");
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
         ccfg.setAffinity(new RendezvousAffinityFunction(false, 2));
         ccfg.setBackups(NODES_CNT - 1);
@@ -178,7 +179,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
     }
 
     @Test
-    public void test1() throws Exception {
+    public void testCheck() throws Exception {
         CacheConfiguration ccfg = new CacheConfiguration();
         ccfg.setName("qqq");
         ccfg.setGroupName("zzz");
@@ -269,6 +270,157 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
             });
 
 //            doSleep(2000);
+
+            System.out.println("qfrbdiu loadFut");
+        });
+
+        GridTestUtils.runMultiThreadedAsync(() -> res.set(partitionReconciliation(client, builder)), 1, "reconciliation");
+
+        GridTestUtils.waitForCondition(() -> res.get() != null, 40_000);
+
+        loadFut.get();
+
+//        doSleep(5000);
+
+        int cacheId = client.context().cache().cache(DEFAULT_CACHE_NAME).context().cacheId();
+
+        ReconciliationResult reconciliationRes = res.get();
+
+        Map<Integer, Map<UUID, Long>> map0 = reconciliationRes.partSizesMap().get(cacheId);
+
+        Map<UUID, Long> map = map0.get(0);
+            Collection<Long> values = map.values();
+            Iterator<Long> iterator = values.iterator();
+
+            assertTrue(iterator.next() == 300);
+            assertTrue(iterator.next() == 300);
+
+        map = map0.get(1);
+            values = map.values();
+            iterator = values.iterator();
+
+            assertTrue(iterator.next() == 300);
+            assertTrue(iterator.next() == 300);
+
+        long delta00 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
+        long delta01 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
+        long delta10 = ((internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
+        long delta11 = ((internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
+
+        assertFalse(delta00 == 0);
+        assertFalse(delta01 == 0);
+        assertFalse(delta10 == 0);
+        assertFalse(delta11 == 0);
+
+        assertTrue(300+300+delta00+delta01 == client.cache(DEFAULT_CACHE_NAME).size());
+        assertTrue(300+300+delta10+delta11 == client.cache(DEFAULT_CACHE_NAME).size());
+
+        System.out.println("qsfgrvd size() " + client.cache(DEFAULT_CACHE_NAME).size());
+//        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());
+//        org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResultCollector.Simple.partSizesMap
+//        internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0)
+//        PartitionReconciliationProcessor#execute
+//        CollectPartitionKeysByBatchTask.CollectPartitionKeysByBatchJob.execute0
+    }
+
+    @Test
+    public void testRepair() throws Exception {
+//        CacheConfiguration ccfg = new CacheConfiguration();
+//        ccfg.setName("qqq");
+//        ccfg.setGroupName("zzz");
+//        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+//        ccfg.setAffinity(new RendezvousAffinityFunction(false, 2));
+//        ccfg.setBackups(NODES_CNT - 1);
+//        ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
+//
+//        client.createCache(ccfg);
+//
+//        for (int i = 0; i < 500; i++) {
+//            client.cache("qqq").put(i, i);
+//        }
+//
+        for (int i = 100; i < 200; i++) {
+            client.cache(DEFAULT_CACHE_NAME).put(i, i);
+        }
+
+        ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).storageSize.set(0);
+        ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).storageSize.set(0);
+        ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).storageSize.set(0);
+        ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)(internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).storageSize.set(0);
+
+
+//        doSleep(500);
+
+        VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
+        builder.repair(true);
+        builder.parallelism(1);
+//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
+        Set<String> objects = new HashSet<>();
+        objects.add(DEFAULT_CACHE_NAME);
+//        objects.add("qqq");
+        builder.caches(objects);
+        builder.recheckAttempts(3);
+        builder.recheckDelay(0);
+
+        AtomicReference<ReconciliationResult> res = new AtomicReference<>();
+
+        IgniteInternalFuture loadFut = GridTestUtils.runAsync(() -> {
+            System.out.println("qdrvlikt loadFut");
+
+//            for (int i = 200; i < 700; i++) {
+//                client.cache(DEFAULT_CACHE_NAME).put(i, i);
+//
+//                try {
+//                    sleep(10);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//
+////            doSleep(500);
+//
+//            for (int i = 0; i < 10; i++) {
+//                client.cache(DEFAULT_CACHE_NAME).put(i, i);
+//            }
+//
+//            for (int i = 100; i < 200; i++) {
+//                client.cache(DEFAULT_CACHE_NAME).remove(i);
+//            }
+//
+//            Map m = new HashMap();
+//
+//            for (int i = 10; i < 20; i++) {
+//                m.put(i, i);
+//            }
+//
+//            client.cache(DEFAULT_CACHE_NAME).putAll(m);
+//
+//            try (Transaction transaction = client.transactions().txStart()) {
+//                client.cache(DEFAULT_CACHE_NAME).put(110, 110);
+//                client.cache(DEFAULT_CACHE_NAME).put(111, 111);
+//                client.cache(DEFAULT_CACHE_NAME).put(112, 112);
+//                client.cache(DEFAULT_CACHE_NAME).put(113, 113);
+//                client.cache(DEFAULT_CACHE_NAME).put(114, 114);
+//                transaction.commit();
+//            }
+//
+//            client.cache(DEFAULT_CACHE_NAME).invoke(300, (e, o) -> {
+//                e.remove();
+//                return new Object();
+//            });
+//
+//            client.cache(DEFAULT_CACHE_NAME).invoke(301, (e, o) -> {
+//                e.remove();
+//                return new Object();
+//            });
+//
+//            client.cache(DEFAULT_CACHE_NAME).invoke(302, (e, o) -> {
+//                e.remove();
+//                return new Object();
+//            });
+//
+////            doSleep(2000);
 
             System.out.println("qfrbdiu loadFut");
         });

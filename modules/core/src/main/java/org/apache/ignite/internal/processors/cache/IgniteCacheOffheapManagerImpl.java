@@ -1508,7 +1508,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         protected final PartitionUpdateCounter pCntr;
 
         /** Partition size. */
-        private final AtomicLong storageSize = new AtomicLong();
+        public final AtomicLong storageSize = new AtomicLong();
 
         /** */
         private final IntMap<AtomicLong> cacheSizes = new IntRWHashMap();

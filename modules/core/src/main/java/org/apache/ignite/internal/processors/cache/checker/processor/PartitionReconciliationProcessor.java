@@ -40,14 +40,17 @@ import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatc
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.RepairSizesRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
+import org.apache.ignite.internal.processors.cache.checker.processor.workload.RepairSizes;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
+import org.apache.ignite.internal.processors.cache.checker.tasks.RepairSizesTask;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -246,6 +249,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     handle((Recheck)workload);
                 else if (workload instanceof Repair)
                     handle((Repair)workload);
+                else if (workload instanceof RepairSizes)
+                    handle((RepairSizes)workload);
                 else {
                     String err = "Unsupported workload type: " + workload;
 
@@ -333,7 +338,13 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     );
                 }
 
-                workloadChainIdsInProgress.get(workload.workloadChainId()).decrementAndGet();
+                AtomicInteger counter = workloadChainIdsInProgress.get(workload.workloadChainId());
+
+                counter.decrementAndGet();
+
+                if (counter.get() == 0) {
+                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
+                }
             }
         );
     }
@@ -379,7 +390,13 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     }
                 }
 
-                workloadChainIdsInProgress.get(workload.workloadChainId()).decrementAndGet();
+                AtomicInteger counter = workloadChainIdsInProgress.get(workload.workloadChainId());
+
+                counter.decrementAndGet();
+
+                if (counter.get() == 0) {
+                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
+                }
             });
     }
 
@@ -433,7 +450,32 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     }
                 }
 
-                workloadChainIdsInProgress.get(workload.workloadChainId()).decrementAndGet();
+                AtomicInteger counter = workloadChainIdsInProgress.get(workload.workloadChainId());
+
+                counter.decrementAndGet();
+
+                if (counter.get() == 0) {
+                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
+                }
+            });
+    }
+
+    /**
+     * @param workload Workload.
+     */
+    private void handle(RepairSizes workload) throws InterruptedException {
+        compute(
+            RepairSizesTask.class,
+            new RepairSizesRequest(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), startTopVer,
+                workload.partSizesMap()),
+            repairRes -> {
+                AtomicInteger couner = workloadChainIdsInProgress.get(workload.workloadChainId());
+
+                couner.decrementAndGet();
+
+                if (couner.get() == 0) {
+                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
+                }
             });
     }
 
@@ -460,10 +502,10 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         return new Repair(sesId, workloadChainId, cacheName, partId, res, repairAttempts);
     }
 
-    private Repair repairSizes(UUID chainId, String cacheName, int partId) {
-        Map<Integer, Map<Integer, Map<UUID, Long>>> sizesMap = collector.partSizesMap();
-
-    }
+//    private Repair repairSizes(String cacheName, int partId) {
+//        Map<Integer, Map<Integer, Map<UUID, Long>>> sizesMap = collector.partSizesMap();
+//
+//    }
 
     /**
      * This class allows tracking workload chains based on its lifecycle.
