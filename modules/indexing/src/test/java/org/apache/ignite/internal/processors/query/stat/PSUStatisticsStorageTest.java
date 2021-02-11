@@ -52,7 +52,7 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
         // 3) partially remove necessarily for the query statistics and check that query plan will be changed
         statsMgr.clearObjectStatistics(new StatisticsTarget("PUBLIC", "SMALL", "B"));
 
-        GridTestUtils.waitForCondition(() -> {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
             try {
                 checkOptimalPlanChosenForDifferentIndexes(grid0, new String[]{"SMALL_C"}, lessSql, noHints);
                 return true;
@@ -60,7 +60,7 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
             catch (AssertionError e) {
                 return false;
             }
-        }, TIMEOUT);
+        }, TIMEOUT));
 
         // 4) partially collect statistics for extra column and check that query plan still unable to get all statistics
         //      it wants

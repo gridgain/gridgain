@@ -13,41 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.springdata.misc;
 
-import java.io.Serializable;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
- * Compound key.
+ * Advanced SpEl Expressions into projection
+ *
+ * @author Manuel Núñez Sánchez (manuel.nunez@hawkore.com)
  */
-public class PersonKey implements Serializable {
+public interface PersonProjection {
     /** */
-    private int id1;
-
-    /** */
-    private int id2;
+    String getFirstName();
 
     /**
-     * @param id1 ID1.
-     * @param id2 ID2.
+     * Sample of using registered spring bean into SpEL expression
+     * @return
      */
-    public PersonKey(int id1, int id2) {
-        this.id1 = id1;
-        this.id2 = id2;
-    }
+    @Value("#{@sampleExtensionBean.transformParam(target.firstName)}")
+    String getFirstNameTransformed();
 
     /**
-     * @return ID1
+     * Sample of using SpEL expression
+     * @return
      */
-    public int getId1() {
-        return id1;
-    }
-
-    /**
-     * @return ID1
-     */
-    public int getId2() {
-        return id1;
-    }
+    @Value("#{target.firstName + ' ' + target.secondName}")
+    String getFullName();
 }

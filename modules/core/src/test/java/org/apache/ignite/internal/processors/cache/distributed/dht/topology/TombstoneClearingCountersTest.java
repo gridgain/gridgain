@@ -16,42 +16,63 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.BooleanSupplier;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
-import org.apache.ignite.internal.pagemem.wal.WALIterator;
-import org.apache.ignite.internal.pagemem.wal.WALPointer;
-import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
-import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
+import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 
 /**
- * Tests rebalancing scenarios after tombstones are forcefully cleared on supplier.
+ * Tests fast full rebalancing optimization correctness.
  */
+@RunWith(Parameterized.class)
 public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
+    /** */
+    @Parameterized.Parameter(value = 0)
+    public CacheAtomicityMode atomicityMode;
+
+    /**
+     * @return List of test parameters.
+     */
+    @Parameterized.Parameters(name = "mode={0}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>();
+
+        params.add(new Object[]{ATOMIC});
+        params.add(new Object[]{TRANSACTIONAL});
+
+        return params;
+    }
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -68,6 +89,7 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         cfg.setDataStorageConfiguration(dsCfg);
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
+            setAtomicityMode(atomicityMode).
             setBackups(1).
             setAffinity(new RendezvousAffinityFunction(false, 64)));
 
@@ -110,6 +132,46 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange();
 
         crd.cache(DEFAULT_CACHE_NAME).remove(testPart);
+
+        TrackingResolver rslvr = new TrackingResolver(testPart);
+        IgniteEx g2 = startGrid(1, rslvr);
+
+        awaitPartitionMapExchange();
+
+        assertTrue(historical(1).isEmpty());
+        assertNull(rslvr.reason); // Expecting fast full rebalancing.
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "1000")
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
+    @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
+    public void testConsistencyOnCounterTriggeredRebalanceCleanupNotFullBaseline() throws Exception {
+        int id = CU.cacheId("cache_group_173");
+
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        int testPart = 0;
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        cache.put(testPart, 0);
+
+        stopGrid(1);
+        awaitPartitionMapExchange();
+
+        crd.cache(DEFAULT_CACHE_NAME).remove(testPart);
+
+        doSleep(1100);
+
+        // Tombstone shouldn't be removed if not full baseline.
+        CU.unwindEvicts(crd.cachex(DEFAULT_CACHE_NAME).context());
 
         TrackingResolver rslvr = new TrackingResolver(testPart);
         IgniteEx g2 = startGrid(1, rslvr);
@@ -586,38 +648,66 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @param size Size.
+     * Tests if the tombstones are not removed during topology change.
      */
-    private void validadate(int size) {
-        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "3000")
+    public void testTombstoneSafetyOnUnstableTopology() throws Exception {
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
 
-        for (Ignite grid : G.allGrids())
-            assertEquals(size, grid.cache(DEFAULT_CACHE_NAME).size());
-    }
+        int testPart = 0;
 
-    private void checkWAL(IgniteEx ig) throws IgniteCheckedException {
-        WALIterator iter = walIterator(ig);
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
 
-        long cntr = 0;
+        cache.put(testPart, 0);
 
-        while (iter.hasNext()) {
-            IgniteBiTuple<WALPointer, WALRecord> tup = iter.next();
+        stopGrid(1);
 
-            if (tup.get2() instanceof DataRecord) {
-                DataRecord rec = (DataRecord)tup.get2();
+        cache.remove(testPart);
 
-                log.info("DBG: " + rec.toString());
+        GridCacheContext<Object, Object> ctx0 = crd.cachex(DEFAULT_CACHE_NAME).context();
+        PendingEntriesTree t0 = ctx0.group().topology().localPartition(testPart).dataStore().pendingTree();
+        assertFalse(t0.isEmpty());
+
+        IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
+        TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
+        spi1.blockMessages(TestRecordingCommunicationSpi.blockSingleExhangeMessage());
+
+        TrackingResolver rslvr = new TrackingResolver(testPart);
+
+        IgniteInternalFuture<Void> startFut = GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(cfg1, rslvr);
+
+                return null;
             }
-        }
-    }
+        });
 
-    /**
-     * @param ignite Ignite.
-     */
-    private WALIterator walIterator(IgniteEx ignite) throws IgniteCheckedException {
-        IgniteWriteAheadLogManager walMgr = ignite.context().cache().context().wal();
+        spi1.waitForBlocked();
 
-        return walMgr.replay(null);
+        assertFalse(t0.isEmpty());
+
+        doSleep(4000);
+
+        boolean wasEmpty = t0.isEmpty();
+
+        CU.unwindEvicts(ctx0);
+
+        spi1.stopBlock();
+
+        startFut.get();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+        assertTrue(historical(1).isEmpty());
+        assertNull(rslvr.reason);
+
+        assertFalse("Expecting tombstones are not removed during PME", wasEmpty);
+
+        CU.unwindEvicts(ctx0);
     }
 
     /**

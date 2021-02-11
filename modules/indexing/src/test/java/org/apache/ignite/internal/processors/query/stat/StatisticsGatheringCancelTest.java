@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -58,16 +59,28 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
 
         cancelGathering(targets, true, true);
 
+        checkQueueIsEmpty();
+
         statMgr1.gatherObjectStatistics(targets[0]);
+
+        checkQueueIsEmpty();
 
         cancelGathering(targets, false, true);
 
+        checkQueueIsEmpty();
+
         statMgr1.gatherObjectStatistics(targets[0]);
+
+        checkQueueIsEmpty();
 
         cancelGathering(targets, false, false);
 
-        statMgr1.gatherObjectStatistics(targets[0]);
+        checkQueueIsEmpty();
 
+        statMgr1.gatherObjectStatistics(targets[0]);
+    }
+
+    private void checkQueueIsEmpty() throws Exception {
         GridTestUtils.waitForCondition(() -> {
             try {
                 checkStatTasksEmpty(0);
@@ -77,14 +90,17 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
             catch (Throwable e) {
                 return false;
             }
-        }, TIMEOUT);
+        }, TIMEOUT * 10 );
+        // To show the error text - check it again.
+        checkStatTasksEmpty(0);
+        checkStatTasksEmpty(1);
     }
 
     /**
      * Start and cancel statistics gathering.
      *
      * @param targets Targets to collect statistics by.
-     * @param hangLoc If {@code true} - hand local node, otherwise - hang pool in remote one.
+     * @param hangLoc If {@code true} - hang local node, otherwise - hang pool in remote one.
      * @param hangGathering If {@code true} - hang gathering pool, otherwise - hand message processing one.
      * @throws Exception In case of errors.
      */
@@ -111,6 +127,15 @@ public class StatisticsGatheringCancelTest extends StatisticsRestartAbstractTest
 
         lock.unlock();
 
+        for (StatisticsGatheringFuture<?> future : futures) {
+            try {
+                future.get();
+                fail("Future " + future.gatId() + " for " + future.targets() + " wasn't cancelled.");
+            }
+            catch (IgniteFutureCancelledCheckedException e) {
+                // NoOp.
+            }
+        }
     }
 
     /** {@inheritDoc} */

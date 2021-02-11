@@ -196,14 +196,8 @@ public class GridServiceProxy<T> implements Serializable {
                         if (svcCtx != null) {
                             Service svc = svcCtx.service();
 
-                            if (svc != null) {
-                                try {
-                                    return callServiceLocally(svc, mtd, args);
-                                }
-                                catch (InvocationTargetException e) {
-                                    throw e.getTargetException();
-                                }
-                            }
+                            if (svc != null)
+                                return callServiceLocally(svc, mtd, args);
                         }
                     }
                     else {
@@ -218,6 +212,10 @@ public class GridServiceProxy<T> implements Serializable {
                             waitTimeout,
                             true).get();
                     }
+                }
+                catch (InvocationTargetException e) {
+                    // For local services rethrow original exception.
+                    throw e.getTargetException();
                 }
                 catch (RuntimeException | Error e) {
                     throw e;

@@ -26,7 +26,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.task.GridInternal;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.jetbrains.annotations.Nullable;
@@ -86,7 +85,7 @@ public class VisorRunningQueriesCollectorTask extends VisorMultiNodeTask<VisorRu
 
             Collection<VisorRunningQuery> res = new ArrayList<>(queries.size());
 
-            long curTime = U.currentTimeMillis();
+            long curTime = System.currentTimeMillis();
 
             for (GridRunningQueryInfo qry : queries)
                 res.add(new VisorRunningQuery(qry.id(), qry.query(), qry.queryType(), qry.schemaName(),

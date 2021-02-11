@@ -19,6 +19,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,11 +54,20 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         Assert.assertNotNull(statMgr0.getGlobalStatistics(SCHEMA, "SMALL"));
 
         Assert.assertNotNull(statMgr1.getLocalStatistics(SCHEMA, "SMALL"));
-        Assert.assertNotNull(statMgr1.getGlobalStatistics(SCHEMA, "SMALL"));
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            try {
+                return null != statMgr1.getGlobalStatistics(SCHEMA, "SMALL");
+            } catch (IgniteCheckedException e) {
+                return false;
+            }
+        }, TIMEOUT));
+
+        // Await till gathered statistics spreaded between all nodes.
+        U.sleep(1000);
 
         statMgr1.clearObjectStatistics(SMALL_TARGET);
 
-        GridTestUtils.waitForCondition(() -> {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
             try {
                 return null == statMgr0.getLocalStatistics(SCHEMA, "SMALL")
                     && null == statMgr1.getLocalStatistics(SCHEMA, "SMALL")
@@ -68,7 +78,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
                 fail(e.getMessage());
             }
             return false;
-        }, TIMEOUT);
+        }, TIMEOUT ));
     }
 
     /**
@@ -90,7 +100,6 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         Assert.assertNull(statMgr0.getGlobalStatistics(SCHEMA, "NO_NAME"));
         Assert.assertNull(statMgr1.getGlobalStatistics(SCHEMA, "NO_NAME"));
     }
-
 
     /**
      * 1) Restart without statistics version

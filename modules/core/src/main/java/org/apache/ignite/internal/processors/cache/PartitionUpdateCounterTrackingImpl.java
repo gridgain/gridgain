@@ -84,7 +84,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     protected final CacheGroupContext grp;
 
     /** Tombstones clear counter. */
-    private long clearCntr;
+    private volatile long clearCntr;
 
     /**
      * Initial counter points to last sequential update after WAL recovery.
@@ -465,6 +465,8 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
             .a(highestAppliedCounter())
             .a(", hwm=")
             .a(reserveCntr.get())
+            .a(", clearCntr=")
+            .a(tombstoneClearCounter())
             .a(']')
             .toString();
     }
