@@ -313,8 +313,8 @@ public class Checkpointer extends GridWorker {
         if (deviation == null || deviation == 0)
             return checkpointFreq;
 
-        long startDelay = ThreadLocalRandom.current().nextLong(U.ensurePositive(U.safeAbs(checkpointFreq * deviation)/ 100, 1))
-            - U.ensurePositive(U.safeAbs(checkpointFreq * deviation)/ 200, 1);
+        long startDelay = ThreadLocalRandom.current().nextLong(U.ensurePositive(U.safeAbs(checkpointFreq * deviation) / 100, 1))
+            - U.ensurePositive(U.safeAbs(checkpointFreq * deviation) / 200, 1);
 
         return U.safeAbs(checkpointFreq + startDelay);
     }
