@@ -301,7 +301,7 @@ public class Checkpointer extends GridWorker {
      * @return Next checkpoint interval.
      */
     private long nextCheckpointInterval() {
-        long startDelay = ThreadLocalRandom.current().nextLong(checkpointFreq / 2) - checkpointFreq / 4;
+        long startDelay = ThreadLocalRandom.current().nextLong(U.ensurePositive(checkpointFreq / 2, 1)) - checkpointFreq / 4;
 
         return U.safeAbs(checkpointFreq + startDelay);
     }
