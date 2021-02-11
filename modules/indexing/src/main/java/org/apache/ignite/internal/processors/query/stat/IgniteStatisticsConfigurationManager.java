@@ -19,9 +19,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -79,7 +82,7 @@ public class IgniteStatisticsConfigurationManager {
     private volatile DistributedMetaStorage distrMetaStorage;
 
     /** */
-    private volatile boolean started;
+    private AtomicBoolean started = new AtomicBoolean(false);
 
     /** Monitor to synchronize changes repository: aggregate after collects and drop statistics. */
     private final Object mux = new Object();
@@ -110,7 +113,7 @@ public class IgniteStatisticsConfigurationManager {
                         // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
                         // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
                         // called on exchange done.
-                        if (!started)
+                        if (!started.get())
                             return;
 
                         mgmtPool.submit(() -> {
@@ -133,9 +136,12 @@ public class IgniteStatisticsConfigurationManager {
         exchange.registerExchangeAwareComponent(
             new PartitionsExchangeAware() {
                 @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
-                    started = true;
+                    Map<StatisticsObjectConfiguration, Set<Integer>> cfg = scanAndCheckLocalStatistic(fut.topologyVersion());
 
-                    scanAndCheckLocalStatistic(fut.topologyVersion());
+                    if (started.compareAndSet(false,true))
+                        repo.loadObsolescenceInfo(cfg);
+                    else
+                        repo.updateObsolescenceInfo(cfg);
                 }
             }
         );
@@ -145,16 +151,22 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /** */
-    private void scanAndCheckLocalStatistic(AffinityTopologyVersion topVer) {
+    private Map<StatisticsObjectConfiguration, Set<Integer>> scanAndCheckLocalStatistic(AffinityTopologyVersion topVer) {
+        Map<StatisticsObjectConfiguration, Set<Integer>> res = new HashMap<>();
+
         mgmtPool.submit(() -> {
             try {
-                distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) ->
-                    checkLocalStatistics((StatisticsObjectConfiguration)v, topVer));
+                distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> {
+                    StatisticsObjectConfiguration cfg = (StatisticsObjectConfiguration)v;
+                    Set<Integer> parts = checkLocalStatistics(cfg, topVer);
+                    res.put(cfg, parts);
+                    });
             }
             catch (IgniteCheckedException e) {
                 log.warning("Unexpected exception on check local statistic on start", e);
             }
         });
+        return res;
     }
 
     /** */
@@ -296,13 +308,13 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /** */
-    private void checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
+    private Set<Integer> checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
         try {
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
 
             if (tbl == null) {
                 // Drop tables handle by onDropTable
-                return;
+                return Collections.emptySet();
             }
 
             GridCacheContext cctx = tbl.cacheContext();
@@ -381,10 +393,13 @@ public class IgniteStatisticsConfigurationManager {
             }
             else
                 gatherer.submit(() -> onFinishLocalGathering(cfg.key(), parts));
+
+            return parts;
         }
         catch (IgniteCheckedException ex) {
             log.error("Unexpected error on check local statistics", ex);
         }
+        return Collections.emptySet();
     }
 
     /** */

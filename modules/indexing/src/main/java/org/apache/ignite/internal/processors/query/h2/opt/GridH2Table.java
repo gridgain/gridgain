@@ -40,6 +40,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
@@ -801,6 +802,8 @@ public class GridH2Table extends TableBase {
             }
         }
         finally {
+            updateStat(row0, prevRow0);
+
             row0.clearValuesCache();
 
             if (prevRow0 != null)
@@ -820,6 +823,8 @@ public class GridH2Table extends TableBase {
      */
     public boolean remove(CacheDataRow row) throws IgniteCheckedException {
         H2CacheRow row0 = desc.createRow(row);
+
+        boolean res = false;
 
         lock(false);
 
@@ -844,11 +849,15 @@ public class GridH2Table extends TableBase {
                 size.decrement();
             }
 
-            return rmv;
+            res = rmv;
         }
         finally {
             unlock(false);
         }
+
+        updateStat(row0.key());
+
+        return res;
     }
 
     /**
@@ -1344,6 +1353,39 @@ public class GridH2Table extends TableBase {
         res.sortType = sorting;
 
         return res;
+    }
+
+    /**
+     * Process statistics by update/insert rows.
+     *
+     * @param row New row value.
+     * @param prevRow Previous row value (if exists).
+     */
+    private void updateStat(CacheDataRow row, @Nullable CacheDataRow prevRow) {
+        if (prevRow != null)
+            updateStat(prevRow.key());
+        else if (row != null)
+            updateStat(row.key());
+    }
+
+    /**
+     * Update key statistics.
+     *
+     * @param key Updated key.
+     */
+    private void updateStat(KeyCacheObject key) {
+        GridCacheContext cacheCtx = cacheInfo.cacheContext();
+        if (cacheCtx == null)
+            return;
+
+        try {
+            cacheCtx.kernalContext().query().getIndexing().statsManager().onRowUpdated(this.identifier().schema(),
+                this.identifier.table(), key.partition(), key.valueBytes(this.cacheContext().cacheObjectContext()));
+        } catch (IgniteCheckedException e) {
+            // TODO: log error
+        }
+
+        System.err.println("updateStat on " + key + " partId = " + key.partition() + " tbl: " + this.identifier());
     }
 
     /**

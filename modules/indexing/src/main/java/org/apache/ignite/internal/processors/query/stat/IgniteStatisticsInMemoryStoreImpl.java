@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -89,6 +90,23 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
 
             return v;
         });
+    }
+
+    /** {@inheritDoc} */
+    @Override public void saveObsolescenceInfo(
+        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> obsolescence
+    ) {
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public void removeObsolescenceInfo(StatisticsKey key, Set<Integer> partIds) {
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> loadAllObsolescence() {
+        return Collections.emptyMap();
     }
 
     /** {@inheritDoc} */

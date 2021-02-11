@@ -19,6 +19,8 @@ import org.apache.ignite.IgniteLogger;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -90,5 +92,22 @@ public class IgniteStatisticsDummyStoreImpl implements IgniteStatisticsStore {
     @Override public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics) {
         if (log.isInfoEnabled())
             log.info("Unable to save partition level statistics on non server node.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public void saveObsolescenceInfo(
+        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> obsolescence
+    ) {
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public void removeObsolescenceInfo(StatisticsKey key, Set<Integer> partIds) {
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> loadAllObsolescence() {
+        return Collections.emptyMap();
     }
 }

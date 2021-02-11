@@ -50,6 +50,16 @@ public interface IgniteStatisticsManager {
     public ObjectStatistics getLocalStatistics(String schemaName, String objName);
 
     /**
+     * To track statistics invalidation. Skip value if no statistics for the given table exists.
+     *
+     * @param schemaName Schema name.
+     * @param objName Object name.
+     * @param partId Partition id.
+     * @param keyBytes Row key bytes.
+     */
+    public void onRowUpdated(String schemaName, String objName, int partId, byte[] keyBytes);
+
+    /**
      * Stop statistic manager.
      */
     public void stop();
