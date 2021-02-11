@@ -127,7 +127,7 @@ public class RollingUpgradeCommand extends AbstractCommand<RollingUpgradeArgumen
 
         switch (args.command()) {
             case FINISH:
-                new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.DISABLE, false);
+                return new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.DISABLE, false);
             case FORCE:
                 return new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.ENABLE, true);
             case START:
