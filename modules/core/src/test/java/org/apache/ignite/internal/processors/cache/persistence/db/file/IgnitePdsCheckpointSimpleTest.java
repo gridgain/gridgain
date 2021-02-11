@@ -26,6 +26,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
@@ -106,6 +107,11 @@ public class IgnitePdsCheckpointSimpleTest extends GridCommonAbstractTest {
         IgniteEx ignite0 = startGrids(nodes);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
+
+        SimpleDistributedProperty<Integer> cpFreqDeviation = U.field(((IgniteEx)ignite0).context().cache().context().database(),
+            "cpFreqDeviation");
+
+        cpFreqDeviation.propagate(25);
 
         doSleep(cpFrequency * 2);
 

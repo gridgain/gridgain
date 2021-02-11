@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -155,6 +156,9 @@ public class Checkpointer extends GridWorker {
     /** The number of IO-bound threads which will write pages to disk. */
     private final int checkpointWritePageThreads;
 
+    /** Checkpoint frequency deviation. */
+    private final Supplier<Integer> cpFreqDeviation;
+
     /** Checkpoint runner thread pool. If null tasks are to be run in single thread */
     @Nullable private volatile IgniteThreadPoolExecutor checkpointWritePagesPool;
 
@@ -190,6 +194,7 @@ public class Checkpointer extends GridWorker {
      * @param factory Page writer factory.
      * @param checkpointFrequency Checkpoint frequency.
      * @param checkpointWritePageThreads The number of IO-bound threads which will write pages to disk.
+     * @param cpFreqDeviation Deviation of checkpoint frequency.
      */
     Checkpointer(
         @Nullable String gridName,
@@ -204,7 +209,8 @@ public class Checkpointer extends GridWorker {
         CheckpointWorkflow checkpoint,
         CheckpointPagesWriterFactory factory,
         long checkpointFrequency,
-        int checkpointWritePageThreads
+        int checkpointWritePageThreads,
+        Supplier<Integer> cpFreqDeviation
     ) {
         super(gridName, name, logger.apply(Checkpointer.class), workersRegistry);
         this.pauseDetector = detector;
@@ -217,6 +223,7 @@ public class Checkpointer extends GridWorker {
         this.cacheProcessor = cacheProcessor;
         this.checkpointWritePageThreads = Math.max(checkpointWritePageThreads, 1);
         this.checkpointWritePagesPool = initializeCheckpointPool();
+        this.cpFreqDeviation = cpFreqDeviation;
 
         scheduledCp = new CheckpointProgressImpl(nextCheckpointInterval());
     }
@@ -301,7 +308,13 @@ public class Checkpointer extends GridWorker {
      * @return Next checkpoint interval.
      */
     private long nextCheckpointInterval() {
-        long startDelay = ThreadLocalRandom.current().nextLong(U.ensurePositive(checkpointFreq / 2, 1)) - checkpointFreq / 4;
+        Integer deviation = cpFreqDeviation.get();
+
+        if (deviation == null || deviation == 0)
+            return checkpointFreq;
+
+        long startDelay = ThreadLocalRandom.current().nextLong(U.ensurePositive(U.safeAbs(checkpointFreq * deviation)/ 100, 1))
+            - U.ensurePositive(U.safeAbs(checkpointFreq * deviation)/ 200, 1);
 
         return U.safeAbs(checkpointFreq + startDelay);
     }
