@@ -383,6 +383,12 @@ namespace Apache.Ignite.Core.Tests.Services
         }
 
         /** <inheritDoc /> */
+        public void testException(string exceptionClass)
+        {
+            _svc.testException(exceptionClass);
+        }
+
+        /** <inheritDoc /> */
         public void sleep(long delayMs)
         {
             _svc.sleep(delayMs);
