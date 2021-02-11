@@ -1955,10 +1955,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             else {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key.prepareForCache(coCtx, coCtx.compressKeys());
+                key = key.prepareForCache(coCtx, coCtx.compressKeys());
 
                 if (val != null)
-                    val.prepareForCache(coCtx, true);
+                    val = val.prepareForCache(coCtx, true);
 
                 rowStore.addRow(dataRow, grp.statisticsHolderData());
             }
@@ -3063,7 +3063,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
-            key = key.prepareForCache(cctx.cacheObjectContext(), cctx.cacheObjectContext().compressKeys());
+            key = key.prepareForCache(cctx.cacheObjectContext(), false);
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
