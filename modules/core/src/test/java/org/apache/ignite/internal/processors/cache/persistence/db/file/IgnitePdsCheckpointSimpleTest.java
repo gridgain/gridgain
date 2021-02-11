@@ -109,9 +109,9 @@ public class IgnitePdsCheckpointSimpleTest extends GridCommonAbstractTest {
 
         doSleep(cpFrequency * 2);
 
-            TreeSet<Long> cpStartTimes = new TreeSet();
+        TreeSet<Long> cpStartTimes = new TreeSet();
 
-        for (int i=0; i<nodes; i++)
+        for (int i = 0; i < nodes; i++)
             cpStartTimes.add(getLatCheckpointStartTime(ignite(i)));
 
         assertEquals(nodes, cpStartTimes.size());
