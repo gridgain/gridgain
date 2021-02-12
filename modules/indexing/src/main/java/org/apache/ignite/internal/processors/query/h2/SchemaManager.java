@@ -853,7 +853,7 @@ public class SchemaManager {
     }
 
     /** */
-    public void onDropTable(String schema, String tblName) {
+    public void afterDropTable(String schema, String tblName) {
         dropTblLsnrs.forEach(l -> l.accept(schema, tblName));
     }
 }

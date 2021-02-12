@@ -836,9 +836,12 @@ public class CommandProcessor {
                 else {
                     ctx.security().authorize(tbl.cacheName(), SecurityPermission.CACHE_DESTROY);
 
+                    String schema = tbl.getSchema().getName();
+                    String tblName = tbl.getName();
+
                     ctx.query().dynamicTableDrop(tbl.cacheName(), cmd.tableName(), cmd.ifExists());
 
-                    schemaMgr.onDropTable(tbl.cacheName(), cmd.tableName());
+                    schemaMgr.afterDropTable(schema, tblName);
                 }
             }
             else if (cmdH2 instanceof GridSqlAlterTableAddColumn) {
