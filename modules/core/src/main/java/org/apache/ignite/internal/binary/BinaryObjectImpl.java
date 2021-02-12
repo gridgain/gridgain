@@ -198,9 +198,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         int len = length();
 
         if (detached()) {
-            assert compressedArr != null : "putValue() called before prepareForCache()";
-
-            if (compressedArr.length > 0) {
+            if (compressedArr != null && compressedArr.length > 0) {
                 type = CacheObject.TYPE_BINARY_COMPRESSED;
 
                 arr = compressedArr;
@@ -219,9 +217,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         byte[] arr = this.arr;
 
         if (detached()) {
-            assert compressedArr != null : "putValue() called before prepareForCache()";
-
-            if (compressedArr.length > 0) {
+            if (compressedArr != null && compressedArr.length > 0) {
                 type = CacheObject.TYPE_BINARY_COMPRESSED;
 
                 arr = compressedArr;
@@ -232,9 +228,9 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /** {@inheritDoc} */
-    @Override public int valueBytesLength(CacheObjectContext ctx) {
+    @Override public int valueBytesLength(CacheObjectContext ctx) throws IgniteCheckedException {
         if (detached()) {
-            if (compressedArr.length > 0)
+            if (compressedArr != null && compressedArr.length > 0)
                 return CacheObjectAdapter.objectPutSize(compressedArr.length);
         }
 
@@ -251,11 +247,8 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         }
 
         if (entryCompressionStrategy == null) {
-            this.compressedArr = UNCOMPRESSED;
-
             return this;
         }
-
 
         byte[] tryCompressed = entryCompressionStrategy.tryCompress(arr);
 
@@ -273,9 +266,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         if (!detached() && detachAllowed)
             return detach().prepareForCache(ctx, compress);
         else if (compress)
-            tryCompress(ctx.compressionStrategy());
-        else
-            compressedArr = UNCOMPRESSED;
+            return tryCompress(ctx.compressionStrategy());
 
         return this;
     }
