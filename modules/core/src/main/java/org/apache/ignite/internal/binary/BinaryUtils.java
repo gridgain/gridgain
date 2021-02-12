@@ -715,7 +715,7 @@ public class BinaryUtils {
         Class<?> cls = obj.getClass();
 
         return cls == KeyCacheObjectImpl.class ||
-            BinaryObjectImpl.class.isAssignableFrom(cls) ||
+            cls == BinaryObjectImpl.class ||
             cls == CacheObjectImpl.class ||
             cls == CacheObjectByteArrayImpl.class ||
             cls == BinaryEnumObjectImpl.class ||
