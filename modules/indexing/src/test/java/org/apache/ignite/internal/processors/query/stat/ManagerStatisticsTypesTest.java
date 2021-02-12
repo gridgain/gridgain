@@ -37,7 +37,7 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
 
         assertEquals(SMALL_SIZE * 1.5 - 1, dtypesStat.rowCount());
 
-        assertEquals(TYPES.length + 5, dtypesStat.columnsStatistics().size());
+        assertEquals(TYPES.length + 3, dtypesStat.columnsStatistics().size());
 
         for (String type : TYPES) {
             String colName = COL_NAME_PREFIX + type;
@@ -52,6 +52,7 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
 
             assertEquals(dtypesStat.rowCount(), colStat.total());
             assertNotNull(colStat.raw());
+
             if (colName.equals("COL_GEOMETRY")) {
                 assertNull(colStat.min());
                 assertNull(colStat.max());
