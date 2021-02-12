@@ -1960,6 +1960,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (val != null)
                     val = val.prepareForCache(coCtx, true);
 
+                dataRow = makeDataRow(key, val, ver, expireTime, cacheId);
+
                 rowStore.addRow(dataRow, grp.statisticsHolderData());
             }
 

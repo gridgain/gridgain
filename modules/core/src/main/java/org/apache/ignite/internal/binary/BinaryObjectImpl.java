@@ -232,10 +232,8 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /** {@inheritDoc} */
-    @Override public int valueBytesLength(CacheObjectContext ctx) throws IgniteCheckedException {
+    @Override public int valueBytesLength(CacheObjectContext ctx) {
         if (detached()) {
-            assert compressedArr != null : "putValue() called before prepareForCache()";
-
             if (compressedArr.length > 0)
                 return CacheObjectAdapter.objectPutSize(compressedArr.length);
         }
@@ -258,6 +256,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
             return this;
         }
 
+
         byte[] tryCompressed = entryCompressionStrategy.tryCompress(arr);
 
         BinaryObjectImpl compressedForm = new BinaryObjectImpl(ctx, arr, start);
@@ -274,7 +273,9 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         if (!detached() && detachAllowed)
             return detach().prepareForCache(ctx, compress);
         else if (compress)
-            return tryCompress(ctx.compressionStrategy());
+            tryCompress(ctx.compressionStrategy());
+        else
+            compressedArr = UNCOMPRESSED;
 
         return this;
     }
