@@ -15,18 +15,12 @@
  */
 package org.apache.ignite.internal;
 
-import java.lang.management.ManagementFactory;
-import javax.management.MBeanServer;
-import javax.management.MBeanServerInvocationHandler;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClusterMetricsMXBean;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -150,10 +144,11 @@ public class IgniteClientFailuresTest extends GridCommonAbstractTest {
 
         checkCacheOperations(client02.cache("cache0"));
 
-        assertEquals( 4, srv0.context().discovery().allNodes().size());
+        assertEquals(4, srv0.context().discovery().allNodes().size());
 
         // Cluster metrics.
-        ClusterMetricsMXBean mxBeanCluster = mxBean(0, ClusterMetricsMXBeanImpl.class);
+        ClusterMetricsMXBean mxBeanCluster = GridCommonAbstractTest.getMxBean(srv0.name(), "Kernal",
+            ClusterMetricsMXBeanImpl.class.getSimpleName(), ClusterMetricsMXBean.class);
 
         assertEquals(1, mxBeanCluster.getTotalClientNodes());
     }
@@ -257,28 +252,5 @@ public class IgniteClientFailuresTest extends GridCommonAbstractTest {
         ((TcpCommunicationSpi)commSpi).simulateNodeFailure();
 
         ((TcpDiscoverySpi)discoSpi).simulateNodeFailure();
-    }
-
-    /**
-     * Gets ClusterMetricsMXBean for given node.
-     *
-     * @param nodeIdx Node index.
-     * @param clazz Class of ClusterMetricsMXBean implementation.
-     * @return MBean instance.
-     */
-    private ClusterMetricsMXBean mxBean(int nodeIdx, Class<? extends ClusterMetricsMXBean> clazz)
-        throws MalformedObjectNameException {
-
-        ObjectName mbeanName = U.makeMBeanName(
-            getTestIgniteInstanceName(nodeIdx),
-            "Kernal",
-            clazz.getSimpleName());
-
-        MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
-
-        if (!mbeanSrv.isRegistered(mbeanName))
-            fail("MBean is not registered: " + mbeanName.getCanonicalName());
-
-        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, ClusterMetricsMXBean.class, true);
     }
 }
