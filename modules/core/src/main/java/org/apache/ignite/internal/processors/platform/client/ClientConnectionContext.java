@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -37,6 +38,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxContext;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 
+import static org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature.SQL_TIMEZONE_FIX;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.AUTHORIZATION;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.BITMAP_FEATURES;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.USER_ATTRIBUTES;
@@ -83,7 +85,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
     /** Default protocol context. */
     public static final ClientProtocolContext DEFAULT_PROTOCOL_CONTEXT =
-        new ClientProtocolContext(DEFAULT_VER, ClientBitmaskFeature.allFeaturesAsEnumSet());
+        new ClientProtocolContext(DEFAULT_VER, ClientBitmaskFeature.allFeaturesAsEnumSet(), null);
 
     /** Supported versions. */
     private static final Collection<ClientListenerProtocolVersion> SUPPORTED_VERS = Arrays.asList(
@@ -150,7 +152,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
      * @param thinCfg Thin-client configuration.
      */
     public ClientConnectionContext(GridKernalContext ctx, GridNioSession ses, long connId, int maxCursors,
-        ThinClientConfiguration thinCfg) {
+        ThinClientConfiguration thinCfg, TimeZone srvTz) {
         super(ctx, ses, connId);
 
         this.maxCursors = maxCursors;
@@ -185,19 +187,25 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
     }
 
     /** {@inheritDoc} */
-    @Override public void initializeFromHandshake(GridNioSession ses,
-        ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
+    @Override public void initializeFromHandshake(GridNioSession ses, ClientListenerProtocolVersion ver,
+        BinaryReaderExImpl reader)
         throws IgniteCheckedException {
 
         EnumSet<ClientBitmaskFeature> features = null;
-
         if (ClientProtocolContext.isFeatureSupported(ver, BITMAP_FEATURES)) {
             byte[] cliFeatures = reader.readByteArray();
 
             features = ClientBitmaskFeature.enumSet(cliFeatures);
         }
 
-        currentProtocolContext = new ClientProtocolContext(ver, features);
+        TimeZone clientTz = null;
+        if (ClientProtocolContext.isFeatureSupported(features, SQL_TIMEZONE_FIX)) {
+            String clientTzId = reader.readString();
+
+            clientTz = TimeZone.getTimeZone(clientTzId);
+        }
+
+        currentProtocolContext = new ClientProtocolContext(ver, features, clientTz);
 
         String user = null;
         String pwd = null;

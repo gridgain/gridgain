@@ -19,6 +19,10 @@ package org.apache.ignite.internal.processors.odbc;
 import java.math.BigDecimal;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.util.TimeZone;
 import java.util.UUID;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -309,5 +313,50 @@ public abstract class SqlListenerUtils {
         toRegex = toRegex.replaceAll("([^\\\\\\\\])(\\\\\\\\(?>\\\\\\\\\\\\\\\\)*\\\\\\\\)*\\\\\\\\([_|%])", "$1$2$3");
 
         return toRegex.substring(1);
+    }
+
+    /**
+     */
+    public static Timestamp convertWithTimeZone(Timestamp ts, TimeZone tzFrom, TimeZone tzTo) {
+        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
+            return ts;
+
+        return new Timestamp(convertWithTimeZone(tzFrom, tzTo, ts.getTime()));
+    }
+
+    /**
+     */
+    public static Time convertWithTimeZone(Time time, TimeZone tzFrom, TimeZone tzTo) {
+        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
+            return time;
+
+        return new Time(convertWithTimeZone(tzFrom, tzTo, time.getTime()));
+    }
+
+    /**
+     */
+    public static java.util.Date convertWithTimeZone(java.util.Date date, TimeZone tzFrom, TimeZone tzTo) {
+        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
+            return date;
+
+        return new Time(convertWithTimeZone(tzFrom, tzTo, date.getTime()));
+    }
+
+    /**
+     * Change timezone from one to another timezone.
+     *
+     * @param tzFrom Timezone from which to convert.
+     * @param tzTo Timezone to convert to/
+     * @param ms Miliseconds since Epoch.
+     * @return Fixed time since Epoch.
+     */
+    private static long convertWithTimeZone(TimeZone tzFrom, TimeZone tzTo, long ms) {
+        Instant i = Instant.ofEpochMilli(ms);
+
+        LocalDateTime ldt = LocalDateTime.ofInstant(i, tzFrom.toZoneId());
+
+        ZonedDateTime zdt = ldt.atZone(tzTo.toZoneId());
+
+        return zdt.toInstant().toEpochMilli();
     }
 }

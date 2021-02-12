@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.platform.client;
 
 import java.util.EnumSet;
+import java.util.TimeZone;
+
 import org.apache.ignite.internal.ThinProtocolFeature;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 
@@ -30,13 +32,19 @@ public class ClientProtocolContext {
     /** Features. */
     private final EnumSet<ClientBitmaskFeature> features;
 
+    /** Client timezone. */
+    private final TimeZone clientTz;
+
     /**
      * @param ver Protocol version.
      * @param features Supported features.
+     * @param clientTz Client timezone.
      */
-    public ClientProtocolContext(ClientListenerProtocolVersion ver, EnumSet<ClientBitmaskFeature> features) {
+    public ClientProtocolContext(ClientListenerProtocolVersion ver, EnumSet<ClientBitmaskFeature> features,
+        TimeZone clientTz) {
         this.ver = ver;
         this.features = features != null ? features : EnumSet.noneOf(ClientBitmaskFeature.class);
+        this.clientTz = clientTz;
     }
 
     /**
@@ -82,5 +90,22 @@ public class ClientProtocolContext {
      */
     public static boolean isFeatureSupported(ClientListenerProtocolVersion ver, ClientProtocolVersionFeature feature) {
         return ver.compareTo(feature.verIntroduced()) >= 0;
+    }
+
+    /**
+     * Check if the feature is supported.
+     * @param features Features set.
+     * @param feature Feature which support should be checked.
+     * @return {@code true} if the feature was supported in the protocol version.
+     */
+    public static boolean isFeatureSupported(EnumSet<ClientBitmaskFeature> features, ClientBitmaskFeature feature) {
+        return features != null && features.contains(feature);
+    }
+
+    /**
+     * @return Client time zone.
+     */
+    public TimeZone clientTimeZone() {
+        return clientTz;
     }
 }
