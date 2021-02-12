@@ -154,6 +154,33 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         }
     }
 
+
+    /**
+     * Check statistics on cluster after change topology.
+     * 1. Create statistic for a table;
+     * 2. Restart node;
+     * 3. Check statistics.
+     */
+    @Test
+    public void updateStatisticsOnRestartSingleNode() throws Exception {
+        if (!persist)
+            return;
+
+        startGridAndChangeBaseline(0);
+
+        createSmallTable(null);
+
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        stopGrid(0);
+
+        startGrid(0);
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+    }
+
     /**
      * Check statistics on cluster after change topology.
      * 1. Create statistic for a table;

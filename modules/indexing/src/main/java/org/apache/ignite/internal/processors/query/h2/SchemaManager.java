@@ -581,8 +581,6 @@ public class SchemaManager {
                     log.debug("Dropping database index table with SQL: " + sql);
 
                 stmt.executeUpdate(sql);
-
-                dropTblLsnrs.forEach(l -> l.accept(tbl.schemaName(), tbl.tableName()));
             }
             catch (SQLException e) {
                 throw new IgniteSQLException("Failed to drop database index table [type=" + tbl.type().name() +
@@ -852,5 +850,10 @@ public class SchemaManager {
     /** */
     public void registerDropTable(BiConsumer<String, String> lsnr) {
         dropTblLsnrs.add(lsnr);
+    }
+
+    /** */
+    public void onDropTable(String schema, String tblName) {
+        dropTblLsnrs.forEach(l -> l.accept(schema, tblName));
     }
 }

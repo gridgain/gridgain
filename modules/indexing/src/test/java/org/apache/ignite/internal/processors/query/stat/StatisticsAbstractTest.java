@@ -239,6 +239,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected void createSmallTable(String suffix) {
         suffix = suffix != null ? suffix : "";
 
+        System.out.println("+++ CREATE small" + suffix);
+
         sql("DROP TABLE IF EXISTS small" + suffix);
 
         sql(String.format("CREATE TABLE small%s (a INT PRIMARY KEY, b INT, c INT)" +
