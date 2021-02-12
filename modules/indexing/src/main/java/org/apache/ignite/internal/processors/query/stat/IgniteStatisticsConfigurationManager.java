@@ -30,6 +30,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ExchangeType;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -51,9 +52,6 @@ import org.gridgain.internal.h2.table.Column;
  *
  */
 public class IgniteStatisticsConfigurationManager {
-    /** */
-    public static final StatisticsColumnConfiguration[] EMPTY_COLUMN_CFGS_ARR = new StatisticsColumnConfiguration[0];
-
     /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
 
@@ -134,6 +132,9 @@ public class IgniteStatisticsConfigurationManager {
             new PartitionsExchangeAware() {
                 @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
                     started = true;
+
+                    if (fut.exchangeType() != ExchangeType.ALL)
+                        return;
 
                     scanAndCheckLocalStatistic(fut.topologyVersion());
                 }
@@ -230,12 +231,12 @@ public class IgniteStatisticsConfigurationManager {
     ) {
         // Drop all columns
         if (colToRemove.isEmpty())
-            return EMPTY_COLUMN_CFGS_ARR;
+            return StatisticsObjectConfiguration.EMPTY_COLUMN_CFGS_ARR;
 
         Set<StatisticsColumnConfiguration> cols = Arrays.stream(oldCfg.columns())
             .filter(c -> !colToRemove.contains(c.name())).collect(Collectors.toSet());
 
-        return cols.toArray(EMPTY_COLUMN_CFGS_ARR);
+        return cols.toArray(StatisticsObjectConfiguration.EMPTY_COLUMN_CFGS_ARR);
     }
 
     /** Drop All statistics. */

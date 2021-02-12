@@ -25,8 +25,8 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Statistics gathering context.
  */
 public class LocalStatisticsGatheringContext {
-    /** Amount of remaining partitions */
-    private Set<Integer> remainingParts;
+    /** Remaining partitions */
+    private final Set<Integer> remainingParts;
 
     /** Done future. */
     private final CompletableFuture<Void> fut;

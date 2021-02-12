@@ -93,7 +93,7 @@ public class IgniteStatisticsHelper {
                         keyMsg.schema(), keyMsg.obj()));
         }
 
-        return aggregateLocalStatistics(tbl, filterColumns(tbl.getColumns(), keyMsg.colNames()), stats, log);
+        return aggregateLocalStatistics(tbl, filterColumns(tbl.getColumns(), keyMsg.colNames()), stats);
     }
 
     /**
@@ -107,8 +107,7 @@ public class IgniteStatisticsHelper {
     public static ObjectStatisticsImpl aggregateLocalStatistics(
             GridH2Table tbl,
             Column[] selectedCols,
-            Collection<? extends ObjectStatisticsImpl> stats,
-            IgniteLogger log
+            Collection<? extends ObjectStatisticsImpl> stats
     ) {
         assert !stats.isEmpty();
 

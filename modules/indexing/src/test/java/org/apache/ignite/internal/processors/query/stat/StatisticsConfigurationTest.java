@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjec
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -431,21 +432,22 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         while (true) {
             try {
-                List<IgniteStatisticsManager> mgrs = G.allGrids().stream()
-                    .map(ign -> ((IgniteEx)ign).context().query().getIndexing().statsManager())
-                    .collect(Collectors.toList());
-
-                List<ObjectStatisticsImpl> stats = mgrs.stream()
-                    .map(m -> (ObjectStatisticsImpl)m.getLocalStatistics(schema, objName))
-                    .collect(Collectors.toList());
+                List<ObjectStatisticsImpl> stats = statisticsAllNodes(schema, objName);
 
                 for (Consumer<List<ObjectStatisticsImpl>> statChecker : statsCheckers)
                     statChecker.accept(stats);
 
                 return;
             } catch (Throwable ex) {
-                if (t0 + timeout < U.currentTimeMillis())
+                if (t0 + timeout < U.currentTimeMillis()) {
+                    log.error("Unexpected stats");
+
+                    List<ObjectStatisticsImpl> stats = statisticsAllNodes(schema, objName);
+
+                    stats.forEach(s -> log.error(s.toString()));
+
                     throw ex;
+                }
                 else {
                     try {
                         U.sleep(200);
@@ -456,5 +458,16 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
                 }
             }
         }
+    }
+
+    /** */
+    @NotNull private List<ObjectStatisticsImpl> statisticsAllNodes(String schema, String objName) {
+        List<IgniteStatisticsManager> mgrs = G.allGrids().stream()
+            .map(ign -> ((IgniteEx)ign).context().query().getIndexing().statsManager())
+            .collect(Collectors.toList());
+
+        return mgrs.stream()
+            .map(m -> (ObjectStatisticsImpl)m.getLocalStatistics(schema, objName))
+            .collect(Collectors.toList());
     }
 }

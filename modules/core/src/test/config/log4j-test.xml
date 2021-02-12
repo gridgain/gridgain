@@ -136,6 +136,10 @@
         <level value="INFO"/>
     </category>
 
+    <category name="org.apache.ignite.internal.processors.query.stat">
+        <level value="DEBUG"/>
+    </category>
+
     <category name="org.eclipse.jetty">
         <level value="INFO"/>
     </category>

@@ -17,8 +17,9 @@ package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
@@ -31,6 +32,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class StatisticsObjectConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** */
+    public static final StatisticsColumnConfiguration[] EMPTY_COLUMN_CFGS_ARR = new StatisticsColumnConfiguration[0];
 
     /** */
     @GridToStringInclude
@@ -67,18 +71,17 @@ public class StatisticsObjectConfiguration implements Serializable {
         assert oldCfg.key.equals(newCfg.key) : "Invalid schema to merge: [oldKey=" + oldCfg.key
             + ", newKey=" + newCfg.key + ']';
 
-        Set<String> cols = Arrays.stream(oldCfg.cols)
-            .map(StatisticsColumnConfiguration::name).collect(Collectors.toSet());
+        Map<String, StatisticsColumnConfiguration> oldCols = Arrays.stream(oldCfg.cols)
+            .collect(Collectors.toMap(StatisticsColumnConfiguration::name, Function.identity()));
 
-        cols.addAll(Arrays.stream(newCfg.cols)
-            .map(StatisticsColumnConfiguration::name).collect(Collectors.toSet()));
+        Map<String, StatisticsColumnConfiguration> newCols = Arrays.stream(newCfg.cols)
+            .collect(Collectors.toMap(StatisticsColumnConfiguration::name, Function.identity()));
+
+        newCols.putAll(oldCols);
 
         return new StatisticsObjectConfiguration(
             newCfg.key,
-            cols.stream()
-                .map(StatisticsColumnConfiguration::new)
-                .collect(Collectors.toList())
-                .toArray(new StatisticsColumnConfiguration[cols.size()]),
+            newCols.values().toArray(EMPTY_COLUMN_CFGS_ARR),
             oldCfg.ver + 1
         );
     }

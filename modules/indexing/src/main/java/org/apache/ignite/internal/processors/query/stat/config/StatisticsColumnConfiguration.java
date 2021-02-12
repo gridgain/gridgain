@@ -28,7 +28,7 @@ public class StatisticsColumnConfiguration implements Serializable {
     private static final long serialVersionUID = 0L;
 
     /** */
-    private String name;
+    private final String name;
 
     /** */
     public StatisticsColumnConfiguration(String name) {

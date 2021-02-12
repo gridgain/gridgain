@@ -45,7 +45,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 /**
  * Implementation of statistic collector.
  */
-public class CollectPartitionStatistics implements Callable<ObjectPartitionStatisticsImpl> {
+public class GatherPartitionStatistics implements Callable<ObjectPartitionStatisticsImpl> {
     /** Canceled check interval. */
     private static final int CANCELLED_CHECK_INTERVAL = 100;
 
@@ -71,7 +71,7 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
     private final long time = U.currentTimeMillis();
 
     /** */
-    public CollectPartitionStatistics(
+    public GatherPartitionStatistics(
         LocalStatisticsGatheringContext gathCtx,
         GridH2Table tbl,
         Column[] cols,
@@ -170,5 +170,10 @@ public class CollectPartitionStatistics implements Callable<ObjectPartitionStati
     /** */
     private boolean wasExpired(CacheDataRow row) {
         return row.expireTime() > 0 && row.expireTime() <= time;
+    }
+
+    /** */
+    public int partition() {
+        return partId;
     }
 }

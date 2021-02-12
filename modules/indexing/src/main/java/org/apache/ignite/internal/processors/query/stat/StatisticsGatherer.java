@@ -24,7 +24,7 @@ import java.util.function.Function;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.stat.task.CollectPartitionStatistics;
+import org.apache.ignite.internal.processors.query.stat.task.GatherPartitionStatistics;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
 
@@ -91,7 +91,7 @@ public class StatisticsGatherer {
         }
 
         for (int part : parts) {
-            final CollectPartitionStatistics task = new CollectPartitionStatistics(
+            final GatherPartitionStatistics task = new GatherPartitionStatistics(
                 newCtx,
                 tbl,
                 cols,
@@ -100,7 +100,7 @@ public class StatisticsGatherer {
                 log
             );
 
-            submitTask(tbl, key, newCtx, part, task);
+            submitTask(tbl, key, newCtx, task);
         }
 
         // Wait all partition gathering tasks.
@@ -111,31 +111,30 @@ public class StatisticsGatherer {
     private void submitTask(
         final GridH2Table tbl,
         final StatisticsKey key,
-        final LocalStatisticsGatheringContext newCtx,
-        final int part,
-        final CollectPartitionStatistics task)
+        final LocalStatisticsGatheringContext ctx,
+        final GatherPartitionStatistics task)
     {
         CompletableFuture<ObjectPartitionStatisticsImpl> f = CompletableFuture.supplyAsync(task::call, gatherPool);
 
         f.thenAccept((partStat) -> {
-            completePartitionStatistic(tbl, key, newCtx, part, partStat);
+            completePartitionStatistic(tbl, key, ctx, task.partition(), partStat);
         });
 
         f.exceptionally((ex) -> {
             if (ex instanceof GatherStatisticRetryException) {
                 if (log.isDebugEnabled())
-                    log.debug("Retry collect statistics task [key=" + key + ", part=" + part + ']');
+                    log.debug("Retry collect statistics task [key=" + key + ", part=" + task.partition() + ']');
 
-                submitTask(tbl, key, newCtx, part, task);
+                submitTask(tbl, key, ctx, task);
             }
             if (ex instanceof GatherStatisticCancelException) {
                 if (log.isDebugEnabled())
-                    log.debug("Collect statistics task was cancelled [key=" + key + ", part=" + part + ']');
+                    log.debug("Collect statistics task was cancelled [key=" + key + ", part=" + task.partition() + ']');
             }
             else {
                 log.error("Unexpected error on statistic gathering", ex);
 
-                newCtx.future().obtrudeException(ex);
+                ctx.future().obtrudeException(ex);
             }
 
             return null;
