@@ -29,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
@@ -538,19 +539,13 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectStatisticsImpl getStatsFromNode(int nodeIdx, String tblName, StatisticsType type) {
         IgniteStatisticsManager statMgr = grid(nodeIdx).context().query().getIndexing().statsManager();
-        try {
-            switch (type) {
-                case LOCAL:
-                    return (ObjectStatisticsImpl) statMgr.getLocalStatistics(SCHEMA, tblName);
-                case GLOBAL:
-                    return (ObjectStatisticsImpl) statMgr.getGlobalStatistics(SCHEMA, tblName);
-                default:
-                    throw new UnsupportedOperationException();
-            }
+
+        switch (type) {
+            case LOCAL:
+                return (ObjectStatisticsImpl) statMgr.getLocalStatistics(SCHEMA, tblName);
+            case PARTITION:
+            default:
+                throw new UnsupportedOperationException();
         }
-        catch (IgniteCheckedException e) {
-            fail(e.getMessage());
-        }
-        return null;
     }
 }

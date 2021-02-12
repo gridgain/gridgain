@@ -508,15 +508,14 @@ public class CommandProcessor {
      *
      * @param cmd Sql analyze command.
      */
-    private void processAnalyzeCommand(SqlAnalyzeCommand cmd) {
+    private void processAnalyzeCommand(SqlAnalyzeCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
         IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        // TODO: save config after GG-32420
-        statMgr.gatherObjectStatisticsAsync(targets);
+        statMgr.updateStatistics(targets);
     }
 
     /**
@@ -524,15 +523,14 @@ public class CommandProcessor {
      *
      * @param cmd Refresh statistics command.
      */
-    private void processRefreshStatisticsCommand(SqlRefreshStatitsicsCommand cmd) {
+    private void processRefreshStatisticsCommand(SqlRefreshStatitsicsCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.REFRESH_STATISTICS);
         IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        // TODO: load config after GG-32420
-        statMgr.gatherObjectStatisticsAsync(targets);
+        statMgr.updateStatistics(targets);
     }
 
     /**
@@ -547,8 +545,7 @@ public class CommandProcessor {
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
         try {
-            // TODO: clean config after GG-32420
-            statMgr.clearObjectStatistics(targets);
+            statMgr.dropStatistics(targets);
         } catch (IgniteCheckedException e) {
             throw new IgniteSQLException("Failed to drop statistics on targets " + cmd.targets() + ", err="
                 + e.getMessage() + "]", e);

@@ -33,6 +33,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
@@ -309,8 +310,11 @@ public class IgniteStatisticsHelper {
      * @return Column with specified names.
      */
     public static Column[] filterColumns(Column[] cols, @Nullable Collection<String> colNames) {
-        if (F.isEmpty(colNames))
-            return cols;
+        if (F.isEmpty(colNames)) {
+            return Arrays.stream(cols)
+                .filter(c -> c.getColumnId() >= QueryUtils.DEFAULT_COLUMNS_COUNT)
+                .toArray(Column[]::new);
+        }
 
         Set<String> colNamesSet = new HashSet<>(colNames);
 

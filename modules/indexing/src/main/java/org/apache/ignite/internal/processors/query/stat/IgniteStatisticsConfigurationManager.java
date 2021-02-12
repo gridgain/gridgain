@@ -167,12 +167,13 @@ public class IgniteStatisticsConfigurationManager {
 
             validate(target, tbl);
 
-            Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), Arrays.asList(target.columns()));
+            Column[] cols = IgniteStatisticsHelper.filterColumns(
+                tbl.getColumns(),
+                target.columns() != null ? Arrays.asList(target.columns()) : Collections.emptyList());
 
             StatisticsColumnConfiguration[] colCfgs = Arrays.stream(cols)
                 .map(c -> new StatisticsColumnConfiguration(c.getName()))
-                .collect(Collectors.toList())
-                .toArray(new StatisticsColumnConfiguration[cols.length]);
+                .toArray(StatisticsColumnConfiguration[]::new);
 
             updateObjectStatisticConfiguration(
                 new StatisticsObjectConfiguration(
@@ -200,7 +201,9 @@ public class IgniteStatisticsConfigurationManager {
 
                     StatisticsColumnConfiguration[] newColsCfg = filterColumns(
                         oldCfg,
-                        Arrays.stream(target.columns()).collect(Collectors.toSet())
+                        target.columns() != null ?
+                            Arrays.stream(target.columns()).collect(Collectors.toSet()) :
+                            Collections.emptySet()
                     );
 
                     StatisticsObjectConfiguration newCfg = new StatisticsObjectConfiguration(
@@ -214,7 +217,8 @@ public class IgniteStatisticsConfigurationManager {
                 }
             }
             catch (IgniteCheckedException ex) {
-                throw new IgniteSQLException("Error on get or update statistic schema", IgniteQueryErrorCode.UNKNOWN, ex);
+                throw new IgniteSQLException(
+                    "Error on get or update statistic schema", IgniteQueryErrorCode.UNKNOWN, ex);
             }
         }
     }
@@ -231,10 +235,6 @@ public class IgniteStatisticsConfigurationManager {
         Set<StatisticsColumnConfiguration> cols = Arrays.stream(oldCfg.columns())
             .filter(c -> !colToRemove.contains(c.name())).collect(Collectors.toSet());
 
-        // All not-hidden fields are dropped -> Drop all columns
-        if (cols.size() == 2 && cols.contains(QueryUtils.KEY_FIELD_NAME) && cols.contains(QueryUtils.VAL_FIELD_NAME))
-            return EMPTY_COLUMN_CFGS_ARR;
-
         return cols.toArray(EMPTY_COLUMN_CFGS_ARR);
     }
 
@@ -243,6 +243,7 @@ public class IgniteStatisticsConfigurationManager {
         mgmtPool.submit(() -> {
             try {
                 final List<StatisticsTarget> targetsToRemove = new ArrayList<>();
+
                 distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> {
                         StatisticsKey statKey = ((StatisticsObjectConfiguration)v).key();
 
@@ -253,7 +254,7 @@ public class IgniteStatisticsConfigurationManager {
                 dropStatistics(targetsToRemove);
             }
             catch (IgniteCheckedException e) {
-                log.warning("Unexpected exception on check local statistic on start", e);
+                log.warning("Unexpected exception drop all statistics", e);
             }
         });
     }
@@ -262,13 +263,19 @@ public class IgniteStatisticsConfigurationManager {
     private void validate(StatisticsTarget target, GridH2Table tbl) {
         if (tbl == null) {
             throw new IgniteSQLException(
-                "Table doesn't exist [schema=" + target.schema() + ", table=" + target.obj() + ']');
+                "Table doesn't exist [schema=" + target.schema() + ", table=" + target.obj() + ']',
+                IgniteQueryErrorCode.TABLE_NOT_FOUND);
         }
 
-        for (String col : target.columns()) {
-            if (tbl.getColumn(col) == null) {
-                throw new IgniteSQLException(
-                    "Column doesn't exist [schema=" + target.schema() + ", table=" + target.obj() + ", column=" + col + ']');
+        if (!F.isEmpty(target.columns())) {
+            for (String col : target.columns()) {
+                if (!tbl.doesColumnExist(col)) {
+                    throw new IgniteSQLException(
+                        "Column doesn't exist [schema=" + target.schema() +
+                            ", table=" + target.obj() +
+                            ", column=" + col + ']',
+                        IgniteQueryErrorCode.COLUMN_NOT_FOUND);
+                }
             }
         }
     }
@@ -337,6 +344,7 @@ public class IgniteStatisticsConfigurationManager {
 
                 for (ObjectPartitionStatisticsImpl pstat : partStats) {
                     Set<String> existColumns = pstat.columnsStatistics().keySet();
+
                     if (pstat.version() != cfg.version() || !existColumns.containsAll(targetColumns)) {
                         partsToCollect.add(pstat.partId());
 
@@ -358,7 +366,7 @@ public class IgniteStatisticsConfigurationManager {
                 partsToRemove = Collections.emptySet();
             }
 
-            if (!partsToRemove.isEmpty()) {
+            if (!F.isEmpty(partsToRemove)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Remove local partitioned statistics [key=" + cfg.key() +
                         ", part=" + partsToRemove + ']');

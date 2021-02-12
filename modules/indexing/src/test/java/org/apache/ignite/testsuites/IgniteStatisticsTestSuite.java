@@ -25,13 +25,12 @@ import org.apache.ignite.internal.processors.query.stat.ManagerStatisticsTypesTe
 import org.apache.ignite.internal.processors.query.stat.PSUBasicValueDistributionTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.stat.PSUCompositeIndexTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticPartialGatheringTest;
-import org.apache.ignite.internal.processors.query.stat.PSUStatisticsRestartTest;
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticsStorageTest;
 import org.apache.ignite.internal.processors.query.stat.PSUStatisticsTypesTest;
 import org.apache.ignite.internal.processors.query.stat.PSUValueDistributionTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.stat.SqlStatisticsCommandTests;
 import org.apache.ignite.internal.processors.query.stat.StatisticsClearTest;
-import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringCancelTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsConfigurationTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageInMemoryTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStoragePersistenceTest;
@@ -57,7 +56,6 @@ import org.junit.runners.Suite;
     StatisticsStorageRestartTest.class,
     StatisticsGatheringTest.class,
     StatisticsClearTest.class,
-    StatisticsGatheringCancelTest.class,
 
     // Table statistics usage.
     RowCountTableStatisticsUsageTest.class,
@@ -68,7 +66,6 @@ import org.junit.runners.Suite;
     PSUValueDistributionTableStatisticsUsageTest.class,
     PSUCompositeIndexTableStatisticsUsageTest.class,
     PSUStatisticsStorageTest.class,
-    PSUStatisticsRestartTest.class,
 
     // Statistics collection components tests
     StatisticsStorageInMemoryTest.class,
@@ -80,6 +77,7 @@ import org.junit.runners.Suite;
     SqlParserRefreshStatisticsSelfTest.class,
     SqlParserDropStatisticsSelfTest.class,
     SqlStatisticsCommandTests.class,
+    StatisticsConfigurationTest.class,
 })
 public class IgniteStatisticsTestSuite {
 }

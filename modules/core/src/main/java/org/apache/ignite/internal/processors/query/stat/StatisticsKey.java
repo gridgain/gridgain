@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.io.Serializable;
 import java.util.Objects;
 
+import org.apache.ignite.internal.processors.query.QueryUtils;
+
 /**
  * Key to collect statistics by.
  */
@@ -38,6 +40,8 @@ public class StatisticsKey implements Serializable {
      * @param obj Object name.
      */
     public StatisticsKey(String schema, String obj) {
+        assert obj != null;
+
         this.schema = schema;
         this.obj = obj;
     }

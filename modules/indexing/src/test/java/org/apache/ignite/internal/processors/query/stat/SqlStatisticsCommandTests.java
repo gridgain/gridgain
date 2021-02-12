@@ -35,18 +35,18 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         startGrids(2);
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        runSql("DROP TABLE IF EXISTS TEST");
-        runSql("DROP TABLE IF EXISTS TEST2");
+        sql("DROP TABLE IF EXISTS TEST");
+        sql("DROP TABLE IF EXISTS TEST2");
 
         clearStat();
 
         testStats(SCHEMA, "TEST", true);
         testStats(SCHEMA, "TEST2", true);
 
-        runSql("CREATE TABLE TEST(id int primary key, name varchar)");
-        runSql("CREATE TABLE TEST2(id int primary key, name varchar)");
+        sql("CREATE TABLE TEST(id int primary key, name varchar)");
+        sql("CREATE TABLE TEST2(id int primary key, name varchar)");
 
-        runSql("CREATE INDEX TEXT_NAME ON TEST(NAME);");
+        sql("CREATE INDEX TEXT_NAME ON TEST(NAME);");
     }
 
     /**
@@ -56,12 +56,12 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      */
     @Test
     public void testAnalyze() throws IgniteCheckedException {
-        runSql("ANALYZE TEST");
+        sql("ANALYZE TEST");
 
         //U.sleep(1000);
         testStats(SCHEMA, "TEST", false);
 
-        runSql("ANALYZE PUBLIC.TEST2(name)");
+        sql("ANALYZE PUBLIC.TEST2(name)");
 
         //U.sleep(1000);
         testStats(SCHEMA, "TEST2", false);
@@ -71,7 +71,7 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         testStats(SCHEMA, "TEST", true);
         testStats(SCHEMA, "TEST2", true);
 
-        runSql("ANALYZE PUBLIC.TEST, test2");
+        sql("ANALYZE PUBLIC.TEST, test2");
 
         testStats(SCHEMA, "TEST", false);
         testStats(SCHEMA, "TEST2", false);
@@ -91,7 +91,7 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         testStats(SCHEMA, "TEST", true);
         testStats(SCHEMA, "TEST2", true);
 
-        runSql("REFRESH STATISTICS PUBLIC.TEST, test2");
+        sql("REFRESH STATISTICS PUBLIC.TEST, test2");
 
         testStats(SCHEMA, "TEST", false);
         testStats(SCHEMA, "TEST2", false);
@@ -99,7 +99,7 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         clearStat();
         U.sleep(1000);
 
-        runSql("REFRESH STATISTICS public.test(id, name);");
+        sql("REFRESH STATISTICS public.test(id, name);");
 
         testStats(SCHEMA, "TEST", false);
         testStats(SCHEMA, "TEST2", true);
@@ -116,29 +116,29 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
     @Test
     public void testDropStatistics() throws IgniteInterruptedCheckedException {
         // TODO after GG-32420 test schema
-        runSql("ANALYZE PUBLIC.TEST, test2");
+        sql("ANALYZE PUBLIC.TEST, test2");
 
         testStats(SCHEMA, "TEST", false);
         testStats(SCHEMA, "TEST2", false);
 
-        runSql("DROP STATISTICS PUBLIC.TEST(name);");
+        sql("DROP STATISTICS PUBLIC.TEST(name);");
 
         testStats(SCHEMA, "TEST", false);
         testStats(SCHEMA, "TEST2", false);
 
         U.sleep(TIMEOUT);
 
-        runSql("DROP STATISTICS PUBLIC.TEST;");
+        sql("DROP STATISTICS PUBLIC.TEST;");
 
         testStats(SCHEMA, "TEST", true);
         testStats(SCHEMA, "TEST2", false);
 
-        runSql("ANALYZE PUBLIC.TEST, test2");
+        sql("ANALYZE PUBLIC.TEST, test2");
 
         testStats(SCHEMA, "TEST", false);
         testStats(SCHEMA, "TEST2", false);
 
-        runSql("DROP STATISTICS PUBLIC.TEST, test2");
+        sql("DROP STATISTICS PUBLIC.TEST, test2");
 
         testStats(SCHEMA, "TEST", true);
         testStats(SCHEMA, "TEST2", true);
@@ -155,22 +155,22 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      */
     @Test
     public void statisticsLexemaTest() throws IgniteInterruptedCheckedException {
-        runSql("CREATE TABLE STATISTICS(id int primary key, statistics varchar)");
-        runSql("CREATE INDEX STATISTICS_STATISTICS ON STATISTICS(STATISTICS);");
+        sql("CREATE TABLE STATISTICS(id int primary key, statistics varchar)");
+        sql("CREATE INDEX STATISTICS_STATISTICS ON STATISTICS(STATISTICS);");
 
         testStats(SCHEMA, "STATISTICS", true);
 
-        runSql("ANALYZE PUBLIC.STATISTICS(STATISTICS)");
+        sql("ANALYZE PUBLIC.STATISTICS(STATISTICS)");
 
         testStats(SCHEMA, "STATISTICS", false);
 
-        runSql("REFRESH STATISTICS PUBLIC.STATISTICS(STATISTICS)");
+        sql("REFRESH STATISTICS PUBLIC.STATISTICS(STATISTICS)");
 
         testStats(SCHEMA, "STATISTICS", false);
 
         U.sleep(TIMEOUT);
 
-        runSql("DROP STATISTICS PUBLIC.STATISTICS(STATISTICS)");
+        sql("DROP STATISTICS PUBLIC.STATISTICS(STATISTICS)");
 
         testStats(SCHEMA, "STATISTICS", true);
     }
@@ -182,7 +182,7 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      */
     private void clearStat() throws IgniteCheckedException {
         IgniteStatisticsManager statMgr = grid(0).context().query().getIndexing().statsManager();
-        statMgr.clearObjectStatistics(new StatisticsTarget(SCHEMA, "TEST"),
+        statMgr.dropStatistics(new StatisticsTarget(SCHEMA, "TEST"),
             new StatisticsTarget(SCHEMA, "TEST2"));
     }
 
@@ -198,13 +198,8 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
             for (Ignite node : G.allGrids()) {
                 IgniteStatisticsManager nodeStatMgr = ((IgniteEx) node).context().query().getIndexing().statsManager();
                 ObjectStatistics localStat = nodeStatMgr.getLocalStatistics(schema, obj);
-                ObjectStatistics globalStat = null;
-                try {
-                    globalStat = nodeStatMgr.getGlobalStatistics(schema, obj);
-                } catch (IgniteCheckedException e) {
-                    return false;
-                }
-                if (!(isNull ? (localStat == null && globalStat == null) : (localStat != null && globalStat != null)))
+
+                if (!(isNull == (localStat == null)))
                     return false;
             }
             return true;
