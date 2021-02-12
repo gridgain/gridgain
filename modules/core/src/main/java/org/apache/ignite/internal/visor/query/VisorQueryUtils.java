@@ -401,7 +401,7 @@ public class VisorQueryUtils {
                     cctx = cache.context();
                 }
 
-                long start = U.currentTimeMillis();
+                long start = System.currentTimeMillis();
 
                 List<FieldsQueryCursor<List<?>>> qryCursors = ignite
                     .context()
@@ -435,7 +435,7 @@ public class VisorQueryUtils {
                             );
                         }
 
-                        actualHolder.complete(cur, U.currentTimeMillis() - start, cols);
+                        actualHolder.complete(cur, System.currentTimeMillis() - start, cols);
 
                         scheduleQueryHolderRemoval(ignite, actualHolder.getQueryID());
                     }
@@ -477,7 +477,7 @@ public class VisorQueryUtils {
 
                 QueryCursor<Cache.Entry<Object, Object>> cur;
 
-                long start = U.currentTimeMillis();
+                long start = System.currentTimeMillis();
 
                 if (arg.isNear())
                     cur = new VisorNearCacheCursor<>(c.localEntries(CachePeekMode.NEAR).iterator());
@@ -493,7 +493,7 @@ public class VisorQueryUtils {
                     // Ensure holder was not removed from node local storage from separate thread if user cancel query.
                     VisorQueryHolder actualHolder = getQueryHolder(ignite, holder.getQueryID());
 
-                    actualHolder.complete(cur, U.currentTimeMillis() - start, SCAN_COL_NAMES);
+                    actualHolder.complete(cur, System.currentTimeMillis() - start, SCAN_COL_NAMES);
 
                     scheduleQueryHolderRemoval(ignite, actualHolder.getQueryID());
                 }

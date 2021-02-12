@@ -29,7 +29,7 @@ public class StatisticsTarget {
     @GridToStringInclude
     private final StatisticsKey key;
 
-    /**  */
+    /** Column names. */
     @GridToStringInclude
     private final String[] columns;
 
@@ -52,7 +52,7 @@ public class StatisticsTarget {
      */
     public StatisticsTarget(StatisticsKey key, String... columns) {
         this.key = key;
-        this.columns = columns;
+        this.columns = (columns == null || columns.length == 0) ? null : columns;
     }
 
     /**
@@ -81,7 +81,9 @@ public class StatisticsTarget {
     @Override public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
+
         StatisticsTarget that = (StatisticsTarget) o;
+
         return Objects.equals(key, that.key) &&
                 Arrays.equals(columns, that.columns);
     }

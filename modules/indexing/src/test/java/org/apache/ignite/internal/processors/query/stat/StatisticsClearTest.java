@@ -78,7 +78,6 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         Assert.assertNull(statMgr1.getLocalStatistics(SCHEMA, "NO_NAME"));
     }
 
-
     /**
      * 1) Restart without statistics version
      * 2) Check that statistics was refreshed.

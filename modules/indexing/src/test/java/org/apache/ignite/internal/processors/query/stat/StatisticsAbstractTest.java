@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -495,5 +496,61 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         pool.submit(res::lock);
 
         return res;
+    }
+
+    /**
+     * Get local or global object statistics from all server nodes.
+     *
+     * @param tblName Object name to get statistics by.
+     * @param type Desired statistics type.
+     * @return Array of local statistics from nodes.
+     */
+    protected ObjectStatisticsImpl[] getStats(String tblName, StatisticsType type) {
+        int nodes = G.allGrids().size();
+        ObjectStatisticsImpl res[] = new ObjectStatisticsImpl[nodes];
+
+        for (int i = 0; i < nodes; i++)
+            res[i] = getStatsFromNode(i, tblName, type);
+
+        return res;
+    }
+
+    /**
+     * Test specified predicate on each object statistics.
+     *
+     * @param cond Predicate to test.
+     * @param stats Statistics to test on.
+     */
+    protected void testCond(Function<ObjectStatisticsImpl, Boolean> cond, ObjectStatisticsImpl... stats) {
+        assertFalse(F.isEmpty(stats));
+
+        for (ObjectStatisticsImpl stat : stats)
+            assertTrue(cond.apply(stat));
+    }
+
+    /**
+     * Get local table statistics by specified node.
+     *
+     * @param nodeIdx Node index to get statistics from.
+     * @param tblName Table name.
+     * @param type Desired statistics type.
+     * @return Local table statistics or {@code null} if there are no such statistics in specified node.
+     */
+    protected ObjectStatisticsImpl getStatsFromNode(int nodeIdx, String tblName, StatisticsType type) {
+        IgniteStatisticsManager statMgr = grid(nodeIdx).context().query().getIndexing().statsManager();
+        try {
+            switch (type) {
+                case LOCAL:
+                    return (ObjectStatisticsImpl) statMgr.getLocalStatistics(SCHEMA, tblName);
+                case GLOBAL:
+                    return (ObjectStatisticsImpl) statMgr.getGlobalStatistics(SCHEMA, tblName);
+                default:
+                    throw new UnsupportedOperationException();
+            }
+        }
+        catch (IgniteCheckedException e) {
+            fail(e.getMessage());
+        }
+        return null;
     }
 }
