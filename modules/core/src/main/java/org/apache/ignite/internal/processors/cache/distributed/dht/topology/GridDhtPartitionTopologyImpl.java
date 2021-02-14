@@ -1128,16 +1128,22 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         lock.readLock().lock();
 
         try {
+            GridDhtPartitionMap locPartMap = node2part != null ? node2part.get(ctx.localNodeId()) : null;
+
             for (int i = 0; i < locParts.length(); i++) {
                 GridDhtLocalPartition part = locParts.get(i);
 
                 if (part == null)
                     continue;
 
+                if (locPartMap != null && locPartMap.get(i) != null && locPartMap.get(i) != part.state())
+                    log.warning("Local partition state is different than the state in a map [grp=" + grp.cacheOrGroupName()
+                        + ", part=" + i
+                        + ", locState=" + part.state()
+                        + ", mapState=" + locPartMap.get(i) + ']');
+
                 map.put(i, part.state());
             }
-
-            GridDhtPartitionMap locPartMap = node2part != null ? node2part.get(ctx.localNodeId()) : null;
 
             return new GridDhtPartitionMap(ctx.localNodeId(),
                 updateSeq.get(),
@@ -2518,8 +2524,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             }
         }
 
-        if (part.state() != MOVING)
+        if (part.state() != MOVING) {
+            U.dumpStack(log, "Local partition state is changing [grp=" + grp.cacheOrGroupName()
+                + ", part=" + part.id()
+                + ", formSate=" + part.state()
+                + ", toState=" + MOVING + ']');
+
             part.moving();
+        }
 
         if (clear)
             exchFut.addClearingPartition(grp, part.id());
