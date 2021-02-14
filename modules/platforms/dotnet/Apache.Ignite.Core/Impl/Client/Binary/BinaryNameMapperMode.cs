@@ -14,22 +14,28 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Cache.Query
+namespace Apache.Ignite.Core.Impl.Client.Binary
 {
     using Apache.Ignite.Core.Binary;
-    using NUnit.Framework;
 
     /// <summary>
-    /// Test with simple name mapper.
+    /// Represents the binary name mapper mode.
     /// </summary>
-    [TestFixture]
-    [Category(TestUtils.CategoryIntensive)]
-    public class CacheDmlQueriesTestSimpleName : CacheDmlQueriesTest
+    internal enum BinaryNameMapperMode
     {
-        /** <inheritdoc /> */
-        protected override IBinaryNameMapper GetNameMapper()
-        {
-            return new BinaryBasicNameMapper {IsSimpleName = true};
-        }
+        /// <summary>
+        /// Default full name mapper, see <see cref="BinaryBasicNameMapper.FullNameInstance"/>.
+        /// </summary>
+        BasicFull = 0,
+
+        /// <summary>
+        /// Simple name mapper, see <see cref="BinaryBasicNameMapper.SimpleNameInstance"/>.
+        /// </summary>
+        BasicSimple = 1,
+
+        /// <summary>
+        /// Custom user-defined mapper.
+        /// </summary>
+        Custom = 2
     }
 }

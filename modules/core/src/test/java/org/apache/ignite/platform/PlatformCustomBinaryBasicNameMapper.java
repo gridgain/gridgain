@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Cache.Query
-{
-    using Apache.Ignite.Core.Binary;
-    using NUnit.Framework;
+package org.apache.ignite.platform;
 
-    /// <summary>
-    /// Test with simple name mapper.
-    /// </summary>
-    [TestFixture]
-    [Category(TestUtils.CategoryIntensive)]
-    public class CacheDmlQueriesTestSimpleName : CacheDmlQueriesTest
-    {
-        /** <inheritdoc /> */
-        protected override IBinaryNameMapper GetNameMapper()
-        {
-            return new BinaryBasicNameMapper {IsSimpleName = true};
-        }
+import org.apache.ignite.binary.BinaryBasicNameMapper;
+
+/**
+ * Custom name mapper for tests.
+ */
+public class PlatformCustomBinaryBasicNameMapper extends BinaryBasicNameMapper {
+    /** {@inheritDoc} */
+    @Override public String typeName(String clsName) {
+        return clsName + "_";
+    }
+
+    /** {@inheritDoc} */
+    @Override public String fieldName(String fieldName) {
+        return fieldName;
     }
 }
