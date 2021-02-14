@@ -54,7 +54,7 @@ public enum IgniteFeatures {
     /** Cache metrics v2 support. */
     CACHE_METRICS_V2(1),
 
-    /** Data paket compression. */
+    /** Data packet compression. */
     DATA_PACKET_COMPRESSION(3),
 
     /** Support of different rebalance size for nodes.  */
@@ -69,7 +69,7 @@ public enum IgniteFeatures {
      */
     TRANSACTION_OWNER_THREAD_DUMP_PROVIDING(6),
 
-    /** Displaying versbose transaction information: --info option of --tx control script command. */
+    /** Displaying verbose transaction information: --info option of --tx control script command. */
     TX_INFO_COMMAND(7),
 
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
@@ -206,7 +206,7 @@ public enum IgniteFeatures {
     /** Statistics collection. */
     STATISTICS_COLLECTION(55),
 
-    /** Warning is shown in server log and after schedule and snapshot commands if PIRT is enabled and snapshot schedule
+    /** Warning is shown in server log and after schedule and snapshot commands if PITR is enabled and snapshot schedule
      * is improper for PITR*/
     IMPROPER_SCHEDULE_FOR_PITR_WARNING(56);
 
