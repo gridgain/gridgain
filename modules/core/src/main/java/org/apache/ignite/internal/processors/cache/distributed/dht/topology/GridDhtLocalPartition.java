@@ -77,7 +77,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELET
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
-import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.DATA_AND_TOMBSONES;
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.DATA_AND_TOMBSTONES;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.TOMBSTONES;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
@@ -148,9 +148,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * Can be replaced with LWM comparison. */
     private volatile long clearVer;
 
-    /** Suspended clearing task until rebalancing will start. */
-    private volatile PartitionsEvictManager.PartitionEvictionTask clearTask;
-
     /**
      * @param ctx Context.
      * @param grp Cache group.
@@ -220,7 +217,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 + ", p=" + id + ", state=" + state() + "]");
 
         clearVer = ctx.versions().localOrder();
-        clearTask = ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.CLEARING);
     }
 
     /**
@@ -570,7 +566,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (casState(state, MOVING)) {
                 // The state is switched under global topology lock, safe to record version here.
                 clearVer = ctx.versions().localOrder();
-                clearTask = ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.CLEARING);
 
                 return true;
             }
@@ -664,13 +659,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @return A future what will be finished then a current clearing attempt is done.
      */
     public IgniteInternalFuture<Void> clearAsync() {
-        if (clearTask != null) {
-            clearTask.start();
+        PartitionsEvictManager.PartitionEvictionTask clearTask =
+            ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.CLEARING);
 
-            return clearTask.finishFuture();
-        }
-        else // No clearing required.
-            return new GridFinishedFuture<>();
+        return clearTask.start() ? clearTask.finishFuture() : new GridFinishedFuture<>();
     }
 
     /**
@@ -930,7 +922,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         try {
             GridIterator<CacheDataRow> it0 = task.reason() == PartitionsEvictManager.EvictReason.TOMBSTONE ?
                 grp.offheap().partitionIterator(id, TOMBSTONES) :
-                grp.offheap().partitionIterator(id, DATA_AND_TOMBSONES);
+                grp.offheap().partitionIterator(id, DATA_AND_TOMBSTONES);
 
             while (it0.hasNext()) {
                 if (stopClo.getAsBoolean() || state0 != state())

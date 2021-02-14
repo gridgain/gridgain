@@ -250,6 +250,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         assert grp.dataRegion().pageMemory() instanceof PageMemoryEx;
 
         syncMetadata(ctx);
+
+        // Double flushing memory buckets for decrease a time on write lock.
+        syncMetadata(ctx, ctx.executor(), false);
     }
 
     /** {@inheritDoc} */
@@ -1240,11 +1243,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
 
-        FileWALPointer latestReservedPointer = (FileWALPointer)database.latestWalPointerReservedForPreloading();
-
-        if (latestReservedPointer == null)
-            throw new IgniteHistoricalIteratorException("Historical iterator wasn't created, because WAL isn't reserved.");
-
         Map<Integer, Long> partsCounters = new HashMap<>();
 
         for (int i = 0; i < partCntrs.size(); i++) {
@@ -1254,15 +1252,20 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             partsCounters.put(p, initCntr);
         }
 
-        FileWALPointer minPtr = database.checkpointHistory().searchEarliestWalPointer(grp.groupId(),
-            partsCounters, latestReservedPointer, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
-
-        assert latestReservedPointer.compareTo(minPtr) <= 0
-            : "Historical iterator tries to iterate WAL out of reservation [cache=" + grp.cacheOrGroupName()
-            + ", reservedPointer=" + database.latestWalPointerReservedForPreloading()
-            + ", historicalPointer=" + minPtr + ']';
-
         try {
+            FileWALPointer minPtr = database.checkpointHistory().searchEarliestWalPointer(grp.groupId(),
+                partsCounters, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
+
+            FileWALPointer latestReservedPointer = (FileWALPointer)database.latestWalPointerReservedForPreloading();
+
+            assert latestReservedPointer == null || latestReservedPointer.compareTo(minPtr) <= 0
+                : "Historical iterator tries to iterate WAL out of reservation [cache=" + grp.cacheOrGroupName()
+                + ", reservedPointer=" + latestReservedPointer
+                + ", historicalPointer=" + minPtr + ']';
+
+            if (latestReservedPointer == null)
+                log.warning("History for the preloading has not reserved yet.");
+
             WALIterator it = grp.shared().wal().replay(minPtr);
 
             WALHistoricalIterator iterator = new WALHistoricalIterator(log, grp, partCntrs, partsCounters, it);
@@ -1323,8 +1326,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
             // This will allow offline node to join faster using fast full rebalancing.
-            if (tsCnt <= tsLimit && (!discoCache.fullBaseline() || !ctx.exchange().lastFinishedFuture().rebalanced() ||
-                ctx.ttl().tombstoneCleanupSuspended()))
+            if (tsCnt <= tsLimit &&
+                (!discoCache.fullBaseline() ||
+                    !ctx.exchange().lastFinishedFuture().rebalanced() ||
+                    !ctx.exchange().lastTopologyFuture().isDone() ||
+                    ctx.ttl().tombstoneCleanupSuspended()))
                 return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
 
             if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
@@ -3256,8 +3262,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     if (!cur.next())
                         return 0;
-
-                    GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
                     int cleared = 0;
 

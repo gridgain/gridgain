@@ -37,7 +37,7 @@ public class PendingRow {
     public int cacheId;
 
     /** */
-    public boolean tombstone;
+    public Boolean tombstone;
 
     /** */
     public KeyCacheObject key;

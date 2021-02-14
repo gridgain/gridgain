@@ -29,6 +29,11 @@ import org.springframework.data.repository.query.parser.PartTree;
  * Ignite query generator for Spring Data framework.
  */
 public class IgniteQueryGenerator {
+    /** */
+    private IgniteQueryGenerator() {
+        // No-op.
+    }
+
     /**
      * @param mtd Method.
      * @param metadata Metadata.
@@ -63,7 +68,7 @@ public class IgniteQueryGenerator {
             if (isCountOrFieldQuery)
                 sql.append("COUNT(1) ");
             else
-                sql.append(" * ");
+                sql.append("* ");
         }
 
         sql.append("FROM ").append(metadata.getDomainType().getSimpleName());
@@ -94,7 +99,7 @@ public class IgniteQueryGenerator {
             sql.append(parts.getMaxResults().intValue());
         }
 
-        return new IgniteQuery(sql.toString(), isCountOrFieldQuery, getOptions(mtd));
+        return new IgniteQuery(sql.toString(), isCountOrFieldQuery, false, true, getOptions(mtd));
     }
 
     /**
@@ -121,6 +126,7 @@ public class IgniteQueryGenerator {
                         case NULLS_LAST:
                             sql.append("LAST");
                             break;
+                        default:
                     }
                 }
                 sql.append(", ");
@@ -140,8 +146,8 @@ public class IgniteQueryGenerator {
      * @return Builder instance.
      */
     public static StringBuilder addPaging(StringBuilder sql, Pageable pageable) {
-        if (pageable.getSort() != null)
-            addSorting(sql, pageable.getSort());
+
+        addSorting(sql, pageable.getSort());
 
         sql.append(" LIMIT ").append(pageable.getPageSize()).append(" OFFSET ").append(pageable.getOffset());
 
@@ -190,7 +196,7 @@ public class IgniteQueryGenerator {
     }
 
     /**
-     * Transform part to sql expression
+     * Transform part to qryStr expression
      */
     private static void handleQueryPart(StringBuilder sql, Part part, Class<?> domainType) {
         sql.append("(");
@@ -231,15 +237,13 @@ public class IgniteQueryGenerator {
             case TRUE:
                 sql.append(" = TRUE");
                 break;
+            //TODO: review this legacy code, LIKE should be -> LIKE ?
+            case LIKE:
             case CONTAINING:
                 sql.append(" LIKE '%' || ? || '%'");
                 break;
             case NOT_CONTAINING:
-                sql.append(" NOT LIKE '%' || ? || '%'");
-                break;
-            case LIKE:
-                sql.append(" LIKE '%' || ? || '%'");
-                break;
+                //TODO: review this legacy code, NOT_LIKE should be -> NOT LIKE ?
             case NOT_LIKE:
                 sql.append(" NOT LIKE '%' || ? || '%'");
                 break;
