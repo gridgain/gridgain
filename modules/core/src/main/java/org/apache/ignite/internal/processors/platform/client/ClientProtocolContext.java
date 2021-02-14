@@ -93,16 +93,6 @@ public class ClientProtocolContext {
     }
 
     /**
-     * Check if the feature is supported.
-     * @param features Features set.
-     * @param feature Feature which support should be checked.
-     * @return {@code true} if the feature was supported in the protocol version.
-     */
-    public static boolean isFeatureSupported(EnumSet<ClientBitmaskFeature> features, ClientBitmaskFeature feature) {
-        return features != null && features.contains(feature);
-    }
-
-    /**
      * @return Client time zone.
      */
     public TimeZone clientTimeZone() {

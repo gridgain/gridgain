@@ -38,9 +38,9 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxContext;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 
-import static org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature.SQL_TIMEZONE_FIX;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.AUTHORIZATION;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.BITMAP_FEATURES;
+import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.SQL_TIMEZONE_FIX;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.USER_ATTRIBUTES;
 
 /**
@@ -75,13 +75,14 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
      */
     public static final ClientListenerProtocolVersion VER_1_7_0 = ClientListenerProtocolVersion.create(1, 7, 0);
 
-    /**
-     * Version 1.7.1. User Attributes introduced. New version is needed because user attributes passed in handshake.
-     */
+    /** Version 1.7.1. User Attributes introduced. New version is needed because user attributes passed in handshake. */
     public static final ClientListenerProtocolVersion VER_1_7_1 = ClientListenerProtocolVersion.create(1, 7, 1);
 
+    /** Version 1.8.0. Timezone fix introduced. New version is needed because timezone passed in handshake. */
+    public static final ClientListenerProtocolVersion VER_1_8_0 = ClientListenerProtocolVersion.create(1, 8, 0);
+
     /** Default version. */
-    public static final ClientListenerProtocolVersion DEFAULT_VER = VER_1_7_1;
+    public static final ClientListenerProtocolVersion DEFAULT_VER = VER_1_8_0;
 
     /** Default protocol context. */
     public static final ClientProtocolContext DEFAULT_PROTOCOL_CONTEXT =
@@ -89,6 +90,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
     /** Supported versions. */
     private static final Collection<ClientListenerProtocolVersion> SUPPORTED_VERS = Arrays.asList(
+        VER_1_8_0,
         VER_1_7_1,
         VER_1_7_0,
         VER_1_6_0,
@@ -199,7 +201,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
         }
 
         TimeZone clientTz = null;
-        if (ClientProtocolContext.isFeatureSupported(features, SQL_TIMEZONE_FIX)) {
+        if (ClientProtocolContext.isFeatureSupported(ver, SQL_TIMEZONE_FIX)) {
             String clientTzId = reader.readString();
 
             clientTz = TimeZone.getTimeZone(clientTzId);
