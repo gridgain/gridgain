@@ -244,105 +244,122 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = cacheDataStore.reconciliationCtx();
 
             if (lowerKey == null)
-                partReconciliationCtx.isReconciliationInProgress(true);
+                synchronized (partReconciliationCtx.reconciliationMux()) {
+                    partReconciliationCtx.isReconciliationInProgress(true);
+                }
 
             KeyCacheObject lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
 
             KeyCacheObject keyToStart = null;
 
-            if (lowerKey != null && lastKeyForSizes !=  null)
+            if (lowerKey != null && lastKeyForSizes != null)
                 keyToStart = KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
             else if (lowerKey != null)
                 keyToStart = lowerKey;
-            else if (lowerKey != null)
+            else if (lastKeyForSizes != null)
                 keyToStart = lastKeyForSizes;
 
 
-            try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
-                grpCtx.offheap().dataStore(part).cursor(cacheId, DATA) :
-                grpCtx.offheap().dataStore(part).cursor(cacheId, keyToStart, null)) {
+            synchronized (partReconciliationCtx.reconciliationMux()) {
 
-                List<VersionedKey> partEntryHashRecords = new ArrayList<>();
+                System.out.println("qfbaftgr before cursor");
+                try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
+                    grpCtx.offheap().dataStore(part).cursor(cacheId, DATA) :
+                    grpCtx.offheap().dataStore(part).cursor(cacheId, keyToStart, null)) {
+                    System.out.println("qfbaftgr after cursor");
 
-                Long partSize = partBatch.partSizesMap().get(ignite.localNode().id());
+                    List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
-                if (partSize == null)
-                    partSize = 0L;
+                    Long partSize = partBatch.partSizesMap().get(ignite.localNode().id());
 
-                for (int i = 0; i < batchSize && cursor.next(); i++) {
+                    if (partSize == null)
+                        partSize = 0L;
+
+//                synchronized (partReconciliationCtx.reconciliationMux()) {
+
+                    for (int i = 0; i < batchSize && cursor.next(); i++) {
 //                    System.out.println("qfvndrfg");
 
-                    CacheDataRow row;
+                        CacheDataRow row;
 
-                    try {
-                        sleep(10);
-                    }
-                    catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                        try {
+                            sleep(3);
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
 
-                    synchronized (partReconciliationCtx.reconciliationMux()) {
-                        row = cursor.get();
+                        synchronized (partReconciliationCtx.reconciliationMux()) {
+                            row = cursor.get();
 
-                        if (partReconciliationCtx.lastKey(cacheId) == null || KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(cacheId), row.key()) < 0) {
-                            partReconciliationCtx.lastKey(cacheId, row.key());
+                            if (partReconciliationCtx.lastKey(cacheId) == null || KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(cacheId), row.key()) < 0) {
+                                partSize++;
+                            }
+
+                            if (partReconciliationCtx.lastKey(cacheId) == null || KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(cacheId), row.key()) < 0) {
+                                partReconciliationCtx.keysAfter.set(0);
+
+                                partReconciliationCtx.lastKey(cacheId, row.key());
 //                            System.out.println("qqedfks1 " + ignite.localNode().id() +
 //                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
 //                                " ||| _row.key()_:" + row.key() +
 //                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
 //                                " ||| partId: " + part +
 //                                " ||| partSize: " + partSize);
-//                            System.out.println("qqedfks2 " + ignite.localNode().id() +
-//                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (((KeyCacheObjectImpl)cacheDataStore.lastKey()).value() == null ? "null" : ((KeyCacheObjectImpl)cacheDataStore.lastKey()).value()) +
-//                                " ||| _row.key()_:" + ((KeyCacheObjectImpl) row.key()).value() +
-//                                " ||| compare: " + (((KeyCacheObjectImpl) cacheDataStore.lastKey()).value() == null ? "null" : ((Integer)((KeyCacheObjectImpl) cacheDataStore.lastKey()).value()) > ((Integer)((KeyCacheObjectImpl) row.key()).value())) +
-//                                " ||| partId: " + part +
-//                                " ||| partSize: " + partSize);
-                        }
-                        else {
+                                System.out.println("qqedfks2 " + ignite.localNode().id() +
+                                    " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value() == null ? "null" : ((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value()) +
+                                    " ||| _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() +
+                                    " ||| compare: " + (((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value() == null ? "null" : ((Integer)((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value()) > ((Integer)((KeyCacheObjectImpl)row.key()).value())) +
+                                    " ||| partId: " + part +
+                                    " ||| partSize: " + partSize);
+                            }
+                            else {
 //                            System.out.println("qftsbg1 " + ignite.localNode().id() +
 //                                " reconcilation execute0 else. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
 //                                " ||| _row.key()_:" + cacheDataStore.lastKey() +
 //                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
 //                                " ||| partId: " + part +
 //                                " ||| partSize: " + partSize);
-//                            System.out.println("qftsbg2 " + ignite.localNode().id() +
-//                                " reconcilation execute0 else. _cacheDataStore.lastKey()_: " + (((KeyCacheObjectImpl)cacheDataStore.lastKey()).value() == null ? "null" : ((KeyCacheObjectImpl)cacheDataStore.lastKey()).value()) +
-//                                " ||| _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() +
-//                                " ||| compare: " + (((KeyCacheObjectImpl)cacheDataStore.lastKey()).value() == null ? "null" : ((Integer)((KeyCacheObjectImpl)cacheDataStore.lastKey()).value()) > ((Integer)((KeyCacheObjectImpl)row.key()).value())) +
-//                                " ||| partId: " + part +
-//                                " ||| partSize: " + partSize);
+                                System.out.println("qftsbg2 " + ignite.localNode().id() +
+                                    " reconcilation execute0 else. _cacheDataStore.lastKey()_: " + (((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value() == null ? "null" : ((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value()) +
+                                    " ||| _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() +
+                                    " ||| compare: " + (((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value() == null ? "null" : ((Integer)((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value()) > ((Integer)((KeyCacheObjectImpl)row.key()).value())) +
+                                    " ||| partId: " + part +
+                                    " ||| partSize: " + partSize);
+                            }
+//                        }
+
+//                    System.out.println("qdvrfgad " + ignite.localNode().id() + " _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() + ", lowerKey: " + (lowerKey == null ? "null" : ((KeyCacheObjectImpl)lowerKey).value()) + ", row.key(): " + row.key() + ", lowerKey: " + lowerKey);
+                            if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0) {
+//                    if (lowerKey == null || !((KeyCacheObjectImpl)row.key()).value().equals(((KeyCacheObjectImpl)lowerKey).value())) {
+//                        partSize++;
+//                        System.out.println("qdrvgsrwe partSize: " + partSize);
+//                            System.out.println("qwerdcs " + ignite.localNode().id() + " _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value());
+                                partEntryHashRecords.add(new VersionedKey(
+                                    ignite.localNode().id(),
+                                    row.key(),
+                                    row.version()
+                                ));
+                            }
+                            else
+                                i--;
                         }
                     }
-                    System.out.println("qdvrfgad " + ignite.localNode().id() + " _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() + ", lowerKey: " + (lowerKey == null ? "null" : ((KeyCacheObjectImpl)lowerKey).value()) + ", row.key(): " + row.key() + ", lowerKey: " + lowerKey);
-                    if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) != 0) {
-//                    if (lowerKey == null || !((KeyCacheObjectImpl)row.key()).value().equals(((KeyCacheObjectImpl)lowerKey).value())) {
-                        partSize++;
-//                        System.out.println("qdrvgsrwe partSize: " + partSize);
-                        System.out.println("qwerdcs " + ignite.localNode().id() + " _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value());
-                        partEntryHashRecords.add(new VersionedKey(
-                            ignite.localNode().id(),
-                            row.key(),
-                            row.version()
-                        ));
-                    }
-                    else
-                        i--;
-                }
 
 //                System.out.println("qflyruc cursor.next(): " + cursor.next());
 
-                return new ExecutionResult<>(new T2<>(partEntryHashRecords, partSize));
-            }
-            catch (Exception e) {
-                String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";
+                    return new ExecutionResult<>(new T2<>(partEntryHashRecords, partSize));
+                }
+                catch (Exception e) {
+                    String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";
 
-                log.error(errMsg, e);
+                    log.error(errMsg, e);
 
-                return new ExecutionResult<>(errMsg + " " + e.getMessage());
-            }
-            finally {
-                part.release();
+                    return new ExecutionResult<>(errMsg + " " + e.getMessage());
+                }
+                finally {
+                    part.release();
+                }
             }
         }
     }

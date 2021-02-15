@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
@@ -76,7 +77,7 @@ public class AbstractPipelineProcessor {
     protected volatile ReconciliationEventListener evtLsnr = ReconciliationEventListenerProvider.defaultListenerInstance();
 
     /** */
-    final Map<UUID, AtomicInteger> workloadChainIdsInProgress = new HashMap();
+    final Map<UUID, AtomicInteger> workloadChainIdsInProgress = new ConcurrentHashMap<>();
 
     /** Tracks workload chains based on its lifecycle. */
     protected final WorkloadsInProgressTracker workloadsInProgressTracker = new WorkloadsInProgressTracker();

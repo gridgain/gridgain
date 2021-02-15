@@ -88,6 +88,7 @@ public class RepairSizesTask extends ComputeTaskAdapter<RepairSizesRequest, Exec
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, RepairSizesRequest arg)
         throws IgniteException {
+        System.out.println("qdsffter " + Thread.currentThread().getName());
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = arg.partSizesMap();
@@ -100,10 +101,23 @@ public class RepairSizesTask extends ComputeTaskAdapter<RepairSizesRequest, Exec
 
         Map<Integer, Map<UUID, Long>> partSizes = partSizesMap.get(cacheId);
 
-        for (Map.Entry<Integer, Map<UUID, Long>> entry : partSizes.entrySet()) {
-            Integer partId = entry.getKey();
-            Map<UUID, Long> sizes = entry.getValue();
+        Map<UUID, Long> sizes = partSizes.get(arg.partitionId());
 
+        for (ClusterNode node : subgrid) {
+            Long size = sizes.remove(node.id());
+
+            jobs.put(
+                new RepairSizesJob(
+                    arg.cacheName(),
+                    arg.startTopologyVersion(),
+                    cacheId,
+                    arg.partitionId(),
+                    size
+                ),
+                node);
+        }
+
+        if (!sizes.isEmpty()) {
             for (ClusterNode node : subgrid) {
                 Long size = sizes.remove(node.id());
 
@@ -112,29 +126,50 @@ public class RepairSizesTask extends ComputeTaskAdapter<RepairSizesRequest, Exec
                         arg.cacheName(),
                         arg.startTopologyVersion(),
                         cacheId,
-                        partId,
+                        arg.partitionId(),
                         size
-                        ),
-                    node);
+                    ),
+                    subgrid.iterator().next());
             }
-
-            if (!sizes.isEmpty()) {
-                for (ClusterNode node : subgrid) {
-                    Long size = sizes.remove(node.id());
-
-                    jobs.put(
-                        new RepairSizesJob(
-                            arg.cacheName(),
-                            arg.startTopologyVersion(),
-                            cacheId,
-                            partId,
-                            size
-                        ),
-                        subgrid.iterator().next());
-                }
-            }
-
         }
+
+
+
+//        for (Map.Entry<Integer, Map<UUID, Long>> entry : partSizes.entrySet()) {
+//            Integer partId = entry.getKey();
+//            Map<UUID, Long> sizes = entry.getValue();
+//
+//            for (ClusterNode node : subgrid) {
+//                Long size = sizes.remove(node.id());
+//
+//                jobs.put(
+//                    new RepairSizesJob(
+//                        arg.cacheName(),
+//                        arg.startTopologyVersion(),
+//                        cacheId,
+//                        partId,
+//                        size
+//                        ),
+//                    node);
+//            }
+//
+//            if (!sizes.isEmpty()) {
+//                for (ClusterNode node : subgrid) {
+//                    Long size = sizes.remove(node.id());
+//
+//                    jobs.put(
+//                        new RepairSizesJob(
+//                            arg.cacheName(),
+//                            arg.startTopologyVersion(),
+//                            cacheId,
+//                            partId,
+//                            size
+//                        ),
+//                        subgrid.iterator().next());
+//                }
+//            }
+//
+//        }
 
         return jobs;
     }

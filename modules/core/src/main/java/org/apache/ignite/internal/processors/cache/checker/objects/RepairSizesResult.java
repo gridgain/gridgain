@@ -16,17 +16,21 @@
 
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 
 /** Result of {@code RepairResultTask}. */
-public class RepairSizesResult {
+public class RepairSizesResult implements Serializable {
+    int qwer = 1;
+
     /**
      * Default constructor.
      */
     public RepairSizesResult() {
+        System.out.println("qfvshedr");
         // No-op
     }
 }
