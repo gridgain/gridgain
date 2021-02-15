@@ -28,7 +28,7 @@ import java.util.Iterator;
 /**
  * Update counter wrapper for error logging.
  */
-public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounter  {
+public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounter {
     /** */
     private final IgniteLogger log;
 
@@ -95,8 +95,7 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void update(long val) throws IgniteCheckedException {
+    @Override public void update(long val) throws IgniteCheckedException {
         delegate.update(val);
     }
 
