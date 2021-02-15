@@ -360,8 +360,6 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
             grid(0).context().query().getIndexing().statsManager().updateStatistics(targets);
 
-            U.sleep(2000);
-
             awaitStatistics(TIMEOUT, expectedVersion);
         }
         catch (Exception ex) {
