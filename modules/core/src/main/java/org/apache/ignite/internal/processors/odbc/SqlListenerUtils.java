@@ -343,10 +343,10 @@ public abstract class SqlListenerUtils {
     }
 
     /**
-     * Change timezone from one to another timezone.
+     * Change timezone from one to another.
      *
      * @param tzFrom Timezone from which to convert.
-     * @param tzTo Timezone to convert to/
+     * @param tzTo Timezone to convert to.
      * @param ms Miliseconds since Epoch.
      * @return Fixed time since Epoch.
      */
