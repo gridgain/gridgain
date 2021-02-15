@@ -56,6 +56,7 @@ import org.apache.ignite.internal.processors.cluster.ClusterReadOnlyModeSelfTest
 import org.apache.ignite.internal.processors.cluster.GridAddressResolverSelfTest;
 import org.apache.ignite.internal.processors.cluster.GridUpdateNotifierSelfTest;
 import org.apache.ignite.internal.processors.port.GridPortProcessorSelfTest;
+import org.apache.ignite.internal.util.GridMutableLongTest;
 import org.apache.ignite.internal.util.GridStartupWithUndefinedIgniteHomeSelfTest;
 import org.apache.ignite.internal.util.IgniteUtilsWorkDirectoryTest;
 import org.apache.ignite.spi.communication.GridCacheMessageSelfTest;
@@ -111,7 +112,8 @@ import org.junit.runners.Suite;
     DeploymentRequestOfUnknownClassProcessingTest.class,
     ThreadNameValidationTest.class,
     NodeWithFilterRestartTest.class,
-    ClusterActiveStateChangeWithNodeOutOfBaselineTest.class
+    ClusterActiveStateChangeWithNodeOutOfBaselineTest.class,
+    GridMutableLongTest.class
 })
 public class IgniteKernalSelfTestSuite {
     /** Activate service grid for test it. */
