@@ -131,8 +131,8 @@ namespace Apache.Ignite.Core.Impl.Client
 
             _logger = (_config.Logger ?? NoopLogger.Instance).GetLogger(GetType());
 
-            Connect();
-            OnFirstConnect();
+            ConnectDefaultSocket();
+            OnFirstConnection();
         }
 
         /// <summary>
@@ -271,7 +271,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 if (_socket == null || (_socket.IsDisposed && !_config.ReconnectDisabled))
                 {
-                    Connect();
+                    ConnectDefaultSocket();
                 }
 
                 return _socket;
@@ -418,17 +418,19 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /// <summary>
-        /// Connects the socket.
+        /// Connects the default socket.
         /// </summary>
-        private void Connect()
+        private void ConnectDefaultSocket()
         {
             _socket = GetNextSocket();
+
+            OnNewDefaultConnection();
         }
 
         /// <summary>
-        /// Performs initial checks when the first connection to the cluster has been established.
+        /// Performs feature checks when a new default connection is established.
         /// </summary>
-        private void OnFirstConnect()
+        private void OnNewDefaultConnection()
         {
             if (_config.EnablePartitionAwareness && !_socket.Features.HasOp(ClientOp.CachePartitions))
             {
@@ -447,7 +449,13 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 _logger.Warn("Automatic server node discovery is not supported by the server");
             }
+        }
 
+        /// <summary>
+        /// Performs initial checks when the first connection to the cluster has been established.
+        /// </summary>
+        private void OnFirstConnection()
+        {
             if (_socket.Features.HasFeature(ClientBitmaskFeature.BinaryConfiguration))
             {
                 var serverBinaryCfg = _socket.DoOutInOp(
