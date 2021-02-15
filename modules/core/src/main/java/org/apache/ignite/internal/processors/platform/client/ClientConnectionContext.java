@@ -40,7 +40,6 @@ import org.apache.ignite.internal.util.nio.GridNioSession;
 
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.AUTHORIZATION;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.BITMAP_FEATURES;
-import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.SQL_TIMEZONE_FIX;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.USER_ATTRIBUTES;
 
 /**
@@ -78,19 +77,15 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
     /** Version 1.7.1. User Attributes introduced. New version is needed because user attributes passed in handshake. */
     public static final ClientListenerProtocolVersion VER_1_7_1 = ClientListenerProtocolVersion.create(1, 7, 1);
 
-    /** Version 1.8.0. Timezone fix introduced. New version is needed because timezone passed in handshake. */
-    public static final ClientListenerProtocolVersion VER_1_8_0 = ClientListenerProtocolVersion.create(1, 8, 0);
-
     /** Default version. */
-    public static final ClientListenerProtocolVersion DEFAULT_VER = VER_1_8_0;
+    public static final ClientListenerProtocolVersion DEFAULT_VER = VER_1_7_1;
 
     /** Default protocol context. */
     public static final ClientProtocolContext DEFAULT_PROTOCOL_CONTEXT =
-        new ClientProtocolContext(DEFAULT_VER, ClientBitmaskFeature.allFeaturesAsEnumSet(), null);
+        new ClientProtocolContext(DEFAULT_VER, ClientBitmaskFeature.allFeaturesAsEnumSet());
 
     /** Supported versions. */
     private static final Collection<ClientListenerProtocolVersion> SUPPORTED_VERS = Arrays.asList(
-        VER_1_8_0,
         VER_1_7_1,
         VER_1_7_0,
         VER_1_6_0,
@@ -101,6 +96,9 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
         VER_1_1_0,
         VER_1_0_0
     );
+
+    /** User attribute used to pass timezone of the client. */
+    private static final String USER_ATTR_TIMEZONE = "client.timezone";
 
     /** Message parser. */
     private ClientMessageParser parser;
@@ -200,20 +198,19 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
             features = ClientBitmaskFeature.enumSet(cliFeatures);
         }
 
-        TimeZone clientTz = null;
-        if (ClientProtocolContext.isFeatureSupported(ver, SQL_TIMEZONE_FIX)) {
-            String clientTzId = reader.readString();
-
-            clientTz = TimeZone.getTimeZone(clientTzId);
-        }
-
-        currentProtocolContext = new ClientProtocolContext(ver, features, clientTz);
+        currentProtocolContext = new ClientProtocolContext(ver, features);
 
         String user = null;
         String pwd = null;
 
         if (currentProtocolContext.isFeatureSupported(USER_ATTRIBUTES))
             userAttrs = reader.readMap();
+
+        if (userAttrs != null) {
+            String clientTzId = userAttrs.get(USER_ATTR_TIMEZONE);
+
+            currentProtocolContext.clientTimeZone(TimeZone.getTimeZone(clientTzId));
+        }
 
         if (currentProtocolContext.isFeatureSupported(AUTHORIZATION)) {
             boolean hasMore;

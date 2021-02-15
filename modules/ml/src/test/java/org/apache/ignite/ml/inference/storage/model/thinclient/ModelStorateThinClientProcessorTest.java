@@ -64,7 +64,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     private static final ClientConnectionContext connCtx = mock(ClientConnectionContext.class);
 
     static {
-        when(connCtx.currentProtocolContext()).thenReturn(new ClientProtocolContext(ClientListenerProtocolVersion.create(1, 4, 0), null, null));
+        when(connCtx.currentProtocolContext()).thenReturn(new ClientProtocolContext(ClientListenerProtocolVersion.create(1, 4, 0), null));
         when(connCtx.checkAffinityTopologyVersion()).thenReturn(new ClientAffinityTopologyVersion(AffinityTopologyVersion.ZERO, false));
     }
 

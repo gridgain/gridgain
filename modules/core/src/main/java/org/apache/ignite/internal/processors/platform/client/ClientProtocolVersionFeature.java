@@ -45,9 +45,6 @@ public class ClientProtocolVersionFeature {
     /** User attributes feature introduced. */
     public static final ClientProtocolVersionFeature USER_ATTRIBUTES = new ClientProtocolVersionFeature(VER_1_7_1);
 
-    /** User attributes feature introduced. */
-    public static final ClientProtocolVersionFeature SQL_TIMEZONE_FIX = new ClientProtocolVersionFeature(VER_1_8_0);
-
     /** Version in which the feature was introduced. */
     private final ClientListenerProtocolVersion ver;
 

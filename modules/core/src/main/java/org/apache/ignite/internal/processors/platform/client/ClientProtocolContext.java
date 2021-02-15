@@ -33,18 +33,15 @@ public class ClientProtocolContext {
     private final EnumSet<ClientBitmaskFeature> features;
 
     /** Client timezone. */
-    private final TimeZone clientTz;
+    private TimeZone clientTz;
 
     /**
      * @param ver Protocol version.
      * @param features Supported features.
-     * @param clientTz Client timezone.
      */
-    public ClientProtocolContext(ClientListenerProtocolVersion ver, EnumSet<ClientBitmaskFeature> features,
-        TimeZone clientTz) {
+    public ClientProtocolContext(ClientListenerProtocolVersion ver, EnumSet<ClientBitmaskFeature> features) {
         this.ver = ver;
         this.features = features != null ? features : EnumSet.noneOf(ClientBitmaskFeature.class);
-        this.clientTz = clientTz;
     }
 
     /**
@@ -97,5 +94,12 @@ public class ClientProtocolContext {
      */
     public TimeZone clientTimeZone() {
         return clientTz;
+    }
+
+    /**
+     * @param clientTz Client time zone.
+     */
+    public void clientTimeZone(TimeZone clientTz) {
+        this.clientTz = clientTz;
     }
 }
