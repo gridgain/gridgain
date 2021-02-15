@@ -55,9 +55,6 @@ public class StatisticsObjectData implements Message {
     @GridDirectMap(keyType = String.class, valueType = StatisticsColumnData.class)
     private Map<String, StatisticsColumnData> data;
 
-    /** Version */
-    private long ver;
-
     /**
      * Constructor.
      *
@@ -74,8 +71,7 @@ public class StatisticsObjectData implements Message {
         StatisticsType type,
         int partId,
         long updCnt,
-        Map<String, StatisticsColumnData> data,
-        long ver
+        Map<String, StatisticsColumnData> data
     ) {
         this.key = key;
         this.rowsCnt = rowsCnt;
@@ -83,7 +79,6 @@ public class StatisticsObjectData implements Message {
         this.partId = partId;
         this.updCnt = updCnt;
         this.data = data;
-        this.ver = ver;
     }
 
     /**
@@ -126,11 +121,6 @@ public class StatisticsObjectData implements Message {
      */
     public Map<String, StatisticsColumnData> data() {
         return data;
-    }
-
-    /** */
-    public long version() {
-        return ver;
     }
 
     /**
@@ -184,12 +174,6 @@ public class StatisticsObjectData implements Message {
 
             case 5:
                 if (!writer.writeLong("updCnt", updCnt))
-                    return false;
-
-                writer.incrementState();
-
-            case 6:
-                if (!writer.writeLong("ver", ver))
                     return false;
 
                 writer.incrementState();
@@ -259,14 +243,6 @@ public class StatisticsObjectData implements Message {
 
                 reader.incrementState();
 
-            case 6:
-                ver = reader.readLong("ver");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
         }
 
         return reader.afterMessageRead(StatisticsObjectData.class);
@@ -279,7 +255,7 @@ public class StatisticsObjectData implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 7;
+        return 6;
     }
 
     /** {@inheritDoc} */

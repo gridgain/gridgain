@@ -111,8 +111,6 @@ public class IgniteStatisticsHelper {
     ) {
         assert !stats.isEmpty();
 
-        long ver = F.first(stats).version();
-
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedCols.length);
         long rowCnt = 0;
 
@@ -120,8 +118,6 @@ public class IgniteStatisticsHelper {
             colPartStats.put(col, new ArrayList<>());
 
         for (ObjectStatisticsImpl partStat : stats) {
-            assert partStat.version() == ver : "Different partition statistic version";
-
             for (Column col : selectedCols) {
                 ColumnStatistics colPartStat = partStat.columnStatistics(col.getName());
 
@@ -133,6 +129,7 @@ public class IgniteStatisticsHelper {
                     });
                 }
             }
+
             rowCnt += partStat.rowCount();
         }
 
@@ -144,7 +141,7 @@ public class IgniteStatisticsHelper {
             colStats.put(col.getName(), stat);
         }
 
-        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats, ver);
+        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
 
         return tblStats;
     }
@@ -281,25 +278,25 @@ public class IgniteStatisticsHelper {
         return res;
     }
 
-    /**
-     * Filter columns from specified statistics.
-     *
-     * @param stat Statistics to filter columns from.
-     * @param cols Column names to return in result object.
-     * @return Statistics with only specified columns.
-     */
-    public static ObjectStatisticsImpl filterColumns(ObjectStatisticsImpl stat, Collection<String> cols) {
-        ObjectStatisticsImpl res = stat.clone();
-        res.columnsStatistics().clear();
-
-        for (String column : cols) {
-            ColumnStatistics colStat = stat.columnStatistics(column);
-            if (colStat != null)
-                res.columnsStatistics().put(column, colStat);
-        }
-
-        return res;
-    }
+//    /**
+//     * Filter columns from specified statistics.
+//     *
+//     * @param stat Statistics to filter columns from.
+//     * @param cols Column names to return in result object.
+//     * @return Statistics with only specified columns.
+//     */
+//    public static ObjectStatisticsImpl filterColumns(ObjectStatisticsImpl stat, Collection<String> cols) {
+//        ObjectStatisticsImpl res = stat.clone();
+//        res.columnsStatistics().clear();
+//
+//        for (String column : cols) {
+//            ColumnStatistics colStat = stat.columnStatistics(column);
+//            if (colStat != null)
+//                res.columnsStatistics().put(column, colStat);
+//        }
+//
+//        return res;
+//    }
 
     /**
      * Filter columns by specified names.
@@ -316,21 +313,6 @@ public class IgniteStatisticsHelper {
         }
 
         Set<String> colNamesSet = new HashSet<>(colNames);
-
-        return Arrays.stream(cols).filter(c -> colNamesSet.contains(c.getName())).toArray(Column[]::new);
-    }
-
-    /**
-     * Filter columns by specified names.
-     *
-     * @param cols Columns to filter.
-     * @return Column with specified names.
-     */
-    public static Column[] filterColumns(Column[] cols, @Nullable StatisticsColumnConfiguration[] colCfgs) {
-        if (F.isEmpty(colCfgs))
-            return cols;
-
-        Set<String> colNamesSet = Arrays.stream(colCfgs).map(StatisticsColumnConfiguration::name).collect(Collectors.toSet());
 
         return Arrays.stream(cols).filter(c -> colNamesSet.contains(c.getName())).toArray(Column[]::new);
     }

@@ -150,8 +150,8 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         colStat2.put("col2", cs3);
         colStat2.put("col3", cs4);
 
-        ObjectStatisticsImpl os1 = new ObjectStatisticsImpl(100, colStat1, 9);
-        ObjectStatisticsImpl os2 = new ObjectStatisticsImpl(101, colStat2, 0);
+        ObjectStatisticsImpl os1 = new ObjectStatisticsImpl(100, colStat1);
+        ObjectStatisticsImpl os2 = new ObjectStatisticsImpl(101, colStat2);
 
         ObjectStatisticsImpl sumStat1 = IgniteStatisticsRepository.add(os1, os2);
 
@@ -160,7 +160,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         assertEquals(cs3, sumStat1.columnStatistics("col2"));
 
         // 2) Add statistics with new columns.
-        ObjectStatisticsImpl os3 = new ObjectStatisticsImpl(101, Collections.singletonMap("col3", cs3), 0);
+        ObjectStatisticsImpl os3 = new ObjectStatisticsImpl(101, Collections.singletonMap("col3", cs3));
 
         ObjectStatisticsImpl sumStat2 = IgniteStatisticsRepository.add(os1, os3);
 
@@ -171,7 +171,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         colStat3.put("col1", cs3);
         colStat3.put("col2", cs4);
 
-        ObjectStatisticsImpl os4 = new ObjectStatisticsImpl(99, colStat3, 0);
+        ObjectStatisticsImpl os4 = new ObjectStatisticsImpl(99, colStat3);
 
         ObjectStatisticsImpl sumStat3 = IgniteStatisticsRepository.add(os1, os4);
 
@@ -191,7 +191,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         colStat1.put("col1", cs1);
         colStat1.put("col2", cs2);
 
-        ObjectStatisticsImpl os = new ObjectStatisticsImpl(100, colStat1, 0);
+        ObjectStatisticsImpl os = new ObjectStatisticsImpl(100, colStat1);
 
         // 1) Remove not existing column.
         ObjectStatisticsImpl os1 = IgniteStatisticsRepository.subtract(os, Collections.singleton("col0"));

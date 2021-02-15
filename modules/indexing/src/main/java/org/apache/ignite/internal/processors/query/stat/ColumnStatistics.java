@@ -49,6 +49,9 @@ public class ColumnStatistics {
     /** Raw data. */
     private final byte[] raw;
 
+    /** Version. */
+    private final long ver;
+
     /**
      * Constructor.
      *
@@ -61,6 +64,30 @@ public class ColumnStatistics {
      * @param raw Raw data to aggregate statistics.
      */
     public ColumnStatistics(Value min, Value max, int nulls, int cardinality, long total, int size, byte[] raw) {
+        this(min, max, nulls, cardinality, total, size, raw, 0);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param min Min value in column or {@code null}.
+     * @param max Max value in column or {@code null}.
+     * @param nulls Percent of null values in column.
+     * @param cardinality Percent of unique value in column.
+     * @param total Total number of values in column.
+     * @param size Average size in bytes, for variable size only.
+     * @param raw Raw data to aggregate statistics.
+     */
+    public ColumnStatistics(
+        Value min,
+        Value max,
+        int nulls,
+        int cardinality,
+        long total,
+        int size,
+        byte[] raw,
+        long ver
+    ) {
         this.min = min;
         this.max = max;
         this.nulls = nulls;
@@ -68,6 +95,7 @@ public class ColumnStatistics {
         this.total = total;
         this.size = size;
         this.raw = raw;
+        this.ver = ver;
     }
 
     /**
@@ -119,6 +147,13 @@ public class ColumnStatistics {
         return raw;
     }
 
+    /**
+     * @return Statistic's version.
+     */
+    public long version() {
+        return ver;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -128,6 +163,7 @@ public class ColumnStatistics {
                 cardinality == that.cardinality &&
                 total == that.total &&
                 size == that.size &&
+                ver == that.ver &&
                 Objects.equals(min, that.min) &&
                 Objects.equals(max, that.max) &&
                 Arrays.equals(raw, that.raw);
@@ -135,7 +171,7 @@ public class ColumnStatistics {
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        int result = Objects.hash(min, max, nulls, cardinality, total, size);
+        int result = Objects.hash(min, max, nulls, cardinality, total, size, ver);
         result = 31 * result + Arrays.hashCode(raw);
         return result;
     }

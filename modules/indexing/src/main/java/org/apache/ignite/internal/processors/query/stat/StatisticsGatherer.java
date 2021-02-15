@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,6 +25,7 @@ import java.util.function.Function;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.task.GatherPartitionStatistics;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
@@ -67,16 +69,16 @@ public class StatisticsGatherer {
     public LocalStatisticsGatheringContext collectLocalObjectsStatisticsAsync(
         GridH2Table tbl,
         Column[] cols,
-        Set<Integer> parts,
-        long ver
+        Map<String, StatisticsColumnConfiguration> colCfgs,
+        Set<Integer> parts
     ) {
         StatisticsKey key = new StatisticsKey(tbl.getSchema().getName(), tbl.getName());
 
         if (log.isDebugEnabled()) {
             log.debug("Start statistics gathering [key=" + key +
                 ", cols=" + Arrays.toString(cols) +
-                ", parts=" + parts +
-                ", ver=" + ver + ']');
+                ", cfgs=" + colCfgs +
+                ", parts=" + parts + ']');
         }
 
         final LocalStatisticsGatheringContext newCtx = new LocalStatisticsGatheringContext(parts);
@@ -95,8 +97,8 @@ public class StatisticsGatherer {
                 newCtx,
                 tbl,
                 cols,
+                colCfgs,
                 part,
-                ver,
                 log
             );
 

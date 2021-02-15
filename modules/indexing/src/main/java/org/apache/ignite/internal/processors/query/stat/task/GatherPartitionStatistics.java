@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.query.stat.GatherStatisticCancelExc
 import org.apache.ignite.internal.processors.query.stat.GatherStatisticRetryException;
 import org.apache.ignite.internal.processors.query.stat.LocalStatisticsGatheringContext;
 import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatisticsImpl;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.table.Column;
 
@@ -56,10 +57,10 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
     private final Column[] cols;
 
     /** */
-    private final int partId;
+    private final Map<String, StatisticsColumnConfiguration> colCfgs;
 
     /** */
-    private final long ver;
+    private final int partId;
 
     /** */
     private final Supplier<Boolean> cancelled;
@@ -75,14 +76,14 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
         LocalStatisticsGatheringContext gathCtx,
         GridH2Table tbl,
         Column[] cols,
+        Map<String, StatisticsColumnConfiguration> colCfgs,
         int partId,
-        long ver,
         IgniteLogger log
     ) {
         this.tbl = tbl;
         this.cols = cols;
+        this.colCfgs = colCfgs;
         this.partId = partId;
-        this.ver = ver;
         cancelled = () -> gathCtx.future().isCancelled();
         this.log = log;
     }
@@ -113,8 +114,13 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
 
             ColumnStatisticsCollector[] collectors = new ColumnStatisticsCollector[cols.length];
 
-            for (int i = 0; i < cols.length; ++i)
-                collectors[i] = new ColumnStatisticsCollector(cols[i], tbl::compareValues);
+            for (int i = 0; i < cols.length; ++i) {
+                collectors[i] = new ColumnStatisticsCollector(
+                    cols[i],
+                    tbl::compareValues,
+                    colCfgs.get(cols[i].getName()).version()
+                );
+            }
 
             GridQueryTypeDescriptor typeDesc = tbl.rowDescriptor().type();
 
@@ -157,8 +163,7 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
                 partId,
                 colStats.values().iterator().next().total(),
                 locPart.updateCounter(),
-                colStats,
-                ver
+                colStats
             );
         }
         finally {

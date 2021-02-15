@@ -185,6 +185,30 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
      * Check statistics on cluster after change topology.
      * 1. Create statistic for a table;
      * 2. Check statistics on all nodes of the cluster;
+     * 3. Stop node;
+     * 4. Check statistics on remaining node.
+     */
+    @Test
+    public void stopNodeWithoutChangeBaseline() throws Exception {
+        startGrids(2);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        createSmallTable(null);
+
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+
+        stopGrid(1);
+
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+    }
+
+    /**
+     * Check statistics on cluster after change topology.
+     * 1. Create statistic for a table;
+     * 2. Check statistics on all nodes of the cluster;
      * 3. Change topology (add or remove node);
      * 4. Go to p.2;
      */
@@ -249,9 +273,10 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
 
         grid(0).context().query().getIndexing().statsManager()
-            .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+            .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, (stats) -> stats.forEach(s -> assertNull(s)));
+        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+            (stats) -> stats.forEach(s -> assertNull(s.columnStatistics("A"))));
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
@@ -471,7 +496,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
                     List<ObjectStatisticsImpl> stats = statisticsAllNodes(schema, objName);
 
-                    stats.forEach(s -> log.error(s.toString()));
+                    stats.forEach(s -> log.error("Stat: " + s));
 
                     throw ex;
                 }

@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -48,7 +49,8 @@ public class StatisticsUtils {
         GridH2ValueMessage msgMin = stat.min() == null ? null : GridH2ValueMessageFactory.toMessage(stat.min());
         GridH2ValueMessage msgMax = stat.max() == null ? null : GridH2ValueMessageFactory.toMessage(stat.max());
 
-        return new StatisticsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(), stat.total(), stat.size(), stat.raw());
+        return new StatisticsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(),
+            stat.total(), stat.size(), stat.raw(), stat.version());
     }
 
     /**
@@ -66,7 +68,8 @@ public class StatisticsUtils {
         Value min = (data.min() == null) ? null : data.min().value(ctx);
         Value max = (data.max() == null) ? null : data.max().value(ctx);
 
-        return new ColumnStatistics(min, max, data.nulls(), data.cardinality(), data.total(), data.size(), data.rawData());
+        return new ColumnStatistics(min, max, data.nulls(), data.cardinality(),
+            data.total(), data.size(), data.rawData(), data.version());
     }
 
     /**
@@ -94,11 +97,10 @@ public class StatisticsUtils {
             ObjectPartitionStatisticsImpl partStats = (ObjectPartitionStatisticsImpl) stat;
 
             data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, partStats.partId(),
-                    partStats.updCnt(), colData, partStats.version());
+                    partStats.updCnt(), colData);
         }
         else
-            data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, 0, 0, colData, stat.version());
-
+            data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, 0, 0, colData);
         return data;
     }
 
@@ -140,8 +142,7 @@ public class StatisticsUtils {
             objData.partId(),
             objData.rowsCnt(),
             objData.updCnt(),
-            colNameToStat,
-            objData.version()
+            colNameToStat
         );
     }
 
@@ -162,7 +163,7 @@ public class StatisticsUtils {
         for (Map.Entry<String, StatisticsColumnData> cs : data.data().entrySet())
             colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
 
-        return new ObjectStatisticsImpl(data.rowsCnt(), colNameToStat, data.version());
+        return new ObjectStatisticsImpl(data.rowsCnt(), colNameToStat);
     }
 
     /**
@@ -181,7 +182,7 @@ public class StatisticsUtils {
         return new StatisticsKeyMessage(
             cfg.key().schema(),
             cfg.key().obj(),
-            Arrays.stream(cfg.columns()).map(StatisticsColumnConfiguration::name).collect(Collectors.toList())
+            new ArrayList<>(cfg.columns().keySet())
         );
     }
 }

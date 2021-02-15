@@ -29,7 +29,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
@@ -352,10 +351,16 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                     (grid(0).context().query().getIndexing().statsManager()))
                     .statisticConfiguration().config(t.key());
 
-                expectedVersion.put(t, cfg != null ? cfg.version() + 1 : 0);
+                expectedVersion.put(
+                    t,
+                    cfg != null
+                        ? cfg.columnsAll().values().stream().mapToLong(c -> c.version()).min().orElse(0L) + 1
+                        : 0L);
             }
 
             grid(0).context().query().getIndexing().statsManager().updateStatistics(targets);
+
+            U.sleep(2000);
 
             awaitStatistics(TIMEOUT, expectedVersion);
         }
@@ -373,7 +378,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0, 100,
             0, new byte[0]);
-        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics), 0);
+        return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
     }
 
     /**
@@ -388,8 +393,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
         return new ObjectPartitionStatisticsImpl(
             partId, 0, 0,
-            Collections.singletonMap("col1", colStatistics),
-            0
+            Collections.singletonMap("col1", colStatistics)
         );
     }
 
@@ -444,7 +448,12 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                     ObjectStatisticsImpl s = (ObjectStatisticsImpl)ign.context().query().getIndexing().statsManager()
                         .getLocalStatistics(k.schema(), k.obj());
 
-                    assertEquals((long)ver, s.version());
+                    long maxVer = s.columnsStatistics().values().stream()
+                        .mapToLong(c -> c.version())
+                        .min()
+                        .orElse(-1L);
+
+                    assertEquals((long)ver, maxVer);
                 });
 
                 return;

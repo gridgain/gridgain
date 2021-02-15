@@ -68,8 +68,7 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
 
         ObjectStatisticsImpl locStat2WithPrevVersion = new ObjectStatisticsImpl(
             locStat2.rowCount(),
-            locStat2.columnsStatistics(),
-            locStat.version());
+            locStat2.columnsStatistics());
 
         assertEquals(locStat, locStat2WithPrevVersion);
     }
@@ -91,7 +90,8 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL");
 
-        ObjectStatisticsImpl locStat2WithPrevVersion = new ObjectStatisticsImpl(locStat2.rowCount(), locStat2.columnsStatistics(), locStat.version());
+        ObjectStatisticsImpl locStat2WithPrevVersion = new ObjectStatisticsImpl(
+            locStat2.rowCount(), locStat2.columnsStatistics());
 
         assertEquals(locStat, locStat2WithPrevVersion);
     }

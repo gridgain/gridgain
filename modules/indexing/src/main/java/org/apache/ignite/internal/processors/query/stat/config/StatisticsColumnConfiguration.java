@@ -16,6 +16,8 @@
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -31,13 +33,58 @@ public class StatisticsColumnConfiguration implements Serializable {
     private final String name;
 
     /** */
+    private final long ver;
+
+    /** */
+    private final boolean tombstone;
+
+    /** */
     public StatisticsColumnConfiguration(String name) {
+        this(name, 0);
+    }
+
+    /** */
+    public StatisticsColumnConfiguration(String name, long ver) {
+        this(name, ver, false);
+    }
+
+    /** */
+    private StatisticsColumnConfiguration(String name, long ver, boolean tombstone) {
         this.name = name;
+        this.ver = ver;
+        this.tombstone = tombstone;
     }
 
     /** */
     public String name() {
         return name;
+    }
+
+    /** */
+    public long version() {
+        return ver;
+    }
+
+    /** */
+    public boolean tombstone() {
+        return tombstone;
+    }
+
+    /** */
+    public static StatisticsColumnConfiguration merge(
+        StatisticsColumnConfiguration oldCfg,
+        StatisticsColumnConfiguration newCfg)
+    {
+        if (oldCfg == null)
+            return newCfg;
+
+        return new StatisticsColumnConfiguration(newCfg.name, oldCfg.ver + 1);
+    }
+
+    /** */
+    public StatisticsColumnConfiguration createTombstone()
+    {
+        return new StatisticsColumnConfiguration(name, ver + 1, true);
     }
 
     /** {@inheritDoc} */
@@ -50,12 +97,13 @@ public class StatisticsColumnConfiguration implements Serializable {
 
         StatisticsColumnConfiguration that = (StatisticsColumnConfiguration)o;
 
-        return Objects.equals(name, that.name);
+        return ver == that.ver
+            && Objects.equals(name, that.name);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(name);
+        return Objects.hash(name, ver);
     }
 
     /** {@inheritDoc} */
