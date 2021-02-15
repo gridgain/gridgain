@@ -442,6 +442,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                     log.debug("Partition has been owned (created first time) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + locPart.id() + ']');
                             }
+                            else if (locPart.state() == RENTING)
+                                locPart.moving(); // A partition should be owned by the node.
 
                             needRefresh = true;
 
@@ -455,6 +457,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                 needRefresh = true;
 
                                 updateSeq = updateLocal(p, locPart.state(), updateSeq, affVer);
+
+                                if (locPart.state() == RENTING)
+                                    locPart.evictAsync(); // Continue eviction (persistence is enabled).
                             }
                         }
                     }
@@ -808,7 +813,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         GridDhtLocalPartition locPart = localPartition0(p, topVer, false, true);
 
                         if (partitionLocalNode(p, topVer)) {
-                            assert locPart != null && locPart.state() != RENTING && locPart.state() != EVICTED : locPart;
+                            assert locPart != null && locPart.state() != RENTING && locPart.state() != EVICTED :
+                                p + " " + topVer + " " + locPart + " " + grp.cacheOrGroupName();
                         }
                         else {
                             if (locPart != null) {
@@ -2041,14 +2047,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             // Own orphan moving partitions (having no suppliers).
             if (fut != null && (fut.events().hasServerJoin() || fut.changedBaseline()))
                 ownOrphans();
-
-            // Resume eviction of RENTING partitions on first PME.
-            if (fut != null && grp.localStartVersion().equals(fut.initialVersion()) && grp.persistenceEnabled()) {
-                for (GridDhtLocalPartition part : localPartitions()) {
-                    if (part.state() == RENTING)
-                        part.evictAsync();
-                }
-            }
         }
         finally {
             lock.writeLock().unlock();
