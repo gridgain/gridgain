@@ -173,7 +173,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checking the correctness of {@link CacheMetrics#getRebalancingKeysRate}.
+     * Checks the correctness of {@link CacheMetrics#getRebalancingKeysRate}.
      *
      * @throws Exception If failed.
      */
@@ -194,7 +194,9 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
         final CountDownLatch l1 = new CountDownLatch(1);
         final CountDownLatch l2 = new CountDownLatch(1);
 
-        startGrid(1).events().localListen((IgnitePredicate<Event>)evt -> {
+        ignite = startGrid(1);
+
+        ignite.events().localListen((IgnitePredicate<Event>)evt -> {
             l1.countDown();
 
             try {
@@ -208,8 +210,6 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
         }, EventType.EVT_CACHE_REBALANCE_STOPPED);
 
         assertTrue(l1.await(5, TimeUnit.SECONDS));
-
-        ignite = ignite(1);
 
         CacheMetrics metrics1 = ignite.cache(CACHE1).localMetrics();
         CacheMetrics metrics2 = ignite.cache(CACHE2).localMetrics();
