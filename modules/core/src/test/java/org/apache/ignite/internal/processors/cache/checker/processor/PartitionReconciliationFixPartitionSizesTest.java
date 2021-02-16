@@ -45,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
+import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -156,7 +157,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 10;
+        int endKey = 10000;
 
         for (int i = startKey; i < endKey; i++) {
             i += 2;
@@ -171,9 +172,9 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
-//        breakCacheSizes(List.of(grid(0)), List.of(DEFAULT_CACHE_NAME));
+        breakCacheSizes(List.of(grid(0)), List.of(DEFAULT_CACHE_NAME));
 //
-//        assertFalse(cache.size() == startSize);
+        assertFalse(cache.size() == startSize);
 
         doSleep(500);
 
@@ -185,6 +186,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         objects.add(DEFAULT_CACHE_NAME);
 //        objects.add("qqq");
         builder.caches(objects);
+        builder.batchSize(100);
 
 
         AtomicReference<ReconciliationResult> res = new AtomicReference<>();
@@ -199,12 +201,14 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             while(res.get() == null/* || i < endKey*/) {
                 int i1 = startKey + rnd.nextInt(endKey - startKey);
                 cache.put(i1, 1);
+//                i1 = startKey + rnd.nextInt(endKey - startKey);
+//                cache.remove(i1);
 
 //                System.out.println("qfegsdg put random: " + i1);
 //                doSleep(3);
 
-                if (i1 > max)
-                    max = i1;
+//                if (i1 > max)
+//                    max = i1;
 
 //                if (i < endKey) {
 //                    cache.put(i, i);
@@ -219,6 +223,12 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         System.out.println("qvsdhntsd partitionReconciliation start");
 
         GridTestUtils.runMultiThreadedAsync(() -> res.set(partitionReconciliation(client, builder)), 1, "reconciliation");
+
+//        CollectPartitionKeysByBatchTask.latch.await();
+
+//        cache.removeAll();
+
+        System.out.println("qfdrbad removeAll");
 
         GridTestUtils.waitForCondition(() -> res.get() != null, 40_000);
 
@@ -237,6 +247,9 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
 //            System.out.println("qfegsdg put after all: " + i);
         }
+
+        System.out.println(CollectPartitionKeysByBatchTask.msg);
+
         assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size());
 //        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());
 //        org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResultCollector.Simple.partSizesMap

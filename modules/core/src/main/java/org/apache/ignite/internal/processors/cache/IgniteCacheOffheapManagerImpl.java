@@ -49,6 +49,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccMarkUpdat
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateNewTxStateHintRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateTxStateHintRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtDetachedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
@@ -1625,7 +1626,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     else
                         storageSize.set(reconciliationCacheSize + reconciliationCtx.storageSizeDelta(cacheId) + reconciliationCtx.keysAfter.get());
 
-                System.out.println("reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfter: " + reconciliationCtx.keysAfter.get());
+                CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfter: " + reconciliationCtx.keysAfter.get());
+
+                System.out.println(CollectPartitionKeysByBatchTask.msg);
 
                 reconciliationCtx.storageSizeDeltas().remove(cacheId);
 
@@ -1760,8 +1763,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //                            e.printStackTrace();
 //                        }
 //                    }
-                    if (reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) < 0) {
+                    if ((reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.firstKey(cacheId)) <= 0) || (reconciliationCtx.keysToCheck.containsKey(cacheId) && !reconciliationCtx.keysToCheck.get(cacheId).contains(key))) {
 
+                        if (!(reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.firstKey(cacheId)) <= 0) && (reconciliationCtx.keysToCheck.containsKey(cacheId) && !reconciliationCtx.keysToCheck.get(cacheId).contains(key))) {
+                            System.out.println();
+                        }
                         reconciliationCtx.storageSizeAddDelta(cacheId, delta);
 
 //                        storageSize.addAndGet(delta);
@@ -1780,7 +1786,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                             " ||| storageSize:" + storageSize.get() +
                             " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
                     }
-                    else if (reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) > 0) {
+                    else if ((reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.firstKey(cacheId)) >= 0) || (reconciliationCtx.keysToCheck.containsKey(cacheId) && !reconciliationCtx.keysToCheck.get(cacheId).contains(key))) {
                         reconciliationCtx.keysAfter.addAndGet(delta);
                         System.out.println("qdrefgs2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                             " updateSize keysAfter. _key_: " + ((KeyCacheObjectImpl)key).value() +
@@ -3037,7 +3043,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             public final Map<Integer, AtomicLong> storageSizeDeltas = new ConcurrentHashMap<>();
 
             /** */
+            private final Map<Integer, KeyCacheObject> firstKeys = new ConcurrentHashMap<>();
+
+            /** */
             private final Map<Integer, KeyCacheObject> lastKeys = new ConcurrentHashMap<>();
+
+            public final Map<Integer, List<KeyCacheObject>> keysToCheck = new ConcurrentHashMap<>();
 
             /** */
             private static final KeyComparator KEY_COMPARATOR = new KeyComparator();
@@ -3097,6 +3108,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             /** */
             public void lastKey(int cacheId, KeyCacheObject key) {
                 lastKeys.put(cacheId, key);
+            }
+
+            /** */
+            public KeyCacheObject firstKey(int cacheId) {
+                return firstKeys.get(cacheId);
+            }
+
+            /** */
+            public void firstKey(int cacheId, KeyCacheObject key) {
+                firstKeys.put(cacheId, key);
             }
         }
 
