@@ -614,12 +614,16 @@ public class GridNioServerWrapper {
         }
 
         if (ses == null) {
-            if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
-                if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size())) {
-                    String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
-                        "; inverse connection will be requested.";
+            // If local node and remote node are configured to use paired connections we won't even request
+            // inverse connection so no point in throwing NodeUnreachableException
+            if (!cfg.usePairedConnections() || !Boolean.TRUE.equals(node.attribute(attrs.pairedConnection()))) {
+                if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
+                    if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size())) {
+                        String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
+                            "; inverse connection will be requested.";
 
-                    throw new NodeUnreachableException(msg);
+                        throw new NodeUnreachableException(msg);
+                    }
                 }
             }
 
