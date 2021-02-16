@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -51,6 +52,7 @@ import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectC
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
 
@@ -157,8 +159,6 @@ public class IgniteStatisticsConfigurationManager {
                         if (msg instanceof DynamicCacheChangeBatch)
                             return;
                     }
-
-                    log.info("+++ EVT" + evt);
 
                     scanAndCheckLocalStatistic(fut.topologyVersion());
                 }
@@ -504,8 +504,10 @@ public class IgniteStatisticsConfigurationManager {
                 repo.refreshAggregatedLocalStatistics(partsToAggregate, cfg);
             }
             catch (Throwable e) {
-                log.error("Error on aggregate statistic on finish local statistics collection" +
-                    " [key=" + key + ", parts=" + partsToAggregate, e);
+                if (!X.hasCause(e, NodeStoppingException.class)) {
+                    log.error("Error on aggregate statistic on finish local statistics collection" +
+                        " [key=" + key + ", parts=" + partsToAggregate, e);
+                }
             }
             finally {
                 stopLock.leaveBusy();
