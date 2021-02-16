@@ -156,7 +156,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 15000;
+        int endKey = 10;
 
         for (int i = startKey; i < endKey; i++) {
             i += 2;
