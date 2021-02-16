@@ -34,7 +34,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.odbc.jdbc.JdbcUtils;
+import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
 import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -283,9 +283,9 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
             cliSqlDistrCfg.updateTimeZone(tz).get();
 
             // Backward convert date/time.
-            String strDate = fmtDate.format(JdbcUtils.convertWithTimeZone(date, tz, initTz));
-            String strTime = fmtTime.format(JdbcUtils.convertWithTimeZone(time, tz, initTz));
-            String strTs = fmtTs.format(JdbcUtils.convertWithTimeZone(ts, tz, initTz));
+            String strDate = fmtDate.format(SqlListenerUtils.convertWithTimeZone(date, tz, initTz));
+            String strTime = fmtTime.format(SqlListenerUtils.convertWithTimeZone(time, tz, initTz));
+            String strTs = fmtTs.format(SqlListenerUtils.convertWithTimeZone(ts, tz, initTz));
 
             checkDates(strDate, strTime, strTs);
         }
