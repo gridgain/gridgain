@@ -17,11 +17,13 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
@@ -59,6 +61,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
     /** */
     private GridCacheContext dhtCtx;
+
+    /** */
+    private ReentrantReadWriteLock topChangeGuard = new ReentrantReadWriteLock();
 
     /** */
     private final IgniteClosure2X<GridCacheEntryEx, Long, Boolean> expireC =
@@ -222,6 +227,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
         long now = U.currentTimeMillis();
 
+        if (!topChangeGuard.readLock().tryLock())
+            return false;
+
         try {
             if (pendingEntries != null) {
                 GridNearCacheAdapter nearCache = cctx.near();
@@ -288,6 +296,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             else
                 throw e;
         }
+        finally {
+            topChangeGuard.readLock().unlock();
+        }
 
         return false;
     }
@@ -334,6 +345,27 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
         }
 
         return res;
+    }
+
+    /**
+     * @param fut Future.
+     */
+    @SuppressWarnings("LockAcquiredButNotSafelyReleased")
+    public void blockExpire(GridDhtPartitionsExchangeFuture fut) {
+        if (log.isDebugEnabled())
+            log.debug("Block expiration [initVer=" + fut.initialVersion() + ", ctx=" + dhtCtx + ']');
+
+        topChangeGuard.writeLock().lock();
+    }
+
+    /**
+     * @param fut Future.
+     */
+    public void unblockExpire(GridDhtPartitionsExchangeFuture fut) {
+        if (log.isDebugEnabled())
+            log.debug("Unblock expiration [initVer=" + fut.initialVersion() + ", ctx=" + dhtCtx + ']');
+
+        topChangeGuard.writeLock().unlock();
     }
 
     /**

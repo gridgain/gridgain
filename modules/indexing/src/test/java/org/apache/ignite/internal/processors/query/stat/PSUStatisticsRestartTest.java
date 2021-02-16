@@ -44,7 +44,7 @@ public class PSUStatisticsRestartTest extends StatisticsRestartAbstractTest {
 
         grid(0).cluster().state(ClusterState.ACTIVE);
 
-        GridTestUtils.waitForCondition(() -> {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
             try {
                 checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_B"}, isNullSql, noHints);
 
@@ -53,11 +53,11 @@ public class PSUStatisticsRestartTest extends StatisticsRestartAbstractTest {
             catch (AssertionError e) {
                 return false;
             }
-        }, TIMEOUT);
+        }, TIMEOUT));
 
         grid(0).context().query().getIndexing().statsManager().clearObjectStatistics(SMALL_TARGET);
 
-        GridTestUtils.waitForCondition(() -> {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
             try {
                 checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_C"}, isNullSql, noHints);
 
@@ -66,6 +66,6 @@ public class PSUStatisticsRestartTest extends StatisticsRestartAbstractTest {
             catch (AssertionError e) {
                 return false;
             }
-        }, TIMEOUT);
+        }, TIMEOUT));
     }
 }

@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.odbc;
 
 import java.io.Closeable;
+import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -387,6 +388,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         throws IgniteCheckedException {
         long connId = nextConnectionId();
 
+        TimeZone timeZone = nodeTimeZoneId();
+
         switch (clientType) {
             case ODBC_CLIENT:
                 return new OdbcConnectionContext(ctx, ses, busyLock, connId, maxCursors);
@@ -395,10 +398,20 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
                 return new JdbcConnectionContext(ctx, ses, busyLock, connId, maxCursors);
 
             case THIN_CLIENT:
-                return new ClientConnectionContext(ctx, ses, connId, maxCursors, thinCfg);
+                return new ClientConnectionContext(ctx, ses, connId, maxCursors, thinCfg, timeZone);
         }
 
         throw new IgniteCheckedException("Unknown client type: " + clientType);
+    }
+
+    /**
+     * @return Node time zome identifier.
+     */
+    private TimeZone nodeTimeZoneId() {
+        if (ctx.query().moduleEnabled())
+            return ctx.query().getIndexing().clusterTimezone();
+        else
+            return TimeZone.getDefault();
     }
 
     /**

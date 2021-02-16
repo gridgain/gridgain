@@ -13,15 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.springdata.misc;
 
-import org.apache.ignite.springdata20.repository.IgniteRepository;
-import org.apache.ignite.springdata20.repository.config.RepositoryConfig;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
- * Test repository.
+ * Advanced SpEl Expressions into projection
+ *
+ * @author Manuel Núñez Sánchez (manuel.nunez@hawkore.com)
  */
-@RepositoryConfig(cacheName = "PersonWithKeyCache")
-public interface PersonRepositoryWithCompoundKey extends IgniteRepository<Person, PersonKey> {
+public interface PersonProjection {
+    /** */
+    String getFirstName();
+
+    /**
+     * Sample of using registered spring bean into SpEL expression
+     * @return
+     */
+    @Value("#{@sampleExtensionBean.transformParam(target.firstName)}")
+    String getFirstNameTransformed();
+
+    /**
+     * Sample of using SpEL expression
+     * @return
+     */
+    @Value("#{target.firstName + ' ' + target.secondName}")
+    String getFullName();
 }

@@ -28,7 +28,7 @@ public class StatisticsTarget {
     /** Object (table or index) name. */
     private final String obj;
 
-    /**  */
+    /** Column names. */
     private final String[] columns;
 
     /**
@@ -41,7 +41,7 @@ public class StatisticsTarget {
     public StatisticsTarget(String schema, String obj, String... columns) {
         this.schema = schema;
         this.obj = obj;
-        this.columns = columns;
+        this.columns = (columns == null || columns.length == 0) ? null : columns;
     }
 
     /**
@@ -76,5 +76,14 @@ public class StatisticsTarget {
         int result = Objects.hash(schema, obj);
         result = 31 * result + Arrays.hashCode(columns);
         return result;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return "StatisticsTarget{" +
+            "schema='" + schema + '\'' +
+            ", obj='" + obj + '\'' +
+            ", columns=" + Arrays.toString(columns) +
+            '}';
     }
 }

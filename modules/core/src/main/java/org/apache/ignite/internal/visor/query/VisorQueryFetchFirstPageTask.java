@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorEither;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
@@ -65,7 +64,7 @@ public class VisorQueryFetchFirstPageTask extends VisorOneNodeTask<VisorQueryNex
         @Override protected VisorEither<VisorQueryResult> run(VisorQueryNextPageTaskArg arg) {
             String qryId = arg.getQueryId();
 
-            long start = U.currentTimeMillis();
+            long start = System.currentTimeMillis();
 
             if (debug)
                 start = log(ignite.log(), "Fetch query first page started: " + qryId, getClass(), start);
@@ -95,7 +94,15 @@ public class VisorQueryFetchFirstPageTask extends VisorOneNodeTask<VisorQueryNex
                 log(ignite.log(), "Fetch query first page finished: " + qryId, getClass(), start);
 
             return new VisorEither<>(
-                new VisorQueryResult(ignite.localNode().id(), qryId, cols, rows, hasMore, holder.duration()));
+                new VisorQueryResult(
+                    ignite.localNode().id(),
+                    qryId,
+                    cols,
+                    rows,
+                    hasMore,
+                    holder.duration() + System.currentTimeMillis() - start
+                )
+            );
         }
 
         /** {@inheritDoc} */

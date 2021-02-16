@@ -59,6 +59,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
 
         runSql("CREATE TABLE digital_distribution (ID INT PRIMARY KEY, col_a int, col_b int, col_c int, col_d int) " +
             "WITH \"TEMPLATE=" + cacheMode + "\"");
+        runSql("ANALYZE PUBLIC.digital_distribution;");
 
         runSql("CREATE INDEX digital_distribution_col_a ON digital_distribution(col_a)");
         runSql("CREATE INDEX digital_distribution_col_b ON digital_distribution(col_b)");

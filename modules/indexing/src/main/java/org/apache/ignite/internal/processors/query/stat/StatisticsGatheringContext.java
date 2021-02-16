@@ -55,8 +55,7 @@ public class StatisticsGatheringContext {
         collectedStatistics = new HashMap<>();
         this.keys = keys;
         this.remainingParts = remainingParts;
-        StatisticsTarget[] targets = keys.stream().map(key -> new StatisticsTarget(key.schema(), key.obj(),
-            key.colNames().toArray(new String[0]))).toArray(StatisticsTarget[]::new);
+        StatisticsTarget[] targets = keys.stream().map(StatisticsUtils::statisticsTarget).toArray(StatisticsTarget[]::new);
         this.doneFut = new StatisticsGatheringFutureAdapter<>(gatId, targets);
     }
 

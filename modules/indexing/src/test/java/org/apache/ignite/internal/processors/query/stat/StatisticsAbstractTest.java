@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +37,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsGatheringRequest;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -341,15 +343,18 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         ConcurrentMap<UUID, StatisticsAddrRequest<StatisticsGatheringRequest>> remainingRequests = GridTestUtils
             .getFieldValue(crawler, "remainingRequests");
 
-        assertTrue(remainingRequests.isEmpty());
+        assertTrue("node " + nodeIdx + " StatisticsGatheringRequestCrawlerImpl.remainingRequests.size() = " +
+                remainingRequests.size(), remainingRequests.isEmpty());
 
         IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(crawler, "msgMgmtPool");
 
-        assertTrue(pool.getQueue().isEmpty());
+        assertTrue("node " + nodeIdx + " StatisticsGatheringRequestCrawlerImpl.msgMgmtPool.queue.size() = " +
+                pool.getQueue().size(), pool.getQueue().isEmpty());
 
         Map<UUID, StatisticsGatheringContext> currColls = GridTestUtils.getFieldValue(statMgr, "currColls");
 
-        assertTrue(currColls.isEmpty());
+        assertTrue("node " + nodeIdx + " IgniteStatisticsManagerImpl.currColls.size() = " + currColls.size(),
+            currColls.isEmpty());
     }
 
     /**
@@ -394,5 +399,61 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         pool.submit(res::lock);
 
         return res;
+    }
+
+    /**
+     * Get local or global object statistics from all server nodes.
+     *
+     * @param tblName Object name to get statistics by.
+     * @param type Desired statistics type.
+     * @return Array of local statistics from nodes.
+     */
+    protected ObjectStatisticsImpl[] getStats(String tblName, StatisticsType type) {
+        int nodes = G.allGrids().size();
+        ObjectStatisticsImpl res[] = new ObjectStatisticsImpl[nodes];
+
+        for (int i = 0; i < nodes; i++)
+            res[i] = getStatsFromNode(i, tblName, type);
+
+        return res;
+    }
+
+    /**
+     * Test specified predicate on each object statistics.
+     *
+     * @param cond Predicate to test.
+     * @param stats Statistics to test on.
+     */
+    protected void testCond(Function<ObjectStatisticsImpl, Boolean> cond, ObjectStatisticsImpl... stats) {
+        assertFalse(F.isEmpty(stats));
+
+        for (ObjectStatisticsImpl stat : stats)
+            assertTrue(cond.apply(stat));
+    }
+
+    /**
+     * Get local table statistics by specified node.
+     *
+     * @param nodeIdx Node index to get statistics from.
+     * @param tblName Table name.
+     * @param type Desired statistics type.
+     * @return Local table statistics or {@code null} if there are no such statistics in specified node.
+     */
+    protected ObjectStatisticsImpl getStatsFromNode(int nodeIdx, String tblName, StatisticsType type) {
+        IgniteStatisticsManager statMgr = grid(nodeIdx).context().query().getIndexing().statsManager();
+        try {
+            switch (type) {
+                case LOCAL:
+                    return (ObjectStatisticsImpl) statMgr.getLocalStatistics(SCHEMA, tblName);
+                case GLOBAL:
+                    return (ObjectStatisticsImpl) statMgr.getGlobalStatistics(SCHEMA, tblName);
+                default:
+                    throw new UnsupportedOperationException();
+            }
+        }
+        catch (IgniteCheckedException e) {
+            fail(e.getMessage());
+        }
+        return null;
     }
 }

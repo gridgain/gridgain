@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.ignite.IgniteCheckedException;
@@ -202,7 +203,8 @@ public class StatisticsUtils {
      * @return StatisticsTarget.
      */
     public static StatisticsTarget statisticsTarget(StatisticsKeyMessage msg) {
-        return new StatisticsTarget(msg.schema(), msg.obj(), msg.colNames().toArray(new String[0]));
+        String[] cols = (msg.colNames() == null) ? null : msg.colNames().toArray(new String[0]);
+        return new StatisticsTarget(msg.schema(), msg.obj(), cols);
     }
 
     /**
@@ -212,6 +214,7 @@ public class StatisticsUtils {
      * @return StatisticsKeyMessage.
      */
     public static StatisticsKeyMessage statisticsKeyMessage(StatisticsTarget target) {
-        return new StatisticsKeyMessage(target.schema(), target.obj(), Arrays.asList(target.columns()));
+        List<String> cols = (target.columns() == null) ? null : Arrays.asList(target.columns());
+        return new StatisticsKeyMessage(target.schema(), target.obj(), cols);
     }
 }
