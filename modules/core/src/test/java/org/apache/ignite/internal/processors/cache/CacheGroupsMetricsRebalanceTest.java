@@ -173,11 +173,13 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checking the correctness of {@link CacheMetrics#getRebalancingKeysRate}.
+     *
      * @throws Exception If failed.
      */
     @Test
     public void testRebalance() throws Exception {
-        Ignite ignite = startGrids(4);
+        Ignite ignite = startGrids(1);
 
         IgniteCache<Object, Object> cache1 = ignite.cache(CACHE1);
         IgniteCache<Object, Object> cache2 = ignite.cache(CACHE2);
@@ -192,24 +194,22 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
         final CountDownLatch l1 = new CountDownLatch(1);
         final CountDownLatch l2 = new CountDownLatch(1);
 
-        startGrid(4).events().localListen(new IgnitePredicate<Event>() {
-            @Override public boolean apply(Event evt) {
-                l1.countDown();
+        startGrid(1).events().localListen((IgnitePredicate<Event>)evt -> {
+            l1.countDown();
 
-                try {
-                    assertTrue(l2.await(5, TimeUnit.SECONDS));
-                }
-                catch (InterruptedException e) {
-                    throw new AssertionError();
-                }
-
-                return false;
+            try {
+                assertTrue(l2.await(5, TimeUnit.SECONDS));
             }
+            catch (InterruptedException e) {
+                throw new AssertionError();
+            }
+
+            return false;
         }, EventType.EVT_CACHE_REBALANCE_STOPPED);
 
         assertTrue(l1.await(5, TimeUnit.SECONDS));
 
-        ignite = ignite(4);
+        ignite = ignite(1);
 
         CacheMetrics metrics1 = ignite.cache(CACHE1).localMetrics();
         CacheMetrics metrics2 = ignite.cache(CACHE2).localMetrics();
@@ -221,13 +221,10 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
 
         assertTrue(rate1 > 0);
         assertTrue(rate2 > 0);
+        assertTrue(rate1 > rate2);
 
-        // rate1 has to be roughly the same as rate2
-        double ratio = ((double)rate2 / rate1);
-
-        log.info("Ratio: " + ratio);
-
-        assertTrue(ratio > 0.9 && ratio < 1.1);
+        assertEquals(metrics1.getRebalancedKeys(), rate1);
+        assertEquals(metrics2.getRebalancedKeys(), rate2);
     }
 
     /**
