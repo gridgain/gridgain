@@ -77,4 +77,16 @@ public interface IgniteStatisticsManager {
      * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
      */
     public void clearObjectStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+
+    /**
+     * Set statistics usage state.
+     *
+     * @param state Statistics state.
+     */
+    public void usageState(StatisticsUsageState state) throws IgniteCheckedException;
+
+    /**
+     * @return Statistics usage state.
+     */
+    public StatisticsUsageState usageState();
 }

@@ -87,6 +87,38 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     }
 
     /**
+     * 1) Check that statistics available and usage state is ON
+     * 2) Switch usage state to NO_UPDATE and check that statistics still availabel
+     * 3) Disable statistics usage (OFF) and check it became unavailable.
+     * 4) Turn ON again and check statistics availability
+     *
+     * @throws Exception In case of error.
+     */
+    @Test
+    public void testDisableGet() throws Exception {
+        IgniteStatisticsManager statsMgr0 = grid(0).context().query().getIndexing().statsManager();
+        IgniteStatisticsManager statsMgr1 = grid(1).context().query().getIndexing().statsManager();
+
+        assertNotNull(statsMgr0.getLocalStatistics(SCHEMA, "SMALL"));
+        assertNotNull(statsMgr1.getLocalStatistics(SCHEMA, "SMALL"));
+
+        statsMgr0.usageState(StatisticsUsageState.NO_UPDATE);
+
+        assertNotNull(statsMgr0.getLocalStatistics(SCHEMA, "SMALL"));
+        assertNotNull(statsMgr1.getLocalStatistics(SCHEMA, "SMALL"));
+
+        statsMgr0.usageState(StatisticsUsageState.OFF);
+
+        assertNull(statsMgr0.getLocalStatistics(SCHEMA, "SMALL"));
+        assertNull(statsMgr1.getLocalStatistics(SCHEMA, "SMALL"));
+
+        statsMgr0.usageState(StatisticsUsageState.ON);
+
+        assertNotNull(statsMgr0.getLocalStatistics(SCHEMA, "SMALL"));
+        assertNotNull(statsMgr1.getLocalStatistics(SCHEMA, "SMALL"));
+    }
+
+    /**
      * Clear statistics twice and check that .
      */
     @Test

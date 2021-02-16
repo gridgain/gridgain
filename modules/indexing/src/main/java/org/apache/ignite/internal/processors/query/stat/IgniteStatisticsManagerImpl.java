@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedEnumProperty;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
@@ -48,6 +49,9 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.NO_UPDATE;
+import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.OFF;
+import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.ON;
 
 /**
  * Statistics manager implementation.
@@ -55,6 +59,9 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Size of statistics collection pool. */
     private static final int STATS_POOL_SIZE = 1;
+
+    /** Default statistics usage state. */
+    private static final StatisticsUsageState DEFAULT_STATISTICS_USAGE_STATE = StatisticsUsageState.ON;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -79,6 +86,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
     /** Current collections, collection id to collection status map. */
     private final Map<UUID, StatisticsGatheringContext> currColls = new ConcurrentHashMap<>();
+
+    /** Cluster wide statistics usage state. */
+    private final DistributedEnumProperty<StatisticsUsageState> usageState = new DistributedEnumProperty<>(
+        "statistics.usage.state", StatisticsUsageState::fromOrdinal, StatisticsUsageState::index, StatisticsUsageState.class);
 
     /**
      * Constructor.
@@ -133,6 +144,17 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), statsRepos, statCrawler,
             gatMgmtPool, ctx::log);
 
+        ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+            usageState.addListener((name, oldVal, newVal) -> {
+                if (log.isInfoEnabled())
+                    log.info(String.format("Statistics usage state was changed from %s to %s", oldVal, newVal));
+
+                if (newVal == NO_UPDATE || newVal == OFF)
+                    currColls.values().removeIf(c -> c.doneFuture().cancel());
+            });
+
+            dispatcher.registerProperty(usageState);
+        });
     }
 
     /**
@@ -144,7 +166,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
     /** {@inheritDoc} */
     @Override public ObjectStatistics getLocalStatistics(String schemaName, String objName) {
-        return statsRepos.getLocalStatistics(new StatisticsKey(schemaName, objName));
+        StatisticsUsageState currState = usageState();
+
+        return (currState == ON || currState == StatisticsUsageState.NO_UPDATE) ?
+            statsRepos.getLocalStatistics(new StatisticsKey(schemaName, objName)) : null;
     }
 
     /**
@@ -196,6 +221,23 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             .collect(Collectors.toList());
 
         clearObjectStatistics(keys);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void usageState(StatisticsUsageState state) throws IgniteCheckedException {
+        checkStatisticsSupport("clear statistics");
+
+        try {
+            usageState.propagate(state);
+        }
+        catch (IgniteCheckedException e) {
+            log.error("Unable to set usage state value due to " + e.getMessage(), e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public StatisticsUsageState usageState() {
+        return usageState.getOrDefault(DEFAULT_STATISTICS_USAGE_STATE);
     }
 
     /**
