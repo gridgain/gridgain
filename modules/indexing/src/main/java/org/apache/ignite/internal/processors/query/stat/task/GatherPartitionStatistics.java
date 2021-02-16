@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.query.stat.GatherStatisticRetryExce
 import org.apache.ignite.internal.processors.query.stat.LocalStatisticsGatheringContext;
 import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatisticsImpl;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.table.Column;
 
@@ -65,6 +66,9 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
     /** */
     private final Supplier<Boolean> cancelled;
 
+    /** Node stop lock. */
+    private final GridSpinBusyLock stopLock;
+
     /** */
     private final IgniteLogger log;
 
@@ -78,8 +82,10 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
         Column[] cols,
         Map<String, StatisticsColumnConfiguration> colCfgs,
         int partId,
+        GridSpinBusyLock stopLock,
         IgniteLogger log
     ) {
+        this.stopLock = stopLock;
         this.tbl = tbl;
         this.cols = cols;
         this.colCfgs = colCfgs;
@@ -135,20 +141,28 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
                 for (CacheDataRow row : grp.offheap().cachePartitionIterator(
                     tbl.cacheId(), partId, null, false))
                 {
-                    if (--checkInt == 0) {
-                        if (cancelled.get())
-                            throw new GatherStatisticCancelException();
+                    if (!stopLock.enterBusy())
+                        break;
 
-                        checkInt = CANCELLED_CHECK_INTERVAL;
+                    try {
+                        if (--checkInt == 0) {
+                            if (cancelled.get())
+                                throw new GatherStatisticCancelException();
+
+                            checkInt = CANCELLED_CHECK_INTERVAL;
+                        }
+
+                        if (!typeDesc.matchType(row.value()) || wasExpired(row))
+                            continue;
+
+                        H2Row h2row = tbl.rowDescriptor().createRow(row);
+
+                        for (ColumnStatisticsCollector colStat : collectors)
+                            colStat.add(h2row.getValue(colStat.col().getColumnId()));
                     }
-
-                    if (!typeDesc.matchType(row.value()) || wasExpired(row))
-                        continue;
-
-                    H2Row h2row = tbl.rowDescriptor().createRow(row);
-
-                    for (ColumnStatisticsCollector colStat : collectors)
-                        colStat.add(h2row.getValue(colStat.col().getColumnId()));
+                    finally {
+                        stopLock.leaveBusy();
+                    }
                 }
             }
             catch (IgniteCheckedException e) {

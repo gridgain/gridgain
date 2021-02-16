@@ -24,9 +24,12 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.task.GatherPartitionStatistics;
+import org.apache.ignite.internal.util.GridSpinBusyLock;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
 
@@ -46,6 +49,9 @@ public class StatisticsGatherer {
     /** (cacheGroupId -> gather context) */
     private final ConcurrentMap<StatisticsKey, LocalStatisticsGatheringContext> gatheringInProgress = new ConcurrentHashMap<>();
 
+    /** Node stop lock. */
+    private final GridSpinBusyLock stopLock;
+
     /**
      * Constructor.
      *
@@ -56,11 +62,13 @@ public class StatisticsGatherer {
     public StatisticsGatherer(
         IgniteStatisticsRepository repo,
         IgniteThreadPoolExecutor gatherPool,
+        GridSpinBusyLock stopLock,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.log = logSupplier.apply(StatisticsGatherer.class);
         this.statRepo = repo;
         this.gatherPool = gatherPool;
+        this.stopLock = stopLock;
     }
 
     /**
@@ -99,6 +107,7 @@ public class StatisticsGatherer {
                 cols,
                 colCfgs,
                 part,
+                stopLock,
                 log
             );
 
@@ -151,6 +160,9 @@ public class StatisticsGatherer {
         int part,
         ObjectPartitionStatisticsImpl partStat)
     {
+        if (!stopLock.enterBusy())
+            return;
+
         try {
             if (partStat == null)
                 return;
@@ -169,7 +181,11 @@ public class StatisticsGatherer {
                 gatheringInProgress.remove(key, ctx);
         }
         catch (Throwable ex) {
-            log.error("Unexpected error os statistic save", ex);
+            if (!X.hasCause(ex, NodeStoppingException.class))
+                log.error("Unexpected error os statistic save", ex);
+        }
+        finally {
+            stopLock.leaveBusy();
         }
     }
 

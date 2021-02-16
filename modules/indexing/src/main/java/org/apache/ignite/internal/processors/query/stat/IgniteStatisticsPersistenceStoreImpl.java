@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
@@ -36,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadW
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.internal.util.typedef.X;
 
 /**
  * Sql statistics storage in metastore.
@@ -291,8 +293,10 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
                     res.add(partStats);
                 }
                 catch (IgniteCheckedException e) {
-                    log.warning(String.format("Error during reading statistics %s.%s by key %s", key.schema(), key.obj(),
-                            k));
+                    log.warning(String.format(
+                        "Error during reading statistics %s.%s by key %s",
+                        key.schema(), key.obj(),k
+                    ));
                 }
             }, true);
         }
@@ -341,8 +345,13 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
             writeMeta(partKey, statsMsg);
         }
         catch (IgniteCheckedException e) {
-            log.warning(String.format("Error while storing local partition statistics %s.%s:%d", key.schema(), key.obj(),
-                    stat.partId()), e);
+            log.warning(
+                String.format(
+                    "Error while storing local partition statistics %s.%s:%d",
+                    key.schema(), key.obj(),stat.partId()
+                ),
+                e
+            );
         }
     }
 

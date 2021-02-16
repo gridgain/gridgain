@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -48,6 +49,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
@@ -83,6 +85,9 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private volatile boolean started;
 
+    /** Busy lock on node stop. */
+    private final GridSpinBusyLock stopLock;
+
     /** Monitor to synchronize changes repository: aggregate after collects and drop statistics. */
     private final Object mux = new Object();
 
@@ -94,6 +99,7 @@ public class IgniteStatisticsConfigurationManager {
         IgniteStatisticsRepository repo,
         StatisticsGatherer gatherer,
         IgniteThreadPoolExecutor mgmtPool,
+        GridSpinBusyLock stopLock,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.schemaMgr = schemaMgr;
@@ -101,6 +107,7 @@ public class IgniteStatisticsConfigurationManager {
         this.repo = repo;
         this.mgmtPool = mgmtPool;
         this.gatherer = gatherer;
+        this.stopLock = stopLock;
 
         subscriptionProcessor.registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
             @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
@@ -141,13 +148,17 @@ public class IgniteStatisticsConfigurationManager {
                     if (fut.exchangeType() != ExchangeType.ALL)
                         return;
 
+                    DiscoveryEvent evt = fut.firstEvent();
+
                     // Skip create/destroy caches.
-                    if (fut.firstEvent().type() == DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT) {
-                        DiscoveryCustomMessage msg = ((DiscoveryCustomEvent)fut.firstEvent()).customMessage();
+                    if (evt.type() == DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT) {
+                        DiscoveryCustomMessage msg = ((DiscoveryCustomEvent)evt).customMessage();
 
                         if (msg instanceof DynamicCacheChangeBatch)
                             return;
                     }
+
+                    log.info("+++ EVT" + evt);
 
                     scanAndCheckLocalStatistic(fut.topologyVersion());
                 }
@@ -161,12 +172,18 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private void scanAndCheckLocalStatistic(AffinityTopologyVersion topVer) {
         mgmtPool.submit(() -> {
+            if (!stopLock.enterBusy())
+                return;
+
             try {
                 distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) ->
                     checkLocalStatistics((StatisticsObjectConfiguration)v, topVer));
             }
             catch (IgniteCheckedException e) {
                 log.warning("Unexpected exception on check local statistic on start", e);
+            }
+            finally {
+                stopLock.leaveBusy();
             }
         });
     }
@@ -286,6 +303,9 @@ public class IgniteStatisticsConfigurationManager {
 
     /** */
     private void checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
+        if (!stopLock.enterBusy())
+            return;
+
         try {
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
 
@@ -310,13 +330,13 @@ public class IgniteStatisticsConfigurationManager {
             partsOwn.addAll(parts);
 
             if (log.isDebugEnabled())
-                log.debug("Check local statistics [key=" + cfg.key() + ", parts=" + parts + ']');
+                log.debug("Check local statistics [key=" + cfg + ", parts=" + parts + ']');
 
             Collection<ObjectPartitionStatisticsImpl> partStats = repo.getLocalPartitionsStatistics(cfg.key());
 
             Set<Integer> partsToRmv = new HashSet<>();
             Set<Integer> partsToCollect = new HashSet<>(parts);
-            Set<String> colsNotNeedToCollect = new HashSet<>(cfg.columns().keySet());
+            Map<String, StatisticsColumnConfiguration> colsToCollect = new HashMap<>();
             Set<String> colsToRmv = new HashSet<>();
 
             if (!F.isEmpty(partStats)) {
@@ -329,11 +349,13 @@ public class IgniteStatisticsConfigurationManager {
                     for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values()) {
                         ColumnStatistics colStat = pstat.columnStatistics(colCfg.name());
 
-                        if (colCfg.tombstone() && colsNotNeedToCollect != null)
-                            colsToRmv.add(colCfg.name());
+                        if (colCfg.tombstone()) {
+                            if (colStat != null)
+                                colsToRmv.add(colCfg.name());
+                        }
                         else {
                             if (colStat == null || colStat.version() < colCfg.version()) {
-                                colsNotNeedToCollect.remove(colCfg.name());
+                                colsToCollect.put(colCfg.name(), colCfg);
 
                                 partsToCollect.add(pstat.partId());
 
@@ -347,13 +369,18 @@ public class IgniteStatisticsConfigurationManager {
                 }
             }
 
+
             if (!F.isEmpty(partsToRmv)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Remove local partitioned statistics [key=" + cfg.key() +
                         ", part=" + partsToRmv + ']');
                 }
 
-                partsToRmv.forEach(p -> repo.clearLocalPartitionStatistics(cfg.key(), p));
+                partsToRmv.forEach(p -> {
+                    assert !partsToCollect.contains(p);
+
+                    repo.clearLocalPartitionStatistics(cfg.key(), p);
+                });
             }
 
             if (!F.isEmpty(colsToRmv)) {
@@ -366,10 +393,6 @@ public class IgniteStatisticsConfigurationManager {
             }
 
             if (!F.isEmpty(partsToCollect)) {
-                Map<String, StatisticsColumnConfiguration> colsToCollect = cfg.columns().values().stream()
-                    .filter(c -> !colsNotNeedToCollect.contains(c.name()))
-                    .collect(Collectors.toMap(StatisticsColumnConfiguration::name, Function.identity()));
-
                 if (F.isEmpty(colsToCollect))
                     colsToCollect = cfg.columns();
 
@@ -384,11 +407,17 @@ public class IgniteStatisticsConfigurationManager {
 
                 ctx.future().thenAccept((v) -> onFinishLocalGathering(cfg.key(), parts));
             }
-            else
+            else {
+                // All local statistics by partition are available.
+                // Only refresh aggregated local statistics.
                 gatherer.submit(() -> onFinishLocalGathering(cfg.key(), parts));
+            }
         }
-        catch (IgniteCheckedException ex) {
+        catch (Throwable ex) {
             log.error("Unexpected error on check local statistics", ex);
+        }
+        finally {
+            stopLock.leaveBusy();
         }
     }
 
@@ -466,6 +495,9 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private void onFinishLocalGathering(StatisticsKey key, Set<Integer> partsToAggregate) {
         synchronized (mux) {
+            if (!stopLock.enterBusy())
+                return;
+
             try {
                 StatisticsObjectConfiguration cfg = distrMetaStorage.read(key2String(key));
 
@@ -474,6 +506,9 @@ public class IgniteStatisticsConfigurationManager {
             catch (Throwable e) {
                 log.error("Error on aggregate statistic on finish local statistics collection" +
                     " [key=" + key + ", parts=" + partsToAggregate, e);
+            }
+            finally {
+                stopLock.leaveBusy();
             }
         }
     }
