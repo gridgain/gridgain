@@ -57,6 +57,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 {ClientOp.ClusterGroupGetNodesEndpoints, ClientBitmaskFeature.ClusterGroupGetNodesEndpoints},
                 {ClientOp.ComputeTaskExecute, ClientBitmaskFeature.ExecuteTaskByName}
             };
+
         /** */
         private readonly ClientProtocolVersion _protocolVersion;
 
@@ -212,14 +213,16 @@ namespace Apache.Ignite.Core.Impl.Client
                 .Cast<int>()
                 .ToArray();
 
-            var bits = new BitArray(values.Max() + 1);
+            var max = values.Max();
+
+            var bits = new BitArray(max + 1);
 
             foreach (var feature in values)
             {
                 bits.Set(feature, true);
             }
 
-            var bytes = new byte[1 + values.Length / 8];
+            var bytes = new byte[1 + max / 8];
             bits.CopyTo(bytes, 0);
 
             return bytes;
