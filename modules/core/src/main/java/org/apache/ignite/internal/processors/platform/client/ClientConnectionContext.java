@@ -209,7 +209,8 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
         if (userAttrs != null) {
             String clientTzId = userAttrs.get(USER_ATTR_TIMEZONE);
 
-            currentProtocolContext.clientTimeZone(TimeZone.getTimeZone(clientTzId));
+            if (clientTzId != null)
+                currentProtocolContext.clientTimeZone(TimeZone.getTimeZone(clientTzId));
         }
 
         if (currentProtocolContext.isFeatureSupported(AUTHORIZATION)) {

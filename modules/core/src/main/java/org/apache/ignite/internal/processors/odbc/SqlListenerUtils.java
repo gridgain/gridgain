@@ -31,6 +31,7 @@ import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.F;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -318,7 +319,7 @@ public abstract class SqlListenerUtils {
     /**
      */
     public static Timestamp convertWithTimeZone(Timestamp ts, TimeZone tzFrom, TimeZone tzTo) {
-        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
+        if (ts == null || tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
             return ts;
 
         return new Timestamp(convertWithTimeZone(tzFrom, tzTo, ts.getTime()));
@@ -327,7 +328,7 @@ public abstract class SqlListenerUtils {
     /**
      */
     public static Time convertWithTimeZone(Time time, TimeZone tzFrom, TimeZone tzTo) {
-        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
+        if (time == null || tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
             return time;
 
         return new Time(convertWithTimeZone(tzFrom, tzTo, time.getTime()));
@@ -336,7 +337,7 @@ public abstract class SqlListenerUtils {
     /**
      */
     public static java.util.Date convertWithTimeZone(java.util.Date date, TimeZone tzFrom, TimeZone tzTo) {
-        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
+        if (date == null || tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
             return date;
 
         return new Time(convertWithTimeZone(tzFrom, tzTo, date.getTime()));
