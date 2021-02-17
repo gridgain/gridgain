@@ -227,7 +227,6 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
     @Override public boolean register(ClassLoader ldr, Class<?> rsrc) throws IgniteSpiException {
         assert ldr != null;
         assert rsrc != null;
-        boolean move = false;
 
         if (log.isDebugEnabled())
             log.debug("Registering [ldrRsrcs=" + ldrRsrcs + ", ldr=" + ldr + ", rsrc=" + rsrc + ']');
@@ -247,8 +246,6 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
                 ldrRsrcs0.put(ldr, clsLdrRsrcs);
 
                 ldrRsrcs = ldrRsrcs0;
-
-                move = true;
             }
         }
         else {
@@ -261,7 +258,7 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
 
         newRsrcs = addResource(ldr, clsLdrRsrcs, rsrc);
 
-        return !F.isEmpty(newRsrcs) && !move;
+        return !F.isEmpty(newRsrcs);
     }
 
     /** {@inheritDoc} */
