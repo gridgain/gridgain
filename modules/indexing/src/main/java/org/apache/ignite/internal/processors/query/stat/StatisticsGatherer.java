@@ -16,12 +16,14 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.NodeStoppingException;
@@ -71,10 +73,49 @@ public class StatisticsGatherer {
         this.stopLock = stopLock;
     }
 
+    /** */
+    public LocalStatisticsGatheringContext aggregateStatisticsAsync(
+        final StatisticsKey key,
+        Supplier<ObjectStatisticsImpl> aggregate
+    ) {
+        final LocalStatisticsGatheringContext ctx = new LocalStatisticsGatheringContext(Collections.emptySet());
+
+        // Only refresh local aggregates.
+        ctx.futureGather().complete(null);
+
+        LocalStatisticsGatheringContext inProgressCtx = gatheringInProgress.putIfAbsent(key, ctx);
+
+        if (inProgressCtx == null) {
+            CompletableFuture<ObjectStatisticsImpl> f = CompletableFuture.supplyAsync(aggregate, gatherPool);
+
+            f.handle((stat, ex) -> {
+                if (ex == null)
+                    ctx.futureAggregate().complete(stat);
+                else
+                    ctx.futureAggregate().completeExceptionally(ex);
+
+                gatheringInProgress.remove(key, ctx);
+
+                return null;
+            });
+
+            return ctx;
+        }
+        else {
+            inProgressCtx.futureGather().thenAccept((v) -> {
+                ObjectStatisticsImpl stat = aggregate.get();
+
+                inProgressCtx.futureAggregate().complete(stat);
+            });
+
+            return inProgressCtx;
+        }
+    }
+
     /**
      * Collect statistic per partition for specified objects on the same cache group.
      */
-    public LocalStatisticsGatheringContext collectLocalObjectsStatisticsAsync(
+    public LocalStatisticsGatheringContext gatherLocalObjectsStatisticsAsync(
         GridH2Table tbl,
         Column[] cols,
         Map<String, StatisticsColumnConfiguration> colCfgs,
@@ -97,7 +138,7 @@ public class StatisticsGatherer {
             if (log.isDebugEnabled())
                 log.debug("Cancel previous statistic gathering for [key=" + key + ']');
 
-            oldCtx.future().cancel(false);
+            oldCtx.futureGather().cancel(false);
         }
 
         for (int part : parts) {
@@ -139,13 +180,15 @@ public class StatisticsGatherer {
                 submitTask(tbl, key, ctx, task);
             }
             if (ex instanceof GatherStatisticCancelException) {
-                if (log.isDebugEnabled())
-                    log.debug("Collect statistics task was cancelled [key=" + key + ", part=" + task.partition() + ']');
+                if (log.isDebugEnabled()) {
+                    log.debug("Collect statistics task was cancelled " +
+                        "[key=" + key + ", part=" + task.partition() + ']');
+                }
             }
             else {
                 log.error("Unexpected error on statistic gathering", ex);
 
-                ctx.future().obtrudeException(ex);
+                ctx.futureGather().obtrudeException(ex);
             }
 
             return null;
@@ -177,7 +220,7 @@ public class StatisticsGatherer {
 
             ctx.partitionDone(part);
 
-            if (ctx.future().isDone())
+            if (ctx.futureGather().isDone())
                 gatheringInProgress.remove(key, ctx);
         }
         catch (Throwable ex) {
@@ -201,6 +244,6 @@ public class StatisticsGatherer {
 
     /** */
     public void stop() {
-        gatheringInProgress.values().forEach(ctx -> ctx.future().cancel(true));
+        gatheringInProgress.values().forEach(ctx -> ctx.futureGather().cancel(true));
     }
 }

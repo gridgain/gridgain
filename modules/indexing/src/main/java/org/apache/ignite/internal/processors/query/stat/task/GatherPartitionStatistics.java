@@ -90,7 +90,7 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
         this.cols = cols;
         this.colCfgs = colCfgs;
         this.partId = partId;
-        cancelled = () -> gathCtx.future().isCancelled();
+        cancelled = () -> gathCtx.futureGather().isCancelled();
         this.log = log;
     }
 

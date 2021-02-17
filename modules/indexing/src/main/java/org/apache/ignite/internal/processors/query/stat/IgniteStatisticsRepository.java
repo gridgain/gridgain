@@ -274,7 +274,10 @@ public class IgniteStatisticsRepository {
     }
 
     /** */
-    public void refreshAggregatedLocalStatistics(Set<Integer> parts, StatisticsObjectConfiguration objStatCfg) {
+    public ObjectStatisticsImpl refreshAggregatedLocalStatistics(
+        Set<Integer> parts,
+        StatisticsObjectConfiguration objStatCfg
+    ) {
         if (log.isDebugEnabled()) {
             log.debug("Refresh local aggregated statistic [cfg=" + objStatCfg +
                 ", part=" + parts + ']');
@@ -294,5 +297,7 @@ public class IgniteStatisticsRepository {
         );
 
         saveLocalStatistics(objStatCfg.key(), locStat);
+
+        return locStat;
     }
 }

@@ -29,12 +29,16 @@ public class LocalStatisticsGatheringContext {
     private final Set<Integer> remainingParts;
 
     /** Done future. */
-    private final CompletableFuture<Void> fut;
+    private final CompletableFuture<Void> futGather;
+
+    /** Done future. */
+    private final CompletableFuture<ObjectStatisticsImpl> futAggregate;
 
     /** */
     public LocalStatisticsGatheringContext(Set<Integer> remainingParts) {
         this.remainingParts = new HashSet<>(remainingParts);
-        this.fut = new CompletableFuture<>();
+        this.futGather = new CompletableFuture<>();
+        this.futAggregate = new CompletableFuture<>();
     }
 
     /**
@@ -44,14 +48,21 @@ public class LocalStatisticsGatheringContext {
         remainingParts.remove(partId);
 
         if (remainingParts.isEmpty())
-            fut.complete(null);
+            futGather.complete(null);
     }
 
     /**
      * @return Collection control future.
      */
-    public CompletableFuture<Void> future() {
-        return fut;
+    public CompletableFuture<Void> futureGather() {
+        return futGather;
+    }
+
+    /**
+     * @return Collection control future.
+     */
+    public CompletableFuture<ObjectStatisticsImpl> futureAggregate() {
+        return futAggregate;
     }
 
     /** {@inheritDoc} */

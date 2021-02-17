@@ -325,7 +325,9 @@ public class IgniteStatisticsConfigurationManager {
                 return;
             }
 
-            final Set<Integer> partsOwn = new HashSet<>(cctx.affinity().backupPartitions(cctx.localNodeId(), topVer0));
+            final Set<Integer> partsOwn = new HashSet<>(
+                cctx.affinity().backupPartitions(cctx.localNodeId(), topVer0)
+            );
 
             partsOwn.addAll(parts);
 
@@ -383,34 +385,15 @@ public class IgniteStatisticsConfigurationManager {
                 });
             }
 
-            if (!F.isEmpty(colsToRmv)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Remove local partitioned statistics [key=" + cfg.key() +
-                        ", cols=" + colsToRmv + ']');
-                }
+            if (!F.isEmpty(colsToRmv))
+                dropColumnsOnLocalStatistics(cfg, colsToRmv);
 
-                repo.clearLocalPartitionsStatistics(cfg.key(), colsToRmv);
-            }
-
-            if (!F.isEmpty(partsToCollect)) {
-                if (F.isEmpty(colsToCollect))
-                    colsToCollect = cfg.columns();
-
-                Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), colsToCollect.keySet());
-
-                LocalStatisticsGatheringContext ctx = gatherer.collectLocalObjectsStatisticsAsync(
-                    tbl,
-                    cols,
-                    colsToCollect,
-                    partsToCollect
-                );
-
-                ctx.future().thenAccept((v) -> onFinishLocalGathering(cfg.key(), parts));
-            }
+            if (!F.isEmpty(partsToCollect))
+                gatherLocalStatistics(cfg, tbl, parts, partsToCollect, colsToCollect);
             else {
                 // All local statistics by partition are available.
                 // Only refresh aggregated local statistics.
-                gatherer.submit(() -> onFinishLocalGathering(cfg.key(), parts));
+                gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), parts));
             }
         }
         catch (Throwable ex) {
@@ -432,25 +415,8 @@ public class IgniteStatisticsConfigurationManager {
 
             StatisticsObjectConfiguration.Diff diff = StatisticsObjectConfiguration.diff(oldCfg, newCfg);
 
-            if (!F.isEmpty(diff.dropCols())) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Remove local statistics [key=" + newCfg.key() +
-                        ", columns=" + diff.dropCols() + ']');
-                }
-
-                LocalStatisticsGatheringContext gCtx = gatherer.gatheringInProgress(newCfg.key());
-
-                if (gCtx != null) {
-                    gCtx.future().thenAccept((v) -> {
-                        repo.clearLocalStatistics(newCfg.key(), diff.dropCols());
-                        repo.clearLocalPartitionsStatistics(newCfg.key(), diff.dropCols());
-                    });
-                }
-                else {
-                    repo.clearLocalStatistics(newCfg.key(), diff.dropCols());
-                    repo.clearLocalPartitionsStatistics(newCfg.key(), diff.dropCols());
-                }
-            }
+            if (!F.isEmpty(diff.dropCols()))
+                dropColumnsOnLocalStatistics(newCfg, diff.dropCols());
 
             if (!F.isEmpty(diff.updateCols())) {
                 GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
@@ -460,15 +426,58 @@ public class IgniteStatisticsConfigurationManager {
                 Set<Integer> parts = cctx.affinity().primaryPartitions(
                     cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());
 
-                Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), diff.updateCols().keySet());
-
-                LocalStatisticsGatheringContext ctx = gatherer
-                    .collectLocalObjectsStatisticsAsync(tbl, cols, diff.updateCols(), parts);
-
-                ctx.future().thenAccept((v) -> {
-                    onFinishLocalGathering(newCfg.key(), parts);
-                });
+                gatherLocalStatistics(
+                    newCfg,
+                    tbl,
+                    parts,
+                    parts,
+                    diff.updateCols()
+                );
             }
+        }
+    }
+
+    /** */
+    private void gatherLocalStatistics(
+        StatisticsObjectConfiguration cfg,
+        GridH2Table tbl,
+        Set<Integer> partsToAggregate,
+        Set<Integer> partsToCollect,
+        Map<String, StatisticsColumnConfiguration> colsToCollect
+    ) {
+        if (F.isEmpty(colsToCollect))
+            colsToCollect = cfg.columns();
+
+        Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), colsToCollect.keySet());
+
+        gatherer.gatherLocalObjectsStatisticsAsync(
+            tbl,
+            cols,
+            colsToCollect,
+            partsToCollect
+        );
+
+        gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), partsToAggregate));
+    }
+
+    /** */
+    private void dropColumnsOnLocalStatistics(StatisticsObjectConfiguration cfg, Set<String> cols) {
+        if (log.isDebugEnabled()) {
+            log.debug("Remove local statistics [key=" + cfg.key() +
+                ", columns=" + cols + ']');
+        }
+
+        LocalStatisticsGatheringContext gCtx = gatherer.gatheringInProgress(cfg.key());
+
+        if (gCtx != null) {
+            gCtx.futureAggregate().thenAccept((v) -> {
+                repo.clearLocalStatistics(cfg.key(), cols);
+                repo.clearLocalPartitionsStatistics(cfg.key(), cols);
+            });
+        }
+        else {
+            repo.clearLocalStatistics(cfg.key(), cols);
+            repo.clearLocalPartitionsStatistics(cfg.key(), cols);
         }
     }
 
@@ -493,21 +502,23 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /** */
-    private void onFinishLocalGathering(StatisticsKey key, Set<Integer> partsToAggregate) {
+    private ObjectStatisticsImpl aggregateLocalGathering(StatisticsKey key, Set<Integer> partsToAggregate) {
         synchronized (mux) {
             if (!stopLock.enterBusy())
-                return;
+                return null;
 
             try {
                 StatisticsObjectConfiguration cfg = distrMetaStorage.read(key2String(key));
 
-                repo.refreshAggregatedLocalStatistics(partsToAggregate, cfg);
+                return repo.refreshAggregatedLocalStatistics(partsToAggregate, cfg);
             }
             catch (Throwable e) {
                 if (!X.hasCause(e, NodeStoppingException.class)) {
                     log.error("Error on aggregate statistic on finish local statistics collection" +
                         " [key=" + key + ", parts=" + partsToAggregate, e);
                 }
+
+                return null;
             }
             finally {
                 stopLock.leaveBusy();
