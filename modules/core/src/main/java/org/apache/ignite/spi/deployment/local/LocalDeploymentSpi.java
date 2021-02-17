@@ -116,38 +116,7 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
      */
     @Deprecated
     @Nullable @Override public DeploymentResource findResource(String rsrcName) {
-        assert rsrcName != null;
-
-        // Last updated class loader has highest priority in search.
-        for (Entry<ClassLoader, ConcurrentMap<String, String>> e : ldrRsrcs.descendingEntrySet()) {
-            ClassLoader ldr = e.getKey();
-            ConcurrentMap<String, String> rsrcs = e.getValue();
-
-            String clsName = rsrcs.get(rsrcName);
-
-            // Return class if it was found in resources map.
-            if (clsName != null) {
-                // Recalculate resource name in case if access is performed by
-                // class name and not the resource name.
-                rsrcName = getResourceName(clsName, rsrcs);
-
-                assert clsName != null;
-
-                try {
-                    Class<?> cls = Class.forName(clsName, true, ldr);
-
-                    assert cls != null;
-
-                    // Return resource.
-                    return new DeploymentResourceAdapter(rsrcName, cls, ldr);
-                }
-                catch (ClassNotFoundException ignored) {
-                    // No-op.
-                }
-            }
-        }
-
-        return null;
+        return findResource(rsrcName, null);
     }
 
     /** {@inheritDoc} */
@@ -164,7 +133,17 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
         }
 
         // we can remove this stub after deprecated IgniteCompute.localDeployTask was deleted.
-        return findResource(rsrcName);
+        for (Entry<ClassLoader, ConcurrentMap<String, String>> e : ldrRsrcs.descendingEntrySet()) {
+            ClassLoader ldr = e.getKey();
+            ConcurrentMap<String, String> rsrcs = e.getValue();
+
+            DeploymentResourceAdapter res = findResource0(rsrcs, rsrcName, ldr);
+
+            if (res != null)
+                return res;
+        }
+
+        return null;
     }
 
     /**
@@ -194,8 +173,8 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
                 // Return resource.
                 return new DeploymentResourceAdapter(rsrcName, cls, clsLdr);
             }
-            catch (ClassNotFoundException ignored) {
-                // No-op.
+            catch (ClassNotFoundException e) {
+                log.warning("Can`t find appropriate class. ", e);
             }
         }
 
