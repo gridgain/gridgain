@@ -60,50 +60,50 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    GridTcpCommunicationSpiRecoveryAckSelfTest.class,
-    IgniteTcpCommunicationRecoveryAckClosureSelfTest.class,
-    GridTcpCommunicationSpiRecoverySelfTest.class,
-    GridTcpCommunicationSpiRecoveryNoPairedConnectionsTest.class,
-    GridTcpCommunicationSpiRecoverySslSelfTest.class,
-
-    GridTcpCommunicationSpiConcurrentConnectSelfTest.class,
-    GridTcpCommunicationSpiConcurrentConnectSslSelfTest.class,
-
-    GridTcpCommunicationSpiSslSelfTest.class,
-    GridTcpCommunicationSpiSslSmallBuffersSelfTest.class,
-    GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest.class,
-
-    GridTcpCommunicationSpiTcpSelfTest.class,
-    GridTcpCommunicationSpiTcpNoDelayOffSelfTest.class,
-    GridTcpCommunicationSpiShmemSelfTest.class,
-
-    GridTcpCommunicationSpiStartStopSelfTest.class,
-
-    GridTcpCommunicationSpiMultithreadedSelfTest.class,
-    GridTcpCommunicationSpiMultithreadedShmemTest.class,
-
-    GridTcpCommunicationSpiRecoveryFailureDetectionSelfTest.class,
-    GridTcpCommunicationSpiTcpFailureDetectionSelfTest.class,
-
-    GridTcpCommunicationSpiConfigSelfTest.class,
-
-    TcpCommunicationSpiSkipMessageSendTest.class,
-
-    TcpCommunicationSpiFaultyClientTest.class,
-    TcpCommunicationSpiFaultyClientSslTest.class,
-
-    TcpCommunicationSpiFreezingClientTest.class,
-
-    TcpCommunicationSpiDropNodesTest.class,
-    TcpCommunicationSpiHalfOpenedConnectionTest.class,
-
-    TcpCommunicationStatisticsTest.class,
-
-    IgniteTcpCommunicationHandshakeWaitTest.class,
-    IgniteTcpCommunicationHandshakeWaitSslTest.class,
-    IgniteTcpCommunicationConnectOnInitTest.class,
-
-    TcpCommunicationSpiMultiJvmTest.class,
+//    GridTcpCommunicationSpiRecoveryAckSelfTest.class,
+//    IgniteTcpCommunicationRecoveryAckClosureSelfTest.class,
+//    GridTcpCommunicationSpiRecoverySelfTest.class,
+//    GridTcpCommunicationSpiRecoveryNoPairedConnectionsTest.class,
+//    GridTcpCommunicationSpiRecoverySslSelfTest.class,
+//
+//    GridTcpCommunicationSpiConcurrentConnectSelfTest.class,
+//    GridTcpCommunicationSpiConcurrentConnectSslSelfTest.class,
+//
+//    GridTcpCommunicationSpiSslSelfTest.class,
+//    GridTcpCommunicationSpiSslSmallBuffersSelfTest.class,
+//    GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest.class,
+//
+//    GridTcpCommunicationSpiTcpSelfTest.class,
+//    GridTcpCommunicationSpiTcpNoDelayOffSelfTest.class,
+//    GridTcpCommunicationSpiShmemSelfTest.class,
+//
+//    GridTcpCommunicationSpiStartStopSelfTest.class,
+//
+//    GridTcpCommunicationSpiMultithreadedSelfTest.class,
+//    GridTcpCommunicationSpiMultithreadedShmemTest.class,
+//
+//    GridTcpCommunicationSpiRecoveryFailureDetectionSelfTest.class,
+//    GridTcpCommunicationSpiTcpFailureDetectionSelfTest.class,
+//
+//    GridTcpCommunicationSpiConfigSelfTest.class,
+//
+//    TcpCommunicationSpiSkipMessageSendTest.class,
+//
+//    TcpCommunicationSpiFaultyClientTest.class,
+//    TcpCommunicationSpiFaultyClientSslTest.class,
+//
+//    TcpCommunicationSpiFreezingClientTest.class,
+//
+//    TcpCommunicationSpiDropNodesTest.class,
+//    TcpCommunicationSpiHalfOpenedConnectionTest.class,
+//
+//    TcpCommunicationStatisticsTest.class,
+//
+//    IgniteTcpCommunicationHandshakeWaitTest.class,
+//    IgniteTcpCommunicationHandshakeWaitSslTest.class,
+//    IgniteTcpCommunicationConnectOnInitTest.class,
+//
+//    TcpCommunicationSpiMultiJvmTest.class,
 
     TooManyOpenFilesTcpCommunicationSpiTest.class,
 
@@ -112,9 +112,9 @@ import org.junit.runners.Suite;
     GridTcpCommunicationSpiLogTest.class,
 
     GridTotallyUnreachableClientTest.class,
-    GridSandboxedClientWithoutNetworkTest.class,
-
-    TcpCommunicationHandshakeTimeoutTest.class,
+//    GridSandboxedClientWithoutNetworkTest.class,
+//
+//    TcpCommunicationHandshakeTimeoutTest.class,
 })
 public class IgniteSpiCommunicationSelfTestSuite {
 }
