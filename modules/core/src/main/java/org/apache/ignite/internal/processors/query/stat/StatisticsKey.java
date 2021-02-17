@@ -18,8 +18,6 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.io.Serializable;
 import java.util.Objects;
 
-import org.apache.ignite.internal.processors.query.QueryUtils;
-
 /**
  * Key to collect statistics by.
  */

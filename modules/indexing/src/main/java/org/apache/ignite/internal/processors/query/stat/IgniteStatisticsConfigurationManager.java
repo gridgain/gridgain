@@ -371,7 +371,6 @@ public class IgniteStatisticsConfigurationManager {
                 }
             }
 
-
             if (!F.isEmpty(partsToRmv)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Remove local partitioned statistics [key=" + cfg.key() +
