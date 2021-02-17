@@ -210,7 +210,7 @@ public class IgniteCacheSqlInsertValidationSelfTest extends AbstractIndexingComm
     }
 
     /**
-     * Check we can't insert null as part of compound PK that marks as NOT NULL.
+     * Check we can't insert null as column value of a compound PK that has NOT NULL constraint.
      */
     @Test
     public void testValidationOfCompoundKey() {
