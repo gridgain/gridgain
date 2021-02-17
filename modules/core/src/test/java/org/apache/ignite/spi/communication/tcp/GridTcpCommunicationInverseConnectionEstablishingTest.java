@@ -308,6 +308,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testPairedAndInverseConnectionDoesntHang() throws Exception {
         AtomicBoolean doTheShake = new AtomicBoolean(true);
 
