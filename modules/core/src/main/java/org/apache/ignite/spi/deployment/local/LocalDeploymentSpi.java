@@ -164,17 +164,7 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
         }
 
         // we can remove this stub after deprecated IgniteCompute.localDeployTask was deleted.
-        for (Entry<ClassLoader, ConcurrentMap<String, String>> e : ldrRsrcs.descendingEntrySet()) {
-            ClassLoader ldr = e.getKey();
-            ConcurrentMap<String, String> rsrcs = e.getValue();
-
-            DeploymentResourceAdapter res = findResource0(rsrcs, rsrcName, ldr);
-
-            if (res != null)
-                return res;
-        }
-
-        return null;
+        return findResource(rsrcName);
     }
 
     /**
