@@ -119,7 +119,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             statsRepos,
             gatherPool,
             stopLock,
-            ctx::log);
+            ctx::log
+        );
 
         statCfgMgr = new IgniteStatisticsConfigurationManager(
             schemaMgr,

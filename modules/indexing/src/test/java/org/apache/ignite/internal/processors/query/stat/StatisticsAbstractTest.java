@@ -19,20 +19,25 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
@@ -351,10 +356,23 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                     (grid(0).context().query().getIndexing().statsManager()))
                     .statisticConfiguration().config(t.key());
 
+                Predicate<StatisticsColumnConfiguration> predicate;
+                if (t.columns() != null) {
+                    Set<String> cols = Arrays.stream(t.columns()).collect(Collectors.toSet());
+
+                    predicate = c -> cols.contains(c.name());
+                }
+                else
+                    predicate = c -> true;
+
                 expectedVersion.put(
                     t,
                     cfg != null
-                        ? cfg.columnsAll().values().stream().mapToLong(c -> c.version()).min().orElse(0L) + 1
+                        ? cfg.columnsAll().values().stream()
+                        .filter(predicate)
+                        .mapToLong(c -> c.version())
+                        .min()
+                        .orElse(0L) + 1
                         : 0L);
             }
 
@@ -446,12 +464,23 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                     ObjectStatisticsImpl s = (ObjectStatisticsImpl)ign.context().query().getIndexing().statsManager()
                         .getLocalStatistics(k.schema(), k.obj());
 
-                    long maxVer = s.columnsStatistics().values().stream()
-                        .mapToLong(c -> c.version())
-                        .min()
-                        .orElse(-1L);
+                    long minVer = Long.MAX_VALUE;
 
-                    assertEquals((long)ver, maxVer);
+                    Set<String> cols;
+                    if (k.columns() != null)
+                        cols = Arrays.stream(k.columns()).collect(Collectors.toSet());
+                    else
+                        cols = s.columnsStatistics().keySet();
+
+                    for (String col : cols) {
+                        if (s.columnStatistics(col).version() < minVer)
+                            minVer = s.columnStatistics(col).version();
+                    }
+
+                    if (minVer == Long.MAX_VALUE)
+                        minVer = -1;
+
+                    assertEquals((long)ver, minVer);
                 });
 
                 return;

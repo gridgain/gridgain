@@ -93,7 +93,7 @@ public class IgniteStatisticsHelper {
                         keyMsg.schema(), keyMsg.obj()));
         }
 
-        return aggregateLocalStatistics(tbl, filterColumns(tbl.getColumns(), keyMsg.colNames()), stats);
+        return aggregateLocalStatistics(tbl, filterColumns(tbl.getColumns(), keyMsg.colNames()), stats, log);
     }
 
     /**
@@ -102,12 +102,14 @@ public class IgniteStatisticsHelper {
      * @param tbl Table to aggregate statistics by.
      * @param selectedCols Columns to aggregate statistics by.
      * @param stats Collection of partition level or local level statistics to aggregate.
+     * @param log
      * @return Local level statistics.
      */
     public static ObjectStatisticsImpl aggregateLocalStatistics(
-            GridH2Table tbl,
-            Column[] selectedCols,
-            Collection<? extends ObjectStatisticsImpl> stats
+        GridH2Table tbl,
+        Column[] selectedCols,
+        Collection<? extends ObjectStatisticsImpl> stats,
+        IgniteLogger log
     ) {
         assert !stats.isEmpty();
 
@@ -137,6 +139,9 @@ public class IgniteStatisticsHelper {
 
         for (Column col : selectedCols) {
             ColumnStatistics stat = ColumnStatisticsCollector.aggregate(tbl::compareValues, colPartStats.get(col));
+
+            if (log.isDebugEnabled())
+                log.debug("Aggregate column statistic done [col=" + col.getName() + ", stat=" + stat + ']');
 
             colStats.put(col.getName(), stat);
         }

@@ -66,11 +66,15 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
             .getLocalStatistics("PUBLIC", "SMALL");
 
-        ObjectStatisticsImpl locStat2WithPrevVersion = new ObjectStatisticsImpl(
-            locStat2.rowCount(),
-            locStat2.columnsStatistics());
+        // Reset version to compare statistic.
+        for (ColumnStatistics c : locStat2.columnsStatistics().values())
+            GridTestUtils.setFieldValue(c, "ver", 0);
 
-        assertEquals(locStat, locStat2WithPrevVersion);
+        // Reset version to compare statistic.
+        for (ColumnStatistics c : locStat.columnsStatistics().values())
+            GridTestUtils.setFieldValue(c, "ver", 0);
+
+        assertEquals(locStat, locStat2);
     }
 
     /**
@@ -90,10 +94,15 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL");
 
-        ObjectStatisticsImpl locStat2WithPrevVersion = new ObjectStatisticsImpl(
-            locStat2.rowCount(), locStat2.columnsStatistics());
+        // Reset version to compare statistic.
+        for (ColumnStatistics c : locStat2.columnsStatistics().values())
+            GridTestUtils.setFieldValue(c, "ver", 0);
 
-        assertEquals(locStat, locStat2WithPrevVersion);
+        // Reset version to compare statistic.
+        for (ColumnStatistics c : locStat.columnsStatistics().values())
+            GridTestUtils.setFieldValue(c, "ver", 0);
+
+        assertEquals(locStat, locStat2);
     }
 
     /**
