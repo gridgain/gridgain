@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.platform.client.cache;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientSqlUtils;
 
 import javax.cache.Cache;
 
@@ -39,7 +40,7 @@ class ClientCacheEntryQueryCursor extends ClientCacheQueryCursor<Cache.Entry> {
 
     /** {@inheritDoc} */
     @Override void writeEntry(BinaryRawWriterEx writer, Cache.Entry e) {
-        writer.writeObjectDetached(e.getKey());
-        writer.writeObjectDetached(e.getValue());
+        ClientSqlUtils.writeSqlField(writer, e.getKey(), getProtocolContext());
+        ClientSqlUtils.writeSqlField(writer, e.getValue(), getProtocolContext());
     }
 }
