@@ -154,10 +154,12 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     @Test
     public void testRepairUnderLoad() throws Exception {
+        CollectPartitionKeysByBatchTask.msg.clear();
+
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 10000;
+        int endKey = 100000;
 
         for (int i = startKey; i < endKey; i++) {
             i += 2;
@@ -172,7 +174,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
-        breakCacheSizes(List.of(grid(0)), List.of(DEFAULT_CACHE_NAME));
+        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2)*/), List.of(DEFAULT_CACHE_NAME));
 //
         assertFalse(cache.size() == startSize);
 
@@ -191,7 +193,65 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         AtomicReference<ReconciliationResult> res = new AtomicReference<>();
 
-        IgniteInternalFuture loadFut = GridTestUtils.runAsync(() -> {
+        IgniteInternalFuture loadFut0 = GridTestUtils.runAsync(() -> {
+            System.out.println("qvsdhntsd loadFut start");
+
+            int i = 0;
+
+            int max = 0;
+
+            while(res.get() == null/* || i < endKey*/) {
+                int i1 = startKey + rnd.nextInt(endKey - startKey);
+                cache.put(i1, 1);
+//                i1 = startKey + rnd.nextInt(endKey - startKey);
+//                cache.remove(i1);
+
+//                System.out.println("qfegsdg put random: " + i1);
+//                doSleep(3);
+
+//                if (i1 > max)
+//                    max = i1;
+
+//                if (i < endKey) {
+//                    cache.put(i, i);
+//                    i++;
+//                }
+            }
+
+            System.out.println("qvraslpf loadFut stop" + i);
+            System.out.println("qmfgtssf loadFut max" + max);
+        });
+
+        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
+            System.out.println("qvsdhntsd loadFut start");
+
+            int i = 0;
+
+            int max = 0;
+
+            while(res.get() == null/* || i < endKey*/) {
+                int i1 = startKey + rnd.nextInt(endKey - startKey);
+                cache.put(i1, 1);
+//                i1 = startKey + rnd.nextInt(endKey - startKey);
+//                cache.remove(i1);
+
+//                System.out.println("qfegsdg put random: " + i1);
+//                doSleep(3);
+
+//                if (i1 > max)
+//                    max = i1;
+
+//                if (i < endKey) {
+//                    cache.put(i, i);
+//                    i++;
+//                }
+            }
+
+            System.out.println("qvraslpf loadFut stop" + i);
+            System.out.println("qmfgtssf loadFut max" + max);
+        });
+
+        IgniteInternalFuture loadFut2 = GridTestUtils.runAsync(() -> {
             System.out.println("qvsdhntsd loadFut start");
 
             int i = 0;
@@ -236,7 +296,9 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         ReconciliationResult reconciliationRes = res.get();
 
-        loadFut.get();
+        loadFut0.get();
+        loadFut1.get();
+        loadFut2.get();
 
 //        doSleep(5000);
 

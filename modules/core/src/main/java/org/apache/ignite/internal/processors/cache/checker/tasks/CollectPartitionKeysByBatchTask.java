@@ -317,7 +317,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                     System.out.println("qfbaftgr after cursor");
 
-                    for (int i = 0; cursor.next() && i < batchSize; i++) {
+                    for (int i = 0; i < batchSize && cursor.next(); i++) {
                         CacheDataRow row = cursor.get();
 
                         if (partReconciliationCtx.lastKey(cacheId) == null || KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(cacheId), row.key()) < 0)
@@ -327,7 +327,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     if (keysToCheck.isEmpty())
                         return new ExecutionResult<>(new T2<>(partEntryHashRecords, partSize));
 
-                    partReconciliationCtx.keysAfter.set(0);
+                    if (!keysToCheck.isEmpty() && partReconciliationCtx.lastKey(cacheId) != null && KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(cacheId), keysToCheck.get(keysToCheck.size() - 1).key()) > 0);
+                        partReconciliationCtx.keysAfter.set(0);
 
                     partReconciliationCtx.firstKey(cacheId, keysToCheck.get(0).key());
                     partReconciliationCtx.lastKey(cacheId, keysToCheck.get(keysToCheck.size() - 1).key());
@@ -362,13 +363,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                    System.out.println("qfvndrfg");
 
 //                        try {
-//                            sleep(3);
+//                            sleep(1);
 //                        }
 //                        catch (InterruptedException e) {
 //                            e.printStackTrace();
 //                        }
 
-                        synchronized (partReconciliationCtx.reconciliationMux()) {
+//                        synchronized (partReconciliationCtx.reconciliationMux()) {
 //                            if (row == null) {
 //                                row = cursor.get();
 //
@@ -428,7 +429,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                             }
                             else
                                 i--;
-                        }
+//                        }
 
 //                        row = null;
 
