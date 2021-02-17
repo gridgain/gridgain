@@ -457,9 +457,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                 needRefresh = true;
 
                                 updateSeq = updateLocal(p, locPart.state(), updateSeq, affVer);
-
-                                if (locPart.state() == RENTING)
-                                    locPart.evictAsync(); // Continue eviction (persistence is enabled).
                             }
                         }
                     }
@@ -2047,6 +2044,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             // Own orphan moving partitions (having no suppliers).
             if (fut != null && (fut.events().hasServerJoin() || fut.changedBaseline()))
                 ownOrphans();
+
+            // Resume eviction of RENTING partitions on first PME.
+            if (fut != null && grp.localStartVersion().equals(fut.initialVersion()) && grp.persistenceEnabled()) {
+                for (GridDhtLocalPartition part : localPartitions()) {
+                    if (part.state() == RENTING)
+                        part.evictAsync();
+                }
+            }
         }
         finally {
             lock.writeLock().unlock();
@@ -3236,9 +3241,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 GridDhtLocalPartition locPart = localPartition(p);
 
+                if (locPart == null)
+                    return false;
+
                 GridDhtPartitionState state0 = locPart.state();
 
-                if (locPart == null || state0 == RENTING || state0 == EVICTED || partitionLocalNode(p, readyTopVer))
+                if (state0 == RENTING || state0 == EVICTED || partitionLocalNode(p, readyTopVer))
                     return false;
 
                 locPart.rent();
