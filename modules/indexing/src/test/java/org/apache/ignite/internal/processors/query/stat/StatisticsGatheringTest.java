@@ -16,10 +16,8 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Objects;
-import java.util.function.Function;
 
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 

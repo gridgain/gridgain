@@ -75,6 +75,7 @@ public class ColumnStatisticsCollector {
     public ColumnStatisticsCollector(Column col, Comparator<Value> comp) {
         this(col, comp, 0);
     }
+
     /**
      * Constructor.
      *
