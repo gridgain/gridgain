@@ -159,10 +159,10 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 100000;
+        int endKey = 30000;
 
         for (int i = startKey; i < endKey; i++) {
-            i += 2;
+            i += 1;
             if (i < endKey)
                 cache.put(i, i);
         }
@@ -174,7 +174,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
-        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2)*/), List.of(DEFAULT_CACHE_NAME));
+        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
 //
         assertFalse(cache.size() == startSize);
 
@@ -203,7 +203,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             while(res.get() == null/* || i < endKey*/) {
                 int i1 = startKey + rnd.nextInt(endKey - startKey);
                 cache.put(i1, 1);
-//                i1 = startKey + rnd.nextInt(endKey - startKey);
+//                int i1 = startKey + rnd.nextInt(endKey - startKey);
 //                cache.remove(i1);
 
 //                System.out.println("qfegsdg put random: " + i1);
@@ -232,7 +232,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             while(res.get() == null/* || i < endKey*/) {
                 int i1 = startKey + rnd.nextInt(endKey - startKey);
                 cache.put(i1, 1);
-//                i1 = startKey + rnd.nextInt(endKey - startKey);
+//                int i1 = startKey + rnd.nextInt(endKey - startKey);
 //                cache.remove(i1);
 
 //                System.out.println("qfegsdg put random: " + i1);
@@ -261,7 +261,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             while(res.get() == null/* || i < endKey*/) {
                 int i1 = startKey + rnd.nextInt(endKey - startKey);
                 cache.put(i1, 1);
-//                i1 = startKey + rnd.nextInt(endKey - startKey);
+//                int i1 = startKey + rnd.nextInt(endKey - startKey);
 //                cache.remove(i1);
 
 //                System.out.println("qfegsdg put random: " + i1);
