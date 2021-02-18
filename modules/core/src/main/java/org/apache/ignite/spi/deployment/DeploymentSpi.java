@@ -18,7 +18,6 @@ package org.apache.ignite.spi.deployment;
 
 import org.apache.ignite.spi.IgniteSpi;
 import org.apache.ignite.spi.IgniteSpiException;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Grid deployment SPI is in charge of deploying tasks and classes from different
@@ -27,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
  * Class loaders that are in charge of loading task classes (and other classes)
  * can be deployed directly by calling {@link #register(ClassLoader, Class)} method or
  * by SPI itself, for example by asynchronously scanning some folder for new tasks.
- * When method {@link #findResource(String, ClassLoader)} is called by the system, SPI must return a
+ * When method {@link #findResource(String)} is called by the system, SPI must return a
  * class loader associated with given class. Every time a class loader
  * gets (re)deployed or released, callbacks
  * {@link DeploymentListener#onUnregistered(ClassLoader)}} must be called by SPI.
@@ -67,15 +66,6 @@ public interface DeploymentSpi extends IgniteSpi {
     public DeploymentResource findResource(String rsrcName);
 
     /**
-     * Finds class loader for the given class.
-     *
-     * @param rsrcName Class name or class alias to find class loader for.
-     * @param clsLdr desired class loader.
-     * @return Deployed class loader, or {@code null} if not deployed.
-     */
-    public DeploymentResource findResource(String rsrcName, @Nullable ClassLoader clsLdr);
-
-    /**
      * Registers a class loader with this SPI. This method exists
      * to be able to add external class loaders to deployment SPI.
      * Deployment SPI may also have its own class loaders. For example,
@@ -84,7 +74,7 @@ public interface DeploymentSpi extends IgniteSpi {
      * <p>
      * The array of classes passed in should be checked for presence of
      * {@link org.apache.ignite.compute.ComputeTaskName} annotations. The classes that have this annotation
-     * should be accessible by this name from {@link #findResource(String, ClassLoader)} method.
+     * should be accessible by this name from {@link #findResource(String)} method.
      *
      * @param ldr Class loader to register.
      * @param rsrc Class that should be checked for aliases.

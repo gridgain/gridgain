@@ -368,15 +368,15 @@ public interface IgniteCompute extends IgniteAsyncSupport {
      * <p>
      * If task for given name has not been deployed yet, then {@code taskName} will be
      * used as task class name to auto-deploy the task (see {@link #localDeployTask(Class, ClassLoader)} method).
+     * <p>
+     * If there are more one class deployed with the same name this method will execute the lasts one deployed of them.
+     * This method has no guarantees if it invokes where classes with the same names deployed from different threads.
      *
      * @param taskName Name of the task to execute.
      * @param arg Optional argument of task execution, can be {@code null}.
      * @return Task result.
      * @throws IgniteException If task failed.
      * @see ComputeTask for information about task execution.
-     *
-     * @deprecated Multi thread usage of {@link IgniteCompute#localDeployTask(Class, ClassLoader)} and the subsequent
-     * call of {@link IgniteCompute#execute(String, Object)} without ClassLoader clarification may lead to unpredictable instance calling.
      */
     public <T, R> R execute(String taskName, @Nullable T arg) throws IgniteException;
 
@@ -727,10 +727,7 @@ public interface IgniteCompute extends IgniteAsyncSupport {
      * @param clsLdr Task class loader. This class loader is in charge
      *      of loading all necessary resources for task execution.
      * @throws IgniteException If task is invalid and cannot be deployed.
-     *
-     * @deprecated check {@link IgniteCompute#execute(String, Object)} documentation.
      */
-    @Deprecated
     public void localDeployTask(Class<? extends ComputeTask> taskCls, ClassLoader clsLdr) throws IgniteException;
 
     /**

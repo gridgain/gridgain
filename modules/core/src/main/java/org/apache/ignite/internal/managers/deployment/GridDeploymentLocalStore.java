@@ -46,6 +46,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.deployment.DeploymentListener;
 import org.apache.ignite.spi.deployment.DeploymentResource;
 import org.apache.ignite.spi.deployment.DeploymentSpi;
+import org.apache.ignite.spi.deployment.local.LocalDeploymentSpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CLASS_DEPLOYED;
@@ -156,7 +157,7 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
             return dep;
         }
 
-        DeploymentResource rsrc = spi.findResource(alias, meta.classLoader());
+        DeploymentResource rsrc = getResource(alias, meta.classLoader());
 
         if (rsrc != null) {
             dep = deploy(ctx.config().getDeploymentMode(), rsrc.getClassLoader(), rsrc.getResourceClass(), alias,
@@ -195,7 +196,7 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
 
                     spi.register(ldr, cls);
 
-                    rsrc = spi.findResource(cls.getName(), ldr);
+                    rsrc = getResource(cls.getName(), ldr);
 
                     if (rsrc != null && rsrc.getResourceClass().equals(cls)) {
                         if (log.isDebugEnabled())
@@ -230,6 +231,24 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
             log.debug("Acquired deployment class: " + dep);
 
         return dep;
+    }
+
+    /**
+     * Tries to find a resource by deployment metadata.
+     *
+     * @param name Name of resource.
+     * @param ldr Class loader.
+     * @return A resource which would be found or {@code null} if nothing found.
+     */
+    private DeploymentResource getResource(String name, @Nullable ClassLoader ldr) {
+        DeploymentResource rsrc;
+
+        if (spi instanceof LocalDeploymentSpi)
+            rsrc = ((LocalDeploymentSpi)spi).findResource(name, ldr);
+        else
+            rsrc = spi.findResource(name);
+
+        return rsrc;
     }
 
     /** {@inheritDoc} */
@@ -380,7 +399,7 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
                 dep = deployment(meta);
 
                 if (dep == null) {
-                    DeploymentResource rsrc = spi.findResource(cls.getName(), clsLdr);
+                    DeploymentResource rsrc = getResource(cls.getName(), clsLdr);
 
                     if (rsrc != null) {
                         dep = deploy(ctx.config().getDeploymentMode(), rsrc.getClassLoader(),
