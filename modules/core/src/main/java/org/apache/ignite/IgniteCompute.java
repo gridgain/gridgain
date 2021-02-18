@@ -378,7 +378,6 @@ public interface IgniteCompute extends IgniteAsyncSupport {
      * @deprecated Multi thread usage of {@link IgniteCompute#localDeployTask(Class, ClassLoader)} and the subsequent
      * call of {@link IgniteCompute#execute(String, Object)} without ClassLoader clarification may lead to unpredictable instance calling.
      */
-    @Deprecated
     public <T, R> R execute(String taskName, @Nullable T arg) throws IgniteException;
 
     /**
