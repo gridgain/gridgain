@@ -203,8 +203,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             while(res.get() == null/* || i < endKey*/) {
                 int i1 = startKey + rnd.nextInt(endKey - startKey);
                 cache.put(i1, 1);
-//                int i1 = startKey + rnd.nextInt(endKey - startKey);
-//                cache.remove(i1);
+                i1 = startKey + rnd.nextInt(endKey - startKey);
+                cache.remove(i1);
 
 //                System.out.println("qfegsdg put random: " + i1);
 //                doSleep(3);
@@ -232,8 +232,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             while(res.get() == null/* || i < endKey*/) {
                 int i1 = startKey + rnd.nextInt(endKey - startKey);
                 cache.put(i1, 1);
-//                int i1 = startKey + rnd.nextInt(endKey - startKey);
-//                cache.remove(i1);
+                i1 = startKey + rnd.nextInt(endKey - startKey);
+                cache.remove(i1);
 
 //                System.out.println("qfegsdg put random: " + i1);
 //                doSleep(3);
@@ -261,8 +261,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             while(res.get() == null/* || i < endKey*/) {
                 int i1 = startKey + rnd.nextInt(endKey - startKey);
                 cache.put(i1, 1);
-//                int i1 = startKey + rnd.nextInt(endKey - startKey);
-//                cache.remove(i1);
+                i1 = startKey + rnd.nextInt(endKey - startKey);
+                cache.remove(i1);
 
 //                System.out.println("qfegsdg put random: " + i1);
 //                doSleep(3);

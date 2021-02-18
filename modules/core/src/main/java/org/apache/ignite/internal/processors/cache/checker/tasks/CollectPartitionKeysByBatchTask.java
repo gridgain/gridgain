@@ -308,7 +308,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             try {
                 synchronized (partReconciliationCtx.reconciliationMux()) {
                     partReconciliationCtx.isReconciliationInProgress(true);
-                    partReconciliationCtx.isBatchInProgress = true;
+//                    partReconciliationCtx.isBatchInProgress = true;
 
                     System.out.println("qfbaftgr before cursor");
 
@@ -319,8 +319,6 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     System.out.println("qfbaftgr after cursor");
 
                     if (cursor.next()) {
-                        first = true;
-
                         row = cursor.get();
 
                         if (partReconciliationCtx.lastKey(cacheId) != null && partReconciliationCtx.lastKey(cacheId).equals(row.key())) {
@@ -333,6 +331,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         System.out.println("qefrasgbdt1");
 
                         if (row != null) {
+                            first = true;
+
                             partReconciliationCtx.firstKey(cacheId, row.key());
 
 //                            partReconciliationCtx.keysAfter.clear();
@@ -379,7 +379,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                    System.out.println("qfvndrfg");
 
 //                    try {
-//                        sleep(3);
+//                        sleep(2);
 //                    }
 //                    catch (InterruptedException e) {
 //                        e.printStackTrace();
@@ -457,6 +457,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     first = false;
                 }
 
+//                try {
+//                    sleep(2);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
                 System.out.println("qvdrftga2 " + partSize.get());
 
                 synchronized (partReconciliationCtx.reconciliationMux()) {
@@ -479,6 +486,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                     partReconciliationCtx.keysAfter.clear();
                 }
+
+//                try {
+//                    sleep(2);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
 
                 System.out.println("qcfdrfae2 " + partSize.get());
 
