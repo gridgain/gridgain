@@ -305,94 +305,71 @@ public class IgniteStatisticsConfigurationManager {
     private void checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
         if (!stopLock.enterBusy())
             return;
-
         try {
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
-
             if (tbl == null) {
                 // Drop tables handle by onDropTable
                 return;
             }
-
             GridCacheContext cctx = tbl.cacheContext();
-
             AffinityTopologyVersion topVer0 = cctx.affinity().affinityReadyFuture(topVer).get();
-
-            final Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer0);
-
-            if (F.isEmpty(parts)) {
-                // There is no data on the node for specified cache.
-                return;
-            }
-
-            final Set<Integer> partsOwn = new HashSet<>(
-                cctx.affinity().backupPartitions(cctx.localNodeId(), topVer0)
-            );
-
-            partsOwn.addAll(parts);
-
+            Set<Integer> affPrParts2Agr = cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer0);
+            Set<Integer> affPrParts = new HashSet<>(affPrParts2Agr);
+            Set<Integer> affAllParts = new HashSet<>(affPrParts);
+            affAllParts.addAll(cctx.affinity().backupPartitions(cctx.localNodeId(), topVer0));
             if (log.isDebugEnabled())
-                log.debug("Check local statistics [key=" + cfg + ", parts=" + parts + ']');
+                log.debug("Check local statistics [key=" + cfg + ", parts=" + affPrParts + ']');
 
             Collection<ObjectPartitionStatisticsImpl> partStats = repo.getLocalPartitionsStatistics(cfg.key());
 
             Set<Integer> partsToRmv = new HashSet<>();
-            Set<Integer> partsToCollect = new HashSet<>(parts);
+            Set<Integer> partsToCollect = new HashSet<>();
             Map<String, StatisticsColumnConfiguration> colsToCollect = new HashMap<>();
             Set<String> colsToRmv = new HashSet<>();
+            for (ObjectPartitionStatisticsImpl pstat : partStats) {
+                if (!affAllParts.contains(pstat.partId())) {
+                    partsToRmv.add(pstat.partId());
 
-            if (!F.isEmpty(partStats)) {
-                for (ObjectPartitionStatisticsImpl pstat : partStats) {
-                    if (!partsOwn.contains(pstat.partId()))
-                        partsToRmv.add(pstat.partId());
+                    continue;
+                }
+                if (!affPrParts.remove(pstat.partId()))
+                    // To not waste time on backup updating
+                    continue;
 
-                    boolean partExists = true;
-
-                    for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values()) {
-                        ColumnStatistics colStat = pstat.columnStatistics(colCfg.name());
-
-                        if (colCfg.tombstone()) {
-                            if (colStat != null)
-                                colsToRmv.add(colCfg.name());
-                        }
-                        else {
-                            if (colStat == null || colStat.version() < colCfg.version()) {
-                                colsToCollect.put(colCfg.name(), colCfg);
-
-                                partsToCollect.add(pstat.partId());
-
-                                partExists = false;
-                            }
+                for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values()) {
+                    ColumnStatistics colStat = pstat.columnStatistics(colCfg.name());
+                    if (colCfg.tombstone()) {
+                        if (colStat != null)
+                            colsToRmv.add(colCfg.name());
+                    }
+                    else {
+                        if (colStat == null || colStat.version() < colCfg.version()) {
+                            colsToCollect.put(colCfg.name(), colCfg);
+                            partsToCollect.add(pstat.partId());
                         }
                     }
-
-                    if (partExists)
-                        partsToCollect.remove(pstat.partId());
                 }
             }
+            partsToCollect.addAll(affPrParts);
 
             if (!F.isEmpty(partsToRmv)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Remove local partitioned statistics [key=" + cfg.key() +
                         ", part=" + partsToRmv + ']');
                 }
-
                 partsToRmv.forEach(p -> {
                     assert !partsToCollect.contains(p);
-
                     repo.clearLocalPartitionStatistics(cfg.key(), p);
                 });
             }
-
             if (!F.isEmpty(colsToRmv))
                 dropColumnsOnLocalStatistics(cfg, colsToRmv);
-
             if (!F.isEmpty(partsToCollect))
-                gatherLocalStatistics(cfg, tbl, parts, partsToCollect, colsToCollect);
-            else {
+                gatherLocalStatistics(cfg, tbl, affPrParts2Agr, partsToCollect, colsToCollect);
+            else if (!affPrParts2Agr.isEmpty()) {
                 // All local statistics by partition are available.
                 // Only refresh aggregated local statistics.
-                gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), parts));
+                gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), affPrParts2Agr));
             }
         }
         catch (Throwable ex) {
