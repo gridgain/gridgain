@@ -15,16 +15,15 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.function.Consumer;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.function.Consumer;
 
 /**
  * Statistics cleaning tests.

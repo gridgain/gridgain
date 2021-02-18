@@ -16,7 +16,6 @@
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -114,7 +113,6 @@ public class StatisticsObjectConfiguration implements Serializable {
 
         return new Diff(dropCols, updateCols);
     }
-
 
     /** */
     public StatisticsKey key() {

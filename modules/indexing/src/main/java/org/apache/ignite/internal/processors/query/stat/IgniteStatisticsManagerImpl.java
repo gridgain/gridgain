@@ -29,7 +29,6 @@ import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
-import org.apache.ignite.internal.util.GridBusyLock;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 

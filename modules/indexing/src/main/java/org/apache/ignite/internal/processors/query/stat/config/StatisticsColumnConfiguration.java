@@ -16,8 +16,6 @@
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
