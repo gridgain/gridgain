@@ -52,9 +52,9 @@ import org.apache.ignite.internal.processors.rest.handlers.cluster.GridBaselineC
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridChangeClusterStateCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridChangeStateCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridClusterNameCommandHandler;
-import org.apache.ignite.internal.processors.rest.handlers.memory.MemoryMetricsCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.datastructures.DataStructuresCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.log.GridLogCommandHandler;
+import org.apache.ignite.internal.processors.rest.handlers.memory.MemoryMetricsCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.probe.GridProbeCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.query.QueryCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.task.GridTaskCommandHandler;
@@ -490,7 +490,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
                 if (sesId == null || !sesId.equals(U.bytesToUuid(sesTok, 0)))
                     throw new IgniteAuthenticationException("Failed to handle request - unsupported case (mismatched " +
                         "clientId and session token) [clientId=" + clientId + ", sesTok=" +
-                        U.byteArray2HexString(sesTok) + "]");
+                        U.byteArray2HexString(sesTok) + ", sesId=" + sesId + "]");
 
                 Session ses = sesId2Ses.get(sesId);
 
