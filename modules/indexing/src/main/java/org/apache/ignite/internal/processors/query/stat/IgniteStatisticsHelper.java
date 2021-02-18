@@ -283,26 +283,6 @@ public class IgniteStatisticsHelper {
         return res;
     }
 
-//    /**
-//     * Filter columns from specified statistics.
-//     *
-//     * @param stat Statistics to filter columns from.
-//     * @param cols Column names to return in result object.
-//     * @return Statistics with only specified columns.
-//     */
-//    public static ObjectStatisticsImpl filterColumns(ObjectStatisticsImpl stat, Collection<String> cols) {
-//        ObjectStatisticsImpl res = stat.clone();
-//        res.columnsStatistics().clear();
-//
-//        for (String column : cols) {
-//            ColumnStatistics colStat = stat.columnStatistics(column);
-//            if (colStat != null)
-//                res.columnsStatistics().put(column, colStat);
-//        }
-//
-//        return res;
-//    }
-
     /**
      * Filter columns by specified names.
      *

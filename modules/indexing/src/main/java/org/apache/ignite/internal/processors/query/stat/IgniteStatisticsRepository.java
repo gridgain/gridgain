@@ -78,32 +78,40 @@ public class IgniteStatisticsRepository {
      * @param colNames if specified - only statistics by specified columns will be cleared.
      */
     public void clearLocalPartitionsStatistics(StatisticsKey key, Set<String> colNames) {
-        if (F.isEmpty(colNames))
+        if (F.isEmpty(colNames)) {
             store.clearLocalPartitionsStatistics(key);
-        else {
-            Collection<ObjectPartitionStatisticsImpl> oldStatistics = store.getLocalPartitionsStatistics(key);
-            if (oldStatistics.isEmpty())
-                return;
 
-            Collection<ObjectPartitionStatisticsImpl> newStatistics = new ArrayList<>(oldStatistics.size());
-            Collection<Integer> partitionsToRmv = new ArrayList<>();
-            for (ObjectPartitionStatisticsImpl oldStat : oldStatistics) {
-                ObjectPartitionStatisticsImpl newStat = subtract(oldStat, colNames);
-                if (!newStat.columnsStatistics().isEmpty())
-                    newStatistics.add(newStat);
-                else
-                    partitionsToRmv.add(oldStat.partId());
-            }
-
-            if (newStatistics.isEmpty())
-                store.clearLocalPartitionsStatistics(key);
-            else {
-                if (!partitionsToRmv.isEmpty())
-                    store.clearLocalPartitionsStatistics(key, partitionsToRmv);
-
-                store.replaceLocalPartitionsStatistics(key, newStatistics);
-            }
+            return;
         }
+
+        Collection<ObjectPartitionStatisticsImpl> oldStatistics = store.getLocalPartitionsStatistics(key);
+
+        if (oldStatistics.isEmpty())
+            return;
+
+        Collection<ObjectPartitionStatisticsImpl> newStatistics = new ArrayList<>(oldStatistics.size());
+        Collection<Integer> partitionsToRmv = new ArrayList<>();
+
+        for (ObjectPartitionStatisticsImpl oldStat : oldStatistics) {
+
+            ObjectPartitionStatisticsImpl newStat = subtract(oldStat, colNames);
+
+            if (!newStat.columnsStatistics().isEmpty())
+                newStatistics.add(newStat);
+            else
+                partitionsToRmv.add(oldStat.partId());
+        }
+
+        if (newStatistics.isEmpty()) {
+            store.clearLocalPartitionsStatistics(key);
+
+            return;
+        }
+
+        if (!partitionsToRmv.isEmpty())
+            store.clearLocalPartitionsStatistics(key, partitionsToRmv);
+
+        store.replaceLocalPartitionsStatistics(key, newStatistics);
     }
 
     /**

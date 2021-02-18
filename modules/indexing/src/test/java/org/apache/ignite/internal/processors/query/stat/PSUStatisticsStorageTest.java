@@ -55,7 +55,7 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
 
         assertTrue(GridTestUtils.waitForCondition(
             () ->
-                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics("PUBLIC", "SMALL"))
+                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL")))
                     .columnStatistics("A") == null,
             TIMEOUT));
 
@@ -66,7 +66,7 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
 
         assertTrue(GridTestUtils.waitForCondition(
             () ->
-                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics("PUBLIC", "SMALL"))
+                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL")))
                     .columnStatistics("B") == null,
             TIMEOUT));
 

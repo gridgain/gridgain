@@ -51,6 +51,7 @@ import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnC
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -62,9 +63,6 @@ import org.gridgain.internal.h2.table.Column;
 public class IgniteStatisticsConfigurationManager {
     /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
-
-    /** */
-    public static final String[] EMPTY_STRING_ARR = new String[0];
 
     /** */
     private final IgniteStatisticsRepository repo;
@@ -166,7 +164,7 @@ public class IgniteStatisticsConfigurationManager {
         );
 
         schemaMgr.registerDropColumnsListener(this::onDropColumns);
-        schemaMgr.registerDropTable(this::onDropTable);
+        schemaMgr.registerDropTableListener(this::onDropTable);
     }
 
     /** */
@@ -322,6 +320,7 @@ public class IgniteStatisticsConfigurationManager {
 
             if (F.isEmpty(parts)) {
                 // There is no data on the node for specified cache.
+                // TODO: remove oll data
                 return;
             }
 
@@ -488,7 +487,7 @@ public class IgniteStatisticsConfigurationManager {
             new StatisticsTarget(
                 tbl.getSchema().getName(),
                 tbl.getName(),
-                cols.toArray(EMPTY_STRING_ARR)
+                cols.toArray(IgniteUtils.EMPTY_STRINGS)
             )
         ));
     }

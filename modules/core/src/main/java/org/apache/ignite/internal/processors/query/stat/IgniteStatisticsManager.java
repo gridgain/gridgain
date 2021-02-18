@@ -43,11 +43,10 @@ public interface IgniteStatisticsManager {
     /**
      * Get local statistics by object.
      *
-     * @param schemaName Schema name.
-     * @param objName Object to collect statistics by.
+     * @param key Statistic key.
      * @return Object statistics or {@code null} if there are no available statistics by specified object.
      */
-    public ObjectStatistics getLocalStatistics(String schemaName, String objName);
+    public ObjectStatistics getLocalStatistics(StatisticsKey key);
 
     /**
      * Stop statistic manager.

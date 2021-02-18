@@ -142,8 +142,8 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectStatistics getLocalStatistics(String schemaName, String objName) {
-        return statsRepos.getLocalStatistics(new StatisticsKey(schemaName, objName));
+    @Override public ObjectStatistics getLocalStatistics(StatisticsKey key) {
+        return statsRepos.getLocalStatistics(key);
     }
 
     /** {@inheritDoc} */

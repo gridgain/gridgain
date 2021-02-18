@@ -140,12 +140,10 @@ public class SchemaManager {
     private final IgniteLogger log;
 
     /** */
-    private final Set<BiConsumer<GridH2Table, List<String>>> dropColsLsnrs = Collections.newSetFromMap(
-        new ConcurrentHashMap<>());
+    private final Set<BiConsumer<GridH2Table, List<String>>> dropColsLsnrs = ConcurrentHashMap.newKeySet();
 
     /** */
-    private final Set<BiConsumer<String, String>> dropTblLsnrs = Collections.newSetFromMap(
-        new ConcurrentHashMap<>());
+    private final Set<BiConsumer<String, String>> dropTblLsnrs = ConcurrentHashMap.newKeySet();
 
     /**
      * Constructor.
@@ -847,7 +845,7 @@ public class SchemaManager {
     }
 
     /** */
-    public void registerDropTable(BiConsumer<String, String> lsnr) {
+    public void registerDropTableListener(BiConsumer<String, String> lsnr) {
         dropTblLsnrs.add(lsnr);
     }
 

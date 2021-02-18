@@ -50,15 +50,15 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
 
         updateStatistics(SMALL_TARGET);
 
-        Assert.assertNotNull(statMgr0.getLocalStatistics(SCHEMA, "SMALL"));
+        Assert.assertNotNull(statMgr0.getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL")));
 
-        Assert.assertNotNull(statMgr1.getLocalStatistics(SCHEMA, "SMALL"));
+        Assert.assertNotNull(statMgr1.getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL")));
 
         statMgr1.dropStatistics(SMALL_TARGET);
 
         GridTestUtils.waitForCondition(
-            () -> null == statMgr0.getLocalStatistics(SCHEMA, "SMALL")
-            && null == statMgr1.getLocalStatistics(SCHEMA, "SMALL"), TIMEOUT);
+            () -> null == statMgr0.getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"))
+            && null == statMgr1.getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL")), TIMEOUT);
     }
 
     /**
@@ -74,8 +74,8 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
 
         statMgr1.dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME"));
 
-        Assert.assertNull(statMgr0.getLocalStatistics(SCHEMA, "NO_NAME"));
-        Assert.assertNull(statMgr1.getLocalStatistics(SCHEMA, "NO_NAME"));
+        Assert.assertNull(statMgr0.getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
+        Assert.assertNull(statMgr1.getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
     }
 
     /**
@@ -151,7 +151,6 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         }
 
         stopGrid(0);
-        U.sleep(500);
         startGrid(0);
 
         grid(0).cluster().state(ClusterState.ACTIVE);
@@ -179,29 +178,24 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
      * @throws IgniteCheckedException In case of errors.
      */
     private void checkStatisticsExist(IgniteCacheDatabaseSharedManager db, long timeout) throws IgniteCheckedException {
-        long t0 = U.currentTimeMillis();
+        assertTrue(
+            GridTestUtils.waitForCondition(() -> {
+                db.checkpointReadLock();
 
-        while (true) {
-            db.checkpointReadLock();
+                try {
+                    boolean found[] = new boolean[1];
 
-            try {
-                boolean found[] = new boolean[1];
+                    db.metaStorage().iterate("stats.data.PUBLIC.SMALL.", (k, v) -> found[0] = true, true);
 
-                db.metaStorage().iterate("stats.data.PUBLIC.SMALL.", (k, v) -> found[0] = true, true);
-
-                Assert.assertTrue(found[0]);
-
-                return;
-            }
-            catch (Throwable ex) {
-                if (t0 + timeout < U.currentTimeMillis())
-                    throw ex;
-                else
-                    U.sleep(200);
-            }
-            finally {
-                db.checkpointReadUnlock();
-            }
-        }
+                    return found[0];
+                }
+                catch (Throwable ex) {
+                    return false;
+                }
+                finally {
+                    db.checkpointReadUnlock();
+                }
+            }, timeout)
+        );
     }
 }

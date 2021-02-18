@@ -462,7 +462,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
                 expectedVersions.forEach((k, ver) -> {
                     ObjectStatisticsImpl s = (ObjectStatisticsImpl)ign.context().query().getIndexing().statsManager()
-                        .getLocalStatistics(k.schema(), k.obj());
+                        .getLocalStatistics(k.key());
 
                     long minVer = Long.MAX_VALUE;
 
@@ -580,7 +580,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
         switch (type) {
             case LOCAL:
-                return (ObjectStatisticsImpl) statMgr.getLocalStatistics(SCHEMA, tblName);
+                return (ObjectStatisticsImpl) statMgr.getLocalStatistics(new StatisticsKey(SCHEMA, tblName));
             case PARTITION:
             default:
                 throw new UnsupportedOperationException();

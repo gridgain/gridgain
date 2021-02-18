@@ -519,7 +519,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
             .collect(Collectors.toList());
 
         return mgrs.stream()
-            .map(m -> (ObjectStatisticsImpl)m.getLocalStatistics(schema, objName))
+            .map(m -> (ObjectStatisticsImpl)m.getLocalStatistics(new StatisticsKey(schema, objName)))
             .collect(Collectors.toList());
     }
 }

@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -168,6 +169,8 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
             catch (IgniteCheckedException e) {
                 log.warning(String.format("Unable to collect partition level statistics by %s.%s:%d due to %s",
                     tbl.identifier().schema(), tbl.identifier().table(), partId, e.getMessage()));
+
+                throw new IgniteException("Unable to collect partition level statistics", e);
             }
 
             Map<String, ColumnStatistics> colStats = Arrays.stream(collectors).collect(

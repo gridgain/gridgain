@@ -197,7 +197,7 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         assertTrue(GridTestUtils.waitForCondition(() -> {
             for (Ignite node : G.allGrids()) {
                 IgniteStatisticsManager nodeStatMgr = ((IgniteEx) node).context().query().getIndexing().statsManager();
-                ObjectStatistics localStat = nodeStatMgr.getLocalStatistics(schema, obj);
+                ObjectStatistics localStat = nodeStatMgr.getLocalStatistics(new StatisticsKey(schema, obj));
 
                 if (!(isNull == (localStat == null)))
                     return false;

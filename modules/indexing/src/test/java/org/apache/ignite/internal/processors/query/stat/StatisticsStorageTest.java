@@ -41,7 +41,7 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
 
         statsStore.clearAllStatistics();
 
-        ObjectStatistics locStat = statsMgr.getLocalStatistics("PUBLIC", "SMALL");
+        ObjectStatistics locStat = statsMgr.getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL"));
 
         assertNotNull(locStat);
     }
@@ -59,12 +59,12 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
         ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
-            .getLocalStatistics("PUBLIC", "SMALL");
+            .getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL"));
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
-            .getLocalStatistics("PUBLIC", "SMALL");
+            .getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL"));
 
         // Reset version to compare statistic.
         for (ColumnStatistics c : locStat2.columnsStatistics().values())
@@ -89,10 +89,12 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
 
         updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
-        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL");
+        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
 
         updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
-        ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL");
+        ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
 
         // Reset version to compare statistic.
         for (ColumnStatistics c : locStat2.columnsStatistics().values())
@@ -115,14 +117,15 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL"));
 
         assertTrue(GridTestUtils.waitForCondition(() ->
-            null == (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL"), TIMEOUT));
+            null == (ObjectStatisticsImpl) statsMgr
+                .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL")), TIMEOUT));
 
         statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL"));
 
         Thread.sleep(TIMEOUT);
 
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
-            .getLocalStatistics(SCHEMA, "SMALL");
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
 
         assertNull(locStat2);
     }
@@ -137,10 +140,10 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
 
         assertTrue(GridTestUtils.waitForCondition(() -> null == ((ObjectStatisticsImpl) statsMgr
-            .getLocalStatistics(SCHEMA, "SMALL")).columnsStatistics().get("B"), TIMEOUT));
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"))).columnsStatistics().get("B"), TIMEOUT));
 
         ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
-            .getLocalStatistics(SCHEMA, "SMALL");
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
 
         assertNotNull(locStat);
         assertNotNull(locStat.columnsStatistics().get("A"));
@@ -149,7 +152,9 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
 
         Thread.sleep(TIMEOUT);
 
-        ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr.getLocalStatistics(SCHEMA, "SMALL");
+        ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
+
         assertNotNull(locStat2);
         assertNotNull(locStat.columnsStatistics().get("A"));
         assertNull(locStat.columnsStatistics().get("B"));
