@@ -208,7 +208,10 @@ public enum IgniteFeatures {
 
     /** Warning is shown in server log and after schedule and snapshot commands if PITR is enabled and snapshot schedule
      * is improper for PITR*/
-    IMPROPER_SCHEDULE_FOR_PITR_WARNING(56);
+    IMPROPER_SCHEDULE_FOR_PITR_WARNING(56),
+
+    /** Rolling upgrade based on distributed metastorage. Improved handling of changing RU state. */
+    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58);
 
     /**
      * Unique feature identifier.
