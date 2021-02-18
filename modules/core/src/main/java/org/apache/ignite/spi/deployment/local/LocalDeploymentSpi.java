@@ -111,7 +111,6 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
      * @param rsrcName Class name or class alias to find class loader for.
      * @return Deployed class loader, or {@code null} if not deployed.
      */
-    @Deprecated
     @Nullable @Override public DeploymentResource findResource(String rsrcName) {
         return findResource(rsrcName, null);
     }
