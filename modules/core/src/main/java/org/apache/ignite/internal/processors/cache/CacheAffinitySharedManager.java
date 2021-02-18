@@ -1133,6 +1133,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      *
      */
     public void clearGroupHoldersAndRegistry() {
+        U.dumpStack(log, "Clear affinity cache.");
+
         grpHolders.clear();
 
         cachesRegistry.unregisterAll();
@@ -1294,6 +1296,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         boolean locJoin = fut.firstEvent().eventNode().isLocal();
 
         if (!locJoin) {
+            if ("client".equals(cctx.igniteInstanceName()))
+                U.dumpStack(log, "Client evt on top: " + fut.initialVersion());
+
             forAllCacheGroups(new IgniteInClosureX<GridAffinityAssignmentCache>() {
                 @Override public void applyx(GridAffinityAssignmentCache aff) throws IgniteCheckedException {
                     AffinityTopologyVersion topVer = fut.initialVersion();
