@@ -204,7 +204,10 @@ public enum IgniteFeatures {
     POINT_IN_TIME_DISTRIBUTED_PROPERTY(54),
 
     /** Statistics collection. */
-    STATISTICS_COLLECTION(55);
+    STATISTICS_COLLECTION(55),
+
+    /** Rolling upgrade based on distributed metastorage. Improved handling of changing RU state. */
+    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(56);
 
     /**
      * Unique feature identifier.
