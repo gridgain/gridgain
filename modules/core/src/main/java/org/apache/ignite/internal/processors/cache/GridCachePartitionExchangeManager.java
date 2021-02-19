@@ -994,9 +994,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         // Stop exchange worker
         U.cancel(exchWorker);
 
-        if ("client".equals(cctx.igniteInstanceName()))
-            U.dumpStack(log, "Exchange worker interrupted.");
-
         if (log.isDebugEnabled())
             log.debug("Before joining on exchange worker: " + exchWorker);
 

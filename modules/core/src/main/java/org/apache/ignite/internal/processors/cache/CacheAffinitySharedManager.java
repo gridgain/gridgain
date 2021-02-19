@@ -1132,8 +1132,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      *
      */
     public void clearGroupHoldersAndRegistry() {
-        U.dumpStack(log, "Clear affinity cache.");
-
         grpHolders.clear();
 
         cachesRegistry.unregisterAll();
