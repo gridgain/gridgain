@@ -27,7 +27,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -2754,14 +2753,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean hasOldVal = oldRow != null && !oldRow.tombstone();
 
-            ConcurrentMap<KeyCacheObject, ConcurrentLinkedQueue<Object[]>> hist = cctx.hist;
-
-            if (cctx.cacheId() == CU.cacheId("default")) {
-                KeyCacheObject key = newRow.key();
-
-                hist.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(new Object[]{"update", newRow, oldRow, new Exception()});
-            }
-
             if (!hasOldVal)
                 incrementSize(cctx.cacheId());
 
@@ -2949,14 +2940,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         ) throws IgniteCheckedException {
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean oldVal = oldRow != null && !oldRow.tombstone();
-
-            ConcurrentMap<KeyCacheObject, ConcurrentLinkedQueue<Object[]>> hist = cctx.hist;
-
-            if (cctx.cacheId() == CU.cacheId("default")) {
-                KeyCacheObject kkk = oldRow != null ? oldRow.key() : tombstoneRow.key();
-
-                hist.computeIfAbsent(kkk, k -> new ConcurrentLinkedQueue<>()).add(new Object[]{"remove", oldRow, tombstoneRow, new Exception()});
-            }
 
             if (oldVal) {
                 clearPendingEntries(cctx, oldRow);
