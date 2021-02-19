@@ -206,8 +206,11 @@ public enum IgniteFeatures {
     /** Statistics collection. */
     STATISTICS_COLLECTION(55),
 
+    /** Rolling upgrade based on distributed metastorage. Improved handling of changing RU state. */
+    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(56),
+
     /** Chains of snapshot operations. */
-    SNAPSHOT_OPERATIONS_CHAINING(56);
+    SNAPSHOT_OPERATIONS_CHAINING(57);
 
     /**
      * Unique feature identifier.
