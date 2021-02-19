@@ -82,7 +82,7 @@ public class RaceOnDeployClassesWithSameAliases extends GridCommonAbstractTest {
         AtomicBoolean deployed = new AtomicBoolean();
 
         LogListener logLsnr = LogListener.matches(logStr -> {
-            if (logStr.startsWith("Retrieved auto-loaded resource from spi:") &&
+            if (logStr.startsWith("Resource registered automatically:") &&
                 logStr.contains(TestCacheEntryProcessor.class.getSimpleName())) {
 
                 if (deployed.compareAndSet(false, true)) {
