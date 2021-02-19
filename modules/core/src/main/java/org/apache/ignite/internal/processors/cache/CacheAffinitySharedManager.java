@@ -838,8 +838,10 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         cachesRegistry.unregisterGroup(grpCtx.groupId());
     }
 
-    /** {@inheritDoc} */
-    @Override protected void stop0(boolean cancel) {
+    /**
+     * Removes and unregisters all group holders.
+     */
+    public void removeGroupHolders() {
         Iterator<Integer> it = grpHolders.keySet().iterator();
 
         while (it.hasNext()) {
@@ -851,8 +853,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         }
 
         assert grpHolders.isEmpty();
-
-        super.stop0(cancel);
     }
 
     /**

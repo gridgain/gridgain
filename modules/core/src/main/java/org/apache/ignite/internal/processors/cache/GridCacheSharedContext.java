@@ -452,8 +452,7 @@ public class GridCacheSharedContext<K, V> {
      * @return {@code True} if manager is restarted cn reconnect.
      */
     private boolean restartOnDisconnect(GridCacheSharedManager<?, ?> mgr) {
-        return mgr instanceof GridCacheDeploymentManager || mgr instanceof GridCachePartitionExchangeManager
-            || mgr instanceof CacheAffinitySharedManager;
+        return mgr instanceof GridCacheDeploymentManager || mgr instanceof GridCachePartitionExchangeManager;
     }
 
     /** */
