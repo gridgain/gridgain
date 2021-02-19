@@ -40,7 +40,6 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
@@ -97,6 +96,7 @@ import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONN_IDX_META;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONSISTENT_ID_META;
+import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.FORCIBLE_NODE_KILL_ENABLED;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.handshakeTimeoutException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.isRecoverableException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.nodeAddresses;
@@ -180,14 +180,6 @@ public class GridNioServerWrapper {
 
     /** Socket channel factory. */
     private volatile ThrowableSupplier<SocketChannel, IOException> socketChannelFactory = SocketChannel::open;
-
-    /** Enable forcible node kill. */
-    private boolean enableForcibleNodeKill = IgniteSystemProperties
-        .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
-
-    /** Enable troubleshooting logger. */
-    private boolean enableTroubleshootingLog = IgniteSystemProperties
-        .getBoolean(IgniteSystemProperties.IGNITE_TROUBLESHOOTING_LOGGER);
 
     /** NIO server. */
     private GridNioServer<Message> nioSrv;
@@ -745,25 +737,14 @@ public class GridNioServerWrapper {
             ctx.resolveCommunicationFailure(node, errs);
         }
 
-        if (!commErrResolve && enableForcibleNodeKill) {
+        if (!commErrResolve && FORCIBLE_NODE_KILL_ENABLED) {
             if (ctx.node(node.id()) != null
                 && node.isClient()
                 && !locNodeSupplier.get().isClient()
                 && isRecoverableException(errs)
             ) {
-                // Only server can fail client for now, as in TcpDiscovery resolveCommunicationFailure() is not supported.
-                String msg = "TcpCommunicationSpi failed to establish connection to node, node will be dropped from " +
-                    "cluster [" + "rmtNode=" + node + ']';
-
-                if (enableTroubleshootingLog)
-                    U.error(log, msg, errs);
-                else
-                    U.warn(log, msg);
-
-                ctx.failNode(node.id(), "TcpCommunicationSpi failed to establish connection to node [" +
-                    "rmtNode=" + node +
-                    ", errs=" + errs +
-                    ", connectErrs=" + X.getSuppressedList(errs) + ']');
+                CommunicationTcpUtils.failNode(node,
+                    ctx, errs, log);
             }
         }
 

@@ -63,6 +63,7 @@ import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DISABLED_CLIENT_PORT;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.OUT_OF_RESOURCES_TCP_MSG;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.handshakeTimeoutException;
+import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.isRecoverableException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.nodeAddresses;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.usePairedConnections;
 
@@ -390,6 +391,13 @@ public class ConnectionClientPool {
                     fut.get(failTimeout);
                 }
                 catch (Throwable triggerException) {
+                    if (CommunicationTcpUtils.FORCIBLE_NODE_KILL_ENABLED
+                        && node.isClient()
+                        && isRecoverableException(triggerException)
+                    ) {
+                        CommunicationTcpUtils.failNode(node, tcpCommSpi.getSpiContext(), triggerException, log);
+                    }
+
                     IgniteSpiException spiE = new IgniteSpiException(e);
 
                     spiE.addSuppressed(triggerException);
