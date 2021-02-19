@@ -46,7 +46,6 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.deployment.DeploymentListener;
 import org.apache.ignite.spi.deployment.DeploymentResource;
 import org.apache.ignite.spi.deployment.DeploymentSpi;
-import org.apache.ignite.spi.deployment.local.LocalDeploymentSpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CLASS_DEPLOYED;
@@ -157,98 +156,70 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
             return dep;
         }
 
-        DeploymentResource rsrc = getResource(alias, meta.classLoader());
+        if (meta.classLoader() == null) {
+            DeploymentResource rsrc = spi.findResource(alias);
 
-        if (rsrc != null) {
-            dep = deploy(ctx.config().getDeploymentMode(), rsrc.getClassLoader(), rsrc.getResourceClass(), alias,
-                meta.record());
+            if (rsrc != null) {
+                dep = deploy(ctx.config().getDeploymentMode(), rsrc.getClassLoader(), rsrc.getResourceClass(), alias,
+                    meta.record());
 
-            assert dep != null;
+                assert dep != null;
 
-            if (log.isDebugEnabled())
-                log.debug("Acquired deployment class from SPI: " + dep);
-        }
-        // Auto-deploy.
-        else {
-            ClassLoader ldr = meta.classLoader();
-
-            if (ldr == null) {
-                ldr = Thread.currentThread().getContextClassLoader();
-
-                // Safety.
-                if (ldr == null)
-                    ldr = U.resolveClassLoader(ctx.config());
-            }
-
-            if (ldr instanceof GridDeploymentClassLoader) {
                 if (log.isDebugEnabled())
-                    log.debug("Skipping local auto-deploy (nested execution) [ldr=" + ldr + ", meta=" + meta + ']');
+                    log.debug("Acquired deployment class from SPI: " + dep);
 
-                return null;
+                return dep;
+            }
+        }
+
+        // Auto-deploy.
+        ClassLoader ldr = meta.classLoader();
+
+        if (ldr == null) {
+            ldr = Thread.currentThread().getContextClassLoader();
+
+            // Safety.
+            if (ldr == null)
+                ldr = U.resolveClassLoader(ctx.config());
+        }
+
+        if (ldr instanceof GridDeploymentClassLoader) {
+            if (log.isDebugEnabled())
+                log.debug("Skipping local auto-deploy (nested execution) [ldr=" + ldr + ", meta=" + meta + ']');
+
+            return null;
+        }
+
+        try {
+            // Check that class can be loaded.
+            String clsName = meta.className();
+
+            Class<?> cls = U.forName(clsName != null ? clsName : alias, ldr);
+
+            if (spi.register(ldr, cls) && log.isDebugEnabled()) {
+                log.debug("Resource registered automatically: [name=" + U.getResourceName(cls)
+                    + ", class=" + cls.getName()
+                    + ", ldr=" + ldr + ']');
             }
 
-            while (true) {
-                try {
-                    // Check that class can be loaded.
-                    String clsName = meta.className();
+            dep = deploy(ctx.config().getDeploymentMode(), ldr, cls, alias, meta.record());
+        }
+        catch (ClassNotFoundException ignored) {
+            if (log.isDebugEnabled())
+                log.debug("Failed to load class for local auto-deployment [ldr=" + ldr + ", meta=" + meta + ']');
 
-                    Class<?> cls = U.forName(clsName != null ? clsName : alias, ldr);
+            return null;
+        }
+        catch (IgniteSpiException e) {
+            U.error(log, "Failed to deploy local class with meta: " + meta, e);
 
-                    spi.register(ldr, cls);
-
-                    rsrc = getResource(cls.getName(), ldr);
-
-                    if (rsrc != null && rsrc.getResourceClass().equals(cls)) {
-                        if (log.isDebugEnabled())
-                            log.debug("Retrieved auto-loaded resource from spi: " + rsrc);
-
-                        dep = deploy(ctx.config().getDeploymentMode(), ldr, cls, meta.alias(), meta.record());
-
-                        if (dep != null)
-                            return dep;
-                    }
-                    else {
-                        U.warn(log, "Failed to find resource from deployment SPI even after registering: " + meta);
-
-                        return null;
-                    }
-                }
-                catch (ClassNotFoundException ignored) {
-                    if (log.isDebugEnabled())
-                        log.debug("Failed to load class for local auto-deployment [ldr=" + ldr + ", meta=" + meta + ']');
-
-                    return null;
-                }
-                catch (IgniteSpiException e) {
-                    U.error(log, "Failed to deploy local class with meta: " + meta, e);
-
-                    return null;
-                }
-            }
+            return null;
         }
 
         if (log.isDebugEnabled())
             log.debug("Acquired deployment class: " + dep);
 
         return dep;
-    }
-
-    /**
-     * Tries to find a resource by deployment metadata.
-     *
-     * @param name Name of resource.
-     * @param ldr Class loader.
-     * @return A resource which would be found or {@code null} if nothing found.
-     */
-    private DeploymentResource getResource(String name, @Nullable ClassLoader ldr) {
-        DeploymentResource rsrc;
-
-        if (spi instanceof LocalDeploymentSpi)
-            rsrc = ((LocalDeploymentSpi)spi).findResource(name, ldr);
-        else
-            rsrc = spi.findResource(name);
-
-        return rsrc;
     }
 
     /** {@inheritDoc} */
@@ -386,26 +357,22 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
             if (clsLdr.getClass().equals(GridDeploymentClassLoader.class))
                 clsLdr = clsLdr.getParent();
 
-            GridDeployment dep = null;
+            if (spi.register(clsLdr, cls) && log.isDebugEnabled()) {
+                log.debug("Resource registered automatically: [name=" + U.getResourceName(cls)
+                    + ", class=" + cls.getName()
+                    + ", ldr=" + clsLdr + ']');
+            }
 
-            while (dep == null) {
-                spi.register(clsLdr, cls);
+            GridDeploymentMetadata meta = new GridDeploymentMetadata();
 
-                GridDeploymentMetadata meta = new GridDeploymentMetadata();
+            meta.alias(cls.getName());
+            meta.classLoader(clsLdr);
 
-                meta.alias(cls.getName());
-                meta.classLoader(clsLdr);
+            GridDeployment dep = deployment(meta);
 
-                dep = deployment(meta);
-
-                if (dep == null) {
-                    DeploymentResource rsrc = getResource(cls.getName(), clsLdr);
-
-                    if (rsrc != null) {
-                        dep = deploy(ctx.config().getDeploymentMode(), rsrc.getClassLoader(),
-                            rsrc.getResourceClass(), rsrc.getName(), true);
-                    }
-                }
+            if (dep == null) {
+                dep = deploy(ctx.config().getDeploymentMode(), clsLdr,
+                    cls, U.getResourceName(cls), true);
             }
 
             return dep;

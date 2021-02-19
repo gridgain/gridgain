@@ -112,29 +112,6 @@ public class LocalDeploymentSpi extends IgniteSpiAdapter implements DeploymentSp
      * @return Deployed class loader, or {@code null} if not deployed.
      */
     @Nullable @Override public DeploymentResource findResource(String rsrcName) {
-        return findResource(rsrcName, null);
-    }
-
-    /**
-     * Finds a resource from the given classloader.
-     *
-     * @param rsrcName Class name or class alias to find class loader for.
-     * @param clsLdr desired class loader.
-     * @return Deployed resource, or {@code null} if nothing found.
-     */
-    @Nullable public DeploymentResource findResource(String rsrcName, @Nullable ClassLoader clsLdr) {
-        assert rsrcName != null;
-
-        if (clsLdr != null) {
-            ConcurrentMap<String, String> rsrcs = ldrRsrcs.get(clsLdr);
-
-            if (rsrcs == null)
-                return null;
-
-            return findResource0(rsrcs, rsrcName, clsLdr);
-        }
-
-        // We can remove this stub after IgniteCompute.localDeployTask was deleted.
         for (Entry<ClassLoader, ConcurrentMap<String, String>> e : ldrRsrcs.descendingEntrySet()) {
             ClassLoader ldr = e.getKey();
             ConcurrentMap<String, String> rsrcs = e.getValue();
