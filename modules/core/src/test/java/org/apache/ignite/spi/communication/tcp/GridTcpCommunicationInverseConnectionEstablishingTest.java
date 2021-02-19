@@ -401,8 +401,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         IgniteEx srv = startGrid();
 
         srv.events().localListen(new IgnitePredicate<Event>() {
-            @Override
-            public boolean apply(Event event) {
+            @Override public boolean apply(Event event) {
                 clientFailedEventFlag.set(true);
 
                 return false;
