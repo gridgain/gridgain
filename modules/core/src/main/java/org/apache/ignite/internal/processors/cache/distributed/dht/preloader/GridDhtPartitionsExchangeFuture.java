@@ -713,9 +713,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         this.firstDiscoEvt = discoEvt;
         this.firstEvtDiscoCache = discoCache;
 
-        if ("client".equals(cctx.igniteInstanceName()) && !localJoinExchange())
-            U.dumpStack(log, "Disco event received evt=" + firstDiscoEvt);
-
         evtLatch.countDown();
     }
 
@@ -1038,9 +1035,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 comp.onInitBeforeTopologyLock(this);
 
             updateTopologies(crdNode);
-
-            if ("client".equals(cctx.igniteInstanceName()) && !localJoinExchange())
-                log.info("Exchnage on target client evt=" + firstDiscoEvt);
 
             timeBag.finishGlobalStage("Determine exchange type");
 

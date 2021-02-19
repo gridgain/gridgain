@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import javax.cache.CacheException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,6 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -74,7 +74,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
-import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
@@ -840,7 +839,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     }
 
     /** {@inheritDoc} */
-    @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
+    @Override protected void stop0(boolean cancel) {
         Iterator<Integer> it = grpHolders.keySet().iterator();
 
         while (it.hasNext()) {
@@ -853,7 +852,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         assert grpHolders.isEmpty();
 
-        super.onDisconnected(reconnectFut);
+        super.stop0(cancel);
     }
 
     /**
@@ -1296,9 +1295,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         boolean locJoin = fut.firstEvent().eventNode().isLocal();
 
         if (!locJoin) {
-            if ("client".equals(cctx.igniteInstanceName()))
-                U.dumpStack(log, "Client evt on top: " + fut.initialVersion());
-
             forAllCacheGroups(new IgniteInClosureX<GridAffinityAssignmentCache>() {
                 @Override public void applyx(GridAffinityAssignmentCache aff) throws IgniteCheckedException {
                     AffinityTopologyVersion topVer = fut.initialVersion();

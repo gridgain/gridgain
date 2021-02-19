@@ -382,8 +382,7 @@ public class GridCacheSharedContext<K, V> {
      * @throws IgniteCheckedException If failed.
      */
     void onDisconnected(IgniteFuture<?> reconnectFut) throws IgniteCheckedException {
-        for (ListIterator<? extends GridCacheSharedManager<?, ?>> it = mgrs.listIterator(mgrs.size());
-            it.hasPrevious();) {
+        for (ListIterator<? extends GridCacheSharedManager<?, ?>> it = mgrs.listIterator(mgrs.size()); it.hasPrevious();) {
             GridCacheSharedManager<?, ?> mgr = it.previous();
 
             mgr.onDisconnected(reconnectFut);
@@ -453,7 +452,8 @@ public class GridCacheSharedContext<K, V> {
      * @return {@code True} if manager is restarted cn reconnect.
      */
     private boolean restartOnDisconnect(GridCacheSharedManager<?, ?> mgr) {
-        return mgr instanceof GridCacheDeploymentManager || mgr instanceof GridCachePartitionExchangeManager;
+        return mgr instanceof GridCacheDeploymentManager || mgr instanceof GridCachePartitionExchangeManager
+            || mgr instanceof CacheAffinitySharedManager;
     }
 
     /** */

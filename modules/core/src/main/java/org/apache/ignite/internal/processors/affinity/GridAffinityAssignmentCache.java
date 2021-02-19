@@ -304,8 +304,6 @@ public class GridAffinityAssignmentCache {
 
         affCache.clear();
 
-        U.dumpStack(log, "Cleared affinity cache.");
-
         nonShallowHistSize.set(0);
 
         head.set(new GridAffinityAssignmentV2(AffinityTopologyVersion.NONE));
