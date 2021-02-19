@@ -204,7 +204,10 @@ public enum IgniteFeatures {
     POINT_IN_TIME_DISTRIBUTED_PROPERTY(54),
 
     /** Statistics collection. */
-    STATISTICS_COLLECTION(55);
+    STATISTICS_COLLECTION(55),
+
+    /** Chains of snapshot operations. */
+    SNAPSHOT_OPERATIONS_CHAINING(56);
 
     /**
      * Unique feature identifier.
