@@ -46,10 +46,6 @@ public class CommunicationTcpUtils {
     public static final IgniteRunnable NOOP = () -> {};
 
     /** */
-    public static final boolean FORCIBLE_NODE_KILL_ENABLED = IgniteSystemProperties
-        .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
-
-    /** */
     private static final boolean THROUBLESHOOTING_LOG_ENABLED = IgniteSystemProperties
         .getBoolean(IgniteSystemProperties.IGNITE_TROUBLESHOOTING_LOGGER);
 

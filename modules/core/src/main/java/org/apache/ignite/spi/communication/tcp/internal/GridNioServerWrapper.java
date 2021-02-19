@@ -40,6 +40,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
@@ -96,7 +97,6 @@ import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONN_IDX_META;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONSISTENT_ID_META;
-import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.FORCIBLE_NODE_KILL_ENABLED;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.handshakeTimeoutException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.isRecoverableException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.nodeAddresses;
@@ -180,6 +180,10 @@ public class GridNioServerWrapper {
 
     /** Socket channel factory. */
     private volatile ThrowableSupplier<SocketChannel, IOException> socketChannelFactory = SocketChannel::open;
+
+    /** Enable forcible node kill. */
+    private boolean forcibleNodeKillEnabled = IgniteSystemProperties
+        .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
 
     /** NIO server. */
     private GridNioServer<Message> nioSrv;
@@ -737,7 +741,7 @@ public class GridNioServerWrapper {
             ctx.resolveCommunicationFailure(node, errs);
         }
 
-        if (!commErrResolve && FORCIBLE_NODE_KILL_ENABLED) {
+        if (!commErrResolve && forcibleNodeKillEnabled) {
             if (ctx.node(node.id()) != null
                 && node.isClient()
                 && !locNodeSupplier.get().isClient()
