@@ -14,7 +14,21 @@
  * limitations under the License.
  */
 
+package org.apache.ignite.platform;
+
+import org.apache.ignite.binary.BinaryBasicNameMapper;
+
 /**
- * Contains implementation of OSGi class loaders.
+ * Custom name mapper for tests.
  */
-package org.apache.ignite.osgi.classloaders;
+public class PlatformCustomBinaryBasicNameMapper extends BinaryBasicNameMapper {
+    /** {@inheritDoc} */
+    @Override public String typeName(String clsName) {
+        return clsName + "_";
+    }
+
+    /** {@inheritDoc} */
+    @Override public String fieldName(String fieldName) {
+        return fieldName;
+    }
+}

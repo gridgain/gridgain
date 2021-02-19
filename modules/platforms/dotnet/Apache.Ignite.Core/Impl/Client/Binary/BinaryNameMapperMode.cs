@@ -14,15 +14,28 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.osgi.classloaders;
+namespace Apache.Ignite.Core.Impl.Client.Binary
+{
+    using Apache.Ignite.Core.Binary;
 
-/**
- * Enum for the user to indicate which type of {@link ClassLoader} Ignite should use.
- */
-public enum OsgiClassLoadingStrategyType {
-    /** Use this value for {@link BundleDelegatingClassLoader}. */
-    BUNDLE_DELEGATING,
+    /// <summary>
+    /// Represents the binary name mapper mode.
+    /// </summary>
+    internal enum BinaryNameMapperMode
+    {
+        /// <summary>
+        /// Default full name mapper, see <see cref="BinaryBasicNameMapper.FullNameInstance"/>.
+        /// </summary>
+        BasicFull = 0,
 
-    /** Use this value for {@link ContainerSweepClassLoader}. */
-    CONTAINER_SWEEP
+        /// <summary>
+        /// Simple name mapper, see <see cref="BinaryBasicNameMapper.SimpleNameInstance"/>.
+        /// </summary>
+        BasicSimple = 1,
+
+        /// <summary>
+        /// Custom user-defined mapper.
+        /// </summary>
+        Custom = 2
+    }
 }

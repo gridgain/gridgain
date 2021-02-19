@@ -31,6 +31,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
     /// <summary>
     /// Tests platform cache behavior when cluster topology changes.
     /// </summary>
+    [Category(TestUtils.CategoryIntensive)]
     public class PlatformCacheTopologyChangeTest
     {
         /** */
