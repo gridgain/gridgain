@@ -175,18 +175,19 @@ public class CommunicationTcpUtils {
      * Is used in a single situation if a client node is visible to discovery but is not reachable via comm protocol.
      *
      * @param nodeToFail Client node to forcible fail.
-     * @param spiCtx Context to request node node failing.
+     * @param spiCtx Context to request node failing.
      * @param err Error to fail client with.
      * @param log Logger to print message about failed node to.
      */
     public static void failNode(ClusterNode nodeToFail,
-                                IgniteSpiContext spiCtx,
-                                Throwable err,
-                                IgniteLogger log) {
+        IgniteSpiContext spiCtx,
+        Throwable err,
+        IgniteLogger log
+    ) {
         assert nodeToFail.isClient();
 
         String logMsg = "TcpCommunicationSpi failed to establish connection to node, node will be dropped from " +
-            "cluster [" + "rmtNode=" + nodeToFail + ']';
+            "cluster [rmtNode=" + nodeToFail + ']';
 
         if (THROUBLESHOOTING_LOG_ENABLED)
             U.error(log, logMsg, err);
