@@ -28,11 +28,17 @@ public class LocalStatisticsGatheringContext {
     /** Remaining partitions */
     private final Set<Integer> remainingParts;
 
-    /** Done future. */
-    private final CompletableFuture<Void> futGather;
+    /**
+     *  Done future. Result: {@code true} gathering complete (stats from all partitions are gathered),
+     *  {@code false} gathering incomplete: one or more partitions not available.
+     */
+    private final CompletableFuture<Boolean> futGather;
 
     /** Done future. */
     private final CompletableFuture<ObjectStatisticsImpl> futAggregate;
+
+    /** */
+    private boolean completeStatus = true;
 
     /** */
     public LocalStatisticsGatheringContext(Set<Integer> remainingParts) {
@@ -48,13 +54,25 @@ public class LocalStatisticsGatheringContext {
         remainingParts.remove(partId);
 
         if (remainingParts.isEmpty())
-            futGather.complete(null);
+            futGather.complete(completeStatus);
+    }
+
+    /**
+     * Decrement remaining.
+     */
+    public synchronized void partitionNotAvailable(int partId) {
+        remainingParts.remove(partId);
+
+        completeStatus = false;
+
+        if (remainingParts.isEmpty())
+            futGather.complete(completeStatus);
     }
 
     /**
      * @return Collection control future.
      */
-    public CompletableFuture<Void> futureGather() {
+    public CompletableFuture<Boolean> futureGather() {
         return futGather;
     }
 

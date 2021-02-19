@@ -81,7 +81,7 @@ public class StatisticsGatherer {
         final LocalStatisticsGatheringContext ctx = new LocalStatisticsGatheringContext(Collections.emptySet());
 
         // Only refresh local aggregates.
-        ctx.futureGather().complete(null);
+        ctx.futureGather().complete(true);
 
         LocalStatisticsGatheringContext inProgressCtx = gatheringInProgress.putIfAbsent(key, ctx);
 
@@ -102,10 +102,14 @@ public class StatisticsGatherer {
             return ctx;
         }
         else {
-            inProgressCtx.futureGather().thenAccept((v) -> {
-                ObjectStatisticsImpl stat = aggregate.get();
+            inProgressCtx.futureGather().thenAccept((complete) -> {
+                if (complete) {
+                    ObjectStatisticsImpl stat = aggregate.get();
 
-                inProgressCtx.futureAggregate().complete(stat);
+                    inProgressCtx.futureAggregate().complete(stat);
+                }
+                else
+                    inProgressCtx.futureAggregate().complete(null);
             });
 
             return inProgressCtx;
@@ -155,7 +159,6 @@ public class StatisticsGatherer {
             submitTask(tbl, key, newCtx, task);
         }
 
-        // Wait all partition gathering tasks.
         return newCtx;
     }
 
@@ -173,12 +176,6 @@ public class StatisticsGatherer {
         });
 
         f.exceptionally((ex) -> {
-            if (ex instanceof GatherStatisticRetryException) {
-                if (log.isDebugEnabled())
-                    log.debug("Retry collect statistics task [key=" + key + ", part=" + task.partition() + ']');
-
-                submitTask(tbl, key, ctx, task);
-            }
             if (ex instanceof GatherStatisticCancelException) {
                 if (log.isDebugEnabled()) {
                     log.debug("Collect statistics task was cancelled " +
@@ -208,17 +205,18 @@ public class StatisticsGatherer {
 
         try {
             if (partStat == null)
-                return;
+                ctx.partitionNotAvailable(part);
+            else {
+                statRepo.saveLocalPartitionStatistics(
+                    new StatisticsKey(tbl.getSchema().getName(), tbl.getName()),
+                    partStat
+                );
 
-            statRepo.saveLocalPartitionStatistics(
-                new StatisticsKey(tbl.getSchema().getName(), tbl.getName()),
-                partStat
-            );
+                if (log.isDebugEnabled())
+                    log.debug("Local partitioned statistic saved [stat=" + partStat + ']');
 
-            if (log.isDebugEnabled())
-                log.debug("Local partitioned statistic saved [stat=" + partStat + ']');
-
-            ctx.partitionDone(part);
+                ctx.partitionDone(part);
+            }
 
             if (ctx.futureGather().isDone())
                 gatheringInProgress.remove(key, ctx);

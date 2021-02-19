@@ -35,7 +35,6 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatistics;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollector;
 import org.apache.ignite.internal.processors.query.stat.GatherStatisticCancelException;
-import org.apache.ignite.internal.processors.query.stat.GatherStatisticRetryException;
 import org.apache.ignite.internal.processors.query.stat.LocalStatisticsGatheringContext;
 import org.apache.ignite.internal.processors.query.stat.ObjectPartitionStatisticsImpl;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
@@ -116,7 +115,7 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
                         ", tbl=" + tbl.identifier() + ']');
                 }
 
-                throw new GatherStatisticRetryException();
+                return null;
             }
 
             ColumnStatisticsCollector[] collectors = new ColumnStatisticsCollector[cols.length];
