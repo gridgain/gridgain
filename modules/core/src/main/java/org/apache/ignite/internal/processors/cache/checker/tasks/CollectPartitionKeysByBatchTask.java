@@ -19,13 +19,16 @@ package org.apache.ignite.internal.processors.cache.checker.tasks;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -44,6 +47,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
+import org.apache.ignite.internal.processors.cache.checker.processor.workload.RepairSizes;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -219,6 +223,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
         /** {@inheritDoc} */
         @Override protected ExecutionResult<T2<List<VersionedKey>, Long>> execute0() {
+            IgniteCache<Object, Object> cache = ignite.cache(partBatch.cacheName());
+
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();
@@ -296,7 +302,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                e.printStackTrace();
 //            }
 
-            List<KeyCacheObject> keysInBatch = new ArrayList<>();
+            partReconciliationCtx.keysAfterCounters.putIfAbsent(cacheId, new AtomicLong());
+
+            Set<KeyCacheObject> keysInBatch = new HashSet<>();
 
             Long partSize0 = partBatch.partSizesMap().get(ignite.localNode().id());
 
@@ -308,9 +316,16 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             try {
                 synchronized (partReconciliationCtx.reconciliationMux()) {
                     partReconciliationCtx.isReconciliationInProgress(true);
+                    partReconciliationCtx.isBatchesInProgress(true);
+
+//                    if (partReconciliationCtx.lastKey(cacheId) != null)
+//                        partReconciliationCtx.firstKey(cacheId, partReconciliationCtx.lastKey(cacheId));
+
 //                    partReconciliationCtx.isBatchInProgress = true;
 
                     System.out.println("qfbaftgr before cursor");
+
+                    System.out.println("qfdvgrtd value of key0: " + cache.get(0));
 
                     cursor = keyToStart == null ?
                         grpCtx.offheap().dataStore(part).cursor(cacheId, null, null) :
@@ -329,41 +344,55 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         }
 
                         System.out.println("qefrasgbdt1");
+                    }
 
-                        if (row != null) {
-                            first = true;
+                    if (row != null) {
+                        first = true;
 
-                            partReconciliationCtx.firstKey(cacheId, row.key());
+                        keysInBatch.add(row.key());
+
+                        partReconciliationCtx.firstKey(cacheId, row.key());
 
 //                            partReconciliationCtx.keysAfter.clear();
 
-
-
-
-                            System.out.println("qffvsre1 " + partSize.get());
-
-                            synchronized (partReconciliationCtx.reconciliationMux()) {
-                                System.out.println("qsfvrsv1 " + partReconciliationCtx.keysAfter);
-                                partReconciliationCtx.keysAfter.entrySet().forEach(e -> {
-                                    if (KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.firstKey(cacheId)) < 0) {
-                                        long count = e.getValue().get();
-                                        partSize.addAndGet(count);
-                                        System.out.println("qvfddrfrfd1 " + ((KeyCacheObjectImpl)e.getKey()).value());
-                                    }
-                                });
-
-                                partReconciliationCtx.keysAfterCounter.set(0);
-
-                                partReconciliationCtx.keysAfter.clear();
-                            }
-
-                            System.out.println("qsersvsdd1 " + partSize.get());
-
-
-
-
-                        }
                     }
+                    else {
+                        partReconciliationCtx.removeFirstKey(cacheId);
+                        partReconciliationCtx.isBatchesInProgress(false);
+                    }
+
+                    CacheDataRow row0 = row;
+
+                    System.out.println("qffvsre1 partSize " + partSize.get());
+
+                    synchronized (partReconciliationCtx.reconciliationMux()) {
+                        System.out.println("qsfvrsv1 " + partReconciliationCtx.keysAfter);
+                        partReconciliationCtx.keysAfter.entrySet().forEach(e -> {
+                            if (row0 == null|| partReconciliationCtx.lastKey(cacheId) == null || KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.lastKey(cacheId)) <= 0) {
+                                long count = e.getValue().get();
+                                partSize.addAndGet(count);
+//                                if (count > 0 && !keysInBatch.contains(e.getKey())) {
+//                                    partSize.addAndGet(count);
+                                    System.out.println("qsdvsd keysAfter first after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
+//                                }
+//                                if (count < 0 && keysInBatch.contains(e.getKey())) {
+//                                    partSize.addAndGet(count);
+//                                    System.out.println("qcdsvrdsv keysAfter first after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
+//                                }
+                                System.out.println("qdsvrafdv " + ((KeyCacheObjectImpl)e.getKey()).value());
+                            }
+                        });
+
+                        partReconciliationCtx.keysAfterCounters.get(cacheId).set(0);
+
+                        partReconciliationCtx.keysAfter.clear();
+                    }
+
+                    if (row == null) {
+                        grpCtx.offheap().dataStore(part).flushReconciliationResult(cacheId, partSize.get());
+                    }
+
+                    System.out.println("qsersvsdd1 partSize " + partSize.get());
                 }
             }
             catch (IgniteCheckedException e) {
@@ -378,12 +407,12 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 for (int i = 0; i < batchSize && (row != null || cursor.next()); i++) {
 //                    System.out.println("qfvndrfg");
 
-//                    try {
-//                        sleep(2);
-//                    }
-//                    catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
+                    try {
+                        sleep(1);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
 
 //                    synchronized (partReconciliationCtx.reconciliationMux()) {
                         if (row == null) {
@@ -399,7 +428,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         }
 
                         if (first || partReconciliationCtx.lastKey(cacheId) == null || KEY_COMPARATOR.compare(partReconciliationCtx.firstKey(cacheId), row.key()) < 0) {
-                            partReconciliationCtx.keysAfterCounter.set(0);
+
+                            partReconciliationCtx.keysAfterCounters.get(cacheId).set(0);
 
 
 //                            partReconciliationCtx.keysCheckedInBatch.get(cacheId).add(row.key());
@@ -466,26 +496,38 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                 System.out.println("qvdrftga2 " + partSize.get());
 
-                synchronized (partReconciliationCtx.reconciliationMux()) {
-                    System.out.println("qfrskotd2 " + partReconciliationCtx.keysAfter);
-                    partReconciliationCtx.keysAfter.entrySet().forEach(e -> {
-                        if (KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.lastKey(cacheId)) <= 0) {
-                            long count = e.getValue().get();
-                            if (count > 0 && !keysInBatch.contains(e.getKey()))
-                                partSize.addAndGet(count);
-                            if (count < 0 && keysInBatch.contains(e.getKey()))
-                                partSize.addAndGet(count);
-                            System.out.println("qwddxvfgrt2 " + ((KeyCacheObjectImpl)e.getKey()).value());
-                        }
-                    });
+                if (partReconciliationCtx.firstKey(cacheId) != null) {
+                    synchronized (partReconciliationCtx.reconciliationMux()) {
+                        System.out.println("qfrskotd2 " + partReconciliationCtx.keysAfter);
 
-                    if (keysInBatch.isEmpty())
-                        partReconciliationCtx.isReconciliationInProgress(false);
+//                    if (row != null) {
+                        partReconciliationCtx.keysAfter.entrySet().forEach(e -> {
+                            if (KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.lastKey(cacheId)) <= 0) {
+                                long count = e.getValue().get();
+                                if (count > 0 && !keysInBatch.contains(e.getKey())) {
+                                    partSize.addAndGet(count);
+                                    System.out.println("qwqwfdeds keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
+                                }
+                                if (count < 0 && keysInBatch.contains(e.getKey())) {
+                                    partSize.addAndGet(count);
+                                    System.out.println("qcdsvrdsv keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
+                                }
+                                System.out.println("qwddxvfgrt2 " + ((KeyCacheObjectImpl)e.getKey()).value());
+                            }
+                        });
+//                    }
 
-                    partReconciliationCtx.keysAfterCounter.set(0);
+                        if (keysInBatch.isEmpty())
+                            partReconciliationCtx.isBatchesInProgress(false);
 
-                    partReconciliationCtx.keysAfter.clear();
+                        partReconciliationCtx.keysAfterCounters.get(cacheId).set(0);
+
+                        partReconciliationCtx.keysAfter.clear();
+                    }
                 }
+//                else {
+//                    scheduleHighPriority(new RepairSizes(partBatch.sessionId(), partBatch.workloadChainId(), partBatch.cacheName(), partBatch.partitionId(), partBatch.partSizesMap()));
+//                }
 
 //                try {
 //                    sleep(2);

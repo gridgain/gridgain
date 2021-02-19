@@ -344,7 +344,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 if (counter.get() == 0) {
                     System.out.println("qfrsdvfd");
-                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
+//                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
                 }
             }
         );
@@ -458,7 +458,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 if (counter.get() == 0) {
                     System.out.println("qvsdvewb");
-                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
+//                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
                 }
             });
     }
