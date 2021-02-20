@@ -18,19 +18,20 @@ package org.apache.ignite.internal.processors.rest;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Collection;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import org.apache.ignite.IgniteAuthenticationException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
-import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.junit.Before;
 import org.junit.Test;
 
 import static junit.framework.TestCase.assertTrue;
 import static junit.framework.TestCase.fail;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test reproduces GG-26664 when snapshot-utility stopped sending topology and progress update requests during some
@@ -41,6 +42,9 @@ public class RestProcessorSessionMismatchOnTimeoutTest {
     /** Unsupported case error message. */
     private static final String UNSUPPORTED_CASE_ERROR_MESSAGE_BEGIN =
         "Failed to handle request - unsupported case (mismatched clientId and session token)";
+
+    /** Illagal exception message*/
+    private static final String AUTH_EXCEPTION_EXPECTED = "IgniteAuthenticationException was expected";
 
     /** Rest processor to test */
     private GridRestProcessor processor;
@@ -53,7 +57,10 @@ public class RestProcessorSessionMismatchOnTimeoutTest {
      */
     @Before
     public void before() throws NoSuchMethodException {
-        processor = new GridRestProcessor(new GridTestKernalContext(new InnerLogger()));
+        final IgniteLogger log = mock(IgniteLogger.class);
+        when(log.getLogger(anyString())).thenReturn(log);
+
+        processor = new GridRestProcessor(new GridTestKernalContext(log));
         sesMtdInternal = processor.getClass().getDeclaredMethod("session", GridRestRequest.class);
         sesMtdInternal.setAccessible(true);
     }
@@ -76,52 +83,12 @@ public class RestProcessorSessionMismatchOnTimeoutTest {
                 return;
             }
 
-            wrongErrorThrown();
+            fail(AUTH_EXCEPTION_EXPECTED);
         }
         catch (Exception e) {
-            wrongErrorThrown();
+            fail(AUTH_EXCEPTION_EXPECTED);
         }
 
-        wrongErrorThrown();
-    }
-
-    /**
-     * Fail test when wrong exception was thrown
-     */
-    private static void wrongErrorThrown() {
-        fail("IgniteAuthenticationException was expected");
-    }
-
-    /**
-     *
-     */
-    public static class InnerLogger extends GridTestLog4jLogger {
-        /**
-         *
-         */
-        private Collection<String> logs = new ConcurrentLinkedDeque<>();
-
-        /**
-         * Returns true if and only if this string contains the specified sequence of char values.
-         *
-         * @param str String.
-         */
-        public boolean contains(String str) {
-            for (String text : logs)
-                if (text != null && text.contains(str))
-                    return true;
-
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void debug(String msg) {
-            logs.add(msg);
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean isDebugEnabled() {
-            return true;
-        }
+        fail(AUTH_EXCEPTION_EXPECTED);
     }
 }
