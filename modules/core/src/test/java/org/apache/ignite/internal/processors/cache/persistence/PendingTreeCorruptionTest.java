@@ -134,12 +134,12 @@ public class PendingTreeCorruptionTest extends GridCommonAbstractTest {
         try {
             // Carefully calculated number. Just enough for the first split to happen, but not more.
             for (int i = 0; i < 202; i++)
-                pendingTree.putx(new PendingRow(expireCacheId, expiration, expiration + i)); // link != 0
+                pendingTree.putx(new PendingRow(expireCacheId, false, expiration, expiration + i)); // link != 0
 
             // Open cursor, it'll cache first leaf of the tree.
             GridCursor<PendingRow> cur = pendingTree.find(
                 null,
-                new PendingRow(expireCacheId, expiration + year, 0),
+                new PendingRow(expireCacheId, false, expiration + year, 0),
                 PendingEntriesTree.WITHOUT_KEY
             );
 

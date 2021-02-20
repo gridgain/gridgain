@@ -182,6 +182,10 @@ public class CacheGroupMetricsImpl {
             this::getTotalAllocatedSize,
             "Total size of memory allocated for group, in bytes.");
 
+        mreg.register("Tombstones",
+            this::getTombstones,
+            "Number of tombstone entries.");
+
         if (ctx.config().isEncryptionEnabled()) {
             mreg.register("ReencryptionFinished",
                 () -> !ctx.shared().kernalContext().encryption().reencryptionInProgress(ctx.groupId()),
@@ -501,6 +505,11 @@ public class CacheGroupMetricsImpl {
     /** */
     public long getSparseStorageSize() {
         return sparseStorageSize == null ? 0 : sparseStorageSize.value();
+    }
+
+    /** */
+    public long getTombstones() {
+        return ctx.offheap().tombstonesCount();
     }
 
     /** */

@@ -56,7 +56,8 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
         Calendar cal = Calendar.getInstance();
         try {
             cal.setTime(SDF.parse(START_DATE));
-        } catch (ParseException e) {
+        }
+        catch (ParseException e) {
             // No-op.
         }
         TIMESTART = cal.getTimeInMillis();
@@ -197,6 +198,7 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
             insert.append(", ").append(getVal(type, cntr));
 
         insert.append(")");
+
         return insert.toString();
     }
 }

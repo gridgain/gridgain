@@ -21,7 +21,7 @@ import org.junit.Test;
 import java.math.BigDecimal;
 
 /**
- * Collect statistics on test table dtypes and check that statistics manager will return correct statistics for
+ * Gather statistics on test table dtypes and check that statistics manager will return correct statistics for
  * different data types.
  */
 public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
@@ -280,6 +280,6 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
      */
     private ObjectStatisticsImpl getTypesStats() {
         return (ObjectStatisticsImpl) grid(0).context().query().getIndexing().statsManager()
-                .getLocalStatistics("PUBLIC", "DTYPES");
+                .getLocalStatistics(SCHEMA, "DTYPES");
     }
 }

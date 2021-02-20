@@ -76,35 +76,34 @@ public class ColumnStatisticsCollector {
         complexType = colTypeInfo == TypeInfo.TYPE_ARRAY || colTypeInfo == TypeInfo.TYPE_ENUM_UNDEFINED
                 || colTypeInfo == TypeInfo.TYPE_JAVA_OBJECT || colTypeInfo == TypeInfo.TYPE_RESULT_SET
                 || colTypeInfo == TypeInfo.TYPE_UNKNOWN;
-
     }
 
     /**
      * Try to fix unexpected behaviour of base Value class.
      *
-     * @param value Value to convert.
+     * @param val Value to convert.
      * @return Byte array.
      */
-    private byte[] getBytes(Value value) {
-        switch (value.getValueType()) {
+    private byte[] getBytes(Value val) {
+        switch (val.getValueType()) {
             case Value.STRING:
-                String strValue = value.getString();
-                return strValue.getBytes(StandardCharsets.UTF_8);
+                String strVal = val.getString();
+                return strVal.getBytes(StandardCharsets.UTF_8);
             case Value.BOOLEAN:
-                return value.getBoolean() ? new byte[]{1} : new byte[]{0};
+                return val.getBoolean() ? new byte[]{1} : new byte[]{0};
             case Value.DECIMAL:
             case Value.DOUBLE:
             case Value.FLOAT:
-                return U.join(value.getBigDecimal().unscaledValue().toByteArray(),
-                        BigInteger.valueOf(value.getBigDecimal().scale()).toByteArray());
+                return U.join(val.getBigDecimal().unscaledValue().toByteArray(),
+                        BigInteger.valueOf(val.getBigDecimal().scale()).toByteArray());
             case Value.TIME:
-                return BigInteger.valueOf(value.getTime().getTime()).toByteArray();
+                return BigInteger.valueOf(val.getTime().getTime()).toByteArray();
             case Value.DATE:
-                return BigInteger.valueOf(value.getDate().getTime()).toByteArray();
+                return BigInteger.valueOf(val.getDate().getTime()).toByteArray();
             case Value.TIMESTAMP:
-                return BigInteger.valueOf(value.getTimestamp().getTime()).toByteArray();
+                return BigInteger.valueOf(val.getTimestamp().getTime()).toByteArray();
             default:
-                return value.getBytes();
+                return val.getBytes();
         }
     }
 
@@ -122,7 +121,7 @@ public class ColumnStatisticsCollector {
             return;
         }
 
-        byte bytes[] = getBytes(val);
+        byte[] bytes = getBytes(val);
         size += bytes.length;
 
         hll.addRaw(hash.fastHash(bytes));

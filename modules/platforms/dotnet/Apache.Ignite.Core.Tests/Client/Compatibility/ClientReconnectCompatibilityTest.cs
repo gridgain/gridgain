@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#if !NETCOREAPP
 namespace Apache.Ignite.Core.Tests.Client.Compatibility
 {
     using System;
@@ -106,4 +105,3 @@ namespace Apache.Ignite.Core.Tests.Client.Compatibility
         }
     }
 }
-#endif

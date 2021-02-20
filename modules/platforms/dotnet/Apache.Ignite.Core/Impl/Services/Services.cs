@@ -433,7 +433,12 @@ namespace Apache.Ignite.Core.Impl.Services
         private object InvokeProxyMethod(IPlatformTargetInternal proxy, string methodName,
             MethodBase method, object[] args, PlatformType platformType)
         {
-            Marshaller.RegisterSameJavaType.Value = true;
+            bool locRegisterSameJavaType = Marshaller.RegisterSameJavaTypeTl.Value;
+
+            if (platformType == PlatformType.Java)
+            {
+                Marshaller.RegisterSameJavaTypeTl.Value = true;
+            }
 
             try
             {
@@ -444,7 +449,10 @@ namespace Apache.Ignite.Core.Impl.Services
             }
             finally
             {
-                Marshaller.RegisterSameJavaType.Value = false;
+                if (platformType == PlatformType.Java)
+                {
+                    Marshaller.RegisterSameJavaTypeTl.Value = locRegisterSameJavaType;
+                }
             }
 
         }

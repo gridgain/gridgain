@@ -4530,13 +4530,9 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
                     // Get "cache" field from GridCacheProxyImpl.
                     GridCacheAdapter c0 = cacheFromCtx(c);
 
-                    if (!c0.context().deferredDelete()) {
-                        GridCacheEntryEx e0 = c0.peekEx(key);
+                    GridCacheEntryEx e0 = c0.peekEx(key);
 
-                        return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
-                    }
-                    else
-                        return true;
+                    return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
                 }
                 catch (GridCacheEntryRemovedException e) {
                     throw new RuntimeException(e);
@@ -6622,12 +6618,7 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
                 GridCacheEntryEx entry = ctx.isNear() ? ctx.near().dht().peekEx(key) : ctx.cache().peekEx(key);
 
-                if (ignite.affinity(cacheName).mapKeyToPrimaryAndBackups(key).contains(((IgniteKernal)ignite).localNode())) {
-                    assertNotNull(entry);
-                    assertTrue(entry.deleted());
-                }
-                else
-                    assertNull(entry);
+                assertNull(entry);
             }
         }
     }

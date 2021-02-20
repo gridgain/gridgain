@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -169,7 +169,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
 
     /** First eviction was warned flag. */
     private volatile boolean firstEvictWarn;
-
 
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
@@ -957,6 +956,11 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         // No-op.
     }
 
+    /** */
+    public boolean tryCheckpointReadLock() {
+        return true;
+    }
+
     /**
      * No-op for non-persistent storage.
      */
@@ -1011,7 +1015,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     /**
      * @return Last checkpoint mark WAL pointer.
      */
-    public WALPointer lastCheckpointMarkWalPointer() {
+    @Nullable public WALPointer lastCheckpointMarkWalPointer() {
         return null;
     }
 
@@ -1482,7 +1486,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                             ((MvccDataEntry)dataEntry).mvccVer());
                     }
                     else
-                        cacheCtx.offheap().remove(cacheCtx, dataEntry.key(), partId, locPart);
+                        cacheCtx.offheap().removeWithTombstone(cacheCtx, dataEntry.key(), dataEntry.writeVersion(), locPart);
 
                     if (dataEntry.partitionCounter() != 0)
                         cacheCtx.offheap().onPartitionInitialCounterUpdated(partId, dataEntry.partitionCounter() - 1, 1);

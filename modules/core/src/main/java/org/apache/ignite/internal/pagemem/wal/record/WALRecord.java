@@ -249,7 +249,10 @@ public abstract class WALRecord {
         PARTITION_META_PAGE_DELTA_RECORD_V3(67, PHYSICAL),
 
         /** Index meta page delta record includes encryption status data. */
-        INDEX_META_PAGE_DELTA_RECORD(68, PHYSICAL);
+        INDEX_META_PAGE_DELTA_RECORD(68, PHYSICAL),
+
+        /** Partition meta page delta record includes tombstones count. */
+        PARTITION_META_PAGE_DELTA_RECORD_V4(69, PHYSICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;

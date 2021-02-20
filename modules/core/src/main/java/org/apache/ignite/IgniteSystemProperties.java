@@ -390,10 +390,20 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_OFFHEAP_SAFE_RELEASE = "IGNITE_OFFHEAP_SAFE_RELEASE";
 
-    /** Maximum size for atomic cache queue delete history (default is 200 000 entries per partition). */
+    /**
+     * Maximum size for atomic cache queue delete history (default is 200 000 entries per partition).
+     *
+     * @deprecated No longer used.
+     */
+    @Deprecated
     public static final String IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE = "IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE";
 
-    /** Ttl of removed cache entries (ms). */
+    /**
+     * Ttl of removed cache entries (ms).
+     *
+     * @deprecated No longer used.
+     */
+    @Deprecated
     public static final String IGNITE_CACHE_REMOVED_ENTRIES_TTL = "IGNITE_CACHE_REMOVED_ENTRIES_TTL";
 
     /**
@@ -775,8 +785,8 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL = "IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL";
 
     /**
-     * When cache has entries with expired TTL, each user operation will also remove this amount of expired entries.
-     * Defaults to {@code 5}.
+     * When cache has entries with expired TTL and/or tombstones, each user operation will also remove this amount of
+     * expired entries. Defaults to {@code 5}. Setting the value to {@code 0} will disable this behavior.
      */
     public static final String IGNITE_TTL_EXPIRE_BATCH_SIZE = "IGNITE_TTL_EXPIRE_BATCH_SIZE";
 
@@ -811,7 +821,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
 
     /**
-     * Prefer historical rebalance if there's enough history regardless off all heuristics.
+     * Prefer historical rebalance if there's enough history regardless of all heuristics.
      * This property is intended for integration or performance tests.
      * Default is {@code false}.
      */

@@ -142,7 +142,7 @@ public interface IgniteTree<L, T> {
         /** */
         PUT,
 
-        /** */
+        /** A tree was updated in-place. Not supported with enabled indexing. */
         IN_PLACE
     }
 }

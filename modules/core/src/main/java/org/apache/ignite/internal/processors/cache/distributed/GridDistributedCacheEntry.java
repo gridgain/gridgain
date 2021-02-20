@@ -284,11 +284,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
                 refreshRemotes();
 
-                if (emptyAfter) {
+                if (emptyAfter)
                     mvccExtras(null);
-
-                    onUnlock();
-                }
             }
         }
         finally {
@@ -369,8 +366,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
         GridCacheMvccCandidate doomed;
 
-        GridCacheVersion deferredDelVer;
-
         CacheObject val;
 
         cctx.tm().detectPossibleCollidingKeys(this);
@@ -411,20 +406,9 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
             }
 
             val = this.val;
-
-            deferredDelVer = this.ver;
         }
         finally {
             unlockEntry();
-        }
-
-        if (val == null) {
-            boolean deferred = cctx.deferredDelete() && !detached() && !isInternal();
-
-            if (deferred) {
-                if (deferredDelVer != null)
-                    cctx.onDeferredDelete(this, deferredDelVer);
-            }
         }
 
         if (log.isDebugEnabled())

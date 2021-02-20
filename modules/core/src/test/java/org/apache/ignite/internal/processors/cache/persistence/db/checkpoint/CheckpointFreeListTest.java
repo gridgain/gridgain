@@ -154,6 +154,7 @@ public class CheckpointFreeListTest extends GridCommonAbstractTest {
      * @throws Exception if fail.
      */
     @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "1000000") // Prevent tombstone clearing during the test.
     public void testFreeListRestoredCorrectly() throws Exception {
         IgniteEx ignite0 = startGrid(0);
 

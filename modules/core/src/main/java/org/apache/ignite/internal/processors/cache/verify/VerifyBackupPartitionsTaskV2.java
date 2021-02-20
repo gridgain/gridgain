@@ -70,6 +70,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Collections.emptyMap;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.DATA;
 import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 
 /**
@@ -558,7 +559,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
                 if (arg.checkCrc())
                     checkPartitionCrc(grpCtx, part);
 
-                GridIterator<CacheDataRow> it = grpCtx.offheap().partitionIterator(part.id());
+                GridIterator<CacheDataRow> it = grpCtx.offheap().partitionIterator(part.id(), DATA);
 
                 while (it.hasNextX()) {
                     CacheDataRow row = it.nextX();

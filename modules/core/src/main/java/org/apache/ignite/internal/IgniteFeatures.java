@@ -38,6 +38,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AU
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
@@ -196,8 +197,17 @@ public enum IgniteFeatures {
     /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
     SAFE_CLUSTER_DEACTIVATION(51),
 
+    /** Custom snapshot operations. */
+    CUSTOM_SNAPSHOT_OPERATIONS(53),
+
     /** Point-in-time distributed property. */
-    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54);
+    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54),
+
+    /** Statistics collection. */
+    STATISTICS_COLLECTION(55),
+
+    /** Rolling upgrade based on distributed metastorage. Improved handling of changing RU state. */
+    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(56);
 
     /**
      * Unique feature identifier.
@@ -380,6 +390,9 @@ public enum IgniteFeatures {
                 continue;
 
             if (PME_FREE_SWITCH == value && isFeatureEnabled(IGNITE_PME_FREE_SWITCH_DISABLED))
+                continue;
+
+            if (SPECIFIED_SEQ_PK_KEYS == value && isFeatureEnabled(IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED))
                 continue;
 
             final int featureId = value.getFeatureId();

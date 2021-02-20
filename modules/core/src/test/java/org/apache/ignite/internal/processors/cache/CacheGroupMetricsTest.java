@@ -53,6 +53,7 @@ import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.mxbean.CacheGroupMetricsMXBean;
@@ -65,6 +66,7 @@ import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheGroupMetricsRegistryName;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
@@ -146,6 +148,12 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        // We need enought threads for this test, overwise blocked eviction can prevent demand messages ordered
+        // processing, which is done in the same pool as eviction.
+        cfg.setRebalanceThreadPoolSize(4);
+
+        cfg.setConsistentId(igniteInstanceName);
 
         CacheConfiguration cCfg1 = new CacheConfiguration()
             .setName("cache1")
@@ -333,17 +341,23 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
 
         stopGrid(2);
 
+        // Wait until renting moved to evicting.
+        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            @Override public boolean apply() {
+                return grid(0).context().cache().cacheGroup(CU.cacheId("group1")).
+                    topology().localPartitions().stream().noneMatch(p -> p.state() == RENTING);
+            }
+        }, 5_000);
+
         // Check moving partitions while rebalancing.
         assertFalse(arrayToAllocationMap(new int[10][]).equals(movingPartitionsAllocationMap.value()));
 
-        int movingCnt = mxBean0Grp1.get2().<IntMetric>findMetric("LocalNodeMovingPartitionsCount").value();
-
-        assertTrue(movingCnt > 0);
+        assertTrue(mxBean0Grp1.get2().<IntMetric>findMetric("LocalNodeMovingPartitionsCount").value() > 0);
         assertTrue(mxBean0Grp1.get1().getClusterMovingPartitionsCount() > 0);
 
         final CountDownLatch evictLatch = new CountDownLatch(1);
 
-        // Block all evicting threads to count total renting partitions.
+        // All evictions are expecting for RENTING state and shouldn't block rebalancing.
         grid(0).events().localListen(new IgnitePredicate<Event>() {
             @Override public boolean apply(Event evt) {
                 try {
@@ -357,10 +371,18 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
             }
         }, EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED);
 
+        // Resume rebalancing, no clearing expected.
         grid(0).rebalanceEnabled(true);
         grid(1).rebalanceEnabled(true);
 
+        awaitPartitionMapExchange();
+
         startGrid(2);
+
+        awaitPartitionMapExchange();
+
+        long expEvicting = grid(0).cachex("cache1").context().topology().localPartitions().stream().
+            filter(p -> p.state() == RENTING).count();
 
         try {
             assertTrue("Renting partitions count when node returns not equals to moved partitions when node left",
@@ -374,7 +396,7 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
                         log.info("Renting entries count: " +
                             mxBean0Grp1.get2().findMetric("LocalNodeRentingEntriesCount").getAsString());
 
-                        return localNodeRentingPartitionsCount.value() == movingCnt;
+                        return localNodeRentingPartitionsCount.value() == expEvicting;
                     }
                 }, 10_000L)
             );
@@ -385,6 +407,9 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
         finally {
             evictLatch.countDown();
         }
+
+        // After the latch releasing partitions must be evicted.
+        awaitPartitionMapExchange(true, true, null);
     }
 
     /**
