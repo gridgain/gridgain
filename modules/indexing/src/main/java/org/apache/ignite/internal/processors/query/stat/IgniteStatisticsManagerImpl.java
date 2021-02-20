@@ -154,6 +154,13 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /** {@inheritDoc} */
+    @Override public void refreshStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
+        checkStatisticsSupport("collect statistics");
+
+        statCfgMgr.refreshStatistics(Arrays.asList(targets));
+    }
+
+    /** {@inheritDoc} */
     @Override public void dropAll() throws IgniteCheckedException {
         checkStatisticsSupport("drop all statistics");
 

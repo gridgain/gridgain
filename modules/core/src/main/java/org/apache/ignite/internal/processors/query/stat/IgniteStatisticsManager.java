@@ -24,10 +24,10 @@ public interface IgniteStatisticsManager {
     /**
      * Gather object statistics.
      *
-     * @param target Target to gather statistics by.
+     * @param targets Target to gather statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
      */
-    public void updateStatistics(StatisticsTarget... target) throws IgniteCheckedException;
+    public void updateStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
 
     /**
      * Clear object statistics.
@@ -37,7 +37,15 @@ public interface IgniteStatisticsManager {
      */
     public void dropStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
 
-    /** Drop all statistics. */
+    /**
+     * Refresh object statistics.
+     *
+     * @param targets Target to refresh statistics by.
+     * @throws IgniteCheckedException  Throws in case of errors.
+     */
+    public void refreshStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+
+        /** Drop all statistics. */
     void dropAll() throws IgniteCheckedException;
 
     /**

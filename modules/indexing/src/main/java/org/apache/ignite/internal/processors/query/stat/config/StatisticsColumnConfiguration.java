@@ -53,6 +53,13 @@ public class StatisticsColumnConfiguration implements Serializable {
         this.tombstone = tombstone;
     }
 
+    /** */
+    private StatisticsColumnConfiguration(StatisticsColumnConfiguration cfg, long ver, boolean tombstone) {
+        this.name = cfg.name;
+        this.ver = ver;
+        this.tombstone = tombstone;
+    }
+
     /**
      * Get column name.
      *
@@ -105,6 +112,16 @@ public class StatisticsColumnConfiguration implements Serializable {
     public StatisticsColumnConfiguration createTombstone()
     {
         return new StatisticsColumnConfiguration(name, ver + 1, true);
+    }
+
+    /**
+     * Create configuration for dropped statistic column.
+     *
+     * @return Columns configuration for refresh statistic.
+     */
+    public StatisticsColumnConfiguration refresh()
+    {
+        return new StatisticsColumnConfiguration(this,  tombstone ? ver : ver + 1, tombstone);
     }
 
     /** {@inheritDoc} */

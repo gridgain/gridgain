@@ -510,7 +510,9 @@ public class CommandProcessor {
      */
     private void processAnalyzeCommand(SqlAnalyzeCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
+
         IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
@@ -525,12 +527,14 @@ public class CommandProcessor {
      */
     private void processRefreshStatisticsCommand(SqlRefreshStatitsicsCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.REFRESH_STATISTICS);
+
         IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        statMgr.updateStatistics(targets);
+        statMgr.refreshStatistics(targets);
     }
 
     /**
@@ -540,13 +544,17 @@ public class CommandProcessor {
      */
     private void processDropStatisticsCommand(SqlDropStatisticsCommand cmd) {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
+
         IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
+
         try {
             statMgr.dropStatistics(targets);
-        } catch (IgniteCheckedException e) {
+        }
+        catch (IgniteCheckedException e) {
             throw new IgniteSQLException("Failed to drop statistics on targets " + cmd.targets() + ", err="
                 + e.getMessage() + "]", e);
         }

@@ -88,16 +88,31 @@ public class StatisticsObjectConfiguration implements Serializable {
      * @return Result configuration object.
      */
     public StatisticsObjectConfiguration dropColumns(Set<String> dropColNames) {
-        if (F.isEmpty(dropColNames))
-            dropColNames = cols.keySet();
+        Map<String, StatisticsColumnConfiguration> newCols = new HashMap<>();
 
-        Map<String, StatisticsColumnConfiguration> newCols = new HashMap<>(cols);
+        for (StatisticsColumnConfiguration col : cols.values()) {
+            if (F.isEmpty(dropColNames) || dropColNames.contains(col.name()))
+                newCols.put(col.name(), col.createTombstone());
+            else
+                newCols.put(col.name(), col);
+        }
 
-        for (String dropCol : dropColNames) {
-            StatisticsColumnConfiguration c = cols.get(dropCol);
+        return new StatisticsObjectConfiguration(key, newCols.values());
+    }
 
-            if (c != null)
-                newCols.put(c.name(), c.createTombstone());
+    /**
+     * Creates new configuration object to refresh statistic with current configuration.
+     *
+     * @return Result configuration object.
+     */
+    public StatisticsObjectConfiguration refresh(Set<String> refreshColumns) {
+        Map<String, StatisticsColumnConfiguration> newCols = new HashMap<>();
+
+        for (StatisticsColumnConfiguration col : cols.values()) {
+            if (F.isEmpty(refreshColumns) || refreshColumns.contains(col.name()))
+                newCols.put(col.name(), col.refresh());
+            else
+                newCols.put(col.name(), col);
         }
 
         return new StatisticsObjectConfiguration(key, newCols.values());

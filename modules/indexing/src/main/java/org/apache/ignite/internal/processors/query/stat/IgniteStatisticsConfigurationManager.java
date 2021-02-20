@@ -279,6 +279,41 @@ public class IgniteStatisticsConfigurationManager {
         });
     }
 
+    /**
+     * Refresh local statistic for specified database objects on the cluster.
+     *
+     * @param targets DB objects to statistics update.
+     */
+    public void refreshStatistics(List<StatisticsTarget> targets) {
+        if (log.isDebugEnabled())
+            log.debug("Drop statistics [targets=" + targets + ']');
+
+        for (StatisticsTarget target : targets) {
+            String key = key2String(target.key());
+
+            try {
+                while (true) {
+                    StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
+
+                    if (oldCfg == null)
+                        break;
+
+                    StatisticsObjectConfiguration newCfg = oldCfg.refresh(
+                        target.columns() != null ?
+                            Arrays.stream(target.columns()).collect(Collectors.toSet()) :
+                            Collections.emptySet());
+
+                    if (distrMetaStorage.compareAndSet(key, oldCfg, newCfg))
+                        break;
+                }
+            }
+            catch (IgniteCheckedException ex) {
+                throw new IgniteSQLException(
+                    "Error on get or update statistic schema", IgniteQueryErrorCode.UNKNOWN, ex);
+            }
+        }
+    }
+
     /** */
     private void validate(StatisticsTarget target, GridH2Table tbl) {
         if (tbl == null) {

@@ -19,6 +19,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -40,8 +41,8 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
 
         clearStat();
 
-        testStats(SCHEMA, "TEST", true);
-        testStats(SCHEMA, "TEST2", true);
+        testStatistics(SCHEMA, "TEST", true);
+        testStatistics(SCHEMA, "TEST2", true);
 
         sql("CREATE TABLE TEST(id int primary key, name varchar)");
         sql("CREATE TABLE TEST2(id int primary key, name varchar)");
@@ -59,22 +60,22 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         sql("ANALYZE TEST");
 
         //U.sleep(1000);
-        testStats(SCHEMA, "TEST", false);
+        testStatistics(SCHEMA, "TEST", false);
 
         sql("ANALYZE PUBLIC.TEST2(name)");
 
         //U.sleep(1000);
-        testStats(SCHEMA, "TEST2", false);
+        testStatistics(SCHEMA, "TEST2", false);
 
         clearStat();
 
-        testStats(SCHEMA, "TEST", true);
-        testStats(SCHEMA, "TEST2", true);
+        testStatistics(SCHEMA, "TEST", true);
+        testStatistics(SCHEMA, "TEST2", true);
 
         sql("ANALYZE PUBLIC.TEST, test2");
 
-        testStats(SCHEMA, "TEST", false);
-        testStats(SCHEMA, "TEST2", false);
+        testStatistics(SCHEMA, "TEST", false);
+        testStatistics(SCHEMA, "TEST2", false);
     }
 
     /**
@@ -88,21 +89,21 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
     @Test
     public void testRefreshStatistics() throws IgniteCheckedException {
         // TODO after GG-32420 test schema
-        testStats(SCHEMA, "TEST", true);
-        testStats(SCHEMA, "TEST2", true);
+        testStatistics(SCHEMA, "TEST", true);
+        testStatistics(SCHEMA, "TEST2", true);
+
+        sql("ANALYZE PUBLIC.TEST, test2");
+
+        testStatistics(SCHEMA, "TEST", false);
+        testStatistics(SCHEMA, "TEST2", false);
+
+        long testVer = sumStatisticsVersion(SCHEMA, "TEST");
+        long test2Ver = sumStatisticsVersion(SCHEMA, "TEST2");
 
         sql("REFRESH STATISTICS PUBLIC.TEST, test2");
 
-        testStats(SCHEMA, "TEST", false);
-        testStats(SCHEMA, "TEST2", false);
-
-        clearStat();
-        U.sleep(1000);
-
-        sql("REFRESH STATISTICS public.test(id, name);");
-
-        testStats(SCHEMA, "TEST", false);
-        testStats(SCHEMA, "TEST2", true);
+        testStatisticsVersion(SCHEMA, "TEST", testVer);
+        testStatisticsVersion(SCHEMA, "TEST2", test2Ver);
     }
 
     /**
@@ -118,30 +119,30 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         // TODO after GG-32420 test schema
         sql("ANALYZE PUBLIC.TEST, test2");
 
-        testStats(SCHEMA, "TEST", false);
-        testStats(SCHEMA, "TEST2", false);
+        testStatistics(SCHEMA, "TEST", false);
+        testStatistics(SCHEMA, "TEST2", false);
 
         sql("DROP STATISTICS PUBLIC.TEST(name);");
 
-        testStats(SCHEMA, "TEST", false);
-        testStats(SCHEMA, "TEST2", false);
+        testStatistics(SCHEMA, "TEST", false);
+        testStatistics(SCHEMA, "TEST2", false);
 
         U.sleep(TIMEOUT);
 
         sql("DROP STATISTICS PUBLIC.TEST;");
 
-        testStats(SCHEMA, "TEST", true);
-        testStats(SCHEMA, "TEST2", false);
+        testStatistics(SCHEMA, "TEST", true);
+        testStatistics(SCHEMA, "TEST2", false);
 
         sql("ANALYZE PUBLIC.TEST, test2");
 
-        testStats(SCHEMA, "TEST", false);
-        testStats(SCHEMA, "TEST2", false);
+        testStatistics(SCHEMA, "TEST", false);
+        testStatistics(SCHEMA, "TEST2", false);
 
         sql("DROP STATISTICS PUBLIC.TEST, test2");
 
-        testStats(SCHEMA, "TEST", true);
-        testStats(SCHEMA, "TEST2", true);
+        testStatistics(SCHEMA, "TEST", true);
+        testStatistics(SCHEMA, "TEST2", true);
     }
 
     /**
@@ -158,21 +159,21 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         sql("CREATE TABLE STATISTICS(id int primary key, statistics varchar)");
         sql("CREATE INDEX STATISTICS_STATISTICS ON STATISTICS(STATISTICS);");
 
-        testStats(SCHEMA, "STATISTICS", true);
+        testStatistics(SCHEMA, "STATISTICS", true);
 
         sql("ANALYZE PUBLIC.STATISTICS(STATISTICS)");
 
-        testStats(SCHEMA, "STATISTICS", false);
+        testStatistics(SCHEMA, "STATISTICS", false);
 
         sql("REFRESH STATISTICS PUBLIC.STATISTICS(STATISTICS)");
 
-        testStats(SCHEMA, "STATISTICS", false);
+        testStatistics(SCHEMA, "STATISTICS", false);
 
         U.sleep(TIMEOUT);
 
         sql("DROP STATISTICS PUBLIC.STATISTICS(STATISTICS)");
 
-        testStats(SCHEMA, "STATISTICS", true);
+        testStatistics(SCHEMA, "STATISTICS", true);
     }
 
     /**
@@ -191,9 +192,8 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      *
      * @param schema Schema name.
      * @param obj Object name.
-     * @param isNull If {@code true} - test if statistics is null, otherwise - test if is not null.
      */
-    private void testStats(String schema, String obj, boolean isNull) throws IgniteInterruptedCheckedException {
+    private void testStatistics(String schema, String obj, boolean isNull) throws IgniteInterruptedCheckedException {
         assertTrue(GridTestUtils.waitForCondition(() -> {
             for (Ignite node : G.allGrids()) {
                 IgniteStatisticsManager nodeStatMgr = ((IgniteEx) node).context().query().getIndexing().statsManager();
@@ -204,5 +204,47 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
             }
             return true;
         }, TIMEOUT));
+    }
+
+    /**
+     * Test statistics existence on all nodes.
+     *
+     * @param schema Schema name.
+     * @param obj Object name.
+     */
+    private void testStatisticsVersion(String schema, String obj, long ver) throws IgniteInterruptedCheckedException {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            for (Ignite node : G.allGrids()) {
+                IgniteStatisticsManager nodeStatMgr = ((IgniteEx) node).context().query().getIndexing().statsManager();
+
+                ObjectStatisticsImpl localStat = (ObjectStatisticsImpl)nodeStatMgr.getLocalStatistics(
+                    new StatisticsKey(schema, obj)
+                );
+
+                long sumVer = localStat.columnsStatistics().values().stream()
+                    .mapToLong(ColumnStatistics::version)
+                    .sum();
+
+                if (sumVer <= ver)
+                    return false;
+            }
+
+            return true;
+        }, TIMEOUT));
+    }
+
+    /**
+     * Get average version of the column statistics for specified DB object.
+     */
+    long sumStatisticsVersion(String schema, String obj) {
+        IgniteStatisticsManager nodeStatMgr = ((IgniteEx)F.first(G.allGrids())).context().query().getIndexing().statsManager();
+        ObjectStatisticsImpl localStat = (ObjectStatisticsImpl)nodeStatMgr.getLocalStatistics(new StatisticsKey(schema, obj));
+
+        if (localStat == null)
+            return -1;
+
+        return localStat.columnsStatistics().values().stream()
+            .mapToLong(ColumnStatistics::version)
+            .sum();
     }
 }
