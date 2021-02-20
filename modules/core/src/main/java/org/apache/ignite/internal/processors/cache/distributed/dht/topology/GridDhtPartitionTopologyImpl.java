@@ -442,6 +442,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                     log.debug("Partition has been owned (created first time) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + locPart.id() + ']');
                             }
+                            else if (locPart.state() == RENTING)
+                                locPart.moving(); // A partition should be owned by the node.
 
                             needRefresh = true;
 
@@ -808,7 +810,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         GridDhtLocalPartition locPart = localPartition0(p, topVer, false, true);
 
                         if (partitionLocalNode(p, topVer)) {
-                            assert locPart != null && locPart.state() != RENTING && locPart.state() != EVICTED : locPart;
+                            assert locPart != null && locPart.state() != RENTING && locPart.state() != EVICTED :
+                                p + " " + topVer + " " + locPart + " " + grp.cacheOrGroupName();
                         }
                         else {
                             if (locPart != null) {
@@ -3238,9 +3241,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 GridDhtLocalPartition locPart = localPartition(p);
 
+                if (locPart == null)
+                    return false;
+
                 GridDhtPartitionState state0 = locPart.state();
 
-                if (locPart == null || state0 == RENTING || state0 == EVICTED || partitionLocalNode(p, readyTopVer))
+                if (state0 == RENTING || state0 == EVICTED || partitionLocalNode(p, readyTopVer))
                     return false;
 
                 locPart.rent();
