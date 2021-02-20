@@ -50,7 +50,6 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
-import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -58,7 +57,8 @@ import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
 
 /**
- *
+ * Holds statistic configuration objects at the distributed metastore
+ * and match local statistics with target statistic configuration.
  */
 public class IgniteStatisticsConfigurationManager {
     /** */
@@ -85,9 +85,6 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private volatile boolean started;
 
-    /** Busy lock on node stop. */
-    private final GridSpinBusyLock stopLock;
-
     /** Monitor to synchronize changes repository: aggregate after collects and drop statistics. */
     private final Object mux = new Object();
 
@@ -99,7 +96,6 @@ public class IgniteStatisticsConfigurationManager {
         IgniteStatisticsRepository repo,
         StatisticsGatherer gatherer,
         IgniteThreadPoolExecutor mgmtPool,
-        GridSpinBusyLock stopLock,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.schemaMgr = schemaMgr;
@@ -107,7 +103,6 @@ public class IgniteStatisticsConfigurationManager {
         this.repo = repo;
         this.mgmtPool = mgmtPool;
         this.gatherer = gatherer;
-        this.stopLock = stopLock;
 
         subscriptionProcessor.registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
             @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
@@ -158,7 +153,7 @@ public class IgniteStatisticsConfigurationManager {
                             return;
                     }
 
-                    scanAndCheckLocalStatistic(fut.topologyVersion());
+                    scanAndCheckLocalStatistics(fut.topologyVersion());
                 }
             }
         );
@@ -168,11 +163,8 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /** */
-    private void scanAndCheckLocalStatistic(AffinityTopologyVersion topVer) {
+    private void scanAndCheckLocalStatistics(AffinityTopologyVersion topVer) {
         mgmtPool.submit(() -> {
-            if (!stopLock.enterBusy())
-                return;
-
             try {
                 distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) ->
                     checkLocalStatistics((StatisticsObjectConfiguration)v, topVer));
@@ -180,13 +172,15 @@ public class IgniteStatisticsConfigurationManager {
             catch (IgniteCheckedException e) {
                 log.warning("Unexpected exception on check local statistic on start", e);
             }
-            finally {
-                stopLock.leaveBusy();
-            }
         });
     }
 
-    /** */
+    /**
+     * Update local statistic for specified database objects on the cluster.
+     * Each node will scan local primary partitions to collect and update local statistic.
+     *
+     * @param targets DB objects to statistics update.
+     */
     public void updateStatistics(List<StatisticsTarget> targets) {
         if (log.isDebugEnabled())
             log.debug("Update statistics [targets=" + targets + ']');
@@ -225,7 +219,12 @@ public class IgniteStatisticsConfigurationManager {
         }
     }
 
-    /** */
+    /**
+     * Drop local statistic for specified database objects on the cluster.
+     * Remove local aggregated and partitioned statistics that are stored at the local metastorage.
+     *
+     * @param targets DB objects to statistics update.
+     */
     public void dropStatistics(List<StatisticsTarget> targets) {
         if (log.isDebugEnabled())
             log.debug("Drop statistics [targets=" + targets + ']');
@@ -257,7 +256,9 @@ public class IgniteStatisticsConfigurationManager {
         }
     }
 
-    /** Drop All statistics. */
+    /**
+     * Drop all local statistics on the cluster.
+     */
     public void dropAll() {
         mgmtPool.submit(() -> {
             try {
@@ -266,7 +267,7 @@ public class IgniteStatisticsConfigurationManager {
                 distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> {
                         StatisticsKey statKey = ((StatisticsObjectConfiguration)v).key();
 
-                        targetsToRemove.add(new StatisticsTarget(statKey.schema(), statKey.obj()));
+                        targetsToRemove.add(new StatisticsTarget(statKey, null));
                     }
                 );
 
@@ -299,11 +300,18 @@ public class IgniteStatisticsConfigurationManager {
         }
     }
 
-    /** */
+    /**
+     * Scan local statistic saved at the local metastorage, compare ones to statistic configuration.
+     * The local statistics must be matched with configuration:
+     * - re-collect old statistics;
+     * - drop local statistics if ones dropped on cluster;
+     * - collect new statistics if it possible.
+     *
+     * The method is called on change affinity assignment (end of PME).
+     * @param cfg expected statistic configuration.
+     * @param topVer topology version.
+     */
     private void checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
-        if (!stopLock.enterBusy())
-            return;
-
         try {
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
 
@@ -320,7 +328,9 @@ public class IgniteStatisticsConfigurationManager {
 
             if (F.isEmpty(parts)) {
                 // There is no data on the node for specified cache.
-                // TODO: remove oll data
+                // Remove oll data
+                dropColumnsOnLocalStatistics(cfg, cfg.columns().keySet());
+
                 return;
             }
 
@@ -397,12 +407,16 @@ public class IgniteStatisticsConfigurationManager {
         catch (Throwable ex) {
             log.error("Unexpected error on check local statistics", ex);
         }
-        finally {
-            stopLock.leaveBusy();
-        }
     }
 
-    /** */
+    /**
+     * Match local statistic with changes of statistic configuration:
+     * - update statistics;
+     * - drop columns;
+     * - add new columns to collect statistics.
+     *
+     * The method is called on change statistic configuration object at the distributed metastorage.
+     */
     private void onChangeStatisticConfiguration(
         StatisticsObjectConfiguration oldCfg,
         final StatisticsObjectConfiguration newCfg
@@ -448,12 +462,7 @@ public class IgniteStatisticsConfigurationManager {
 
         Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), colsToCollect.keySet());
 
-        gatherer.gatherLocalObjectsStatisticsAsync(
-            tbl,
-            cols,
-            colsToCollect,
-            partsToCollect
-        );
+        gatherer.gatherLocalObjectsStatisticsAsync(tbl, cols, colsToCollect, partsToCollect);
 
         gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), partsToAggregate));
     }
@@ -485,7 +494,7 @@ public class IgniteStatisticsConfigurationManager {
 
         dropStatistics(Collections.singletonList(
             new StatisticsTarget(
-                tbl.getSchema().getName(),
+                tbl.identifier().schema(),
                 tbl.getName(),
                 cols.toArray(IgniteUtils.EMPTY_STRINGS)
             )
@@ -502,13 +511,10 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private ObjectStatisticsImpl aggregateLocalGathering(StatisticsKey key, Set<Integer> partsToAggregate) {
         synchronized (mux) {
-            if (!stopLock.enterBusy())
-                return null;
-
             try {
                 StatisticsObjectConfiguration cfg = distrMetaStorage.read(key2String(key));
 
-                return repo.refreshAggregatedLocalStatistics(partsToAggregate, cfg);
+                return repo.aggregatedLocalStatistics(partsToAggregate, cfg);
             }
             catch (Throwable e) {
                 if (!X.hasCause(e, NodeStoppingException.class)) {
@@ -518,24 +524,12 @@ public class IgniteStatisticsConfigurationManager {
 
                 return null;
             }
-            finally {
-                stopLock.leaveBusy();
-            }
         }
     }
 
     /** */
     public StatisticsObjectConfiguration config(StatisticsKey key) throws IgniteCheckedException {
         return distrMetaStorage.read(key2String(key));
-    }
-
-    /** */
-    public List<StatisticsObjectConfiguration> config() throws IgniteCheckedException {
-        List<StatisticsObjectConfiguration> cfgs = new ArrayList<>();
-
-        distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> cfgs.add((StatisticsObjectConfiguration)v));
-
-        return cfgs;
     }
 
     /** */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,9 +66,6 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
     /** */
     private final Supplier<Boolean> cancelled;
 
-    /** Node stop lock. */
-    private final GridSpinBusyLock stopLock;
-
     /** */
     private final IgniteLogger log;
 
@@ -82,10 +79,8 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
         Column[] cols,
         Map<String, StatisticsColumnConfiguration> colCfgs,
         int partId,
-        GridSpinBusyLock stopLock,
         IgniteLogger log
     ) {
-        this.stopLock = stopLock;
         this.tbl = tbl;
         this.cols = cols;
         this.colCfgs = colCfgs;
@@ -141,28 +136,20 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
                 for (CacheDataRow row : grp.offheap().cachePartitionIterator(
                     tbl.cacheId(), partId, null, false))
                 {
-                    if (!stopLock.enterBusy())
-                        break;
+                    if (--checkInt == 0) {
+                        if (cancelled.get())
+                            throw new GatherStatisticCancelException();
 
-                    try {
-                        if (--checkInt == 0) {
-                            if (cancelled.get())
-                                throw new GatherStatisticCancelException();
-
-                            checkInt = CANCELLED_CHECK_INTERVAL;
-                        }
-
-                        if (!typeDesc.matchType(row.value()) || wasExpired(row))
-                            continue;
-
-                        H2Row h2row = tbl.rowDescriptor().createRow(row);
-
-                        for (ColumnStatisticsCollector colStat : collectors)
-                            colStat.add(h2row.getValue(colStat.col().getColumnId()));
+                        checkInt = CANCELLED_CHECK_INTERVAL;
                     }
-                    finally {
-                        stopLock.leaveBusy();
-                    }
+
+                    if (!typeDesc.matchType(row.value()) || wasExpired(row))
+                        continue;
+
+                    H2Row h2row = tbl.rowDescriptor().createRow(row);
+
+                    for (ColumnStatisticsCollector colStat : collectors)
+                        colStat.add(h2row.getValue(colStat.col().getColumnId()));
                 }
             }
             catch (IgniteCheckedException e) {

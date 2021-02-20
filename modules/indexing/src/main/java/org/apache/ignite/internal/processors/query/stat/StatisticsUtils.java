@@ -172,13 +172,4 @@ public class StatisticsUtils {
         String[] cols = (msg.colNames() == null) ? null : msg.colNames().toArray(new String[0]);
         return new StatisticsTarget(msg.schema(), msg.obj(), cols);
     }
-
-    /** */
-    public static StatisticsKeyMessage statisticsObjectConfiguration2Key(StatisticsObjectConfiguration cfg) {
-        return new StatisticsKeyMessage(
-            cfg.key().schema(),
-            cfg.key().obj(),
-            new ArrayList<>(cfg.columns().keySet())
-        );
-    }
 }

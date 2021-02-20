@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,9 +45,6 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 @SuppressWarnings("unchecked")
 public class StatisticsConfigurationTest extends StatisticsAbstractTest {
-    /** Statistics await timeout.*/
-    private static final long STAT_TIMEOUT = 5_000;
-
     /** Columns to check.*/
     private static final String[] COLUMNS = {"A", "B", "C"};
 
@@ -172,13 +169,13 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         stopGrid(0);
 
         startGrid(0);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
     }
 
     /**
@@ -198,11 +195,11 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         stopGrid(1);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
     }
 
     /**
@@ -220,35 +217,35 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         startGridAndChangeBaseline(1);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         startGridAndChangeBaseline(2);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         startGridAndChangeBaseline(3);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         stopGridAndChangeBaseline(0);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         stopGridAndChangeBaseline(2);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         stopGridAndChangeBaseline(3);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         startGridAndChangeBaseline(3);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
     }
 
     /**
@@ -270,17 +267,17 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         grid(0).context().query().getIndexing().statsManager()
             .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+        waitForStats("PUBLIC", "SMALL", TIMEOUT,
             (stats) -> stats.forEach(s -> assertNull(s.columnStatistics("A"))));
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
     }
 
     /**
@@ -305,30 +302,30 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         stopGrid(1);
 
         grid(0).context().query().getIndexing().statsManager()
             .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+        waitForStats("PUBLIC", "SMALL", TIMEOUT,
             (stats) -> {
                 stats.forEach(s -> assertNull("Invalid stats: " + stats, s.columnStatistics("A")));
             }
         );
 
-        checkStatisticsInMetastore(grid(0).context().cache().context().database(), STAT_TIMEOUT,
+        checkStatisticsInMetastore(grid(0).context().cache().context().database(), TIMEOUT,
             "PUBLIC", "SMALL", (s -> assertNull(s.data().get("A"))));
-        checkStatisticsInMetastore(grid(2).context().cache().context().database(), STAT_TIMEOUT,
+        checkStatisticsInMetastore(grid(2).context().cache().context().database(), TIMEOUT,
             "PUBLIC", "SMALL", (s -> assertNull(s.data().get("A"))));
 
         startGrid(1);
 
-        checkStatisticsInMetastore(grid(1).context().cache().context().database(), STAT_TIMEOUT,
+        checkStatisticsInMetastore(grid(1).context().cache().context().database(), TIMEOUT,
             "PUBLIC", "SMALL", (s -> assertNull(s.data().get("A"))));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows,
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows,
             (stats) -> {
                 stats.forEach(s -> assertNull("Invalid stats: " + stats, s.columnStatistics("A")));
             }
@@ -351,18 +348,18 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
             new StatisticsTarget("PUBLIC", "SMALL"),
             new StatisticsTarget("PUBLIC", "SMALL_A"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
-        waitForStats("PUBLIC", "SMALL_A", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL_A", TIMEOUT, checkTotalRows, checkColumStats);
 
         dropSmallTable(null);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+        waitForStats("PUBLIC", "SMALL", TIMEOUT,
             (stats) -> stats.forEach(s -> assertNull(s)));
 
-        waitForStats("PUBLIC", "SMALL_A", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL_A", TIMEOUT, checkTotalRows, checkColumStats);
 
         for (Ignite ign : G.allGrids()) {
-            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), STAT_TIMEOUT,
+            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), TIMEOUT,
                 "PUBLIC", "SMALL", (s -> assertNull(s)));
         }
     }
@@ -380,12 +377,12 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         sql("DROP INDEX SMALL_B");
         sql("ALTER TABLE SMALL DROP COLUMN B");
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+        waitForStats("PUBLIC", "SMALL", TIMEOUT,
             (stats) -> stats.forEach(s -> {
                 assertNotNull(s.columnStatistics("A"));
                 assertNotNull(s.columnStatistics("C"));
@@ -393,7 +390,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
             }));
 
         for (Ignite ign : G.allGrids()) {
-            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), STAT_TIMEOUT,
+            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), TIMEOUT,
                 "PUBLIC", "SMALL", (s -> assertNull(s.data().get("B"))));
         }
     }
@@ -415,7 +412,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT, checkTotalRows, checkColumStats);
+        waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
         stopGrid(2);
 
@@ -424,7 +421,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         startGrid(2);
 
-        waitForStats("PUBLIC", "SMALL", STAT_TIMEOUT,
+        waitForStats("PUBLIC", "SMALL", TIMEOUT,
             (stats) -> stats.forEach(s -> {
                 assertNotNull(s.columnStatistics("A"));
                 assertNotNull(s.columnStatistics("C"));
@@ -432,7 +429,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
             }));
 
         for (Ignite ign : G.allGrids()) {
-            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), STAT_TIMEOUT,
+            checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), TIMEOUT,
                 "PUBLIC", "SMALL", (s -> assertNull(s.data().get("B"))));
         }
     }

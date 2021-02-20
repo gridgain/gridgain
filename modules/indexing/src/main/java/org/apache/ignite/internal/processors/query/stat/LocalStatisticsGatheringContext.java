@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,14 @@ public class LocalStatisticsGatheringContext {
     private final Set<Integer> remainingParts;
 
     /**
-     *  Done future. Result: {@code true} gathering complete (stats from all partitions are gathered),
+     *  Complete gathering local partitioned statistics future.
+     *  Result:
+     *  {@code true} gathering complete (stats from all partitions are gathered),
      *  {@code false} gathering incomplete: one or more partitions not available.
      */
     private final CompletableFuture<Boolean> futGather;
 
-    /** Done future. */
+    /** Aggregate local statistic future. */
     private final CompletableFuture<ObjectStatisticsImpl> futAggregate;
 
     /** */
@@ -70,14 +72,21 @@ public class LocalStatisticsGatheringContext {
     }
 
     /**
-     * @return Collection control future.
+     *  Complete gathering local partitioned statistics future.
+     *  Result:
+     *  {@code true} gathering complete (stats from all partitions are gathered),
+     *  {@code false} gathering incomplete: one or more partitions not available.
+     *
+     * @return Gathering future.
      */
     public CompletableFuture<Boolean> futureGather() {
         return futGather;
     }
 
     /**
-     * @return Collection control future.
+     * Complete aggregation local statistics future.
+     *
+     * @return Aggregate future.
      */
     public CompletableFuture<ObjectStatisticsImpl> futureAggregate() {
         return futAggregate;

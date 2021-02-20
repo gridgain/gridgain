@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,19 +21,19 @@ import java.util.Objects;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- *
+ * Describe configuration of the statistic for a database object' column.
  */
 public class StatisticsColumnConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** */
+    /** Columns name. */
     private final String name;
 
-    /** */
+    /** Configuration version. */
     private final long ver;
 
-    /** */
+    /** Tombstone flag: {@code true} statistic for this column is dropped, otherwise {@code false}. */
     private final boolean tombstone;
 
     /** */
@@ -53,22 +53,40 @@ public class StatisticsColumnConfiguration implements Serializable {
         this.tombstone = tombstone;
     }
 
-    /** */
+    /**
+     * Get column name.
+     *
+     * @return Column name.
+     */
     public String name() {
         return name;
     }
 
-    /** */
+    /**
+     * Get configuration version.
+     *
+     * @return Configuration version.
+     */
     public long version() {
         return ver;
     }
 
-    /** */
+    /**
+     * Tombstone flag.
+     *
+     * @return {@code true} statistic for this column is dropped, otherwise {@code false}.
+     */
     public boolean tombstone() {
         return tombstone;
     }
 
-    /** */
+    /**
+     * Merge configuration changes with existing configuration.
+     *
+     * @param oldCfg Previous configuration. May be {@code null} when new configuration is created.
+     * @param newCfg New configuration.
+     * @return merged configuration.
+     */
     public static StatisticsColumnConfiguration merge(
         StatisticsColumnConfiguration oldCfg,
         StatisticsColumnConfiguration newCfg)
@@ -79,7 +97,11 @@ public class StatisticsColumnConfiguration implements Serializable {
         return new StatisticsColumnConfiguration(newCfg.name, oldCfg.ver + 1);
     }
 
-    /** */
+    /**
+     * Create configuration for dropped statistic column.
+     *
+     * @return Tombstone column configuration.
+     */
     public StatisticsColumnConfiguration createTombstone()
     {
         return new StatisticsColumnConfiguration(name, ver + 1, true);

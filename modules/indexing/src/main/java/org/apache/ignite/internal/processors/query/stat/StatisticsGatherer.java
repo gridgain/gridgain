@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,9 +51,6 @@ public class StatisticsGatherer {
     /** (cacheGroupId -> gather context) */
     private final ConcurrentMap<StatisticsKey, LocalStatisticsGatheringContext> gatheringInProgress = new ConcurrentHashMap<>();
 
-    /** Node stop lock. */
-    private final GridSpinBusyLock stopLock;
-
     /**
      * Constructor.
      *
@@ -64,16 +61,15 @@ public class StatisticsGatherer {
     public StatisticsGatherer(
         IgniteStatisticsRepository repo,
         IgniteThreadPoolExecutor gatherPool,
-        GridSpinBusyLock stopLock,
         Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.log = logSupplier.apply(StatisticsGatherer.class);
         this.statRepo = repo;
         this.gatherPool = gatherPool;
-        this.stopLock = stopLock;
     }
 
-    /** */
+    /**
+     */
     public LocalStatisticsGatheringContext aggregateStatisticsAsync(
         final StatisticsKey key,
         Supplier<ObjectStatisticsImpl> aggregate
@@ -152,7 +148,6 @@ public class StatisticsGatherer {
                 cols,
                 colCfgs,
                 part,
-                stopLock,
                 log
             );
 
@@ -200,9 +195,6 @@ public class StatisticsGatherer {
         int part,
         ObjectPartitionStatisticsImpl partStat)
     {
-        if (!stopLock.enterBusy())
-            return;
-
         try {
             if (partStat == null)
                 ctx.partitionNotAvailable(part);
@@ -223,10 +215,7 @@ public class StatisticsGatherer {
         }
         catch (Throwable ex) {
             if (!X.hasCause(ex, NodeStoppingException.class))
-                log.error("Unexpected error os statistic save", ex);
-        }
-        finally {
-            stopLock.leaveBusy();
+                log.error("Unexpected error on statistic save", ex);
         }
     }
 
@@ -243,5 +232,7 @@ public class StatisticsGatherer {
     /** */
     public void stop() {
         gatheringInProgress.values().forEach(ctx -> ctx.futureGather().cancel(true));
+
+        gatheringInProgress.clear();
     }
 }

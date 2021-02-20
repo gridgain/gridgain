@@ -148,7 +148,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
             }
             else {
                 if (log.isInfoEnabled()) {
-                    log.info(String.format("Found incontestable statistics version %d instead of %d. " +
+                    log.info(String.format("Found inconsistent statistics version %d instead of %d. " +
                         "Collected local statistics will be cleaned.", storeVer, VERSION));
                 }
             }

@@ -63,9 +63,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Gathering pool. */
     private final IgniteThreadPoolExecutor gatherPool;
 
-    /** Busy lock on node stop. */
-    private final GridSpinBusyLock stopLock;
-
     /**
      * Constructor.
      *
@@ -74,7 +71,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      */
     public IgniteStatisticsManagerImpl(GridKernalContext ctx, SchemaManager schemaMgr) {
         this.ctx = ctx;
-        stopLock = new GridSpinBusyLock();
 
         helper = new IgniteStatisticsHelper(ctx.localNodeId(), schemaMgr, ctx::log);
 
@@ -117,7 +113,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         gatherer = new StatisticsGatherer(
             statsRepos,
             gatherPool,
-            stopLock,
             ctx::log
         );
 
@@ -128,7 +123,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             statsRepos,
             gatherer,
             mgmtPool,
-            stopLock,
             ctx::log
         );
     }
@@ -168,8 +162,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
     /** {@inheritDoc} */
     @Override public void stop() {
-        stopLock.block();
-
         gatherer.stop();
 
         if (gatherPool != null) {

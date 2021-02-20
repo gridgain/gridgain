@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
@@ -93,7 +95,6 @@ public class IgniteStatisticsRepository {
         Collection<Integer> partitionsToRmv = new ArrayList<>();
 
         for (ObjectPartitionStatisticsImpl oldStat : oldStatistics) {
-
             ObjectPartitionStatisticsImpl newStat = subtract(oldStat, colNames);
 
             if (!newStat.columnsStatistics().isEmpty())
@@ -187,12 +188,6 @@ public class IgniteStatisticsRepository {
      * @param statistics Statistics to save.
      */
     public void saveLocalStatistics(StatisticsKey key, ObjectStatisticsImpl statistics) {
-        if (locStats == null) {
-            log.warning("Unable to save local statistics for " + key + " on non server node.");
-
-            return;
-        }
-
         locStats.put(key, statistics);
     }
 
@@ -203,9 +198,6 @@ public class IgniteStatisticsRepository {
      * @return Object local statistics or {@code null} if there are no statistics collected for such object.
      */
     public ObjectStatisticsImpl getLocalStatistics(StatisticsKey key) {
-        if (locStats == null)
-            return null;
-
         return locStats.get(key);
     }
 
@@ -281,17 +273,22 @@ public class IgniteStatisticsRepository {
         return res;
     }
 
-    /** */
-    public ObjectStatisticsImpl refreshAggregatedLocalStatistics(
+    /**
+     * Scan local partitioned statistic and aggregate local statistic for specified statistic object.
+     * @param parts Partitions numbers to aggregate,
+     * @param cfg Statistic configuration to specify statistic object to aggregate.
+     * @return aggregated local statistic.
+     */
+    public ObjectStatisticsImpl aggregatedLocalStatistics(
         Set<Integer> parts,
-        StatisticsObjectConfiguration objStatCfg
+        StatisticsObjectConfiguration cfg
     ) {
         if (log.isDebugEnabled()) {
-            log.debug("Refresh local aggregated statistic [cfg=" + objStatCfg +
+            log.debug("Refresh local aggregated statistic [cfg=" + cfg +
                 ", part=" + parts + ']');
         }
 
-        Collection<ObjectPartitionStatisticsImpl> stats = store.getLocalPartitionsStatistics(objStatCfg.key());
+        Collection<ObjectPartitionStatisticsImpl> stats = store.getLocalPartitionsStatistics(cfg.key());
 
         Collection<ObjectPartitionStatisticsImpl> statsToAgg = stats.stream()
             .filter(s -> parts.contains(s.partId()))
@@ -299,12 +296,18 @@ public class IgniteStatisticsRepository {
 
         assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough partitioned statistics";
 
+        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(
+            cfg.key().schema(),
+            cfg.key().obj(),
+            new ArrayList<>(cfg.columns().keySet())
+        );
+
         ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(
-            StatisticsUtils.statisticsObjectConfiguration2Key(objStatCfg),
+            keyMsg,
             statsToAgg
         );
 
-        saveLocalStatistics(objStatCfg.key(), locStat);
+        saveLocalStatistics(cfg.key(), locStat);
 
         return locStat;
     }

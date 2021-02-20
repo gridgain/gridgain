@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,17 +32,17 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- *
+ * Describe configuration of the statistic for a database object (e.g. TABLE).
  */
 public class StatisticsObjectConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** */
+    /** Database object key (schema and name). */
     @GridToStringInclude
     private final StatisticsKey key;
 
-    /** */
+    /** Map of the statistic configurations for columns (column_name -> configuration). */
     @GridToStringInclude
     private final Map<String, StatisticsColumnConfiguration> cols;
 
@@ -58,7 +58,13 @@ public class StatisticsObjectConfiguration implements Serializable {
             );
     }
 
-    /** */
+    /**
+     * Merge configuration changes with existing configuration.
+     *
+     * @param oldCfg Previous configuration. May be {@code null} when new configuration is created.
+     * @param newCfg Contains target configuration changes.
+     * @return merged configuration.
+     */
     public static StatisticsObjectConfiguration merge(
         StatisticsObjectConfiguration oldCfg,
         StatisticsObjectConfiguration newCfg
@@ -74,7 +80,13 @@ public class StatisticsObjectConfiguration implements Serializable {
         return new StatisticsObjectConfiguration(newCfg.key, cols.values());
     }
 
-    /** */
+    /**
+     * Creates new configuration object for drop specified columns from current configuration.
+     * Marks dropped columns as tombstone.
+     *
+     * @param dropColNames Set of dropped columns.
+     * @return Result configuration object.
+     */
     public StatisticsObjectConfiguration dropColumns(Set<String> dropColNames) {
         if (F.isEmpty(dropColNames))
             dropColNames = cols.keySet();
@@ -91,7 +103,13 @@ public class StatisticsObjectConfiguration implements Serializable {
         return new StatisticsObjectConfiguration(key, newCols.values());
     }
 
-    /** */
+    /**
+     * Calculate diff between two configuration.
+     *
+     * @param oldCfg Current configuration.
+     * @param newCfg Target configuration.
+     * @return Configurations differences.
+     */
     public static Diff diff(
         StatisticsObjectConfiguration oldCfg,
         StatisticsObjectConfiguration newCfg
@@ -114,17 +132,28 @@ public class StatisticsObjectConfiguration implements Serializable {
         return new Diff(dropCols, updateCols);
     }
 
-    /** */
+    /**
+     * Get database object key (schema and name).
+     * @return statistic key.
+     */
     public StatisticsKey key() {
         return key;
     }
 
-    /** */
+    /**
+     * Get configurations of all statistic columns includes tombstone configuration objects (dropped columns).
+     *
+     * @return statistic key.
+     */
     public Map<String, StatisticsColumnConfiguration> columnsAll() {
         return cols;
     }
 
-    /** */
+    /**
+     * Get configurations of statistic columns.
+     *
+     * @return statistic key.
+     */
     public Map<String, StatisticsColumnConfiguration> columns() {
         return cols.entrySet().stream()
             .filter(e -> !e.getValue().tombstone())
@@ -155,12 +184,18 @@ public class StatisticsObjectConfiguration implements Serializable {
         return S.toString(StatisticsObjectConfiguration.class, this);
     }
 
-    /** */
+    /**
+     * Difference between current and target configuration.
+     */
     public static class Diff {
-        /** */
+        /**
+         * Statistic columns to drop.
+         */
         private final Set<String> dropCols;
 
-        /** */
+        /**
+         * Statistic columns to update.
+         */
         private final Map<String, StatisticsColumnConfiguration> updateCols;
 
         /** */
@@ -172,12 +207,20 @@ public class StatisticsObjectConfiguration implements Serializable {
             this.updateCols = updateCols;
         }
 
-        /** */
+        /**
+         * Statistics columns to drop.
+         *
+         * @return Set of the columns' names.
+         */
         public Set<String> dropCols() {
             return dropCols;
         }
 
-        /** */
+        /**
+         * Statistics columns to update.
+         *
+         * @return Map of the statistic configuration for columns (column_name -> column_configuration).
+         */
         public Map<String, StatisticsColumnConfiguration> updateCols() {
             return updateCols;
         }
