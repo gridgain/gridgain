@@ -1626,7 +1626,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     else
                         storageSize.set(reconciliationCacheSize + reconciliationCtx.storageSizeDelta(cacheId) + reconciliationCtx.keysAfterCounters.get(cacheId).get());
 
-                CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfterCounter: " + reconciliationCtx.keysAfterCounters.get(cacheId).get());
+                CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "xxxxxxxxxxxx reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfterCounter: " + reconciliationCtx.keysAfterCounters.get(cacheId).get());
 
                 System.out.println(CollectPartitionKeysByBatchTask.msg);
 
@@ -1753,13 +1753,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Override public void updateSize(int cacheId, long delta, KeyCacheObject key) {
             System.out.println("qdrvgdrfa updateSize key before synchronized: " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
             synchronized (reconciliationCtx.reconciliationMux()) {
-                System.out.println("qdrvgdrfa updateSize key before sReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
+                System.out.println("qdrvgdrfa updateSize key before isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
                 if (reconciliationCtx.isReconciliationInProgress()) {
 
-                    System.out.println("qdrvgdrfa updateSize key after sReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
+                    System.out.println("qdrvgdrfa updateSize key after isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
                     reconciliationCtx.keysAfterCounters.putIfAbsent(cacheId, new AtomicLong());
                     reconciliationCtx.keysAfterCounters.get(cacheId).addAndGet(delta);
-                    System.out.println("qdrvlkiyt updateSize key after sReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
+                    System.out.println("qdrvlkiyt updateSize key after isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
 
                 if (reconciliationCtx.isBatchesInProgress()) {
 //                    while (reconciliationCtx.lastKey(cacheId) == null && reconciliationCtx.isReconciliationInProgress()) {

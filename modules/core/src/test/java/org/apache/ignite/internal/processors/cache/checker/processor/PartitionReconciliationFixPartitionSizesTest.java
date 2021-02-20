@@ -32,6 +32,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -41,6 +42,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.FinalizeCountersDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
@@ -159,7 +161,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 1;
+        int endKey = 50000;
 
         for (int i = startKey; i < endKey; i++) {
             i += 1;
@@ -319,13 +321,24 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
 //        endKey = 1000;
 
+        try {
+            FinalizeCountersDiscoveryMessage msg = new FinalizeCountersDiscoveryMessage();
+
+            msg.partSizesMap = res.get().partSizesMap();
+
+            grid(0).context().discovery().sendCustomEvent(msg);
+        }
+        catch (IgniteCheckedException e) {
+            e.printStackTrace();
+        }
+
         for (int i = startKey; i < endKey; i++) {
             cache.put(i, i);
 
 //            System.out.println("qfegsdg put after all: " + i);
         }
 
-        System.out.println(CollectPartitionKeysByBatchTask.msg);
+//        System.out.println(CollectPartitionKeysByBatchTask.msg);
 
         assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size());
 //        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());

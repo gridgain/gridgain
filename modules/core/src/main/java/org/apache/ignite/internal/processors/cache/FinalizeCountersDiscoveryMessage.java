@@ -1,5 +1,8 @@
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
@@ -11,6 +14,8 @@ public class FinalizeCountersDiscoveryMessage implements DiscoveryCustomMessage 
 
     /** Custom message ID. */
     private IgniteUuid id = IgniteUuid.randomUuid();
+
+    public Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = new HashMap();
 
     @Override public IgniteUuid id() {
         return id;

@@ -258,6 +258,8 @@ public class RepairSizesTask extends ComputeTaskAdapter<RepairSizesRequest, Exec
 
             IgniteCacheOffheapManager.CacheDataStore dataStore = grpCtx.topology().localPartition(partId).dataStore();
 
+            System.out.println("qvredfgs RepairSizesJob flushReconciliationResult");
+
             dataStore.flushReconciliationResult(cacheId, partSize);
 
             return new ExecutionResult<>(new RepairSizesResult());

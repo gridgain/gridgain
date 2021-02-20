@@ -260,6 +260,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 }
             }
 
+//            collector()
+
             return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()));
         }
         catch (InterruptedException | IgniteException e) {

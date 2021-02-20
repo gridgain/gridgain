@@ -42,6 +42,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.expiry.EternalExpiryPolicy;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -89,6 +90,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.StateChangeRequest;
 import org.apache.ignite.internal.processors.cache.WalStateAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter;
@@ -1763,8 +1765,39 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         if (events().hasServerLeft() ||
             exchangeId().discoveryEvent() instanceof DiscoveryCustomEvent &&
-                ((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage() instanceof FinalizeCountersDiscoveryMessage)
-            finalizePartitionCounters();
+                ((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage() instanceof FinalizeCountersDiscoveryMessage) {
+            FinalizeCountersDiscoveryMessage msg = (FinalizeCountersDiscoveryMessage)((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage();
+
+
+
+//            IgniteCache<Object, Object> cache = cctx.cache(partBatch.cacheName());
+//sharedContext().cacheContext(1).offheap()
+//            GridCacheContext<Object, Object> cctx = .cache().cache("default").context();
+//
+//            CacheGroupContext grpCtx = cctx.group();
+//
+//            int cacheId = cctx.cacheId();
+//
+//            grpCtx.offheap().dataStore(part)
+
+//            GridDhtLocalPartition part = cctx.cacheContext().topology().localPartition(partBatch.partitionId());
+
+            msg.partSizesMap.forEach((cacheId, map) -> {
+                GridCacheContext cacheContext = sharedContext().cacheContext(cacheId);
+                IgniteCacheOffheapManager offheap = cacheContext.offheap();
+                map.forEach((partId, nodeMap) -> {
+                    GridDhtLocalPartition partition = cacheContext.topology().localPartition(partId);
+                    IgniteCacheOffheapManager.CacheDataStore part = offheap.dataStore(partition);
+
+                    Long partSize = nodeMap.get(sharedContext().localNodeId());
+
+                    part.flushReconciliationResult(cacheId, partSize);
+
+                });
+            });
+
+//            finalizePartitionCounters();
+        }
 
         cctx.exchange().exchangerBlockingSectionBegin();
 
