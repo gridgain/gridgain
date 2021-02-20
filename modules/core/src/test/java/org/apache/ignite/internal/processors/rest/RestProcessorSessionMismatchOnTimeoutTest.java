@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,26 +34,25 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Test reproduces GG-26664 when snapshot-utility stopped sending topology and progress update requests during some
- * period of time which forces server to remove session because of timeout
+ * Test reproduces situation when snapshot-utility stopped sending topology and progress update requests for some
+ * period of time and server removed session for snapshot-utility operation after timeout.
  */
 public class RestProcessorSessionMismatchOnTimeoutTest {
-
     /** Unsupported case error message. */
     private static final String UNSUPPORTED_CASE_ERROR_MESSAGE_BEGIN =
         "Failed to handle request - unsupported case (mismatched clientId and session token)";
 
-    /** Illagal exception message*/
+    /** Illegal exception message. */
     private static final String AUTH_EXCEPTION_EXPECTED = "IgniteAuthenticationException was expected";
 
-    /** Rest processor to test */
+    /** Rest processor to test. */
     private GridRestProcessor processor;
 
-    /** Private method "session" of {@link GridRestProcessor} */
+    /** Private method "session" of {@link GridRestProcessor}. */
     private Method sesMtdInternal;
 
     /**
-     * Preparation for test
+     * Preparation for test.
      */
     @Before
     public void before() throws NoSuchMethodException {
@@ -66,7 +65,7 @@ public class RestProcessorSessionMismatchOnTimeoutTest {
     }
 
     /**
-     * Check that correct error is thrown when rest session was timed out to forces client to re-authenticate himself
+     * Check that correct error is thrown when rest session was timed out so client will re-authenticate itself.
      */
     @Test
     public void throwAuthExceptionWhenSessionTimedOut() {
