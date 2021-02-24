@@ -156,7 +156,18 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             if (data.get2().errorMessage() != null)
                 errors.add(nodeId + " - " + data.get2().errorMessage());
 
-            partSizesMap.putAll(data.get2().result().get2());
+            System.out.println("qsdfewrfwef");
+
+            data.get2().result().get2().entrySet().forEach(e -> {
+                partSizesMap.putIfAbsent(e.getKey(), new HashMap<>());
+//                partSizesMap.putIfAbsent(e.getKey(), e.getValue());
+                e.getValue().entrySet().forEach(e0 -> {
+                    partSizesMap.get(e.getKey()).put(e0.getKey(), e0.getValue());
+                });
+
+            });
+
+//            partSizesMap.putAll(data.get2().result().get2());
         }
 
         return new ReconciliationResult(res, partSizesMap, nodeIdToFolder, errors);

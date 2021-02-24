@@ -161,10 +161,10 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 50000;
+        int endKey = 100000;
 
         for (int i = startKey; i < endKey; i++) {
-            i += 1;
+            i += 2;
             if (i < endKey)
                 cache.put(i, i);
         }
@@ -176,9 +176,9 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
-//        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
+        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
 //
-//        assertFalse(cache.size() == startSize);
+        assertFalse(cache.size() == startSize);
 
 //        doSleep(500);
 
@@ -213,8 +213,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //                    e.printStackTrace();
 //                }
 
-                i1 = startKey + rnd.nextInt(endKey - startKey);
-                cache.remove(i1);
+//                int i1 = startKey + rnd.nextInt(endKey - startKey);
+//                cache.remove(i1);
 
 //                try {
 //                    sleep(3);
@@ -317,7 +317,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        loadFut1.get();
 //        loadFut2.get();
 
-//        doSleep(5000);
+        doSleep(500);
 
 //        endKey = 1000;
 
@@ -325,6 +325,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             FinalizeCountersDiscoveryMessage msg = new FinalizeCountersDiscoveryMessage();
 
             msg.partSizesMap = res.get().partSizesMap();
+
+            System.out.println("qsdzgsdfg msg.partSizesMap.size(): " + msg.partSizesMap.size());
 
             grid(0).context().discovery().sendCustomEvent(msg);
         }
@@ -338,7 +340,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //            System.out.println("qfegsdg put after all: " + i);
         }
 
-//        System.out.println(CollectPartitionKeysByBatchTask.msg);
+        System.out.println("qdsvdrd " + CollectPartitionKeysByBatchTask.msg);
+        System.out.println("qcsdfrs " + CollectPartitionKeysByBatchTask.msg1);
 
         assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size());
 //        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());

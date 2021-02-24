@@ -262,6 +262,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
 //            collector()
 
+            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size());
+
             return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()));
         }
         catch (InterruptedException | IgniteException e) {
@@ -329,6 +331,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     collector.partSizesMap().putIfAbsent(workload.cacheId(), new HashMap<>());
 
                     collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.get3());
+
+                    System.out.println("qsdfverdsf " + workload.partitionId());
                 }
 
                 if (!recheckKeys.isEmpty()) {
@@ -399,7 +403,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 if (counter.get() == 0) {
                     System.out.println("qvfdrbzdf");
-                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
+//                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
                 }
             });
     }

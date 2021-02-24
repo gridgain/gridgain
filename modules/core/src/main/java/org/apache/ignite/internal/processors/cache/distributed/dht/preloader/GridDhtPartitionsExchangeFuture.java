@@ -1763,10 +1763,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         changeWalModeIfNeeded();
 
-        if (events().hasServerLeft() ||
-            exchangeId().discoveryEvent() instanceof DiscoveryCustomEvent &&
-                ((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage() instanceof FinalizeCountersDiscoveryMessage) {
-            FinalizeCountersDiscoveryMessage msg = (FinalizeCountersDiscoveryMessage)((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage();
+        if (events().hasServerLeft())
+            finalizePartitionCounters();
+
+        if ((exchangeId().discoveryEvent() instanceof DiscoveryCustomEvent &&
+                (((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage()) instanceof FinalizeCountersDiscoveryMessage)) {
+            FinalizeCountersDiscoveryMessage msg = (FinalizeCountersDiscoveryMessage)(((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage());
 
 
 
@@ -1786,6 +1788,22 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 GridCacheContext cacheContext = sharedContext().cacheContext(cacheId);
                 IgniteCacheOffheapManager offheap = cacheContext.offheap();
                 map.forEach((partId, nodeMap) -> {
+//                    int[] cacheParts = ignite.affinity(name).primaryPartitions(ignite.localNode());
+
+                    List<ClusterNode> owners = cacheContext.topology().owners(partId, exchCtx.events().topologyVersion());
+
+                    System.out.println("qdsvsdra");
+
+//                    if (!owners.contains(cctx.localNode()))
+//                        return;
+
+                    if (!nodeMap.containsKey(sharedContext().localNodeId()))
+                        return;
+
+//                    int[] cacheParts = cctx.primaryPartitions(ignite.localNode());
+
+                    System.out.println("qsrrtsdf ");
+
                     GridDhtLocalPartition partition = cacheContext.topology().localPartition(partId);
                     IgniteCacheOffheapManager.CacheDataStore part = offheap.dataStore(partition);
 
