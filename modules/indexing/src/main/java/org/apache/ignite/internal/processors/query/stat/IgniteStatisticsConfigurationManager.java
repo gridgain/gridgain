@@ -64,13 +64,16 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
 
-    /** */
-    private final IgniteStatisticsRepository repo;
-
     /** Schema manager. */
     private final SchemaManager schemaMgr;
 
-    /** */
+    /** Distributed metastore. */
+    private volatile DistributedMetaStorage distrMetaStorage;
+
+    /** Statistics repository.*/
+    private final IgniteStatisticsRepository repo;
+
+    /** Statistic gatherer. */
     private final StatisticsGatherer gatherer;
 
     /** */
@@ -79,10 +82,7 @@ public class IgniteStatisticsConfigurationManager {
     /** Logger. */
     private final IgniteLogger log;
 
-    /** Distributed metastore. */
-    private volatile DistributedMetaStorage distrMetaStorage;
-
-    /** */
+    /** Started flag (used to skip updates of the distributed metastorage on start). */
     private volatile boolean started;
 
     /** Monitor to synchronize changes repository: aggregate after collects and drop statistics. */
@@ -225,7 +225,7 @@ public class IgniteStatisticsConfigurationManager {
      *
      * @param targets DB objects to statistics update.
      */
-    public void dropStatistics(List<StatisticsTarget> targets) {
+    public void dropStatistics(List<StatisticsTarget> targets, boolean validate) {
         if (log.isDebugEnabled())
             log.debug("Drop statistics [targets=" + targets + ']');
 
@@ -236,8 +236,8 @@ public class IgniteStatisticsConfigurationManager {
                 while (true) {
                     StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
 
-                    if (oldCfg == null)
-                        break;
+                    if (validate)
+                        validateDropRefresh(target, oldCfg);
 
                     StatisticsObjectConfiguration newCfg = oldCfg.dropColumns(
                         target.columns() != null ?
@@ -260,23 +260,25 @@ public class IgniteStatisticsConfigurationManager {
      * Drop all local statistics on the cluster.
      */
     public void dropAll() {
-        mgmtPool.submit(() -> {
-            try {
-                final List<StatisticsTarget> targetsToRemove = new ArrayList<>();
+        try {
+            final List<StatisticsTarget> targetsToRemove = new ArrayList<>();
 
-                distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> {
-                        StatisticsKey statKey = ((StatisticsObjectConfiguration)v).key();
+            distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> {
+                    StatisticsKey statKey = ((StatisticsObjectConfiguration)v).key();
 
+                    StatisticsObjectConfiguration cfg = (StatisticsObjectConfiguration)v;
+
+                    if (!F.isEmpty(cfg.columns()))
                         targetsToRemove.add(new StatisticsTarget(statKey, null));
-                    }
-                );
+                }
+            );
 
-                dropStatistics(targetsToRemove);
-            }
-            catch (IgniteCheckedException e) {
-                log.warning("Unexpected exception drop all statistics", e);
-            }
-        });
+            dropStatistics(targetsToRemove, false);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteSQLException(
+                "Unexpected exception drop all statistics", IgniteQueryErrorCode.UNKNOWN, e);
+        }
     }
 
     /**
@@ -295,8 +297,7 @@ public class IgniteStatisticsConfigurationManager {
                 while (true) {
                     StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
 
-                    if (oldCfg == null)
-                        break;
+                    validateDropRefresh(target, oldCfg);
 
                     StatisticsObjectConfiguration newCfg = oldCfg.refresh(
                         target.columns() != null ?
@@ -334,6 +335,30 @@ public class IgniteStatisticsConfigurationManager {
             }
         }
     }
+
+    /** */
+    private void validateDropRefresh(StatisticsTarget target, StatisticsObjectConfiguration cfg) {
+        if (cfg == null || F.isEmpty(cfg.columns())) {
+            throw new IgniteSQLException(
+                "Statistic doesn't exist for [schema=" + target.schema() + ", obj=" + target.obj() + ']',
+                IgniteQueryErrorCode.TABLE_NOT_FOUND
+            );
+        }
+
+        if (!F.isEmpty(target.columns())) {
+            for (String col : target.columns()) {
+                if (!cfg.columns().containsKey(col)) {
+                    throw new IgniteSQLException(
+                        "Statistic doesn't exist for [" +
+                            "schema=" + cfg.key().schema() +
+                            ", obj=" + cfg.key().obj() +
+                            ", col=" + col + ']',
+                        IgniteQueryErrorCode.COLUMN_NOT_FOUND
+                    );
+                }
+            }
+        }
+   }
 
     /**
      * Scan local statistic saved at the local metastorage, compare ones to statistic configuration.
@@ -527,20 +552,34 @@ public class IgniteStatisticsConfigurationManager {
     private void onDropColumns(GridH2Table tbl, List<String> cols) {
         assert !F.isEmpty(cols);
 
-        dropStatistics(Collections.singletonList(
-            new StatisticsTarget(
-                tbl.identifier().schema(),
-                tbl.getName(),
-                cols.toArray(IgniteUtils.EMPTY_STRINGS)
-            )
-        ));
+        dropStatistics(
+            Collections.singletonList(
+                new StatisticsTarget(
+                    tbl.identifier().schema(),
+                    tbl.getName(),
+                    cols.toArray(IgniteUtils.EMPTY_STRINGS)
+                )
+            ),
+            false
+        );
     }
 
     /** */
     private void onDropTable(String schema, String name) {
         assert !F.isEmpty(schema) && !F.isEmpty(name) : schema + ":" + name;
 
-        dropStatistics(Collections.singletonList(new StatisticsTarget(schema, name)));
+        StatisticsKey key = new StatisticsKey(schema, name);
+
+        try {
+            StatisticsObjectConfiguration cfg = config(key);
+
+            if (cfg != null && !F.isEmpty(cfg.columns()))
+                dropStatistics(Collections.singletonList(new StatisticsTarget(schema, name)), false);
+        }
+        catch (Throwable e) {
+            if (!X.hasCause(e, NodeStoppingException.class))
+                throw new IgniteSQLException("Error on drop statistics for dropped table [key=" + key + ']', e);
+        }
     }
 
     /** */

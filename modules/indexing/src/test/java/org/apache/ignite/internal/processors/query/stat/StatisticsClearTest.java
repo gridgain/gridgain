@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -71,7 +72,12 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
         IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
 
-        statMgr1.dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME"));
+        GridTestUtils.assertThrows(
+            log,
+            () -> statMgr1.dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME")),
+            IgniteSQLException.class,
+            "Statistic doesn't exist for [schema=PUBLIC, obj=NO_NAME]"
+        );
 
         Assert.assertNull(statMgr0.getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
         Assert.assertNull(statMgr1.getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));

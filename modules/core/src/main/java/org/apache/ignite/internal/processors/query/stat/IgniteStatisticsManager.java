@@ -45,7 +45,9 @@ public interface IgniteStatisticsManager {
      */
     public void refreshStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
 
-        /** Drop all statistics. */
+    /**
+     * Drop all statistics.
+     */
     void dropAll() throws IgniteCheckedException;
 
     /**

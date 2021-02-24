@@ -15,10 +15,13 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.function.Predicate;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -50,6 +53,13 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
         sql("CREATE INDEX TEXT_NAME ON TEST(NAME);");
     }
 
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        clearStat();
+    }
+
     /**
      * 1) Analyze two test table one by one and test statistics collected
      * 2) Clear collected statistics
@@ -59,7 +69,6 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
     public void testAnalyze() throws IgniteCheckedException {
         sql("ANALYZE TEST");
 
-        //U.sleep(1000);
         testStatistics(SCHEMA, "TEST", false);
 
         sql("ANALYZE PUBLIC.TEST2(name)");
@@ -84,7 +93,6 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      * 2) Test that there are statistics collected (new after schema implementation).
      * 3) Clear statistics and refresh one again.
      * 4) Test that now only one statistics exists.
-     * @throws IgniteCheckedException
      */
     @Test
     public void testRefreshStatistics() throws IgniteCheckedException {
@@ -102,8 +110,39 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
 
         sql("REFRESH STATISTICS PUBLIC.TEST, test2");
 
-        testStatisticsVersion(SCHEMA, "TEST", testVer);
-        testStatisticsVersion(SCHEMA, "TEST2", test2Ver);
+        testStatisticsVersion(SCHEMA, "TEST", newVer -> newVer > testVer);
+        testStatisticsVersion(SCHEMA, "TEST2", newVer -> newVer > test2Ver);
+    }
+
+    /**
+     * 1) Refresh not exist statistics for table.
+     * 2) Refresh not exist statistics for column.
+     *
+     * Check that correct exception is thrown in all cases.
+     */
+    @Test
+    public void testRefreshNotExistStatistics() throws IgniteInterruptedCheckedException {
+        GridTestUtils.assertThrows(
+            log,
+            () -> sql("REFRESH STATISTICS PUBLIC.TEST"),
+            IgniteSQLException.class,
+            "Statistic doesn't exist for [schema=PUBLIC, obj=TEST]"
+        );
+
+        sql("ANALYZE PUBLIC.TEST(id)");
+
+        testStatistics(SCHEMA, "TEST", false);
+
+        long testVer = sumStatisticsVersion(SCHEMA, "TEST");
+
+        GridTestUtils.assertThrows(
+            log,
+            () -> sql("REFRESH STATISTICS PUBLIC.TEST (id, name)"),
+            IgniteSQLException.class,
+            "Statistic doesn't exist for [schema=PUBLIC, obj=TEST, col=NAME]"
+        );
+
+        testStatisticsVersion(SCHEMA, "TEST", newVer -> newVer == testVer);
     }
 
     /**
@@ -146,6 +185,31 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
     }
 
     /**
+     * 1) Drop not exist statistics for table.
+     * 2) Drop not exist statistics for column.
+     *
+     * Check that correct exception is thrown in all cases.
+     */
+    @Test
+    public void testDropNotExistStatistics() {
+        GridTestUtils.assertThrows(
+            log,
+            () -> sql("DROP STATISTICS PUBLIC.TEST"),
+            IgniteSQLException.class,
+            "Statistic doesn't exist for [schema=PUBLIC, obj=TEST]"
+        );
+
+        sql("ANALYZE PUBLIC.TEST(id)");
+
+        GridTestUtils.assertThrows(
+            log,
+            () -> sql("DROP STATISTICS PUBLIC.TEST (id, name)"),
+            IgniteSQLException.class,
+            "Statistic doesn't exist for [schema=PUBLIC, obj=TEST, col=NAME]"
+        );
+    }
+
+    /**
      * Test ability to create table, index and statistics on table named STATISTICS:
      *
      * 1) Create table STATISTICS with column STATISTICS.
@@ -182,9 +246,7 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      * @throws IgniteCheckedException In case of errors.
      */
     private void clearStat() throws IgniteCheckedException {
-        IgniteStatisticsManager statMgr = grid(0).context().query().getIndexing().statsManager();
-        statMgr.dropStatistics(new StatisticsTarget(SCHEMA, "TEST"),
-            new StatisticsTarget(SCHEMA, "TEST2"));
+        grid(0).context().query().getIndexing().statsManager().dropAll();
     }
 
     /**
@@ -212,7 +274,7 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      * @param schema Schema name.
      * @param obj Object name.
      */
-    private void testStatisticsVersion(String schema, String obj, long ver) throws IgniteInterruptedCheckedException {
+    private void testStatisticsVersion(String schema, String obj, Predicate<Long> verChecker) throws IgniteInterruptedCheckedException {
         assertTrue(GridTestUtils.waitForCondition(() -> {
             for (Ignite node : G.allGrids()) {
                 IgniteStatisticsManager nodeStatMgr = ((IgniteEx) node).context().query().getIndexing().statsManager();
@@ -225,7 +287,7 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
                     .mapToLong(ColumnStatistics::version)
                     .sum();
 
-                if (sumVer <= ver)
+                if (!verChecker.test(sumVer))
                     return false;
             }
 

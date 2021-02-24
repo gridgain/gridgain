@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -117,10 +118,15 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL"));
 
         assertTrue(GridTestUtils.waitForCondition(() ->
-            null == (ObjectStatisticsImpl) statsMgr
+            null == statsMgr
                 .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL")), TIMEOUT));
 
-        statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL"));
+        GridTestUtils.assertThrows(
+            log,
+            () -> statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL")),
+            IgniteSQLException.class,
+            "Statistic doesn't exist for [schema=PUBLIC, obj=SMALL]"
+        );
 
         Thread.sleep(TIMEOUT);
 
@@ -148,7 +154,12 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         assertNotNull(locStat);
         assertNotNull(locStat.columnsStatistics().get("A"));
 
-        statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
+        GridTestUtils.assertThrows(
+            log,
+            () -> statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B")),
+            IgniteSQLException.class,
+            "Statistic doesn't exist for [schema=PUBLIC, obj=SMALL, col=B]"
+        );
 
         Thread.sleep(TIMEOUT);
 

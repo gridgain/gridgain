@@ -150,7 +150,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     @Override public void dropStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
         checkStatisticsSupport("drop statistics");
 
-        statCfgMgr.dropStatistics(Arrays.asList(targets));
+        statCfgMgr.dropStatistics(Arrays.asList(targets), true);
     }
 
     /** {@inheritDoc} */
