@@ -121,7 +121,7 @@ public class StatisticsColumnConfiguration implements Serializable {
      */
     public StatisticsColumnConfiguration refresh()
     {
-        return new StatisticsColumnConfiguration(this,  tombstone ? ver : ver + 1, tombstone);
+        return new StatisticsColumnConfiguration(this, tombstone ? ver : ver + 1, tombstone);
     }
 
     /** {@inheritDoc} */
