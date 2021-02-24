@@ -239,6 +239,9 @@ public class IgniteStatisticsConfigurationManager {
                     if (validate)
                         validateDropRefresh(target, oldCfg);
 
+                    if (oldCfg == null)
+                        return;
+
                     StatisticsObjectConfiguration newCfg = oldCfg.dropColumns(
                         target.columns() != null ?
                             Arrays.stream(target.columns()).collect(Collectors.toSet()) :
