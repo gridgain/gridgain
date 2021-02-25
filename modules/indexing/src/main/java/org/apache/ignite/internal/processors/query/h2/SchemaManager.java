@@ -570,7 +570,6 @@ public class SchemaManager {
         if (log.isDebugEnabled())
             log.debug("Removing query index table: " + tbl.fullTableName());
 
-        log.info("+++ DROP " + tbl + ", " + destroy);
         try (H2PooledConnection c = connMgr.connection(tbl.schemaName())) {
             Statement stmt = null;
 
