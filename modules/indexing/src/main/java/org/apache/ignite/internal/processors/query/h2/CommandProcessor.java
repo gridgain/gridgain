@@ -542,7 +542,7 @@ public class CommandProcessor {
      *
      * @param cmd Drop statistics command.
      */
-    private void processDropStatisticsCommand(SqlDropStatisticsCommand cmd) {
+    private void processDropStatisticsCommand(SqlDropStatisticsCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
 
         IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
@@ -551,13 +551,7 @@ public class CommandProcessor {
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        try {
-            statMgr.dropStatistics(targets);
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteSQLException("Failed to drop statistics on targets " + cmd.targets() + ", err="
-                + e.getMessage() + "]", e);
-        }
+        statMgr.dropStatistics(targets);
     }
 
     /**

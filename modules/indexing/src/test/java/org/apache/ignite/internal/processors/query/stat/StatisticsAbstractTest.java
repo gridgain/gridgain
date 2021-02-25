@@ -266,9 +266,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected void dropSmallTable(String suffix) {
         suffix = suffix != null ? suffix : "";
 
-        grid(0).destroyCache("SMALL" + suffix);
-
-//        sql("DROP TABLE IF EXISTS small" + suffix);
+        sql("DROP TABLE IF EXISTS small" + suffix);
     }
 
     /**
@@ -442,6 +440,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     /**
      * Await statistic gathering is complete on whole cluster.
      *
+     * @param timeout Timeout.
+     * @param expectedVersions Expected versions for specified targets.
      * @throws Exception In case of errors.
      */
     protected void awaitStatistics(long timeout, Map<StatisticsTarget, Long> expectedVersions) throws Exception {
@@ -454,6 +454,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     /**
      * Await statistic gathering is complete on specified node.
      *
+     * @param timeout Timeout.
+     * @param expectedVersions Expected versions for specified targets.
+     * @param ign Node to await.
      * @throws Exception In case of errors.
      */
     protected void awaitStatistics(long timeout, Map<StatisticsTarget, Long> expectedVersions, IgniteEx ign)
