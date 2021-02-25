@@ -1136,11 +1136,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (part == null)
                     continue;
 
-                if (locPartMap != null && locPartMap.get(i) != null && locPartMap.get(i) != part.state())
+                if (locPartMap == null || locPartMap.get(i) != part.state())
                     log.warning("Local partition state is different than the state in a map [grp=" + grp.cacheOrGroupName()
                         + ", part=" + i
+                        + ", isMapPresent=" + (locPartMap != null)
                         + ", locState=" + part.state()
-                        + ", mapState=" + locPartMap.get(i) + ']');
+                        + ", mapState=" + (locPartMap == null ? null : locPartMap.get(i)) + ']');
 
                 map.put(i, part.state());
             }
@@ -2522,12 +2523,18 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (part.state() == LOST)
                     return part;
             }
+            else {
+                U.dumpStack(log, "Local partition state changed [grp=" + grp.cacheOrGroupName()
+                    + ", part=" + part.id()
+                    + ", fromState=" + RENTING
+                    + ", toState=" + part.state() + ']');
+            }
         }
 
         if (part.state() != MOVING) {
             U.dumpStack(log, "Local partition state is changing [grp=" + grp.cacheOrGroupName()
                 + ", part=" + part.id()
-                + ", formSate=" + part.state()
+                + ", fromState=" + part.state()
                 + ", toState=" + MOVING + ']');
 
             part.moving();
