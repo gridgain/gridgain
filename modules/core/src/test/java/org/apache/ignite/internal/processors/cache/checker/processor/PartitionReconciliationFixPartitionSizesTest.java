@@ -63,7 +63,7 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
  */
 public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static final int NODES_CNT = 1;
+    protected static final int NODES_CNT = 4;
 
     /** Crd server node. */
     protected IgniteEx ig;
@@ -81,7 +81,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         ccfg.setName(DEFAULT_CACHE_NAME);
 //        ccfg.setGroupName("zzz");
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 1));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, 20));
         ccfg.setBackups(NODES_CNT - NODES_CNT);
         ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
 
@@ -163,10 +163,15 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         int startKey = 0;
         int endKey = 100000;
 
+        AtomicInteger putCount = new AtomicInteger();
+        AtomicInteger removeCount = new AtomicInteger();
+
         for (int i = startKey; i < endKey; i++) {
             i += 2;
-            if (i < endKey)
+            if (i < endKey) {
                 cache.put(i, i);
+                putCount.incrementAndGet();
+            }
         }
 
         int startSize = cache.size();
@@ -176,7 +181,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
-        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
+        breakCacheSizes(List.of(grid(0), grid(1), grid(2), grid(3)), List.of(DEFAULT_CACHE_NAME));
 //
         assertFalse(cache.size() == startSize);
 
@@ -203,8 +208,12 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             int max = 0;
 
             while(res.get() == null/* || i < endKey*/) {
-                int i1 = startKey + rnd.nextInt(endKey - startKey);
-                cache.put(i1, 1);
+
+                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (!cache.containsKey(i1)) {
+                    cache.put(i1, 1);
+                    putCount.incrementAndGet();
+//                }
 
 //                try {
 //                    sleep(1);
@@ -213,8 +222,11 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //                    e.printStackTrace();
 //                }
 
-//                int i1 = startKey + rnd.nextInt(endKey - startKey);
-//                cache.remove(i1);
+//                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (cache.containsKey(i1)) {
+//                    cache.remove(i1);
+//                    removeCount.incrementAndGet();
+//                }
 
 //                try {
 //                    sleep(3);
@@ -317,7 +329,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        loadFut1.get();
 //        loadFut2.get();
 
-        doSleep(500);
+//        doSleep(500);
 
 //        endKey = 1000;
 
@@ -325,6 +337,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             FinalizeCountersDiscoveryMessage msg = new FinalizeCountersDiscoveryMessage();
 
             msg.partSizesMap = res.get().partSizesMap();
+
 
             System.out.println("qsdzgsdfg msg.partSizesMap.size(): " + msg.partSizesMap.size());
 
@@ -334,16 +347,24 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             e.printStackTrace();
         }
 
+//        doSleep(1000);
+
         for (int i = startKey; i < endKey; i++) {
             cache.put(i, i);
+            putCount.incrementAndGet();
+            cache.remove(i + endKey);
+            removeCount.incrementAndGet();
 
-//            System.out.println("qfegsdg put after all: " + i);
+            System.out.println("qfegsdg put after all: " + i);
         }
 
         System.out.println("qdsvdrd " + CollectPartitionKeysByBatchTask.msg);
         System.out.println("qcsdfrs " + CollectPartitionKeysByBatchTask.msg1);
 
+        System.out.println("qfsvrsdsdsd putCount " + putCount + ", removeCount " + removeCount);
+
         assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size());
+
 //        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());
 //        org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResultCollector.Simple.partSizesMap
 //        internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0)

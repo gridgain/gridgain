@@ -1635,14 +1635,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                         System.out.println("qwddssda " + newSize);
 
-                        reconciliationCtx.keysAfter.entrySet().forEach(e -> {
+                        reconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
+                        reconciliationCtx.keysInBatch.putIfAbsent(cacheId, Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>()));
+
+                        reconciliationCtx.keysAfter.get(cacheId).entrySet().forEach(e -> {
                             if (reconciliationCtx.lastKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.lastKey(cacheId)) <= 0) {
                                 long count = e.getValue().get();
-                                if (count > 0 && !reconciliationCtx.keysInBatch.contains(e.getKey())) {
+                                if (count > 0 && !reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
                                     newSize.addAndGet(count);
                                     System.out.println("qddsdws flush keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
                                 }
-                                if (count < 0 && reconciliationCtx.keysInBatch.contains(e.getKey())) {
+                                if (count < 0 && reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
                                     newSize.addAndGet(count);
                                     System.out.println("qfresdvd flush keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
                                 }
@@ -1785,10 +1788,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 size.addAndGet(delta);
             }
+
+//            throw new RuntimeException("qwer");
+            System.out.println("qfdgtservs");
         }
 
         /** {@inheritDoc} */
         @Override public void updateSize(int cacheId, long delta, KeyCacheObject key) {
+            if (delta < 0)
+                System.out.println("qdrdsfsdf " + delta);
+            if (delta > 0)
+                System.out.println("qfsvfrsd " + delta);
+            if (delta == 0)
+                System.out.println("qfsrbxdg " + delta);
             System.out.println("qdrvgdrfa updateSize key before synchronized: " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
 
             reconciliationCtx.lock.readLock().lock();
@@ -1803,7 +1815,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     reconciliationCtx.keysAfterCounters.get(cacheId).addAndGet(delta);
                     System.out.println("qdrvlkiyt updateSize key after isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
 
-                if (reconciliationCtx.isBatchesInProgress()) {
+//                if (reconciliationCtx.isBatchesInProgress()) {
 //                    while (reconciliationCtx.lastKey(cacheId) == null && reconciliationCtx.isReconciliationInProgress()) {
 //                        try {
 //                            sleep(100);
@@ -1839,9 +1851,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     if ((reconciliationCtx.firstKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.firstKey(cacheId)) >= 0)/* || (reconciliationCtx.keysToCheck.containsKey(cacheId) && !reconciliationCtx.keysToCheck.get(cacheId).contains(key))*/) {
 //                        reconciliationCtx.keysAfterCounter.addAndGet(delta);
 
-                        reconciliationCtx.keysAfter.putIfAbsent(key, new AtomicLong());
+                        reconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
+                        reconciliationCtx.keysAfter.get(cacheId).putIfAbsent(key, new AtomicLong());
 
-                        reconciliationCtx.keysAfter.get(key).addAndGet(delta);
+                        reconciliationCtx.keysAfter.get(cacheId).get(key).addAndGet(delta);
 
                         System.out.println("qdrefgs2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                             " updateSize keysAfter. _key_: " + ((KeyCacheObjectImpl)key).value() +
@@ -1877,7 +1890,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                             " ||| storageSize:" + storageSize.get() +
                             " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
                     }
-                }
+//                }
             }
                 else {
 //                    storageSize.addAndGet(delta);
@@ -3124,10 +3137,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             public final Map<Integer, List<KeyCacheObject>> keysCheckedInBatch = new ConcurrentHashMap<>();
 
-            public final Map<KeyCacheObject, AtomicLong> keysAfter = new ConcurrentHashMap<>();
+            public final Map<Integer, Map<KeyCacheObject, AtomicLong>> keysAfter = new ConcurrentHashMap<>();
 
-            public Set<KeyCacheObject> keysInBatch = Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>());
-//            public Map<Integer, Set<KeyCacheObject>> keysInBatch = new ConcurrentHashMap<>();
+            public Map<Integer, Set<KeyCacheObject>> keysInBatch = new ConcurrentHashMap<>();
+//            public Map<Integer, Set<KeyCacheObject>> keysInBatch = Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>());
 
             /** */
             private static final KeyComparator KEY_COMPARATOR = new KeyComparator();

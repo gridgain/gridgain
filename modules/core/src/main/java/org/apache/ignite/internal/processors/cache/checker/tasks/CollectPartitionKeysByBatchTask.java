@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.checker.tasks;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -303,7 +304,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                e.printStackTrace();
 //            }
 
-            Set<KeyCacheObject> keysInBatch = partReconciliationCtx.keysInBatch;
+            partReconciliationCtx.keysInBatch.putIfAbsent(cacheId, Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>()));
+
+            Set<KeyCacheObject> keysInBatch = partReconciliationCtx.keysInBatch.get(cacheId);
 
             AtomicLong partSize = new AtomicLong();
 
@@ -314,7 +317,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                     partReconciliationCtx.keysAfterCounters.putIfAbsent(cacheId, new AtomicLong());
 
-                    partReconciliationCtx.keysInBatch.clear();
+                    partReconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
+
+                    partReconciliationCtx.keysInBatch.get(cacheId).clear();
 
                     Long partSize0 = partBatch.partSizesMap().get(ignite.localNode().id());
 
@@ -515,7 +520,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         System.out.println("qfrskotd2 " + partReconciliationCtx.keysAfter);
 
 //                    if (row != null) {
-                        partReconciliationCtx.keysAfter.entrySet().forEach(e -> {
+                        partReconciliationCtx.keysAfter.get(cacheId).entrySet().forEach(e -> {
                             if (KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.lastKey(cacheId)) <= 0) {
                                 long count = e.getValue().get();
                                 if (count > 0 && !keysInBatch.contains(e.getKey())) {
@@ -536,7 +541,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                         partReconciliationCtx.keysAfterCounters.get(cacheId).set(0);
 
-                        partReconciliationCtx.keysAfter.clear();
+                        partReconciliationCtx.keysAfter.get(cacheId).clear();
 
 
                     }
