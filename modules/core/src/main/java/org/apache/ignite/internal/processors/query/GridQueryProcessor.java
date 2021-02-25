@@ -2213,6 +2213,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (idx == null || !cacheNames.contains(cacheInfo.name()))
             return;
 
+        log.info("+++ onCacheStop0 " + cacheInfo.name() + ", " + destroy);
+
         String cacheName = cacheInfo.name();
 
         synchronized (stateMux) {

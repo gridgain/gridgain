@@ -284,7 +284,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
 
         List<ObjectPartitionStatisticsImpl> res = new ArrayList<>();
         try {
-            iterateMeta(getPartKeyPrefix(key), (k,v) -> {
+            iterateMeta(getPartKeyPrefix(key), (k, v) -> {
                 try {
                     ObjectPartitionStatisticsImpl partStats = StatisticsUtils
                             .toObjectPartitionStatistics(null, (StatisticsObjectData)v);
@@ -293,7 +293,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
                 catch (IgniteCheckedException e) {
                     log.warning(String.format(
                         "Error during reading statistics %s.%s by key %s",
-                        key.schema(), key.obj(),k
+                        key.schema(), key.obj(), k
                     ));
                 }
             }, true);

@@ -219,6 +219,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
+        startClientGrid("cli");
         startGridAndChangeBaseline(1);
 
         waitForStats("PUBLIC", "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
@@ -364,6 +365,18 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         }
     }
 
+    @Test
+    public void dbg() throws Exception {
+        startGrid(0);
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        createSmallTable(null);
+
+        dropSmallTable(null);
+
+        U.sleep(3000);
+    }
+
     /**
      * Check drop statistics when table's column is dropped.
      */
@@ -487,7 +500,8 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
                     statChecker.accept(stats);
 
                 return;
-            } catch (Throwable ex) {
+            }
+            catch (Throwable ex) {
                 if (t0 + timeout < U.currentTimeMillis()) {
                     log.error("Unexpected stats");
 
@@ -512,6 +526,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     /** */
     @NotNull private List<ObjectStatisticsImpl> statisticsAllNodes(String schema, String objName) {
         List<IgniteStatisticsManager> mgrs = G.allGrids().stream()
+            .filter(ign -> !((IgniteEx)ign).context().clientNode())
             .map(ign -> ((IgniteEx)ign).context().query().getIndexing().statsManager())
             .collect(Collectors.toList());
 

@@ -385,6 +385,9 @@ public class IgniteStatisticsConfigurationManager {
 
             GridCacheContext cctx = tbl.cacheContext();
 
+            if (cctx == null)
+                return;
+
             AffinityTopologyVersion topVer0 = cctx.affinity().affinityReadyFuture(topVer).get();
 
             final Set<Integer> parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer0);
@@ -482,7 +485,7 @@ public class IgniteStatisticsConfigurationManager {
      */
     private void onChangeStatisticConfiguration(
         StatisticsObjectConfiguration oldCfg,
-        final StatisticsObjectConfiguration newCfg
+        StatisticsObjectConfiguration newCfg
     ) {
         synchronized (mux) {
             if (log.isDebugEnabled())
@@ -497,6 +500,10 @@ public class IgniteStatisticsConfigurationManager {
                 GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
 
                 GridCacheContext cctx = tbl.cacheContext();
+
+                // Not affinity node (e.g. client node)
+                if (cctx == null)
+                    return;
 
                 Set<Integer> parts = cctx.affinity().primaryPartitions(
                     cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());

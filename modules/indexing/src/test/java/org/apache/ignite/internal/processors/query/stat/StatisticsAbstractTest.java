@@ -266,7 +266,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected void dropSmallTable(String suffix) {
         suffix = suffix != null ? suffix : "";
 
-        sql("DROP TABLE IF EXISTS small" + suffix);
+        grid(0).destroyCache("SMALL" + suffix);
+
+//        sql("DROP TABLE IF EXISTS small" + suffix);
     }
 
     /**
@@ -443,8 +445,10 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @throws Exception In case of errors.
      */
     protected void awaitStatistics(long timeout, Map<StatisticsTarget, Long> expectedVersions) throws Exception {
-        for (Ignite ign : G.allGrids())
-            awaitStatistics(timeout, expectedVersions, (IgniteEx)ign);
+        for (Ignite ign : G.allGrids()) {
+            if (!((IgniteEx)ign).context().clientNode())
+                awaitStatistics(timeout, expectedVersions, (IgniteEx)ign);
+        }
     }
 
     /**
@@ -452,7 +456,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      *
      * @throws Exception In case of errors.
      */
-    protected void awaitStatistics(long timeout, Map<StatisticsTarget, Long> expectedVersions, IgniteEx ign) throws Exception {
+    protected void awaitStatistics(long timeout, Map<StatisticsTarget, Long> expectedVersions, IgniteEx ign)
+        throws Exception {
         long t0 = U.currentTimeMillis();
 
         while (true) {
@@ -483,7 +488,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                 });
 
                 return;
-            } catch (Throwable ex) {
+            }
+            catch (Throwable ex) {
                 if (t0 + timeout < U.currentTimeMillis())
                     throw ex;
                 else

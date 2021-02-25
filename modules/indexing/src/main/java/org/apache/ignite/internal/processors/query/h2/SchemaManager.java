@@ -350,10 +350,13 @@ public class SchemaManager {
      * Handle cache destroy.
      *
      * @param cacheName Cache name.
-     * @param rmvIdx Whether to remove indexes.
+     * @param destroy Whether to remove indexes.
      */
-    public void onCacheDestroyed(String cacheName, boolean rmvIdx) {
+    public void onCacheDestroyed(String cacheName, boolean destroy) {
         String schemaName = schemaName(cacheName);
+
+        if (destroy)
+            System.out.println();
 
         H2Schema schema = schemas.get(schemaName);
 
@@ -366,9 +369,9 @@ public class SchemaManager {
         for (H2TableDescriptor tbl : schema.tables()) {
             if (F.eq(tbl.cacheName(), cacheName)) {
                 try {
-                    tbl.table().setRemoveIndexOnDestroy(rmvIdx);
+                    tbl.table().setRemoveIndexOnDestroy(destroy);
 
-                    dropTable(tbl);
+                    dropTable(tbl, destroy);
                 }
                 catch (Exception e) {
                     U.error(log, "Failed to drop table on cache stop (will ignore): " + tbl.fullTableName(), e);
@@ -559,17 +562,22 @@ public class SchemaManager {
      * Drops table form h2 database and clear all related indexes (h2 text, lucene).
      *
      * @param tbl Table to unregister.
+     * @param destroy {@code true} when table destroyed (cache destroyed) otherwise {@code false}.
      */
-    private void dropTable(H2TableDescriptor tbl) {
+    private void dropTable(H2TableDescriptor tbl, boolean destroy) {
         assert tbl != null;
 
         if (log.isDebugEnabled())
             log.debug("Removing query index table: " + tbl.fullTableName());
 
+        log.info("+++ DROP " + tbl + ", " + destroy);
         try (H2PooledConnection c = connMgr.connection(tbl.schemaName())) {
             Statement stmt = null;
 
             try {
+                String schema = tbl.schemaName();
+                String tblName = tbl.tableName();
+
                 stmt = c.connection().createStatement();
 
                 String sql = "DROP TABLE IF EXISTS " + tbl.fullTableName();
@@ -578,6 +586,9 @@ public class SchemaManager {
                     log.debug("Dropping database index table with SQL: " + sql);
 
                 stmt.executeUpdate(sql);
+
+                if (destroy)
+                    afterDropTable(schema, tblName);
             }
             catch (SQLException e) {
                 throw new IgniteSQLException("Failed to drop database index table [type=" + tbl.type().name() +

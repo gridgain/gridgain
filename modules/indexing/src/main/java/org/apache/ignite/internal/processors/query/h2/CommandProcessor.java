@@ -848,8 +848,6 @@ public class CommandProcessor {
                     String tblName = tbl.getName();
 
                     ctx.query().dynamicTableDrop(tbl.cacheName(), cmd.tableName(), cmd.ifExists());
-
-                    schemaMgr.afterDropTable(schema, tblName);
                 }
             }
             else if (cmdH2 instanceof GridSqlAlterTableAddColumn) {

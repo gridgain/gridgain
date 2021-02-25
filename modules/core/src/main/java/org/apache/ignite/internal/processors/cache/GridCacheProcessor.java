@@ -1003,6 +1003,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     @SuppressWarnings({"unchecked"})
     private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy, boolean clearDbObjects) {
         GridCacheContext ctx = cache.context();
+        log.info("+++ stopCache " + cache.cacheCfg.getName() + ", destroy=" + destroy);
 
         try {
             if (!cache.isNear() && ctx.shared().wal() != null) {
@@ -1026,8 +1027,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             if (!clearDbObjects)
                 ctx.kernalContext().query().getIndexing().closeCacheOnClient(ctx.name());
-            else
-                ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || destroy);
+            else {
+                ctx.kernalContext().query().onCacheStop(
+                    cacheInfo,
+                    !cache.context().group().persistenceEnabled() || destroy
+                );
+            }
 
             if (isNearEnabled(ctx)) {
                 GridDhtCacheAdapter dht = ctx.near().dht();
