@@ -125,6 +125,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Boolean.TRUE;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -1490,7 +1491,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      */
     public static class CacheDataStoreImpl implements CacheDataStore {
         /** */
-        private final boolean IS_INCREMENTAL_DR_ENABLED = Boolean.getBoolean("GG_INCREMENTAL_STATE_TRANSFER");
+        private final boolean IS_INCREMENTAL_DR_ENABLED = getBoolean("GG_INCREMENTAL_STATE_TRANSFER", true);
 
         /** */
         private final int partId;
