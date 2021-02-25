@@ -15,10 +15,12 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.IgniteException;
+
 /** */
-public class GatherStatisticCancelException extends RuntimeException {
+public class GatherStatisticCancelException extends IgniteException {
     /** */
     public GatherStatisticCancelException() {
-        super(null, null, false, false);
+        // No-op.
     }
 }
