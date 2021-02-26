@@ -338,10 +338,6 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
      */
     @Test
     public void dropTable() throws Exception {
-        // TODO: fix drop table for persisted caches GG-32766
-        if (persist)
-            return;
-
         startGrids(3);
 
         grid(0).cluster().state(ClusterState.ACTIVE);
@@ -357,6 +353,12 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         waitForStats("PUBLIC", "SMALL_A", TIMEOUT, checkTotalRows, checkColumStats);
 
         dropSmallTable(null);
+
+        // TODO: must be removed after fix GG-32766
+        if (persist) {
+            grid(0).context().query().getIndexing().statsManager()
+                .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+        }
 
         waitForStats("PUBLIC", "SMALL", TIMEOUT,
             (stats) -> stats.forEach(s -> assertNull(s)));
