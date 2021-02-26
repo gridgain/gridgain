@@ -840,6 +840,10 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
     /**
      * Removes and unregisters all group holders.
+     *
+     * This method cannot be transformed to {@see #onDisconnected(IgniteFuture)} because
+     * {@link GridCachePartitionExchangeManager} requires fully initialized cache group holders
+     * until it handles the disconnect event, and so, it must called directly.
      */
     public void removeGroupHolders() {
         Iterator<Integer> it = grpHolders.keySet().iterator();

@@ -318,9 +318,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     /** Latch that is used to guarantee that this manager fully started and all variables initialized. */
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
-    /** Disconnected flag is true when the node disconnected from cluster false otherwise. */
-    private volatile boolean disconnected;
-
     /** Discovery listener. */
     private final DiscoveryEventListener discoLsnr = new DiscoveryEventListener() {
         @Override public void onEvent(DiscoveryEvent evt, DiscoCache cache) {
@@ -546,11 +543,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             " this metric in False regardless of the real partitions state.");
 
         startLatch.countDown();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
-        disconnected = true;
     }
 
     /**
@@ -1007,7 +999,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         U.join(exchWorker, log);
 
-        if (disconnected)
+        if (cctx.kernalContext().clientDisconnected())
             cctx.affinity().removeGroupHolders();
 
         // Finish all exchange futures.
