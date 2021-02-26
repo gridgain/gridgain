@@ -20,7 +20,7 @@ import org.apache.ignite.internal.sql.command.SqlRefreshStatitsicsCommand;
 import org.junit.Test;
 
 /**
- * Test for SQL parser: REFREST STATISTICS command.
+ * Test for SQL parser: REFRESH STATISTICS command.
  */
 public class SqlParserRefreshStatisticsSelfTest extends SqlParserAbstractSelfTest {
     /**

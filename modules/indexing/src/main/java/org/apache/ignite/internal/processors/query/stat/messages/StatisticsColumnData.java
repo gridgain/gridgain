@@ -53,6 +53,9 @@ public class StatisticsColumnData implements Message {
     /** Raw data. */
     private byte[] rawData;
 
+    /** Version. */
+    private long ver;
+
     /**
      * Default constructor.
      */
@@ -77,7 +80,8 @@ public class StatisticsColumnData implements Message {
         int cardinality,
         long total,
         int size,
-        byte[] rawData
+        byte[] rawData,
+        long ver
     ) {
         this.min = min;
         this.max = max;
@@ -86,6 +90,7 @@ public class StatisticsColumnData implements Message {
         this.total = total;
         this.size = size;
         this.rawData = rawData;
+        this.ver = ver;
     }
 
     /**
@@ -135,6 +140,13 @@ public class StatisticsColumnData implements Message {
      */
     public byte[] rawData() {
         return rawData;
+    }
+
+    /**
+     * @return Raw data.
+     */
+    public long version() {
+        return ver;
     }
 
     /** {@inheritDoc} */
@@ -187,6 +199,12 @@ public class StatisticsColumnData implements Message {
 
             case 6:
                 if (!writer.writeLong("total", total))
+                    return false;
+
+                writer.incrementState();
+
+            case 7:
+                if (!writer.writeLong("ver", ver))
                     return false;
 
                 writer.incrementState();
@@ -260,6 +278,13 @@ public class StatisticsColumnData implements Message {
 
                 reader.incrementState();
 
+            case 7:
+                ver = reader.readLong("ver");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(StatisticsColumnData.class);
@@ -272,7 +297,7 @@ public class StatisticsColumnData implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 7;
+        return 8;
     }
 
     /** {@inheritDoc} */

@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -51,21 +50,16 @@ public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTe
 
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        runSql("DROP TABLE IF EXISTS small");
+        sql("DROP TABLE IF EXISTS small");
 
-        runSql("CREATE TABLE small (a INT PRIMARY KEY, b INT, c INT)");
+        sql("CREATE TABLE small (a INT PRIMARY KEY, b INT, c INT)");
 
-        runSql("CREATE INDEX small_b ON small(b)");
+        sql("CREATE INDEX small_b ON small(b)");
 
-        runSql("CREATE INDEX small_c ON small(c)");
-
-        IgniteCache<Integer, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+        sql("CREATE INDEX small_c ON small(c)");
 
         for (int i = 0; i < SMALL_SIZE; i++)
-            runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
-
-        grid(0).context().query().getIndexing().statsManager().gatherObjectStatistics(
-            new StatisticsTarget(SCHEMA, "SMALL"));
+            sql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
     }
 
     /** {@inheritDoc} */
