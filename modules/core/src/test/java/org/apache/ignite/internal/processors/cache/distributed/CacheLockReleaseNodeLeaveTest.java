@@ -19,27 +19,40 @@ package org.apache.ignite.internal.processors.cache.distributed;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteTransactions;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
+import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -60,6 +73,12 @@ public class CacheLockReleaseNodeLeaveTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setGridLogger(testLogger);
+
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        System.setProperty(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, Integer.toString(6000));
 
         CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
 
@@ -276,6 +295,115 @@ public class CacheLockReleaseNodeLeaveTest extends GridCommonAbstractTest {
         finally {
             stopAllGrids();
         }
+    }
+
+    /** Logger */
+    private static final ListeningTestLogger testLogger = new ListeningTestLogger();
+
+    /**
+     * старт 2 серверных нод, старт клиентской ноды, запуск транзакции с таймаутом
+     * затормозить транзакцию с клиента (время выполнения больше timeout)
+     * остановить клиента, сервер останавливает транзакцию
+     * возникновение ошибки "java.lang.AssertionError: Transaction does not own lock for update"
+     * @throws Exception
+     */
+    @Test
+    public void sdsb12022() throws Exception {
+        IgniteEx crd = startGrids(2);
+        System.out.println("!!!!! start 2 node");
+        crd.cluster().state(ClusterState.ACTIVE);
+        System.out.println("!!!!! ACTIVE");
+
+        testLogger.registerListener(new LogListener() {
+            @Override public boolean check() {
+                return false;
+            }
+
+            @Override public void reset() {
+
+            }
+
+            @Override public void accept(String s) {
+                if (s.contains("Transaction does not own lock for update")) {
+                    System.out.println(s);
+                    fail();
+                }
+            }
+        });
+
+        CountDownLatch latch=new CountDownLatch(1);
+
+        new Thread(){
+            @Override public void run() {
+                IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+                try {
+                    System.out.println("!!!!! crd tx wait");
+                    latch.await();
+                    System.out.println("!!!!! crd tx start");
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                for (int i = 0; i < 10; i++) {
+                    for (int j = 0; j < 10; j++) {
+                        try (Transaction tx = crd.transactions().txStart(TransactionConcurrency.OPTIMISTIC, TransactionIsolation.READ_COMMITTED, 5000, 10)) {
+                            System.out.println("!!!!! crd"+i+" "+j);
+                            cache.put(j, "crd"+i+" "+j);
+                            tx.commit();
+                        }catch (Exception e){
+                            System.out.println("!!!!! crd tx error "+i+" "+j);
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }.start();
+
+        try(IgniteEx client = startClientGrid(3)) {
+            System.out.println("!!!!! client start");
+            IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
+            latch.countDown();
+            System.out.println("!!!!! client tx start");
+            try (Transaction tx = client.transactions().txStart(TransactionConcurrency.OPTIMISTIC, TransactionIsolation.READ_COMMITTED, 5000, 10)) {
+                cache.put(1, 1);
+                System.out.println("!!!!! client tx put");
+
+                TransactionProxyImpl txProxy = (TransactionProxyImpl)tx;
+                GridNearTxLocal txEx = txProxy.tx();
+                txEx.prepare(true);
+                System.out.println("!!!!! client tx prepare");
+
+                TestRecordingCommunicationSpi.spi(client).blockMessages((node, msg) ->{
+                 return true;
+                });
+                System.out.println("!!!!! client block messages");
+
+                System.out.println("!!!!! client tx wait begin");
+                Thread.sleep(10000);
+                System.out.println("!!!!! client tx wait end");
+
+                tx.commit();
+                System.out.println("!!!!! client tx commit");
+            }
+        }catch (Exception e){
+            System.out.println("!!!!! client tx error");
+            e.printStackTrace();
+        }
+
+        Thread.sleep(1000);
+        {
+            IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+            System.out.println("!!!!! crd 1 1");
+            try (Transaction tx = crd.transactions().txStart(TransactionConcurrency.OPTIMISTIC, TransactionIsolation.READ_COMMITTED, 5000, 10)) {
+                cache.put(1, 1);
+                tx.commit();
+            }catch (Exception e){
+                System.out.println("!!!!! crd tx error 1 1");
+                e.printStackTrace();
+            }
+        }
+        Thread.sleep(1000);
+
     }
 
     /**
