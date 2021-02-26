@@ -15,14 +15,11 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.testframework.GridTestUtils;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import java.util.Map;
 import java.util.Objects;
+
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Test;
 
 /**
  * Test cluster wide gathering.
@@ -47,17 +44,6 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         testCond(stat -> stat.columnsStatistics().size() == stats[0].columnsStatistics().size(), stats);
 
         testCond(this::checkStat, stats);
-
-        assertTrue(GridTestUtils.waitForCondition(() -> {
-            ObjectStatisticsImpl globalStats[] = getStats("SMALL", StatisticsType.GLOBAL);
-            try {
-                testCond(stat -> stat.equals(globalStats[0]), globalStats);
-                return true;
-            }
-            catch (Exception e) {
-                return false;
-            }
-        }, 1000));
     }
 
     /**
@@ -67,111 +53,24 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
      */
     @Test
     public void testGroupGathering() throws Exception {
-        StatisticsTarget t100 = createSmallTable(100);
-        StatisticsTarget t101 = createSmallTable(101);
+        StatisticsTarget t100 = createStatisticTarget(100);
+        StatisticsTarget t101 = createStatisticTarget(101);
         StatisticsTarget tWrong = new StatisticsTarget(t101.schema(), t101.obj() + "wrong");
 
-        StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] futures = grid(0).context().query()
-            .getIndexing().statsManager().gatherObjectStatisticsAsync(t100, t101, tWrong);
+        GridTestUtils.assertThrows(
+            log,
+            () -> grid(0).context().query().getIndexing().statsManager().updateStatistics(t100, t101, tWrong),
+            IgniteSQLException.class,
+            "Table doesn't exist [schema=PUBLIC, table=SMALL101wrong]"
+        );
 
-        try {
-            for (StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>> future : futures)
-                future.get();
-
-            fail("Got result of wrong target.");
-        } catch (IgniteCheckedException e) {
-            assertTrue(e.getMessage().contains("1 target not found"));
-        }
+        updateStatistics(t100, t101);
 
         ObjectStatisticsImpl[] stats100 = getStats(t100.obj(), StatisticsType.LOCAL);
         ObjectStatisticsImpl[] stats101 = getStats(t101.obj(), StatisticsType.LOCAL);
 
         testCond(this::checkStat, stats100);
         testCond(this::checkStat, stats101);
-    }
-
-    /**
-     * Test statistics gathering on new node after join to cluster:
-     *
-     * 0) check statistics exists.
-     * 1) clear statistics and check last node lack it.
-     * 2) stop last node and gather statistics again.
-     * 3) start last node and check last node lack statistics.
-     * 4) gather statistics and check last node have it.
-     *
-     * @throws Exception In case of errors.
-     */
-    @Test
-    public void testNoStatNewNode() throws Exception {
-        ObjectStatisticsImpl stat0local, stat0global, statNlocal;
-
-        IgniteStatisticsManager statMgr = grid(0).context().query().getIndexing().statsManager();
-
-        // 0) check statistics exists.
-        assertNotNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL));
-        assertTrue(GridTestUtils.waitForCondition(() ->
-            null != getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL), TIMEOUT));
-
-        // 1) clear statistics and check last node lack it.
-        statMgr.clearObjectStatistics(SMALL_TARGET);
-
-        assertTrue(GridTestUtils.waitForCondition(() ->
-            null == getStatsFromNode(0, "SMALL", StatisticsType.LOCAL), TIMEOUT));
-        assertNull(getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL));
-
-        assertTrue(GridTestUtils.waitForCondition(() ->
-            null == getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL), TIMEOUT));
-        assertNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL));
-
-        // 2) stop last node and gather statistics again.
-        stopGrid(nodes() - 1);
-
-        statMgr.gatherObjectStatistics(SMALL_TARGET);
-
-        assertNotNull(getStatsFromNode(0, "SMALL", StatisticsType.LOCAL));
-        assertNotNull(getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL));
-
-        // 3) start last node and check last node lack statistics.
-        startGrid(nodes() - 1);
-
-        assertNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL));
-        assertNull(getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL));
-
-        // 4) gather statistics and check last node have it.
-        statMgr.gatherObjectStatistics(SMALL_TARGET);
-
-        assertNotNull(stat0local = getStatsFromNode(0, "SMALL", StatisticsType.LOCAL));
-        assertTrue(GridTestUtils.waitForCondition(() ->
-            null != getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL), TIMEOUT));
-
-        assertNotNull(statNlocal = getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.LOCAL));
-        assertTrue(GridTestUtils.waitForCondition(() ->
-            null != getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL), TIMEOUT));
-
-        assertTrue(stat0local.columnsStatistics().size() == statNlocal.columnsStatistics().size());
-        assertEquals(stat0global = getStatsFromNode(0, "SMALL", StatisticsType.GLOBAL),
-            getStatsFromNode(nodes() - 1, "SMALL", StatisticsType.GLOBAL));
-
-        checkStat(stat0global);
-        checkStat(statNlocal);
-    }
-
-    /**
-     * Gather object statistics from a client node.
-     *
-     * @throws Exception In case of errors.
-     */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-18638")
-    @Test
-    public void testGatheringFromClientNode() throws Exception {
-        IgniteEx client = startClientGrid(nodes());
-        IgniteStatisticsManager statMgr = client.context().query().getIndexing().statsManager();
-
-        assertNull(statMgr.getGlobalStatistics(SCHEMA, "SMALL"));
-
-        statMgr.gatherObjectStatistics(SMALL_TARGET);
-
-        assertNotNull(statMgr.getGlobalStatistics(SCHEMA, "SMALL"));
     }
 
     /**

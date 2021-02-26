@@ -360,6 +360,9 @@ public abstract class IgniteUtils {
     /** Empty  longs. */
     public static final Field[] EMPTY_FIELDS = new Field[0];
 
+    /** Empty string array. */
+    public static final String[] EMPTY_STRINGS = new String[0];
+
     /** System line separator. */
     private static final String NL = System.getProperty("line.separator");
 

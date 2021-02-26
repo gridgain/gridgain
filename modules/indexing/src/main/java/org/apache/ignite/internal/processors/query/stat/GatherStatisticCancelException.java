@@ -15,28 +15,12 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.jetbrains.annotations.Nullable;
+import org.apache.ignite.IgniteException;
 
-/**
- * Types of statistics width.
- */
-public enum StatisticsType {
-    /** Statistics by some particular partition. */
-    PARTITION,
-
-    /** Statistics by some data node. */
-    LOCAL;
-
-    /** Enumerated values. */
-    private static final StatisticsType[] VALUES = values();
-
-    /**
-     * Efficiently gets enumerated value from its ordinal.
-     *
-     * @param ord Ordinal value.
-     * @return Enumerated value or {@code null} if ordinal out of range.
-     */
-    @Nullable public static StatisticsType fromOrdinal(int ord) {
-        return ord >= 0 && ord < VALUES.length ? VALUES[ord] : null;
+/** */
+public class GatherStatisticCancelException extends IgniteException {
+    /** */
+    public GatherStatisticCancelException() {
+        // No-op.
     }
 }

@@ -654,7 +654,7 @@ import org.junit.runners.Suite;
     IgniteStatisticsTestSuite.class,
 
     SqlViewExporterSpiTest.class,
-    SystemViewSelfTest.class
+    SystemViewSelfTest.class,
 })
 public class IgniteBinaryCacheQueryTestSuite {
 }
