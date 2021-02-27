@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache.transactions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -46,6 +48,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
@@ -328,6 +331,90 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         awaitPartitionMapExchange();
 
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * Start 2 servers
+     * Start 1 client
+     * Start transaction on primary and client node
+     * Transfer to PREPARED STATE
+     * Block client messages
+     * Stop client node
+     */
+    @Test
+    public void reproducer() throws Exception {
+        backups = 2;
+        persistence = true;
+        this.syncMode = FULL_ASYNC;
+
+        final IgniteEx node0 = startGrids(3);
+        node0.cluster().active(true);
+
+        final Ignite client = startGrid("client");
+
+        final IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
+        final IgniteCache<Object, Object> cache1 = grid(1).cache(DEFAULT_CACHE_NAME);
+
+        final Integer pk = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
+
+        IgniteInternalFuture<Void> fut = null;
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        IgniteInternalFuture<Long> future = GridTestUtils.runMultiThreadedAsync(() -> {
+            try (final Transaction tx = grid(1).transactions().txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
+                cache1.put(pk, Boolean.TRUE);
+
+                TransactionProxyImpl p = (TransactionProxyImpl)tx;
+
+                p.tx().prepareNearTxLocal();
+
+                latch.countDown();
+
+                log.info("TX STATE: " + txs(grid(1)).get(0).state().toString());
+
+            } catch (Exception e) {
+                // No-op.
+            }
+        }, 1, "tx2");
+
+        List<IgniteInternalTx> tx0 = null;
+        List<IgniteInternalTx> tx2 = null;
+
+        try (final Transaction tx = client.transactions().txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
+            cache.put(pk, Boolean.TRUE);
+
+            TransactionProxyImpl p = (TransactionProxyImpl)tx;
+
+            latch.await(300, TimeUnit.MILLISECONDS);
+
+            p.tx().prepare(false);
+
+            tx0 = txs(grid(0));
+            tx2 = txs(grid(2));
+
+            TestRecordingCommunicationSpi.spi(grid("client")).blockMessages((node, msg) -> true);
+
+            U.sleep(5500);
+
+            fut = runAsync(() -> {
+
+                client.close();
+
+                return null;
+            });
+        }
+        catch (Exception e) {
+            // No-op.
+        }
+
+        future.get();
+        fut.get();
+
+        U.sleep(1000);
+
+        log.info("TX STATE0: " +  tx0.get(0).state().toString());
+        log.info("TX STATE2: " + tx2.get(0).state().toString());
     }
 
     /**
