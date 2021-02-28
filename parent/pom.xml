@@ -111,7 +111,7 @@
         <checkstyle.puppycrawl.version>8.29</checkstyle.puppycrawl.version>
         <mockito.version>3.4.6</mockito.version>
         <mysql.connector.version>8.0.13</mysql.connector.version>
-        <netty.version>4.1.52.Final</netty.version>
+        <netty.version>4.1.59.Final</netty.version>
         <netlibjava.version>1.1.2</netlibjava.version>
         <oro.bundle.version>2.0.8_6</oro.bundle.version>
         <osgi.core.version>5.0.0</osgi.core.version>
@@ -521,10 +521,6 @@
                             <group>
                                 <title>Spark Integration</title>
                                 <packages>org.apache.ignite.spark.examples.java</packages>
-                            </group>
-                            <group>
-                                <title>OSGi integration</title>
-                                <packages>org.apache.ignite.osgi*</packages>
                             </group>
                             <group>
                                 <title>Flink Sink Integration</title>

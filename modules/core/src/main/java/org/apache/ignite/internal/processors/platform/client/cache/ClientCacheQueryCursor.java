@@ -20,6 +20,7 @@ import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.platform.client.ClientCloseableResource;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -60,6 +61,13 @@ abstract class ClientCacheQueryCursor<T> implements ClientCloseableResource {
         this.cursor = cursor;
         this.pageSize = pageSize;
         this.ctx = ctx;
+    }
+
+    /**
+     * @return Current protocol context.
+     */
+    ClientProtocolContext getProtocolContext() {
+        return ctx.currentProtocolContext();
     }
 
     /**
