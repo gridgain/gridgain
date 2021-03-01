@@ -33,10 +33,10 @@ import java.util.stream.Collectors;
  */
 public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
     /** First default key. */
-    private static final StatisticsKey K1 = new StatisticsKey("PUBLIC", "tab1");
+    private static final StatisticsKey K1 = new StatisticsKey(SCHEMA, "tab1");
 
     /** Second default key. */
-    private static final StatisticsKey K2 = new StatisticsKey("PUBLIC", "tab2");
+    private static final StatisticsKey K2 = new StatisticsKey(SCHEMA, "tab2");
 
     /** Column statistics with 100 nulls. */
     ColumnStatistics cs1 = new ColumnStatistics(null, null, 100, 0, 100,

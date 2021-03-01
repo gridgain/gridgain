@@ -79,7 +79,7 @@ public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
                 String.format(SQL, 6, 6), NO_HINTS);
 
         // All columns set up before also will be updated
-        updateStatistics(new StatisticsTarget("PUBLIC", "TBL_SELECT", "LO_SELECT"));
+        updateStatistics(new StatisticsTarget(SCHEMA, "TBL_SELECT", "LO_SELECT"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_LO_IDX"},
                 String.format(SQL, 8, 8), NO_HINTS);
