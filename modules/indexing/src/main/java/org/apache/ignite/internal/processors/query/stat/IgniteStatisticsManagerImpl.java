@@ -148,14 +148,12 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
                 switch (newVal) {
                     case OFF:
-                        gatherer.stop();
-                        statCfgMgr.stop();
+                        disableOperations();
 
                         break;
                     case ON:
                     case NO_UPDATE:
-                        gatherer.start();
-                        statCfgMgr.start();
+                        enableOperations();
 
                         break;
                 }
@@ -165,10 +163,26 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         });
 
         StatisticsUsageState currState = usageState();
-        if (currState == ON || currState == NO_UPDATE) {
-            gatherer.start();
-            statCfgMgr.start();
-        }
+        if (currState == ON || currState == NO_UPDATE)
+            enableOperations();
+    }
+
+    /**
+     * Enable statistics operations.
+     */
+    private void enableOperations() {
+
+        gatherer.start();
+        statCfgMgr.start();
+    }
+
+    /**
+     * Disable statistics operations.
+     */
+    private void disableOperations() {
+        statCfgMgr.stop();
+        gatherer.stop();
+        statsRepos.start();
     }
 
     /**

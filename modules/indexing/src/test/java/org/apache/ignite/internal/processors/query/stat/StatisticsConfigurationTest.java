@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -34,10 +35,15 @@ import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjec
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.NO_UPDATE;
+import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.OFF;
+import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.ON;
 
 /**
  * Tests for statistics configuration.
@@ -430,6 +436,92 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
             checkStatisticsInMetastore(((IgniteEx)ign).context().cache().context().database(), TIMEOUT,
                 SCHEMA, "SMALL", (s -> assertNull(s.data().get("B"))));
         }
+    }
+
+    /**
+     * Try statistics configuration commands in different statistics state.
+     *
+     * 1) Start grid and check state is ON.
+     * 2) Create table and gather/get/refresh/drop statistics on it from "local" and "remote" hosts.
+     * 3) Change state to NO_UPDATE and gather/get/refresh/drop statistics on created table.
+     * 4) Change state to OFF and check exception throws on gather/get/refresh/drop statistics.
+     * 5) Change state to NO_UPDATE gather/get/refresh/drop statistics on created table.
+     * 6) Change state to ON and gather/get/refresh/drop statistics on created table.
+     *
+     * @throws Exception In case of errors:
+     */
+    @Test
+    public void testChangeState() throws Exception {
+        IgniteEx ign0 = startGrids(2);
+
+        ign0.cluster().state(ClusterState.ACTIVE);
+
+        IgniteEx ign1 = grid(1);
+        IgniteStatisticsManager ign0statMgr = ign0.context().query().getIndexing().statsManager();
+
+        assertEquals(ON, ign0statMgr.usageState());
+
+        createSmallTable(null);
+
+        assertTrue(executeStatCfgCommands(ign0));
+        assertTrue(executeStatCfgCommands(ign1));
+
+        ign0statMgr.usageState(NO_UPDATE);
+
+        assertTrue(executeStatCfgCommands(ign0));
+        assertTrue(executeStatCfgCommands(ign1));
+
+        ign0statMgr.usageState(OFF);
+
+        assertFalse(executeStatCfgCommands(ign0));
+        assertFalse(executeStatCfgCommands(ign1));
+
+        ign0statMgr.usageState(NO_UPDATE);
+
+        assertTrue(executeStatCfgCommands(ign0));
+        assertTrue(executeStatCfgCommands(ign1));
+
+        ign0statMgr.usageState(ON);
+
+        assertTrue(executeStatCfgCommands(ign0));
+        assertTrue(executeStatCfgCommands(ign1));
+    }
+
+    /**
+     * Run analyze/get/refresh/drop commands on specified node.
+     *
+     * @param ign Node to test.
+     * @return {@code true} if all commands pass successfully, {@code false} - otherwise.
+     */
+    private boolean executeStatCfgCommands(IgniteEx ign) throws IgniteInterruptedCheckedException {
+        IgniteStatisticsManager statMgr = ign.context().query().getIndexing().statsManager();
+
+        int success = 0;
+        try {
+            statMgr.collectStatistics(SMALL_TARGET);
+            success++;
+        } catch (Exception e) {
+            // NoOp.
+        }
+
+        if (GridTestUtils.waitForCondition(() -> statMgr.getLocalStatistics(SMALL_KEY) != null, TIMEOUT))
+            success++;
+
+        try {
+            statMgr.refreshStatistics(SMALL_TARGET);
+            success++;
+        } catch (Exception e) {
+            // NoOp.
+        }
+
+        try {
+            statMgr.dropStatistics(SMALL_TARGET);
+            success++;
+        } catch (Exception e) {
+            // NoOp.
+        }
+
+        return success == 4;
     }
 
     /**
