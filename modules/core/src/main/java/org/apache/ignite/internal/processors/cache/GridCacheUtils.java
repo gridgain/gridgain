@@ -30,6 +30,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Stream;
@@ -890,7 +891,7 @@ public class GridCacheUtils {
     public static void unwindEvictsSafe(GridCacheContext ctx) {
         assert ctx != null;
 
-        if (ctx.started())
+        if (ctx.started() && ThreadLocalRandom.current().nextInt(10) == 0)
             ctx.ttl().expireSafe();
     }
 
