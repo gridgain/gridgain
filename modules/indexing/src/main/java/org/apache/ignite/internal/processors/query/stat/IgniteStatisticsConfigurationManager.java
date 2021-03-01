@@ -127,6 +127,7 @@ public class IgniteStatisticsConfigurationManager {
         }
     };
 
+    /** Exchange listener. */
     private final PartitionsExchangeAware exchAwareLsnr = new PartitionsExchangeAware() {
         @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
             started = true;
@@ -150,7 +151,7 @@ public class IgniteStatisticsConfigurationManager {
     };
 
     /** Drop columns listener. */
-    private final BiConsumer<GridH2Table, List<String>> dropColumnsLsnr = new BiConsumer<GridH2Table, List<String>>() {
+    private final BiConsumer<GridH2Table, List<String>> dropColsLsnr = new BiConsumer<GridH2Table, List<String>>() {
         /**
          * Drop statistics after columns dropped.
          *
@@ -229,7 +230,7 @@ public class IgniteStatisticsConfigurationManager {
 
         exchange.registerExchangeAwareComponent(exchAwareLsnr);
 
-        schemaMgr.registerDropColumnsListener(dropColumnsLsnr);
+        schemaMgr.registerDropColumnsListener(dropColsLsnr);
         schemaMgr.registerDropTableListener(dropTblLsnr);
 
         if (log.isDebugEnabled())
@@ -247,7 +248,7 @@ public class IgniteStatisticsConfigurationManager {
 
         exchange.unregisterExchangeAwareComponent(exchAwareLsnr);
 
-        schemaMgr.unregisterDropColumnsListener(dropColumnsLsnr);
+        schemaMgr.unregisterDropColumnsListener(dropColsLsnr);
         schemaMgr.unregisterDropTableListener(dropTblLsnr);
 
         if (log.isDebugEnabled())
@@ -622,7 +623,16 @@ public class IgniteStatisticsConfigurationManager {
         }
     }
 
-    /** */
+    /**
+     * Gather local statistics for specified object and partitions.
+     *
+     * @param cfg Statistics object configuration.
+     * @param tbl Table.
+     * @param partsToAggregate Set of partition ids to aggregate.
+     * @param partsToCollect Set of partition ids to gather statistics from.
+     * @param colsToCollect If specified - collect statistics only for this columns,
+     *                      otherwise - collect to all columns from object configuration.
+     */
     private void gatherLocalStatistics(
         StatisticsObjectConfiguration cfg,
         GridH2Table tbl,

@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
@@ -142,20 +143,29 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                 if (log.isInfoEnabled())
                     log.info(String.format("Statistics usage state was changed from %s to %s", oldVal, newVal));
 
-                if (newVal == NO_UPDATE || newVal == OFF) {
-                    gatherer.stop();
-                    statCfgMgr.stop();
-                }
-                if (newVal == ON) {
-                    gatherer.start();
-                    statCfgMgr.start();
+                if (oldVal == newVal)
+                    return;
+
+                switch (newVal) {
+                    case OFF:
+                        gatherer.stop();
+                        statCfgMgr.stop();
+
+                        break;
+                    case ON:
+                    case NO_UPDATE:
+                        gatherer.start();
+                        statCfgMgr.start();
+
+                        break;
                 }
             });
 
             dispatcher.registerProperty(usageState);
         });
 
-        if (usageState() == ON) {
+        StatisticsUsageState currState = usageState();
+        if (currState == ON || currState == NO_UPDATE) {
             gatherer.start();
             statCfgMgr.start();
         }
@@ -179,6 +189,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     @Override public void collectStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
         checkStatisticsSupport("collect statistics");
 
+        if (usageState() == OFF)
+            throw new IgniteException("Can't gather statistics while statistics usage state is OFF.");
+
         statCfgMgr.updateStatistics(Arrays.asList(targets));
     }
 
@@ -186,12 +199,19 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     @Override public void dropStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
         checkStatisticsSupport("drop statistics");
 
+        if (usageState() == OFF)
+            throw new IgniteException("Can't drop statistics while statistics usage state is OFF.");
+
         statCfgMgr.dropStatistics(Arrays.asList(targets), true);
     }
 
     /** {@inheritDoc} */
     @Override public void refreshStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
         checkStatisticsSupport("collect statistics");
+
+
+        if (usageState() == OFF)
+            throw new IgniteException("Can't refresh statistics while statistics usage state is OFF.");
 
         statCfgMgr.refreshStatistics(Arrays.asList(targets));
     }
