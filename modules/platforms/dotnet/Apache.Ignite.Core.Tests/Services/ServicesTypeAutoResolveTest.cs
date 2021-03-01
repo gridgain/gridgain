@@ -21,8 +21,9 @@ namespace Apache.Ignite.Core.Tests.Services
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using Apache.Ignite.Core.Binary;
     using NUnit.Framework;
-    using org.apache.ignite.platform.model;
+    using Apache.Ignite.Platform.Model;
 
     /// <summary>
     /// Tests checks ability to execute service method without explicit registration of parameter type.
@@ -35,7 +36,7 @@ namespace Apache.Ignite.Core.Tests.Services
             new Employee {Fio = "Sarah Connor", Salary = 1},
             new Employee {Fio = "John Connor", Salary = 2}
         };
-        
+
         /** */
         protected internal static readonly Parameter[] Param = new[] 
         {
@@ -222,7 +223,11 @@ namespace Apache.Ignite.Core.Tests.Services
 
             return new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
-                SpringConfigUrl = springConfigUrl
+                SpringConfigUrl = springConfigUrl,
+                BinaryConfiguration = new BinaryConfiguration
+                {
+                    NameMapper = new BinaryBasicNameMapper {NamespacePrefix = "org.", NamespaceToLower = true}
+                }
             };
         }
     }
