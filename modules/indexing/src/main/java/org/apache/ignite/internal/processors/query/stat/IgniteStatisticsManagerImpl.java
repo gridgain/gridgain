@@ -223,7 +223,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     @Override public void refreshStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
         checkStatisticsSupport("collect statistics");
 
-
         if (usageState() == OFF)
             throw new IgniteException("Can't refresh statistics while statistics usage state is OFF.");
 
