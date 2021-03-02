@@ -56,7 +56,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_OBJECT_READ;
-import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_MAP_PLAN_ANALYZE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_MAP_END;
 
 /**
@@ -404,7 +403,7 @@ class MapQueryResult {
         void close() {
             try (MTC.TraceSurroundings ignored =
                      MTC.support(tracing.create(SQL_QRY_MAP_END, MTC.span())
-                         .addTag(SQL_MAP_PLAN_ANALYZE, this::plan))
+                         .addLog(this::plan))
             ) {
                 fetchSizeInterceptor.checkOnClose();
 

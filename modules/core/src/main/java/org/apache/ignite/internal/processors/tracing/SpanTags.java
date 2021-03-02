@@ -110,9 +110,6 @@ public class SpanTags {
     /** Whether parsing of the SQL query was skipped due to the cached result. */
     public static final String SQL_PARSER_CACHE_HIT = "sql.parser.cache.hit";
 
-    /** Query map query plan with analyze information. */
-    public static final String SQL_MAP_PLAN_ANALYZE = "sql.map.plan.analyze";
-
     /** */
     private SpanTags() {}
 

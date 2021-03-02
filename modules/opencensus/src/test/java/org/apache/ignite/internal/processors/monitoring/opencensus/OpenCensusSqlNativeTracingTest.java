@@ -73,7 +73,6 @@ import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE_ID;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_CACHE_UPDATES;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_IDX_RANGE_ROWS;
-import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_MAP_PLAN_ANALYZE;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PAGE_ROWS;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PARSER_CACHE_HIT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
@@ -586,11 +585,12 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
         List<SpanId> mapQryEndSpans = checkSpan(SQL_QRY_MAP_END, null, GRID_CNT, null);
 
         mapQryEndSpans.forEach(span -> {
-            String plan = getAttribute(span, SQL_MAP_PLAN_ANALYZE);
+            List<String> logs = getLogs(span);
 
             assertTrue(
-                "Invalid plan in tag: " + plan,
-                plan.contains("SELECT") && plan.contains("lookupCount")
+                "Invalid logs: " + logs,
+                logs.stream()
+                    .anyMatch(msg -> msg.contains("SELECT") && msg.contains("lookupCount"))
             );
         });
     }
@@ -703,6 +703,20 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
             .getAttributes()
             .getAttributeMap()
             .get(tag));
+    }
+
+    /**
+     * Logs string from span with specified id.
+     *
+     * @param spanId Id of the target span.
+     * @return Value of the attribute.
+     */
+    protected List<String> getLogs(SpanId spanId) {
+        return handler()
+            .spanById(spanId)
+            .getAnnotations().getEvents().stream()
+            .map(e -> e.getEvent().getDescription())
+            .collect(Collectors.toList());
     }
 
     /**
