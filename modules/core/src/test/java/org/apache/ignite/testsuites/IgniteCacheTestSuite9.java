@@ -41,12 +41,17 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheLoadRebalanceEvict
 import org.apache.ignite.internal.processors.cache.IgniteOOMWithoutNodeFailureTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheAtomicPrimarySyncBackPressureTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheOperationsInterruptTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesBasicTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesPreloadingTest;
 import org.apache.ignite.internal.processors.cache.distributed.FailBackupOnAtomicOperationTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCacheWriteSynchronizationModesMultithreadedTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConcurrentRemoveObjectsTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.HistoricalRebalanceRemovesConsistencyTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesFailoverTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstoneClearingCountersTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstonesManagementTest;
 import org.apache.ignite.internal.processors.cache.transactions.PartitionUpdateCounterTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCachePartitionConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxDataConsistencyOnCommitFailureTest;
@@ -159,6 +164,13 @@ public class IgniteCacheTestSuite9 {
         GridTestUtils.addTestIfNeeded(suite, HistoricalRebalanceRemovesConsistencyTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgniteOOMWithoutNodeFailureTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesBasicTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesFailoverTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesPreloadingTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, TombstoneClearingCountersTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, TombstonesManagementTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, TxRecoveryOnCoordniatorFailTest.class, ignoredTests);
 

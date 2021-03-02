@@ -28,6 +28,7 @@ import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -300,32 +301,36 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         IgniteCache<Object, Object> cache3 = ignite.cache(CACHE_NAME3);
 
-        for (int i = 0; i < 100_000; i++) {
-            Long id = (long)i;
+        try (IgniteDataStreamer<Object, Object> s = ignite.dataStreamer(CACHE_NAME2)) {
+            for (int i = 0; i < 100_000; i++) {
+                Long id = (long)i;
 
-            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME2)
+                BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME2)
                     .setField(KEY_NAME, id)
                     .setField(COLUMN1_NAME, i / 2)
                     .setField(COLUMN2_NAME, "str" + Integer.toHexString(i));
 
-            cache2.put(id, o.build());
+                s.addData(id, o.build());
+            }
         }
 
         String addColSql = "ALTER TABLE \"" + CACHE_NAME3 + "\"." + OBJECT_NAME3 + " ADD COLUMN " + COLUMN3_NAME + " BIGINT";
 
         cache3.query(new SqlFieldsQuery(addColSql)).getAll();
 
-        for (long id = 100_000; id < 200_000; id++) {
-            BinaryObjectBuilder o2 = ignite.binary().builder(OBJECT_NAME3)
-                .setField(KEY_NAME, id * 3)
-                .setField(COLUMN1_NAME, (int)(id / 2))
-                .setField(COLUMN2_NAME, "str" + Long.toHexString(id))
-                .setField(COLUMN3_NAME, id * 10);
+        try (IgniteDataStreamer<Object, Object> s = ignite.dataStreamer(CACHE_NAME3)) {
+            for (long id = 100_000; id < 200_000; id++) {
+                BinaryObjectBuilder o2 = ignite.binary().builder(OBJECT_NAME3)
+                    .setField(KEY_NAME, id * 3)
+                    .setField(COLUMN1_NAME, (int)(id / 2))
+                    .setField(COLUMN2_NAME, "str" + Long.toHexString(id))
+                    .setField(COLUMN3_NAME, id * 10);
 
-            cache3.put(id, o2.build());
+                s.addData(id, o2.build());
+            }
         }
 
-        String consistentId = ignite.cluster().localNode().consistentId().toString();
+        String consistentId = ignite.cluster().localNode().consistentId().toString().replace(".", "_");
 
         stopGrid(0);
 

@@ -56,7 +56,8 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
         Calendar cal = Calendar.getInstance();
         try {
             cal.setTime(SDF.parse(START_DATE));
-        } catch (ParseException e) {
+        }
+        catch (ParseException e) {
             // No-op.
         }
         TIMESTART = cal.getTimeInMillis();
@@ -75,7 +76,7 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        runSql("DROP TABLE IF EXISTS dtypes");
+        sql("DROP TABLE IF EXISTS dtypes");
 
         StringBuilder create = new StringBuilder("CREATE TABLE dtypes (ID INT PRIMARY KEY, col_index int, col_no_index int");
         for (String type : TYPES)
@@ -83,17 +84,17 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
 
         create.append(")");
 
-        runSql(create.toString());
+        sql(create.toString());
 
-        runSql("CREATE INDEX dtypes_col_index ON dtypes(col_index)");
+        sql("CREATE INDEX dtypes_col_index ON dtypes(col_index)");
         for (String type : TYPES)
-            runSql(String.format("CREATE INDEX dtypes_%s ON dtypes(col_%s)", type, type));
+            sql(String.format("CREATE INDEX dtypes_%s ON dtypes(col_%s)", type, type));
 
         for (int i = 1; i < SMALL_SIZE; i++)
-            runSql(insert(i));
+            sql(insert(i));
 
         for (int i = 0; i > -SMALL_SIZE / 2; i--)
-            runSql(insertNulls(i));
+            sql(insertNulls(i));
 
         updateStatistics("dtypes");
     }
@@ -197,6 +198,7 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
             insert.append(", ").append(getVal(type, cntr));
 
         insert.append(")");
+
         return insert.toString();
     }
 }

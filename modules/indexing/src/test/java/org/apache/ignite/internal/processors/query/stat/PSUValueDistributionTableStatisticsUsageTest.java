@@ -15,15 +15,15 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMode;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import java.util.Arrays;
-import java.util.Collection;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -44,8 +44,8 @@ public class PSUValueDistributionTableStatisticsUsageTest extends StatisticsAbst
     @Parameterized.Parameters(name = "cacheMode={0}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
-                { REPLICATED },
-                { PARTITIONED },
+            { REPLICATED },
+            { PARTITIONED },
         });
     }
 
@@ -58,15 +58,15 @@ public class PSUValueDistributionTableStatisticsUsageTest extends StatisticsAbst
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        runSql("DROP TABLE IF EXISTS sized");
+        sql("DROP TABLE IF EXISTS sized");
 
-        runSql("CREATE TABLE sized (ID INT PRIMARY KEY, small VARCHAR, small_nulls VARCHAR," +
-                " big VARCHAR, big_nulls VARCHAR) WITH \"TEMPLATE=" + cacheMode + "\"");
+        sql("CREATE TABLE sized (ID INT PRIMARY KEY, small VARCHAR, small_nulls VARCHAR," +
+            " big VARCHAR, big_nulls VARCHAR) WITH \"TEMPLATE=" + cacheMode + "\"");
 
-        runSql("CREATE INDEX sized_small ON sized(small)");
-        runSql("CREATE INDEX sized_small_nulls ON sized(small_nulls)");
-        runSql("CREATE INDEX sized_big ON sized(big)");
-        runSql("CREATE INDEX sized_big_nulls ON sized(big_nulls)");
+        sql("CREATE INDEX sized_small ON sized(small)");
+        sql("CREATE INDEX sized_small_nulls ON sized(small_nulls)");
+        sql("CREATE INDEX sized_big ON sized(big)");
+        sql("CREATE INDEX sized_big_nulls ON sized(big_nulls)");
 
         String bigVal = "someBigLongValueWithTheSameTextAtFirst";
         String smallNulls, bigNulls;
@@ -82,10 +82,10 @@ public class PSUValueDistributionTableStatisticsUsageTest extends StatisticsAbst
                 valAdd = 1;
             }
             String sql = String.format("INSERT INTO sized(id, small, small_nulls, big, big_nulls)" +
-                    " VALUES(%d,'small%d', %s, '%s%d', %s)", i, i + valAdd, smallNulls, bigVal, i + valAdd, bigNulls);
-            runSql(sql);
+                " VALUES(%d,'small%d', %s, '%s%d', %s)", i, i + valAdd, smallNulls, bigVal, i + valAdd, bigNulls);
+            sql(sql);
         }
-        runSql("INSERT INTO sized(id, small, big) VALUES(" + BIG_SIZE + ", null, null)");
+        sql("INSERT INTO sized(id, small, big) VALUES(" + BIG_SIZE + ", null, null)");
         updateStatistics("sized");
     }
 

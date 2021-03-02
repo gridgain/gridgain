@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -136,6 +138,12 @@ public class SchemaManager {
 
     /** Logger. */
     private final IgniteLogger log;
+
+    /** */
+    private final Set<BiConsumer<GridH2Table, List<String>>> dropColsLsnrs = ConcurrentHashMap.newKeySet();
+
+    /** */
+    private final Set<BiConsumer<String, String>> dropTblLsnrs = ConcurrentHashMap.newKeySet();
 
     /**
      * Constructor.
@@ -342,10 +350,13 @@ public class SchemaManager {
      * Handle cache destroy.
      *
      * @param cacheName Cache name.
-     * @param rmvIdx Whether to remove indexes.
+     * @param destroy Whether to remove indexes.
      */
-    public void onCacheDestroyed(String cacheName, boolean rmvIdx) {
+    public void onCacheDestroyed(String cacheName, boolean destroy) {
         String schemaName = schemaName(cacheName);
+
+        if (destroy)
+            System.out.println();
 
         H2Schema schema = schemas.get(schemaName);
 
@@ -358,9 +369,9 @@ public class SchemaManager {
         for (H2TableDescriptor tbl : schema.tables()) {
             if (F.eq(tbl.cacheName(), cacheName)) {
                 try {
-                    tbl.table().setRemoveIndexOnDestroy(rmvIdx);
+                    tbl.table().setRemoveIndexOnDestroy(destroy);
 
-                    dropTable(tbl);
+                    dropTable(tbl, destroy);
                 }
                 catch (Exception e) {
                     U.error(log, "Failed to drop table on cache stop (will ignore): " + tbl.fullTableName(), e);
@@ -551,8 +562,9 @@ public class SchemaManager {
      * Drops table form h2 database and clear all related indexes (h2 text, lucene).
      *
      * @param tbl Table to unregister.
+     * @param destroy {@code true} when table destroyed (cache destroyed) otherwise {@code false}.
      */
-    private void dropTable(H2TableDescriptor tbl) {
+    private void dropTable(H2TableDescriptor tbl, boolean destroy) {
         assert tbl != null;
 
         if (log.isDebugEnabled())
@@ -562,6 +574,9 @@ public class SchemaManager {
             Statement stmt = null;
 
             try {
+                String schema = tbl.schemaName();
+                String tblName = tbl.tableName();
+
                 stmt = c.connection().createStatement();
 
                 String sql = "DROP TABLE IF EXISTS " + tbl.fullTableName();
@@ -570,6 +585,9 @@ public class SchemaManager {
                     log.debug("Dropping database index table with SQL: " + sql);
 
                 stmt.executeUpdate(sql);
+
+                if (destroy)
+                    afterDropTable(schema, tblName);
             }
             catch (SQLException e) {
                 throw new IgniteSQLException("Failed to drop database index table [type=" + tbl.type().name() +
@@ -743,6 +761,8 @@ public class SchemaManager {
         }
 
         desc.table().dropColumns(cols, ifColExists);
+
+        dropColsLsnrs.forEach(l -> l.accept(desc.table(), cols));
     }
 
     /**
@@ -827,5 +847,20 @@ public class SchemaManager {
         }
 
         return null;
+    }
+
+    /** */
+    public void registerDropColumnsListener(BiConsumer<GridH2Table, List<String>> lsnr) {
+        dropColsLsnrs.add(lsnr);
+    }
+
+    /** */
+    public void registerDropTableListener(BiConsumer<String, String> lsnr) {
+        dropTblLsnrs.add(lsnr);
+    }
+
+    /** */
+    public void afterDropTable(String schema, String tblName) {
+        dropTblLsnrs.forEach(l -> l.accept(schema, tblName));
     }
 }

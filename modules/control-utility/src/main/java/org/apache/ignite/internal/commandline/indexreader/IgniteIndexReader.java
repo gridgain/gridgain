@@ -49,6 +49,8 @@ import org.apache.ignite.internal.commandline.StringBuilderOutputStream;
 import org.apache.ignite.internal.commandline.argument.parser.CLIArgument;
 import org.apache.ignite.internal.commandline.argument.parser.CLIArgumentParser;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
+import org.apache.ignite.internal.pagemem.PageUtils;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
@@ -68,6 +70,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDat
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.PendingRowIO;
 import org.apache.ignite.internal.processors.cache.tree.RowLinkIO;
+import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2InnerIO;
@@ -611,7 +614,8 @@ public class IgniteIndexReader implements AutoCloseable {
                             if (cacheId != cacheAwareLink.cacheId)
                                 continue; // It's index for other cache, don't check.
 
-                            if (!tree.itemStorage.contains(cacheAwareLink))
+                            // Tombstones are not indexed and shouldn't be tested.
+                            if (!tree.itemStorage.contains(cacheAwareLink) && !cacheAwareLink.tombstone)
                                 errors.add(new IgniteException(cacheDataTreeEntryMissingError(name, cacheAwareLink)));
                         }
 
@@ -1510,14 +1514,14 @@ public class IgniteIndexReader implements AutoCloseable {
             if (isLinkIo(io)) {
                 final long link = getLink(io, addr, idx);
 
-                int cacheId;
+                final int cacheId;
 
                 if (io instanceof AbstractDataLeafIO && ((AbstractDataLeafIO)io).storeCacheId())
-                    cacheId = ((AbstractDataLeafIO)io).getCacheId(addr, idx);
+                    cacheId = ((AbstractDataLeafIO) io).getCacheId(addr, idx);
                 else
                     cacheId = nodeCtx.cacheId;
 
-                final CacheAwareLink res = new CacheAwareLink(cacheId, link);
+                boolean tombstone = false;
 
                 if (partCnt > 0) {
                     try {
@@ -1526,7 +1530,7 @@ public class IgniteIndexReader implements AutoCloseable {
                         int linkedPagePartId = partId(linkedPageId);
 
                         if (missingPartitions.contains(linkedPagePartId))
-                            return res; // just skip
+                            return new CacheAwareLink(cacheId, link, false); // just skip
 
                         int linkedItemId = itemId(link);
 
@@ -1546,13 +1550,13 @@ public class IgniteIndexReader implements AutoCloseable {
                                 linkedPagePartId + ". Does partition file exist?");
                         }
 
-                        doWithBuffer((dataBuf, dataBufAddr) -> {
+                        tombstone = doWithBuffer((dataBuf, dataBufAddr) -> {
                             readPage(store, linkedPageId, dataBuf);
 
                             PageIO dataIo = PageIO.getPageIO(getType(dataBuf), getVersion(dataBuf));
 
                             if (dataIo instanceof AbstractDataPageIO) {
-                                AbstractDataPageIO dataPageIO = (AbstractDataPageIO)dataIo;
+                                AbstractDataPageIO dataPageIO = (AbstractDataPageIO) dataIo;
 
                                 DataPagePayload payload = dataPageIO.readPayload(dataBufAddr, linkedItemId, pageSize);
 
@@ -1564,9 +1568,22 @@ public class IgniteIndexReader implements AutoCloseable {
 
                                     throw new IgniteException(payloadInfo.toString());
                                 }
+
+                                if (payload.nextLink() == 0) {
+                                    if (io instanceof MvccDataLeafIO)
+                                        return false;
+
+                                    int off = payload.offset();
+
+                                    int len = PageUtils.getInt(dataBufAddr, off);
+
+                                    byte type = PageUtils.getByte(dataBufAddr, off + len + 9);
+
+                                    return type == CacheObject.TOMBSTONE;
+                                }
                             }
 
-                            return null;
+                            return false;
                         });
                     }
                     catch (Exception e) {
@@ -1574,7 +1591,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     }
                 }
 
-                return res;
+                return new CacheAwareLink(cacheId, link, tombstone);
             }
             else
                 throw new IgniteException("Unexpected page io: " + io.getClass().getSimpleName());

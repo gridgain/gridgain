@@ -107,6 +107,9 @@ public class DiscoCache {
     /** */
     private final P1<ClusterNode> aliveNodePred;
 
+    /** */
+    private final boolean fullBaseline;
+
     /**
      * @param topVer Topology version.
      * @param state Current cluster state.
@@ -124,6 +127,7 @@ public class DiscoCache {
      * @param nodeIdToConsIdx Node ID to consistent ID mapping.
      * @param consIdxToNodeId Consistent ID to node ID mapping.
      * @param minNodeVer Minimum node version.
+     * @param fullBaseline {@code True} if all nodes in a baseline are alive.
      */
     DiscoCache(
         AffinityTopologyVersion topVer,
@@ -142,7 +146,8 @@ public class DiscoCache {
         @Nullable Map<UUID, Short> nodeIdToConsIdx,
         @Nullable Map<Short, UUID> consIdxToNodeId,
         IgniteProductVersion minNodeVer,
-        IgniteProductVersion minSrvNodeVer
+        IgniteProductVersion minSrvNodeVer,
+        boolean fullBaseline
     ) {
         this.topVer = topVer;
         this.state = state;
@@ -161,6 +166,7 @@ public class DiscoCache {
         this.minSrvNodeVer = minSrvNodeVer;
         this.nodeIdToConsIdx = nodeIdToConsIdx;
         this.consIdxToNodeId = consIdxToNodeId;
+        this.fullBaseline = fullBaseline;
 
         aliveBaselineNodePred = new P1<BaselineNode>() {
             @Override public boolean apply(BaselineNode node) {
@@ -468,6 +474,13 @@ public class DiscoCache {
     }
 
     /**
+     * @return {@code True} if all baseline node are alive.
+     */
+    public boolean fullBaseline() {
+        return fullBaseline;
+    }
+
+    /**
      * @param ver Topology version.
      * @param state Not {@code null} state if need override state, otherwise current state is used.
      * @return Copy of discovery cache with new version.
@@ -490,7 +503,8 @@ public class DiscoCache {
             nodeIdToConsIdx,
             consIdxToNodeId,
             minNodeVer,
-            minSrvNodeVer);
+            minSrvNodeVer,
+            fullBaseline);
     }
 
     /** {@inheritDoc} */

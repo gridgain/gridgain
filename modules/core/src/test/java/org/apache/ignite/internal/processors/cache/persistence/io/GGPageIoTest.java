@@ -37,12 +37,12 @@ import static org.junit.Assert.assertTrue;
  */
 public class GGPageIoTest {
     /** Page size. */
-    private static final int PAGE_SIZE = 1024;
+    public static final int PAGE_SIZE = 1024;
 
     /** */
     @Test
     public void testGGVersionsCovered() {
-        List<Integer> knownVers = Arrays.asList(1, 2, 3, GG_VERSION_OFFSET);
+        List<Integer> knownVers = Arrays.asList(1, 2, 3, 4, GG_VERSION_OFFSET, GG_VERSION_OFFSET + 1);
 
         PagePartitionMetaIO[] vers = U.field(PagePartitionMetaIO.VERSIONS, "vers");
 
@@ -93,11 +93,42 @@ public class GGPageIoTest {
         testUpgrade(3, GG_VERSION_OFFSET, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 9, 10, 0L);
     }
 
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromAIV1() {
+        testUpgrade(1, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 0L, 0L, 0L, 0, 0, 0L, 0L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromAIV2() {
+        testUpgrade(2, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 0, 0, 0L, 0L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromAIV3() {
+        testUpgrade(3, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 9, 10, 0L, 0L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromAIV4() {
+        testUpgrade(4, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 9, 10, 0L, 11L);
+    }
+
+    /** */
+    @Test
+    public void testUpgradeToGGV2FromGGV1() {
+        testUpgrade(GG_VERSION_OFFSET, GG_VERSION_OFFSET + 1, 1L, 2L, 3L, (byte)4, 5L, 6L, 7L, 8L, 9, 10, 1001L, 0L);
+    }
+
     /**
      * Tests upgrade to GG version.
      *
      * @param from From version.
      * @param to To version.
+     * @param expVals Expected values to test.
      */
     private void testUpgrade(int from, int to, Object... expVals) {
         PagePartitionMetaIO fromIO = PagePartitionMetaIO.VERSIONS.forVersion(from);
@@ -119,12 +150,16 @@ public class GGPageIoTest {
             System.out.println("The page before upgrade:");
             System.out.println(PageIO.printPage(addr, PAGE_SIZE));
 
+            assertEquals(fromIO.getVersion(), PageIO.getVersion(addr));
+
             ((PagePartitionMetaIOGG)toIO).upgradePage(addr);
 
             System.out.println("The page after upgrade:");
             System.out.println(PageIO.printPage(addr, PAGE_SIZE));
 
             validate("Failed upgrading from " + from + " to " + to, addr, expVals);
+
+            assertEquals(toIO.getVersion(), PageIO.getVersion(addr));
         }
         finally {
             GridUnsafe.freeBuffer(bb);
@@ -143,7 +178,7 @@ public class GGPageIoTest {
         io.setUpdateCounter(addr, 2);
         io.setGlobalRemoveId(addr, 3);
         io.setPartitionState(addr, (byte) 4);
-        io.setCountersPageId(addr, 5);
+        io.setCacheSizesPageId(addr, 5);
 
         if (io.getVersion() >= 2) {
             io.setPendingTreeRoot(addr, 6);
@@ -155,11 +190,18 @@ public class GGPageIoTest {
             io.setEncryptedPageIndex(addr, 9);
             io.setEncryptedPageCount(addr, 10);
         }
+
+        if (io.getVersion() == 4 || io.getVersion() == GG_VERSION_OFFSET + 1)
+            io.setTombstonesCount(addr, 11);
+
+        if (io.getVersion() == GG_VERSION_OFFSET)
+            io.setUpdateTreeRoot(addr, 1001);
     }
 
     /**
      * @param msg Message.
      * @param addr Address.
+     * @param expVals Expected values to test.
      */
     private void validate(String msg, long addr, Object... expVals) {
         PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(addr);
@@ -170,13 +212,16 @@ public class GGPageIoTest {
         assertEquals(msg, expVals[1], io.getUpdateCounter(addr));
         assertEquals(msg, expVals[2], io.getGlobalRemoveId(addr));
         assertEquals(msg, expVals[3], io.getPartitionState(addr));
-        assertEquals(msg, expVals[4], io.getCountersPageId(addr));
+        assertEquals(msg, expVals[4], io.getCacheSizesPageId(addr));
         assertEquals(msg, expVals[5], io.getPendingTreeRoot(addr));
         assertEquals(msg, expVals[6], io.getPartitionMetaStoreReuseListRoot(addr));
         assertEquals(msg, expVals[7], io.getGapsLink(addr));
         assertEquals(msg, expVals[8], io.getEncryptedPageIndex(addr));
         assertEquals(msg, expVals[9], io.getEncryptedPageCount(addr));
         assertEquals(msg, expVals[10], io.getUpdateTreeRoot(addr));
+
+        if (expVals.length > 11)
+            assertEquals(msg, expVals[11], io.getTombstonesCount(addr));
     }
 
     /** */

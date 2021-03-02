@@ -15,49 +15,52 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
-import org.apache.ignite.internal.util.typedef.F;
-import org.gridgain.internal.h2.table.Column;
-
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
 /**
  * Statistics manager implementation.
  */
 public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
+    /** Size of statistics collection pool. */
+    private static final int STATS_POOL_SIZE = 4;
+
     /** Logger. */
     private final IgniteLogger log;
 
     /** Kernal context. */
     private final GridKernalContext ctx;
 
-    /** Schema manager. */
-    private final SchemaManager schemaMgr;
-
     /** Statistics repository. */
     private final IgniteStatisticsRepository statsRepos;
+
+    /** Ignite statistics helper. */
+    private final IgniteStatisticsHelper helper;
+
+    /** Statistics collector. */
+    private final StatisticsGatherer gatherer;
+
+    /** Statistics configuration manager. */
+    private final IgniteStatisticsConfigurationManager statCfgMgr;
+
+    /** Management pool. */
+    private final IgniteThreadPoolExecutor mgmtPool;
+
+    /** Gathering pool. */
+    private final IgniteThreadPoolExecutor gatherPool;
 
     /**
      * Constructor.
@@ -67,15 +70,60 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      */
     public IgniteStatisticsManagerImpl(GridKernalContext ctx, SchemaManager schemaMgr) {
         this.ctx = ctx;
-        this.schemaMgr = schemaMgr;
+
+        helper = new IgniteStatisticsHelper(ctx.localNodeId(), schemaMgr, ctx::log);
 
         log = ctx.log(IgniteStatisticsManagerImpl.class);
 
-        boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
         IgniteCacheDatabaseSharedManager db = (GridCacheUtils.isPersistenceEnabled(ctx.config())) ?
                 ctx.cache().context().database() : null;
-        statsRepos = new IgniteStatisticsRepositoryImpl(storeData, db, ctx.internalSubscriptionProcessor(), this,
-                ctx::log);
+
+        gatherPool = new IgniteThreadPoolExecutor("stat-gather",
+                ctx.igniteInstanceName(),
+                0,
+                STATS_POOL_SIZE,
+                IgniteConfiguration.DFLT_THREAD_KEEP_ALIVE_TIME,
+                new LinkedBlockingQueue<>(),
+                GridIoPolicy.UNDEFINED,
+                ctx.uncaughtExceptionHandler()
+        );
+
+        mgmtPool = new IgniteThreadPoolExecutor("stat-mgmt",
+                ctx.igniteInstanceName(),
+                0,
+                1,
+                IgniteConfiguration.DFLT_THREAD_KEEP_ALIVE_TIME,
+                new LinkedBlockingQueue<>(),
+                GridIoPolicy.UNDEFINED,
+                ctx.uncaughtExceptionHandler()
+        );
+
+        boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
+        IgniteStatisticsStore store;
+        if (!storeData)
+            store = new IgniteStatisticsDummyStoreImpl(ctx::log);
+        else if (db == null)
+            store = new IgniteStatisticsInMemoryStoreImpl(ctx::log);
+        else
+            store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db, ctx::log);
+
+        statsRepos = new IgniteStatisticsRepository(store, helper, ctx::log);
+
+        gatherer = new StatisticsGatherer(
+            statsRepos,
+            gatherPool,
+            ctx::log
+        );
+
+        statCfgMgr = new IgniteStatisticsConfigurationManager(
+            schemaMgr,
+            ctx.internalSubscriptionProcessor(),
+            ctx.cache().context().exchange(),
+            statsRepos,
+            gatherer,
+            mgmtPool,
+            ctx::log
+        );
     }
 
     /**
@@ -86,196 +134,80 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectStatistics getLocalStatistics(String schemaName, String objName) {
-        return statsRepos.getLocalStatistics(new StatsKey(schemaName, objName));
+    @Override public ObjectStatistics getLocalStatistics(StatisticsKey key) {
+        return statsRepos.getLocalStatistics(key);
     }
 
     /** {@inheritDoc} */
-    @Override public void clearObjectStatistics(String schemaName, String objName, String... colNames) {
-        StatsKey key = new StatsKey(schemaName, objName);
-        statsRepos.clearLocalPartitionsStatistics(key, colNames);
-        statsRepos.clearLocalStatistics(key, colNames);
-        statsRepos.clearGlobalStatistics(key, colNames);
-    }
+    @Override public void updateStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
+        checkStatisticsSupport("collect statistics");
 
-    /**
-     * Filter columns by specified names.
-     *
-     * @param cols Columns to filter.
-     * @param colNames Column names.
-     * @return Column with specified names.
-     */
-    private Column[] filterColumns(Column[] cols, String... colNames) {
-        if (F.isEmpty(colNames))
-            return cols;
-
-        Set<String> colNamesSet = new HashSet(Arrays.asList(colNames));
-        List<Column> resList = new ArrayList<>(colNames.length);
-
-        for (Column col : cols)
-            if (colNamesSet.contains(col.getName()))
-                resList.add(col);
-
-        return resList.toArray(new Column[resList.size()]);
+        statCfgMgr.updateStatistics(Arrays.asList(targets));
     }
 
     /** {@inheritDoc} */
-    @Override public void collectObjectStatistics(String schemaName, String objName, String... colNames)
-            throws IgniteCheckedException {
-        GridH2Table tbl = schemaMgr.dataTable(schemaName, objName);
-        if (tbl == null)
-            throw new IllegalArgumentException(String.format("Can't find table %s.%s", schemaName, objName));
+    @Override public void dropStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
+        checkStatisticsSupport("drop statistics");
 
-        if (log.isDebugEnabled())
-            log.debug(String.format("Starting statistics collection by %s.%s object", schemaName, objName));
+        statCfgMgr.dropStatistics(Arrays.asList(targets), true);
+    }
 
-        Column[] selectedCols;
-        boolean fullStat = F.isEmpty(colNames);
-        selectedCols = filterColumns(tbl.getColumns(), colNames);
+    /** {@inheritDoc} */
+    @Override public void refreshStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
+        checkStatisticsSupport("collect statistics");
 
-        Collection<ObjectPartitionStatisticsImpl> partsStats = collectPartitionStatistics(tbl, selectedCols);
-        StatsKey key = new StatsKey(tbl.identifier().schema(), tbl.identifier().table());
-        if (fullStat)
-            statsRepos.saveLocalPartitionsStatistics(key, partsStats);
-        else
-            statsRepos.mergeLocalPartitionsStatistics(key, partsStats);
+        statCfgMgr.refreshStatistics(Arrays.asList(targets));
+    }
 
-        ObjectStatisticsImpl objStats = aggregateLocalStatistics(tbl, selectedCols, partsStats);
-        if (fullStat)
-            statsRepos.saveLocalStatistics(key, objStats);
-        else
-            statsRepos.mergeLocalStatistics(key, objStats);
-        if (log.isDebugEnabled())
-            log.debug(String.format("Statistics collection by %s.%s object is finished.", schemaName, objName));
+    /** {@inheritDoc} */
+    @Override public void dropAll() throws IgniteCheckedException {
+        checkStatisticsSupport("drop all statistics");
+
+        statCfgMgr.dropAll();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void stop() {
+        gatherer.stop();
+
+        if (gatherPool != null) {
+            List<Runnable> unfinishedTasks = gatherPool.shutdownNow();
+            if (!unfinishedTasks.isEmpty())
+                log.warning(String.format("%d statistics collection cancelled.", unfinishedTasks.size()));
+        }
+
+        if (mgmtPool != null) {
+            List<Runnable> unfinishedTasks = mgmtPool.shutdownNow();
+            if (!unfinishedTasks.isEmpty())
+                log.warning(String.format("%d statistics configuration change handler cancelled.", unfinishedTasks.size()));
+        }
+    }
+
+   /** */
+    public IgniteStatisticsConfigurationManager statisticConfiguration() {
+        return statCfgMgr;
     }
 
     /**
-     * Collect partition level statistics.
+     * Check that all server nodes in the cluster support STATISTICS_COLLECTION feature. Throws IgniteCheckedException
+     * in not.
      *
-     * @param tbl Table to collect statistics by.
-     * @param selectedCols Columns to collect statistics by.
-     * @return Collection of partition level statistics by local primary partitions.
-     * @throws IgniteCheckedException in case of error.
+     * @param op Operation name.
+     * @throws IgniteCheckedException If at least one server node doesn't support feature.
      */
-    private Collection<ObjectPartitionStatisticsImpl> collectPartitionStatistics(
-            GridH2Table tbl,
-            Column[] selectedCols
-    ) throws IgniteCheckedException {
-        List<ObjectPartitionStatisticsImpl> tblPartStats = new ArrayList<>();
-        GridH2RowDescriptor desc = tbl.rowDescriptor();
-        String tblName = tbl.getName();
-
-        for (GridDhtLocalPartition locPart : tbl.cacheContext().topology().localPartitions()) {
-            final boolean reserved = locPart.reserve();
-
-            try {
-                if (!reserved || (locPart.state() != OWNING && locPart.state() != MOVING)
-                        || !locPart.primary(ctx.discovery().topologyVersionEx()))
-                    continue;
-
-                if (locPart.state() == MOVING)
-                    tbl.cacheContext().preloader().syncFuture().get();
-
-                long rowsCnt = 0;
-
-                List<ColumnStatisticsCollector> colStatsCollectors = new ArrayList<>(selectedCols.length);
-
-                for (Column col : selectedCols)
-                    colStatsCollectors.add(new ColumnStatisticsCollector(col, tbl::compareValues));
-
-                for (CacheDataRow row : tbl.cacheContext().offheap().cachePartitionIterator(tbl.cacheId(), locPart.id(),
-                        null, true)) {
-                    GridQueryTypeDescriptor typeDesc = ctx.query().typeByValue(tbl.cacheName(),
-                            tbl.cacheContext().cacheObjectContext(), row.key(), row.value(), false);
-                    if (!tblName.equals(typeDesc.tableName()))
-                        continue;
-
-                    rowsCnt++;
-
-                    H2Row row0 = desc.createRow(row);
-
-                    for (ColumnStatisticsCollector colStat : colStatsCollectors)
-                        colStat.add(row0.getValue(colStat.col().getColumnId()));
-
-                }
-
-                Map<String, ColumnStatistics> colStats = colStatsCollectors.stream().collect(Collectors.toMap(
-                        csc -> csc.col().getName(), csc -> csc.finish()
-                ));
-
-                tblPartStats.add(new ObjectPartitionStatisticsImpl(locPart.id(), true, rowsCnt,
-                        locPart.updateCounter(), colStats));
-            }
-            finally {
-                if (reserved)
-                    locPart.release();
-            }
-        }
-
-        return tblPartStats;
-    }
+   private void checkStatisticsSupport(String op) throws IgniteCheckedException {
+       if (!isStatisticsSupport()) {
+           throw new IgniteCheckedException(String.format(
+               "Unable to perform %s due to not all server nodes supports STATISTICS_COLLECTION feature.", op));
+       }
+   }
 
     /**
-     * Aggregate specified partition level statistics to local level statistics.
+     * Test is statistics collection feature are supported by each server node in cluster.
      *
-     * @param key Aggregation key.
-     * @param tblPartStats Collection of all local partition level statistics by specified key.
-     * @return Local level aggregated statistics.
+     * @return {@code true} if all server nodes support STATISTICS_COLLECTION feature, {@code false} - otherwise.
      */
-    public ObjectStatisticsImpl aggregateLocalStatistics(
-            StatsKey key,
-            Collection<ObjectPartitionStatisticsImpl> tblPartStats
-    ) {
-        // For now there can be only tables
-        GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
-
-        if (tbl == null) {
-            // remove all loaded statistics.
-            log.info("Removing statistics for object " + key + " cause table doesn't exists.");
-            statsRepos.clearLocalPartitionsStatistics(key);
-        }
-        return aggregateLocalStatistics(tbl, tbl.getColumns(), tblPartStats);
-    }
-
-    /**
-     * Aggregate partition level statistics to local level one.
-     *
-     * @param tbl Table to aggregate statistics by.
-     * @param selectedCols Columns to aggregate statistics by.
-     * @param tblPartStats Collection of partition level statistics.
-     * @return Local level statistics.
-     */
-    private ObjectStatisticsImpl aggregateLocalStatistics(
-            GridH2Table tbl,
-            Column[] selectedCols,
-            Collection<ObjectPartitionStatisticsImpl> tblPartStats
-    ) {
-        Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedCols.length);
-        long rowCnt = 0;
-        for (Column col : selectedCols)
-            colPartStats.put(col, new ArrayList<>());
-
-        for (ObjectPartitionStatisticsImpl partStat : tblPartStats) {
-            for (Column col : selectedCols) {
-                ColumnStatistics colPartStat = partStat.columnStatistics(col.getName());
-                if (colPartStat != null) {
-                    colPartStats.compute(col, (k, v) -> {
-                        v.add(colPartStat);
-                        return v;
-                    });
-                }
-            }
-            rowCnt += partStat.rowCount();
-        }
-
-        Map<String, ColumnStatistics> colStats = new HashMap<>(selectedCols.length);
-        for (Column col : selectedCols) {
-            ColumnStatistics stat = ColumnStatisticsCollector.aggregate(tbl::compareValues, colPartStats.get(col));
-            colStats.put(col.getName(), stat);
-        }
-
-        ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
-
-        return tblStats;
-    }
+   private boolean isStatisticsSupport() {
+       return IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.STATISTICS_COLLECTION, IgniteDiscoverySpi.SRV_NODES);
+   }
 }

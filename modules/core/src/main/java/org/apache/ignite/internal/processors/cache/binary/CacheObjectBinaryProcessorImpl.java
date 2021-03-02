@@ -83,6 +83,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectByteArrayImpl;
@@ -1221,6 +1222,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             case CacheObject.TYPE_REGULAR:
                 return new CacheObjectImpl(null, bytes);
+
+            case CacheObject.TOMBSTONE:
+                return TombstoneCacheObject.INSTANCE;
 
             case CacheObject.TYPE_BINARY_COMPRESSED:
                 return new BinaryObjectImpl(binaryContext(), ctx.compressionStrategy().decompress(bytes), 0);

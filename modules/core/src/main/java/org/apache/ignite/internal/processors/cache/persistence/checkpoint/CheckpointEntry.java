@@ -132,16 +132,10 @@ public class CheckpointEntry {
      * @param grpId Cache group ID.
      * @param part Partition ID.
      * @return Partition counter or {@code null} if not found.
+     * @throws IgniteCheckedException If something is wrong when loading the counter from WAL history.
      */
-    public Long partitionCounter(IgniteWriteAheadLogManager wal, int grpId, int part) {
-        GroupStateLazyStore store;
-
-        try {
-            store = initIfNeeded(wal);
-        }
-        catch (IgniteCheckedException e) {
-            return null;
-        }
+    public Long partitionCounter(IgniteWriteAheadLogManager wal, int grpId, int part) throws IgniteCheckedException {
+        GroupStateLazyStore store = initIfNeeded(wal);
 
         return store.partitionCounter(grpId, part);
     }

@@ -173,7 +173,7 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean rmvIdx) throws IgniteCheckedException {
+    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean destroy) throws IgniteCheckedException {
 
     }
 

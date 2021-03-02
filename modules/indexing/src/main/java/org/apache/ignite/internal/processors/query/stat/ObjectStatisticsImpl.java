@@ -19,6 +19,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
  * All statistics by some object (table or index).
  */
@@ -27,6 +30,7 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
     private final long rowsCnt;
 
     /** Map columnKey to its statistic. */
+    @GridToStringInclude
     private final Map<String, ColumnStatistics> colNameToStat;
 
     /**
@@ -35,8 +39,10 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
      * @param rowsCnt Total rows count.
      * @param colNameToStat Column names to statistics map.
      */
-    public ObjectStatisticsImpl(long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
-
+    public ObjectStatisticsImpl(
+        long rowsCnt,
+        Map<String, ColumnStatistics> colNameToStat
+    ) {
         assert rowsCnt >= 0 : "rowsCnt >= 0";
 
         assert colNameToStat != null : "colNameToStat != null";
@@ -76,15 +82,24 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
 
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
         ObjectStatisticsImpl that = (ObjectStatisticsImpl) o;
-        return rowsCnt == that.rowsCnt &&
-                Objects.equals(colNameToStat, that.colNameToStat);
+
+        return rowsCnt == that.rowsCnt
+            && Objects.equals(colNameToStat, that.colNameToStat);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(rowsCnt, colNameToStat);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ObjectStatisticsImpl.class, this);
     }
 }

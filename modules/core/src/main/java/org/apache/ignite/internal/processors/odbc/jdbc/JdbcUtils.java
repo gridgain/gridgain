@@ -18,9 +18,6 @@ package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -167,7 +164,7 @@ public class JdbcUtils {
         switch (type) {
             case GridBinaryMarshaller.DATE: {
                 if (protoCtx.client()) {
-                    return new java.sql.Date(convertWithTimeZone(BinaryUtils.doReadDate(reader.in()),
+                    return new java.sql.Date(SqlListenerUtils.convertWithTimeZone(BinaryUtils.doReadDate(reader.in()),
                         protoCtx.serverTimeZone(), TimeZone.getDefault()).getTime());
                 }
                 else
@@ -176,7 +173,7 @@ public class JdbcUtils {
 
             case GridBinaryMarshaller.TIME: {
                 if (protoCtx.client()) {
-                    return convertWithTimeZone(BinaryUtils.doReadTime(reader.in()),
+                    return SqlListenerUtils.convertWithTimeZone(BinaryUtils.doReadTime(reader.in()),
                         protoCtx.serverTimeZone(), TimeZone.getDefault());
                 }
                 else
@@ -185,7 +182,7 @@ public class JdbcUtils {
 
             case GridBinaryMarshaller.TIMESTAMP: {
                 if (protoCtx.client()) {
-                    return convertWithTimeZone(BinaryUtils.doReadTimestamp(reader.in()),
+                    return SqlListenerUtils.convertWithTimeZone(BinaryUtils.doReadTimestamp(reader.in()),
                         protoCtx.serverTimeZone(), TimeZone.getDefault());
                 }
                 else
@@ -217,7 +214,8 @@ public class JdbcUtils {
         if (cls == java.sql.Date.class || cls == java.util.Date.class) {
             if (protoCtx.client()) {
                 writer.writeDate(
-                    convertWithTimeZone((java.util.Date)obj, TimeZone.getDefault(), protoCtx.serverTimeZone()));
+                        SqlListenerUtils.convertWithTimeZone((java.util.Date)obj, TimeZone.getDefault(),
+                                protoCtx.serverTimeZone()));
             }
             else
                 writer.writeDate((java.util.Date)obj);
@@ -225,7 +223,8 @@ public class JdbcUtils {
         else if (cls == Time.class) {
             if (protoCtx.client()) {
                 writer.writeTime(
-                    convertWithTimeZone((Time)obj, TimeZone.getDefault(), protoCtx.serverTimeZone()));
+                        SqlListenerUtils.convertWithTimeZone((Time)obj, TimeZone.getDefault(),
+                                protoCtx.serverTimeZone()));
             }
             else
                 writer.writeTime((Time)obj);
@@ -233,56 +232,12 @@ public class JdbcUtils {
         else if (cls == Timestamp.class) {
             if (protoCtx.client()) {
                 writer.writeTimestamp(
-                    convertWithTimeZone((Timestamp)obj, TimeZone.getDefault(), protoCtx.serverTimeZone()));
+                    SqlListenerUtils.convertWithTimeZone((Timestamp)obj, TimeZone.getDefault(),
+                            protoCtx.serverTimeZone()));
             } else
                 writer.writeTimestamp((Timestamp)obj);
         }
         else
             SqlListenerUtils.writeObject(writer, obj, protoCtx.isFeatureSupported(JdbcThinFeature.CUSTOM_OBJECT));
-    }
-
-    /**
-     */
-    public static Timestamp convertWithTimeZone(Timestamp ts, TimeZone tzFrom, TimeZone tzTo) {
-        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
-            return ts;
-
-        Instant i = Instant.ofEpochMilli(ts.getTime());
-
-        LocalDateTime ldt = LocalDateTime.ofInstant(i, tzFrom.toZoneId());
-
-        ZonedDateTime zdt = ldt.atZone(tzTo.toZoneId());
-
-        return new Timestamp(zdt.toInstant().toEpochMilli());
-    }
-
-    /**
-     */
-    public static Time convertWithTimeZone(Time t, TimeZone tzFrom, TimeZone tzTo) {
-        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
-            return t;
-
-        Instant i = Instant.ofEpochMilli(t.getTime());
-
-        LocalDateTime ldt = LocalDateTime.ofInstant(i, tzFrom.toZoneId());
-
-        ZonedDateTime zdt = ldt.atZone(tzTo.toZoneId());
-
-        return new Time(zdt.toInstant().toEpochMilli());
-    }
-
-    /**
-     */
-    public static java.util.Date convertWithTimeZone(java.util.Date t, TimeZone tzFrom, TimeZone tzTo) {
-        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
-            return t;
-
-        Instant i = Instant.ofEpochMilli(t.getTime());
-
-        LocalDateTime ldt = LocalDateTime.ofInstant(i, tzFrom.toZoneId());
-
-        ZonedDateTime zdt = ldt.atZone(tzTo.toZoneId());
-
-        return new Time(zdt.toInstant().toEpochMilli());
     }
 }

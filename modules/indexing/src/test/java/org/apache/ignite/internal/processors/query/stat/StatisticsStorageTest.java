@@ -16,30 +16,35 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
  * Tests for statistics storage.
  */
 public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTest {
+    /** {@inheritDoc} */
+    @Override public void beforeTest() throws Exception {
+        updateStatistics(
+            new StatisticsTarget("PUBLIC", "SMALL"));
+    }
+
     /**
      * Test that statistics manager will return local statistics after cleaning of statistics repository.
      * @throws IgniteCheckedException In case of errors.
      */
     @Test
-    public void clearAllTest() throws IgniteCheckedException {
+    public void clearAllTest() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsRepositoryImpl statsRepo = (IgniteStatisticsRepositoryImpl)
-                ((IgniteStatisticsManagerImpl) statsMgr).statisticsRepository();
+        IgniteStatisticsRepository statsRepo = ((IgniteStatisticsManagerImpl) statsMgr).statisticsRepository();
         IgniteStatisticsStore statsStore = statsRepo.statisticsStore();
 
         statsStore.clearAllStatistics();
 
-        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
-                .getLocalStatistics("PUBLIC", "SMALL");
-        assertNotNull(locStat);
+        ObjectStatistics locStat = statsMgr.getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL"));
 
-        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
+        assertNotNull(locStat);
     }
 
     /**
@@ -51,14 +56,26 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     @Test
     public void testRecollection() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
-        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
-        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
-                .getLocalStatistics("PUBLIC", "SMALL");
-        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
-        ObjectStatisticsImpl localStat2 = (ObjectStatisticsImpl) statsMgr
-                .getLocalStatistics("PUBLIC", "SMALL");
 
-        assertEquals(locStat, localStat2);
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
+            .getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL"));
+
+        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+
+        ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
+            .getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL"));
+
+        // Reset version to compare statistic.
+        for (ColumnStatistics c : locStat2.columnsStatistics().values())
+            GridTestUtils.setFieldValue(c, "ver", 0);
+
+        // Reset version to compare statistic.
+        for (ColumnStatistics c : locStat.columnsStatistics().values())
+            GridTestUtils.setFieldValue(c, "ver", 0);
+
+        assertEquals(locStat, locStat2);
     }
 
     /**
@@ -71,12 +88,22 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     @Test
     public void testPartialRecollection() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
-        statsMgr.collectObjectStatistics("PUBLIC", "SMALL", "B");
+
+        updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
         ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
-                .getLocalStatistics("PUBLIC", "SMALL");
-        statsMgr.collectObjectStatistics("PUBLIC", "SMALL", "B");
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
+
+        updateStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
-                .getLocalStatistics("PUBLIC", "SMALL");
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
+
+        // Reset version to compare statistic.
+        for (ColumnStatistics c : locStat2.columnsStatistics().values())
+            GridTestUtils.setFieldValue(c, "ver", 0);
+
+        // Reset version to compare statistic.
+        for (ColumnStatistics c : locStat.columnsStatistics().values())
+            GridTestUtils.setFieldValue(c, "ver", 0);
 
         assertEquals(locStat, locStat2);
     }
@@ -88,17 +115,25 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     public void testDoubleDeletion() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
 
-        statsMgr.clearObjectStatistics("PUBLIC", "SMALL");
-        ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
-                .getLocalStatistics("PUBLIC", "SMALL");
-        assertNull(locStat);
+        statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL"));
 
-        statsMgr.clearObjectStatistics("PUBLIC", "SMALL");
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            null == statsMgr
+                .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL")), TIMEOUT));
+
+        GridTestUtils.assertThrows(
+            log,
+            () -> statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL")),
+            IgniteSQLException.class,
+            "Statistic doesn't exist for [schema=PUBLIC, obj=SMALL]"
+        );
+
+        Thread.sleep(TIMEOUT);
+
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
-                .getLocalStatistics("PUBLIC", "SMALL");
-        assertNull(locStat2);
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
 
-        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
+        assertNull(locStat2);
     }
 
     /**
@@ -108,22 +143,31 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
     public void testDoublePartialDeletion() throws Exception {
         IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
 
-        statsMgr.clearObjectStatistics("PUBLIC", "SMALL", "B");
+        statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
+
+        assertTrue(GridTestUtils.waitForCondition(() -> null == ((ObjectStatisticsImpl) statsMgr
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"))).columnsStatistics().get("B"), TIMEOUT));
 
         ObjectStatisticsImpl locStat = (ObjectStatisticsImpl) statsMgr
-                .getLocalStatistics("PUBLIC", "SMALL");
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
+
         assertNotNull(locStat);
         assertNotNull(locStat.columnsStatistics().get("A"));
-        assertNull(locStat.columnsStatistics().get("B"));
 
-        statsMgr.clearObjectStatistics("PUBLIC", "SMALL", "B");
+        GridTestUtils.assertThrows(
+            log,
+            () -> statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B")),
+            IgniteSQLException.class,
+            "Statistic doesn't exist for [schema=PUBLIC, obj=SMALL, col=B]"
+        );
+
+        Thread.sleep(TIMEOUT);
 
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl) statsMgr
-                .getLocalStatistics("PUBLIC", "SMALL");
+            .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
+
         assertNotNull(locStat2);
         assertNotNull(locStat.columnsStatistics().get("A"));
         assertNull(locStat.columnsStatistics().get("B"));
-
-        statsMgr.collectObjectStatistics("PUBLIC", "SMALL");
     }
 }

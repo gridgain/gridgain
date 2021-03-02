@@ -2287,8 +2287,6 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                         entry.touch();
 
                         CU.unwindEvicts(cctx);
-
-                        entry.onUnlock();
                     }
                     catch (GridDhtInvalidPartitionException ignored) {
                         ignoredParts.add(cctx.affinity().partition(e.getKey()));

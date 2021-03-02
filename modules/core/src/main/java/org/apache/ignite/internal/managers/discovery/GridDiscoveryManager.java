@@ -37,12 +37,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.BaselineNode;
@@ -69,7 +69,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.NodeStoppingException;
-import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.cluster.NodeOrderComparator;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
@@ -2444,6 +2443,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         BaselineTopology blt = state.baselineTopology();
 
+        boolean fullBaseline = true;
+
         if (blt != null) {
             nodeIdToConsIdx = U.newHashMap(srvNodes.size());
             consIdxToNodeId = U.newHashMap(srvNodes.size());
@@ -2471,8 +2472,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                 if (srvNode != null)
                     baselineNodes0.add(srvNode);
-                else
+                else {
+                    fullBaseline = false;
                     baselineNodes0.add(blt.baselineNode(consId));
+                }
             }
 
             baselineNodes = baselineNodes0;
@@ -2480,7 +2483,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         else {
             nodeIdToConsIdx = null;
             consIdxToNodeId = null;
-
+            fullBaseline = false;
             baselineNodes = null;
         }
 
@@ -2508,7 +2511,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
             nodeIdToConsIdx == null ? null : Collections.unmodifiableMap(nodeIdToConsIdx),
             consIdxToNodeId == null ? null : Collections.unmodifiableMap(consIdxToNodeId),
             minVer,
-            minSrvVer);
+            minSrvVer,
+            fullBaseline);
     }
 
     /**
@@ -3535,6 +3539,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
             nodeIdToConsIdx,
             discoCache.consIdxToNodeId,
             discoCache.minimumNodeVersion(),
-            discoCache.minimumServerNodeVersion());
+            discoCache.minimumServerNodeVersion(),
+            discoCache.fullBaseline());
     }
 }
