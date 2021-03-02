@@ -330,8 +330,8 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      *
      * @return memory in bytes currently left available for the queries on this node.
      */
-    public long getFreeMem() {
-        return ((LongMetric)ctx.metric().registry(SqlMemoryStatisticsHolder.SQL_QUOTAS_REG_NAME).findMetric("freeMem")).value();
+    public long freeMemory() {
+        return memoryLimit() - reserved();
     }
 
 

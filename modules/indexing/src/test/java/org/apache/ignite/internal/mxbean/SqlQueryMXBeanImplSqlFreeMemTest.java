@@ -23,7 +23,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.metric.SqlStatisticsMemoryQuotaTest;
+import org.apache.ignite.internal.metric.SqlStatisticsAbstractTest;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.junit.After;
 import org.junit.Test;
@@ -31,7 +31,8 @@ import org.junit.Test;
 /**
  * Tests SQL Free Memory Bytes JMX property for correctness in various usage scenarios.
  */
-public class SqlQueryMXBeanImplSqlFreeMemTest extends SqlStatisticsMemoryQuotaTest {
+public class SqlQueryMXBeanImplSqlFreeMemTest extends SqlStatisticsAbstractTest {
+
 
     /**
      * Teardown.
