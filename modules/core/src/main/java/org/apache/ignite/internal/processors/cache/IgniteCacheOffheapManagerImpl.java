@@ -1451,13 +1451,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone : row;
 
-                    try {
-                        GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
+                    if (pendingEntries.removex(row)) { // Avoid concurrent processing of the same keys.
+                        try {
+                            GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
-                        c.apply(entry, upper);
-                    }
-                    catch (GridDhtInvalidPartitionException ignored) {
-                        // Skip renting or evicted partition.
+                            c.apply(entry, upper);
+                        }
+                        catch (GridDhtInvalidPartitionException ignored) {
+                            // Skip renting or evicted partition.
+                        }
                     }
 
                     cleared++;
