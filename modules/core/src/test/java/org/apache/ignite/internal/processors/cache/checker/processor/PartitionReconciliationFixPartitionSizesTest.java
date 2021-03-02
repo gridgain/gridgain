@@ -63,7 +63,7 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
  */
 public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static final int NODES_CNT = 4;
+    protected static final int NODES_CNT = 1;
 
     /** Crd server node. */
     protected IgniteEx ig;
@@ -81,7 +81,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         ccfg.setName(DEFAULT_CACHE_NAME);
 //        ccfg.setGroupName("zzz");
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 20));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, 1));
         ccfg.setBackups(NODES_CNT - NODES_CNT);
         ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
 
@@ -161,7 +161,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 100000;
+        int endKey = 1000;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -181,7 +181,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
-        breakCacheSizes(List.of(grid(0), grid(1), grid(2), grid(3)), List.of(DEFAULT_CACHE_NAME));
+        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
 //
         assertFalse(cache.size() == startSize);
 
@@ -216,7 +216,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //                }
 
 //                try {
-//                    sleep(1);
+//                    sleep(10);
 //                }
 //                catch (InterruptedException e) {
 //                    e.printStackTrace();
@@ -226,6 +226,13 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //                if (cache.containsKey(i1)) {
 //                    cache.remove(i1);
 //                    removeCount.incrementAndGet();
+//                }
+
+//                try {
+//                    sleep(10);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
 //                }
 
 //                try {
