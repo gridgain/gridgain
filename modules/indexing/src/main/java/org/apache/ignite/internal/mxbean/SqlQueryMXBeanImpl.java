@@ -90,7 +90,7 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
 
     /** {@inheritDoc} */
     @Override public Long getSqlFreeMemoryBytes() {
-        return h2idx.memoryManager().getFreeMem();
+        return h2idx.memoryManager().freeMemory();
     }
 
     /** {@inheritDoc} */
