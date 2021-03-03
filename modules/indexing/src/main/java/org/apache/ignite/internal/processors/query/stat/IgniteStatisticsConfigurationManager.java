@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -422,10 +422,10 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /**
+     * Validate target against existing table.
      *
-     *
-     * @param target
-     * @param tbl
+     * @param target Statistics target to validate.
+     * @param tbl Table.
      */
     private void validate(StatisticsTarget target, GridH2Table tbl) {
         if (tbl == null) {
@@ -474,7 +474,7 @@ public class IgniteStatisticsConfigurationManager {
                 }
             }
         }
-   }
+    }
 
     /**
      * Scan local statistic saved at the local metastorage, compare ones to statistic configuration.
