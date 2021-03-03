@@ -170,8 +170,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Enable statistics operations.
      */
-    private void enableOperations() {
-
+    private synchronized void enableOperations() {
         gatherer.start();
         statCfgMgr.start();
     }
@@ -179,7 +178,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Disable statistics operations.
      */
-    private void disableOperations() {
+    private synchronized void disableOperations() {
         statCfgMgr.stop();
         gatherer.stop();
         statsRepos.start();

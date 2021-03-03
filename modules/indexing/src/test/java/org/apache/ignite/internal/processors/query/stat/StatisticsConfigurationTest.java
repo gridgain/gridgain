@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -462,28 +463,28 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         createSmallTable(null);
 
-        assertTrue(executeStatCfgCommands(ign0));
-        assertTrue(executeStatCfgCommands(ign1));
+        assertTrue(executeStatisticsConfigurationCommands(ign0));
+        assertTrue(executeStatisticsConfigurationCommands(ign1));
 
         ign0statMgr.usageState(NO_UPDATE);
 
-        assertTrue(executeStatCfgCommands(ign0));
-        assertTrue(executeStatCfgCommands(ign1));
+        assertTrue(executeStatisticsConfigurationCommands(ign0));
+        assertTrue(executeStatisticsConfigurationCommands(ign1));
 
         ign0statMgr.usageState(OFF);
 
-        assertFalse(executeStatCfgCommands(ign0));
-        assertFalse(executeStatCfgCommands(ign1));
+        assertFalse(executeStatisticsConfigurationCommands(ign0));
+        assertFalse(executeStatisticsConfigurationCommands(ign1));
 
         ign0statMgr.usageState(NO_UPDATE);
 
-        assertTrue(executeStatCfgCommands(ign0));
-        assertTrue(executeStatCfgCommands(ign1));
+        assertTrue(executeStatisticsConfigurationCommands(ign0));
+        assertTrue(executeStatisticsConfigurationCommands(ign1));
 
         ign0statMgr.usageState(ON);
 
-        assertTrue(executeStatCfgCommands(ign0));
-        assertTrue(executeStatCfgCommands(ign1));
+        assertTrue(executeStatisticsConfigurationCommands(ign0));
+        assertTrue(executeStatisticsConfigurationCommands(ign1));
     }
 
     /**
@@ -492,7 +493,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
      * @param ign Node to test.
      * @return {@code true} if all commands pass successfully, {@code false} - otherwise.
      */
-    private boolean executeStatCfgCommands(IgniteEx ign) throws IgniteInterruptedCheckedException {
+    private boolean executeStatisticsConfigurationCommands(IgniteEx ign) throws IgniteInterruptedCheckedException {
         IgniteStatisticsManager statMgr = ign.context().query().getIndexing().statsManager();
 
         int success = 0;
@@ -500,7 +501,8 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
             statMgr.collectStatistics(SMALL_TARGET);
             success++;
         } catch (Exception e) {
-            // NoOp.
+            if (!(e instanceof IgniteException && e.getMessage().contains("while statistics usage state is OFF.")))
+                fail("Unknown error: " + e);
         }
 
         if (GridTestUtils.waitForCondition(() -> statMgr.getLocalStatistics(SMALL_KEY) != null, TIMEOUT))
@@ -510,17 +512,26 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
             statMgr.refreshStatistics(SMALL_TARGET);
             success++;
         } catch (Exception e) {
-            // NoOp.
+            if (!(e instanceof IgniteException && e.getMessage().contains("while statistics usage state is OFF.")))
+                fail("Unknown error: " + e);
         }
 
         try {
             statMgr.dropStatistics(SMALL_TARGET);
             success++;
         } catch (Exception e) {
-            // NoOp.
+            if (!(e instanceof IgniteException && e.getMessage().contains("while statistics usage state is OFF.")))
+                fail("Unknown error: " + e);
         }
 
-        return success == 4;
+        if (success == 4)
+            return true;
+
+        if (success == 0)
+            return false;
+
+        fail("Partially success execution");
+        return false;
     }
 
     /**
