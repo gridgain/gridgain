@@ -2999,8 +2999,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             ConcurrentMap<KeyCacheObject, ConcurrentLinkedQueue<Object[]>> hist = cctx.hist;
 
-            if (cctx.cacheId() == 1544803905L)
-                hist.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(new Object[]{"remove", oldRow, tombstoneRow, new Exception()});
+//            if (cctx.cacheId() == 1544803905L)
+//                hist.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(new Object[]{"remove", oldRow, tombstoneRow, new Exception()});
         }
 
         /**
