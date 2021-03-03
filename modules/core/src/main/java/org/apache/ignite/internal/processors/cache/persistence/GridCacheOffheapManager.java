@@ -162,6 +162,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     /** Flag indicates that all group partitions have restored their state from page memory / disk. */
     private volatile boolean partitionStatesRestored;
 
+    private final boolean skipTtlCleanup = IgniteSystemProperties.getBoolean(
+        "DBG_SKIP_TTL_CLEANUP", false);
+
     /** */
     private DataStorageMetricsImpl persStoreMetrics;
 
@@ -1291,11 +1294,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     ) throws IgniteCheckedException {
         assert !cctx.isNear() : cctx.name();
 
+        long now = U.currentTimeMillis();
+
         // Prevent manager being stopped in the middle of pds operation.
         if (!busyLock.enterBusy())
             return false;
-
-        long now = U.currentTimeMillis();
 
         try {
             int expRmvCnt = 0;
@@ -1304,7 +1307,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             List<CacheDataStore> stores = new ArrayList<>();
             cacheDataStores().forEach(stores::add);
 
-            if (cctx.config().isEagerTtl()) {
+            if (cctx.config().isEagerTtl() && !skipTtlCleanup) {
                 Collections.shuffle(stores); // Randomize partitions to clear.
 
                 for (CacheDataStore store : stores) {

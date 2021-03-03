@@ -181,6 +181,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /** */
     protected GridStripedLock partStoreLock = new GridStripedLock(Runtime.getRuntime().availableProcessors());
 
+    private final boolean skipTtlCleanup = IgniteSystemProperties.getBoolean(
+        "DBG_SKIP_TTL_CLEANUP", false);
+
     /** {@inheritDoc} */
     @Override public GridAtomicLong globalRemoveId() {
         return globalRmvId;
@@ -1379,7 +1382,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         long now = U.currentTimeMillis();
 
-        int expRmvCnt = cctx.config().isEagerTtl() ? expireInternal(cctx, c, amount, false, now) : 0;
+        int expRmvCnt = cctx.config().isEagerTtl() && !skipTtlCleanup ? expireInternal(cctx, c, amount, false, now) : 0;
 
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
