@@ -39,7 +39,6 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.metric.LongMetric;
 import org.gridgain.internal.h2.command.dml.GroupByData;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.expression.Expression;
