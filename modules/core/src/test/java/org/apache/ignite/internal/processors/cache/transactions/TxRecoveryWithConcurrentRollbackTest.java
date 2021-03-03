@@ -18,8 +18,10 @@ package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -28,15 +30,20 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecoveryRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocal;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionState;
@@ -81,8 +88,10 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         }
 
         cfg.setActiveOnStart(false);
-        cfg.setClientMode("client".equals(name));
+        cfg.setClientMode(name != null && name.contains("client"));
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        cfg.setFailureHandler(new StopNodeFailureHandler());
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
             setCacheMode(PARTITIONED).
@@ -334,12 +343,14 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
     }
 
     /**
-     * Start 2 servers
+     * Start 3 servers
      * Start 1 client
      * Start transaction on primary and client node
      * Transfer to PREPARED STATE
      * Block client messages
      * Stop client node
+     *
+     * Относительно стабилен
      */
     @Test
     public void reproducer() throws Exception {
@@ -347,74 +358,102 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         persistence = true;
         this.syncMode = FULL_ASYNC;
 
+//        LogListener lsnr = LogListener.matches("Transaction does not own lock for update").build();
+//
+//        testLog.registerListener(lsnr);
+
         final IgniteEx node0 = startGrids(3);
         node0.cluster().active(true);
 
         final Ignite client = startGrid("client");
+        final Ignite client2 = startGrid("client2");
+
+        awaitPartitionMapExchange();
 
         final IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
-        final IgniteCache<Object, Object> cache1 = grid(1).cache(DEFAULT_CACHE_NAME);
+        final IgniteCache<Object, Object> cache2 = client2.cache(DEFAULT_CACHE_NAME);
 
         final Integer pk = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
 
-        IgniteInternalFuture<Void> fut = null;
-
         CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
 
         IgniteInternalFuture<Long> future = GridTestUtils.runMultiThreadedAsync(() -> {
-            try (final Transaction tx = grid(1).transactions().txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
-                cache1.put(pk, Boolean.TRUE);
+            try (final Transaction tx = client.transactions().withLabel("tx").txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
+
+                cache.put(pk, Boolean.TRUE);
 
                 TransactionProxyImpl p = (TransactionProxyImpl)tx;
 
+                TestRecordingCommunicationSpi.spi(grid("client")).blockMessages(
+                        (node, msg) -> msg instanceof GridNearTxFinishRequest || msg instanceof TxLocksRequest);
+
                 p.tx().prepareNearTxLocal();
 
-                latch.countDown();
+                p.tx().currentPrepareFuture().listen((fut) -> {
+                    latch.countDown();
+                });
 
-                log.info("TX STATE: " + txs(grid(1)).get(0).state().toString());
+                log.info("Transactions 0 point: "
+                        + txs(grid(1)).stream()
+                        .map(Object::toString)
+                        .collect(Collectors.joining(", ")));
 
             } catch (Exception e) {
                 // No-op.
             }
-        }, 1, "tx2");
+        }, 1, "tx");
 
-        List<IgniteInternalTx> tx0 = null;
-        List<IgniteInternalTx> tx2 = null;
+        try (final Transaction tx = client2.transactions().withLabel("tx2").txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
+            cache2.put(pk, Boolean.TRUE);
 
-        try (final Transaction tx = client.transactions().txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
-            cache.put(pk, Boolean.TRUE);
+            TestRecordingCommunicationSpi.spi(grid("client2")).blockMessages(
+                    (node, msg) -> msg instanceof GridDhtTxFinishRequest || msg instanceof TxLocksRequest);
 
             TransactionProxyImpl p = (TransactionProxyImpl)tx;
 
-            latch.await(300, TimeUnit.MILLISECONDS);
+            p.tx().prepareNearTxLocal();
 
-            p.tx().prepare(false);
-
-            tx0 = txs(grid(0));
-            tx2 = txs(grid(2));
-
-            TestRecordingCommunicationSpi.spi(grid("client")).blockMessages((node, msg) -> true);
-
-            U.sleep(5500);
-
-            fut = runAsync(() -> {
-
-                client.close();
-
-                return null;
+            p.tx().currentPrepareFuture().listen((fut) -> {
+                latch2.countDown();
             });
+
+            while (latch2.getCount() > 0 && latch.getCount() > 0) {};
+
+            latch2.await(4, TimeUnit.SECONDS);
+
+            GridDhtTxLocal dhtTxLocal = txs(grid(1)).stream()
+                    .filter(t -> t.state() == TransactionState.PREPARING)
+                    .map(t -> (GridDhtTxLocal) t)
+                    .findFirst()
+                    .orElse(null);
+
+            if (dhtTxLocal != null) {
+                UUID clientNodeToFail = dhtTxLocal.eventNodeId();
+                GridDhtTxPrepareFuture prep = GridTestUtils.getFieldValue(dhtTxLocal,"prepFut");
+                prep.get();
+
+                log.info("Transactions 1.1 phase: "
+                        + txs(grid(1)).stream()
+                        .map(Object::toString)
+                        .collect(Collectors.joining(", ")));
+
+                if (clientNodeToFail.equals(((IgniteEx) client).localNode().id())) {
+                    client.close();
+                } else if (clientNodeToFail.equals(((IgniteEx) client2).localNode().id())) {
+                    client2.close();
+                } else {
+                    log.info("ATTEMPT FAILED");
+                }
+            }
         }
         catch (Exception e) {
-            // No-op.
+            log.error("ERROR: " + e.getMessage(), e);
         }
 
-        future.get();
-        fut.get();
+        U.sleep(5000);
 
-        U.sleep(1000);
-
-        log.info("TX STATE0: " +  tx0.get(0).state().toString());
-        log.info("TX STATE2: " + tx2.get(0).state().toString());
+       // assertTrue(lsnr.check());
     }
 
     /**
