@@ -267,7 +267,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             }
             finally {
                 if (lock)
-                    dhtCtx.gate().leave();
+                    dhtCtx.gate().unlock();
             }
 
             // There is nothing to clean, so the next clean up can be postponed.

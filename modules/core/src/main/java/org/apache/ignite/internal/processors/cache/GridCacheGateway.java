@@ -152,6 +152,13 @@ public class GridCacheGateway<K, V> {
     }
 
     /**
+     * Unlocks a gate.
+     */
+    public void unlock() {
+        rwLock.readLock().unlock();
+    }
+
+    /**
      * @param opCtx Cache operation context to guard.
      * @return Previous operation context set on this thread.
      */
