@@ -42,8 +42,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrep
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionState;
@@ -344,23 +342,17 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
     /**
      * Start 3 servers
-     * Start 1 client
-     * Start transaction on primary and client node
+     * Start 2 clients
+     * Start two OPTIMISTIC transactions with the same key from different client nodes
      * Transfer to PREPARED STATE
-     * Block client messages
-     * Stop client node
+     * Stop one client node
      *
-     * Относительно стабилен
      */
     @Test
     public void reproducer() throws Exception {
         backups = 2;
         persistence = true;
         this.syncMode = FULL_ASYNC;
-
-//        LogListener lsnr = LogListener.matches("Transaction does not own lock for update").build();
-//
-//        testLog.registerListener(lsnr);
 
         final IgniteEx node0 = startGrids(3);
         node0.cluster().active(true);
@@ -378,7 +370,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         CountDownLatch latch = new CountDownLatch(1);
         CountDownLatch latch2 = new CountDownLatch(1);
 
-        IgniteInternalFuture<Long> future = GridTestUtils.runMultiThreadedAsync(() -> {
+        GridTestUtils.runMultiThreadedAsync(() -> {
             try (final Transaction tx = client.transactions().withLabel("tx").txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
 
                 cache.put(pk, Boolean.TRUE);
@@ -393,11 +385,6 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
                 p.tx().currentPrepareFuture().listen((fut) -> {
                     latch.countDown();
                 });
-
-                log.info("Transactions 0 point: "
-                        + txs(grid(1)).stream()
-                        .map(Object::toString)
-                        .collect(Collectors.joining(", ")));
 
             } catch (Exception e) {
                 // No-op.
@@ -418,9 +405,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
                 latch2.countDown();
             });
 
-            while (latch2.getCount() > 0 && latch.getCount() > 0) {};
-
-            latch2.await(4, TimeUnit.SECONDS);
+            while (latch2.getCount() > 0 && latch.getCount() > 0) {}
 
             GridDhtTxLocal dhtTxLocal = txs(grid(1)).stream()
                     .filter(t -> t.state() == TransactionState.PREPARING)
@@ -433,7 +418,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
                 GridDhtTxPrepareFuture prep = GridTestUtils.getFieldValue(dhtTxLocal,"prepFut");
                 prep.get();
 
-                log.info("Transactions 1.1 phase: "
+                log.info("Transactions check point: "
                         + txs(grid(1)).stream()
                         .map(Object::toString)
                         .collect(Collectors.joining(", ")));
@@ -442,8 +427,6 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
                     client.close();
                 } else if (clientNodeToFail.equals(((IgniteEx) client2).localNode().id())) {
                     client2.close();
-                } else {
-                    log.info("ATTEMPT FAILED");
                 }
             }
         }
@@ -451,9 +434,9 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
             log.error("ERROR: " + e.getMessage(), e);
         }
 
-        U.sleep(5000);
+        U.sleep(500);
 
-       // assertTrue(lsnr.check());
+        assertEquals(3, grid(0).context().discovery().aliveServerNodes().size());
     }
 
     /**
