@@ -1353,16 +1353,16 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
 
             // Sort by descending tombstones count.
-            GridDhtPartitionTopology top = grp.topology();
+            //GridDhtPartitionTopology top = grp.topology();
 
-            Map<Integer, Long> cntCache = U.newHashMap(top.localPartitions().size());
+            //Map<Integer, Long> cntCache = U.newHashMap(top.localPartitions().size());
 
-            stores.sort((o1, o2) -> {
-                long c1 = cntCache.computeIfAbsent(o1.partId(), k -> tombstoneCount(top.localPartition(o1.partId())));
-                long c2 = cntCache.computeIfAbsent(o2.partId(), k -> tombstoneCount(top.localPartition(o2.partId())));
-
-                return Long.compare(c2, c1);
-            });
+//            stores.sort((o1, o2) -> {
+//                long c1 = cntCache.computeIfAbsent(o1.partId(), k -> tombstoneCount(top.localPartition(o1.partId())));
+//                long c2 = cntCache.computeIfAbsent(o2.partId(), k -> tombstoneCount(top.localPartition(o2.partId())));
+//
+//                return Long.compare(c2, c1);
+//            });
 
             for (CacheDataStore store : stores) {
                 tsRmvCnt += ((GridCacheDataStore)store).purgeExpired(cctx, c, amount - tsRmvCnt, true, now);
