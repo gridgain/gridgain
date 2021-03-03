@@ -74,4 +74,14 @@ public interface IgniteStatisticsManager {
      * @return Statistics usage state.
      */
     public StatisticsUsageState usageState();
+
+    /**
+     * To track statistics invalidation. Skip value if no statistics for the given table exists.
+     *
+     * @param schemaName Schema name.
+     * @param objName Object name.
+     * @param partId Partition id.
+     * @param keyBytes Row key bytes.
+     */
+    public void onRowUpdated(String schemaName, String objName, int partId, byte[] keyBytes);
 }

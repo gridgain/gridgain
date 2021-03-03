@@ -258,13 +258,22 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private void scanAndCheckLocalStatistics(AffinityTopologyVersion topVer) {
         mgmtPool.submit(() -> {
+            Map<StatisticsObjectConfiguration, Set<Integer>> res = new HashMap<>();
+
             try {
-                distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) ->
-                    checkLocalStatistics((StatisticsObjectConfiguration)v, topVer));
+                distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> {
+                    StatisticsObjectConfiguration cfg = (StatisticsObjectConfiguration)v;
+
+                    Set<Integer> parts = checkLocalStatistics(cfg, topVer);
+
+                    res.put(cfg, parts);
+                });
             }
             catch (IgniteCheckedException e) {
                 log.warning("Unexpected exception on check local statistic on start", e);
             }
+
+            repo.checkObsolescenceInfo(res);
         });
     }
 
@@ -477,20 +486,21 @@ public class IgniteStatisticsConfigurationManager {
      * The method is called on change affinity assignment (end of PME).
      * @param cfg expected statistic configuration.
      * @param topVer topology version.
+     * @return Set of local primary partitions.
      */
-    private void checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
+    private Set<Integer> checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
         try {
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
 
             if (tbl == null) {
                 // Drop tables handle by onDropTable
-                return;
+                return Collections.emptySet();
             }
 
             GridCacheContext cctx = tbl.cacheContext();
 
             if (cctx == null)
-                return;
+                return Collections.emptySet();
 
             AffinityTopologyVersion topVer0 = cctx.affinity().affinityReadyFuture(topVer).get();
 
@@ -501,7 +511,7 @@ public class IgniteStatisticsConfigurationManager {
                 // Remove oll data
                 dropColumnsOnLocalStatistics(cfg, cfg.columns().keySet());
 
-                return;
+                return Collections.emptySet();
             }
 
             final Set<Integer> partsOwn = new HashSet<>(
@@ -573,9 +583,13 @@ public class IgniteStatisticsConfigurationManager {
                 // Only refresh aggregated local statistics.
                 gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), parts));
             }
+
+            return parts;
         }
         catch (Throwable ex) {
             log.error("Unexpected error on check local statistics", ex);
+
+            return Collections.emptySet();
         }
     }
 

@@ -15,9 +15,15 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.BiConsumer;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -27,11 +33,15 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedEnumProperty;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.gridgain.internal.h2.table.Column;
 
 import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.NO_UPDATE;
 import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.OFF;
@@ -47,11 +57,20 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Default statistics usage state. */
     private static final StatisticsUsageState DEFAULT_STATISTICS_USAGE_STATE = StatisticsUsageState.ON;
 
+    /** Interval to check statistics obsolescence in seconds. */
+    private static final int OBSOLESCENSE_INTERVAL = 60;
+
+    /** Rows limit to renew partition statistics in percent. */
+    private static final int OBSOLESCENSE_MAX_PERCENT = 15;
+
     /** Logger. */
     private final IgniteLogger log;
 
     /** Kernal context. */
     private final GridKernalContext ctx;
+
+    /** SchemaManager */
+    private final SchemaManager schemaMgr;
 
     /** Statistics repository. */
     private final IgniteStatisticsRepository statsRepos;
@@ -75,6 +94,34 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     private final DistributedEnumProperty<StatisticsUsageState> usageState = new DistributedEnumProperty<>(
         "statistics.usage.state", StatisticsUsageState::fromOrdinal, StatisticsUsageState::index, StatisticsUsageState.class);
 
+    /** Drop columns listener. */
+    private final BiConsumer<GridH2Table, List<String>> dropColsLsnr = new BiConsumer<GridH2Table, List<String>>() {
+        /**
+         * Drop statistics after columns dropped.
+         *
+         * @param tbl  Table.
+         * @param cols Dropped columns.
+         */
+        @Override
+        public void accept(GridH2Table tbl, List<String> cols) {
+
+        }
+    };
+
+    /** Drop table listener. */
+    private final BiConsumer<String, String> dropTblLsnr = new BiConsumer<String, String>() {
+        /**
+         * Drop statistics after table dropped.
+         *
+         * @param schema Schema name.
+         * @param name Table name.
+         */
+        @Override public void accept(String schema, String name) {
+            statsRepos.updateObsolescenceInfo();
+        }
+    };
+
+
     /**
      * Constructor.
      *
@@ -83,6 +130,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      */
     public IgniteStatisticsManagerImpl(GridKernalContext ctx, SchemaManager schemaMgr) {
         this.ctx = ctx;
+        this.schemaMgr = schemaMgr;
 
         helper = new IgniteStatisticsHelper(ctx.localNodeId(), schemaMgr, ctx::log);
 
@@ -171,15 +219,21 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      * Enable statistics operations.
      */
     private void enableOperations() {
-
+        statsRepos.start();
         gatherer.start();
         statCfgMgr.start();
+
+        schemaMgr.registerDropColumnsListener(dropColsLsnr);
+        schemaMgr.registerDropTableListener(dropTblLsnr);
     }
 
     /**
      * Disable statistics operations.
      */
     private void disableOperations() {
+        schemaMgr.unregisterDropTableListener(dropTblLsnr);
+        schemaMgr.unregisterDropColumnsListener(dropColsLsnr);
+
         statCfgMgr.stop();
         gatherer.stop();
         statsRepos.start();
@@ -274,6 +328,78 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** {@inheritDoc} */
     @Override public StatisticsUsageState usageState() {
         return usageState.getOrDefault(DEFAULT_STATISTICS_USAGE_STATE);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onRowUpdated(String schemaName, String objName, int partId, byte[] keyBytes) {
+        try {
+            if (statCfgMgr.config(new StatisticsKey(schemaName, objName)) != null)
+                statsRepos.addRowsModified(new StatisticsKey(schemaName, objName), partId, keyBytes);
+        }
+        catch (IgniteCheckedException e) {
+            if (log.isInfoEnabled())
+                log.info(String.format("Error while obsolescence key in %s.%s due to %s", schemaName, objName,
+                    e.getMessage()));
+        }
+    }
+
+    /**
+     *
+     */
+    private void processObscolescence() {
+        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> dirty = statsRepos.saveObsolescenceInfo();
+        Map<StatisticsKey, List<Integer>> task = new HashMap<>();
+
+        for (Map.Entry<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> objObs : dirty.entrySet()) {
+            StatisticsKey key = objObs.getKey();
+            List<Integer> taskParts = new ArrayList<>();
+
+            for (Map.Entry<Integer, ObjectPartitionStatisticsObsolescence> objPartObs : objObs.getValue().entrySet()) {
+                ObjectPartitionStatisticsImpl partStat = statsRepos.getLocalPartitionStatistics(key, objPartObs.getKey());
+                if (partStat == null || partStat.rowCount() == 0 ||
+                    (double)objPartObs.getValue().modified() * 100 / partStat.rowCount() > OBSOLESCENSE_MAX_PERCENT)
+                    taskParts.add(objPartObs.getKey());
+            }
+
+            if (!taskParts.isEmpty())
+                task.put(key, taskParts);
+        }
+
+        for (Map.Entry<StatisticsKey, List<Integer>> objTask : task.entrySet()) {
+            GridH2Table tbl = schemaMgr.dataTable(objTask.getKey().schema(), objTask.getKey().obj());
+            if (tbl == null) {
+                if (log.isDebugEnabled())
+                    log.debug(String.format("Got obsolescence statistics for unknown table %s", objTask.getKey()));
+
+                continue;
+            }
+            StatisticsObjectConfiguration objCfg;
+            try {
+                objCfg = statCfgMgr.config(objTask.getKey());
+            } catch (IgniteCheckedException e) {
+                log.warning("Unable to load statistics object configuration from global metastore", e);
+                continue;
+            }
+            if (objCfg == null) {
+                if (log.isDebugEnabled())
+                    log.debug(String.format("Got obsolescence statistics for unknown configuration %s", objTask.getKey()));
+
+                continue;
+            }
+
+            GridCacheContext cctx = tbl.cacheContext();
+
+            Set<Integer> parts = cctx.affinity().primaryPartitions(
+                cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());
+
+            Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), objCfg.columns());
+
+            LocalStatisticsGatheringContext ctx = gatherer
+                .collectLocalObjectsStatisticsAsync(tbl, cols, new HashSet<>(objTask.getValue()), objCfg.version());
+
+
+            ctx.future().thenAccept((v) -> statsRepos.refreshAggregatedLocalStatistics(parts, objCfg));
+        }
     }
 
     /**

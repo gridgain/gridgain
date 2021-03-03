@@ -17,6 +17,8 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,7 +41,11 @@ public class IgniteStatisticsRepository {
     private final IgniteStatisticsStore store;
 
     /** Local (for current node) object statistics. */
-    private final Map<StatisticsKey, ObjectStatisticsImpl> locStats;
+    private final Map<StatisticsKey, ObjectStatisticsImpl> locStats = new ConcurrentHashMap<>();
+
+    /** Obsolescence for each partition. */
+    private final Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> statObs =
+        new ConcurrentHashMap<>();
 
     /** Statistics gathering. */
     private final IgniteStatisticsHelper helper;
@@ -57,7 +63,6 @@ public class IgniteStatisticsRepository {
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.store = store;
-        this.locStats = new ConcurrentHashMap<>();
         this.helper = helper;
         this.log = logSupplier.apply(IgniteStatisticsRepository.class);
     }
@@ -327,5 +332,149 @@ public class IgniteStatisticsRepository {
     public void start() {
         if (log.isDebugEnabled())
             log.debug("Statistics repository started.");
+    }
+
+    /**
+     * Load obsolescence info from local metastorage and cache it. Remove parts, that doesn't match configuration.
+     * Create missing partitions info.
+     *
+     * @param cfg Partitions configuration.
+     */
+    public void loadObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
+        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> obsolescence = store.loadAllObsolescence();
+
+        obsolescence.forEach((k,v) -> statObs.put(k, new ConcurrentHashMap<>(v)));
+
+        updateObsolescenceInfo(cfg);
+    }
+
+    /**
+     * Update obsolescence info cache to fit specified cfg.
+     *
+     * @param cfg Obsolescence configuration.
+     */
+    public void updateObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
+        Map<StatisticsKey, Set<Integer>> deleted = updateObsolescenceInfo(statObs, cfg);
+
+        for (Map.Entry<StatisticsKey, Set<Integer>> objDeleted : deleted.entrySet())
+            store.removeObsolescenceInfo(objDeleted.getKey(), objDeleted.getValue());
+    }
+
+    /**
+     * Load or update obsolescence info cache to fit specified cfg.
+     *
+     * @param cfg Map object statistics configuration to primary partitions set.
+     */
+    public void checkObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
+
+    }
+
+    /**
+     * Make obsolescence map correlated with configuration and return removed elements map.
+     *
+     * @param obsolescence Obsolescence info map.
+     * @param cfg Obsolescence configuration.
+     * @return Removed from obsolescence info map partitions.
+     */
+    private static Map<StatisticsKey, Set<Integer>> updateObsolescenceInfo(
+        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> obsolescence,
+        Map<StatisticsObjectConfiguration, Set<Integer>> cfg
+    ) {
+        Map<StatisticsKey, Set<Integer>> res = new HashMap<>();
+
+        Set<StatisticsKey> keys = cfg.keySet().stream().map(StatisticsObjectConfiguration::key).collect(Collectors.toSet());
+
+        for (Map.Entry<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> objObs :
+            obsolescence.entrySet()) {
+            StatisticsKey key = objObs.getKey();
+            if (!keys.contains(key)) {
+                Map<Integer, ObjectPartitionStatisticsObsolescence> rmv = obsolescence.remove(key);
+                res.put(key, rmv.keySet());
+            }
+        }
+
+        for (Map.Entry<StatisticsObjectConfiguration, Set<Integer>> objObsCfg : cfg.entrySet()) {
+            StatisticsKey key = objObsCfg.getKey().key();
+            Map<Integer, ObjectPartitionStatisticsObsolescence> objObs = obsolescence.get(objObsCfg.getKey().key());
+            if (objObs == null) {
+                objObs = new ConcurrentHashMap<>();
+                obsolescence.put(key, objObs);
+            }
+            Map<Integer, ObjectPartitionStatisticsObsolescence> objObsFinal = objObs;
+
+            // TODO:
+            long cfgVer = 1;//objObsCfg.getKey().version();
+            Set<Integer> partIds = objObsCfg.getValue();
+
+            for (Map.Entry<Integer, ObjectPartitionStatisticsObsolescence> objPartObs : objObs.entrySet()) {
+                Integer partId = objPartObs.getKey();
+                if (partIds.contains(partId)) {
+                    if (cfgVer != objPartObs.getValue().ver())
+                        objObs.put(partId, new ObjectPartitionStatisticsObsolescence(cfgVer));
+                }
+                else {
+                    objObs.remove(partId);
+                    res.computeIfAbsent(key, k -> new HashSet<>()).add(partId);
+                }
+            }
+        }
+
+        return res;
+    }
+
+    /**
+     * Try to count modified to specified object and partition.
+     *
+     * @param key Statistics key.
+     * @param partId Partition id.
+     * @param changedKey Changed key bytes.
+     */
+    public void addRowsModified(StatisticsKey key, int partId, byte[] changedKey) {
+        Map<Integer, ObjectPartitionStatisticsObsolescence> objObs = statObs.get(key);
+        if (objObs == null)
+            return;
+
+        ObjectPartitionStatisticsObsolescence objPartObs = objObs.get(partId);
+        if (objPartObs == null)
+            return;
+
+        objPartObs.modify(changedKey);
+    }
+
+    /**
+     * Save all modified obsolescence info to local metastorage.
+     *
+     * @return Map of modified partitions.
+     */
+    public Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> saveObsolescenceInfo() {
+        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> dirtyObs = new HashMap<>();
+        for (Map.Entry<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> objObs :
+            statObs.entrySet()) {
+            Map<Integer, ObjectPartitionStatisticsObsolescence> objDirtyObs = new HashMap<>();
+
+            for (Map.Entry<Integer, ObjectPartitionStatisticsObsolescence> objPartObs : objObs.getValue().entrySet()) {
+                if (objPartObs.getValue().dirty()) {
+                    ObjectPartitionStatisticsObsolescence obs = objPartObs.getValue();
+                    obs.dirty(false);
+                    objDirtyObs.put(objPartObs.getKey(), obs);
+                }
+            }
+
+            if (!objDirtyObs.isEmpty())
+                dirtyObs.put(objObs.getKey(), objDirtyObs);
+        }
+
+        store.saveObsolescenceInfo(dirtyObs);
+
+        return dirtyObs;
+    }
+
+    /**
+     * Remove statistics obsolescence info by the given key.
+     *
+     * @param key Statistics key to remove obsolescence info by.
+     */
+    public void removeObsolescenceInfo(StatisticsKey key) {
+        statObs.remove(key);
     }
 }
