@@ -3290,9 +3290,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                         if (pendingTree.removex(row)) { // Avoid concurrent processing of the same keys.
                             // Can't throw GridDhtInvalidPartitionException because the partition is reserved.
-                            GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
-
-                            c.apply(entry, upper);
+//                            GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
+//
+//                            c.apply(entry, upper);
                         }
 
                         cleared++;
