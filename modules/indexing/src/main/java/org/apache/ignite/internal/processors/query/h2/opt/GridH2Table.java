@@ -1385,12 +1385,11 @@ public class GridH2Table extends TableBase {
         try {
             cacheCtx.kernalContext().query().getIndexing().statsManager().onRowUpdated(this.identifier().schema(),
                 this.identifier.table(), key.partition(), key.valueBytes(this.cacheContext().cacheObjectContext()));
-        } catch (IgniteCheckedException e) {
-            // TODO: log error
         }
-
-        // TODO:::
-        System.err.println("updateStat on " + key + " partId = " + key.partition() + " tbl: " + this.identifier());
+        catch (IgniteCheckedException e) {
+            if (log.isDebugEnabled())
+                log.debug("Error while updating statistics obsolescence due to " + e.getMessage());
+        }
     }
 
     /**

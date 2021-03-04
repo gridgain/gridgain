@@ -17,42 +17,37 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.internal.processors.query.stat.hll.HLL;
 
-import java.io.Serializable;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 
 /**
  * Partition obsolescence tracker.
  */
-public class ObjectPartitionStatisticsObsolescence implements Serializable {
+public class ObjectPartitionStatisticsObsolescence implements Externalizable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Related statistics version. */
-    private final long ver;
-
     /** HLL to track modified keys. */
-    private final HLL modified;
+    private HLL modified;
 
     /** Dirty flag, {@code true} if there are not saved on disc changes. */
     private transient volatile boolean dirty;
 
     /**
      * Constructor.
-     *
-     * @param ver Related statistics version.
      */
-    public ObjectPartitionStatisticsObsolescence(long ver) {
-        this.ver = ver;
+    public ObjectPartitionStatisticsObsolescence() {
         modified = new HLL(13, 5);
     }
 
     /**
      * Constructor.
      *
-     * @param ver
-     * @param modified
+     * @param modified Modified counter.
      */
-    public ObjectPartitionStatisticsObsolescence(long ver, HLL modified) {
-        this.ver = ver;
+    public ObjectPartitionStatisticsObsolescence(HLL modified) {
         this.modified = modified;
     }
 
@@ -65,13 +60,6 @@ public class ObjectPartitionStatisticsObsolescence implements Serializable {
         modified.addRaw(h.fastHash(key));
 
         dirty = true;
-    }
-
-    /**
-     * @return Related statistics version.
-     */
-    public long ver() {
-        return ver;
     }
 
     /**
@@ -95,5 +83,21 @@ public class ObjectPartitionStatisticsObsolescence implements Serializable {
      */
     public void dirty(boolean dirty) {
         this.dirty = dirty;
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public void writeExternal(ObjectOutput out) throws IOException {
+        byte[] rawData = modified.toBytes();
+        out.writeInt(rawData.length);
+        out.write(rawData);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        int length = in.read();
+        byte[] rawData = new byte[length];
+        in.read(rawData);
+        modified = HLL.fromBytes(rawData);
     }
 }

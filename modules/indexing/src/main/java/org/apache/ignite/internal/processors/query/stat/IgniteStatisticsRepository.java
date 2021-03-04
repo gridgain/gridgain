@@ -22,12 +22,16 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.util.collection.IntHashMap;
+import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
@@ -44,11 +48,13 @@ public class IgniteStatisticsRepository {
     private final Map<StatisticsKey, ObjectStatisticsImpl> locStats = new ConcurrentHashMap<>();
 
     /** Obsolescence for each partition. */
-    private final Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> statObs =
-        new ConcurrentHashMap<>();
+    private final Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> statObs = new ConcurrentHashMap<>();
 
     /** Statistics gathering. */
     private final IgniteStatisticsHelper helper;
+
+    /** Started flag. */
+    private AtomicBoolean started = new AtomicBoolean(false);
 
     /**
      * Constructor.
@@ -109,12 +115,15 @@ public class IgniteStatisticsRepository {
 
         if (newStatistics.isEmpty()) {
             store.clearLocalPartitionsStatistics(key);
+            store.clearObsolescenceInfo(key, null);
 
             return;
         }
 
-        if (!partitionsToRmv.isEmpty())
+        if (!partitionsToRmv.isEmpty()) {
             store.clearLocalPartitionsStatistics(key, partitionsToRmv);
+            store.clearObsolescenceInfo(key, partitionsToRmv);
+        }
 
         store.replaceLocalPartitionsStatistics(key, newStatistics);
     }
@@ -136,6 +145,27 @@ public class IgniteStatisticsRepository {
             ObjectPartitionStatisticsImpl combinedStats = add(oldPartStat, statistics);
             store.saveLocalPartitionStatistics(key, combinedStats);
         }
+    }
+
+    /**
+     * Refresh statistics obsolescence after partition gathering.
+     *
+     * @param key Statistics key.
+     * @param partId Partition id.
+     */
+    public void refreshObsolescence(StatisticsKey key, int partId) {
+        statObs.compute(key, (k,v) -> {
+            if (v == null)
+                v = new IntHashMap<>();
+
+            ObjectPartitionStatisticsObsolescence newObs = new ObjectPartitionStatisticsObsolescence();
+
+            if (v.put(partId, newObs) != null)
+                // Need to rewrite old value.
+                newObs.dirty(true);
+
+            return v;
+        });
     }
 
     /**
@@ -319,8 +349,9 @@ public class IgniteStatisticsRepository {
     /**
      * Stop repository.
      */
-    public void stop() {
+    public synchronized void stop() {
         locStats.clear();
+        started.set(false);
 
         if (log.isDebugEnabled())
             log.debug("Statistics repository started.");
@@ -329,7 +360,7 @@ public class IgniteStatisticsRepository {
     /**
      * Start repository.
      */
-    public void start() {
+    public synchronized void start() {
         if (log.isDebugEnabled())
             log.debug("Statistics repository started.");
     }
@@ -341,9 +372,9 @@ public class IgniteStatisticsRepository {
      * @param cfg Partitions configuration.
      */
     public void loadObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
-        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> obsolescence = store.loadAllObsolescence();
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence = store.loadAllObsolescence();
 
-        obsolescence.forEach((k,v) -> statObs.put(k, new ConcurrentHashMap<>(v)));
+        obsolescence.forEach((k, v) -> statObs.put(k, v));
 
         updateObsolescenceInfo(cfg);
     }
@@ -357,7 +388,7 @@ public class IgniteStatisticsRepository {
         Map<StatisticsKey, Set<Integer>> deleted = updateObsolescenceInfo(statObs, cfg);
 
         for (Map.Entry<StatisticsKey, Set<Integer>> objDeleted : deleted.entrySet())
-            store.removeObsolescenceInfo(objDeleted.getKey(), objDeleted.getValue());
+            store.clearObsolescenceInfo(objDeleted.getKey(), objDeleted.getValue());
     }
 
     /**
@@ -365,8 +396,11 @@ public class IgniteStatisticsRepository {
      *
      * @param cfg Map object statistics configuration to primary partitions set.
      */
-    public void checkObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
-
+    public synchronized void checkObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
+        if (!started.compareAndSet(false, true))
+            loadObsolescenceInfo(cfg);
+        else
+            updateObsolescenceInfo(cfg);
     }
 
     /**
@@ -377,46 +411,43 @@ public class IgniteStatisticsRepository {
      * @return Removed from obsolescence info map partitions.
      */
     private static Map<StatisticsKey, Set<Integer>> updateObsolescenceInfo(
-        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> obsolescence,
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence,
         Map<StatisticsObjectConfiguration, Set<Integer>> cfg
     ) {
         Map<StatisticsKey, Set<Integer>> res = new HashMap<>();
 
         Set<StatisticsKey> keys = cfg.keySet().stream().map(StatisticsObjectConfiguration::key).collect(Collectors.toSet());
 
-        for (Map.Entry<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> objObs :
-            obsolescence.entrySet()) {
+        for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> objObs : obsolescence.entrySet()) {
             StatisticsKey key = objObs.getKey();
             if (!keys.contains(key)) {
-                Map<Integer, ObjectPartitionStatisticsObsolescence> rmv = obsolescence.remove(key);
-                res.put(key, rmv.keySet());
+                IntMap<ObjectPartitionStatisticsObsolescence> rmv = obsolescence.remove(key);
+
+                res.put(key, IntStream.of(rmv.keys()).boxed().collect(Collectors.toSet()));
             }
         }
 
         for (Map.Entry<StatisticsObjectConfiguration, Set<Integer>> objObsCfg : cfg.entrySet()) {
             StatisticsKey key = objObsCfg.getKey().key();
-            Map<Integer, ObjectPartitionStatisticsObsolescence> objObs = obsolescence.get(objObsCfg.getKey().key());
+            IntMap<ObjectPartitionStatisticsObsolescence> objObs = obsolescence.get(objObsCfg.getKey().key());
             if (objObs == null) {
-                objObs = new ConcurrentHashMap<>();
+                objObs = new IntHashMap<>();
+
                 obsolescence.put(key, objObs);
             }
-            Map<Integer, ObjectPartitionStatisticsObsolescence> objObsFinal = objObs;
 
-            // TODO:
-            long cfgVer = 1;//objObsCfg.getKey().version();
-            Set<Integer> partIds = objObsCfg.getValue();
+            IntMap<ObjectPartitionStatisticsObsolescence> objObsFinal = objObs;
 
-            for (Map.Entry<Integer, ObjectPartitionStatisticsObsolescence> objPartObs : objObs.entrySet()) {
-                Integer partId = objPartObs.getKey();
-                if (partIds.contains(partId)) {
-                    if (cfgVer != objPartObs.getValue().ver())
-                        objObs.put(partId, new ObjectPartitionStatisticsObsolescence(cfgVer));
-                }
-                else {
-                    objObs.remove(partId);
+            Set<Integer> partIds = new HashSet<>(objObsCfg.getValue());
+
+            objObs.forEach((partId, v) -> {
+                if (!partIds.remove(partId)) {
+                    objObsFinal.remove(partId);
                     res.computeIfAbsent(key, k -> new HashSet<>()).add(partId);
                 }
-            }
+            });
+
+            partIds.forEach(partId -> objObsFinal.put(partId, new ObjectPartitionStatisticsObsolescence()));
         }
 
         return res;
@@ -430,7 +461,7 @@ public class IgniteStatisticsRepository {
      * @param changedKey Changed key bytes.
      */
     public void addRowsModified(StatisticsKey key, int partId, byte[] changedKey) {
-        Map<Integer, ObjectPartitionStatisticsObsolescence> objObs = statObs.get(key);
+        IntMap<ObjectPartitionStatisticsObsolescence> objObs = statObs.get(key);
         if (objObs == null)
             return;
 
@@ -446,19 +477,18 @@ public class IgniteStatisticsRepository {
      *
      * @return Map of modified partitions.
      */
-    public Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> saveObsolescenceInfo() {
-        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> dirtyObs = new HashMap<>();
-        for (Map.Entry<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> objObs :
-            statObs.entrySet()) {
-            Map<Integer, ObjectPartitionStatisticsObsolescence> objDirtyObs = new HashMap<>();
+    public Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> saveObsolescenceInfo() {
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> dirtyObs = new HashMap<>();
 
-            for (Map.Entry<Integer, ObjectPartitionStatisticsObsolescence> objPartObs : objObs.getValue().entrySet()) {
-                if (objPartObs.getValue().dirty()) {
-                    ObjectPartitionStatisticsObsolescence obs = objPartObs.getValue();
-                    obs.dirty(false);
-                    objDirtyObs.put(objPartObs.getKey(), obs);
+        for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> objObs : statObs.entrySet()) {
+            IntMap<ObjectPartitionStatisticsObsolescence> objDirtyObs = new IntHashMap<>();
+
+            objObs.getValue().forEach((k,v) -> {
+                if (v.dirty()) {
+                    v.dirty(false);
+                    objDirtyObs.put(k, v);
                 }
-            }
+            });
 
             if (!objDirtyObs.isEmpty())
                 dirtyObs.put(objObs.getKey(), objDirtyObs);
@@ -476,5 +506,7 @@ public class IgniteStatisticsRepository {
      */
     public void removeObsolescenceInfo(StatisticsKey key) {
         statObs.remove(key);
+
+        store.clearObsolescenceInfo(key, null);
     }
 }

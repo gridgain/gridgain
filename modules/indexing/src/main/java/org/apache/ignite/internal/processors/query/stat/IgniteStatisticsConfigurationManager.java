@@ -56,7 +56,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Holds statistic configuration objects at the distributed metastore
@@ -268,12 +267,12 @@ public class IgniteStatisticsConfigurationManager {
 
                     res.put(cfg, parts);
                 });
+
+                repo.checkObsolescenceInfo(res);
             }
             catch (IgniteCheckedException e) {
                 log.warning("Unexpected exception on check local statistic on start", e);
             }
-
-            repo.checkObsolescenceInfo(res);
         });
     }
 
@@ -453,7 +452,7 @@ public class IgniteStatisticsConfigurationManager {
      * @param target Operation targer.
      * @param cfg Current statistics configuration.
      */
-    private void validateDropRefresh(@NotNull StatisticsTarget target, @NotNull StatisticsObjectConfiguration cfg) {
+    private void validateDropRefresh(StatisticsTarget target, StatisticsObjectConfiguration cfg) {
         if (cfg == null || F.isEmpty(cfg.columns())) {
             throw new IgniteSQLException(
                 "Statistic doesn't exist for [schema=" + target.schema() + ", obj=" + target.obj() + ']',
@@ -647,7 +646,7 @@ public class IgniteStatisticsConfigurationManager {
      * @param colsToCollect If specified - collect statistics only for this columns,
      *                      otherwise - collect to all columns from object configuration.
      */
-    private void gatherLocalStatistics(
+    public void gatherLocalStatistics(
         StatisticsObjectConfiguration cfg,
         GridH2Table tbl,
         Set<Integer> partsToAggregate,
@@ -657,7 +656,7 @@ public class IgniteStatisticsConfigurationManager {
         if (F.isEmpty(colsToCollect))
             colsToCollect = cfg.columns();
 
-        gatherer.gatherLocalObjectsStatisticsAsync(tbl, colsToCollect, partsToCollect);
+        gatherer.gatherLocalObjectsStatisticsAsync(tbl, cfg, colsToCollect, partsToCollect);
 
         gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), partsToAggregate));
     }

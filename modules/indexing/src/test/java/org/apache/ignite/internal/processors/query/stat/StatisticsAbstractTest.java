@@ -248,8 +248,6 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     protected void createSmallTable(String suffix) {
         suffix = suffix != null ? suffix : "";
 
-        System.out.println("+++ CREATE small" + suffix);
-
         sql("DROP TABLE IF EXISTS small" + suffix);
 
         sql(String.format("CREATE TABLE small%s (a INT PRIMARY KEY, b INT, c INT)" +
@@ -430,15 +428,11 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
         assertTrue(currColls.isEmpty());
 
-        IgniteThreadPoolExecutor mgmtPool = GridTestUtils.getFieldValue(
-            statMgr,
-            "mgmtPool");
+        IgniteThreadPoolExecutor mgmtPool = GridTestUtils.getFieldValue(statMgr, "mgmtPool");
 
         assertTrue(mgmtPool.getQueue().isEmpty());
 
-        IgniteThreadPoolExecutor gatherPool = GridTestUtils.getFieldValue(
-            statMgr,
-            "gatherPool");
+        IgniteThreadPoolExecutor gatherPool = GridTestUtils.getFieldValue(statMgr, "gatherPool");
 
         assertTrue(gatherPool.getQueue().isEmpty());
     }

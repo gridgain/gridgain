@@ -16,11 +16,11 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.collection.IntMap;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -96,18 +96,18 @@ public class IgniteStatisticsDummyStoreImpl implements IgniteStatisticsStore {
 
     /** {@inheritDoc} */
     @Override public void saveObsolescenceInfo(
-        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> obsolescence
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence
     ) {
 
     }
 
     /** {@inheritDoc} */
-    @Override public void removeObsolescenceInfo(StatisticsKey key, Set<Integer> partIds) {
+    @Override public void clearObsolescenceInfo(StatisticsKey key, Collection<Integer> partIds) {
 
     }
 
     /** {@inheritDoc} */
-    @Override public Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> loadAllObsolescence() {
+    @Override public Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> loadAllObsolescence() {
         return Collections.emptyMap();
     }
 }

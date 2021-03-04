@@ -37,6 +37,8 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadW
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.internal.util.collection.IntHashMap;
+import org.apache.ignite.internal.util.collection.IntMap;
 
 /**
  * Sql statistics storage in metastore.
@@ -448,15 +450,13 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
 
     /** {@inheritDoc} */
     @Override public void saveObsolescenceInfo(
-        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> obsolescence
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence
     ) {
-        for (Map.Entry<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> objObs :
-            obsolescence.entrySet()) {
-
+        for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> objObs : obsolescence.entrySet()) {
             String keyPrefix = getObsolescencePartKeyPrefix(objObs.getKey());
+
             try {
-                for (Map.Entry<Integer, ObjectPartitionStatisticsObsolescence> objPartObs : objObs.getValue().entrySet())
-                    writeMeta(keyPrefix + objPartObs.getKey(), objPartObs.getValue());
+                objObs.getValue().forEach((k, v) -> writeMeta(keyPrefix + k, v));
             }
             catch (IgniteCheckedException e) {
                 log.warning(String.format("Error while saving statistics obs %s - %s", objObs.getKey(), e.getMessage()));
@@ -465,7 +465,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     }
 
     /** {@inheritDoc} */
-    @Override public void removeObsolescenceInfo(StatisticsKey key, Set<Integer> partIds) {
+    @Override public void clearObsolescenceInfo(StatisticsKey key, Collection<Integer> partIds) {
         String keyPrefix = getObsolescencePartKeyPrefix(key);
         List<String> keysToRmv = new ArrayList<>();
         if (partIds == null) {
@@ -483,24 +483,26 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
 
         try {
             removeMeta(keysToRmv);
-        } catch (IgniteCheckedException e) {
+        }
+        catch (IgniteCheckedException e) {
             log.info(String.format("Unable to clean statistics obsolescence keys in %s due to %s", key,
                 e.getMessage()));
         }
     }
 
     /** {@inheritDoc} */
-    @Override public Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> loadAllObsolescence() {
-        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> res = new HashMap<>();
+    @Override public Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> loadAllObsolescence() {
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> res = new HashMap<>();
 
         try {
             iterateMeta(STAT_OBS_PREFIX, (k,v) -> {
                 StatisticsKey key = getObsolescenceStatsKey(k);
                 Integer partId = getObsolescenceStatsPartId(k);
 
-                res.computeIfAbsent(key, key1 -> new HashMap<>()).put(partId, (ObjectPartitionStatisticsObsolescence)v);
+                res.computeIfAbsent(key, key1 -> new IntHashMap<>()).put(partId, (ObjectPartitionStatisticsObsolescence)v);
             }, true);
-        } catch (IgniteCheckedException e) {
+        }
+        catch (IgniteCheckedException e) {
             log.info(String.format("Unable to load statistics obsolescence keys due to %s", e.getMessage()));
         }
 

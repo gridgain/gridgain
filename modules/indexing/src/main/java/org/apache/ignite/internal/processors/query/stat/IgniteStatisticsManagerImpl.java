@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.BiConsumer;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -40,8 +39,9 @@ import org.apache.ignite.internal.processors.configuration.distributed.Distribut
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
+import org.apache.ignite.internal.util.collection.IntMap;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
-import org.gridgain.internal.h2.table.Column;
 
 import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.NO_UPDATE;
 import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.OFF;
@@ -55,10 +55,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     private static final int STATS_POOL_SIZE = 4;
 
     /** Default statistics usage state. */
-    private static final StatisticsUsageState DEFAULT_STATISTICS_USAGE_STATE = StatisticsUsageState.ON;
+    private static final StatisticsUsageState DEFAULT_STATISTICS_USAGE_STATE = ON;
 
     /** Interval to check statistics obsolescence in seconds. */
-    private static final int OBSOLESCENSE_INTERVAL = 60;
+    private static final int OBSOLESCENSE_INTERVAL = 6;
 
     /** Rows limit to renew partition statistics in percent. */
     private static final int OBSOLESCENSE_MAX_PERCENT = 15;
@@ -93,34 +93,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Cluster wide statistics usage state. */
     private final DistributedEnumProperty<StatisticsUsageState> usageState = new DistributedEnumProperty<>(
         "statistics.usage.state", StatisticsUsageState::fromOrdinal, StatisticsUsageState::index, StatisticsUsageState.class);
-
-    /** Drop columns listener. */
-    private final BiConsumer<GridH2Table, List<String>> dropColsLsnr = new BiConsumer<GridH2Table, List<String>>() {
-        /**
-         * Drop statistics after columns dropped.
-         *
-         * @param tbl  Table.
-         * @param cols Dropped columns.
-         */
-        @Override
-        public void accept(GridH2Table tbl, List<String> cols) {
-
-        }
-    };
-
-    /** Drop table listener. */
-    private final BiConsumer<String, String> dropTblLsnr = new BiConsumer<String, String>() {
-        /**
-         * Drop statistics after table dropped.
-         *
-         * @param schema Schema name.
-         * @param name Table name.
-         */
-        @Override public void accept(String schema, String name) {
-            statsRepos.updateObsolescenceInfo();
-        }
-    };
-
 
     /**
      * Constructor.
@@ -160,6 +132,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         );
 
         boolean storeData = !(ctx.config().isClientMode() || ctx.isDaemon());
+
         IgniteStatisticsStore store;
         if (!storeData)
             store = new IgniteStatisticsDummyStoreImpl(ctx::log);
@@ -213,6 +186,17 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         StatisticsUsageState currState = usageState();
         if (currState == ON || currState == NO_UPDATE)
             enableOperations();
+
+        ctx.timeout().schedule(() -> {
+            StatisticsUsageState state = usageState();
+            if (state == ON && !ctx.isStopping()) {
+                if (log.isTraceEnabled())
+                    log.trace("Processing statistics obsolescence...");
+
+                processObsolescence();
+            }
+
+        }, OBSOLESCENSE_INTERVAL, OBSOLESCENSE_INTERVAL);
     }
 
     /**
@@ -222,18 +206,12 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         statsRepos.start();
         gatherer.start();
         statCfgMgr.start();
-
-        schemaMgr.registerDropColumnsListener(dropColsLsnr);
-        schemaMgr.registerDropTableListener(dropTblLsnr);
     }
 
     /**
      * Disable statistics operations.
      */
     private synchronized void disableOperations() {
-        schemaMgr.unregisterDropTableListener(dropTblLsnr);
-        schemaMgr.unregisterDropColumnsListener(dropColsLsnr);
-
         statCfgMgr.stop();
         gatherer.stop();
         statsRepos.start();
@@ -292,8 +270,9 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
     /** {@inheritDoc} */
     @Override public void stop() {
-        statCfgMgr.stop();
-        gatherer.stop();
+        processObsolescence();
+
+        disableOperations();
 
         if (gatherPool != null) {
             List<Runnable> unfinishedTasks = gatherPool.shutdownNow();
@@ -344,35 +323,27 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /**
-     *
+     * Save dirty obsolescence info to local metastore. Check if statistics need to be refreshed and schedule it.
      */
-    private void processObscolescence() {
-        Map<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> dirty = statsRepos.saveObsolescenceInfo();
-        Map<StatisticsKey, List<Integer>> task = new HashMap<>();
+    private synchronized void processObsolescence() {
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> dirty = statsRepos.saveObsolescenceInfo();
 
-        for (Map.Entry<StatisticsKey, Map<Integer, ObjectPartitionStatisticsObsolescence>> objObs : dirty.entrySet()) {
-            StatisticsKey key = objObs.getKey();
-            List<Integer> taskParts = new ArrayList<>();
+        Map<StatisticsKey, List<Integer>> tasks = calculateObsolescenceRefreshTasks(dirty);
 
-            for (Map.Entry<Integer, ObjectPartitionStatisticsObsolescence> objPartObs : objObs.getValue().entrySet()) {
-                ObjectPartitionStatisticsImpl partStat = statsRepos.getLocalPartitionStatistics(key, objPartObs.getKey());
-                if (partStat == null || partStat.rowCount() == 0 ||
-                    (double)objPartObs.getValue().modified() * 100 / partStat.rowCount() > OBSOLESCENSE_MAX_PERCENT)
-                    taskParts.add(objPartObs.getKey());
-            }
+        if (!F.isEmpty(tasks))
+            if (log.isTraceEnabled())
+                log.trace(String.format("Refreshing statistics for %d targets", tasks.size()));
 
-            if (!taskParts.isEmpty())
-                task.put(key, taskParts);
-        }
-
-        for (Map.Entry<StatisticsKey, List<Integer>> objTask : task.entrySet()) {
+        for (Map.Entry<StatisticsKey, List<Integer>> objTask : tasks.entrySet()) {
             GridH2Table tbl = schemaMgr.dataTable(objTask.getKey().schema(), objTask.getKey().obj());
+
             if (tbl == null) {
                 if (log.isDebugEnabled())
                     log.debug(String.format("Got obsolescence statistics for unknown table %s", objTask.getKey()));
 
                 continue;
             }
+
             StatisticsObjectConfiguration objCfg;
             try {
                 objCfg = statCfgMgr.config(objTask.getKey());
@@ -380,6 +351,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                 log.warning("Unable to load statistics object configuration from global metastore", e);
                 continue;
             }
+
             if (objCfg == null) {
                 if (log.isDebugEnabled())
                     log.debug(String.format("Got obsolescence statistics for unknown configuration %s", objTask.getKey()));
@@ -392,14 +364,37 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             Set<Integer> parts = cctx.affinity().primaryPartitions(
                 cctx.localNodeId(), cctx.affinity().affinityTopologyVersion());
 
-            Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), objCfg.columns());
-
-            LocalStatisticsGatheringContext ctx = gatherer
-                .collectLocalObjectsStatisticsAsync(tbl, cols, new HashSet<>(objTask.getValue()), objCfg.version());
-
-
-            ctx.future().thenAccept((v) -> statsRepos.refreshAggregatedLocalStatistics(parts, objCfg));
+            statCfgMgr.gatherLocalStatistics(objCfg, tbl, parts, new HashSet<>(objTask.getValue()), null);
         }
+    }
+
+    /**
+     * Calculate targets to refresh obsolescence statistics by map of dirty partitions.
+     *
+     * @param dirty Map of statistics key to list of it's dirty obsolescence info.
+     * @return Map of statistics key to partition to refresh statistics.
+     */
+    private Map<StatisticsKey, List<Integer>> calculateObsolescenceRefreshTasks(
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> dirty
+    ) {
+        Map<StatisticsKey, List<Integer>> res = new HashMap<>();
+
+        for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> objObs : dirty.entrySet()) {
+            StatisticsKey key = objObs.getKey();
+            List<Integer> taskParts = new ArrayList<>();
+
+            objObs.getValue().forEach((k,v) -> {;
+                ObjectPartitionStatisticsImpl partStat = statsRepos.getLocalPartitionStatistics(key, k);
+                if (partStat == null || partStat.rowCount() == 0 ||
+                    (double)v.modified() * 100 / partStat.rowCount() > OBSOLESCENSE_MAX_PERCENT)
+                    taskParts.add(k);
+            });
+
+            if (!taskParts.isEmpty())
+                res.put(key, taskParts);
+        }
+
+        return res;
     }
 
     /**
