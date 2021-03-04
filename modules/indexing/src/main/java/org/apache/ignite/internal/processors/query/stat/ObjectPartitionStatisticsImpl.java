@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
  * Statistic for some partition of data object.
  */
@@ -29,21 +31,16 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
     /** Partition update counter at the moment when statistics collected. */
     private final long updCnt;
 
-    /** Local flag. */
-    private final boolean loc;
-
     /**
      * Constructor.
      *
      * @param partId Partition id.
-     * @param loc Local flag.
      * @param rowsCnt Total count of rows in partition.
      * @param updCnt Update counter of partition.
      * @param colNameToStat Column key to column statistics map.
      */
     public ObjectPartitionStatisticsImpl(
             int partId,
-            boolean loc,
             long rowsCnt,
             long updCnt,
             Map<String, ColumnStatistics> colNameToStat
@@ -51,7 +48,6 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
         super(rowsCnt, colNameToStat);
 
         this.partId = partId;
-        this.loc = loc;
         this.updCnt = updCnt;
     }
 
@@ -63,13 +59,6 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
     }
 
     /**
-     * @return Is local flag.
-     */
-    public boolean local() {
-        return loc;
-    }
-
-    /**
      * @return Partition update counter.
      */
     public long updCnt() {
@@ -78,22 +67,33 @@ public class ObjectPartitionStatisticsImpl extends ObjectStatisticsImpl {
 
     /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl clone() {
-        return new ObjectPartitionStatisticsImpl(partId, loc, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
+        return new ObjectPartitionStatisticsImpl(partId, rowCount(), updCnt, new HashMap<>(columnsStatistics()));
     }
 
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        if (!super.equals(o))
+            return false;
+
         ObjectPartitionStatisticsImpl that = (ObjectPartitionStatisticsImpl) o;
+
         return partId == that.partId &&
-                updCnt == that.updCnt &&
-                loc == that.loc;
+                updCnt == that.updCnt;
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(super.hashCode(), partId, updCnt, loc);
+        return Objects.hash(super.hashCode(), partId, updCnt);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ObjectPartitionStatisticsImpl.class, this);
     }
 }

@@ -15,6 +15,9 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
@@ -25,8 +28,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
-import java.util.Arrays;
-import java.util.Collection;
 
 /**
  * Unit tests for statistics store.
@@ -63,11 +64,11 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
 
         IgniteStatisticsStore inMemoryStore = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
 
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(inMemoryStore, helper, cls -> log);
+        IgniteStatisticsRepository statsRepos = new IgniteStatisticsRepository(inMemoryStore, helper, cls -> log);
 
         IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
         IgniteStatisticsPersistenceStoreImpl persStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
-            dbMgr, statsRepos::cacheLocalStatistics, cls -> new GridTestLog4jLogger());
+            dbMgr, cls -> new GridTestLog4jLogger());
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);

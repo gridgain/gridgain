@@ -156,7 +156,8 @@ public class LightweightCheckpointManager {
             checkpointWorkflow,
             checkpointPagesWriterFactory,
             persistenceCfg.getCheckpointFrequency(),
-            persistenceCfg.getCheckpointThreads()
+            persistenceCfg.getCheckpointThreads(),
+            () -> 0
         );
 
         checkpointer = checkpointerProvider.get();

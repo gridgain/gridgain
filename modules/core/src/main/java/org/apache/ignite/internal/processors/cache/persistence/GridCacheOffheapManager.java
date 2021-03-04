@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -250,6 +250,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         assert grp.dataRegion().pageMemory() instanceof PageMemoryEx;
 
         syncMetadata(ctx);
+
+        // Double flushing memory buckets for decrease a time on write lock.
+        syncMetadata(ctx, ctx.executor(), false);
     }
 
     /** {@inheritDoc} */
@@ -666,38 +669,41 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public long restorePartitionStates(Map<GroupPartitionId, Integer> partitionRecoveryStates) throws IgniteCheckedException {
-        if (grp.isLocal() || !grp.affinityNode() || !grp.dataRegion().config().isPersistenceEnabled())
-            return 0;
+    @Override public Map<Integer, Long> restorePartitionStates(
+        Map<GroupPartitionId, Integer> partRecoveryStates
+    ) throws IgniteCheckedException {
+        if (grp.isLocal() || !grp.affinityNode() || !grp.dataRegion().config().isPersistenceEnabled()
+            || partitionStatesRestored)
+            return Collections.emptyMap();
 
-        if (partitionStatesRestored)
-            return 0;
-
-        long processed = 0;
+        Map<Integer, Long> processed = new HashMap<>();
 
         PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
 
         for (int p = 0; p < grp.affinity().partitions(); p++) {
-            Integer recoverState = partitionRecoveryStates.get(new GroupPartitionId(grp.groupId(), p));
+            Integer recoverState = partRecoveryStates.get(new GroupPartitionId(grp.groupId(), p));
 
             long startTime = U.currentTimeMillis();
+
+            if (log.isDebugEnabled())
+                log.debug("Started restoring partition state [grp=" + grp.cacheOrGroupName() + ", p=" + p + ']');
 
             if (ctx.pageStore().exists(grp.groupId(), p)) {
                 ctx.pageStore().ensure(grp.groupId(), p);
 
                 if (ctx.pageStore().pages(grp.groupId(), p) <= 1) {
-                    if (log.isDebugEnabled())
+                    if (log.isDebugEnabled()) {
                         log.debug("Skipping partition on recovery (pages less than 1) " +
                             "[grp=" + grp.cacheOrGroupName() + ", p=" + p + "]");
+                    }
 
                     continue;
                 }
 
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("Creating partition on recovery (exists in page store) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + "]");
-
-                processed++;
+                }
 
                 GridDhtLocalPartition part = grp.topology().forceCreatePartition(p);
 
@@ -723,22 +729,24 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                                 updateState(part, recoverState);
 
-                                if (log.isDebugEnabled())
+                                if (log.isDebugEnabled()) {
                                     log.debug("Restored partition state (from WAL) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
                                         ", updCntr=" + part.initialUpdateCounter() +
                                         ", size=" + part.fullSize() + "]");
+                                }
                             }
                             else {
                                 int stateId = io.getPartitionState(pageAddr);
 
                                 updateState(part, stateId);
 
-                                if (log.isDebugEnabled())
+                                if (log.isDebugEnabled()) {
                                     log.debug("Restored partition state (from page memory) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
                                         ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
                                         ", size=" + part.fullSize() + "]");
+                                }
                             }
                         }
                         finally {
@@ -752,30 +760,35 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 finally {
                     ctx.database().checkpointReadUnlock();
                 }
+
+                processed.put(p, U.currentTimeMillis() - startTime);
             }
             else if (recoverState != null) { // Pre-create partition if having valid state.
                 GridDhtLocalPartition part = grp.topology().forceCreatePartition(p);
 
                 updateState(part, recoverState);
 
-                processed++;
+                processed.put(p, U.currentTimeMillis() - startTime);
 
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("Restored partition state (from WAL) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
                         ", updCntr=" + part.initialUpdateCounter() +
                         ", size=" + part.fullSize() + "]");
+                }
             }
             else {
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("Skipping partition on recovery (no page store OR wal state) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + "]");
+                }
             }
 
-            if (log.isDebugEnabled())
+            if (log.isDebugEnabled()) {
                 log.debug("Finished restoring partition state " +
                     "[grp=" + grp.cacheOrGroupName() + ", p=" + p +
-                    ", time=" + (U.currentTimeMillis() - startTime) + " ms]");
+                    ", time=" + U.humanReadableDuration(U.currentTimeMillis() - startTime) + ']');
+            }
         }
 
         partitionStatesRestored = true;
@@ -1323,8 +1336,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
             // This will allow offline node to join faster using fast full rebalancing.
-            if (tsCnt <= tsLimit && (!discoCache.fullBaseline() || !ctx.exchange().lastFinishedFuture().rebalanced() ||
-                ctx.ttl().tombstoneCleanupSuspended()))
+            if (tsCnt <= tsLimit &&
+                (!discoCache.fullBaseline() ||
+                    !ctx.exchange().lastFinishedFuture().rebalanced() ||
+                    !ctx.exchange().lastTopologyFuture().isDone() ||
+                    ctx.ttl().tombstoneCleanupSuspended()))
                 return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
 
             if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
@@ -3256,8 +3272,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     if (!cur.next())
                         return 0;
-
-                    GridCacheVersion obsoleteVer = cctx.versions().startVersion();
 
                     int cleared = 0;
 

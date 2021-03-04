@@ -23,14 +23,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.TreeSet;
 import org.apache.ignite.springdata.misc.ApplicationConfiguration;
+import org.apache.ignite.springdata.misc.FullNameProjection;
 import org.apache.ignite.springdata.misc.Person;
+import org.apache.ignite.springdata.misc.PersonProjection;
 import org.apache.ignite.springdata.misc.PersonRepository;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 /**
- *
+ * CRUD tests.
  */
 public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     /** Repository. */
@@ -73,9 +75,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
-    /**
-     *
-     */
+    /** */
     private void fillInRepository() {
         for (int i = 0; i < CACHE_SIZE - 5; i++) {
             repo.save(i, new Person("person" + Integer.toHexString(i),
@@ -94,9 +94,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
         ctx.destroy();
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testPutGet() {
         Person person = new Person("some_name", "some_surname");
@@ -119,9 +117,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
         }
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testPutAllGetAll() {
         LinkedHashMap<Integer, Person> map = new LinkedHashMap<>();
@@ -159,9 +155,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
         assertEquals(map.size(), counter);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testGetAll() {
         assertEquals(CACHE_SIZE, repo.count());
@@ -178,9 +172,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
         assertEquals(repo.count(), counter);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testDelete() {
         assertEquals(CACHE_SIZE, repo.count());
@@ -200,9 +192,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
         }
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testDeleteSet() {
         assertEquals(CACHE_SIZE, repo.count());
@@ -231,9 +221,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
         }
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testDeleteAll() {
         assertEquals(CACHE_SIZE, repo.count());
@@ -244,7 +232,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Delete existing record
+     * Delete existing record.
      */
     @Test
     public void testDeleteByFirstName() {
@@ -256,7 +244,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Delete NON existing record
+     * Delete NON existing record.
      */
     @Test
     public void testDeleteExpression() {
@@ -266,7 +254,7 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Delete Multiple records due to where
+     * Delete Multiple records due to where.
      */
     @Test
     public void testDeleteExpressionMultiple() {
@@ -277,29 +265,29 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Remove should do the same than Delete
+     * Remove should do the same than Delete.
      */
     @Test
     public void testRemoveExpression() {
-        long countRemoved = repo.removeByFirstName("person3f");
+        repo.removeByFirstName("person3f");
 
         long count = repo.count();
-        assertEquals(CACHE_SIZE - countRemoved, count);
+        assertEquals(CACHE_SIZE - 1, count);
     }
 
     /**
-     * Delete unique record
+     * Delete unique record using lower case key word.
      */
     @Test
     public void testDeleteQuery() {
-        repo.deleteBySecondNameQuery("uniqueLastName");
+        repo.deleteBySecondNameLowerCase("uniqueLastName");
 
         long countAfter = repo.count();
         assertEquals(CACHE_SIZE - 1, countAfter);
     }
 
     /**
-     * Try to delete with a wrong @Query
+     * Try to delete with a wrong @Query.
      */
     @Test
     public void testWrongDeleteQuery() {
@@ -317,17 +305,122 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Update with a @Query a record
+     * Update with a @Query a record.
      */
     @Test
-    public void testUpdateQuery() {
+    public void testUpdateQueryMixedCase() {
         final String newSecondName = "updatedUniqueSecondName";
-        int cnt = repo.setFixedSecondNameFor(newSecondName, "uniquePerson");
+        int cnt = repo.setFixedSecondNameMixedCase(newSecondName, "uniquePerson");
 
         assertEquals(1, cnt);
 
         List<Person> person = repo.findByFirstName("uniquePerson");
         assertEquals(person.get(0).getSecondName(), "updatedUniqueSecondName");
+    }
+
+    /**
+     * Update with a @Query a record
+     */
+    @Test
+    public void testUpdateQueryMixedCaseProjection() {
+        final String newSecondName = "updatedUniqueSecondName1";
+        int cnt = repo.setFixedSecondNameMixedCase(newSecondName, "uniquePerson");
+
+        assertEquals(1, cnt);
+
+        List<PersonProjection> person = repo.queryByFirstNameWithProjection("uniquePerson");
+        assertEquals(person.get(0).getFullName(), "uniquePerson updatedUniqueSecondName1");
+    }
+
+    /** */
+    @Test
+    public void testUpdateQueryMixedCaseProjectionNamedParameter() {
+        final String newSecondName = "updatedUniqueSecondName2";
+        int cnt = repo.setFixedSecondNameMixedCase(newSecondName, "uniquePerson");
+
+        assertEquals(1, cnt);
+
+        List<PersonProjection> person = repo.queryByFirstNameWithProjectionNamedParameter("uniquePerson");
+        assertEquals(person.get(0).getFullName(), "uniquePerson updatedUniqueSecondName2");
+    }
+
+    /** */
+    @Test
+    public void testUpdateQueryMixedCaseDynamicProjectionNamedParameter() {
+        final String newSecondName = "updatedUniqueSecondName2";
+        int cnt = repo.setFixedSecondNameMixedCase(newSecondName, "uniquePerson");
+
+        assertEquals(1, cnt);
+
+        List<PersonProjection> person = repo.queryByFirstNameWithProjectionNamedParameter(PersonProjection.class, "uniquePerson");
+        assertEquals(person.get(0).getFullName(), "uniquePerson updatedUniqueSecondName2");
+
+        List<FullNameProjection> personFullName = repo.queryByFirstNameWithProjectionNamedParameter(FullNameProjection.class, "uniquePerson");
+        assertEquals(personFullName.get(0).getFullName(), "uniquePerson updatedUniqueSecondName2");
+    }
+
+    /** */
+    @Test
+    public void testUpdateQueryOneMixedCaseDynamicProjectionNamedParameter() {
+        final String newSecondName = "updatedUniqueSecondName2";
+        int cnt = repo.setFixedSecondNameMixedCase(newSecondName, "uniquePerson");
+
+        assertEquals(1, cnt);
+
+        PersonProjection person = repo.queryOneByFirstNameWithProjectionNamedParameter(PersonProjection.class, "uniquePerson");
+        assertEquals(person.getFullName(), "uniquePerson updatedUniqueSecondName2");
+
+        FullNameProjection personFullName = repo.queryOneByFirstNameWithProjectionNamedParameter(FullNameProjection.class, "uniquePerson");
+        assertEquals(personFullName.getFullName(), "uniquePerson updatedUniqueSecondName2");
+    }
+
+    /** */
+    @Test
+    public void testUpdateQueryMixedCaseProjectionIndexedParameter() {
+        final String newSecondName = "updatedUniqueSecondName3";
+        int cnt = repo.setFixedSecondNameMixedCase(newSecondName, "uniquePerson");
+
+        assertEquals(1, cnt);
+
+        List<PersonProjection> person = repo.queryByFirstNameWithProjectionNamedIndexedParameter("notUsed","uniquePerson");
+        assertEquals(person.get(0).getFullName(), "uniquePerson updatedUniqueSecondName3");
+    }
+
+    /** */
+    @Test
+    public void testUpdateQueryMixedCaseProjectionIndexedParameterLuceneTextQuery() {
+        final String newSecondName = "updatedUniqueSecondName4";
+        int cnt = repo.setFixedSecondNameMixedCase(newSecondName, "uniquePerson");
+
+        assertEquals(1, cnt);
+
+        List<PersonProjection> person = repo.textQueryByFirstNameWithProjectionNamedParameter("uniquePerson");
+        assertEquals(person.get(0).getFullName(), "uniquePerson updatedUniqueSecondName4");
+    }
+
+    /** */
+    @Test
+    public void testUpdateQueryMixedCaseProjectionNamedParameterAndTemplateDomainEntityVariable() {
+        final String newSecondName = "updatedUniqueSecondName5";
+        int cnt = repo.setFixedSecondNameMixedCase(newSecondName, "uniquePerson");
+
+        assertEquals(1, cnt);
+
+        List<PersonProjection> person = repo.queryByFirstNameWithProjectionNamedParameterAndTemplateDomainEntityVariable("uniquePerson");
+        assertEquals(person.get(0).getFullName(), "uniquePerson updatedUniqueSecondName5");
+    }
+
+    /** */
+    @Test
+    public void testUpdateQueryMixedCaseProjectionNamedParameterWithSpELExtension() {
+        final String newSecondName = "updatedUniqueSecondName6";
+        int cnt = repo.setFixedSecondNameMixedCase(newSecondName, "uniquePerson");
+
+        assertEquals(1, cnt);
+
+        List<PersonProjection> person = repo.queryByFirstNameWithProjectionNamedParameterWithSpELExtension("uniquePerson");
+        assertEquals(person.get(0).getFullName(), "uniquePerson updatedUniqueSecondName6");
+        assertEquals(person.get(0).getFirstName(), person.get(0).getFirstNameTransformed());
     }
 
     /**
@@ -337,10 +430,11 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     public void testWrongUpdateQuery() {
         final String newSecondName = "updatedUniqueSecondName";
         int rowsUpdated = 0;
+
         try {
             rowsUpdated = repo.setWrongFixedSecondName(newSecondName, "uniquePerson");
         }
-        catch (Exception e) {
+        catch (Exception ignored) {
             //expected
         }
 
