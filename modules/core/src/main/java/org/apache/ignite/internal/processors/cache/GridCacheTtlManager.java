@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
@@ -27,6 +28,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
+import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.X;
@@ -53,11 +55,14 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     /** Entries pending removal. This collection tracks entries for near cache only. */
     private GridConcurrentSkipListSetEx pendingEntries;
 
-    /** Indicates that  */
+    /** Indicates having some entries to clear. */
     protected volatile boolean hasPendingEntries;
 
-    /** Timestamp when next clean try will be allowed. Used for throttling on per-cache basis. */
-    protected volatile long nextCleanTime;
+    /** */
+    protected GridAtomicLong nextTTLEvictTs = new GridAtomicLong();
+
+    /** */
+    protected GridAtomicLong nextTombstoneEvictTs = new GridAtomicLong();
 
     /** */
     private GridCacheContext dhtCtx;
@@ -160,15 +165,19 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      *
      * @param update {@code true} if the underlying pending tree has entries with expire policy enabled.
      */
-    public void hasPendingEntries(boolean update) {
-        hasPendingEntries = update;
+    public void hasPendingEntries(long expireTime, boolean tombstone) {
+        AtomicLong cntr = tombstone ? nextTombstoneEvictTs : nextTTLEvictTs;
+
+        cntr.compareAndSet(0, expireTime);
     }
 
     /**
-     * @return {@code true} if the underlying pending tree has entries with expire policy enabled.
+     * @return {@code true} if the underlying pending tree has entries to process.
      */
     public boolean hasPendingEntries() {
-        return hasPendingEntries;
+        long curTime = U.currentTimeMillis();
+
+        return curTime > nextTTLEvictTs.get() || curTime > nextTombstoneEvictTs.get();
     }
 
     /** {@inheritDoc} */
@@ -254,7 +263,12 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (!cctx.affinityNode())
                 return false;  /* Pending tree never contains entries for that cache */
 
-            if (!hasPendingEntries || nextCleanTime > U.currentTimeMillis())
+            long curTime = U.currentTimeMillis();
+
+            boolean hasTtl = cctx.config().isEagerTtl() && curTime > nextTTLEvictTs.get();
+            boolean hasTs = curTime > nextTombstoneEvictTs.get();
+
+            if (!hasTtl && !hasTs)
                 return false;
 
             if (lock && !dhtCtx.gate().enterIfNotStopped())
@@ -262,22 +276,24 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
             // Locked.
             try {
-                if (cctx.offheap().expire(dhtCtx, expireC, amount))
-                    return true;
+                if (hasTtl && !cctx.offheap().expireRows(dhtCtx, expireC, amount))
+                    nextTTLEvictTs.set(0);
+
+                if (hasTs && !cctx.offheap().expireTombstones(dhtCtx, expireC, amount))
+                    nextTombstoneEvictTs.set(0);
             }
             finally {
                 if (lock)
                     dhtCtx.gate().unlock();
             }
 
-            // There is nothing to clean, so the next clean up can be postponed.
-            nextCleanTime = U.currentTimeMillis() + unwindThrottlingTimeout;
-
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();
 
-                return e != null && e.expireTime <= now;
+                return e != null && e.expireTime <= now; // Still have near entires.
             }
+
+            return nextTTLEvictTs.get() != 0 || nextTombstoneEvictTs.get() != 0;
         }
         catch (GridDhtInvalidPartitionException e) {
             if (log.isDebugEnabled())
