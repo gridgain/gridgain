@@ -53,6 +53,7 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryTy
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_ID;
 
 /**
  * Keep information about all running queries.
@@ -203,7 +204,7 @@ public class RunningQueryManager {
         if (qryInitiatorId == null)
             qryInitiatorId = SqlFieldsQuery.threadedQueryInitiatorId();
 
-        GridRunningQueryInfo run = new GridRunningQueryInfo(
+        final GridRunningQueryInfo run = new GridRunningQueryInfo(
             qryId,
             locNodeId,
             qry,
@@ -258,6 +259,8 @@ public class RunningQueryManager {
                 throw new IgniteException(ex.getMessage(), ex);
             }
         }
+
+        run.span().addTag(SQL_QRY_ID, run::globalQueryId);
 
         return qryId;
     }
