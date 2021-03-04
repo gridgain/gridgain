@@ -81,7 +81,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         ccfg.setName(DEFAULT_CACHE_NAME);
 //        ccfg.setGroupName("zzz");
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 8));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, 16));
         ccfg.setBackups(NODES_CNT - NODES_CNT);
         ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
 
@@ -355,7 +355,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             e.printStackTrace();
         }
 
-//        doSleep(1000);
+        doSleep(200);
 
         for (int i = startKey; i < endKey; i++) {
             cache.put(i, i);
