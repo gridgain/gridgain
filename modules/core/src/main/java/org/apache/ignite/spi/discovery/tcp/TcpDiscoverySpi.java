@@ -1916,15 +1916,14 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
      * @throws org.apache.ignite.spi.IgniteSpiException If an error occurs.
      */
     protected Collection<InetSocketAddress> resolvedAddresses() throws IgniteSpiException {
-        // Default max attempts if other not specified.
-        final int dfltMaxAttempts = 2;
-
         List<InetSocketAddress> res = new ArrayList<>();
 
         Collection<InetSocketAddress> addrs;
 
         int attemptsCnt = 0;
-        int maxResolveAttempts = !failureDetectionTimeoutEnabled() ? getReconnectCount() : dfltMaxAttempts;
+        int maxResolveAttempts = (ipFinder.isShared() && (locNode.isClient()))
+                ? getReconnectCount()
+                : Integer.MAX_VALUE;
 
         // Get consistent addresses collection.
         while (true) {

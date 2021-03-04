@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,11 @@ import java.util.concurrent.CountDownLatch;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
 
-/** Test that a node is disconnected from the cluster if Kubernetes service fails. */
-public class TestKubernetesServiceDisconnection extends KubernetesDiscoveryAbstractTest {
+/**
+ * Test that client node is disconnected from a cluster if KubernetesIpFinder fails.
+ */
+public class TestKubernetesIpFinderDisconnection extends KubernetesDiscoveryAbstractTest {
+
     /** */
     @Test
     public void testClientNodeDisconnectsWithMaxRetries() throws Exception {
