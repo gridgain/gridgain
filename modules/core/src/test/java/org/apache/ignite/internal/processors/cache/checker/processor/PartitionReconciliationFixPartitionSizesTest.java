@@ -63,7 +63,7 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
  */
 public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static final int NODES_CNT = 1;
+    protected static final int NODES_CNT = 4;
 
     /** Crd server node. */
     protected IgniteEx ig;
@@ -81,7 +81,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         ccfg.setName(DEFAULT_CACHE_NAME);
 //        ccfg.setGroupName("zzz");
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 1));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, 8));
         ccfg.setBackups(NODES_CNT - NODES_CNT);
         ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
 
@@ -157,11 +157,12 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     @Test
     public void testRepairUnderLoad() throws Exception {
         CollectPartitionKeysByBatchTask.msg.clear();
+        CollectPartitionKeysByBatchTask.msg1.clear();
 
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 1000;
+        int endKey = 10000;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -181,7 +182,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
-        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
+        breakCacheSizes(List.of(grid(0), grid(1), grid(2), grid(3)), List.of(DEFAULT_CACHE_NAME));
 //
         assertFalse(cache.size() == startSize);
 
@@ -216,15 +217,15 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //                }
 
 //                try {
-//                    sleep(10);
+//                    sleep(30);
 //                }
 //                catch (InterruptedException e) {
 //                    e.printStackTrace();
 //                }
 
-//                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (cache.containsKey(i1)) {
-//                    cache.remove(i1);
+                    cache.remove(i1);
 //                    removeCount.incrementAndGet();
 //                }
 

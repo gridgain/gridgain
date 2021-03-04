@@ -1616,70 +1616,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        @Override public void flushReconciliationResult(Integer cacheId, Long reconciliationCacheSize) {
-            reconciliationCtx.lock.writeLock().lock();
-
-            try /*synchronized (reconciliationCtx.reconciliationMux())*/ {
-                System.out.println("qefsrvfdbs");
-                    if (grp.sharedGroup()) {
-                            cacheSizes.get(cacheId).set(
-                                reconciliationCacheSize +
-                                    reconciliationCtx.storageSizeDeltas().get(cacheId).get());
-
-                        storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
-                    }
-                    else {
-                        long newSize0 = reconciliationCacheSize + reconciliationCtx.storageSizeDelta(cacheId)/* + reconciliationCtx.keysAfterCounters.get(cacheId).get()*/;
-
-                        AtomicLong newSize = new AtomicLong(newSize0);
-
-                        System.out.println("qwddssda " + newSize);
-
-                        reconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
-                        reconciliationCtx.keysInBatch.putIfAbsent(cacheId, Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>()));
-
-                        reconciliationCtx.keysAfter.get(cacheId).entrySet().forEach(e -> {
-//                            if (reconciliationCtx.lastKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.lastKey(cacheId)) <= 0) {
-//                                long count = e.getValue().get();
-//                                if (count > 0 && !reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
-//                                    newSize.addAndGet(count);
-//                                    System.out.println("qddsdws flush keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
-//                                }
-//                                if (count < 0 && reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
-//                                    newSize.addAndGet(count);
-//                                    System.out.println("qfresdvd flush keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
-//                                }
-//                                System.out.println("qcsdsdfv flush key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
-//                            }
-                            if (reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.lastKey(cacheId)) > 0) {
-                                long count = e.getValue().get();
-                                newSize.addAndGet(count);
-                                System.out.println("qcsdsdfv flush key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
-                            }
-                        });
-
-                        System.out.println("qdsrfscsfr " + newSize);
-
-                        storageSize.set(newSize.get());
-                    }
-
-                CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "xxxxx reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfterCounter: " + reconciliationCtx.keysAfterCounters.get(cacheId).get());
-                CollectPartitionKeysByBatchTask.msg1.put(System.identityHashCode(this), "zzzzz reconciliationCtx.keysAfter: " + reconciliationCtx.keysAfter);
-
-//                System.out.println(CollectPartitionKeysByBatchTask.msg);
-
-                reconciliationCtx.storageSizeDeltas().remove(cacheId);
-
-                if (reconciliationCtx.storageSizeDeltas().isEmpty())
-                    reconciliationCtx.isReconciliationInProgress(false);
-            }
-            finally {
-                reconciliationCtx.lock.writeLock().unlock();
-            }
-
-        }
-
-        /** {@inheritDoc} */
         @Override public ReconciliationContext reconciliationCtx() {
             assert reconciliationCtx != null;
 
@@ -1825,7 +1761,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //                            e.printStackTrace();
 //                        }
 //                    }
-                    if ((reconciliationCtx.firstKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.firstKey(cacheId)) < 0) || (reconciliationCtx.firstKey(cacheId) == null && (reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))) {
+                    if ((reconciliationCtx.firstKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.firstKey(cacheId)) < 0)/* || (reconciliationCtx.firstKey(cacheId) == null && (reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))*/) {
 
 //                        if (!(reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) < 0) && (reconciliationCtx.keysToCheck.containsKey(cacheId) && !reconciliationCtx.keysToCheck.get(cacheId).contains(key))) {
 //                            System.out.println();
@@ -1854,7 +1790,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                         reconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
                         reconciliationCtx.keysAfter.get(cacheId).putIfAbsent(key, new AtomicLong());
 
-                        reconciliationCtx.keysAfter.get(cacheId).get(key).addAndGet(delta);
+//                        reconciliationCtx.keysAfter.get(cacheId).get(key).addAndGet(delta);
+                        reconciliationCtx.keysAfter.get(cacheId).put(key, new AtomicLong(delta));
 
                         System.out.println("qdrefgs2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                             " updateSize keysAfter. _key_: " + ((KeyCacheObjectImpl)key).value() +
@@ -1862,6 +1799,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                             " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)key).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
                             " ||| storageSize:" + storageSize.get() +
                             " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                        System.out.println("qwsfrsee keysAfter " + reconciliationCtx.keysAfter);
                     }
                     if ((reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) > 0)/* || (reconciliationCtx.keysToCheck.containsKey(cacheId) && !reconciliationCtx.keysToCheck.get(cacheId).contains(key))*/) {
 //                        reconciliationCtx.keysAfterCounter.addAndGet(delta);
@@ -1950,6 +1888,87 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //                size.addAndGet(delta);
 //            }
 //        }
+
+        /** {@inheritDoc} */
+        @Override public void flushReconciliationResult(Integer cacheId, Long reconciliationCacheSize) {
+            reconciliationCtx.lock.writeLock().lock();
+
+            try /*synchronized (reconciliationCtx.reconciliationMux())*/ {
+                System.out.println("qefsrvfdbs");
+                if (grp.sharedGroup()) {
+                    cacheSizes.get(cacheId).set(
+                        reconciliationCacheSize +
+                            reconciliationCtx.storageSizeDeltas().get(cacheId).get());
+
+                    storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
+                }
+                else {
+                    long newSize0 = reconciliationCacheSize + reconciliationCtx.storageSizeDelta(cacheId)/* + reconciliationCtx.keysAfterCounters.get(cacheId).get()*/;
+
+                    System.out.println("qdsvrfs reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId));
+
+                    AtomicLong newSize = new AtomicLong(newSize0);
+
+                    System.out.println("qwddssda " + newSize);
+
+                    reconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
+                    reconciliationCtx.keysInBatch.putIfAbsent(cacheId, Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>()));
+
+                    reconciliationCtx.keysAfter.get(cacheId).entrySet().forEach(e -> {
+//                            if (reconciliationCtx.lastKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.lastKey(cacheId)) <= 0) {
+//                                long count = e.getValue().get();
+//                                if (count > 0 && !reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
+//                                    newSize.addAndGet(count);
+//                                    System.out.println("qddsdws flush keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
+//                                }
+//                                if (count < 0 && reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
+//                                    newSize.addAndGet(count);
+//                                    System.out.println("qfresdvd flush keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
+//                                }
+//                                System.out.println("qcsdsdfv flush key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
+//                            }
+
+                        if ((reconciliationCtx.lastKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.lastKey(cacheId)) <= 0) &&
+                            (reconciliationCtx.firstKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.firstKey(cacheId)) >= 0)) {
+                            long count = e.getValue().get();
+                            if (count > 0 && !reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
+                                newSize.addAndGet(count);
+                                System.out.println("qwqwfdeds keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
+                            }
+                            if (count < 0 && reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
+                                newSize.addAndGet(count);
+                                System.out.println("qcdsvrdsv keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
+                            }
+                            System.out.println("qwddxvfgrt2 key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
+                        }
+
+                        if (reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.lastKey(cacheId)) > 0) {
+                            long count = e.getValue().get();
+                            newSize.addAndGet(count);
+                            System.out.println("qcsdsdfv flush key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
+                        }
+                    });
+
+                    System.out.println("qdsrfscsfr " + newSize);
+
+                    storageSize.set(newSize.get());
+                }
+
+                CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "xxxxx reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfterCounter: " + reconciliationCtx.keysAfterCounters.get(cacheId).get());
+                CollectPartitionKeysByBatchTask.msg1.put(System.identityHashCode(this), "zzzzz reconciliationCtx.keysAfter: " + reconciliationCtx.keysAfter);
+
+//                System.out.println(CollectPartitionKeysByBatchTask.msg);
+
+                reconciliationCtx.storageSizeDeltas().remove(cacheId);
+
+                if (reconciliationCtx.storageSizeDeltas().isEmpty())
+                    reconciliationCtx.isReconciliationInProgress(false);
+            }
+            finally {
+                reconciliationCtx.lock.writeLock().unlock();
+            }
+
+        }
 
         /** {@inheritDoc} */
         @Override public long nextUpdateCounter() {
