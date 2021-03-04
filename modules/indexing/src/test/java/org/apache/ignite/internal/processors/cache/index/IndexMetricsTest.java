@@ -277,7 +277,7 @@ public class IndexMetricsTest extends AbstractIndexingCommonTest {
         IgniteEx n,
         String cacheName,
         Class<? super T> cls
-    ) throws Exception {
+    ) {
         requireNonNull(n);
         requireNonNull(cacheName);
         requireNonNull(cls);
