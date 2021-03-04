@@ -1482,7 +1482,8 @@ public class GridDhtPartitionDemander {
                         ", topVer=" + topVer +
                         ", supplier=" + supplierNode.id() +
                         ", fullPartitions=" + S.compact(parts.fullSet()) +
-                        ", histPartitions=" + S.compact(parts.historicalSet()) + ']');
+                        ", histPartitions=" + S.compact(parts.historicalSet()) +
+                        ", rebalanceId=" + rebalanceId + ']');
 
                 ctx.io().sendOrderedMessage(supplierNode, msg.topic(),
                     msg.convertIfNeeded(supplierNode.version()), grp.ioPolicy(), msg.timeout());
@@ -1515,9 +1516,6 @@ public class GridDhtPartitionDemander {
             if (super.onDone(res, err)) {
                 if (!isInitial()) {
                     sendRebalanceFinishedEvent();
-
-                    if (log.isInfoEnabled())
-                        log.info("Completed rebalance future: " + this);
 
                     // Complete sync future only if rebalancing was not cancelled.
                     if (res && !grp.preloader().syncFuture().isDone())
@@ -1667,6 +1665,9 @@ public class GridDhtPartitionDemander {
                     lastCancelledTime.accumulateAndGet(System.currentTimeMillis(), Math::max);
                 else if (startTime != -1)
                     endTime = System.currentTimeMillis();
+
+                if (log != null && log.isInfoEnabled() && !isInitial())
+                    log.info("Completed rebalance future: " + this + (isFailed() ? ", error=" + err : ""));
             }
 
             return byThisCall;
