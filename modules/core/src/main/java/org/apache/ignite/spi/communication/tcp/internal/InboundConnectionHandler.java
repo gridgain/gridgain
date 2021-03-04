@@ -638,13 +638,15 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                         new ConnectClosure(ses, recoveryDesc, rmtNode, connKey, msg0, !hasShmemClient, fut));
 
                     if (reserved) {
-                        GridTcpNioCommunicationClient client =
-                            connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
+                        try {
+                            GridTcpNioCommunicationClient client =
+                                connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
 
-                        if (oldFut instanceof ConnectionRequestFuture && !oldFut.isDone())
                             oldFut.onDone(client);
-                        else
+                        }
+                        finally {
                             clientPool.removeFut(connKey, fut);
+                        }
                     }
                 }
             }

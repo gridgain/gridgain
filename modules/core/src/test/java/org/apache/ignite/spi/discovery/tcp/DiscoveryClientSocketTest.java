@@ -97,12 +97,12 @@ public class DiscoveryClientSocketTest {
                 clientFut.get(10_000);
             }
             catch (IgniteFutureTimeoutCheckedException e) {
-                U.closeQuiet(connection);
+                connection.close();
 
                 fail("Can't wait connection closed from client side.");
             }
             catch (Exception e) {
-                U.closeQuiet(connection);
+                connection.close();
 
                 System.out.println("Ex: " + e.getMessage() + " (Socket closed)");
             }
