@@ -16,25 +16,35 @@
 
 package org.apache.ignite.internal.commandline.walconverter;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.ignite.internal.commandline.argument.parser.CLIArgumentParser;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.BINARY_METADATA_DIR;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.HAS_TEXT;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.INCLUDE_SENSITIVE;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.MARSHALLER_MAPPING_DIR;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.PAGES;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.PAGE_SIZE;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.PRINT_STAT;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.RECORD_TYPES;
@@ -50,6 +60,9 @@ import static org.apache.ignite.internal.commandline.argument.parser.CLIArgument
  * Parameters for IgniteWalConverter with parsed and validated.
  */
 public class IgniteWalConverterArguments {
+    /** Record pattern for {@link Args#PAGES}. */
+    private static final Pattern PAGE_ID_PATTERN = Pattern.compile("(\\d+):(\\d+)");
+
     /** Path to dir with wal files. */
     private final File walDir;
 
@@ -89,7 +102,12 @@ public class IgniteWalConverterArguments {
     /** Skip CRC calculation/check flag */
     private final boolean skipCrc;
 
+    /** Pages for searching in format grpId:pageId. */
+    private final Collection<T2<Integer, Long>> pages;
+
     /**
+     * Constructor.
+     *
      * @param walDir                        Path to dir with wal files.
      * @param walArchiveDir                 Path to dir with archive wal files.
      * @param pageSize                      Size of pages, which was selected for file store (1024, 2048, 4096, etc).
@@ -103,6 +121,7 @@ public class IgniteWalConverterArguments {
      * @param includeSensitive              Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5).
      * @param printStat                     Write summary statistics for WAL.
      * @param skipCrc                       Skip CRC calculation/check flag.
+     * @param pages                         Pages for searching in format grpId:pageId.
      */
     public IgniteWalConverterArguments(
         File walDir,
@@ -117,7 +136,8 @@ public class IgniteWalConverterArguments {
         String hasText,
         ProcessSensitiveData includeSensitive,
         boolean printStat,
-        boolean skipCrc
+        boolean skipCrc,
+        Collection<T2<Integer, Long>> pages
     ) {
         this.walDir = walDir;
         this.walArchiveDir = walArchiveDir;
@@ -132,6 +152,7 @@ public class IgniteWalConverterArguments {
         this.includeSensitive = includeSensitive;
         this.printStat = printStat;
         this.skipCrc = skipCrc;
+        this.pages = pages;
     }
 
     /**
@@ -252,6 +273,15 @@ public class IgniteWalConverterArguments {
     }
 
     /**
+     * Return pages for searching in format grpId:pageId.
+     *
+     * @return Pages.
+     */
+    public Collection<T2<Integer, Long>> getPages() {
+        return pages;
+    }
+
+    /**
      * @param filePath Path to the file.
      * @return File, or {@code null} if {@code filePath} == {@code null}.
      */
@@ -311,7 +341,7 @@ public class IgniteWalConverterArguments {
      * @param args Command line arguments.
      * @return IgniteWalConverterArguments.
      */
-    public static IgniteWalConverterArguments parse(final PrintStream out, String args[]) {
+    public static IgniteWalConverterArguments parse(final PrintStream out, String... args) {
         AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
 
         CLIArgumentParser parser = new CLIArgumentParser(asList(
@@ -332,7 +362,12 @@ public class IgniteWalConverterArguments {
             optionalArg(HAS_TEXT.arg(), "Filter by substring in the WAL record.", String.class),
             optionalArg(INCLUDE_SENSITIVE.arg(), "Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). Default MD5.", String.class, ProcessSensitiveData.MD5::toString),
             optionalArg(PRINT_STAT.arg(), "Write summary statistics for WAL.", Boolean.class),
-            optionalArg(SKIP_CRC.arg(), "Skip CRC calculation/check flag", Boolean.class)
+            optionalArg(SKIP_CRC.arg(), "Skip CRC calculation/check flag", Boolean.class),
+            optionalArg(
+                PAGES.arg(),
+                "Comma-separated pages or path to file with pages on each line in grpId:pageId format",
+                String.class
+            )
         ));
 
         if (args == null || args.length < 1) {
@@ -351,6 +386,7 @@ public class IgniteWalConverterArguments {
             out.println("    " + HAS_TEXT.arg() + " search_string");
             out.println("    " + INCLUDE_SENSITIVE.arg() + " SHOW");
             out.println("    " + SKIP_CRC.arg());
+            out.println("    " + PAGES.arg() + " 123456:789456123,123456:789456124");
 
             return null;
         }
@@ -371,6 +407,7 @@ public class IgniteWalConverterArguments {
         String hasText = parser.get(Args.HAS_TEXT.arg());
         boolean printStat = parser.get(Args.PRINT_STAT.arg());
         boolean skipCrc = parser.get(Args.SKIP_CRC.arg());
+        Collection<T2<Integer, Long>> pages = pages(parser.get(PAGES.arg()));
 
         String processSensitiveDataStr = parser.get(Args.INCLUDE_SENSITIVE.arg());
 
@@ -420,9 +457,12 @@ public class IgniteWalConverterArguments {
 
         out.printf("\t%s = %b\n", SKIP_CRC, skipCrc);
 
+        if (!pages.isEmpty())
+            out.printf("\t%s = %s\n", PAGES, pages);
+
         return new IgniteWalConverterArguments(walDir, walArchiveDir, pageSize,
             binaryMetadataDir, marshallerMappingDir,
-            unwrapBinary, recordTypes, fromTime, toTime, hasText, includeSensitive, printStat, skipCrc);
+            unwrapBinary, recordTypes, fromTime, toTime, hasText, includeSensitive, printStat, skipCrc, pages);
     }
 
     /**
@@ -454,7 +494,9 @@ public class IgniteWalConverterArguments {
         /** */
         PRINT_STAT("--print-stat"),
         /** */
-        SKIP_CRC("--skip-crc");
+        SKIP_CRC("--skip-crc"),
+        /** */
+        PAGES("--pages");
 
         /** */
         private String arg;
@@ -468,5 +510,104 @@ public class IgniteWalConverterArguments {
         public String arg() {
             return arg;
         }
+    }
+
+    /**
+     * Parsing a argument value {@link Args#PAGES}.
+     *
+     * @param pages Argument value.
+     * @return Parsed pages.
+     */
+    static Collection<T2<Integer, Long>> pages(@Nullable String pages) {
+        if (pages == null)
+            return emptyList();
+        else {
+            File pagesFile = new File(pages);
+
+            return pagesFile.exists() ? parsePageIds(pagesFile) : parsePageIds(pages.split(","));
+        }
+    }
+
+    /**
+     * Parsing a file in which each line is expected to be grpId:pageId format.
+     *
+     * @param f File.
+     * @return Parsed pages.
+     * @throws IllegalArgumentException If there is an error when working with a file or parsing lines.
+     * @see #parsePageId
+     */
+    static Collection<T2<Integer, Long>> parsePageIds(File f) throws IllegalArgumentException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(f))) {
+            int i = 0;
+            String s;
+
+            Collection<T2<Integer, Long>> res = new ArrayList<>();
+
+            while ((s = reader.readLine()) != null) {
+                try {
+                    res.add(parsePageId(s));
+                }
+                catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException(
+                        "Error parsing value \"" + s + "\" on " + i + " line of the file: " + f.getAbsolutePath(),
+                        e
+                    );
+                }
+
+                i++;
+            }
+
+            return res.isEmpty() ? emptyList() : res;
+        }
+        catch (IOException e) {
+            throw new IllegalArgumentException("Error when working with the file: " + f.getAbsolutePath(), e);
+        }
+    }
+
+    /**
+     * Parsing and checking the string representation of the page in grpId:pageId format.
+     * Example: 123:456.
+     *
+     * @param s String value.
+     * @return Parsed value.
+     * @throws IllegalArgumentException If the string value is invalid.
+     */
+    static T2<Integer, Long> parsePageId(@Nullable String s) throws IllegalArgumentException {
+        if (s == null)
+            throw new IllegalArgumentException("Null value.");
+        else if (s.isEmpty())
+            throw new IllegalArgumentException("Empty value.");
+
+        Matcher m = PAGE_ID_PATTERN.matcher(s);
+
+        if (!m.matches()) {
+            throw new IllegalArgumentException("Incorrect value " + s + ", valid format: grpId:pageId. " +
+                "Example: 123:456");
+        }
+
+        return new T2<>(Integer.parseInt(m.group(1)), Long.parseLong(m.group(2)));
+    }
+
+    /**
+     * Parsing strings in which each element is expected to be in grpId:pageId format.
+     *
+     * @param strs String values.
+     * @return Parsed pages.
+     * @throws IllegalArgumentException If there is an error parsing the strs.
+     * @see #parsePageId
+     */
+    static Collection<T2<Integer, Long>> parsePageIds(String... strs) throws IllegalArgumentException {
+        Collection<T2<Integer, Long>> res = new ArrayList<>();
+
+        for (int i = 0; i < strs.length; i++) {
+            try {
+                res.add(parsePageId(strs[i]));
+            }
+            catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Error parsing value \"" + strs[i] + "\" of " + i + " element", e);
+            }
+        }
+
+        return res.isEmpty() ? emptyList() : res;
     }
 }
