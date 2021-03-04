@@ -181,9 +181,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /** */
     protected GridStripedLock partStoreLock = new GridStripedLock(Runtime.getRuntime().availableProcessors());
 
-    private final boolean skipTtlCleanup = IgniteSystemProperties.getBoolean(
-        "DBG_SKIP_TTL_CLEANUP", false);
-
     /** {@inheritDoc} */
     @Override public GridAtomicLong globalRemoveId() {
         return globalRmvId;
@@ -1371,7 +1368,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Override public boolean expire(
+    @Override public boolean expireRows(
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount
@@ -1380,18 +1377,24 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         assert pendingEntries != null;
 
-        long now = U.currentTimeMillis();
+        return expireInternal(cctx, c, amount, false, U.currentTimeMillis());
+    }
 
-        int expRmvCnt = cctx.config().isEagerTtl() && !skipTtlCleanup ? expireInternal(cctx, c, amount, false, now) : 0;
-
+    @Override public boolean expireTombstones(
+        GridCacheContext cctx,
+        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        int amount
+    ) throws IgniteCheckedException {
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
+
+        long now = U.currentTimeMillis();
 
         // We need to keep tombstones during rebalancing because they are used to handle put-remove conflicts.
         if (tsCnt <= tsLimit &&
             (!ctx.exchange().lastFinishedFuture().rebalanced() ||
                 !ctx.exchange().lastTopologyFuture().isDone() || // Additional safety from hanging PME.
                 ctx.ttl().tombstoneCleanupSuspended()))
-            return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
+            return false;
 
         if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
@@ -1400,9 +1403,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         // Tombstones for volatile cache group are always cleared.
-        int tsRmvCnt = expireInternal(cctx, c, amount, true, now);
-
-        return amount != -1 && (expRmvCnt >= amount || tsRmvCnt >= amount);
+        return expireInternal(cctx, c, amount, true, now);
     }
 
     /**
@@ -1411,10 +1412,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
      * @param tombstone {@code True} to clear tombstone.
      * @param upper Upper limit.
-     * @return cleared entries count.
+     * @return {@code True} if has unprocessed entries.
      * @throws IgniteCheckedException If failed.
      */
-    private int expireInternal(
+    private boolean expireInternal(
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount,
@@ -1432,10 +1433,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 new PendingRow(cacheId, tombstone, upper, 0));
 
             if (!cur.next())
-                return 0;
+                return false;
 
             if (!busyLock.enterBusy())
-                return 0;
+                return false;
 
             try {
                 int cleared = 0;
@@ -1472,7 +1473,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                         ", grp=" + grp.cacheOrGroupName() + ", cacheId=" + cacheId + ']');
                 }
 
-                return cleared;
+                return amount != -1 && cleared >= amount;
             }
             finally {
                 busyLock.leaveBusy();
@@ -2814,8 +2815,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (pendingTree() != null && expireTime != 0) {
                 pendingTree().putx(new PendingRow(cacheId, newRow.tombstone(), expireTime, newRow.link()));
 
-                if (!cctx.ttl().hasPendingEntries())
-                    cctx.ttl().hasPendingEntries(true);
+                cctx.ttl().hasPendingEntries(expireTime, newRow.tombstone());
             }
         }
 

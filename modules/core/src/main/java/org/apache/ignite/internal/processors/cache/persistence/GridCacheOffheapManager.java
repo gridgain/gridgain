@@ -80,7 +80,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Ign
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIteratorException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
@@ -161,9 +160,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
     /** Flag indicates that all group partitions have restored their state from page memory / disk. */
     private volatile boolean partitionStatesRestored;
-
-    private final boolean skipTtlCleanup = IgniteSystemProperties.getBoolean(
-        "DBG_SKIP_TTL_CLEANUP", false);
 
     /** */
     private DataStorageMetricsImpl persStoreMetrics;
@@ -1287,7 +1283,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public boolean expire(
+    @Override public boolean expireRows(
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount
@@ -1300,16 +1296,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (!busyLock.enterBusy())
             return false;
 
-        try {
-            int expRmvCnt = 0;
-            int tsRmvCnt = 0;
+        int expRmvCnt = 0;
 
+        try {
             List<CacheDataStore> stores = new ArrayList<>();
             cacheDataStores().forEach(stores::add);
+            Collections.shuffle(stores); // Randomize partitions to clear.
 
-            if (cctx.config().isEagerTtl() && !skipTtlCleanup) {
-                Collections.shuffle(stores); // Randomize partitions to clear.
-
+            if (cctx.config().isEagerTtl()) {
                 for (CacheDataStore store : stores) {
                     expRmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - expRmvCnt, false, now);
 
@@ -1317,55 +1311,65 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         break;
                 }
             }
-
-            long tsCnt = tombstonesCount();
-
-            if (tsCnt == 0)
-                return amount != -1 && expRmvCnt >= amount;
-
-            DiscoCache discoCache = cctx.discovery().discoCache();
-
-            long tsLimit = ctx.ttl().tombstonesLimit();
-
-            // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
-            // This will allow offline node to join faster using fast full rebalancing.
-            if (tsCnt <= tsLimit &&
-                (!discoCache.fullBaseline() ||
-                    !ctx.exchange().lastFinishedFuture().rebalanced() ||
-                    !ctx.exchange().lastTopologyFuture().isDone() ||
-                    ctx.ttl().tombstoneCleanupSuspended()))
-                return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
-
-            if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
-                amount = (int) (tsCnt - tsLimit);
-
-                now = Long.MAX_VALUE;
-            }
-
-            // Sort by descending tombstones count.
-            //GridDhtPartitionTopology top = grp.topology();
-
-            //Map<Integer, Long> cntCache = U.newHashMap(top.localPartitions().size());
-
-//            stores.sort((o1, o2) -> {
-//                long c1 = cntCache.computeIfAbsent(o1.partId(), k -> tombstoneCount(top.localPartition(o1.partId())));
-//                long c2 = cntCache.computeIfAbsent(o2.partId(), k -> tombstoneCount(top.localPartition(o2.partId())));
-//
-//                return Long.compare(c2, c1);
-//            });
-
-            for (CacheDataStore store : stores) {
-                tsRmvCnt += ((GridCacheDataStore)store).purgeExpired(cctx, c, amount - tsRmvCnt, true, now);
-
-                if (amount != -1 && tsRmvCnt >= amount)
-                    break;
-            }
-
-            return amount != -1 && (expRmvCnt >= amount || tsRmvCnt >= amount);
         }
         finally {
             busyLock.leaveBusy();
         }
+
+        return amount != -1 && expRmvCnt >= amount;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount) throws IgniteCheckedException {
+        long tsCnt = tombstonesCount();
+
+        if (tsCnt == 0)
+            return false;
+
+        long now = U.currentTimeMillis();
+
+        DiscoCache discoCache = cctx.discovery().discoCache();
+
+        long tsLimit = ctx.ttl().tombstonesLimit();
+
+        // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
+        // This will allow offline node to join faster using fast full rebalancing.
+        if (tsCnt <= tsLimit &&
+            (!discoCache.fullBaseline() ||
+                !ctx.exchange().lastFinishedFuture().rebalanced() ||
+                !ctx.exchange().lastTopologyFuture().isDone() ||
+                ctx.ttl().tombstoneCleanupSuspended()))
+            return false;
+
+        if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
+            amount = (int) (tsCnt - tsLimit);
+
+            now = Long.MAX_VALUE;
+        }
+
+        // Prevent manager being stopped in the middle of pds operation.
+        if (!busyLock.enterBusy())
+            return false;
+
+        int tsRmvCnt = 0;
+
+        try {
+            List<CacheDataStore> stores = new ArrayList<>();
+            cacheDataStores().forEach(stores::add);
+            Collections.shuffle(stores); // Randomize partitions to clear.
+
+            for (CacheDataStore store : stores) {
+                tsRmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - tsRmvCnt, true, now);
+
+                if (amount != -1 && tsRmvCnt >= amount)
+                    break;
+            }
+        }
+        finally {
+            busyLock.leaveBusy();
+        }
+
+        return amount != -1 && tsRmvCnt >= amount;
     }
 
     /**
@@ -2320,8 +2324,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     pendingTree = pendingTree0;
 
+                    long curTime = U.currentTimeMillis();
+
                     if (!pendingTree0.isEmpty())
-                        grp.caches().forEach(cctx -> cctx.ttl().hasPendingEntries(true));
+                        grp.caches().forEach(cctx -> {
+                            cctx.ttl().hasPendingEntries(curTime, false);
+                            cctx.ttl().hasPendingEntries(curTime, true);
+                        });
 
                     long partMetaId = pageMem.partitionMetaPageId(grpId, partId);
                     long partMetaPage = pageMem.acquirePage(grpId, partMetaId);
@@ -3280,9 +3289,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                         if (pendingTree.removex(row)) { // Avoid concurrent processing of the same keys.
                             // Can't throw GridDhtInvalidPartitionException because the partition is reserved.
-//                            GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
-//
-//                            c.apply(entry, upper);
+                            GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
+
+                            c.apply(entry, upper);
                         }
 
                         cleared++;
