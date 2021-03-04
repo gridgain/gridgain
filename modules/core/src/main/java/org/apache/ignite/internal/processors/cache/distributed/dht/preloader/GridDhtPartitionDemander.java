@@ -1398,7 +1398,7 @@ public class GridDhtPartitionDemander {
 
             if (isDone()) {
                 assert !result() : "Rebalance future was done, but partitions never requested [grp="
-                    + grp.cacheOrGroupName() + ", topVer=" + topologyVersion() + "]";
+                    + grp.cacheOrGroupName() + ", topVer=" + topologyVersion() + ", rebalanceId=" + rebalanceId + "]";
 
                 return;
             }
@@ -1423,7 +1423,7 @@ public class GridDhtPartitionDemander {
 
                     U.log(log, "Prepared rebalancing [grp=" + grp.cacheOrGroupName()
                         + ", mode=" + cfg.getRebalanceMode() + ", supplier=" + node.id() + ", partitionsCount=" + parts.size()
-                        + ", topVer=" + topologyVersion() + "]");
+                        + ", topVer=" + topologyVersion() + ", rebalanceId=" + rebalanceId + "]");
                 }
 
                 if (!parts.isEmpty()) {
@@ -1538,8 +1538,9 @@ public class GridDhtPartitionDemander {
 
         /**
          * @param topVer Rebalancing topology version.
+         * @param rebalanceId Rebalance id.
          */
-        public void ownPartitionsAndFinishFuture(AffinityTopologyVersion topVer) {
+        public void ownPartitionsAndFinishFuture(AffinityTopologyVersion topVer, long rebalanceId) {
             // Ignore all client exchanges.
             // Note rebalancing may be started on client topology version if forced reassign was queued after client
             // topology exchange.
@@ -1556,8 +1557,13 @@ public class GridDhtPartitionDemander {
                 return;
             }
 
+            if (this.rebalanceId != rebalanceId)
+                return;
+
             if (onDone(true, null)) {
-                assert state == RebalanceFutureState.STARTED : this;
+                RebalanceFutureState state = this.state;
+
+                assert state == RebalanceFutureState.STARTED : "[state=" + state + ", fut=" + this + "]";
 
                 grp.localWalEnabled(true, true);
 
@@ -1604,8 +1610,12 @@ public class GridDhtPartitionDemander {
          * Cancel running future or mark for cancel {@code RebalanceFutureState#MARK_CANCELLED}.
          */
         private void tryCancel() {
-            if (STATE_UPD.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.MARK_CANCELLED))
+            if (STATE_UPD.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.MARK_CANCELLED)) {
+                U.log(log, "Rebalancing marked as cancelled [grp=" + grp.cacheOrGroupName() +
+                    ", topVer=" + topologyVersion() + ", rebalanceId=" + rebalanceId + "]");
+
                 return;
+            }
 
             cancel();
         }
@@ -1626,7 +1636,7 @@ public class GridDhtPartitionDemander {
                         return true;
 
                     U.log(log, "Cancelled rebalancing from all nodes [grp=" + grp.cacheOrGroupName() +
-                        ", topVer=" + topologyVersion() + "]");
+                        ", topVer=" + topologyVersion() + ", rebalanceId=" + rebalanceId + "]");
 
                     if (!ctx.kernalContext().isStopping()) {
                         for (UUID nodeId : remaining.keySet())
@@ -1828,7 +1838,7 @@ public class GridDhtPartitionDemander {
                     cp.onStateChanged(PAGE_SNAPSHOT_TAKEN, () -> grp.localWalEnabled(true, false));
 
                     cp.onStateChanged(FINISHED, () -> {
-                        ctx.exchange().finishPreloading(topVer, grp.groupId());
+                        ctx.exchange().finishPreloading(topVer, grp.groupId(), rebalanceId);
                     });
                 }
                 else {
@@ -2042,7 +2052,9 @@ public class GridDhtPartitionDemander {
             int remainingRoutines = remaining.size() - 1;
 
             try {
-                Map<Boolean, Long> partCnts = rebalancingParts.getOrDefault(nodeId, Collections.emptySet()).stream()
+                Set<Integer> nodeParts = rebalancingParts.get(ctx.node(nodeId));
+
+                Map<Boolean, Long> partCnts = nodeParts == null ? new HashMap<>() : nodeParts.stream()
                     .collect(partitioningBy(historical::contains, counting()));
 
                 int fullParts = partCnts.getOrDefault(Boolean.FALSE, 0L).intValue();
@@ -2093,9 +2105,9 @@ public class GridDhtPartitionDemander {
     /**
      * @param topVer Topopolog verion.
      */
-    void finishPreloading(AffinityTopologyVersion topVer) {
+    void finishPreloading(AffinityTopologyVersion topVer, long rebalanceId) {
         assert !rebalanceFut.isInitial() : topVer;
 
-        rebalanceFut.ownPartitionsAndFinishFuture(topVer);
+        rebalanceFut.ownPartitionsAndFinishFuture(topVer, rebalanceId);
     }
 }
