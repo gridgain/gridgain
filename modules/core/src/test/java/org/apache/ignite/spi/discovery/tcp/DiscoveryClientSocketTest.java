@@ -79,9 +79,6 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
             try {
                 fakeTcpDiscoverySpi.configureSocketOptions(connection);
 
-                connection.getInputStream();
-                connection.getOutputStream();
-
                 readHandshake(connection);
 
                 connection.getOutputStream().write(U.IGNITE_HEADER);
@@ -91,11 +88,9 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
             catch (IgniteFutureTimeoutCheckedException e) {
                 U.dumpThreads(log);
 
-                long startClose = System.currentTimeMillis();
-
                 U.closeQuiet(connection);
 
-                fail("Can't wait connection closed from client side [closeTime=" + (System.currentTimeMillis() - startClose) + ']');
+                fail("Can't wait connection closed from client side.");
             }
             catch (Exception e) {
                 U.closeQuiet(connection);
