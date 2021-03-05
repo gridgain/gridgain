@@ -161,9 +161,8 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     }
 
     /**
-     * Updates the flag {@code hasPendingEntries} with the given value.
-     *
-     * @param update {@code true} if the underlying pending tree has entries with expire policy enabled.
+     * @param expireTime Expire time.
+     * @param tombstone {@code True} if added a tombstone.
      */
     public void hasPendingEntries(long expireTime, boolean tombstone) {
         AtomicLong cntr = tombstone ? nextTombstoneEvictTs : nextTTLEvictTs;
@@ -198,25 +197,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * @return {@code True} if unprocessed expired entries remains.
      */
     public boolean expire() {
-        return expire(ttlBatchSize, false);
+        return expire(ttlBatchSize);
     }
 
-    /**
-     * Processes expired entries with default batch size.
-     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
-     * @return {@code True} if unprocessed expired entries remains.
-     */
-    public boolean expire(int amount) {
-        return expire(amount, false);
-    }
-
-    /**
-     * Processes expired entries with default batch size under cache gate lock.
-     * @return {@code True} if unprocessed expired entries remains.
-     */
-    public boolean expireSafe() {
-        return expire(ttlBatchSize, true);
-    }
 
     /**
      * Processes specified amount of expired entries.
@@ -225,10 +208,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * and tombstones cleanup is executed, so the real amount of deleted entries can be up to {@code amount * 2}.
      *
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
-     * @param lock {@code True} to acquire cache gate lock.
      * @return {@code True} if unprocessed expired entries remains.
      */
-    public boolean expire(int amount, boolean lock) {
+    public boolean expire(int amount) {
         assert cctx != null;
 
         if (amount == 0)
@@ -264,28 +246,20 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                 return false;  /* Pending tree never contains entries for that cache */
 
             long curTime = U.currentTimeMillis();
+            long nextTTLEvict = nextTTLEvictTs.get();
+            long nextTombstoneEvict = nextTombstoneEvictTs.get();
 
-            boolean hasTtl = cctx.config().isEagerTtl() && curTime > nextTTLEvictTs.get();
-            boolean hasTs = curTime > nextTombstoneEvictTs.get();
+            boolean hasTtl = cctx.config().isEagerTtl() && nextTTLEvict != 0 && curTime > nextTTLEvict;
+            boolean hasTs = nextTombstoneEvict != 0 && curTime > nextTombstoneEvict;
 
             if (!hasTtl && !hasTs)
                 return false;
 
-            if (lock && !dhtCtx.gate().enterIfNotStopped())
-                return false; // Stopped.
+            if (hasTtl && !cctx.offheap().expireRows(dhtCtx, expireC, amount))
+                nextTTLEvictTs.set(0);
 
-            // Locked.
-            try {
-                if (hasTtl && !cctx.offheap().expireRows(dhtCtx, expireC, amount))
-                    nextTTLEvictTs.set(0);
-
-                if (hasTs && !cctx.offheap().expireTombstones(dhtCtx, expireC, amount))
-                    nextTombstoneEvictTs.set(0);
-            }
-            finally {
-                if (lock)
-                    dhtCtx.gate().unlock();
-            }
+            if (hasTs && !cctx.offheap().expireTombstones(dhtCtx, expireC, amount))
+                nextTombstoneEvictTs.set(0);
 
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();
