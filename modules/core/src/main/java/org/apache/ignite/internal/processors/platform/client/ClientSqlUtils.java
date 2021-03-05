@@ -98,7 +98,7 @@ public class ClientSqlUtils {
      */
     public static void writeSqlField(BinaryRawWriterEx writer, @Nullable Object obj, ClientProtocolContext protoCtx)
             throws BinaryObjectException {
-        Class<?> cls = obj.getClass();
+        Class<?> cls = obj == null ? null : obj.getClass();
 
         TimeZone serverTz = TimeZone.getDefault();
         TimeZone clientTz = protoCtx.clientTimeZone();
