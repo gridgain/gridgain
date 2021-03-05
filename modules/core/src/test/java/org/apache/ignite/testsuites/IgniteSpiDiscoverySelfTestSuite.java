@@ -86,94 +86,94 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    TcpDiscoveryVmIpFinderDnsResolveTest.class,
-    TcpDiscoveryVmIpFinderSelfTest.class,
-    TcpDiscoverySharedFsIpFinderSelfTest.class,
-    TcpDiscoveryJdbcIpFinderSelfTest.class,
-    TcpDiscoveryMulticastIpFinderSelfTest.class,
-    TcpDiscoveryIpFinderCleanerTest.class,
-
-    TcpDiscoverySelfTest.class,
-    TcpDiscoverySpiSelfTest.class,
-    //TcpDiscoverySpiRandomStartStopTest.class,
-    //TcpDiscoverySpiSslSelfTest.class,
-    //TcpDiscoverySpiWildcardSelfTest.class,
-    TcpDiscoverySpiFailureTimeoutSelfTest.class,
-    TcpDiscoverySpiMBeanTest.class,
-    TcpDiscoverySpiStartStopSelfTest.class,
-    TcpDiscoverySpiConfigSelfTest.class,
-    TcpDiscoveryMarshallerCheckSelfTest.class,
-    TcpDiscoverySnapshotHistoryTest.class,
-    TcpDiscoveryNodeJoinAndFailureTest.class,
-
-    GridTcpSpiForwardingSelfTest.class,
-
-    ExponentialBackoffTimeoutStrategyTest.class,
-
-    TcpClientDiscoverySpiSelfTest.class,
-    LongClientConnectToClusterTest.class,
-    TcpClientDiscoveryMarshallerCheckSelfTest.class,
-    TcpClientDiscoverySpiCoordinatorChangeTest.class,
-    TcpClientDiscoverySpiMulticastTest.class,
-    TcpClientDiscoverySpiFailureTimeoutSelfTest.class,
-    TcpClientDiscoveryUnresolvedHostTest.class,
-
-    TcpDiscoveryNodeConsistentIdSelfTest.class,
-    TcpDiscoveryNodeConfigConsistentIdSelfTest.class,
-
-    TcpDiscoveryRestartTest.class,
-    TcpDiscoveryMultiThreadedTest.class,
-    TcpDiscoveryMetricsWarnLogTest.class,
-    //TcpDiscoveryConcurrentStartTest.class,
-
-    TcpDiscoverySegmentationPolicyTest.class,
-
-    TcpDiscoveryNodeAttributesUpdateOnReconnectTest.class,
-    AuthenticationRestartTest.class,
-
-    TcpDiscoveryWithWrongServerTest.class,
-
-    TcpDiscoverySpiReconnectDelayTest.class,
-
-    TcpDiscoveryNetworkIssuesTest.class,
-
-    IgniteDiscoveryMassiveNodeFailTest.class,
-    TcpDiscoveryCoordinatorFailureTest.class,
-
-    // Client connect.
-    IgniteClientConnectTest.class,
-    IgniteClientConnectSslTest.class,
-    IgniteClientReconnectMassiveShutdownTest.class,
-    IgniteClientReconnectMassiveShutdownSslTest.class,
-    TcpDiscoveryClientSuspensionSelfTest.class,
-    IgniteClientReconnectEventHandlingTest.class,
-
-    TcpDiscoveryFailedJoinTest.class,
-
-    // SSL.
-    TcpDiscoverySslSelfTest.class,
-    TcpDiscoverySslTrustedSelfTest.class,
-    TcpDiscoverySslSecuredUnsecuredTest.class,
-    TcpDiscoverySslTrustedUntrustedTest.class,
-    TcpDiscoverySslParametersTest.class,
-
-    // Disco cache reuse.
-    IgniteDiscoveryCacheReuseSelfTest.class,
-
-    DiscoveryUnmarshalVulnerabilityTest.class,
-
-    FilterDataForClientNodeDiscoveryTest.class,
-
-    TcpDiscoveryPendingMessageDeliveryTest.class,
-
-    TcpDiscoveryReconnectUnstableTopologyTest.class,
+//    TcpDiscoveryVmIpFinderDnsResolveTest.class,
+//    TcpDiscoveryVmIpFinderSelfTest.class,
+//    TcpDiscoverySharedFsIpFinderSelfTest.class,
+//    TcpDiscoveryJdbcIpFinderSelfTest.class,
+//    TcpDiscoveryMulticastIpFinderSelfTest.class,
+//    TcpDiscoveryIpFinderCleanerTest.class,
+//
+//    TcpDiscoverySelfTest.class,
+//    TcpDiscoverySpiSelfTest.class,
+//    //TcpDiscoverySpiRandomStartStopTest.class,
+//    //TcpDiscoverySpiSslSelfTest.class,
+//    //TcpDiscoverySpiWildcardSelfTest.class,
+//    TcpDiscoverySpiFailureTimeoutSelfTest.class,
+//    TcpDiscoverySpiMBeanTest.class,
+//    TcpDiscoverySpiStartStopSelfTest.class,
+//    TcpDiscoverySpiConfigSelfTest.class,
+//    TcpDiscoveryMarshallerCheckSelfTest.class,
+//    TcpDiscoverySnapshotHistoryTest.class,
+//    TcpDiscoveryNodeJoinAndFailureTest.class,
+//
+//    GridTcpSpiForwardingSelfTest.class,
+//
+//    ExponentialBackoffTimeoutStrategyTest.class,
+//
+//    TcpClientDiscoverySpiSelfTest.class,
+//    LongClientConnectToClusterTest.class,
+//    TcpClientDiscoveryMarshallerCheckSelfTest.class,
+//    TcpClientDiscoverySpiCoordinatorChangeTest.class,
+//    TcpClientDiscoverySpiMulticastTest.class,
+//    TcpClientDiscoverySpiFailureTimeoutSelfTest.class,
+//    TcpClientDiscoveryUnresolvedHostTest.class,
+//
+//    TcpDiscoveryNodeConsistentIdSelfTest.class,
+//    TcpDiscoveryNodeConfigConsistentIdSelfTest.class,
+//
+//    TcpDiscoveryRestartTest.class,
+//    TcpDiscoveryMultiThreadedTest.class,
+//    TcpDiscoveryMetricsWarnLogTest.class,
+//    //TcpDiscoveryConcurrentStartTest.class,
+//
+//    TcpDiscoverySegmentationPolicyTest.class,
+//
+//    TcpDiscoveryNodeAttributesUpdateOnReconnectTest.class,
+//    AuthenticationRestartTest.class,
+//
+//    TcpDiscoveryWithWrongServerTest.class,
+//
+//    TcpDiscoverySpiReconnectDelayTest.class,
+//
+//    TcpDiscoveryNetworkIssuesTest.class,
+//
+//    IgniteDiscoveryMassiveNodeFailTest.class,
+//    TcpDiscoveryCoordinatorFailureTest.class,
+//
+//    // Client connect.
+//    IgniteClientConnectTest.class,
+//    IgniteClientConnectSslTest.class,
+//    IgniteClientReconnectMassiveShutdownTest.class,
+//    IgniteClientReconnectMassiveShutdownSslTest.class,
+//    TcpDiscoveryClientSuspensionSelfTest.class,
+//    IgniteClientReconnectEventHandlingTest.class,
+//
+//    TcpDiscoveryFailedJoinTest.class,
+//
+//    // SSL.
+//    TcpDiscoverySslSelfTest.class,
+//    TcpDiscoverySslTrustedSelfTest.class,
+//    TcpDiscoverySslSecuredUnsecuredTest.class,
+//    TcpDiscoverySslTrustedUntrustedTest.class,
+//    TcpDiscoverySslParametersTest.class,
+//
+//    // Disco cache reuse.
+//    IgniteDiscoveryCacheReuseSelfTest.class,
+//
+//    DiscoveryUnmarshalVulnerabilityTest.class,
+//
+//    FilterDataForClientNodeDiscoveryTest.class,
+//
+//    TcpDiscoveryPendingMessageDeliveryTest.class,
+//
+//    TcpDiscoveryReconnectUnstableTopologyTest.class,
 
     DiscoveryClientSocketTest.class,
 
-    IgniteMetricsOverflowTest.class,
-    MetricsCompactionTest.class,
-
-    GridDiscoveryManagerChangeCoordinatorTest.class
+//    IgniteMetricsOverflowTest.class,
+//    MetricsCompactionTest.class,
+//
+//    GridDiscoveryManagerChangeCoordinatorTest.class
 })
 public class IgniteSpiDiscoverySelfTestSuite {
     /** */
