@@ -2053,9 +2053,7 @@ public class GridDhtPartitionDemander {
             int remainingRoutines = remaining.size() - 1;
 
             try {
-                Set<Integer> nodeParts = rebalancingParts.get(ctx.node(nodeId));
-
-                Map<Boolean, Long> partCnts = nodeParts == null ? new HashMap<>() : nodeParts.stream()
+                Map<Boolean, Long> partCnts = rebalancingParts.getOrDefault(nodeId, Collections.emptySet()).stream()
                     .collect(partitioningBy(historical::contains, counting()));
 
                 int fullParts = partCnts.getOrDefault(Boolean.FALSE, 0L).intValue();
