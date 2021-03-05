@@ -23,6 +23,12 @@ import org.junit.Test;
  * Planner statistics usage test: partial statistics collection (by set of columns) tests.
  */
 public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
+    /** */
+    private static final String SQL = "select * from TBL_SELECT i1 where lo_select = %d and med_select = %d";
+
+    /** */
+    private static final String[][] NO_HINTS = new String[1][];
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         Ignite node = startGridsMultiThreaded(1);
@@ -32,16 +38,16 @@ public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        runSql("DROP TABLE IF EXISTS TBL_SELECT");
+        sql("DROP TABLE IF EXISTS TBL_SELECT");
 
-        runSql("CREATE TABLE TBL_SELECT (ID INT PRIMARY KEY, lo_select int, med_select int, hi_select int)");
+        sql("CREATE TABLE TBL_SELECT (ID INT PRIMARY KEY, lo_select int, med_select int, hi_select int)");
 
-        runSql("CREATE INDEX TBL_SELECT_LO_IDX ON TBL_SELECT(lo_select)");
-        runSql("CREATE INDEX TBL_SELECT_MED_IDX ON TBL_SELECT(med_select)");
-        runSql("CREATE INDEX TBL_SELECT_HI_IDX ON TBL_SELECT(hi_select)");
+        sql("CREATE INDEX TBL_SELECT_LO_IDX ON TBL_SELECT(lo_select)");
+        sql("CREATE INDEX TBL_SELECT_MED_IDX ON TBL_SELECT(med_select)");
+        sql("CREATE INDEX TBL_SELECT_HI_IDX ON TBL_SELECT(hi_select)");
 
         for (int i = 0; i < 1000; i++)
-            runSql(String.format("insert into tbl_select(id, lo_select, med_select, hi_select) values(%d, %d, %d, %d)",
+            sql(String.format("insert into tbl_select(id, lo_select, med_select, hi_select) values(%d, %d, %d, %d)",
                     i, i % 10, i % 100, i % 1000));
 
         updateStatistics("tbl_select");
@@ -64,25 +70,18 @@ public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithIntConditions() throws IgniteCheckedException {
-        String[][] noHints = new String[1][];
-        String lo_med_select = "select * from TBL_SELECT i1 where lo_select = %d and med_select = %d";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
-                String.format(lo_med_select, 5, 5), noHints);
+                String.format(SQL, 5, 5), NO_HINTS);
 
-        runSql("UPDATE TBL_SELECT SET lo_select = hi_select");
+        sql("UPDATE TBL_SELECT SET lo_select = hi_select");
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
-                String.format(lo_med_select, 6, 6), noHints);
+                String.format(SQL, 6, 6), NO_HINTS);
 
-        IgniteStatisticsManager statsMgr = grid(0).context().query().getIndexing().statsManager();
-        statsMgr.gatherObjectStatistics(new StatisticsTarget("PUBLIC", "TBL_SELECT", "HI_SELECT"));
-
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
-                String.format(lo_med_select, 7, 7), noHints);
-
-        statsMgr.gatherObjectStatistics(new StatisticsTarget("PUBLIC", "TBL_SELECT", "LO_SELECT"));
+        // All columns set up before also will be updated
+        updateStatistics(new StatisticsTarget("PUBLIC", "TBL_SELECT", "LO_SELECT"));
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_LO_IDX"},
-                String.format(lo_med_select, 8, 8), noHints);
+                String.format(SQL, 8, 8), NO_HINTS);
     }
 }

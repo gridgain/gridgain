@@ -38,6 +38,8 @@ public class StatisticsKey implements Serializable {
      * @param obj Object name.
      */
     public StatisticsKey(String schema, String obj) {
+        assert obj != null;
+
         this.schema = schema;
         this.obj = obj;
     }
