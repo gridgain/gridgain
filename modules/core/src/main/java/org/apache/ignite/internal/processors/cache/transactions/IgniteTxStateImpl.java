@@ -104,7 +104,7 @@ public class IgniteTxStateImpl extends IgniteTxLocalStateAdapter {
             GridCacheContext ctx = cctx.cacheContext(cacheId);
 
             if (ctx != null)
-                CU.unwindEvictsSafe(ctx);
+                CU.unwindEvicts(ctx);
         }
     }
 

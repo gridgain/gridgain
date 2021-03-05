@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.expiry.Duration;
@@ -60,6 +61,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.GridCacheTtlManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
 import org.apache.ignite.internal.processors.cache.MapCacheStoreStrategy;
@@ -133,6 +135,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        cfg.setFailureDetectionTimeout(1000000L);
+        cfg.setClientFailureDetectionTimeout(1000000L);
 
         cfg.setClusterStateOnStart(ClusterState.INACTIVE);
 
@@ -1587,6 +1592,78 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             PendingEntriesTree t1 = ctx1.group().topology().localPartition(p).dataStore().pendingTree();
             assertTrue(t1.isEmpty());
         }
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "1500") // Reduce tombstone TTL
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable async clearing.
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable sync eviction by unwindEvicts.
+    public void testCleanupBothTtlAndTombstones() throws Exception {
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode).setEagerTtl(true);
+        cacheCfg.setExpiryPolicyFactory(FactoryBuilder.factoryOf(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 1500))));
+
+        IgniteEx client = startClientGrid("client");
+
+        IgniteCache<Object, Object> cache = client.createCache(cacheCfg);
+        CacheGroupContext grpCtx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        GridCacheTtlManager ttl = grpCtx0.singleCacheContext().ttl();
+
+        int part = 0;
+
+        List<Integer> keys = partitionKeys(cache, part, 20, 0);
+
+        keys.forEach(k -> cache.put(k, 0));
+
+        // 12 tombstones, 8 expired rows.
+        keys.subList(0, 12).forEach(cache::remove);
+
+        // This call should do nothing.
+        assertFalse(ttl.expire(1));
+
+        doSleep(2000);
+
+        long now = U.currentTimeMillis();
+
+        PendingEntriesTree tree =
+            crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part).dataStore().pendingTree();
+
+        assertEquals(keys.size(), tree.size());
+
+        AtomicLong nextTTLEvictTs = U.field(ttl, "nextTTLEvictTs");
+        AtomicLong nextTombstoneEvictTs = U.field(ttl, "nextTombstoneEvictTs");
+
+        assertTrue(nextTTLEvictTs.get() < now);
+        assertTrue(nextTombstoneEvictTs.get() < now);
+
+        assertTrue(ttl.expire(4));
+
+        // 8 tombstones, 4 expired rows remaining.
+        assertEquals(keys.size() - 8, tree.size());
+        assertTrue(nextTTLEvictTs.get() != 0);
+        assertTrue(nextTombstoneEvictTs.get() != 0);
+
+        assertTrue(ttl.expire(5));
+
+        // 3 tombstones, 0 expired rows remaining.
+        assertEquals(keys.size() - 8 - 9, tree.size());
+        assertTrue(nextTTLEvictTs.get() == 0);
+        assertTrue(nextTombstoneEvictTs.get() != 0);
+
+        assertTrue(ttl.expire(2));
+
+        // 1 tombstone remaining
+        assertTrue(nextTombstoneEvictTs.get() != 0);
+
+        assertFalse(ttl.expire(2));
+
+        assertTrue(nextTTLEvictTs.get() == 0);
+        assertTrue(nextTombstoneEvictTs.get() == 0);
+
+        assertFalse(ttl.expire(1));
     }
 
     /**
