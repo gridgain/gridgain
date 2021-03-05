@@ -1773,6 +1773,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //                            System.out.println();
 //                        }
                         reconciliationCtx.storageSizeAddDelta(cacheId, delta);
+//                        reconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
+//                        reconciliationCtx.keysAfter.get(cacheId).put(key, new AtomicLong(delta));
 
 //                        storageSize.addAndGet(delta);
 
@@ -1794,7 +1796,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //                        reconciliationCtx.keysAfterCounter.addAndGet(delta);
 
                         reconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
-                        reconciliationCtx.keysAfter.get(cacheId).putIfAbsent(key, new AtomicLong());
+//                        reconciliationCtx.keysAfter.get(cacheId).putIfAbsent(key, new AtomicLong());
 
 //                        reconciliationCtx.keysAfter.get(cacheId).get(key).addAndGet(delta);
                         reconciliationCtx.keysAfter.get(cacheId).put(key, new AtomicLong(delta));
@@ -3369,8 +3371,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 // assert c.operationType() == PUT || c.operationType() == IN_PLACE : c.operationType();
 
-                if (c.operationType() != NOOP)
-                    finishRemove(cctx, key, c.oldRow, c.newRow);
+                if (c.operationType() != NOOP) {
+                    reconciliationCtx.lockPutRemove.readLock().lock();
+
+                    try {
+                        finishRemove(cctx, key, c.oldRow, c.newRow);
+                    }
+                    finally {
+                        reconciliationCtx.lockPutRemove.readLock().unlock();
+                    }
+                }
             }
             finally {
                 busyLock.leaveBusy();
