@@ -89,11 +89,13 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
                 clientFut.get(10_000);
             }
             catch (IgniteFutureTimeoutCheckedException e) {
-                U.closeQuiet(connection);
-
                 U.dumpThreads(log);
 
-                fail("Can't wait connection closed from client side.");
+                long startClose = System.currentTimeMillis();
+
+                U.closeQuiet(connection);
+
+                fail("Can't wait connection closed from client side [closeTime=" + (System.currentTimeMillis() - startClose) + ']');
             }
             catch (Exception e) {
                 U.closeQuiet(connection);
@@ -122,7 +124,7 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
                 fail("Failed to read from socket.");
         }
 
-        assertEquals("Handshake did not pass, readed bytes: " + read, Arrays.asList(U.IGNITE_HEADER), Arrays.asList(U.IGNITE_HEADER));
+        assertEquals("Handshake did not pass, read bytes: " + read, Arrays.asList(U.IGNITE_HEADER), Arrays.asList(U.IGNITE_HEADER));
     }
 
     /**
@@ -172,8 +174,12 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
             }
 
             info("Try to close a socket.");
+
+            long startClose = System.currentTimeMillis();
             //Do not use try-catch-resource here, because JVM has a bug on TLS implementation and requires to close socket streams explicitly.
             U.closeQuiet(clientSocket);
+
+            info("Socket closed [time=" + (System.currentTimeMillis() - startClose) + ']');
         }
         catch (Exception e) {
             fail(e.getMessage());
