@@ -82,7 +82,7 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
                 connection.getInputStream();
                 connection.getOutputStream();
 
-                readHadshake(connection);
+                readHandshake(connection);
 
                 connection.getOutputStream().write(U.IGNITE_HEADER);
 
@@ -109,7 +109,7 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
      * @param connection Socket connection.
      * @throws IOException If have some issue happens in time read from socket.
      */
-    public void readHadshake(Socket connection) throws IOException {
+    public void readHandshake(Socket connection) throws IOException {
         byte[] buf = new byte[4];
         int read = 0;
 
@@ -130,7 +130,9 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
      * tries to close it.
      */
     public void startSslClient() {
-        try (Socket clientSocket = sslSockFactory.createSocket(HOST, PORT_TO_LNSR)) {
+        try {
+            Socket clientSocket = sslSockFactory.createSocket(HOST, PORT_TO_LNSR);
+
             info("Client started.");
 
             fakeTcpDiscoverySpi.configureSocketOptions(clientSocket);
@@ -140,7 +142,7 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
             //need to send message in order to ssl handshake passed.
             clientSocket.getOutputStream().write(U.IGNITE_HEADER);
 
-            readHadshake(clientSocket);
+            readHandshake(clientSocket);
 
             long handshakeInterval = System.currentTimeMillis() - handshakeStartTime;
 
@@ -169,7 +171,9 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
                     ", time=" + (System.currentTimeMillis() - handshakeStartTime) + ']');
             }
 
-            info("Try to close a socket."); //see in try-catch-resource
+            info("Try to close a socket.");
+            //Do not use try-catch-resource here, because JVM has a bug on TLS implementation and requires to close socket streams explicitly.
+            U.closeQuiet(clientSocket);
         }
         catch (Exception e) {
             fail(e.getMessage());
