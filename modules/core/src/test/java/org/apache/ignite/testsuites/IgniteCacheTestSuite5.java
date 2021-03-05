@@ -86,7 +86,7 @@ public class IgniteCacheTestSuite5 {
     public static List<Class<?>> suite(Collection<Class> ignoredTests) {
         List<Class<?>> suite = new ArrayList<>();
 
-        GridTestUtils.addTestIfNeeded(suite, CacheSerializableTransactionsTest.class, ignoredTests);
+        /*GridTestUtils.addTestIfNeeded(suite, CacheSerializableTransactionsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheNearReaderUpdateTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheStoreCollectionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheWriteBehindNoUpdateSelfTest.class, ignoredTests);
@@ -115,9 +115,9 @@ public class IgniteCacheTestSuite5 {
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheGroupsPartitionLossPolicySelfTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CacheRebalancingSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, CacheManualRebalancingTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CacheManualRebalancingTest.class, ignoredTests);*/
         GridTestUtils.addTestIfNeeded(suite, RebalanceStatisticsTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, RebalanceMetricsTest.class, ignoredTests);
+        /*GridTestUtils.addTestIfNeeded(suite, RebalanceMetricsTest.class, ignoredTests);
 
         // Affinity tests.
         GridTestUtils.addTestIfNeeded(suite, GridCacheAffinityBackupsSelfTest.class, ignoredTests);
@@ -145,7 +145,7 @@ public class IgniteCacheTestSuite5 {
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheReadThroughEvictionsVariationsSuite.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, ClientSlowDiscoveryTopologyChangeTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, ClientSlowDiscoveryTransactionRemapTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ClientSlowDiscoveryTransactionRemapTest.class, ignoredTests);*/
 
         //GridTestUtils.addTestIfNeeded(suite, GridCacheAtomicPreloadSelfTest.class, ignoredTests);
 
