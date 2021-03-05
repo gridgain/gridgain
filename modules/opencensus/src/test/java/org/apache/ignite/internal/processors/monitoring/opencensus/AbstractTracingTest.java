@@ -16,14 +16,6 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
-import io.opencensus.common.Functions;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.Span;
-import io.opencensus.trace.SpanId;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.export.SpanData;
-import io.opencensus.trace.export.SpanExporter;
-import io.opencensus.trace.samplers.Samplers;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,6 +26,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import io.opencensus.common.Functions;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.SpanId;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.export.SpanData;
+import io.opencensus.trace.export.SpanExporter;
+import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -539,7 +540,6 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     protected boolean blockRebalancing() {
         return true;
     }
-
 
     /** */
     public enum CheckAttributes {
