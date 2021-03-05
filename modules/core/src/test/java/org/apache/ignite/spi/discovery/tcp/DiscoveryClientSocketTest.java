@@ -17,8 +17,6 @@
 package org.apache.ignite.spi.discovery.tcp;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
@@ -87,22 +85,22 @@ public class DiscoveryClientSocketTest {
             try {
                 fakeTcpDiscoverySpi.configureSocketOptions(connection);
 
-                InputStream in = connection.getInputStream();
-                OutputStream out = connection.getOutputStream();
+                connection.getInputStream();
+                connection.getOutputStream();
 
                 readHadshake(connection);
 
                 connection.getOutputStream().write(U.IGNITE_HEADER);
 
-                clientFut.get(10_000);
+                clientFut.get(30_000);
             }
             catch (IgniteFutureTimeoutCheckedException e) {
-                connection.close();
+                U.closeQuiet(connection);
 
                 fail("Can't wait connection closed from client side.");
             }
             catch (Exception e) {
-                connection.close();
+                U.closeQuiet(connection);
 
                 System.out.println("Ex: " + e.getMessage() + " (Socket closed)");
             }
