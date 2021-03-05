@@ -4446,6 +4446,14 @@ public abstract class IgniteUtils {
             return;
 
         try {
+            sock.getOutputStream().close();
+            sock.getInputStream().close();
+        }
+        catch (Exception ignored) {
+            // No-op.
+        }
+
+        try {
             // Avoid java 12 bug see https://bugs.openjdk.java.net/browse/JDK-8219658
             sock.shutdownOutput();
             sock.shutdownInput();
