@@ -38,8 +38,7 @@ public class TestDynamicIpFinder extends TcpDiscoveryVmIpFinder {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public Collection<InetSocketAddress> getRegisteredAddresses() throws IgniteSpiException {
+    @Override public Collection<InetSocketAddress> getRegisteredAddresses() throws IgniteSpiException {
         if (isAvailable)
             return super.getRegisteredAddresses();
 
