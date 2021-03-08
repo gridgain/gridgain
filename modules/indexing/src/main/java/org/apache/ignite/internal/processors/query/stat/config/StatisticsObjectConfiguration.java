@@ -165,9 +165,9 @@ public class StatisticsObjectConfiguration implements Serializable {
     }
 
     /**
-     * Get configurations of statistic columns.
+     * Get active (non tombstone) columns statistics configuration.
      *
-     * @return statistic key.
+     * @return Map column name to column statistics configuration.
      */
     public Map<String, StatisticsColumnConfiguration> columns() {
         return cols.entrySet().stream()
