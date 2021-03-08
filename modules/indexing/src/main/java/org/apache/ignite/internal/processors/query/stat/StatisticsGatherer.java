@@ -204,7 +204,10 @@ public class StatisticsGatherer {
      * Complete gathering of partition statistics: save to repository and try to complete whole task.
      *
      * @param tbl Table to gather statistics by.
+<<<<<<< HEAD
      * @param cfg Statistics configuration.
+=======
+>>>>>>> gridgain-ce/master
      * @param key Key to gather statistics by.
      * @param ctx Task context.
      * @param part Partition id.

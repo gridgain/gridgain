@@ -197,6 +197,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             }
 
         }, OBSOLESCENSE_INTERVAL, OBSOLESCENSE_INTERVAL);
+
     }
 
     /**
@@ -214,7 +215,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     private synchronized void disableOperations() {
         statCfgMgr.stop();
         gatherer.stop();
-        statsRepos.start();
+        statsRepos.stop();
     }
 
     /**
@@ -270,8 +271,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
     /** {@inheritDoc} */
     @Override public void stop() {
-        processObsolescence();
-
         disableOperations();
 
         if (gatherPool != null) {
