@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
@@ -28,6 +29,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
@@ -253,4 +255,14 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
         if (freeMem < maxMem)
             fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
     };
+
+    /**
+     * Checks that a bean with the specified group and name is available and has the expected attribute
+     */
+    protected long getValue(String gridName, String grp, String name, String attributeName) throws Exception {
+        ObjectName mBeanName = IgniteUtils.makeMBeanName(gridName, grp, name);
+        Object attributeVal = grid(gridName).configuration().getMBeanServer().getAttribute(mBeanName, attributeName);
+
+        return (long) attributeVal;
+    }
 }

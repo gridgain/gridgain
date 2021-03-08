@@ -16,12 +16,10 @@
 
 package org.apache.ignite.internal.mxbean;
 
-import javax.management.ObjectName;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.metric.UserQueriesTestBase;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Test;
@@ -73,13 +71,5 @@ public class SqlQueryMXBeanImplSqlFreeMemQuotaExceededTest extends UserQueriesTe
 
         if (freeMem < maxMem)
             fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
-    }
-
-    /** Checks that a bean with the specified group and name is available and has the expected attribute */
-    private long getValue(String gridName, String grp, String name, String attributeName) throws Exception {
-        ObjectName mBeanName = IgniteUtils.makeMBeanName(gridName, grp, name);
-        Object attributeVal = grid(gridName).configuration().getMBeanServer().getAttribute(mBeanName, attributeName);
-
-        return (long) attributeVal;
     }
 }

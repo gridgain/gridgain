@@ -17,14 +17,12 @@
 package org.apache.ignite.internal.mxbean;
 
 import java.util.concurrent.TimeUnit;
-import javax.management.ObjectName;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.metric.SqlStatisticsAbstractTest;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -32,7 +30,6 @@ import org.junit.Test;
  * Tests SQL Free Memory Bytes JMX property for correctness in various usage scenarios.
  */
 public class SqlQueryMXBeanImplSqlFreeMemTest extends SqlStatisticsAbstractTest {
-
 
     /**
      * Teardown.
@@ -42,11 +39,7 @@ public class SqlQueryMXBeanImplSqlFreeMemTest extends SqlStatisticsAbstractTest 
         stopAllGrids();
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * set the appropriate SQL Config attrs to test for.
-     */
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -56,17 +49,9 @@ public class SqlQueryMXBeanImplSqlFreeMemTest extends SqlStatisticsAbstractTest 
         return cfg;
     }
 
-    /* Checks that a bean with the specified group and name is available and has the expected attribute */
-    private long getValue(String gridName, String grp, String name, String attributeName) throws Exception {
-        ObjectName mBeanName = IgniteUtils.makeMBeanName(gridName, grp, name);
-        Object attributeVal = grid(gridName).configuration().getMBeanServer().getAttribute(mBeanName, attributeName);
-
-        return (long) attributeVal;
-    }
-
     /**
-     * test that the FreeMemory JMX property shows correct results when queries are being run.
-     * @throws Exception
+     * Checks if the FreeMemory JMX property shows correct results when queries are being run.
+     * @throws Exception If failed.
      */
     @Test
     public void testFreeMemoryJMXWhenLocalQueryIsRunningAndReleasedOnFinish() throws Exception {
@@ -101,7 +86,7 @@ public class SqlQueryMXBeanImplSqlFreeMemTest extends SqlStatisticsAbstractTest 
      * @param nodeIdx index of the node which metrics to validate.
      * @param validator function(freeMem, maxMem) that validates these values.
      */
-    public void validateMemoryUsageOn(int nodeIdx, MemValidator validator) throws Exception {
+    private void validateMemoryUsageOn(int nodeIdx, MemValidator validator) throws Exception {
         long free = getValue("mxbean.SqlQueryMXBeanImplSqlFreeMemTest" + nodeIdx, "SQL Query", "SqlQueryMXBeanImpl", "SqlFreeMemoryBytes");
         long maxMem = getValue("mxbean.SqlQueryMXBeanImplSqlFreeMemTest" + nodeIdx, "SQL Query", "SqlQueryMXBeanImpl", "SqlGlobalMemoryQuotaBytes");
 

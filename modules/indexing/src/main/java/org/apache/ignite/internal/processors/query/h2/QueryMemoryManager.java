@@ -326,8 +326,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     }
 
     /**
-     *
-     * @return memory in bytes currently left available for the queries on this node.
+     * @return Memory in bytes currently available for SQL queries on the node.
      */
     public long freeMemory() {
         return memoryLimit() - reserved();
