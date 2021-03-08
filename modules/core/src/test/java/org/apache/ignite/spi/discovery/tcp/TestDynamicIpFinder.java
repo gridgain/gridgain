@@ -28,19 +28,21 @@ import java.util.Collection;
 public class TestDynamicIpFinder extends TcpDiscoveryVmIpFinder {
 
     /** */
+     *
+     */
     private boolean isAvailable = true;
 
     /**
      * Ctor.
      */
-    public TestDynamicIpFinder(){
+    public TestDynamicIpFinder() {
         setShared(true);
     }
 
     /** {@inheritDoc} */
     @Override
     public Collection<InetSocketAddress> getRegisteredAddresses() throws IgniteSpiException {
-        if(isAvailable)
+        if (isAvailable)
             return super.getRegisteredAddresses();
 
         throw new IgniteSpiException("Service is unavailable");
@@ -49,7 +51,7 @@ public class TestDynamicIpFinder extends TcpDiscoveryVmIpFinder {
     /**
      * Simulates service fail.
      */
-    public void breakService(){
+    public void breakService() {
         isAvailable = false;
     }
 }
