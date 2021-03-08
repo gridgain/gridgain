@@ -28,8 +28,6 @@ import java.util.Collection;
 public class TestDynamicIpFinder extends TcpDiscoveryVmIpFinder {
 
     /** */
-     *
-     */
     private boolean isAvailable = true;
 
     /**
