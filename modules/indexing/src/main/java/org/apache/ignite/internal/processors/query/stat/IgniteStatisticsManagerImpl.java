@@ -138,7 +138,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         else
             store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db, ctx::log);
 
-        statsRepos = new IgniteStatisticsRepository(store, helper, ctx::log);
+        statsRepos = new IgniteStatisticsRepository(store, ctx.systemView(), helper, ctx::log);
 
         gatherer = new StatisticsGatherer(
             statsRepos,
@@ -149,6 +149,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         statCfgMgr = new IgniteStatisticsConfigurationManager(
             schemaMgr,
             ctx.internalSubscriptionProcessor(),
+            ctx.systemView(),
             ctx.cache().context().exchange(),
             statsRepos,
             gatherer,

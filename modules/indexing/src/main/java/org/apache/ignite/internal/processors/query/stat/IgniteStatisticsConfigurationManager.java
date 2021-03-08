@@ -34,6 +34,8 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnConfigurationViewWalker;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -51,6 +53,7 @@ import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnConfigurationView;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
@@ -65,6 +68,12 @@ import org.jetbrains.annotations.NotNull;
 public class IgniteStatisticsConfigurationManager {
     /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
+
+    /** */
+    private static final String STAT_CFG_VIEW_NAME = "statistics.configuration";
+
+    /** */
+    private static final String STAT_CFG_VIEW_DESCRIPTION = "Statistics configuration";
 
     /** Schema manager. */
     private final SchemaManager schemaMgr;
@@ -205,6 +214,7 @@ public class IgniteStatisticsConfigurationManager {
     public IgniteStatisticsConfigurationManager(
         SchemaManager schemaMgr,
         GridInternalSubscriptionProcessor subscriptionProcessor,
+        GridSystemViewManager sysViewMgr,
         GridCachePartitionExchangeManager exchange,
         IgniteStatisticsRepository repo,
         StatisticsGatherer gatherer,
@@ -220,6 +230,62 @@ public class IgniteStatisticsConfigurationManager {
         this.exchange = exchange;
 
         subscriptionProcessor.registerDistributedMetastorageListener(distrMetaStoreLsnr);
+
+        sysViewMgr.registerFiltrableView(STAT_CFG_VIEW_NAME, STAT_CFG_VIEW_DESCRIPTION,
+            new StatisticsColumnConfigurationViewWalker(), this::columnConfigurationViewSupplier, Function.identity());
+    }
+
+    /**
+     * Statistics column configuration view filterable supplier.
+     *
+     * @param filter Filter.
+     * @return Iterable with selected statistics column configuration views.
+     */
+    private Iterable<StatisticsColumnConfigurationView> columnConfigurationViewSupplier(Map<String, Object> filter) {
+        String schema = (String)filter.get(StatisticsColumnConfigurationViewWalker.SCHEMA_FILTER);
+        String name = (String)filter.get(StatisticsColumnConfigurationViewWalker.NAME_FILTER);
+
+        Collection<StatisticsObjectConfiguration> configs;
+        try {
+            if (!F.isEmpty(schema) && !F.isEmpty(name)) {
+                StatisticsKey key = new StatisticsKey(schema, name);
+                StatisticsObjectConfiguration keyCfg = config(key);
+
+                if (keyCfg == null)
+                    return Collections.emptyList();
+
+                configs = Collections.singletonList(keyCfg);
+            }
+            else
+                configs = getAllConfig();
+        }
+        catch (IgniteCheckedException e) {
+            // TODO: log
+            configs = Collections.emptyList();
+        }
+
+        List<StatisticsColumnConfigurationView> res = new ArrayList<>();
+
+        for (StatisticsObjectConfiguration cfg : configs) {
+            for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values())
+                res.add(new StatisticsColumnConfigurationView(cfg, colCfg));
+        }
+
+        return res;
+    }
+
+    /**
+     * Get statistics configurations for all objects.
+     *
+     * @return Collection of all statistics configuration.
+     * @throws IgniteCheckedException In case of error.
+     */
+    public Collection<StatisticsObjectConfiguration> getAllConfig() throws IgniteCheckedException {
+        List<StatisticsObjectConfiguration> res = new ArrayList<>();
+
+        distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> res.add((StatisticsObjectConfiguration) v));
+
+        return res;
     }
 
     /**

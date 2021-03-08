@@ -17,8 +17,10 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,8 +30,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnLocalDataViewWalker;
+import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnPartitionDataViewWalker;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnConfigurationView;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnLocalDataView;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnPartitionDataView;
 import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.typedef.F;
@@ -38,6 +46,18 @@ import org.apache.ignite.internal.util.typedef.F;
  * Statistics repository implementation.
  */
 public class IgniteStatisticsRepository {
+    /** */
+    public static final String STAT_PART_DATA_VIEW = "statisticsPartitionData";
+
+    /** */
+    public static final String STAT_PART_DATA_VIEW_DESC = "Statistics per partition data.";
+
+    /** */
+    public static final String STAT_LOCAL_DATA_VIEW = "statisticsLocalData";
+
+    /** */
+    public static final String STAT_LOCAL_DATA_VIEW_DESC = "Statistics local node data.";
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -60,17 +80,139 @@ public class IgniteStatisticsRepository {
      * Constructor.
      *
      * @param store Ignite statistics store to use.
+     * @param sysViewMgr Grid system view manager.
      * @param helper IgniteStatisticsHelper.
      * @param logSupplier Ignite logger supplier to get logger from.
      */
     public IgniteStatisticsRepository(
             IgniteStatisticsStore store,
+            GridSystemViewManager sysViewMgr,
             IgniteStatisticsHelper helper,
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.store = store;
         this.helper = helper;
         this.log = logSupplier.apply(IgniteStatisticsRepository.class);
+
+        sysViewMgr.registerFiltrableView(STAT_PART_DATA_VIEW, STAT_PART_DATA_VIEW_DESC,
+            new StatisticsColumnPartitionDataViewWalker(), this::columnPartitionStatisticsViewSupplier,
+            Function.identity());
+
+        sysViewMgr.registerFiltrableView(STAT_LOCAL_DATA_VIEW, STAT_LOCAL_DATA_VIEW_DESC,
+            new StatisticsColumnLocalDataViewWalker(), this::columnLocalStatisticsViewSupplier,
+            Function.identity());
+    }
+
+
+    /**
+     * Statistics column partition data view filterable supplier.
+     *
+     * @param filter Filter.
+     * @return Iterable with statistics column partition data views.
+     */
+    private Iterable<StatisticsColumnPartitionDataView> columnPartitionStatisticsViewSupplier(
+        Map<String, Object> filter
+    ) {
+        String type = (String)filter.get(StatisticsColumnPartitionDataViewWalker.TYPE_FILTER);
+        if (type != null && !StatisticsColumnConfigurationView.TABLE_TYPE.equalsIgnoreCase(type))
+            return Collections.emptyList();
+
+        String schema = (String)filter.get(StatisticsColumnPartitionDataViewWalker.SCHEMA_FILTER);
+        String name = (String)filter.get(StatisticsColumnPartitionDataViewWalker.NAME_FILTER);
+        Integer partId = (Integer)filter.get(StatisticsColumnPartitionDataViewWalker.PARTITION_FILTER);
+        String column = (String)filter.get(StatisticsColumnPartitionDataViewWalker.COLUMN_FILTER);
+
+        Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> partsStatsMap;
+        if (!F.isEmpty(schema) && !F.isEmpty(name)) {
+            StatisticsKey key = new StatisticsKey(schema, name);
+            Collection<ObjectPartitionStatisticsImpl> keyStat;
+            if (partId == null)
+                keyStat = store.getLocalPartitionsStatistics(key);
+            else {
+                ObjectPartitionStatisticsImpl partStat = store.getLocalPartitionStatistics(key, partId);
+                keyStat = (partStat == null) ? Collections.emptyList() : Collections.singletonList(partStat);
+            }
+            partsStatsMap = Collections.singletonMap(key, keyStat);
+        }
+        else
+            partsStatsMap = store.getAllLocalPartitionsStatistics(schema);
+
+        List<StatisticsColumnPartitionDataView> res = new ArrayList<>();
+
+        for (Map.Entry<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> partsStatsEntry : partsStatsMap.entrySet()) {
+            StatisticsKey key = partsStatsEntry.getKey();
+            for (ObjectPartitionStatisticsImpl partStat : partsStatsEntry.getValue()) {
+                if (column == null) {
+                    for (Map.Entry<String, ColumnStatistics> colStatEntry : partStat.columnsStatistics().entrySet())
+                        res.add(new StatisticsColumnPartitionDataView(key, colStatEntry.getKey(), partStat));
+                }
+                else {
+                    ColumnStatistics colStat = partStat.columnStatistics(column);
+                    if (colStat != null)
+                        res.add(new StatisticsColumnPartitionDataView(key, column, partStat));
+                }
+            }
+        }
+
+        return res;
+    }
+
+    /**
+     * Statistics column local node data view filterable supplier.
+     *
+     * @param filter Filter.
+     * @return Iterable with statistics column local node data views.
+     */
+    private Iterable<StatisticsColumnLocalDataView> columnLocalStatisticsViewSupplier(Map<String, Object> filter) {
+        String type = (String)filter.get(StatisticsColumnPartitionDataViewWalker.TYPE_FILTER);
+        if (type != null && !StatisticsColumnConfigurationView.TABLE_TYPE.equalsIgnoreCase(type))
+            return Collections.emptyList();
+
+        String schema = (String)filter.get(StatisticsColumnLocalDataViewWalker.SCHEMA_FILTER);
+        String name = (String)filter.get(StatisticsColumnLocalDataViewWalker.NAME_FILTER);
+        String column = (String)filter.get(StatisticsColumnPartitionDataViewWalker.COLUMN_FILTER);
+
+        Map<StatisticsKey, ObjectStatisticsImpl> localStatsMap;
+        if (!F.isEmpty(schema) && !F.isEmpty(name)) {
+            StatisticsKey key = new StatisticsKey(schema, name);
+
+            ObjectStatisticsImpl objLocalStat = locStats.get(key);
+
+            if (objLocalStat == null)
+                return Collections.emptyList();
+
+            localStatsMap = Collections.singletonMap(key, objLocalStat);
+        }
+        else
+            localStatsMap = locStats.entrySet().stream().filter(e -> F.isEmpty(schema) || schema.equals(e.getKey().schema()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        List<StatisticsColumnLocalDataView> res = new ArrayList<>();
+
+        for (Map.Entry<StatisticsKey, ObjectStatisticsImpl> localStatsEntry : localStatsMap.entrySet()) {
+            StatisticsKey key = localStatsEntry.getKey();
+            ObjectStatisticsImpl stat = localStatsEntry.getValue();
+            if (column == null) {
+                ColumnStatistics colStat = localStatsEntry.getValue().columnStatistics(column);
+                if (colStat != null) {
+                    StatisticsColumnLocalDataView colStatView = new StatisticsColumnLocalDataView(key, column, stat);
+
+                    res.add(colStatView);
+                }
+
+            }
+            else {
+                for (Map.Entry<String, ColumnStatistics> colStat : localStatsEntry.getValue().columnsStatistics()
+                    .entrySet()) {
+                    StatisticsColumnLocalDataView colStatView = new StatisticsColumnLocalDataView(key, colStat.getKey(),
+                        stat);
+
+                    res.add(colStatView);
+                }
+            }
+        }
+
+        return res;
     }
 
     /**

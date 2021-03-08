@@ -34,6 +34,9 @@ import java.util.function.ObjIntConsumer;
 import org.apache.ignite.internal.managers.systemview.SystemViewMBean;
 import org.apache.ignite.internal.managers.systemview.walker.Filtrable;
 import org.apache.ignite.internal.managers.systemview.walker.Order;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnConfigurationView;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnLocalDataView;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnPartitionDataView;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.systemview.view.CacheGroupView;
 import org.apache.ignite.spi.systemview.view.CachePagesListView;
@@ -86,28 +89,32 @@ public class SystemViewRowAttributeWalkerGenerator {
     public static void main(String[] args) throws Exception {
         SystemViewRowAttributeWalkerGenerator gen = new SystemViewRowAttributeWalkerGenerator();
 
-        gen.generateAndWrite(CacheGroupView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(CacheView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(ServiceView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(ComputeTaskView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(ComputeJobView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(ClientConnectionView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(TransactionView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(ContinuousQueryView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(ClusterNodeView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(ScanQueryView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(SqlQueryView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(SqlQueryHistoryView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(StripedExecutorTaskView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(PagesListView.class, DFLT_SRC_DIR);
-        gen.generateAndWrite(CachePagesListView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(CacheGroupView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(CacheView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(ServiceView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(ComputeTaskView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(ComputeJobView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(ClientConnectionView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(TransactionView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(ContinuousQueryView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(ClusterNodeView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(ScanQueryView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(SqlQueryView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(SqlQueryHistoryView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(StripedExecutorTaskView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(PagesListView.class, DFLT_SRC_DIR);
+//        gen.generateAndWrite(CachePagesListView.class, DFLT_SRC_DIR);
+//
+//        gen.generateAndWrite(SqlSchemaView.class, INDEXING_SRC_DIR);
+//        gen.generateAndWrite(SqlTableView.class, INDEXING_SRC_DIR);
+//        gen.generateAndWrite(SqlViewView.class, INDEXING_SRC_DIR);
+//        gen.generateAndWrite(SqlIndexView.class, INDEXING_SRC_DIR);
+//        gen.generateAndWrite(SqlTableColumnView.class, INDEXING_SRC_DIR);
+//        gen.generateAndWrite(SqlViewColumnView.class, INDEXING_SRC_DIR);
 
-        gen.generateAndWrite(SqlSchemaView.class, INDEXING_SRC_DIR);
-        gen.generateAndWrite(SqlTableView.class, INDEXING_SRC_DIR);
-        gen.generateAndWrite(SqlViewView.class, INDEXING_SRC_DIR);
-        gen.generateAndWrite(SqlIndexView.class, INDEXING_SRC_DIR);
-        gen.generateAndWrite(SqlTableColumnView.class, INDEXING_SRC_DIR);
-        gen.generateAndWrite(SqlViewColumnView.class, INDEXING_SRC_DIR);
+        gen.generateAndWrite(StatisticsColumnConfigurationView.class, INDEXING_SRC_DIR);
+        gen.generateAndWrite(StatisticsColumnLocalDataView.class, INDEXING_SRC_DIR);
+        gen.generateAndWrite(StatisticsColumnPartitionDataView.class, INDEXING_SRC_DIR);
     }
 
     /**

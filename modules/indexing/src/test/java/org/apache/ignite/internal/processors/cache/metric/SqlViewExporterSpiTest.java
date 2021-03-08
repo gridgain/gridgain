@@ -398,7 +398,10 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
             "STRIPED_THREADPOOL_QUEUE",
             "DATASTREAM_THREADPOOL_QUEUE",
             "DATA_REGION_PAGE_LISTS",
-            "CACHE_GROUP_PAGE_LISTS"
+            "CACHE_GROUP_PAGE_LISTS",
+            "STATISTICS_CONFIGURATIONS",
+            "STATISTICS_LOCAL_DATA",
+            "STATISTICS_LOCAL_PARTITION_DATA"
         ));
 
         Set<String> actViews = new HashSet<>();

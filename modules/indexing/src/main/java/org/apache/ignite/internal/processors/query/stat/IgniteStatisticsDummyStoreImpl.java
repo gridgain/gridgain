@@ -46,6 +46,16 @@ public class IgniteStatisticsDummyStoreImpl implements IgniteStatisticsStore {
     }
 
     /** {@inheritDoc} */
+    @Override public Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> getAllLocalPartitionsStatistics(
+        String schema
+    ) {
+        if (log.isInfoEnabled())
+            log.info("Unable to get all partition level statistics on non server node.");
+
+        return Collections.emptyMap();
+    }
+
+    /** {@inheritDoc} */
     @Override public void replaceLocalPartitionsStatistics(
         StatisticsKey key,
         Collection<ObjectPartitionStatisticsImpl> statistics

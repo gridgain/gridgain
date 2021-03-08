@@ -173,7 +173,8 @@ public class PSUStatisticsTypesTest extends StatisticsTypesAbstractTest {
      * Test that optimizer will use real column index.
      */
     @Test
-    public void compareSelectWithRealConditions() {
+    public void compareSelectWithRealConditions() throws InterruptedException {
+        Thread.sleep(999999);
         doColumnTests("REAL", "<", "-10");
         doColumnTests("REAL", "<", "0.2");
         doColumnTests("REAL", "<=", "0.22");

@@ -48,6 +48,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
 
 /**
@@ -435,7 +436,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0, 100,
-            0, new byte[0]);
+            0, new byte[0], 0, U.currentTimeMillis());
         return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
     }
 
@@ -447,7 +448,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
-            100, 0, new byte[0]);
+            100, 0, new byte[0], 0, U.currentTimeMillis());
 
         return new ObjectPartitionStatisticsImpl(
             partId, 0, 0,
@@ -664,5 +665,32 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         Collections.addAll(res, vals);
 
         return res;
+    }
+
+    /**
+     * Run specified sql and test result.
+     *
+     * @param sql Sql to execute.
+     * @param nodeFilter Node filter, if {@code null} - run on all nodes.
+     * @param checker Result checker.
+     * @throws Exception In case of error.
+     */
+    protected void checkSqlResult(
+        String sql,
+        Predicate<Ignite> nodeFilter,
+        Predicate<List<List<?>>> checker
+    ) throws Exception {
+        List<Ignite> nodes = G.allGrids();
+
+        if (nodeFilter != null)
+            nodes = nodes.stream().filter(nodeFilter).collect(Collectors.toList());
+
+        for (Ignite ign : nodes) {
+            assertTrue(GridTestUtils.waitForCondition(() -> {
+                List<List<?>> res = ign.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(sql)).getAll();
+
+                return checker.test(res);
+            }, 1000));
+        }
     }
 }

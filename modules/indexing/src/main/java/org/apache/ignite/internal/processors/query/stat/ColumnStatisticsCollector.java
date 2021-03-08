@@ -163,7 +163,8 @@ public class ColumnStatisticsCollector {
 
         int averageSize = averageSize(size, total, nullsCnt);
 
-        return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes(), ver);
+        return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes(), ver,
+            U.currentTimeMillis());
     }
 
     /**
@@ -259,7 +260,8 @@ public class ColumnStatisticsCollector {
         int averageSize = averageSize(totalSize, total, nullsCnt);
 
         return new ColumnStatistics(min, max, nullsPercent(nullsCnt, total),
-                cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes(), ver);
+            cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes(), ver,
+            U.currentTimeMillis());
     }
 
     /**

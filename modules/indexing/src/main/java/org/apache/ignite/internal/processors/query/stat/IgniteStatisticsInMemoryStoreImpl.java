@@ -59,6 +59,18 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     }
 
     /** {@inheritDoc} */
+    @Override public Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> getAllLocalPartitionsStatistics(
+        String schema
+    ) {
+        Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> res = new HashMap<>(partsStats.size());
+
+        for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsImpl>> keyStat : partsStats.entrySet())
+            res.put(keyStat.getKey(), Arrays.asList(keyStat.getValue().values()));
+
+        return res;
+    }
+
+    /** {@inheritDoc} */
     @Override public void replaceLocalPartitionsStatistics(
         StatisticsKey key,
         Collection<ObjectPartitionStatisticsImpl> statistics
