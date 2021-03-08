@@ -1921,9 +1921,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
         Collection<InetSocketAddress> addrs;
 
         int attemptsCnt = 0;
-        int maxResolveAttempts = (ipFinder.isShared() && (locNode.isClient()))
-                ? getReconnectCount()
-                : Integer.MAX_VALUE;
+        int maxResolveAttempts = locNode.isClient() ? getReconnectCount() : Integer.MAX_VALUE;
 
         // Get consistent addresses collection.
         while (true) {

@@ -24,8 +24,6 @@ import java.util.Collection;
 
 /**
  * Shared IpFinder implementation for testing purposes.
- *
- *
  */
 public class TestDynamicIpFinder extends TcpDiscoveryVmIpFinder {
 
@@ -39,7 +37,7 @@ public class TestDynamicIpFinder extends TcpDiscoveryVmIpFinder {
         setShared(true);
     }
 
-    /** */
+    /** {@inheritDoc} */
     @Override
     public Collection<InetSocketAddress> getRegisteredAddresses() throws IgniteSpiException {
         if(isAvailable)
@@ -49,9 +47,7 @@ public class TestDynamicIpFinder extends TcpDiscoveryVmIpFinder {
     }
 
     /**
-     *
      * Simulates service fail.
-     *
      */
     public void breakService(){
         isAvailable = false;

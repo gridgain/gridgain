@@ -32,7 +32,7 @@ import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
  */
 public class TestKubernetesIpFinderDisconnection extends KubernetesDiscoveryAbstractTest {
 
-    /** */
+    /** Tests that client is disconnected if {@link TcpDiscoverySpi#setReconnectCount(int)} is set.  */
     @Test
     public void testClientNodeDisconnectsWithMaxRetries() throws Exception {
 
@@ -41,23 +41,49 @@ public class TestKubernetesIpFinderDisconnection extends KubernetesDiscoveryAbst
         IgniteConfiguration cfgClient = getConfiguration("client", true);
         ((TcpDiscoverySpi) cfgClient.getDiscoverySpi()).setReconnectCount(1);
 
-        runDisconnectionTest(cfgSrv, cfgClient);
+        runSuccessfulDisconnectionTest(cfgSrv, cfgClient);
     }
 
-    /** */
+    /** Tests that client is still trying to connect after a timeout
+     * if {@link TcpDiscoverySpi#setReconnectCount(int)} is big.  */
+    @Test
+    public void testClientNodeIsNotDisconnectedWithBigReconnectCount() throws Exception {
+
+        IgniteConfiguration cfgSrv = getConfiguration(getTestIgniteInstanceName(), false);
+
+        IgniteConfiguration cfgClient = getConfiguration("client", true);
+        ((TcpDiscoverySpi) cfgClient.getDiscoverySpi()).setReconnectCount(100);
+
+        runFailureDisconnectionTest(cfgSrv, cfgClient);
+    }
+
+    /** Tests that client is still trying to connect after a timeout
+     * if {@link TcpDiscoverySpi#setReconnectDelay(int)} is big.  */
+    @Test
+    public void testClientNodeIsNotDisconnectedWithBigReconnectDelay() throws Exception {
+
+        IgniteConfiguration cfgSrv = getConfiguration(getTestIgniteInstanceName(), false);
+
+        IgniteConfiguration cfgClient = getConfiguration("client", true);
+        ((TcpDiscoverySpi) cfgClient.getDiscoverySpi()).setReconnectDelay(5_000);
+
+        runFailureDisconnectionTest(cfgSrv, cfgClient);
+    }
+
+    /** Tests that client is disconnected with default settings. */
     @Test
     public void testClientNodeDisconnectsWithDefaultSettings() throws Exception {
 
         IgniteConfiguration cfgSrv = getConfiguration(getTestIgniteInstanceName(), false);
         IgniteConfiguration cfgClient = getConfiguration("client", true);
 
-        runDisconnectionTest(cfgSrv, cfgClient);
+        runSuccessfulDisconnectionTest(cfgSrv, cfgClient);
     }
 
     /**
-     *
+     * Runs disconnection test and check that a client is disconnected from the grid.
      */
-    private void runDisconnectionTest(IgniteConfiguration cfgNode1, IgniteConfiguration cfgNode2) throws Exception {
+    private void runSuccessfulDisconnectionTest(IgniteConfiguration cfgNode1, IgniteConfiguration cfgNode2) throws Exception {
         mockServerResponse();
 
         IgniteEx crd = startGrid(cfgNode1);
@@ -80,5 +106,33 @@ public class TestKubernetesIpFinderDisconnection extends KubernetesDiscoveryAbst
         }, EVT_CLIENT_NODE_DISCONNECTED);
 
         assertTrue("Failed to wait for client node disconnected.", latch.await(20, SECONDS));
+    }
+
+    /**
+     * Runs disconnection test and check that a client is connected to the grid.
+     */
+    private void runFailureDisconnectionTest(IgniteConfiguration cfgNode1, IgniteConfiguration cfgNode2) throws Exception {
+        mockServerResponse();
+
+        IgniteEx crd = startGrid(cfgNode1);
+        String crdAddr = crd.localNode().addresses().iterator().next();
+
+        mockServerResponse(crdAddr);
+
+        IgniteEx client = startGrid(cfgNode2);
+
+        waitForTopology(2);
+
+        Ignition.stop(crd.name(), true);
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        client.events().localListen(event -> {
+            latch.countDown();
+
+            return true;
+        }, EVT_CLIENT_NODE_DISCONNECTED);
+
+        assertFalse("A client should not be disconnected.", latch.await(5, SECONDS));
     }
 }
