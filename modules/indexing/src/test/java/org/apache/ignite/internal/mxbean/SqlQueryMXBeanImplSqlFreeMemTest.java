@@ -30,7 +30,6 @@ import org.junit.Test;
  * Tests SQL Free Memory Bytes JMX property for correctness in various usage scenarios.
  */
 public class SqlQueryMXBeanImplSqlFreeMemTest extends SqlStatisticsAbstractTest {
-
     /**
      * Teardown.
      */

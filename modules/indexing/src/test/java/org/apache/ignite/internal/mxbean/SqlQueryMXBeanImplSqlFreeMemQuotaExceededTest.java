@@ -37,7 +37,6 @@ public class SqlQueryMXBeanImplSqlFreeMemQuotaExceededTest extends UserQueriesTe
         stopAllGrids();
     }
 
-
     /**
      * Test that sql engine free memory jmx property reverts to the correct settings after a "global quota exceeded" event.
      *
