@@ -1296,19 +1296,19 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (!busyLock.enterBusy())
             return false;
 
-        int expRmvCnt = 0;
+        int rmvCnt = 0;
 
         try {
             List<CacheDataStore> stores = new ArrayList<>();
             cacheDataStores().forEach(stores::add);
-            //Collections.shuffle(stores); // Randomize partitions to clear.
+            Collections.shuffle(stores); // Randomize partitions to clear.
 
             if (cctx.config().isEagerTtl()) {
                 for (CacheDataStore store : stores) {
-                    expRmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - expRmvCnt, false, now);
+                    rmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - rmvCnt, false, now);
 
-                    if (amount != -1 && expRmvCnt >= amount)
-                        break;
+                    if (amount != -1 && rmvCnt >= amount)
+                        return true;
                 }
             }
         }
@@ -1316,7 +1316,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             busyLock.leaveBusy();
         }
 
-        return amount != -1 && expRmvCnt >= amount;
+        return false;
     }
 
     /** {@inheritDoc} */
@@ -1339,7 +1339,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 !ctx.exchange().lastFinishedFuture().rebalanced() ||
                 !ctx.exchange().lastTopologyFuture().isDone() ||
                 ctx.ttl().tombstoneCleanupSuspended()))
-            return false;
+            return true; // Tombstones are still present, only clearing is delayed.
 
         if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
@@ -1351,25 +1351,25 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (!busyLock.enterBusy())
             return false;
 
-        int tsRmvCnt = 0;
+        int rmvCnt = 0;
 
         try {
             List<CacheDataStore> stores = new ArrayList<>();
             cacheDataStores().forEach(stores::add);
-            //Collections.shuffle(stores); // Randomize partitions to clear.
+            Collections.shuffle(stores); // Randomize partitions to clear.
 
             for (CacheDataStore store : stores) {
-                tsRmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - tsRmvCnt, true, now);
+                rmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - rmvCnt, true, now);
 
-                if (amount != -1 && tsRmvCnt >= amount)
-                    break;
+                if (amount != -1 && rmvCnt >= amount)
+                    return true;
             }
         }
         finally {
             busyLock.leaveBusy();
         }
 
-        return amount != -1 && tsRmvCnt >= amount;
+        return false;
     }
 
     /**

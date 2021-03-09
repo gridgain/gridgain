@@ -609,9 +609,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500")
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000")
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0")
     public void testTombstonesArePreloadedAfterExpiration() throws Exception {
-        assumeTrue(persistence); // In volatile mode tombstones cleanup is never blocked.
-
         IgniteEx crd = startGrids(2); // Create baseline.
         crd.cluster().baselineAutoAdjustEnabled(false);
         crd.cluster().state(ClusterState.ACTIVE);
@@ -633,9 +632,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         doSleep(700); // Wait a bit until tombstone is expired.
 
-        CU.unwindEvicts(grpCtx0.singleCacheContext()); // Should be no-op.
+        if (persistence) {
+            grpCtx0.singleCacheContext().ttl().expire(1); // Should be no-op.
 
-        assertEquals(1, t0.size()); // Tombstones are not cleared if a baseline is not complete.
+            assertEquals(1, t0.size()); // Tombstones are not cleared if a baseline is not complete.
+        }
 
         startGrid(1);
         awaitPartitionMapExchange();
@@ -649,8 +650,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         doSleep(700);
 
-        CU.unwindEvicts(grpCtx0.singleCacheContext());
-        CU.unwindEvicts(grpCtx1.singleCacheContext());
+        grpCtx0.singleCacheContext().ttl().expire(1);
+        grpCtx1.singleCacheContext().ttl().expire(1);
 
         validateCache(grpCtx0, part, 0, 0);
         validateCache(grpCtx1, part, 0, 0);

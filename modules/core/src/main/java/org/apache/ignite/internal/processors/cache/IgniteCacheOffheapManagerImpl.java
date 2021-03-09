@@ -1380,12 +1380,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         return expireInternal(cctx, c, amount, false, U.currentTimeMillis());
     }
 
+    /** {@inheritDoc} */
     @Override public boolean expireTombstones(
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount
     ) throws IgniteCheckedException {
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
+
+        if (tsCnt == 0)
+            return false;
 
         long now = U.currentTimeMillis();
 
@@ -1394,7 +1398,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             (!ctx.exchange().lastFinishedFuture().rebalanced() ||
                 !ctx.exchange().lastTopologyFuture().isDone() || // Additional safety from hanging PME.
                 ctx.ttl().tombstoneCleanupSuspended()))
-            return false;
+            return true; // Tombstones are still present, only clearing is delayed.
 
         if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
@@ -1443,7 +1447,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 do {
                     if (amount != -1 && cleared >= amount)
-                        break;
+                        return true;
 
                     PendingRow row = cur.get();
 
@@ -1473,7 +1477,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                         ", grp=" + grp.cacheOrGroupName() + ", cacheId=" + cacheId + ']');
                 }
 
-                return amount != -1 && cleared >= amount;
+                return false;
             }
             finally {
                 busyLock.leaveBusy();
