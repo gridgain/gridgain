@@ -15,15 +15,15 @@
  */
 package org.apache.ignite.internal.sql.command;
 
-import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
-import org.apache.ignite.internal.sql.SqlLexer;
-import org.apache.ignite.internal.sql.SqlLexerToken;
-import org.apache.ignite.internal.sql.SqlLexerTokenType;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
+import org.apache.ignite.internal.sql.SqlLexer;
+import org.apache.ignite.internal.sql.SqlLexerToken;
+import org.apache.ignite.internal.sql.SqlLexerTokenType;
 
 import static org.apache.ignite.internal.sql.SqlParserUtils.error;
 import static org.apache.ignite.internal.sql.SqlParserUtils.errorUnexpectedToken;
