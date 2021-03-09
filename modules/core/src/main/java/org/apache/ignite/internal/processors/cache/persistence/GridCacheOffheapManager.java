@@ -1301,7 +1301,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         try {
             List<CacheDataStore> stores = new ArrayList<>();
             cacheDataStores().forEach(stores::add);
-            Collections.shuffle(stores); // Randomize partitions to clear.
+            //Collections.shuffle(stores); // Randomize partitions to clear.
 
             if (cctx.config().isEagerTtl()) {
                 for (CacheDataStore store : stores) {
@@ -1356,7 +1356,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         try {
             List<CacheDataStore> stores = new ArrayList<>();
             cacheDataStores().forEach(stores::add);
-            Collections.shuffle(stores); // Randomize partitions to clear.
+            //Collections.shuffle(stores); // Randomize partitions to clear.
 
             for (CacheDataStore store : stores) {
                 tsRmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - tsRmvCnt, true, now);
