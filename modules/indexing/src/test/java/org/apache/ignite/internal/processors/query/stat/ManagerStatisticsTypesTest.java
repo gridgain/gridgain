@@ -31,7 +31,7 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
     @Test
     public void testCollectedStatistics() {
         ObjectStatisticsImpl dtypesStat = (ObjectStatisticsImpl) grid(0).context().query().getIndexing()
-                .statsManager().getLocalStatistics(new StatisticsKey("PUBLIC", "DTYPES"));
+                .statsManager().getLocalStatistics(new StatisticsKey(SCHEMA, "DTYPES"));
 
         assertNotNull(dtypesStat);
 

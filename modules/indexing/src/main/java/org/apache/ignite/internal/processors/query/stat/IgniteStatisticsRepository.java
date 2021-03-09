@@ -310,4 +310,22 @@ public class IgniteStatisticsRepository {
 
         return locStat;
     }
+
+    /**
+     * Stop repository.
+     */
+    public void stop() {
+        locStats.clear();
+
+        if (log.isDebugEnabled())
+            log.debug("Statistics repository started.");
+    }
+
+    /**
+     * Start repository.
+     */
+    public void start() {
+        if (log.isDebugEnabled())
+            log.debug("Statistics repository started.");
+    }
 }

@@ -41,7 +41,7 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
      */
     @Test
     public void testPartialDeletionCollection() throws Exception {
-        updateStatistics(new StatisticsTarget("PUBLIC", "SMALL"));
+        updateStatistics(SMALL_TARGET);
 
         IgniteEx ign = grid(0);
 
@@ -55,18 +55,17 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
 
         assertTrue(GridTestUtils.waitForCondition(
             () ->
-                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL")))
-                    .columnStatistics("A") == null,
-            TIMEOUT));
+                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics(SMALL_KEY)).columnStatistics("A") == null,
+                    TIMEOUT));
 
         checkOptimalPlanChosenForDifferentIndexes(ign, new String[]{"SMALL_B"}, SQL, NO_HINTS);
 
         // 3) partially remove necessarily for the query statistics and check that query plan will be changed
-        statsMgr.dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "B"));
+        statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
 
         assertTrue(GridTestUtils.waitForCondition(
             () ->
-                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics(new StatisticsKey("PUBLIC", "SMALL")))
+                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics(SMALL_KEY))
                     .columnStatistics("B") == null,
             TIMEOUT));
 

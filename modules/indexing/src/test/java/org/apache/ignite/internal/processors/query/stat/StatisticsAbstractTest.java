@@ -64,6 +64,12 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     /** Small table size. */
     static final int SMALL_SIZE = 100;
 
+    /** Statistics key for small table. */
+    static final StatisticsKey SMALL_KEY = new StatisticsKey(SCHEMA, "SMALL");
+
+    /** Statistics target for the whole small table. */
+    static final StatisticsTarget SMALL_TARGET = new StatisticsTarget(SMALL_KEY, null);
+
     /** Async operation timeout for test */
     static final int TIMEOUT = 3_000;
 
@@ -375,7 +381,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                         : 0L);
             }
 
-            grid(0).context().query().getIndexing().statsManager().updateStatistics(targets);
+            grid(0).context().query().getIndexing().statsManager().collectStatistics(targets);
 
             awaitStatistics(TIMEOUT, expectedVersion);
         }
