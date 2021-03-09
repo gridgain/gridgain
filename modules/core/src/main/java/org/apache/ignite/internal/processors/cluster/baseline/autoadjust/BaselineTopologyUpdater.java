@@ -114,11 +114,11 @@ public class BaselineTopologyUpdater {
 
                         long timeout = baselineConfiguration.getBaselineAutoAdjustTimeout();
 
-                        log.warning("Baseline auto-adjust will be executed in '" + timeout + "' ms");
-
-                        baselineAutoAdjustScheduler.schedule(baselineData, timeout);
+                        // In case of merging exchanges the affinity ready futures are completed in reverse order,
+                        // thus the data, which is already expired, can be scheduled (should be rejected by scheduler).
+                        if (baselineAutoAdjustScheduler.schedule(baselineData, timeout))
+                            log.warning("Baseline auto-adjust will be executed in '" + timeout + "' ms");
                     });
-
             }
         }
     }
