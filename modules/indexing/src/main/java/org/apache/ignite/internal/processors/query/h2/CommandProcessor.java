@@ -517,7 +517,7 @@ public class CommandProcessor {
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        statMgr.updateStatistics(targets);
+        statMgr.collectStatistics(targets);
     }
 
     /**

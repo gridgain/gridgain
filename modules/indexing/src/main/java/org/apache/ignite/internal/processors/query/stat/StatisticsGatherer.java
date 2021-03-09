@@ -68,6 +68,11 @@ public class StatisticsGatherer {
     }
 
     /**
+     * Schedule supplied statistics aggregation and return task context.
+     *
+     * @param key Statistics key to aggregate statistics by.
+     * @param aggregate Statistics to aggregate supplier.
+     * @return Task context.
      */
     public LocalStatisticsGatheringContext aggregateStatisticsAsync(
         final StatisticsKey key,
@@ -112,15 +117,20 @@ public class StatisticsGatherer {
     }
 
     /**
-     * Collect statistic per partition for specified objects on the same cache group.
+     * Collect statistic per partition for specified object.
+     *
+     * @param tbl Table to gather statistics by.
+     * @param colCfgs Column to gathering configuration.
+     * @param parts Partitions to gather.
+     * @return Operation context.
      */
     public LocalStatisticsGatheringContext gatherLocalObjectsStatisticsAsync(
         GridH2Table tbl,
-        Column[] cols,
         Map<String, StatisticsColumnConfiguration> colCfgs,
         Set<Integer> parts
     ) {
         StatisticsKey key = new StatisticsKey(tbl.getSchema().getName(), tbl.getName());
+        Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), colCfgs.keySet());
 
         if (log.isDebugEnabled()) {
             log.debug("Start statistics gathering [key=" + key +
@@ -161,8 +171,8 @@ public class StatisticsGatherer {
         final GridH2Table tbl,
         final StatisticsKey key,
         final LocalStatisticsGatheringContext ctx,
-        final GatherPartitionStatistics task)
-    {
+        final GatherPartitionStatistics task
+    ) {
         CompletableFuture<ObjectPartitionStatisticsImpl> f = CompletableFuture.supplyAsync(task::call, gatherPool);
 
         f.thenAccept((partStat) -> {
@@ -186,14 +196,22 @@ public class StatisticsGatherer {
         });
     }
 
-    /** */
+    /**
+     * Complete gathering of partition statistics: save to repository and try to complete whole task.
+     *
+     * @param tbl Table to gather statistics by.
+     * @param key Key to gather statistics by.
+     * @param ctx Task context.
+     * @param part Partition id.
+     * @param partStat Collected statistics or {@code null} if it was impossible to gather current partition.
+     */
     private void completePartitionStatistic(
         GridH2Table tbl,
         StatisticsKey key,
         LocalStatisticsGatheringContext ctx,
         int part,
-        ObjectPartitionStatisticsImpl partStat)
-    {
+        ObjectPartitionStatisticsImpl partStat
+    ) {
         try {
             if (partStat == null)
                 ctx.partitionNotAvailable(part);
@@ -218,20 +236,36 @@ public class StatisticsGatherer {
         }
     }
 
-    /** */
+    /**
+     * Get gathering context by key.
+     *
+     * @param key Statistics key.
+     * @return Gathering in progress or {@code null} if there are no active gathering by specified key.
+     */
     public LocalStatisticsGatheringContext gatheringInProgress(StatisticsKey key) {
         return gatheringInProgress.get(key);
     }
 
-    /** */
-    public void submit(Runnable task) {
-        gatherPool.submit(task);
+    /**
+     * Start gathering.
+     */
+    public void start() {
+        if (log.isDebugEnabled())
+            log.debug("Statistics gathering started.");
     }
 
-    /** */
+    /**
+     * Stop gathering.
+     */
     public void stop() {
+        if (log.isTraceEnabled())
+            log.trace(String.format("Statistics gathering stopping %d task...", gatheringInProgress.size()));
+
         gatheringInProgress.values().forEach(ctx -> ctx.futureGather().cancel(true));
 
         gatheringInProgress.clear();
+
+        if (log.isDebugEnabled())
+            log.debug("Statistics gathering stopped.");
     }
 }

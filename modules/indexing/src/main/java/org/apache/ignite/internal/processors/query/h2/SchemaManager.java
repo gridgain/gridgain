@@ -71,8 +71,10 @@ import org.apache.ignite.spi.systemview.view.SqlTableView;
 import org.apache.ignite.spi.systemview.view.SqlViewColumnView;
 import org.apache.ignite.spi.systemview.view.SqlViewView;
 import org.gridgain.internal.h2.index.Index;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
@@ -849,18 +851,57 @@ public class SchemaManager {
         return null;
     }
 
-    /** */
-    public void registerDropColumnsListener(BiConsumer<GridH2Table, List<String>> lsnr) {
+    /**
+     * Register listener for drop columns event.
+     *
+     * @param lsnr Drop columns event listener.
+     */
+    public void registerDropColumnsListener(@NotNull BiConsumer<GridH2Table, List<String>> lsnr) {
+        requireNonNull(lsnr, "Drop columns listener should be not-null.");
+
         dropColsLsnrs.add(lsnr);
     }
 
-    /** */
-    public void registerDropTableListener(BiConsumer<String, String> lsnr) {
+    /**
+     * Unregister listener for drop columns event.
+     *
+     * @param lsnr Drop columns event listener.
+     */
+    public void unregisterDropColumnsListener(@NotNull BiConsumer<GridH2Table, List<String>> lsnr) {
+        requireNonNull(lsnr, "Drop columns listener should be not-null.");
+
+        dropColsLsnrs.remove(lsnr);
+    }
+
+    /**
+     * Register listener for drop table event.
+     *
+     * @param lsnr Drop table event listener.
+     */
+    public void registerDropTableListener(@NotNull BiConsumer<String, String> lsnr) {
+        requireNonNull(lsnr, "Drop table listener should be not-null.");
+
         dropTblLsnrs.add(lsnr);
     }
 
-    /** */
-    public void afterDropTable(String schema, String tblName) {
+    /**
+     * Unregister listener for drop table event.
+     *
+     * @param lsnr Drop table event listener.
+     */
+    public void unregisterDropTableListener(@NotNull BiConsumer<String, String> lsnr) {
+        requireNonNull(lsnr, "Drop table listener should be not-null.");
+
+        dropTblLsnrs.remove(lsnr);
+    }
+
+    /**
+     * Fire each listener after table drop.
+     *
+     * @param schema Dropped table schema.
+     * @param tblName Dropped table name.
+     */
+    private void afterDropTable(String schema, String tblName) {
         dropTblLsnrs.forEach(l -> l.accept(schema, tblName));
     }
 }
