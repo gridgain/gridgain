@@ -55,9 +55,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     /** Entries pending removal. This collection tracks entries for near cache only. */
     private GridConcurrentSkipListSetEx pendingEntries;
 
-    /** Indicates having some entries to clear. */
-    protected volatile boolean hasPendingEntries;
-
     /** */
     protected GridAtomicLong nextTTLEvictTs = new GridAtomicLong();
 
@@ -249,8 +246,8 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             long nextTTLEvict = nextTTLEvictTs.get();
             long nextTombstoneEvict = nextTombstoneEvictTs.get();
 
-            boolean hasTtl = cctx.config().isEagerTtl() && nextTTLEvict != 0 && curTime > nextTTLEvict;
-            boolean hasTs = nextTombstoneEvict != 0 && curTime > nextTombstoneEvict;
+            boolean hasTtl = cctx.config().isEagerTtl() && nextTTLEvict != 0 && curTime >= nextTTLEvict;
+            boolean hasTs = nextTombstoneEvict != 0 && curTime >= nextTombstoneEvict;
 
             if (!hasTtl && !hasTs)
                 return false;
@@ -264,7 +261,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();
 
-                return e != null && e.expireTime <= now; // Still have near entires.
+                return e != null && e.expireTime <= now;
             }
 
             return nextTTLEvictTs.get() != 0 || nextTombstoneEvictTs.get() != 0;
