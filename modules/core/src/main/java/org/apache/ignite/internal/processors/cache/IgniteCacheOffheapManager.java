@@ -175,11 +175,10 @@ public interface IgniteCacheOffheapManager {
      * @param c Closure.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
      *               amount can be greater if a limit has been exceeded.
-     * @param lowerBound
      * @return {@code True} if unprocessed expired entries remains.
      * @throws IgniteCheckedException If failed.
      */
-    public boolean expireRows(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long lowerBound)
+    public boolean expireRows(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount)
         throws IgniteCheckedException;
 
     /**
@@ -187,11 +186,10 @@ public interface IgniteCacheOffheapManager {
      * @param c Closure.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
      *               amount can be greater if a limit has been exceeded.
-     * @param lowerBound
      * @return {@code True} if unprocessed expired entries remains.
      * @throws IgniteCheckedException If failed.
      */
-    public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long lowerBound)
+    public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount)
         throws IgniteCheckedException;
 
     /**

@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.Date;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
@@ -60,12 +58,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
     /** Timestamp when next tombstones clean try will be allowed. Used for throttling on per-cache basis. */
     protected volatile long nextCleanTombstonesTime;
-
-    /** */
-    protected final AtomicLong nextTTLEvictTs = new AtomicLong();
-
-    /** */
-    protected final AtomicLong nextTombstoneEvictTs = new AtomicLong();
 
     /** */
     private GridCacheContext dhtCtx;
@@ -170,32 +162,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     }
 
     /**
-     * @param evictFrom Evict from.
-     * @param nextExpireTime Next expire time.
-     * @param tombstone {@code True} if added a tombstone.
-     */
-    public void updatePendingEntries(long evictFrom, long nextExpireTime, boolean tombstone) {
-        AtomicLong cntr = tombstone ? nextTombstoneEvictTs : nextTTLEvictTs;
-
-        cntr.compareAndSet(evictFrom, nextExpireTime);
-    }
-
-    /**
-     * @param tombstone {@code True} if a tombstone reset.
-     */
-    public void resetPendingEntries(boolean tombstone) {
-        AtomicLong cntr = tombstone ? nextTombstoneEvictTs : nextTTLEvictTs;
-
-        cntr.set(0);
-    }
-
-    /** */
-    public void resetPendingEntries() {
-        nextTTLEvictTs.set(0);
-        nextTombstoneEvictTs.set(0);
-    }
-
-    /**
      * @return {@code True} if the underlying pending tree has entries to process.
      * @param tombstone {@code True} is a tombstone check.
      */
@@ -278,28 +244,19 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (!cctx.affinityNode())
                 return false;  /* Pending tree never contains entries for that cache */
 
-            long nextTTLEvict = nextTTLEvictTs.get();
-            long nextTombstoneEvict = nextTombstoneEvictTs.get();
+            boolean hasRows = false;
+            boolean hasTombstones = false;
 
-            boolean hasRows = cctx.config().isEagerTtl() && (nextTTLEvict == 0 || now >= nextTTLEvict);
-            boolean hasTombstones = nextTombstoneEvict == 0 || now >= nextTombstoneEvict;
+            if (cctx.config().isEagerTtl() && nextCleanRowsTime <= now && hasRowsToEvict)
+                hasRows = cctx.offheap().expireRows(dhtCtx, expireC, amount);
 
-            if (!hasRows && !hasTombstones)
-                return false;
+            if (nextCleanTombstonesTime <= now && hasTombstonesToEvict)
+                hasTombstones = cctx.offheap().expireTombstones(dhtCtx, expireC, amount);
 
-            if (hasRows && nextCleanRowsTime <= now && hasRowsToEvict)
-                cctx.offheap().expireRows(dhtCtx, expireC, amount, nextTTLEvict);
-
-            if (hasTombstones && nextCleanTombstonesTime <= now && hasTombstonesToEvict)
-                cctx.offheap().expireTombstones(dhtCtx, expireC, amount, nextTombstoneEvict);
-
-            boolean emptyRows = nextTTLEvictTs.get() == 0;
-            boolean emptyTombstones = nextTombstoneEvictTs.get() == 0;
-
-            if (emptyRows && nextCleanRowsTime <= now)
+            if (!hasRows)
                 nextCleanRowsTime = now + unwindThrottlingTimeout;
 
-            if (emptyTombstones && nextCleanTombstonesTime <= now)
+            if (!hasTombstones)
                 nextCleanTombstonesTime = now + unwindThrottlingTimeout;
 
             if (amount != -1 && pendingEntries != null) {
@@ -308,7 +265,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                 return e != null && e.expireTime <= now;
             }
 
-            return !(emptyRows && emptyTombstones);
+            return hasRows || hasTombstones;
         }
         catch (GridDhtInvalidPartitionException e) {
             if (log.isDebugEnabled())

@@ -1296,8 +1296,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     @Override public boolean expireRows(
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-        int amount,
-        long lowerBound) throws IgniteCheckedException {
+        int amount
+    ) throws IgniteCheckedException {
         assert !cctx.isNear() : cctx.name();
 
         long now = U.currentTimeMillis();
@@ -1330,7 +1330,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long lowerBound) throws IgniteCheckedException {
+    @Override public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount) throws IgniteCheckedException {
         long tsCnt = tombstonesCount();
 
         if (tsCnt == 0)
