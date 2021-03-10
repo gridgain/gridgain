@@ -15,55 +15,43 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedEnumProperty;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.NO_UPDATE;
+import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.OFF;
+import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.ON;
 
 /**
  * Statistics manager implementation.
  */
 public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /** Size of statistics collection pool. */
-    private static final int STATS_POOL_SIZE = 1;
+    private static final int STATS_POOL_SIZE = 4;
+
+    /** Default statistics usage state. */
+    private static final StatisticsUsageState DEFAULT_STATISTICS_USAGE_STATE = StatisticsUsageState.ON;
 
     /** Logger. */
     private final IgniteLogger log;
 
     /** Kernal context. */
     private final GridKernalContext ctx;
-
-    /** Schema manager. */
-    private final SchemaManager schemaMgr;
 
     /** Statistics repository. */
     private final IgniteStatisticsRepository statsRepos;
@@ -72,13 +60,20 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     private final IgniteStatisticsHelper helper;
 
     /** Statistics collector. */
-    private final StatisticsGathering statGathering;
+    private final StatisticsGatherer gatherer;
 
-    /** Statistics crawler. */
-    private final StatisticsGatheringRequestCrawler statCrawler;
+    /** Statistics configuration manager. */
+    private final IgniteStatisticsConfigurationManager statCfgMgr;
 
-    /** Current collections, collection id to collection status map. */
-    private final Map<UUID, StatisticsGatheringContext> currColls = new ConcurrentHashMap<>();
+    /** Management pool. */
+    private final IgniteThreadPoolExecutor mgmtPool;
+
+    /** Gathering pool. */
+    private final IgniteThreadPoolExecutor gatherPool;
+
+    /** Cluster wide statistics usage state. */
+    private final DistributedEnumProperty<StatisticsUsageState> usageState = new DistributedEnumProperty<>(
+        "statistics.usage.state", StatisticsUsageState::fromOrdinal, StatisticsUsageState::index, StatisticsUsageState.class);
 
     /**
      * Constructor.
@@ -88,7 +83,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
      */
     public IgniteStatisticsManagerImpl(GridKernalContext ctx, SchemaManager schemaMgr) {
         this.ctx = ctx;
-        this.schemaMgr = schemaMgr;
+
         helper = new IgniteStatisticsHelper(ctx.localNodeId(), schemaMgr, ctx::log);
 
         log = ctx.log(IgniteStatisticsManagerImpl.class);
@@ -96,7 +91,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         IgniteCacheDatabaseSharedManager db = (GridCacheUtils.isPersistenceEnabled(ctx.config())) ?
                 ctx.cache().context().database() : null;
 
-        IgniteThreadPoolExecutor gatMgmtPool = new IgniteThreadPoolExecutor("stat-gat-mgmt-pool",
+        gatherPool = new IgniteThreadPoolExecutor("stat-gather",
                 ctx.igniteInstanceName(),
                 0,
                 STATS_POOL_SIZE,
@@ -106,7 +101,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                 ctx.uncaughtExceptionHandler()
         );
 
-        IgniteThreadPoolExecutor msgMgmtPool = new IgniteThreadPoolExecutor("stat-msg-mgmt-pool",
+        mgmtPool = new IgniteThreadPoolExecutor("stat-mgmt",
                 ctx.igniteInstanceName(),
                 0,
                 1,
@@ -123,16 +118,70 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
         else if (db == null)
             store = new IgniteStatisticsInMemoryStoreImpl(ctx::log);
         else
-            store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db,
-                (k, s) -> this.statisticsRepository().cacheLocalStatistics(k, s), ctx::log);
+            store = new IgniteStatisticsPersistenceStoreImpl(ctx.internalSubscriptionProcessor(), db, ctx::log);
 
-        statsRepos = new IgniteStatisticsRepositoryImpl(store, helper, ctx::log);
+        statsRepos = new IgniteStatisticsRepository(store, helper, ctx::log);
 
-        statCrawler = new StatisticsGatheringRequestCrawlerImpl(ctx.localNodeId(), this, ctx.event(), ctx.io(),
-            helper, msgMgmtPool, ctx::log);
-        statGathering = new StatisticsGatheringImpl(schemaMgr, ctx.discovery(), ctx.query(), statsRepos, statCrawler,
-            gatMgmtPool, ctx::log);
+        gatherer = new StatisticsGatherer(
+            statsRepos,
+            gatherPool,
+            ctx::log
+        );
 
+        statCfgMgr = new IgniteStatisticsConfigurationManager(
+            schemaMgr,
+            ctx.internalSubscriptionProcessor(),
+            ctx.cache().context().exchange(),
+            statsRepos,
+            gatherer,
+            mgmtPool,
+            ctx::log
+        );
+
+        ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+            usageState.addListener((name, oldVal, newVal) -> {
+                if (log.isInfoEnabled())
+                    log.info(String.format("Statistics usage state was changed from %s to %s", oldVal, newVal));
+
+                if (oldVal == newVal)
+                    return;
+
+                switch (newVal) {
+                    case OFF:
+                        disableOperations();
+
+                        break;
+                    case ON:
+                    case NO_UPDATE:
+                        enableOperations();
+
+                        break;
+                }
+            });
+
+            dispatcher.registerProperty(usageState);
+        });
+
+        StatisticsUsageState currState = usageState();
+        if (currState == ON || currState == NO_UPDATE)
+            enableOperations();
+    }
+
+    /**
+     * Enable statistics operations.
+     */
+    private synchronized void enableOperations() {
+        gatherer.start();
+        statCfgMgr.start();
+    }
+
+    /**
+     * Disable statistics operations.
+     */
+    private synchronized void disableOperations() {
+        statCfgMgr.stop();
+        gatherer.stop();
+        statsRepos.start();
     }
 
     /**
@@ -143,345 +192,87 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /** {@inheritDoc} */
-    @Override public ObjectStatistics getLocalStatistics(String schemaName, String objName) {
-        return statsRepos.getLocalStatistics(new StatisticsKey(schemaName, objName));
-    }
+    @Override public ObjectStatistics getLocalStatistics(StatisticsKey key) {
+        StatisticsUsageState currState = usageState();
 
-    /**
-     * Clear object statistics implementation.
-     *
-     * @param keys Keys to clear statistics by.
-     * @throws IgniteCheckedException In case of errors.
-     */
-    private void clearObjectStatistics(Collection<StatisticsKeyMessage> keys) throws IgniteCheckedException {
-        checkStatisticsSupport("clear statistics");
-
-        statCrawler.sendClearStatisticsAsync(keys);
-    }
-
-    /**
-     * Clear local statistics by specified keys.
-     *
-     * @param keys Keys to clear statistics by.
-     */
-    public void clearObjectsStatisticsLocal(Collection<StatisticsKeyMessage> keys) {
-        for (StatisticsKeyMessage key : keys)
-            clearObjectStatisticsLocal(key);
-    }
-
-    /**
-     * Update counter to mark that statistics by some partitions where collected by remote request.
-     *
-     * @param gatId Gathering id.
-     * @param parts Partitions count.
-     */
-    public void onRemoteGatheringSend(UUID gatId, int parts) {
-        currColls.compute(gatId, (k,v) -> {
-           if (v == null) {
-               if (log.isDebugEnabled())
-                   log.debug(String.format("Unable to mark %d partitions gathered by gathering id %s", parts, gatId));
-
-               return null;
-           }
-
-           return v.registerCollected(Collections.emptyMap(), parts) ? null : v;
-        });
+        return (currState == ON || currState == NO_UPDATE) ? statsRepos.getLocalStatistics(key) : null;
     }
 
     /** {@inheritDoc} */
-    @Override public void clearObjectStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
-        checkStatisticsSupport("clear statistics");
-
-        List<StatisticsKeyMessage> keys = Arrays.stream(targets).map(target -> new StatisticsKeyMessage(target.schema(),
-            target.obj(), Arrays.asList(target.columns()))).collect(Collectors.toList());
-
-        clearObjectStatistics(keys);
-    }
-
-    /**
-     * Actually clear local object statistics by the given key.
-     *
-     * @param keyMsg Key to clear statistics by.
-     */
-    private void clearObjectStatisticsLocal(StatisticsKeyMessage keyMsg) {
-        StatisticsKey key = new StatisticsKey(keyMsg.schema(), keyMsg.obj());
-        String[] colNames = keyMsg.colNames().toArray(new String[0]);
-
-        statsRepos.clearLocalPartitionsStatistics(key, colNames);
-        statsRepos.clearLocalStatistics(key, colNames);
-        statsRepos.clearGlobalStatistics(key, colNames);
-    }
-
-    /**
-     * Collect object statistics prepared status.
-     *
-     * @param status Collection status to collect statistics by.
-     */
-    private void collectObjectStatistics(StatisticsGatheringContext status) {
-        statCrawler.sendGatheringRequestsAsync(status.gatheringId(), status.keys(), null);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void gatherObjectStatistics(StatisticsTarget target) throws IgniteCheckedException {
+    @Override public void collectStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
         checkStatisticsSupport("collect statistics");
 
-        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(target.schema(), target.obj(),
-            Arrays.asList(target.columns()));
-        CacheGroupContext grpCtx = helper.getGroupContext(keyMsg);
+        if (usageState() == OFF)
+            throw new IgniteException("Can't gather statistics while statistics usage state is OFF.");
 
-        StatisticsGatheringContext status = new StatisticsGatheringContext(UUID.randomUUID(),
-            Collections.singleton(keyMsg), grpCtx.topology().partitions());
-
-        currColls.put(status.gatheringId(), status);
-
-        collectObjectStatistics(status);
-
-        status.doneFuture().get();
-    }
-
-    /**
-     * Ensure that local gathering context exists and schedule local statistics gathering.
-     *
-     * @param nodeId Initiator node id.
-     * @param gatId Gathering id.
-     * @param reqId Request id.
-     * @param keys Keys to collect statistics by.
-     * @param parts Partitions to collect statistics from.
-     */
-    public void gatherLocalObjectStatisticsAsync(
-        UUID gatId,
-        UUID reqId,
-        Collection<StatisticsKeyMessage> keys,
-        int[] parts
-    ) {
-        int partsCnt = (int)Arrays.stream(parts).count();
-        Set<StatisticsKeyMessage> keysSet = new HashSet<>(keys);
-
-        StatisticsGatheringContext gCtx = currColls.computeIfAbsent(gatId, k ->
-            new StatisticsGatheringContext(gatId, keysSet, partsCnt));
-
-        statGathering.collectLocalObjectsStatisticsAsync(reqId, keysSet, parts, () -> gCtx.doneFuture().isCancelled());
+        statCfgMgr.updateStatistics(Arrays.asList(targets));
     }
 
     /** {@inheritDoc} */
-    @Override public StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] gatherObjectStatisticsAsync(
-        StatisticsTarget... keys
-    ) {
+    @Override public void dropStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
+        checkStatisticsSupport("drop statistics");
 
-        Set<StatisticsKeyMessage> keysMsg = Arrays.stream(keys).map(StatisticsUtils::statisticsKeyMessage)
-            .collect(Collectors.toSet());
+        if (usageState() == OFF)
+            throw new IgniteException("Can't drop statistics while statistics usage state is OFF.");
 
-        Map<CacheGroupContext, Collection<StatisticsKeyMessage>> grpsKeys = helper.splitByGroups(keysMsg);
-
-        if (!isStatisticsSupport()) {
-            return grpsKeys.entrySet().stream().map(
-                grpKeys -> new StatisticsGatheringFutureAdapter(UUID.randomUUID(),
-                    grpKeys.getValue().stream().map(StatisticsUtils::statisticsTarget).toArray(StatisticsTarget[]::new)))
-                .toArray(StatisticsGatheringFuture[]::new);
-        }
-
-        Collection<StatisticsKeyMessage> notFoundKeys = grpsKeys.remove(null);
-
-        List<StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>> res = new ArrayList<>();
-
-        for (Map.Entry<CacheGroupContext, Collection<StatisticsKeyMessage>> grpKeys : grpsKeys.entrySet()) {
-            int parts = grpKeys.getKey().topology().partitions();
-
-            StatisticsGatheringContext status = new StatisticsGatheringContext(UUID.randomUUID(),
-                    new HashSet<>(grpKeys.getValue()), parts);
-            currColls.put(status.gatheringId(), status);
-
-            collectObjectStatistics(status);
-
-            res.add(status.doneFuture());
-        }
-        if (notFoundKeys != null) {
-            StatisticsGatheringFutureAdapter<Map<StatisticsTarget, ObjectStatistics>> notFoundFut =
-                new StatisticsGatheringFutureAdapter<>(UUID.randomUUID(),
-                    notFoundKeys.stream().map(StatisticsUtils::statisticsTarget).toArray(StatisticsTarget[]::new));
-
-            notFoundFut.onDone(new IgniteCheckedException(notFoundKeys.size() + " target not found."));
-
-            res.add(notFoundFut);
-        }
-
-        return res.toArray(new StatisticsGatheringFuture[0]);
-    }
-
-    /**
-     * Cancel specified statistics gathering process.
-     *
-     * @param gatId Gathering id to cancel.
-     */
-    public void cancelLocalStatisticsGathering(UUID gatId) {
-       StatisticsGatheringContext stCtx = currColls.remove(gatId);
-       if (stCtx != null)
-           stCtx.doneFuture().cancel();
-       else {
-           if (log.isDebugEnabled())
-               log.debug(String.format("Unable to cancel gathering %s. No active task with such gatId found.", gatId));
-       }
+        statCfgMgr.dropStatistics(Arrays.asList(targets), true);
     }
 
     /** {@inheritDoc} */
-    @Override public boolean cancelObjectStatisticsGathering(UUID gatId) throws IgniteCheckedException {
-        checkStatisticsSupport("cancel gathering");
+    @Override public void refreshStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
+        checkStatisticsSupport("collect statistics");
 
-        boolean res = false;
-        StatisticsGatheringContext stCtx = currColls.get(gatId);
-        if (stCtx != null) {
+        if (usageState() == OFF)
+            throw new IgniteException("Can't refresh statistics while statistics usage state is OFF.");
 
-            res = stCtx.doneFuture().cancel();
-            if (res)
-                statCrawler.sendCancelGatheringAsync(gatId);
-        }
-        return res;
+        statCfgMgr.refreshStatistics(Arrays.asList(targets));
     }
-
-    /**
-     * Receive and store partition statistics object data for locals backup partition.
-     *
-     * @param data Collection of partition level statistics of local bacup partitions.
-     */
-    public void receivePartitionsStatistics(Collection<StatisticsObjectData> data) {
-        for (StatisticsObjectData partData : data) {
-            StatisticsKey key = new StatisticsKey(partData.key().schema(), partData.key().obj());
-
-            assert partData.type() == StatisticsType.PARTITION : "Got non partition level statistics by " + key
-                    + " without request";
-
-            if (log.isTraceEnabled())
-                log.trace(String.format("Received partition statistics %s.%s:%d", key.schema(), key.obj(),
-                    partData.partId()));
-
-            GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
-            if (tbl == null) {
-                if (log.isInfoEnabled())
-                    log.info(String.format("Ignoring outdated partition statistics %s.%s:%d", key.schema(), key.obj(),
-                        partData.partId()));
-
-                continue;
-            }
-            GridDhtPartitionState partState = tbl.cacheContext().topology().partitionState(ctx.localNodeId(),
-                partData.partId());
-            if (partState != OWNING) {
-                if (log.isTraceEnabled())
-                    log.trace(String.format("Ignoring non local partition statistics %s.%s:%d",
-                            key.schema(), key.obj(), partData.partId()));
-
-                continue;
-            }
-
-            try {
-                ObjectPartitionStatisticsImpl opStat = StatisticsUtils.toObjectPartitionStatistics(ctx, partData);
-
-                statsRepos.saveLocalPartitionStatistics(key, opStat);
-            }
-            catch (IgniteCheckedException e) {
-                if (log.isInfoEnabled())
-                    log.info(String.format("Unable to parse partition statistics for %s.%s:%d because of: %s",
-                        key.schema(), key.obj(), partData.partId(), e.getMessage()));
-            }
-        }
-    }
-
-    /**
-     * Aggregate specified gathered statistics, remove it form local and complete its future.
-     *
-     * @param stCtx Gathering to complete.
-     */
-    public void finishStatisticsCollection(StatisticsGatheringContext stCtx) {
-        currColls.remove(stCtx.gatheringId());
-
-        Map<StatisticsTarget, ObjectStatistics> targetStats = new HashMap<>();
-        Map<StatisticsKeyMessage, ObjectStatisticsImpl> keysStats = new HashMap<>();
-        for (Map.Entry<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> keyStats : stCtx.collectedStatistics()
-                .entrySet()) {
-            ObjectStatisticsImpl globalCollectedStat = helper.aggregateLocalStatistics(keyStats.getKey(),
-                keyStats.getValue());
-
-            StatisticsKey statsKey = new StatisticsKey(keyStats.getKey().schema(), keyStats.getKey().obj());
-            ObjectStatisticsImpl globalStat = statsRepos.mergeGlobalStatistics(statsKey, globalCollectedStat);
-
-            targetStats.put(StatisticsUtils.statisticsTarget(keyStats.getKey()), globalStat);
-            keysStats.put(keyStats.getKey(), globalStat);
-        }
-
-        statCrawler.sendGlobalStatAsync(keysStats);
-
-        stCtx.doneFuture().onDone(targetStats);
-    }
-
-    /**
-     * Cache global statistics.
-     *
-     * @param data Global statistics to cache.
-     */
-    public void saveGlobalStatistics(Collection<StatisticsObjectData> data) {
-        for (StatisticsObjectData objData : data) {
-            try {
-                ObjectStatisticsImpl objStat = StatisticsUtils.toObjectStatistics(this.ctx, objData);
-
-                statsRepos.saveGlobalStatistics(new StatisticsKey(objData.key().schema(), objData.key().obj()), objStat);
-            }
-            catch (IgniteCheckedException e) {
-                if (log.isDebugEnabled())
-                    log.debug(String.format("Cannot read global statistics %s", objData.key()));
-            }
-        };
-    }
-
-    /**
-     * Register collected statistics in task context.
-     *
-     * @param gatId Gathering id.
-     * @param data Collected statistics.
-     * @param partsCount Count of collected partitions.
-     */
-    public void registerLocalResult(UUID gatId, Collection<StatisticsObjectData> data, int partsCount) {
-        StatisticsGatheringContext stCtx = currColls.get(gatId);
-        if (stCtx == null) {
-            if (log.isDebugEnabled())
-                log.debug(String.format("Unable to register outdated statistics collection result %s", gatId));
-
-            return;
-        }
-        Map<StatisticsKeyMessage, Collection<ObjectStatisticsImpl>> keyStats = new HashMap<>();
-        for (StatisticsObjectData objData : data) {
-            Collection<ObjectStatisticsImpl> keyObjStats = keyStats.computeIfAbsent(objData.key(), k -> new ArrayList<>());
-            try {
-                ObjectStatisticsImpl objStat = StatisticsUtils.toObjectStatistics(ctx, objData);
-
-                keyObjStats.add(objStat);
-            }
-            catch (IgniteCheckedException e) {
-                if (log.isDebugEnabled())
-                    log.debug(String.format("Cannot read local statistics %s by gathering task %s", objData.key(),
-                        gatId));
-            }
-        }
-
-        if (stCtx.registerCollected(keyStats, partsCount))
-            finishStatisticsCollection(stCtx);
-    }
-
-    /**
-     * Get global statistics by key.
-     *
-     * @param key Key to get statistics by.
-     * @return Global statistics or {@code null} if there are no statistics for specified key.
-     */
-   public ObjectStatisticsImpl getGlobalStatistics(StatisticsKeyMessage key) {
-        ObjectStatisticsImpl stat = statsRepos.getGlobalStatistics(new StatisticsKey(key.schema(), key.obj()));
-        if (stat != null && !F.isEmpty(key.colNames()))
-            stat = IgniteStatisticsHelper.filterColumns(stat, key.colNames());
-
-        return stat;
-   }
 
     /** {@inheritDoc} */
-    @Override public ObjectStatistics getGlobalStatistics(String schemaName, String objName) {
-        return statsRepos.getGlobalStatistics(new StatisticsKey(schemaName, objName));
+    @Override public void dropAll() throws IgniteCheckedException {
+        checkStatisticsSupport("drop all statistics");
+
+        statCfgMgr.dropAll();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void stop() {
+        statCfgMgr.stop();
+        gatherer.stop();
+
+        if (gatherPool != null) {
+            List<Runnable> unfinishedTasks = gatherPool.shutdownNow();
+            if (!unfinishedTasks.isEmpty())
+                log.warning(String.format("%d statistics collection cancelled.", unfinishedTasks.size()));
+        }
+
+        if (mgmtPool != null) {
+            List<Runnable> unfinishedTasks = mgmtPool.shutdownNow();
+            if (!unfinishedTasks.isEmpty())
+                log.warning(String.format("%d statistics configuration change handler cancelled.", unfinishedTasks.size()));
+        }
+    }
+
+   /** */
+    public IgniteStatisticsConfigurationManager statisticConfiguration() {
+        return statCfgMgr;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void usageState(StatisticsUsageState state) throws IgniteCheckedException {
+        checkStatisticsSupport("clear statistics");
+
+        try {
+            usageState.propagate(state);
+        }
+        catch (IgniteCheckedException e) {
+            log.error("Unable to set usage state value due to " + e.getMessage(), e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public StatisticsUsageState usageState() {
+        return usageState.getOrDefault(DEFAULT_STATISTICS_USAGE_STATE);
     }
 
     /**

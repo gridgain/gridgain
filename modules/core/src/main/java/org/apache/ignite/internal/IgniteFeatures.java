@@ -38,6 +38,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AU
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
@@ -53,7 +54,7 @@ public enum IgniteFeatures {
     /** Cache metrics v2 support. */
     CACHE_METRICS_V2(1),
 
-    /** Data paket compression. */
+    /** Data packet compression. */
     DATA_PACKET_COMPRESSION(3),
 
     /** Support of different rebalance size for nodes.  */
@@ -68,7 +69,7 @@ public enum IgniteFeatures {
      */
     TRANSACTION_OWNER_THREAD_DUMP_PROVIDING(6),
 
-    /** Displaying versbose transaction information: --info option of --tx control script command. */
+    /** Displaying verbose transaction information: --info option of --tx control script command. */
     TX_INFO_COMMAND(7),
 
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
@@ -203,7 +204,14 @@ public enum IgniteFeatures {
     POINT_IN_TIME_DISTRIBUTED_PROPERTY(54),
 
     /** Statistics collection. */
-    STATISTICS_COLLECTION(55);
+    STATISTICS_COLLECTION(55),
+
+    /** Warning is shown in server log and after schedule and snapshot commands if PITR is enabled and snapshot schedule
+     * is improper for PITR*/
+    IMPROPER_SCHEDULE_FOR_PITR_WARNING(56),
+
+    /** Rolling upgrade based on distributed metastorage. Improved handling of changing RU state. */
+    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58);
 
     /**
      * Unique feature identifier.
@@ -386,6 +394,9 @@ public enum IgniteFeatures {
                 continue;
 
             if (PME_FREE_SWITCH == value && isFeatureEnabled(IGNITE_PME_FREE_SWITCH_DISABLED))
+                continue;
+
+            if (SPECIFIED_SEQ_PK_KEYS == value && isFeatureEnabled(IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED))
                 continue;
 
             final int featureId = value.getFeatureId();

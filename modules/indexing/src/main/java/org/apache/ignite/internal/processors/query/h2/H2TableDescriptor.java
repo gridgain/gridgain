@@ -23,8 +23,6 @@ import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
@@ -37,7 +35,6 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneIndex;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.index.Index;
@@ -329,11 +326,7 @@ public class H2TableDescriptor {
             if (QueryUtils.isSqlType(type.keyClass()))
                 keyCols.add(keyCol);
             else {
-                // SPECIFIED_SEQ_PK_KEYS check guarantee that request running on heterogeneous (RU) cluster can
-                // perform equally on all nodes.
-                if (!idx.kernalContext().recoveryMode() && IgniteFeatures.allNodesSupports(idx.kernalContext(),
-                    F.view(idx.kernalContext().discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
-                    IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
+                if (!type.primaryKeyFields().isEmpty()) {
                     for (String keyName : type.primaryKeyFields()) {
                         GridQueryProperty prop = type.property(keyName);
 

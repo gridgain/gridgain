@@ -56,6 +56,7 @@ import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
+import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -474,10 +475,13 @@ public class GridH2Table extends TableBase {
      */
     public ObjectStatistics tableStatistics() {
         GridCacheContext cacheContext = cacheInfo.cacheContext();
+
         if (cacheContext == null)
             return null;
+
         IgniteStatisticsManager statManager = cacheContext.kernalContext().query().getIndexing().statsManager();
-        return statManager.getLocalStatistics(identifier.schema(), identifier.table());
+
+        return statManager.getLocalStatistics(new StatisticsKey(identifier.schema(), identifier.table()));
     }
 
     /**

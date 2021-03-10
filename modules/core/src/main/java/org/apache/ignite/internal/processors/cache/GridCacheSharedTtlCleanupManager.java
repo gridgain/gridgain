@@ -28,6 +28,8 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty;
 import org.apache.ignite.internal.util.typedef.X;
@@ -46,7 +48,7 @@ import static org.apache.ignite.internal.processors.configuration.distributed.Di
 /**
  * Periodically removes expired entities from caches with {@link CacheConfiguration#isEagerTtl()} flag set.
  */
-public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdapter {
+public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdapter implements PartitionsExchangeAware {
     /** Ttl cleanup worker thread sleep interval, ms. */
     private final long cleanupWorkerSleepInterval =
         IgniteSystemProperties.getLong("CLEANUP_WORKER_SLEEP_INTERVAL", 500);
@@ -132,6 +134,8 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
 
             dispatcher.registerProperty(tsSuspendedCleanup);
         });
+
+        cctx.exchange().registerExchangeAwareComponent(this);
     }
 
     /** {@inheritDoc} */
@@ -267,6 +271,18 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
         }
     }
 
+    /** {@inheritDoc} */
+    @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+        for (GridCacheTtlManager mgr : mgrs.values())
+            mgr.blockExpire(fut);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onInitAfterTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+        for (GridCacheTtlManager mgr : mgrs.values())
+            mgr.unblockExpire(fut);
+    }
+
     /**
      * Entry cleanup worker.
      */
@@ -325,7 +341,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                             // Need to be sure that the cache to be processed will not be unregistered and,
                             // therefore, stopped during the process of expiration is in progress.
                             mgrs.computeIfPresent(processedCacheID, (id, m) -> {
-                                if (m.expire(CLEANUP_WORKER_ENTRIES_PROCESS_LIMIT))
+                                if (m.expire(CLEANUP_WORKER_ENTRIES_PROCESS_LIMIT, true))
                                     expiredRemains.set(true);
 
                                 return m;

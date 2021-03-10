@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -73,9 +74,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
      */
     public static final ClientListenerProtocolVersion VER_1_7_0 = ClientListenerProtocolVersion.create(1, 7, 0);
 
-    /**
-     * Version 1.7.1. User Attributes introduced. New version is needed because user attributes passed in handshake.
-     */
+    /** Version 1.7.1. User Attributes introduced. New version is needed because user attributes passed in handshake. */
     public static final ClientListenerProtocolVersion VER_1_7_1 = ClientListenerProtocolVersion.create(1, 7, 1);
 
     /** Default version. */
@@ -97,6 +96,9 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
         VER_1_1_0,
         VER_1_0_0
     );
+
+    /** User attribute used to pass timezone of the client. */
+    private static final String USER_ATTR_TIMEZONE = "client.timezone";
 
     /** Message parser. */
     private ClientMessageParser parser;
@@ -150,7 +152,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
      * @param thinCfg Thin-client configuration.
      */
     public ClientConnectionContext(GridKernalContext ctx, GridNioSession ses, long connId, int maxCursors,
-        ThinClientConfiguration thinCfg) {
+        ThinClientConfiguration thinCfg, TimeZone srvTz) {
         super(ctx, ses, connId);
 
         this.maxCursors = maxCursors;
@@ -185,12 +187,11 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
     }
 
     /** {@inheritDoc} */
-    @Override public void initializeFromHandshake(GridNioSession ses,
-        ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
+    @Override public void initializeFromHandshake(GridNioSession ses, ClientListenerProtocolVersion ver,
+        BinaryReaderExImpl reader)
         throws IgniteCheckedException {
 
         EnumSet<ClientBitmaskFeature> features = null;
-
         if (ClientProtocolContext.isFeatureSupported(ver, BITMAP_FEATURES)) {
             byte[] cliFeatures = reader.readByteArray();
 
@@ -204,6 +205,13 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
         if (currentProtocolContext.isFeatureSupported(USER_ATTRIBUTES))
             userAttrs = reader.readMap();
+
+        if (userAttrs != null) {
+            String clientTzId = userAttrs.get(USER_ATTR_TIMEZONE);
+
+            if (clientTzId != null)
+                currentProtocolContext.clientTimeZone(TimeZone.getTimeZone(clientTzId));
+        }
 
         if (currentProtocolContext.isFeatureSupported(AUTHORIZATION)) {
             boolean hasMore;

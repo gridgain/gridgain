@@ -21,6 +21,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
+import org.apache.ignite.mxbean.ClusterMetricsMXBean;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridStringLogger;
@@ -115,28 +116,41 @@ public class IgniteClientFailuresTest extends GridCommonAbstractTest {
      */
     @Test
     public void testFailedClientLeavesTopologyAfterTimeout() throws Exception {
-        IgniteEx srv0 = startGrid(0);
+        IgniteEx srv0 = (IgniteEx)startGridsMultiThreaded(3);
 
         IgniteEx client00 = startGrid("client00");
+        IgniteEx client01 = startGrid("client01");
 
         client00.getOrCreateCache(new CacheConfiguration<>("cache0"));
+        client01.getOrCreateCache(new CacheConfiguration<>("cache1"));
 
-        breakClient(client00);
+        IgniteInternalFuture f1 = GridTestUtils.runAsync(() -> breakClient(client00));
+        IgniteInternalFuture f2 = GridTestUtils.runAsync(() -> breakClient(client01));
+
+        f1.get(); f2.get();
 
         final IgniteClusterEx cl = srv0.cluster();
 
-        assertEquals(2, cl.topology(cl.topologyVersion()).size());
+        assertEquals(5, cl.topology(cl.topologyVersion()).size());
 
-        IgniteEx client01 = startGrid("client01");
+        IgniteEx client02 = startGrid("client02");
 
-        assertEquals(3, cl.topology(cl.topologyVersion()).size());
+        assertEquals(6, cl.topology(cl.topologyVersion()).size());
 
-        boolean waitRes = GridTestUtils.waitForCondition(() -> (cl.topology(cl.topologyVersion()).size() == 2),
+        boolean waitRes = GridTestUtils.waitForCondition(() -> (cl.topology(cl.topologyVersion()).size() == 4),
             20_000);
 
-        checkCacheOperations(client01.cache("cache0"));
-
         assertTrue(waitRes);
+
+        checkCacheOperations(client02.cache("cache0"));
+
+        assertEquals(4, srv0.context().discovery().allNodes().size());
+
+        // Cluster metrics.
+        ClusterMetricsMXBean mxBeanCluster = GridCommonAbstractTest.getMxBean(srv0.name(), "Kernal",
+            ClusterMetricsMXBeanImpl.class.getSimpleName(), ClusterMetricsMXBean.class);
+
+        assertEquals(1, mxBeanCluster.getTotalClientNodes());
     }
 
     /**

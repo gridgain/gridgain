@@ -20,7 +20,7 @@ namespace Apache.Ignite.Core.Tests.Services
     using System.Collections;
     using System.Collections.Generic;
     using Apache.Ignite.Core.Binary;
-    using org.apache.ignite.platform.model;
+    using Apache.Ignite.Platform.Model;
 
     /// <summary>
     /// Explicit service proxy over dynamic variable.
@@ -380,6 +380,12 @@ namespace Apache.Ignite.Core.Tests.Services
         public void testLocalDateFromCache()
         {
             _svc.testLocalDateFromCache();
+        }
+
+        /** <inheritDoc /> */
+        public void testException(string exceptionClass)
+        {
+            _svc.testException(exceptionClass);
         }
 
         /** <inheritDoc /> */

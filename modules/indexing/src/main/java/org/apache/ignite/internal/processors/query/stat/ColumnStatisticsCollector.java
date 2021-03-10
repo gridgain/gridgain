@@ -21,6 +21,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.apache.ignite.internal.processors.query.stat.hll.HLL;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.value.TypeInfo;
@@ -62,6 +63,9 @@ public class ColumnStatisticsCollector {
     /** Hasher. */
     private final Hasher hash = new Hasher();
 
+    /** Version. */
+    private final long ver;
+
     /**
      * Constructor.
      *
@@ -69,8 +73,20 @@ public class ColumnStatisticsCollector {
      * @param comp Column values comparator.
      */
     public ColumnStatisticsCollector(Column col, Comparator<Value> comp) {
+        this(col, comp, 0);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param col Column to collect statistics by.
+     * @param comp Column values comparator.
+     * @param ver Target statistic version.
+     */
+    public ColumnStatisticsCollector(Column col, Comparator<Value> comp, long ver) {
         this.col = col;
         this.comp = comp;
+        this.ver = ver;
 
         TypeInfo colTypeInfo = col.getType();
         complexType = colTypeInfo == TypeInfo.TYPE_ARRAY || colTypeInfo == TypeInfo.TYPE_ENUM_UNDEFINED
@@ -147,7 +163,7 @@ public class ColumnStatisticsCollector {
 
         int averageSize = averageSize(size, total, nullsCnt);
 
-        return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes());
+        return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes(), ver);
     }
 
     /**
@@ -205,6 +221,8 @@ public class ColumnStatisticsCollector {
      * @return Column statistics for all partitions.
      */
     public static ColumnStatistics aggregate(Comparator<Value> comp, List<ColumnStatistics> partStats) {
+        assert !F.isEmpty(partStats);
+
         HLL hll = buildHll();
 
         Value min = null;
@@ -219,7 +237,11 @@ public class ColumnStatisticsCollector {
         // Total size in bytes
         long totalSize = 0;
 
+        long ver = F.first(partStats).version();
+
         for (ColumnStatistics partStat : partStats) {
+            assert ver == partStat.version() : "Aggregate statistics with different version [stats=" + partStats + ']';
+
             HLL partHll = HLL.fromBytes(partStat.raw());
             hll.union(partHll);
 
@@ -237,7 +259,7 @@ public class ColumnStatisticsCollector {
         int averageSize = averageSize(totalSize, total, nullsCnt);
 
         return new ColumnStatistics(min, max, nullsPercent(nullsCnt, total),
-                cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes());
+                cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes(), ver);
     }
 
     /**

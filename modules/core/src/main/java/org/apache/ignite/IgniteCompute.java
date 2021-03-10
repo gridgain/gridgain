@@ -39,6 +39,7 @@ import org.apache.ignite.resources.SpringResource;
 import org.apache.ignite.resources.TaskSessionResource;
 import org.apache.ignite.spi.failover.FailoverSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Defines compute grid functionality for executing tasks and closures over nodes
@@ -367,6 +368,9 @@ public interface IgniteCompute extends IgniteAsyncSupport {
      * <p>
      * If task for given name has not been deployed yet, then {@code taskName} will be
      * used as task class name to auto-deploy the task (see {@link #localDeployTask(Class, ClassLoader)} method).
+     * <p>
+     * If there are more one class deployed with the same name this method will execute the lasts one deployed of them.
+     * This method has no guarantees if it invokes where classes with the same names deployed from different threads.
      *
      * @param taskName Name of the task to execute.
      * @param arg Optional argument of task execution, can be {@code null}.
@@ -374,7 +378,7 @@ public interface IgniteCompute extends IgniteAsyncSupport {
      * @throws IgniteException If task failed.
      * @see ComputeTask for information about task execution.
      */
-    public <T, R> R execute(String taskName, T arg) throws IgniteException;
+    public <T, R> R execute(String taskName, @Nullable T arg) throws IgniteException;
 
     /**
      * Executes given task asynchronously within the cluster group. For step-by-step explanation of task execution

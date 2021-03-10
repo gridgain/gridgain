@@ -1151,6 +1151,7 @@ public class TestCases extends TestDb {
                 "FROM \"PUBLIC\".\"ORGANIZATION\"\n" +
                 "    /* PUBLIC.PRIMARY_KEY_D: ID = ?1 */\n" +
                 "    /* scanCount: 2 */\n" +
+                "    /* lookupCount: 1 */\n" +
                 "WHERE \"ID\" = ?1",
             rs.getString(1));
 
@@ -1177,12 +1178,14 @@ public class TestCases extends TestDb {
                 "    /* WHERE P.ID = ?1\n" +
                 "    */\n" +
                 "    /* scanCount: 2 */\n" +
+                "    /* lookupCount: 1 */\n" +
                 "INNER JOIN \"PUBLIC\".\"ORGANIZATION\" \"O\"\n" +
                 "    /* PUBLIC.PRIMARY_KEY_D: ID = ?1\n" +
                 "        AND ID = P.ID\n" +
                 "     */\n" +
                 "    ON 1=1\n" +
                 "    /* scanCount: 2 */\n" +
+                "    /* lookupCount: 1 */\n" +
                 "WHERE ((\"O\".\"ID\" = ?1)\n" +
                 "    AND (\"O\".\"ID\" = \"P\".\"ID\"))\n" +
                 "    AND (\"P\".\"ID\" = ?1)",

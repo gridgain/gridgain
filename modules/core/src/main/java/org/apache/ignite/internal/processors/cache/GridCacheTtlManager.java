@@ -17,11 +17,13 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
@@ -59,6 +61,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
     /** */
     private GridCacheContext dhtCtx;
+
+    /** */
+    private ReentrantReadWriteLock topChangeGuard = new ReentrantReadWriteLock();
 
     /** */
     private final IgniteClosure2X<GridCacheEntryEx, Long, Boolean> expireC =
@@ -184,7 +189,24 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * @return {@code True} if unprocessed expired entries remains.
      */
     public boolean expire() {
-        return expire(ttlBatchSize);
+        return expire(ttlBatchSize, false);
+    }
+
+    /**
+     * Processes expired entries with default batch size.
+     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     * @return {@code True} if unprocessed expired entries remains.
+     */
+    public boolean expire(int amount) {
+        return expire(amount, false);
+    }
+
+    /**
+     * Processes expired entries with default batch size under cache gate lock.
+     * @return {@code True} if unprocessed expired entries remains.
+     */
+    public boolean expireSafe() {
+        return expire(ttlBatchSize, true);
     }
 
     /**
@@ -194,15 +216,19 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * and tombstones cleanup is executed, so the real amount of deleted entries can be up to {@code amount * 2}.
      *
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     * @param lock {@code True} to acquire cache gate lock.
      * @return {@code True} if unprocessed expired entries remains.
      */
-    public boolean expire(int amount) {
+    public boolean expire(int amount, boolean lock) {
         assert cctx != null;
 
         if (amount == 0)
             return false;
 
         long now = U.currentTimeMillis();
+
+        if (!topChangeGuard.readLock().tryLock())
+            return false;
 
         try {
             if (pendingEntries != null) {
@@ -231,8 +257,18 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (!hasPendingEntries || nextCleanTime > U.currentTimeMillis())
                 return false;
 
-            if (cctx.offheap().expire(dhtCtx, expireC, amount))
-                return true;
+            if (lock && !dhtCtx.gate().enterIfNotStopped())
+                return false; // Stopped.
+
+            // Locked.
+            try {
+                if (cctx.offheap().expire(dhtCtx, expireC, amount))
+                    return true;
+            }
+            finally {
+                if (lock)
+                    dhtCtx.gate().leave();
+            }
 
             // There is nothing to clean, so the next clean up can be postponed.
             nextCleanTime = U.currentTimeMillis() + unwindThrottlingTimeout;
@@ -259,6 +295,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             }
             else
                 throw e;
+        }
+        finally {
+            topChangeGuard.readLock().unlock();
         }
 
         return false;
@@ -306,6 +345,27 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
         }
 
         return res;
+    }
+
+    /**
+     * @param fut Future.
+     */
+    @SuppressWarnings("LockAcquiredButNotSafelyReleased")
+    public void blockExpire(GridDhtPartitionsExchangeFuture fut) {
+        if (log.isDebugEnabled())
+            log.debug("Block expiration [initVer=" + fut.initialVersion() + ", ctx=" + dhtCtx + ']');
+
+        topChangeGuard.writeLock().lock();
+    }
+
+    /**
+     * @param fut Future.
+     */
+    public void unblockExpire(GridDhtPartitionsExchangeFuture fut) {
+        if (log.isDebugEnabled())
+            log.debug("Unblock expiration [initVer=" + fut.initialVersion() + ", ctx=" + dhtCtx + ']');
+
+        topChangeGuard.writeLock().unlock();
     }
 
     /**

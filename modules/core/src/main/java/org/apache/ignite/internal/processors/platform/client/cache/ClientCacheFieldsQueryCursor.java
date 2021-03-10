@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.platform.client.cache;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientSqlUtils;
 
 import java.util.List;
 
@@ -46,7 +47,7 @@ class ClientCacheFieldsQueryCursor extends ClientCacheQueryCursor<List> {
     @Override void writeEntry(BinaryRawWriterEx writer, List e) {
         assert e.size() == columnCount;
 
-        for (Object o : e)
-            writer.writeObjectDetached(o);
+        for (Object obj : e)
+            ClientSqlUtils.writeSqlField(writer, obj, getProtocolContext());
     }
 }
