@@ -1286,8 +1286,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     @Override public boolean expireRows(
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-        int amount
-    ) throws IgniteCheckedException {
+        int amount,
+        long lowerBound) throws IgniteCheckedException {
         assert !cctx.isNear() : cctx.name();
 
         long now = U.currentTimeMillis();
@@ -1320,7 +1320,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount) throws IgniteCheckedException {
+    @Override public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long lowerBound) throws IgniteCheckedException {
         long tsCnt = tombstonesCount();
 
         if (tsCnt == 0)
@@ -2324,14 +2324,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     pendingTree = pendingTree0;
 
-                    long curTime = U.currentTimeMillis();
-
-                    if (!pendingTree0.isEmpty())
-                        grp.caches().forEach(cctx -> {
-                            cctx.ttl().hasPendingEntries(curTime, false);
-                            cctx.ttl().hasPendingEntries(curTime, true);
-                        });
-
                     long partMetaId = pageMem.partitionMetaPageId(grpId, partId);
                     long partMetaPage = pageMem.acquirePage(grpId, partMetaId);
 
@@ -3278,10 +3270,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     int cleared = 0;
 
                     do {
-                        PendingRow row = cur.get();
-
                         if (amount != -1 && cleared >= amount)
                             return cleared;
+
+                        PendingRow row = cur.get();
 
                         assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone : row;
 

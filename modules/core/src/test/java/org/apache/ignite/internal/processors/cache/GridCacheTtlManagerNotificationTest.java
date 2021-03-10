@@ -31,6 +31,8 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
+import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -149,15 +151,11 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
 
             GridTestUtils.runMultiThreadedAsync(
                 new CacheFiller(cache, 100_000, barrier, keysRangeGen, cnt),
-                threadCnt, "");
+                threadCnt, "put-thread");
 
             GridTestUtils.runMultiThreadedAsync(
                 new CacheFiller(cache, smallDuration, barrier, keysRangeGen, cnt),
-                threadCnt, "");
-
-            barrier.await();
-
-            Thread.sleep(1_000); // Cleaner should see at least one entry.
+                threadCnt, "ttl-put-thread");
 
             barrier.await();
 
@@ -218,10 +216,6 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
 
             barrier.await();
 
-            Thread.sleep(1_000);
-
-            barrier.await();
-
             for (int i = 0; i < cacheCnt; i++)
                 assertEquals("Unexpected size of " + CACHE_PREFIX + i, 2 * threadCnt * cnt, caches.get(i).size());
 
@@ -270,7 +264,7 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
         /** {@inheritDoc} */
         @Override public void run() {
             try {
-                barrier.await();
+                //barrier.await();
 
                 ExpiryPolicy plc1 = new CreatedExpiryPolicy(new Duration(MILLISECONDS, expirationDuration));
 

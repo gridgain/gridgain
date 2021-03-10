@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -28,7 +29,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
-import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.X;
@@ -46,7 +46,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * if there is nothing to clean yet.
      */
     private final long unwindThrottlingTimeout = Long.getLong(
-        IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
+        IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 1500L);
 
     /** Each cache operation removes this amount of entries with expired TTL. */
     private final int ttlBatchSize = IgniteSystemProperties.getInteger(
@@ -55,17 +55,29 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     /** Entries pending removal. This collection tracks entries for near cache only. */
     private GridConcurrentSkipListSetEx pendingEntries;
 
-    /** */
-    protected GridAtomicLong nextTTLEvictTs = new GridAtomicLong();
+    /** Timestamp when next expired rows clean try will be allowed. Used for throttling on per-cache basis. */
+    protected volatile long nextCleanRowsTime;
+
+    /** Timestamp when next tombstones clean try will be allowed. Used for throttling on per-cache basis. */
+    protected volatile long nextCleanTombstonesTime;
 
     /** */
-    protected GridAtomicLong nextTombstoneEvictTs = new GridAtomicLong();
+    protected final AtomicLong nextTTLEvictTs = new AtomicLong();
+
+    /** */
+    protected final AtomicLong nextTombstoneEvictTs = new AtomicLong();
 
     /** */
     private GridCacheContext dhtCtx;
 
     /** */
-    private ReentrantReadWriteLock topChangeGuard = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock topChangeGuard = new ReentrantReadWriteLock();
+
+    /** */
+    private volatile boolean hasRowsToEvict;
+
+    /** */
+    private volatile boolean hasTombstonesToEvict;
 
     /** */
     private final IgniteClosure2X<GridCacheEntryEx, Long, Boolean> expireC =
@@ -158,22 +170,41 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     }
 
     /**
-     * @param expireTime Expire time.
+     * @param evictFrom Evict from.
+     * @param nextExpireTime Next expire time.
      * @param tombstone {@code True} if added a tombstone.
      */
-    public void hasPendingEntries(long expireTime, boolean tombstone) {
+    public void updatePendingEntries(long evictFrom, long nextExpireTime, boolean tombstone) {
         AtomicLong cntr = tombstone ? nextTombstoneEvictTs : nextTTLEvictTs;
 
-        cntr.compareAndSet(0, expireTime);
+        cntr.compareAndSet(evictFrom, nextExpireTime);
     }
 
     /**
-     * @return {@code true} if the underlying pending tree has entries to process.
+     * @param tombstone {@code True} if a tombstone reset.
      */
-    public boolean hasPendingEntries() {
-        long curTime = U.currentTimeMillis();
+    public void resetPendingEntries(boolean tombstone) {
+        AtomicLong cntr = tombstone ? nextTombstoneEvictTs : nextTTLEvictTs;
 
-        return curTime > nextTTLEvictTs.get() || curTime > nextTombstoneEvictTs.get();
+        cntr.set(0);
+    }
+
+    /**
+     * @return {@code True} if the underlying pending tree has entries to process.
+     * @param tombstone {@code True} is a tombstone check.
+     */
+    public boolean hasPendingEntries(boolean tombstone) {
+        return tombstone ? hasTombstonesToEvict : hasRowsToEvict;
+    }
+
+    /**
+     * @param tombstone Tombstone.
+     */
+    public void setHasPendingEntries(boolean tombstone) {
+        if (tombstone)
+            hasTombstonesToEvict = true;
+        else
+            hasRowsToEvict = true;
     }
 
     /** {@inheritDoc} */
@@ -196,7 +227,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     public boolean expire() {
         return expire(ttlBatchSize);
     }
-
 
     /**
      * Processes specified amount of expired entries.
@@ -242,21 +272,29 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (!cctx.affinityNode())
                 return false;  /* Pending tree never contains entries for that cache */
 
-            long curTime = U.currentTimeMillis();
             long nextTTLEvict = nextTTLEvictTs.get();
             long nextTombstoneEvict = nextTombstoneEvictTs.get();
 
-            boolean hasTtl = cctx.config().isEagerTtl() && nextTTLEvict != 0 && curTime >= nextTTLEvict;
-            boolean hasTs = nextTombstoneEvict != 0 && curTime >= nextTombstoneEvict;
+            boolean hasRows = cctx.config().isEagerTtl() && (nextTTLEvict == 0 || now >= nextTTLEvict);
+            boolean hasTombstones = nextTombstoneEvict == 0 || now >= nextTombstoneEvict;
 
-            if (!hasTtl && !hasTs)
+            if (!hasRows && !hasTombstones)
                 return false;
 
-            if (hasTtl && !cctx.offheap().expireRows(dhtCtx, expireC, amount))
-                nextTTLEvictTs.set(0);
+            if (hasRows && nextCleanRowsTime <= now && hasRowsToEvict)
+                cctx.offheap().expireRows(dhtCtx, expireC, amount, nextTTLEvict);
 
-            if (hasTs && !cctx.offheap().expireTombstones(dhtCtx, expireC, amount))
-                nextTombstoneEvictTs.set(0);
+            if (hasTombstones && nextCleanTombstonesTime <= now && hasTombstonesToEvict)
+                cctx.offheap().expireTombstones(dhtCtx, expireC, amount, nextTombstoneEvict);
+
+            boolean emptyRows = nextTTLEvictTs.get() == 0;
+            boolean emptyTombstones = nextTombstoneEvictTs.get() == 0;
+
+            if (emptyRows && nextCleanRowsTime <= now)
+                nextCleanRowsTime = now + unwindThrottlingTimeout;
+
+            if (emptyTombstones && nextCleanTombstonesTime <= now)
+                nextCleanTombstonesTime = now + unwindThrottlingTimeout;
 
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();
@@ -264,7 +302,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                 return e != null && e.expireTime <= now;
             }
 
-            return nextTTLEvictTs.get() != 0 || nextTombstoneEvictTs.get() != 0;
+            return !(emptyRows && emptyTombstones);
         }
         catch (GridDhtInvalidPartitionException e) {
             if (log.isDebugEnabled())
