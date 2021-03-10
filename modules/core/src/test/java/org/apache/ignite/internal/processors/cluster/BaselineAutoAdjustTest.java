@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -120,7 +120,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Tests that merging exchanges propery triggers base line changing.
+     * Tests that merging exchanges properly triggers baseline changing.
      *
      * @throws Exception If failed.
      */
@@ -147,7 +147,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
                 return null;
             }
-        }, 2, "async-gris-starter");
+        }, 2, "async-grid-starter");
 
         spi1.waitForBlocked();
 
@@ -454,7 +454,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         stopGrid(1);
 
-        ignite0.cluster().setBaselineTopology(Arrays.asList(((IgniteEx)ignite0).localNode()));
+        ignite0.cluster().setBaselineTopology(Collections.singletonList(ignite0.localNode()));
     }
 
     /**
@@ -484,7 +484,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0 = startGrids(2);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         Set<Object> baselineNodesAfterRestart = ignite0.cluster().currentBaselineTopology().stream()
             .map(BaselineNode::consistentId)
