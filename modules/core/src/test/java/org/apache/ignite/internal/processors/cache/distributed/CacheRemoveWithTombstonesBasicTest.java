@@ -102,6 +102,7 @@ import static org.junit.Assume.assumeTrue;
 
 /** */
 @RunWith(Parameterized.class)
+@WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain")
 public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** */
     public static final int PARTS = 64;
@@ -125,9 +126,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         ArrayList<Object[]> params = new ArrayList<>();
 
         params.add(new Object[]{ATOMIC, false});
-        params.add(new Object[]{ATOMIC, true});
-        params.add(new Object[]{TRANSACTIONAL, false});
-        params.add(new Object[]{TRANSACTIONAL, true});
+//        params.add(new Object[]{ATOMIC, true});
+//        params.add(new Object[]{TRANSACTIONAL, false});
+//        params.add(new Object[]{TRANSACTIONAL, true});
 
         return params;
     }
@@ -135,6 +136,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        cfg.setFailureDetectionTimeout(1000000);
+        cfg.setClientFailureDetectionTimeout(1000000);
 
         cfg.setClusterStateOnStart(ClusterState.INACTIVE);
 
@@ -1606,11 +1610,13 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         IgniteEx client = startClientGrid("client");
 
+        final int part = 0;
+
         IgniteCache<Object, Object> cache = client.createCache(cacheCfg);
         CacheGroupContext grpCtx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
         GridCacheTtlManager ttl = grpCtx0.singleCacheContext().ttl();
-
-        int part = 0;
+        PendingEntriesTree tree =
+            crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part).dataStore().pendingTree();
 
         List<Integer> keys = partitionKeys(cache, part, 20, 0);
 
@@ -1619,15 +1625,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         // 12 tombstones, 8 expired rows.
         keys.subList(0, 12).forEach(cache::remove);
 
-        // This call should do nothing.
-        assertFalse(ttl.expire(1));
+        assertTrue("Expecting unprocessed entries", ttl.expire(1));
 
         doSleep(2000);
 
         long now = U.currentTimeMillis();
-
-        PendingEntriesTree tree =
-            crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part).dataStore().pendingTree();
 
         assertEquals(keys.size(), tree.size());
 
@@ -1662,6 +1664,49 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertTrue(nextTombstoneEvictTs.get() == 0);
 
         assertFalse(ttl.expire(1));
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable async clearing.
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable sync eviction by unwindEvicts.
+    public void testTtlRowsDescendingOrder() throws Exception {
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode).setEagerTtl(true);
+
+        IgniteEx client = startClientGrid("client");
+
+        IgniteCache<Object, Object> cache = client.createCache(cacheCfg);
+        CacheGroupContext grpCtx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+
+        GridCacheTtlManager ttl = grpCtx0.singleCacheContext().ttl();
+
+        int part = 0;
+
+        PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
+
+        List<Integer> keys = partitionKeys(cache, part, 20, 0);
+
+        Integer k0 = keys.get(0);
+        Integer k1 = keys.get(1);
+
+        cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 1000000))).put(k0, 0);
+
+        cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))).put(k1, 1);
+
+        doSleep(600);
+
+        assertEquals(2, t0.size());
+
+        ttl.expire(2);
+
+        assertEquals(1, t0.size());
+
+        ttl.expire(2);
+
+        assertEquals(1, cache.size());
     }
 
     /**
