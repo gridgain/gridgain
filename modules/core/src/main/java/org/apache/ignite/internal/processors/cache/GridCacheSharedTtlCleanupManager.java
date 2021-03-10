@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -101,6 +102,13 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                 if (oldVal == null && newVal == null)
                     return;
 
+                // Force expiration attempt.
+                cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
+                    @Override public void run() {
+                        mgrs.values().forEach(GridCacheTtlManager::resetPendingEntries);
+                    }
+                });
+
                 U.log(log, "Tombstones limit has been updated [oldVal=" + oldVal + ", newVal=" + newVal + ']');
             });
 
@@ -111,6 +119,13 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
             tsTtl.addListener((name, oldVal, newVal) -> {
                 if (oldVal == null && newVal == null)
                     return;
+
+                // Force expiration attempt.
+                cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
+                    @Override public void run() {
+                        mgrs.values().forEach(GridCacheTtlManager::resetPendingEntries);
+                    }
+                });
 
                 U.log(log, "Tombstones time to live has been updated [oldVal=" + oldVal + ", newVal=" + newVal + ']');
             });
