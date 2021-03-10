@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.expiry.Duration;
@@ -126,9 +125,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         ArrayList<Object[]> params = new ArrayList<>();
 
         params.add(new Object[]{ATOMIC, false});
-//        params.add(new Object[]{ATOMIC, true});
-//        params.add(new Object[]{TRANSACTIONAL, false});
-//        params.add(new Object[]{TRANSACTIONAL, true});
+        params.add(new Object[]{ATOMIC, true});
+        params.add(new Object[]{TRANSACTIONAL, false});
+        params.add(new Object[]{TRANSACTIONAL, true});
 
         return params;
     }
@@ -136,9 +135,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
-
-        cfg.setFailureDetectionTimeout(1000000);
-        cfg.setClientFailureDetectionTimeout(1000000);
 
         cfg.setClusterStateOnStart(ClusterState.INACTIVE);
 
@@ -1601,6 +1597,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "1500") // Reduce tombstone TTL
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable async clearing.
     @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable sync eviction by unwindEvicts.
+    // @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
     public void testCleanupBothTtlAndTombstones() throws Exception {
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);
@@ -1615,53 +1612,46 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         IgniteCache<Object, Object> cache = client.createCache(cacheCfg);
         CacheGroupContext grpCtx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
         GridCacheTtlManager ttl = grpCtx0.singleCacheContext().ttl();
-        PendingEntriesTree tree =
-            crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part).dataStore().pendingTree();
 
         List<Integer> keys = partitionKeys(cache, part, 20, 0);
 
         keys.forEach(k -> cache.put(k, 0));
 
+        PendingEntriesTree tree =
+            crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part).dataStore().pendingTree();
+
         // 12 tombstones, 8 expired rows.
         keys.subList(0, 12).forEach(cache::remove);
 
-        assertTrue("Expecting unprocessed entries", ttl.expire(1));
+        assertFalse("Expecting unprocessed entries", ttl.expire(1));
+
+        long nextCleanRowsTime = U.field(ttl, "nextCleanRowsTime");
+        long nextCleanTombstonesTime = U.field(ttl, "nextCleanTombstonesTime");
+
+        // Check throttling.
+        assertTrue(nextCleanRowsTime > U.currentTimeMillis());
+        assertTrue(nextCleanTombstonesTime > U.currentTimeMillis());
 
         doSleep(2000);
 
-        long now = U.currentTimeMillis();
-
         assertEquals(keys.size(), tree.size());
-
-        AtomicLong nextTTLEvictTs = U.field(ttl, "nextTTLEvictTs");
-        AtomicLong nextTombstoneEvictTs = U.field(ttl, "nextTombstoneEvictTs");
-
-        assertTrue(nextTTLEvictTs.get() < now);
-        assertTrue(nextTombstoneEvictTs.get() < now);
 
         assertTrue(ttl.expire(4));
 
         // 8 tombstones, 4 expired rows remaining.
         assertEquals(keys.size() - 8, tree.size());
-        assertTrue(nextTTLEvictTs.get() != 0);
-        assertTrue(nextTombstoneEvictTs.get() != 0);
 
         assertTrue(ttl.expire(5));
 
         // 3 tombstones, 0 expired rows remaining.
         assertEquals(keys.size() - 8 - 9, tree.size());
-        assertTrue(nextTTLEvictTs.get() == 0);
-        assertTrue(nextTombstoneEvictTs.get() != 0);
 
         assertTrue(ttl.expire(2));
 
         // 1 tombstone remaining
-        assertTrue(nextTombstoneEvictTs.get() != 0);
-
         assertFalse(ttl.expire(2));
 
-        assertTrue(nextTTLEvictTs.get() == 0);
-        assertTrue(nextTombstoneEvictTs.get() == 0);
+        assertEquals(0, tree.size());
 
         assertFalse(ttl.expire(1));
     }
@@ -1685,9 +1675,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         int part = 0;
 
-        PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
-
-        List<Integer> keys = partitionKeys(cache, part, 20, 0);
+        List<Integer> keys = partitionKeys(cache, part, 2, 0);
 
         Integer k0 = keys.get(0);
         Integer k1 = keys.get(1);
@@ -1695,6 +1683,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 1000000))).put(k0, 0);
 
         cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))).put(k1, 1);
+
+        PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
 
         doSleep(600);
 

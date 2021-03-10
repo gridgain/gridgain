@@ -1371,27 +1371,20 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     @Override public boolean expireRows(
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-        int amount,
-        long lowerBound
+        int amount
     ) throws IgniteCheckedException {
         assert !cctx.isNear() : cctx.name();
 
         assert pendingEntries != null;
 
-        boolean ret = expireInternal(cctx, c, amount, false, lowerBound, U.currentTimeMillis());
-
-        if (!ret)
-            cctx.ttl().resetPendingEntries(false);
-
-        return ret;
+        return expireInternal(cctx, c, amount, false, U.currentTimeMillis());
     }
 
     /** {@inheritDoc} */
     @Override public boolean expireTombstones(
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-        int amount,
-        long lowerBound
+        int amount
     ) throws IgniteCheckedException {
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
@@ -1416,12 +1409,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         // Tombstones for volatile cache group are always cleared.
         //return expireInternal(cctx, c, amount, true, now);
 
-        boolean ret = expireInternal(cctx, c, amount, true, lowerBound, now);
-
-        if (!ret)
-            cctx.ttl().resetPendingEntries(true);
-
-        return ret;
+        return expireInternal(cctx, c, amount, true, now);
     }
 
     /**
@@ -1430,7 +1418,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
      * @param tombstone {@code True} to clear tombstone.
      * @param upper Upper bound.
-     * @param lower Lower bound.
      * @return {@code True} if has unprocessed entries.
      * @throws IgniteCheckedException If failed.
      */
@@ -1439,7 +1426,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount,
         boolean tombstone,
-        long lower,
         long upper
     ) throws IgniteCheckedException {
         GridCursor<PendingRow> cur;
@@ -1450,7 +1436,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             cur = pendingEntries.find(new PendingRow(cacheId, tombstone, 0, 0),
-                new PendingRow(cacheId, tombstone, Long.MAX_VALUE, 0));
+                new PendingRow(cacheId, tombstone, upper, 0));
 
             if (!cur.next())
                 return false;
@@ -1466,13 +1452,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                         return true;
 
                     PendingRow row = cur.get();
-
-                    if (row.expireTime > upper) {
-                        // Accumulate more rows for processing. // TODO get rid of 500.
-                        cctx.ttl().updatePendingEntries(lower, row.expireTime + 500, tombstone);
-
-                        return true;
-                    }
 
                     if (row.key.partition() == -1)
                         row.key.partition(cctx.affinity().partition(row.key));
@@ -1499,8 +1478,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                         ", remaining=" + pendingEntries.size() + ", tombstone=" + tombstone +
                         ", grp=" + grp.cacheOrGroupName() + ", cacheId=" + cacheId + ']');
                 }
-
-                cctx.ttl().updatePendingEntries(lower, 0, tombstone);
 
                 return false;
             }
