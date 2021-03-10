@@ -2463,7 +2463,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         cctx.walState().runWithOutWAL(() -> {
             if (it != null)
-                applyUpdates(it, stopPred, entryPred, false, null, false);
+                applyUpdates(it, stopPred, entryPred, true, null, false);
         });
     }
 
