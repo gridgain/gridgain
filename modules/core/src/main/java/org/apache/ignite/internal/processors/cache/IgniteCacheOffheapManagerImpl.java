@@ -1731,24 +1731,24 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void updateSize(int cacheId, long delta, KeyCacheObject key) {
-//            try {
-//                sleep(30);
-//            }
-//            catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
+            try {
+                sleep(70);
+            }
+            catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             if (delta < 0)
-                System.out.println("qdrdsfsdf " + delta);
+                System.out.println("qdrdsfsdf delta " + delta);
             if (delta > 0)
-                System.out.println("qfsvfrsd " + delta);
+                System.out.println("qfsvfrsd delta " + delta);
             if (delta == 0)
-                System.out.println("qfsrbxdg " + delta);
+                System.out.println("qfsrbxdg delta " + delta);
             System.out.println("qdrvgdrfa updateSize key before synchronized: " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
 
             reconciliationCtx.lock.readLock().lock();
 
             try /*synchronized (reconciliationCtx.reconciliationMux())*/ {
-                System.out.println("qsddcvasda " + Thread.currentThread().getName());
+                System.out.println("qsddcvasda Thread " + Thread.currentThread().getName());
                 System.out.println("qdrvgdrfa updateSize key before isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
                 if (reconciliationCtx.isReconciliationInProgress()) {
 
@@ -1767,8 +1767,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //                            e.printStackTrace();
 //                        }
 //                    }
-                    if ((reconciliationCtx.firstKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.firstKey(cacheId)) < 0)/* || (reconciliationCtx.firstKey(cacheId) == null && (reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))*/) {
-
+                    if ((reconciliationCtx.firstKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.firstKey(cacheId)) < 0)/* || (reconciliationCtx.firstKey(cacheId) == null && (reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))*/) {
+// если проверка на "!= null &&", то одни ошибки
+// если проверка на "== null ||", то другие ошибки
 //                        if (!(reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) < 0) && (reconciliationCtx.keysToCheck.containsKey(cacheId) && !reconciliationCtx.keysToCheck.get(cacheId).contains(key))) {
 //                            System.out.println();
 //                        }

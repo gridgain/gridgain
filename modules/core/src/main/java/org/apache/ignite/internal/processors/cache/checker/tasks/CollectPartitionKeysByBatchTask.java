@@ -492,7 +492,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                    System.out.println("qfvndrfg");
 
                     try {
-                        sleep(2);
+                        sleep(100);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();
