@@ -247,17 +247,15 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             boolean hasRows = false;
             boolean hasTombstones = false;
 
-            if (cctx.config().isEagerTtl() && nextCleanRowsTime <= now && hasRowsToEvict)
-                hasRows = cctx.offheap().expireRows(dhtCtx, expireC, amount);
+            if (cctx.config().isEagerTtl() && nextCleanRowsTime <= now && hasRowsToEvict) {
+                if (!(hasRows = cctx.offheap().expireRows(dhtCtx, expireC, amount)))
+                    nextCleanRowsTime = now + unwindThrottlingTimeout;
+            }
 
-            if (nextCleanTombstonesTime <= now && hasTombstonesToEvict)
-                hasTombstones = cctx.offheap().expireTombstones(dhtCtx, expireC, amount);
-
-            if (!hasRows)
-                nextCleanRowsTime = now + unwindThrottlingTimeout;
-
-            if (!hasTombstones)
-                nextCleanTombstonesTime = now + unwindThrottlingTimeout;
+            if (nextCleanTombstonesTime <= now && hasTombstonesToEvict) {
+                if (!(hasTombstones = cctx.offheap().expireTombstones(dhtCtx, expireC, amount)))
+                    nextCleanTombstonesTime = now + unwindThrottlingTimeout;
+            }
 
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();
