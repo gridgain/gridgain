@@ -102,12 +102,8 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                 if (oldVal == null && newVal == null)
                     return;
 
-                // Force expiration attempt.
-                cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
-                    @Override public void run() {
-                        mgrs.values().forEach(GridCacheTtlManager::resetPendingEntries);
-                    }
-                });
+                // Forces expiration attempt.
+                mgrs.values().forEach(GridCacheTtlManager::resetPendingEntries);
 
                 U.log(log, "Tombstones limit has been updated [oldVal=" + oldVal + ", newVal=" + newVal + ']');
             });
@@ -120,12 +116,8 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                 if (oldVal == null && newVal == null)
                     return;
 
-                // Force expiration attempt.
-                cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
-                    @Override public void run() {
-                        mgrs.values().forEach(GridCacheTtlManager::resetPendingEntries);
-                    }
-                });
+                // Forces expiration attempt.
+                mgrs.values().forEach(GridCacheTtlManager::resetPendingEntries);
 
                 U.log(log, "Tombstones time to live has been updated [oldVal=" + oldVal + ", newVal=" + newVal + ']');
             });
