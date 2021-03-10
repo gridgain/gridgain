@@ -3875,8 +3875,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             CacheObject expiredVal = this.val;
 
-            log.info("DBG: expired " + key() + " ts=" + deleted());
-
             if (markObsolete0(obsoleteVer, true, null))
                 obsolete = true;
 
