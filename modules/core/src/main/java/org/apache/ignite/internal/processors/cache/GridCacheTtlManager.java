@@ -44,7 +44,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * if there is nothing to clean yet.
      */
     private final long unwindThrottlingTimeout = Long.getLong(
-        IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 1500L);
+        IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
 
     /** Each cache operation removes this amount of entries with expired TTL. */
     private final int ttlBatchSize = IgniteSystemProperties.getInteger(
