@@ -189,6 +189,12 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
         cntr.set(0);
     }
 
+    /** */
+    public void resetPendingEntries() {
+        nextTTLEvictTs.set(0);
+        nextTombstoneEvictTs.set(0);
+    }
+
     /**
      * @return {@code True} if the underlying pending tree has entries to process.
      * @param tombstone {@code True} is a tombstone check.
