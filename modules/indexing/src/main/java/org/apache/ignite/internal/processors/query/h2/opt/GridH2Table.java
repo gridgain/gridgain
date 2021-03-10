@@ -806,7 +806,7 @@ public class GridH2Table extends TableBase {
             }
         }
         finally {
-            updateStat(row0, prevRow0);
+            updateStatistics(row0, prevRow0);
 
             row0.clearValuesCache();
 
@@ -859,7 +859,7 @@ public class GridH2Table extends TableBase {
             unlock(false);
         }
 
-        updateStat(row0.key());
+        updateStatistics(row0.key());
 
         return res;
     }
@@ -1365,11 +1365,11 @@ public class GridH2Table extends TableBase {
      * @param row New row value.
      * @param prevRow Previous row value (if exists).
      */
-    private void updateStat(CacheDataRow row, @Nullable CacheDataRow prevRow) {
+    private void updateStatistics(CacheDataRow row, @Nullable CacheDataRow prevRow) {
         if (prevRow != null)
-            updateStat(prevRow.key());
+            updateStatistics(prevRow.key());
         else if (row != null)
-            updateStat(row.key());
+            updateStatistics(row.key());
     }
 
     /**
@@ -1377,7 +1377,7 @@ public class GridH2Table extends TableBase {
      *
      * @param key Updated key.
      */
-    private void updateStat(KeyCacheObject key) {
+    private void updateStatistics(KeyCacheObject key) {
         GridCacheContext cacheCtx = cacheInfo.cacheContext();
         if (cacheCtx == null)
             return;

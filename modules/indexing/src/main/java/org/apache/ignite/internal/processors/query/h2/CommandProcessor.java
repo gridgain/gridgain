@@ -34,6 +34,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
@@ -513,9 +515,13 @@ public class CommandProcessor {
 
         IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
 
-        StatisticsTarget[] targets = cmd.targets().stream()
-            .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
-            .toArray(StatisticsTarget[]::new);
+        Map<StatisticsTarget, Map<String, String>> targets = cmd.targetsMap().entrySet().stream().collect(
+            Collectors.toMap(e -> {
+                StatisticsTarget target = e.getKey();
+                String schema = (target.schema() == null) ? cmd.schemaName() : target.schema();
+                return new StatisticsTarget(schema, target.obj());
+                },
+                e -> e.getValue()));
 
         statMgr.collectStatistics(targets);
     }

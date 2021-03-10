@@ -127,7 +127,6 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
         return STAT_DATA_PREFIX + META_SEPARATOR + key.schema() + META_SEPARATOR + key.obj() + META_SEPARATOR;
     }
 
-
     /**
      * Get statistics key from obsolescence metastore path.
      *

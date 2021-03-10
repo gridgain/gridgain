@@ -46,16 +46,27 @@ public class StatisticsObjectConfiguration implements Serializable {
     @GridToStringInclude
     private final Map<String, StatisticsColumnConfiguration> cols;
 
-    /** */
+    /** Max percent of obsolescence row. */
+    private final byte maxPartitionObsolescencePercent;
+
+    /**
+     * Constructor.
+     *
+     * @param key Statistics key.
+     * @param cols Column statistics configuration.
+     * @param maxPartitionObsolescencePercent Maximum number of changed rows per partition.
+     */
     public StatisticsObjectConfiguration(
         StatisticsKey key,
-        Collection<StatisticsColumnConfiguration> cols
+        Collection<StatisticsColumnConfiguration> cols,
+        byte maxPartitionObsolescencePercent
     ) {
         this.key = key;
         this.cols = cols.stream()
             .collect(
                 Collectors.toMap(StatisticsColumnConfiguration::name, Function.identity())
             );
+        this.maxPartitionObsolescencePercent = maxPartitionObsolescencePercent;
     }
 
     /**
@@ -77,7 +88,7 @@ public class StatisticsObjectConfiguration implements Serializable {
         for (StatisticsColumnConfiguration c : newCfg.cols.values())
             cols.put(c.name(), StatisticsColumnConfiguration.merge(cols.get(c.name()), c));
 
-        return new StatisticsObjectConfiguration(newCfg.key, cols.values());
+        return new StatisticsObjectConfiguration(newCfg.key, cols.values(), newCfg.maxPartitionObsolescencePercent);
     }
 
     /**
@@ -97,7 +108,7 @@ public class StatisticsObjectConfiguration implements Serializable {
                 newCols.put(col.name(), col);
         }
 
-        return new StatisticsObjectConfiguration(key, newCols.values());
+        return new StatisticsObjectConfiguration(key, newCols.values(), maxPartitionObsolescencePercent);
     }
 
     /**
@@ -115,7 +126,7 @@ public class StatisticsObjectConfiguration implements Serializable {
                 newCols.put(col.name(), col);
         }
 
-        return new StatisticsObjectConfiguration(key, newCols.values());
+        return new StatisticsObjectConfiguration(key, newCols.values(), maxPartitionObsolescencePercent);
     }
 
     /**
@@ -175,6 +186,13 @@ public class StatisticsObjectConfiguration implements Serializable {
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
+    /**
+     * @return Maximum number of changed rows per partition.
+     */
+    public byte maxPartitionObsolescencePercent() {
+        return maxPartitionObsolescencePercent;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o)
@@ -186,12 +204,13 @@ public class StatisticsObjectConfiguration implements Serializable {
         StatisticsObjectConfiguration that = (StatisticsObjectConfiguration)o;
 
         return Objects.equals(key, that.key)
-            && Objects.equals(cols, that.cols);
+            && Objects.equals(cols, that.cols)
+            && maxPartitionObsolescencePercent == that.maxPartitionObsolescencePercent;
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(key, cols);
+        return Objects.hash(key, cols, maxPartitionObsolescencePercent);
     }
 
     /** {@inheritDoc} */

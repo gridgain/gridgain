@@ -374,9 +374,13 @@ public class IgniteStatisticsRepository {
     public void loadObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
         Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence = store.loadAllObsolescence();
 
-        obsolescence.forEach((k, v) -> statObs.put(k, v));
+        Map<StatisticsKey, Set<Integer>> deleted = updateObsolescenceInfo(obsolescence, cfg);
 
-        updateObsolescenceInfo(cfg);
+        statObs.putAll(obsolescence);
+
+        for (Map.Entry<StatisticsKey, Set<Integer>> objDeleted : deleted.entrySet())
+            store.clearObsolescenceInfo(objDeleted.getKey(), objDeleted.getValue());
+
     }
 
     /**
@@ -475,23 +479,29 @@ public class IgniteStatisticsRepository {
     /**
      * Save all modified obsolescence info to local metastorage.
      *
-     * @return Map of modified partitions.
+     * @return Map with all partitions of objects with dirty partitions.
      */
-    public Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> saveObsolescenceInfo() {
+    public synchronized Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> saveObsolescenceInfo() {
         Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> dirtyObs = new HashMap<>();
 
+        boolean hasDirty[] = new boolean[1];
         for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> objObs : statObs.entrySet()) {
-            IntMap<ObjectPartitionStatisticsObsolescence> objDirtyObs = new IntHashMap<>();
+            hasDirty[0] = false;
 
             objObs.getValue().forEach((k,v) -> {
                 if (v.dirty()) {
                     v.dirty(false);
-                    objDirtyObs.put(k, v);
+                    hasDirty[0] = true;
                 }
             });
 
-            if (!objDirtyObs.isEmpty())
+            if (hasDirty[0]) {
+                IntMap<ObjectPartitionStatisticsObsolescence> objDirtyObs = new IntHashMap<>();
+
+                objObs.getValue().forEach((k,v) -> objDirtyObs.put(k, v));
+
                 dirtyObs.put(objObs.getKey(), objDirtyObs);
+            }
         }
 
         store.saveObsolescenceInfo(dirtyObs);

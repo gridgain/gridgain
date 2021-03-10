@@ -104,6 +104,7 @@ public class IgniteStatisticsConfigurationManager {
             distrMetaStorage.listen(
                 (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
                 (k, oldV, newV) -> {
+
                     // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
                     // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
                     // called on exchange done.
@@ -217,6 +218,8 @@ public class IgniteStatisticsConfigurationManager {
         this.gatherer = gatherer;
         this.subscriptionProcessor = subscriptionProcessor;
         this.exchange = exchange;
+
+        subscriptionProcessor.registerDistributedMetastorageListener(distrMetaStoreLsnr);
     }
 
     /**
@@ -225,8 +228,6 @@ public class IgniteStatisticsConfigurationManager {
     public void start() {
         if (log.isTraceEnabled())
             log.trace("Statistics configuration manager starting...");
-
-        subscriptionProcessor.registerDistributedMetastorageListener(distrMetaStoreLsnr);
 
         exchange.registerExchangeAwareComponent(exchAwareLsnr);
 
@@ -244,7 +245,6 @@ public class IgniteStatisticsConfigurationManager {
         if (log.isTraceEnabled())
             log.trace("Statistics configuration manager stopping...");
 
-        subscriptionProcessor.unregisterDistributedMetastorageListener(distrMetaStoreLsnr);
         exchange.unregisterExchangeAwareComponent(exchAwareLsnr);
 
         schemaMgr.unregisterDropColumnsListener(dropColsLsnr);
@@ -282,25 +282,11 @@ public class IgniteStatisticsConfigurationManager {
      *
      * @param targets DB objects to statistics update.
      */
-    public void updateStatistics(List<StatisticsTarget> targets) {
+    public void updateStatistics(StatisticsObjectConfiguration... targets) {
         if (log.isDebugEnabled())
             log.debug("Update statistics [targets=" + targets + ']');
 
-        for (StatisticsTarget target : targets) {
-            GridH2Table tbl = schemaMgr.dataTable(target.schema(), target.obj());
-
-            validate(target, tbl);
-
-            Column[] cols = IgniteStatisticsHelper.filterColumns(
-                tbl.getColumns(),
-                target.columns() != null ? Arrays.asList(target.columns()) : Collections.emptyList());
-
-            List<StatisticsColumnConfiguration> colCfgs = Arrays.stream(cols)
-                .map(c -> new StatisticsColumnConfiguration(c.getName()))
-                .collect(Collectors.toList());
-
-            StatisticsObjectConfiguration newCfg = new StatisticsObjectConfiguration(target.key(), colCfgs);
-
+        for (StatisticsObjectConfiguration target : targets) {
             try {
                 while (true) {
                     String key = key2String(target.key());
@@ -308,9 +294,9 @@ public class IgniteStatisticsConfigurationManager {
                     StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
 
                     if (oldCfg != null)
-                        newCfg = StatisticsObjectConfiguration.merge(oldCfg, newCfg);
+                        target = StatisticsObjectConfiguration.merge(oldCfg, target);
 
-                    if (distrMetaStorage.compareAndSet(key, oldCfg, newCfg))
+                    if (distrMetaStorage.compareAndSet(key, oldCfg, target))
                         break;
                 }
             }
@@ -416,32 +402,6 @@ public class IgniteStatisticsConfigurationManager {
             catch (IgniteCheckedException ex) {
                 throw new IgniteSQLException(
                     "Error on get or update statistic schema", IgniteQueryErrorCode.UNKNOWN, ex);
-            }
-        }
-    }
-
-    /**
-     * Validate target against existing table.
-     *
-     * @param target Statistics target to validate.
-     * @param tbl Table.
-     */
-    private void validate(StatisticsTarget target, GridH2Table tbl) {
-        if (tbl == null) {
-            throw new IgniteSQLException(
-                "Table doesn't exist [schema=" + target.schema() + ", table=" + target.obj() + ']',
-                IgniteQueryErrorCode.TABLE_NOT_FOUND);
-        }
-
-        if (!F.isEmpty(target.columns())) {
-            for (String col : target.columns()) {
-                if (!tbl.doesColumnExist(col)) {
-                    throw new IgniteSQLException(
-                        "Column doesn't exist [schema=" + target.schema() +
-                            ", table=" + target.obj() +
-                            ", column=" + col + ']',
-                        IgniteQueryErrorCode.COLUMN_NOT_FOUND);
-                }
             }
         }
     }

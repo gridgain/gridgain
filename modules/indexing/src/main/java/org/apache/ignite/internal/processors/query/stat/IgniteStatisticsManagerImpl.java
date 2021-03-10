@@ -17,12 +17,14 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -35,13 +37,19 @@ import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedEnumProperty;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.gridgain.internal.h2.table.Column;
+
+import javax.xml.soap.SOAPConnection;
 
 import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.NO_UPDATE;
 import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.OFF;
@@ -51,6 +59,9 @@ import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageSt
  * Statistics manager implementation.
  */
 public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
+    /** OBSOLESCENCE_MAP_PERCENT parameter name. */
+    public static final String MAX_CHANGED_PARTITION_ROWS_PERCENT = "MAX_CHANGED_PARTITION_ROWS_PERCENT";
+
     /** Size of statistics collection pool. */
     private static final int STATS_POOL_SIZE = 4;
 
@@ -58,10 +69,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     private static final StatisticsUsageState DEFAULT_STATISTICS_USAGE_STATE = ON;
 
     /** Interval to check statistics obsolescence in seconds. */
-    private static final int OBSOLESCENSE_INTERVAL = 6;
+    private static final int OBSOLESCENCE_INTERVAL = 6;
 
     /** Rows limit to renew partition statistics in percent. */
-    private static final int OBSOLESCENSE_MAX_PERCENT = 15;
+    private static final byte OBSOLESCENCE_MAX_PERCENT = 15;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -193,10 +204,14 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
                 if (log.isTraceEnabled())
                     log.trace("Processing statistics obsolescence...");
 
-                processObsolescence();
+                try {
+                    processObsolescence();
+                } catch (Throwable e) {
+                    log.warning("Error while processing statistics obsolescence", e);
+                }
             }
 
-        }, OBSOLESCENSE_INTERVAL, OBSOLESCENSE_INTERVAL);
+        }, OBSOLESCENCE_INTERVAL, OBSOLESCENCE_INTERVAL);
 
     }
 
@@ -233,13 +248,72 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /** {@inheritDoc} */
-    @Override public void collectStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
+    @Override public void collectStatistics(Map<StatisticsTarget, Map<String, String>> targets) throws IgniteCheckedException {
         checkStatisticsSupport("collect statistics");
+        StatisticsObjectConfiguration targetsCfg[] = targets.entrySet().stream().map(e -> {
+            StatisticsKey key = new StatisticsKey(e.getKey().schema(), e.getKey().obj());
+
+            GridH2Table tbl = schemaMgr.dataTable(key.schema(), key.obj());
+
+            validate(e.getKey(), tbl);
+
+            Column[] cols = IgniteStatisticsHelper.filterColumns(
+                tbl.getColumns(),
+                e.getKey().columns() != null ? Arrays.asList(e.getKey().columns()) : Collections.emptyList());
+            List<StatisticsColumnConfiguration> colCfgs = Arrays.stream(cols)
+                .map(c -> new StatisticsColumnConfiguration(c.getName()))
+                .collect(Collectors.toList());
+
+            byte maxObsolescenceRow = getByteOrDefault(e.getValue(), MAX_CHANGED_PARTITION_ROWS_PERCENT,
+                OBSOLESCENCE_MAX_PERCENT);
+
+            return new StatisticsObjectConfiguration(key, colCfgs, maxObsolescenceRow);
+        }).toArray(StatisticsObjectConfiguration[]::new);
 
         if (usageState() == OFF)
             throw new IgniteException("Can't gather statistics while statistics usage state is OFF.");
 
-        statCfgMgr.updateStatistics(Arrays.asList(targets));
+        statCfgMgr.updateStatistics(targetsCfg);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void collectStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
+        Map<StatisticsTarget, Map<String, String>> targetsMap = Arrays.stream(targets)
+            .collect(Collectors.toMap(t -> t, t -> Collections.emptyMap()));
+
+        collectStatistics(targetsMap);
+    }
+
+    private static byte getByteOrDefault(Map<String,String> map, String key, byte defaultValue) {
+        String value = map.get(key);
+        return (value==null) ? defaultValue : Byte.valueOf(value);
+    }
+
+    /**
+     * Validate target against existing table.
+     *
+     * @param target Statistics target to validate.
+     * @param tbl Table.
+     */
+    private void validate(StatisticsTarget target, GridH2Table tbl) {
+        StatisticsKey key = target.key();
+        if (tbl == null) {
+            throw new IgniteSQLException(
+                "Table doesn't exist [schema=" + key.schema() + ", table=" + key.obj() + ']',
+                IgniteQueryErrorCode.TABLE_NOT_FOUND);
+        }
+
+        if (!F.isEmpty(target.columns())) {
+            for (String col : target.columns()) {
+                if (!tbl.doesColumnExist(col)) {
+                    throw new IgniteSQLException(
+                        "Column doesn't exist [schema=" + key.schema() +
+                            ", table=" + key.obj() +
+                            ", column=" + col + ']',
+                        IgniteQueryErrorCode.COLUMN_NOT_FOUND);
+                }
+            }
+        }
     }
 
     /** {@inheritDoc} */
@@ -324,7 +398,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     /**
      * Save dirty obsolescence info to local metastore. Check if statistics need to be refreshed and schedule it.
      */
-    private synchronized void processObsolescence() {
+    public synchronized void processObsolescence() {
         Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> dirty = statsRepos.saveObsolescenceInfo();
 
         Map<StatisticsKey, List<Integer>> tasks = calculateObsolescenceRefreshTasks(dirty);
@@ -382,10 +456,11 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             StatisticsKey key = objObs.getKey();
             List<Integer> taskParts = new ArrayList<>();
 
-            objObs.getValue().forEach((k,v) -> {;
+            objObs.getValue().forEach((k,v) -> {
                 ObjectPartitionStatisticsImpl partStat = statsRepos.getLocalPartitionStatistics(key, k);
+
                 if (partStat == null || partStat.rowCount() == 0 ||
-                    (double)v.modified() * 100 / partStat.rowCount() > OBSOLESCENSE_MAX_PERCENT)
+                    (double)v.modified() * 100 / partStat.rowCount() > OBSOLESCENCE_MAX_PERCENT)
                     taskParts.add(k);
             });
 

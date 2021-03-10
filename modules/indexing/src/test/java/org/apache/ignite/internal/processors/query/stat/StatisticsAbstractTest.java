@@ -212,6 +212,17 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Process obsolescence on given grid.
+     *
+     * @param grid Grid to process obsolescence on.
+     */
+    private void processObsolescence(IgniteEx grid) {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl) grid.context().query().getIndexing()
+            .statsManager();
+        statMgr.processObsolescence();
+    }
+
+    /**
      * Extracts actual scanned rows count from EXPLAIN ANALYZE result.
      *
      * @param res EXPLAIN ANALYZE result.
