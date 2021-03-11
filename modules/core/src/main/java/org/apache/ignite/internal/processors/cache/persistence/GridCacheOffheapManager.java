@@ -76,6 +76,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIterator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIteratorException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -1344,12 +1345,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
         // This will allow offline node to join faster using fast full rebalancing.
+        GridDhtPartitionsExchangeFuture fut = ctx.exchange().lastTopologyFuture();
+
         if (tsCnt <= tsLimit &&
             (!discoCache.fullBaseline() ||
-                !ctx.exchange().lastFinishedFuture().rebalanced() ||
-                !ctx.exchange().lastTopologyFuture().isDone() ||
+                !(fut.isDone() && fut.rebalanced()) ||
                 ctx.ttl().tombstoneCleanupSuspended()))
-            return true;
+            return false;
 
         if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
