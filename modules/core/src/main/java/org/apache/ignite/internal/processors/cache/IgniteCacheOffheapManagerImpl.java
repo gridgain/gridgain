@@ -50,6 +50,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateTxS
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtDetachedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIterator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteRebalanceIteratorImpl;
@@ -1393,10 +1394,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         long now = U.currentTimeMillis();
 
+        GridDhtPartitionsExchangeFuture fut = ctx.exchange().lastTopologyFuture();
+
         // We need to keep tombstones during rebalancing because they are used to handle put-remove conflicts.
         if (tsCnt <= tsLimit &&
             (!ctx.exchange().lastFinishedFuture().rebalanced() ||
-                !ctx.exchange().lastTopologyFuture().isDone() || // Additional safety from hanging PME.
+                !(fut.isDone() && fut.rebalanced()) ||
                 ctx.ttl().tombstoneCleanupSuspended()))
             return false;
 
