@@ -17,6 +17,7 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.rest.RestProcessorHangTest;
+import org.apache.ignite.internal.processors.rest.RestProcessorSessionMismatchOnTimeoutTest;
 import org.apache.ignite.internal.processors.rest.RestProtocolStartTest;
 import org.apache.ignite.internal.processors.rest.handlers.cache.GridCacheAtomicCommandHandlerSelfTest;
 import org.apache.ignite.internal.processors.rest.handlers.cache.GridCacheCommandHandlerSelfTest;
@@ -39,7 +40,8 @@ import org.junit.runners.Suite;
     GridQueryCommandHandlerTest.class,
     CacheTopologyCommandHandlerTest.class,
     RestProtocolStartTest.class,
-    RestProcessorHangTest.class
+    RestProcessorHangTest.class,
+    RestProcessorSessionMismatchOnTimeoutTest.class
 })
 public class IgniteRestHandlerTestSuite {
 }
