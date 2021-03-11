@@ -1349,7 +1349,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 !ctx.exchange().lastFinishedFuture().rebalanced() ||
                 !ctx.exchange().lastTopologyFuture().isDone() ||
                 ctx.ttl().tombstoneCleanupSuspended()))
-            return true; // Tombstones are still present, only clearing is delayed.
+            return true;
 
         if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);

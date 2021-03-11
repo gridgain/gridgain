@@ -1401,7 +1401,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             (!ctx.exchange().lastFinishedFuture().rebalanced() ||
                 !ctx.exchange().lastTopologyFuture().isDone() || // Additional safety from hanging PME.
                 ctx.ttl().tombstoneCleanupSuspended()))
-            return true; // Tombstones are still present, only clearing is delayed.
+            return false;
 
         if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
