@@ -50,7 +50,7 @@ endif()
 
 set(TEST_TARGET IgniteThinClientTest)
 
-add_test(NAME ${TEST_TARGET} COMMAND ${TARGET} --catch_system_errors=no --log_level=all --run_test=*/IgniteClientConnectionLimit)
+add_test(NAME ${TEST_TARGET} COMMAND ${TARGET} --catch_system_errors=no --log_level=all)
 
 set_tests_properties(${TEST_TARGET} PROPERTIES ENVIRONMENT
         IGNITE_NATIVE_TEST_CPP_THIN_CONFIG_PATH=${PROJECT_SOURCE_DIR}/config)
