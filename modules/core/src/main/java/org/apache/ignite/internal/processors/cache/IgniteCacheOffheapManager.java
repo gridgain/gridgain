@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.ToIntFunction;
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
@@ -37,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.persistence.partstorage.Parti
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
+import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccLinkAwareSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
@@ -191,6 +193,8 @@ public interface IgniteCacheOffheapManager {
      */
     public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount)
         throws IgniteCheckedException;
+
+    public int expire(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> clo) throws IgniteCheckedException;
 
     /**
      * Gets the number of entries pending expire.

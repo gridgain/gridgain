@@ -1025,11 +1025,10 @@ public interface GridCacheEntryEx {
     /**
      * Callback from ttl processor to cache entry indicating that entry is expired.
      *
-     * @param expireTime Expire time.
      * @throws GridCacheEntryRemovedException If entry was removed.
      * @return {@code True} if this entry was expired as a result of this call.
      */
-    public boolean onTtlExpired(long expireTime) throws GridCacheEntryRemovedException;
+    public boolean onTtlExpired() throws GridCacheEntryRemovedException;
 
     /**
      * @return Time to live, without accounting for transactions or removals.

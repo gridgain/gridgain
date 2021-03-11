@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.cache.configuration.FactoryBuilder;
@@ -63,12 +64,14 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheTtlManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.MapCacheStoreStrategy;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -125,9 +128,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         ArrayList<Object[]> params = new ArrayList<>();
 
         params.add(new Object[]{ATOMIC, false});
-        params.add(new Object[]{ATOMIC, true});
-        params.add(new Object[]{TRANSACTIONAL, false});
-        params.add(new Object[]{TRANSACTIONAL, true});
+//        params.add(new Object[]{ATOMIC, true});
+//        params.add(new Object[]{TRANSACTIONAL, false});
+//        params.add(new Object[]{TRANSACTIONAL, true});
 
         return params;
     }
@@ -135,6 +138,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        cfg.setFailureDetectionTimeout(1000000);
+        cfg.setClientFailureDetectionTimeout(1000000);
 
         cfg.setClusterStateOnStart(ClusterState.INACTIVE);
 
@@ -1686,7 +1692,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
 
-        doSleep(600);
+        doSleep(1500);
 
         assertEquals(2, t0.size());
 
@@ -1697,6 +1703,62 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         ttl.expire(2);
 
         assertEquals(1, cache.size());
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable async clearing.
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable sync eviction by unwindEvicts.
+    public void testTtlRowsDescendingOrderCacheGroup() throws Exception {
+        IgniteEx crd = startGrid(0);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteEx client = startClientGrid("client");
+
+        final String[] caches = new String[] {"cache1", "cache2", "cache3"};
+        for (String cache : caches) {
+            CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(atomicityMode).
+                setName(cache).
+                setEagerTtl(true).
+                setGroupName("test");
+
+            client.createCache(cacheCfg);
+        }
+
+        int part = 0;
+
+        for (String cache : caches) {
+            IgniteCache<Object, Object> c = client.cache(cache);
+
+            List<Integer> keys = partitionKeys(c, part, 2, 0);
+
+            Integer k0 = keys.get(0);
+            Integer k1 = keys.get(1);
+
+            c.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 4000))).put(k0, 0);
+            c.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))).put(k1, 1);
+        }
+
+        CacheGroupContext grpCtx0 = crd.context().cache().cacheGroup(CU.cacheId("test"));
+        PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
+
+        assertEquals(6, t0.size());
+
+        doSleep(2100);
+
+        PartitionsEvictManager evict = crd.context().cache().context().evict();
+
+        Deque<PendingRow> ttlQueue = evict.evictQueue(false);
+        Deque<PendingRow> tsQueue = evict.evictQueue(true);
+
+        assertEquals(3, ttlQueue.size());
+        assertEquals(0, tsQueue.size());
+
+        System.out.println();
+//
+//        ttl.expire(1);
+//
+//        doSleep(5000);
     }
 
     /**
