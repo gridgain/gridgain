@@ -1331,7 +1331,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount) throws IgniteCheckedException {
+    @Override public boolean expireTombstones(
+        GridCacheContext cctx,
+        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        int amount
+    ) throws IgniteCheckedException {
         long tsCnt = tombstonesCount();
 
         if (tsCnt == 0)
