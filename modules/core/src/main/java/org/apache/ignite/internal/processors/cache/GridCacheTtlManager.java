@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCach
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
+import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -72,9 +73,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     private volatile boolean hasTombstonesToEvict;
 
     /** */
-    private final IgniteClosure2X<GridCacheEntryEx, Long, Boolean> expireC =
-        new IgniteClosure2X<GridCacheEntryEx, Long, Boolean>() {
-            @Override public Boolean applyx(GridCacheEntryEx entry, Long expireTime) {
+    private final IgniteClosureX<GridCacheEntryEx, Boolean> expireC =
+        new IgniteClosureX<GridCacheEntryEx, Boolean>() {
+            @Override public Boolean applyx(GridCacheEntryEx entry) {
                 boolean touch = !entry.isNear();
 
                 while (true) {
@@ -82,7 +83,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                         if (log.isTraceEnabled())
                             log.trace("Trying to remove expired entry from cache: " + entry);
 
-                        if (entry.onTtlExpired(expireTime)) // A successful call will remove an entry from a heap.
+                        if (entry.onTtlExpired()) // A successful call will remove an entry from a heap.
                             return true;
 
                         break;
@@ -236,7 +237,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                         GridNearCacheEntry nearEntry = nearCache.peekExx(e.key);
 
                         if (nearEntry != null)
-                            expireC.apply(nearEntry, now);
+                            expireC.apply(nearEntry);
                     }
                 }
             }
@@ -248,12 +249,12 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             boolean hasTombstones = false;
 
             if (cctx.config().isEagerTtl() && nextCleanRowsTime <= now && hasRowsToEvict) {
-                if (!(hasRows = cctx.offheap().expireRows(dhtCtx, expireC, amount)))
+                if (!(hasRows = cctx.shared().evict().expire(false, expireC, amount)))
                     nextCleanRowsTime = now + unwindThrottlingTimeout;
             }
 
             if (nextCleanTombstonesTime <= now && hasTombstonesToEvict) {
-                if (!(hasTombstones = cctx.offheap().expireTombstones(dhtCtx, expireC, amount)))
+                if (!(hasTombstones = cctx.shared().evict().expire(true, expireC, amount)))
                     nextCleanTombstonesTime = now + unwindThrottlingTimeout;
             }
 
@@ -270,9 +271,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                 log.debug("Partition became invalid during rebalancing (will ignore): " + e.partition());
 
             return false;
-        }
-        catch (IgniteCheckedException e) {
-            U.error(log, "Failed to process entry expiration: " + e, e);
         }
         catch (IgniteException e) {
             if (e.hasCause(NodeStoppingException.class)) {

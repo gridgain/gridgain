@@ -18,14 +18,17 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -33,6 +36,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
@@ -40,13 +44,19 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
+import org.apache.ignite.internal.processors.cache.tree.PendingRow;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
+import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
@@ -75,6 +85,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     private final long evictionProgressFreqMs =
         getLong(SHOW_EVICTION_PROGRESS_FREQ, DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS);
 
+    /** */
+    private static final int MAX_EVICT_QUEUE_SIZE = 3000;
+
     /** Last time of show eviction progress. */
     private long lastShowProgressTimeNanos = System.nanoTime() - U.millisToNanos(evictionProgressFreqMs);
 
@@ -94,6 +107,16 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
     /** */
     private final ConcurrentMap<PartitionKey, PartitionEvictionTask> futs = new ConcurrentHashMap<>();
+
+    /** */
+    private FastSizeDeque<PendingRow> tombstoneEvictQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
+
+    /** */
+    private FastSizeDeque<PendingRow> ttlEvictQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
+
+    private AtomicLong tombstoneTs = new AtomicLong();
+
+    private AtomicLong ttlTs = new AtomicLong();
 
     /**
      * Callback on cache group start.
@@ -265,6 +288,125 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         super.start0();
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
+
+        long now = U.currentTimeMillis();
+
+        processEvictions(true, now);
+        processEvictions(false, now);
+    }
+
+    /**
+     * @param tombstone Tombstone.
+     * @param newTs New timestamp.
+     */
+    public void processEvictions(boolean tombstone, long newTs) {
+        GridKernalContext ctx = cctx.kernalContext();
+
+        AtomicLong ts = tombstone ? tombstoneTs : ttlTs;
+
+        long cur = ts.get();
+
+        if (!ts.compareAndSet(cur, newTs))
+            return;
+
+        //log.info("DBG: processEvictions tombstone=" + tombstone + ", newTs=" + newTs);
+
+        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(500) {
+            @Override public void onTimeout() {
+                ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                    @Override public void run() {
+                        // If nothing to clear check later.
+                        if (fillEvictQueue(tombstone, ts.get()) == 0)
+                            processEvictions(tombstone, U.currentTimeMillis());
+                    }
+                });
+            }
+        });
+    }
+
+    /** */
+    public Deque<PendingRow> evictQueue(boolean tombstone) {
+        return tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+    }
+
+    /**
+     * @param upper Upper bound.
+     */
+    private int fillEvictQueue(boolean tombstone, long upper) {
+        int total = 0;
+
+        FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+
+        for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
+            if (cctx.kernalContext().isStopping())
+                return 0;
+
+            if (!ctx0.busyLock.readLock().tryLock())
+                continue;
+
+            int size = tombstoneEvictQueue.sizex();
+            int amount = MAX_EVICT_QUEUE_SIZE - size;
+
+            try {
+                if (amount > 0) {
+                    try {
+                        total += ctx0.grp.offheap().expire(tombstone, amount, upper, key -> {
+                            queue.addFirst(key);
+
+                            // Stop scanning on queue overflow.
+                            return queue.sizex() > MAX_EVICT_QUEUE_SIZE ? 1 : 0;
+                        });
+                    }
+                    catch (IgniteCheckedException e) {
+                        log.error("Failed to expire entries", e);
+                    }
+                }
+            }
+            finally {
+                ctx0.busyLock.readLock().unlock();
+            }
+        }
+
+        log.info("DBG: fillEvictQueue res=" + total + ", tombstone=" + tombstone);
+
+        return total;
+    }
+
+    public boolean expire(boolean tombstone, IgniteClosureX<GridCacheEntryEx, Boolean> c, int amount) {
+        FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+
+        PendingRow row;
+
+        int cleared = 0;
+
+        while((row = queue.pollFirst()) != null) {
+            // TODO add assertion on row bounds.
+            GridCacheContext<Object, Object> ctx = cctx.cache().context().cacheContext(row.cacheId);
+
+            if (ctx != null) {
+                try {
+                    GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
+
+                    c.apply(entry);
+                }
+                catch (GridDhtInvalidPartitionException ignored) {
+                    // Skip renting or evicted partition.
+                }
+            }
+
+            cleared++;
+
+            if (amount != -1 && cleared == amount)
+                break;
+        }
+
+        if (queue.sizex() == 0) {
+            processEvictions(tombstone, U.currentTimeMillis());
+
+            return false;
+        }
+
+        return amount != -1 && cleared == amount;
     }
 
     /** {@inheritDoc} */

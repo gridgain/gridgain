@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
@@ -1490,6 +1491,69 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
         finally {
             cctx.shared().database().checkpointReadUnlock();
+        }
+    }
+
+    /**
+     * @param cctx Cache context.
+     * @param tombstone
+     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     * @param upper Upper bound.
+     * @param c Closure.
+     * @return A number of scanned entries.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Override public int expire(
+        boolean tombstone,
+        int amount,
+        long upper,
+        ToIntFunction<PendingRow> c
+    ) throws IgniteCheckedException {
+        GridCursor<PendingRow> cur;
+
+        if (grp.sharedGroup())
+            cur = pendingEntries.find(new PendingRow(Integer.MIN_VALUE, tombstone, 0, 0),
+                new PendingRow(Integer.MAX_VALUE, tombstone, upper, 0));
+        else
+            cur = pendingEntries.find(new PendingRow(0, tombstone, 0, 0), new PendingRow(0, tombstone, upper, 0));
+
+        if (!cur.next())
+            return 0;
+
+        if (!busyLock.enterBusy())
+            return 0;
+
+        try {
+            int scanned = 0;
+
+            do {
+                if (amount != -1 && scanned >= amount)
+                    break;
+
+                PendingRow row = cur.get();
+
+                if (row.cacheId == CU.UNDEFINED_CACHE_ID)
+                    row.cacheId = grp.singleCacheContext().cacheId();
+
+//                if (row.expireTime > upper)
+//                    break;
+
+                if (row.key.partition() == -1)
+                    row.key.partition(grp.config().getAffinity().partition(row.key));
+
+                assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
+
+                if (c.applyAsInt(row) != 0)
+                    break;
+
+                scanned++;
+            }
+            while (cur.next());
+
+            return scanned;
+        }
+        finally {
+            busyLock.leaveBusy();
         }
     }
 
