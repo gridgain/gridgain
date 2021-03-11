@@ -21,37 +21,43 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.IgniteSpiException;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
-import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 
 /**
- * Check different scenarios in respect to {@link TcpDiscoveryIpFinder#isShared()} cfg
+ * Check different disconnections scenarios in respect to {@link TcpDiscoverySpi#joinTimeout} cfg
  * alongside possible failures for IpResolver
- *
  */
 public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
 
     /**  */
     private TestDynamicIpFinder dynamicIpFinder;
 
+    /** Listening test logger. */
+    private ListeningTestLogger listeningLog;
+
     /** */
     @Before
     public void initDynamicIpFinder() {
         dynamicIpFinder = new TestDynamicIpFinder();
+        listeningLog = new ListeningTestLogger(log);
     }
 
     /** */
@@ -61,64 +67,57 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Tests client node disconnection with shared dynamic IP finder.
-     * Client should be disconnected from the cluster if ipResolver is unable to provide IPs.
+     * Tests shared client node disconnection should use {@link TcpDiscoverySpi#netTimeout).
      */
     @Test
     public void testClientNodeSharedIpFinderFailure() throws Exception {
         dynamicIpFinder.setAddresses(Collections.singleton("127.0.0.1:47500"));
 
-        runClientDisconnectionTest();
+        runClientNodeIpFinderFailureTest(TcpDiscoverySpi.DFLT_RECONNECT_DELAY);
     }
 
     /**
-     * Test client node disconnection with non shared dynamic IP finder.
-     * Client should be disconnected from the cluster if ipResolver is unable to provide IPs.
+     * Tests static client node disconnection should use {@link TcpDiscoverySpi#netTimeout).
      */
     @Test
-    public void testClientNodeDynamicIpFinderFailure() throws Exception {
+    public void testClientNodeStaticIpFinderFailure() throws Exception {
         dynamicIpFinder.setAddresses(Collections.singleton("127.0.0.1:47500"));
         dynamicIpFinder.setShared(false);
-
-        runClientDisconnectionTest();
-    }
-
-    /** Runs client disconnection test. */
-    private void runClientDisconnectionTest() throws Exception {
-        IgniteConfiguration cfgSrv = getConfigurationDynamicIpFinder("Server", false);
-
-        IgniteConfiguration cfgClient = getConfigurationDynamicIpFinder("Client", true);
-
-        IgniteEx crd = startGrid(cfgSrv);
-        IgniteEx client = startGrid(cfgClient);
-
-        waitForTopology(2);
-
-        dynamicIpFinder.breakService();
-
-        Ignition.stop(crd.name(), true);
-
-        CountDownLatch latch = new CountDownLatch(1);
-
-        client.events().localListen(event -> {
-            latch.countDown();
-            return true;
-        }, EVT_CLIENT_NODE_DISCONNECTED);
-
-        assertTrue("Failed to wait for client node disconnected.", latch.await(10, SECONDS));
+        runClientNodeIpFinderFailureTest(TcpDiscoverySpi.DFLT_RECONNECT_DELAY);
     }
 
     /**
-     * Tests that client node behavior is the same as for non-shared IP finder
-     * if reconnectCount value is big enough.
+     * Tests client node disconnection works with {@link TcpDiscoverySpi#getReconnectDelay()} ) set to zero.
      */
     @Test
-    public void testClientNodeDynamicIpFinderFailureAndAdjsutedReconnectCount() throws Exception {
+    public void testClientNodeIpFinderFailureWithZeroReconnectDelay() throws Exception {
+        dynamicIpFinder.setAddresses(Collections.singleton("127.0.0.1:47500"));
+
+        runClientNodeIpFinderFailureTest(0);
+    }
+
+    /** */
+    private void runClientNodeIpFinderFailureTest(long reconnectDelay) throws Exception {
+        List<LogListener> listeners = new ArrayList<>();
+
+        listeners.add(LogListener.matches(
+                "Failed to get registered addresses from IP " +
+                        "finder (retrying every " + reconnectDelay + "ms; change 'reconnectDelay' to configure " +
+                        "the frequency of retries) [maxTimeout=4000]").build());
+
+        listeners.add(LogListener.matches(
+                "Unable to get registered addresses from IP finder," +
+                        " timeout is reached (consider increasing 'joinTimeout' for join process " +
+                        "'netTimeout' for reconnection) [joinTimeout=10000, netTimeout=4000]").build());
+
+        listeners.forEach(listeningLog::registerListener);
+
         IgniteConfiguration cfgSrv = getConfigurationDynamicIpFinder("Server", false);
 
         TcpDiscoverySpi discoverySpi = new TcpDiscoverySpi();
-        discoverySpi.setReconnectCount(100);
-        discoverySpi.setReconnectDelay(1000);
+        discoverySpi.setJoinTimeout(10000);
+        discoverySpi.setNetworkTimeout(4000);
+        discoverySpi.setReconnectDelay((int) reconnectDelay);
         discoverySpi.setIpFinder(dynamicIpFinder);
 
         IgniteConfiguration cfgClient = getConfigurationDynamicIpFinder("Client", true, discoverySpi);
@@ -135,19 +134,41 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
         CountDownLatch latch = new CountDownLatch(1);
 
         client.events().localListen(event -> {
+            listeners.forEach(lsnr -> assertTrue(lsnr.check()));
+
             latch.countDown();
+
             return true;
         }, EVT_CLIENT_NODE_DISCONNECTED);
 
-        assertFalse("Client should be stuck in ip resolution state.", latch.await(10, SECONDS));
+        assertTrue("Failed to wait for client node disconnected.", latch.await(6, SECONDS));
     }
 
     /**
      * Test server node disconnection with dynamic IP finder.
-     * Server node should catch NODE_LEFT event.
+     * Server node should catch NODE_LEFT event, no calls to IP resolver.
      */
     @Test
     public void testServerNodeDynamicIpFinderFailureInTheMiddle() throws Exception {
+        dynamicIpFinder.setAddresses(Collections.singleton("127.0.0.1:47500"));
+
+        runServerNodeDisconnectionITest();
+    }
+
+    /**
+     * Test server node disconnection with static IP finder.
+     * Server node should catch NODE_LEFT event, no calls to IP resolver.
+     */
+    @Test
+    public void testServerNodeStaticIpFinderFailureInTheMiddle() throws Exception {
+        dynamicIpFinder.setAddresses(Collections.singleton("127.0.0.1:47500"));
+        dynamicIpFinder.setShared(false);
+
+        runServerNodeDisconnectionITest();
+    }
+
+    /** */
+    private void runServerNodeDisconnectionITest() throws Exception {
         dynamicIpFinder.setAddresses(Collections.singleton("127.0.0.1:47500"));
 
         IgniteConfiguration cfgSrv = getConfigurationDynamicIpFinder("Server1", false);
@@ -165,23 +186,21 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
         srv.events().localListen(event -> {
             latch.countDown();
             return true;
-        }, EVT_NODE_LEFT, EVT_NODE_FAILED);
+        }, EVT_NODE_LEFT);
 
         Ignition.stop(crd.name(), true);
 
         assertTrue("Failed to wait for server node disconnected.", latch.await(10, SECONDS));
     }
 
-
     /**
-     * Tests that dynamic IP finder doesn't allow server node to join topology if IpResolver is unavailable.
-     * A server node should fail itself.
+     * Tests that dynamic IP finder doesn't allow server node to join topology if IpResolver is unavailable
+     * and joinTimeout is not specified.
+     * Server node should be constantly trying to obtain IP addresses.
      */
     @Test
-    public void testServerNodeBrokenDynamicIpFinderFromTheStart() throws Exception {
-        dynamicIpFinder.setShared(false);
-
-        IgniteConfiguration cfgSrv = getConfigurationDynamicIpFinder("Server1", false);
+    public void testServerNodeBrokenDynamicIpFinderFromTheStartNoJoinTimeout() throws Exception {
+        IgniteConfiguration cfgSrv = getConfigurationDynamicIpFinder("Server1", false, 0);
 
         dynamicIpFinder.breakService();
 
@@ -191,58 +210,11 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
             try {
                 startGrid(cfgSrv);
 
-                fail("Server node should not join a cluster if static ip finder is not working");
+                fail("Server node should not join a cluster if dynamic service is not working");
             }
             catch (IgniteCheckedException e) {
-                if (e.getCause() != null && e.getCause() instanceof IgniteCheckedException) {
-                    Throwable cause = e.getCause();
-                    if (cause.getCause() != null && cause.getCause() instanceof IgniteSpiException)
-                        return true;
-                }
-            }
-            catch (Exception e) {
-                return false;
-            }
-            finally {
-                done[0] = true;
-            }
-
-            return false;
-        });
-
-        if (!GridTestUtils.waitForCondition(() -> done[0], 10_000)) {
-            fut.cancel();
-
-            fail("Node was stuck in joining topology");
-        }
-
-        Assert.assertEquals("Node was not failed", fut.get(), true);
-    }
-
-    /**
-     * Test that shared IP finder blocks server node from joining topology.
-     * A server node should be constantly trying to obtain IP addresses.
-     */
-    @Test
-    public void testServerNodeBrokenStaticIpFinderFromTheStart() throws Exception {
-        IgniteConfiguration cfgSrv = getConfigurationDynamicIpFinder("Server1", false);
-
-        dynamicIpFinder.breakService();
-
-        final Boolean[] done = {false};
-
-        IgniteInternalFuture<Boolean> fut = GridTestUtils.runAsync(() -> {
-            try {
-                startGrid(cfgSrv);
-
-                fail("Server node should not join a cluster if shared dynamic service is not working");
-            }
-            catch (IgniteCheckedException e) {
-                if (e.getCause() != null && e.getCause() instanceof IgniteCheckedException) {
-                    Throwable cause = e.getCause();
-                    if (cause.getCause() != null && cause.getCause() instanceof IgniteSpiException)
-                        return true;
-                }
+                if (X.hasCause(e, IgniteSpiException.class))
+                    return true;
             }
             catch (Exception e) {
                 return false;
@@ -266,6 +238,76 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Tests that static IP finder doesn't allow server node to join topology if IpResolver is unavailable
+     * and joinTimeout is set to 0
+     * Server node should be constantly trying to obtain IP addresses.
+     */
+    @Test
+    public void testServerNodeBrokenStaticIpFinderZeroJoinTimeout() throws Exception {
+        IgniteConfiguration cfgSrv = getConfigurationDynamicIpFinder("Server1", false, 0);
+        dynamicIpFinder.setShared(false);
+        dynamicIpFinder.breakService();
+
+        final Boolean[] done = {false};
+
+        IgniteInternalFuture<Boolean> fut = GridTestUtils.runAsync(() -> {
+            try {
+                startGrid(cfgSrv);
+
+                fail("Server node should not join a cluster if static ip finder is not working");
+            }
+            catch (IgniteCheckedException e) {
+                if (X.hasCause(e, IgniteSpiException.class))
+                    return true;
+            }
+            catch (Exception e) {
+                return false;
+            }
+            finally {
+                done[0] = true;
+            }
+
+            return false;
+        });
+
+        if (!GridTestUtils.waitForCondition(() -> done[0], 5_000)) fut.cancel();
+
+        Assert.assertEquals("Node should be stuck in a joining loop", fut.get(), true);
+    }
+
+    /**
+     * Tests that broken static IP finder allows server node to join topology
+     * when joinTimeout expires.
+     */
+    @Test
+    public void testServerNodeBrokenStaticIpFinderWithJoinTimeout() throws Exception {
+        IgniteConfiguration cfgSrv = getConfigurationDynamicIpFinder("Server1", false, 2000);
+
+        dynamicIpFinder.breakService();
+
+        List<LogListener> listeners = new ArrayList<>();
+
+        listeners.add(LogListener.matches(
+                "Failed to get registered addresses from IP " +
+                        "finder (retrying every 2000ms; change 'reconnectDelay' to configure " +
+                        "the frequency of retries) [maxTimeout=2000]").build());
+
+        listeners.add(LogListener.matches(
+                "Unable to get registered addresses from IP finder," +
+                        " timeout is reached (consider increasing 'joinTimeout' for join process " +
+                        "'netTimeout' for reconnection) [joinTimeout=2000, netTimeout=5000]").build());
+
+        listeners.add(LogListener.matches(
+                "Topology snapshot [ver=1").build());
+
+        listeners.forEach(listeningLog::registerListener);
+
+        startGrid(cfgSrv);
+
+        listeners.forEach(lsnr -> assertTrue(lsnr.check()));
+    }
+
+    /**
      * Tests shared IP finder with empty list allows server to start.
      */
     @Test
@@ -286,6 +328,8 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
     public void testServerNodeDynamicIpFinderWithEmptyAddresses() throws Exception {
         dynamicIpFinder.setShared(false);
         dynamicIpFinder.setAddresses(null);
+
+        setRootLoggerDebugLevel();
 
         IgniteConfiguration cfgSrv = getConfigurationDynamicIpFinder("Server1", false);
 
@@ -312,8 +356,18 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
      */
     private IgniteConfiguration getConfigurationDynamicIpFinder(String instanceName, boolean clientMode) throws Exception {
         TcpDiscoverySpi discoverySpi = new TcpDiscoverySpi();
-        discoverySpi.setReconnectCount(2);
-        discoverySpi.setReconnectDelay(1000);
+        discoverySpi.setIpFinder(dynamicIpFinder);
+
+        return getConfigurationDynamicIpFinder(instanceName, clientMode, discoverySpi);
+    }
+
+    /**
+     * Gets node configuration with dynamic IP finder.
+     */
+    private IgniteConfiguration getConfigurationDynamicIpFinder(String instanceName, boolean clientMode, int joinTimeout) throws Exception {
+        TcpDiscoverySpi discoverySpi = new TcpDiscoverySpi();
+        discoverySpi.setJoinTimeout(joinTimeout);
+        discoverySpi.setNetworkTimeout(5000);
         discoverySpi.setIpFinder(dynamicIpFinder);
 
         return getConfigurationDynamicIpFinder(instanceName, clientMode, discoverySpi);
@@ -325,10 +379,11 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
     private IgniteConfiguration getConfigurationDynamicIpFinder(String instanceName, boolean clientMode, TcpDiscoverySpi discoverySpi) throws Exception {
         IgniteConfiguration cfg = getConfiguration();
         cfg.setNodeId(null);
+        cfg.setLocalHost("127.0.0.1");
 
         cfg.setDiscoverySpi(discoverySpi);
 
-        cfg.setGridLogger(log);
+        cfg.setGridLogger(listeningLog);
 
         cfg.setIgniteInstanceName(instanceName);
         cfg.setClientMode(clientMode);

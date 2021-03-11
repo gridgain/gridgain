@@ -1911,37 +1911,39 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
      * Resolves addresses registered in the IP finder, removes duplicates and local host
      * address and returns the collection of.
      *
+     * @param timeout Timeout.
+     *
      * @return Resolved addresses without duplicates and local address (potentially
      *      empty but never null).
      * @throws org.apache.ignite.spi.IgniteSpiException If an error occurs.
      */
-    protected Collection<InetSocketAddress> resolvedAddresses() throws IgniteSpiException {
+    protected Collection<InetSocketAddress> resolvedAddresses(long timeout) throws IgniteSpiException {
+        // Time when join process started.
+        long resolutionStartNanos = System.nanoTime();
+
         List<InetSocketAddress> res = new ArrayList<>();
-
         Collection<InetSocketAddress> addrs;
-
-        int attemptsCnt = 0;
-        int maxResolveAttempts = locNode.isClient() ? getReconnectCount() : Integer.MAX_VALUE;
 
         // Get consistent addresses collection.
         while (true) {
             try {
-                attemptsCnt++;
-
                 addrs = registeredAddresses();
 
                 break;
             }
             catch (IgniteSpiException e) {
-                LT.error(log, e, "Failed to get registered addresses from IP finder on start " +
-                        "(retrying every " + getReconnectDelay() + "ms; change 'reconnectDelay' to configure " +
-                        "the frequency of retries).");
+                LT.error(log, e, "Failed to get registered addresses from IP finder " +
+                        "(retrying every " + getReconnectDelay() + "ms;" +
+                        " change 'reconnectDelay' to configure the frequency of retries) " +
+                        "[maxTimeout=" + timeout + "]", true);
             }
 
             try {
-                if (attemptsCnt >= maxResolveAttempts) {
-                    LT.info(log, "Unable to get registered addresses from IP finder. " +
-                            "Maximum attempts count (" + attemptsCnt + ") has reached.");
+                if (timeout > 0 && U.millisSinceNanos(resolutionStartNanos) > timeout) {
+                    LT.warn(log, "Unable to get registered addresses from IP finder, timeout is reached " +
+                            "(consider increasing 'joinTimeout' for join process 'netTimeout' for reconnection) " +
+                            "[joinTimeout=" + joinTimeout + ", netTimeout=" + netTimeout + "]");
+
                     addrs = res;
                     break;
                 }

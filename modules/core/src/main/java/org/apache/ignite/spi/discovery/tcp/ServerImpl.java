@@ -1276,7 +1276,7 @@ class ServerImpl extends TcpDiscoveryImpl {
         long joinStartNanos = 0;
 
         while (true) {
-            Collection<InetSocketAddress> addrs = spi.resolvedAddresses();
+            Collection<InetSocketAddress> addrs = spi.resolvedAddresses(spi.joinTimeout);
 
             if (F.isEmpty(addrs))
                 return false;

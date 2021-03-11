@@ -586,7 +586,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                 throw new InterruptedException();
 
             while (addrs == null || addrs.isEmpty()) {
-                addrs = new ArrayList<>(spi.resolvedAddresses());
+                addrs = new ArrayList<>(spi.resolvedAddresses(timeout));
 
                 if (!F.isEmpty(addrs)) {
                     if (log.isDebugEnabled())
