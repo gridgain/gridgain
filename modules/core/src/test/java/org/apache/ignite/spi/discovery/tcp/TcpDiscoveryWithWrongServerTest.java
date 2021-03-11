@@ -324,8 +324,8 @@ public class TcpDiscoveryWithWrongServerTest extends GridCommonAbstractTest {
      */
     class TcpDiscoverySpiWithOrderedIps extends TcpDiscoverySpi {
         /** {@inheritDoc} */
-        @Override protected Collection<InetSocketAddress> resolvedAddresses(long timeout) throws IgniteSpiException {
-            Collection<InetSocketAddress> shuffled = super.resolvedAddresses(timeout);
+        @Override protected Collection<InetSocketAddress> resolvedAddresses() throws IgniteSpiException {
+            Collection<InetSocketAddress> shuffled = super.resolvedAddresses();
             List<InetSocketAddress> res = new ArrayList<>(shuffled);
 
             Collections.sort(res, new Comparator<InetSocketAddress>() {

@@ -1911,18 +1911,20 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
      * Resolves addresses registered in the IP finder, removes duplicates and local host
      * address and returns the collection of.
      *
-     * @param timeout Timeout.
-     *
      * @return Resolved addresses without duplicates and local address (potentially
      *      empty but never null).
      * @throws org.apache.ignite.spi.IgniteSpiException If an error occurs.
      */
-    protected Collection<InetSocketAddress> resolvedAddresses(long timeout) throws IgniteSpiException {
+    protected Collection<InetSocketAddress> resolvedAddresses() throws IgniteSpiException {
         // Time when join process started.
         long resolutionStartNanos = System.nanoTime();
 
         List<InetSocketAddress> res = new ArrayList<>();
         Collection<InetSocketAddress> addrs;
+
+        long timeout = isClientMode() && impl.getSpiState().equalsIgnoreCase("connected")
+                ? netTimeout
+                : joinTimeout;
 
         // Get consistent addresses collection.
         while (true) {
