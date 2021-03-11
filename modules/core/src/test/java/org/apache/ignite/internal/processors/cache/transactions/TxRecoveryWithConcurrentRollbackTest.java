@@ -18,7 +18,11 @@ package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -26,12 +30,15 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecoveryRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocal;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -46,6 +53,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
@@ -78,8 +86,10 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         }
 
         cfg.setActiveOnStart(false);
-        cfg.setClientMode("client".equals(name));
+        cfg.setClientMode(name.startsWith("client"));
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        cfg.setFailureHandler(new StopNodeFailureHandler());
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
             setCacheMode(PARTITIONED).
@@ -335,5 +345,104 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
      */
     private List<IgniteInternalTx> txs(IgniteEx g) {
         return new ArrayList<>(g.context().cache().context().tm().activeTransactions());
+    }
+
+    /**
+     * Start 3 servers
+     * Start 2 clients
+     * Start two OPTIMISTIC transactions with the same key from different client nodes
+     * Transfer to PREPARED STATE
+     * Stop one client node
+     *
+     */
+    @Test
+    public void reproducer() throws Exception {
+        backups = 2;
+        persistence = true;
+        this.syncMode = FULL_ASYNC;
+
+        final IgniteEx node0 = startGrids(3);
+        node0.cluster().active(true);
+
+        final Ignite client = startGrid("client");
+        final Ignite client2 = startGrid("client2");
+
+        awaitPartitionMapExchange();
+
+        final IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
+        final IgniteCache<Object, Object> cache2 = client2.cache(DEFAULT_CACHE_NAME);
+
+        final Integer pk = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
+
+        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
+
+        GridTestUtils.runMultiThreadedAsync(() -> {
+            try (final Transaction tx = client.transactions().withLabel("tx").txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
+
+                cache.put(pk, Boolean.TRUE);
+
+                TransactionProxyImpl p = (TransactionProxyImpl)tx;
+
+                TestRecordingCommunicationSpi.spi(grid("client")).blockMessages(
+                    (node, msg) -> msg instanceof GridNearTxFinishRequest || msg instanceof TxLocksRequest);
+
+                p.tx().prepareNearTxLocal();
+
+                p.tx().currentPrepareFuture().listen((fut) -> {
+                    latch.countDown();
+                });
+
+            } catch (Exception e) {
+                // No-op.
+            }
+        }, 1, "tx");
+
+        try (final Transaction tx = client2.transactions().withLabel("tx2").txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
+            cache2.put(pk, Boolean.TRUE);
+
+            TestRecordingCommunicationSpi.spi(grid("client2")).blockMessages(
+                (node, msg) -> msg instanceof GridDhtTxFinishRequest || msg instanceof TxLocksRequest);
+
+            TransactionProxyImpl p = (TransactionProxyImpl)tx;
+
+            p.tx().prepareNearTxLocal();
+
+            p.tx().currentPrepareFuture().listen((fut) -> {
+                latch2.countDown();
+            });
+
+            while (latch2.getCount() > 0 && latch.getCount() > 0) {}
+
+            GridDhtTxLocal dhtTxLocal = txs(grid(1)).stream()
+                .filter(t -> t.state() == TransactionState.PREPARING)
+                .map(t -> (GridDhtTxLocal) t)
+                .findFirst()
+                .orElse(null);
+
+            if (dhtTxLocal != null) {
+                UUID clientNodeToFail = dhtTxLocal.eventNodeId();
+                GridDhtTxPrepareFuture prep = GridTestUtils.getFieldValue(dhtTxLocal,"prepFut");
+                prep.get();
+
+                log.info("Transactions check point: "
+                    + txs(grid(1)).stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(", ")));
+
+                if (clientNodeToFail.equals(((IgniteEx) client).localNode().id())) {
+                    client.close();
+                } else if (clientNodeToFail.equals(((IgniteEx) client2).localNode().id())) {
+                    client2.close();
+                }
+            }
+        }
+        catch (Exception e) {
+            log.error("ERROR: " + e.getMessage(), e);
+        }
+
+        U.sleep(500);
+
+        assertEquals(3, grid(0).context().discovery().aliveServerNodes().size());
     }
 }
