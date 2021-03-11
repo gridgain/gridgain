@@ -210,11 +210,11 @@ public enum IgniteFeatures {
      * is improper for PITR*/
     IMPROPER_SCHEDULE_FOR_PITR_WARNING(56),
 
-    /** Chains of snapshot operations. */
-    SNAPSHOT_OPERATIONS_CHAINING(57),
-
     /** Rolling upgrade based on distributed metastorage. Improved handling of changing RU state. */
-    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58);
+    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58),
+
+    /** Chains of snapshot operations. */
+    SNAPSHOT_OPERATIONS_CHAINING(59);
 
     /**
      * Unique feature identifier.
