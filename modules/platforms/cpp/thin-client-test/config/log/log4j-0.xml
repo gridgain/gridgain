@@ -31,12 +31,23 @@
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
+        <RollingFile name="FILE2" append="true"
+                     fileName="${sys:IGNITE_HOME:-./ignite}/work/log/ignite-log-0.txt"
+                     filePattern="${sys:IGNITE_HOME:-./ignite}/work/log/ignite-log-0-%i.log.gz"
+                     immediateFlush="true">
+            <PatternLayout pattern="%m%n"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
     </Appenders>
     <Loggers>
-        <Logger name="org.apache.ignite.internal.processors.odbc.ClientListenerNioListener" level="debug"/>
-        <Root level="info">
-            <AppenderRef ref="CONSOLE"/>
-            <AppenderRef ref="FILE"/>
+        <Logger name="org.apache.ignite.internal.processors.odbc.ClientListenerNioListener" level="DEBUG"/>
+        <Root level="INFO">
+            <AppenderRef ref="CONSOLE" level="DEBUG"/>
+            <AppenderRef ref="FILE" level="DEBUG"/>
+            <AppenderRef ref="FILE2" level="DEBUG"/>
         </Root>
     </Loggers>
 </Configuration>
