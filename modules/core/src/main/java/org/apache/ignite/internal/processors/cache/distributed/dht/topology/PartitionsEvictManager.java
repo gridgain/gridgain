@@ -360,7 +360,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             try {
                 if (amount > 0) {
                     try {
-                        total += ctx0.grp.offheap().expire(tombstone, amount, upper, key -> {
+                        total += ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
                             queue.addLast(key);
 
                             // Stop scanning on queue overflow.
@@ -383,6 +383,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         return total;
     }
 
+    /**
+     * @param tombstone Tombstone.
+     * @param c Closure.
+     * @param amount Amount.
+     */
     public boolean expire(boolean tombstone, IgniteClosureX<GridCacheEntryEx, Boolean> c, int amount) {
         FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
 
@@ -390,38 +395,49 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         int cleared = 0;
 
-        while((row = queue.pollFirst()) != null) {
-            // TODO add assertion on row bounds.
-            GridCacheContext<Object, Object> ctx = cctx.cache().context().cacheContext(row.cacheId);
+        cctx.database().checkpointReadLock();
 
-            if (ctx != null) {
-                try {
-                    GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
+        try {
+            while ((row = queue.pollFirst()) != null) {
+                // TODO add assertion on row bounds.
+                GridCacheContext<Object, Object> ctx = cctx.cache().context().cacheContext(row.cacheId);
 
-                    c.apply(entry);
+                if (ctx != null) {
+                    try {
+                        GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
+
+                        c.apply(entry);
+                    } catch (GridDhtInvalidPartitionException ignored) {
+                        // Skip renting or evicted partition.
+                    }
                 }
-                catch (GridDhtInvalidPartitionException ignored) {
-                    // Skip renting or evicted partition.
+
+                cleared++;
+
+                if ((cleared & 127) == 0) {
+                    cctx.database().checkpointReadUnlock();
+                    cctx.database().checkpointReadLock();
                 }
+
+                if (amount != -1 && cleared == amount)
+                    break;
             }
-
-            cleared++;
-
-            if (amount != -1 && cleared == amount)
-                break;
-        }
 
 //        if (cleared > 0)
 //            log.info("DBG: removed=" + cleared + ", tombstone=" + tombstone + ", queue=" + queue.sizex());
 
-        if (queue.sizex() == 0) {
-            if (cleared > 0)
-                processEvictions(tombstone, U.currentTimeMillis());
+            if (queue.sizex() == 0) {
+                if (cleared > 0)
+                    processEvictions(tombstone, U.currentTimeMillis());
 
-            return false;
+                return false;
+            }
+
+            return amount != -1 && cleared == amount;
         }
-
-        return amount != -1 && cleared == amount;
+        finally {
+            cctx.database().checkpointReadUnlock();
+        }
     }
 
     /** {@inheritDoc} */

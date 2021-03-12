@@ -128,9 +128,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         ArrayList<Object[]> params = new ArrayList<>();
 
         params.add(new Object[]{ATOMIC, false});
-//        params.add(new Object[]{ATOMIC, true});
-//        params.add(new Object[]{TRANSACTIONAL, false});
-//        params.add(new Object[]{TRANSACTIONAL, true});
+        params.add(new Object[]{ATOMIC, true});
+        params.add(new Object[]{TRANSACTIONAL, false});
+        params.add(new Object[]{TRANSACTIONAL, true});
 
         return params;
     }

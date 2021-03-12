@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,6 +30,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
@@ -120,6 +120,7 @@ import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
+import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -1295,55 +1296,32 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
     /** {@inheritDoc} */
     @Override public boolean expireRows(
-        GridCacheContext cctx,
-        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        IgniteClosureX<GridCacheEntryEx, Boolean> c,
         int amount
-    ) throws IgniteCheckedException {
-        assert !cctx.isNear() : cctx.name();
-
-        long now = U.currentTimeMillis();
-
+    ) {
         // Prevent manager being stopped in the middle of pds operation.
         if (!busyLock.enterBusy())
             return false;
 
-        int rmvCnt = 0;
-
         try {
-            List<CacheDataStore> stores = new ArrayList<>();
-            cacheDataStores().forEach(stores::add);
-            Collections.shuffle(stores); // Randomize partitions to clear.
-
-            if (cctx.config().isEagerTtl()) {
-                for (CacheDataStore store : stores) {
-                    rmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - rmvCnt, false, now);
-
-                    if (amount != -1 && rmvCnt >= amount)
-                        return true;
-                }
-            }
+            return ctx.evict().expire(false, c, amount);
         }
         finally {
             busyLock.leaveBusy();
         }
-
-        return false;
     }
 
     /** {@inheritDoc} */
     @Override public boolean expireTombstones(
-        GridCacheContext cctx,
-        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        IgniteClosureX<GridCacheEntryEx, Boolean> c,
         int amount
-    ) throws IgniteCheckedException {
+    ) {
         long tsCnt = tombstonesCount();
 
         if (tsCnt == 0)
             return false;
 
-        long now = U.currentTimeMillis();
-
-        DiscoCache discoCache = cctx.discovery().discoCache();
+        DiscoCache discoCache = ctx.discovery().discoCache();
 
         long tsLimit = ctx.ttl().tombstonesLimit();
 
@@ -1357,35 +1335,73 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 ctx.ttl().tombstoneCleanupSuspended()))
             return false;
 
-        if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
+        if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
-
-            now = Long.MAX_VALUE;
-        }
 
         // Prevent manager being stopped in the middle of pds operation.
         if (!busyLock.enterBusy())
             return false;
 
-        int rmvCnt = 0;
+        try {
+            return ctx.evict().expire(true, c, amount);
+        }
+        finally {
+            busyLock.leaveBusy();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException {
+        if (!busyLock.enterBusy())
+            return 0;
+
+        int cnt = 0;
 
         try {
-            List<CacheDataStore> stores = new ArrayList<>();
-            cacheDataStores().forEach(stores::add);
-            Collections.shuffle(stores); // Randomize partitions to clear.
+            for (CacheDataStore store : cacheDataStores()) {
+                if (!store.init())
+                    continue;
 
-            for (CacheDataStore store : stores) {
-                rmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - rmvCnt, true, now);
+                GridDhtLocalPartition part = null;
 
-                if (amount != -1 && rmvCnt >= amount)
-                    return true;
+                int partId = store.partId();
+
+                if (!grp.isLocal()) {
+                    part = grp.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
+
+                    // Skip non-owned partitions.
+                    if (part == null || part.state() != OWNING && part.state() != MOVING)
+                        continue;
+                }
+
+                if (part != null && !part.reserve())
+                    continue;
+
+                try {
+                    if (grp.sharedGroup()) {
+                        for (GridCacheContext cache : grp.caches()) {
+                            if (!cache.started())
+                                continue;
+
+                            cnt += expireInternal(store.pendingTree(), cache.cacheId(), tombstone, amount - cnt, upper, c);
+
+                            if (amount != -1 && cnt >= amount)
+                                break;
+                        }
+                    } else
+                        cnt = expireInternal(store.pendingTree(), CU.UNDEFINED_CACHE_ID, tombstone, amount, upper, c);
+                }
+                finally {
+                    if (part != null)
+                        part.release();
+                }
             }
         }
         finally {
             busyLock.leaveBusy();
         }
 
-        return false;
+        return cnt;
     }
 
     /**
