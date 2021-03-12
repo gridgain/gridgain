@@ -173,7 +173,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     protected final ConcurrentMap<Integer, CacheDataStore> partDataStores = new ConcurrentHashMap<>();
 
     /** */
-    private PendingEntriesTree pendingEntries;
+    private volatile PendingEntriesTree pendingEntries;
 
     /** */
     private final GridAtomicLong globalRmvId = new GridAtomicLong(U.currentTimeMillis() * 1000_000);
@@ -1512,52 +1512,71 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         long upper,
         ToIntFunction<PendingRow> c
     ) throws IgniteCheckedException {
-        GridCursor<PendingRow> cur;
-
-        if (grp.sharedGroup())
-            cur = pendingEntries.find(new PendingRow(Integer.MIN_VALUE, tombstone, 0, 0),
-                new PendingRow(Integer.MAX_VALUE, tombstone, upper, 0));
-        else
-            cur = pendingEntries.find(new PendingRow(0, tombstone, 0, 0), new PendingRow(0, tombstone, upper, 0));
-
-        if (!cur.next())
-            return 0;
-
         if (!busyLock.enterBusy())
             return 0;
 
+        int cnt = 0;
+
         try {
-            int scanned = 0;
+            if (grp.sharedGroup()) {
+                for (GridCacheContext cache : grp.caches()) {
+                    if (!cache.started())
+                        continue;
 
-            do {
-                if (amount != -1 && scanned >= amount)
-                    break;
+                    cnt += expireInternal(cache.cacheId(), tombstone, amount - cnt, upper, c);
 
-                PendingRow row = cur.get();
-
-                if (row.cacheId == CU.UNDEFINED_CACHE_ID)
-                    row.cacheId = grp.singleCacheContext().cacheId();
-
-//                if (row.expireTime > upper)
-//                    break;
-
-                if (row.key.partition() == -1)
-                    row.key.partition(grp.config().getAffinity().partition(row.key));
-
-                assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
-
-                if (c.applyAsInt(row) != 0)
-                    break;
-
-                scanned++;
-            }
-            while (cur.next());
-
-            return scanned;
+                    if (amount != -1 && cnt >= amount)
+                        break;
+                }
+            } else
+                cnt = expireInternal(CU.UNDEFINED_CACHE_ID, tombstone, amount, upper, c);
         }
         finally {
             busyLock.leaveBusy();
         }
+
+        return cnt;
+    }
+
+    private int expireInternal(
+        int cacheId,
+        boolean tombstone,
+        int amount,
+        long upper,
+        ToIntFunction<PendingRow> c
+    ) throws IgniteCheckedException {
+        if (pendingEntries == null)
+            return 0;
+
+        GridCursor<PendingRow> cur = pendingEntries.find(new PendingRow(cacheId, tombstone, 0, 0), new PendingRow(cacheId, tombstone, upper, 0));
+
+        if (!cur.next())
+            return 0;
+
+        int scanned = 0;
+
+        do {
+            if (amount != -1 && scanned >= amount)
+                break;
+
+            PendingRow row = cur.get();
+
+            if (row.cacheId == CU.UNDEFINED_CACHE_ID)
+                row.cacheId = grp.singleCacheContext().cacheId();
+
+            if (row.key.partition() == -1)
+                row.key.partition(grp.config().getAffinity().partition(row.key));
+
+            assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
+
+            if (c.applyAsInt(row) != 0)
+                break;
+
+            scanned++;
+        }
+        while (cur.next());
+
+        return scanned;
     }
 
     /** {@inheritDoc} */

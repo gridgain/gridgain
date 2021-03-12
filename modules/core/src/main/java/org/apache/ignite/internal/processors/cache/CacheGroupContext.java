@@ -348,9 +348,9 @@ public class CacheGroupContext {
      * @throws IgniteCheckedException If failed.
      */
     void onCacheStarted(GridCacheContext cctx) throws IgniteCheckedException {
-        addCacheContext(cctx);
-
         offheapMgr.onCacheStarted(cctx);
+
+        addCacheContext(cctx);
     }
 
     /**
