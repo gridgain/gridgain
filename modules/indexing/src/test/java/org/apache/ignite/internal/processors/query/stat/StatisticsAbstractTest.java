@@ -379,7 +379,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                 }
 
                 Long expVer = (cfg == null) ? 0L : cfg.columnsAll().values().stream().filter(predicate)
-                    .mapToLong(StatisticsColumnConfiguration::version).min().orElse(0L);
+                    .mapToLong(StatisticsColumnConfiguration::version).min().orElse(-1L) + 1;
 
                 expectedVersion.put(t, expVer);
             }
