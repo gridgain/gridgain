@@ -151,6 +151,8 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
                 new CacheFiller(cache, 100_000, barrier, keysRangeGen, cnt),
                 threadCnt, "put-thread");
 
+            long t1 = System.currentTimeMillis();
+
             GridTestUtils.runMultiThreadedAsync(
                 new CacheFiller(cache, smallDuration, barrier, keysRangeGen, cnt),
                 threadCnt, "ttl-put-thread");

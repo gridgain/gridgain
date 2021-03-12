@@ -54,12 +54,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     /** Entries pending removal. This collection tracks entries for near cache only. */
     private GridConcurrentSkipListSetEx pendingEntries;
 
-    /** Timestamp when next expired rows clean try will be allowed. Used for throttling on per-cache basis. */
-    protected volatile long nextCleanRowsTime;
-
-    /** Timestamp when next tombstones clean try will be allowed. Used for throttling on per-cache basis. */
-    protected volatile long nextCleanTombstonesTime;
-
     /** */
     private GridCacheContext dhtCtx;
 
@@ -216,6 +210,12 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
         if (amount == 0)
             return false;
 
+        int size = cctx.shared().evict().evictQueue(false).size();
+
+//        if (!cctx.group().cacheOrGroupName().equals("ignite-sys-cache") && size != 0) {
+//            log.info("DBG: remove " + cctx.name() + " " + amount + " queue=" + size);
+//        }
+
         long now = U.currentTimeMillis();
 
         if (!topChangeGuard.readLock().tryLock())
@@ -248,15 +248,11 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             boolean hasRows = false;
             boolean hasTombstones = false;
 
-            if (cctx.config().isEagerTtl() && nextCleanRowsTime <= now && hasRowsToEvict) {
-                if (!(hasRows = cctx.shared().evict().expire(false, expireC, amount)))
-                    nextCleanRowsTime = now + unwindThrottlingTimeout;
-            }
+            if (cctx.config().isEagerTtl() && !cctx.shared().evict().evictQueue(false).isEmpty())
+                hasRows = cctx.shared().evict().expire(false, expireC, amount);
 
-            if (nextCleanTombstonesTime <= now && hasTombstonesToEvict) {
-                if (!(hasTombstones = cctx.shared().evict().expire(true, expireC, amount)))
-                    nextCleanTombstonesTime = now + unwindThrottlingTimeout;
-            }
+            if (!cctx.shared().evict().evictQueue(true).isEmpty())
+                hasTombstones = cctx.shared().evict().expire(true, expireC, amount);
 
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();

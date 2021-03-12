@@ -1631,13 +1631,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         assertFalse("Expecting unprocessed entries", ttl.expire(1));
 
-        long nextCleanRowsTime = U.field(ttl, "nextCleanRowsTime");
-        long nextCleanTombstonesTime = U.field(ttl, "nextCleanTombstonesTime");
-
-        // Check throttling.
-        assertTrue(nextCleanRowsTime > U.currentTimeMillis());
-        assertTrue(nextCleanTombstonesTime > U.currentTimeMillis());
-
         doSleep(2000);
 
         assertEquals(keys.size(), tree.size());
@@ -1686,23 +1679,29 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         Integer k0 = keys.get(0);
         Integer k1 = keys.get(1);
 
-        cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 1000000))).put(k0, 0);
+        doSleep(1100);
+
+        cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 4000))).put(k0, 0);
 
         cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))).put(k1, 1);
 
         PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
 
-        doSleep(1500);
-
         assertEquals(2, t0.size());
 
-        ttl.expire(2);
+        doSleep(2100);
 
-        assertEquals(1, t0.size());
+        PartitionsEvictManager evict = crd.context().cache().context().evict();
 
-        ttl.expire(2);
+        Deque<PendingRow> ttlQueue = evict.evictQueue(false);
+        Deque<PendingRow> tsQueue = evict.evictQueue(true);
 
-        assertEquals(1, cache.size());
+        assertEquals(1, ttlQueue.size());
+        assertEquals(0, tsQueue.size());
+
+        ttl.expire(1);
+
+        assertEquals(0, ttlQueue.size());
     }
 
     /** */
@@ -1740,6 +1739,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         }
 
         CacheGroupContext grpCtx0 = crd.context().cache().cacheGroup(CU.cacheId("test"));
+        GridCacheTtlManager ttl = grpCtx0.caches().get(0).ttl();
         PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
 
         assertEquals(6, t0.size());
@@ -1754,11 +1754,15 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(3, ttlQueue.size());
         assertEquals(0, tsQueue.size());
 
-        System.out.println();
-//
-//        ttl.expire(1);
-//
-//        doSleep(5000);
+        ttl.expire(3);
+
+        assertEquals(0, ttlQueue.size());
+
+        doSleep(5000);
+
+        ttl.expire(3);
+
+        assertEquals(0, ttlQueue.size());
     }
 
     /**

@@ -86,7 +86,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         getLong(SHOW_EVICTION_PROGRESS_FREQ, DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS);
 
     /** */
-    private static final int MAX_EVICT_QUEUE_SIZE = 3000;
+    private static final int MAX_EVICT_QUEUE_SIZE = 10_000;
 
     /** Last time of show eviction progress. */
     private long lastShowProgressTimeNanos = System.nanoTime() - U.millisToNanos(evictionProgressFreqMs);
@@ -302,24 +302,34 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     public void processEvictions(boolean tombstone, long newTs) {
         GridKernalContext ctx = cctx.kernalContext();
 
-        AtomicLong ts = tombstone ? tombstoneTs : ttlTs;
+        ctx.closure().runLocalSafe(new GridPlainRunnable() {
+            @Override public void run() {
+                AtomicLong ts = tombstone ? tombstoneTs : ttlTs;
 
-        long cur = ts.get();
+                long cur = ts.get();
 
-        if (!ts.compareAndSet(cur, newTs))
-            return;
+                if (cur >= newTs)
+                    return;
 
-        //log.info("DBG: processEvictions tombstone=" + tombstone + ", newTs=" + newTs);
+                if (!ts.compareAndSet(cur, newTs)) {
+                    //log.info("DBG: processEvictions fail to advance");
 
-        ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(500) {
-            @Override public void onTimeout() {
-                ctx.closure().runLocalSafe(new GridPlainRunnable() {
-                    @Override public void run() {
-                        // If nothing to clear check later.
-                        if (fillEvictQueue(tombstone, ts.get()) == 0)
+                    return;
+                }
+
+                //log.info("DBG: processEvictions tombstone=" + tombstone + ", oldTs=" + cur + ", newTs=" + newTs);
+
+                int res = fillEvictQueue(tombstone, ts.get());
+
+                if (res == 0) {
+                    ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(500) {
+                        @Override public void onTimeout() {
                             processEvictions(tombstone, U.currentTimeMillis());
-                    }
-                });
+                        }
+                    });
+                }
+//                else
+//                    log.info("DBG: non zero data, pausing " + res);
             }
         });
     }
@@ -344,20 +354,20 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             if (!ctx0.busyLock.readLock().tryLock())
                 continue;
 
-            int size = tombstoneEvictQueue.sizex();
+            int size = queue.sizex();
             int amount = MAX_EVICT_QUEUE_SIZE - size;
 
             try {
                 if (amount > 0) {
                     try {
                         total += ctx0.grp.offheap().expire(tombstone, amount, upper, key -> {
-                            queue.addFirst(key);
+                            queue.addLast(key);
 
                             // Stop scanning on queue overflow.
                             return queue.sizex() > MAX_EVICT_QUEUE_SIZE ? 1 : 0;
                         });
                     }
-                    catch (IgniteCheckedException e) {
+                    catch (Throwable e) {
                         log.error("Failed to expire entries", e);
                     }
                 }
@@ -367,7 +377,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             }
         }
 
-        log.info("DBG: fillEvictQueue res=" + total + ", tombstone=" + tombstone);
+        PendingRow pendingRow = queue.peekFirst();
+        //log.info("DBG: fillEvictQueue res=" + total + ", tombstone=" + tombstone + ", queue=" + queue.sizex() + ", first=" + (pendingRow == null ? "NA" : pendingRow.key));
 
         return total;
     }
@@ -400,8 +411,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 break;
         }
 
+//        if (cleared > 0)
+//            log.info("DBG: removed=" + cleared + ", tombstone=" + tombstone + ", queue=" + queue.sizex());
+
         if (queue.sizex() == 0) {
-            processEvictions(tombstone, U.currentTimeMillis());
+            if (cleared > 0)
+                processEvictions(tombstone, U.currentTimeMillis());
 
             return false;
         }
