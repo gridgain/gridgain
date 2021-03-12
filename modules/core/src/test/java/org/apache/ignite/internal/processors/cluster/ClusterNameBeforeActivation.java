@@ -59,7 +59,7 @@ public class ClusterNameBeforeActivation extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void clusterNameBeforeSystemCacheStarted() throws Exception {
+    public void testGetClusterNameBeforeSystemCacheStarted() throws Exception {
         IgniteEx ignite = startGrid(0);
 
         latch = new CountDownLatch(1);
