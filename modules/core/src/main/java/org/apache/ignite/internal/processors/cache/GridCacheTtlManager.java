@@ -210,7 +210,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
         if (amount == 0)
             return false;
 
-        int size = cctx.shared().evict().evictQueue(false).size();
+        //int size = cctx.shared().evict().evictQueue(false).size();
 
 //        if (!cctx.group().cacheOrGroupName().equals("ignite-sys-cache") && size != 0) {
 //            log.info("DBG: remove " + cctx.name() + " " + amount + " queue=" + size);
