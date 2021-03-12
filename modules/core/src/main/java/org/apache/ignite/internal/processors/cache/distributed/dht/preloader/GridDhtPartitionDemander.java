@@ -1559,8 +1559,6 @@ public class GridDhtPartitionDemander {
                 return;
 
             if (onDone(true, null)) {
-                RebalanceFutureState state = this.state;
-
                 assert state == RebalanceFutureState.STARTED : "[state=" + state + ", fut=" + this + "]";
 
                 grp.localWalEnabled(true, true);
