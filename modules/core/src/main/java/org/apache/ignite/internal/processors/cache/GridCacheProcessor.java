@@ -700,18 +700,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Awaits for local join finish and caches start.
-     */
-    public void awaitStartedQuiet() {
-        try {
-            awaitStarted();
-        }
-        catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
-    }
-
-    /**
      * Await rebalance for caches with SYNC rebalance mode started on local join exchange.
      *
      * @param joinVer Topology version of local join.
