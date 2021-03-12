@@ -64,7 +64,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheTtlManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.MapCacheStoreStrategy;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
@@ -430,6 +429,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             ctx0.ttl().expire(1);
             ctx1.ttl().expire(1);
 
+            // TODO
             validateCache(ctx0.group(), pk, 0, 0);
             validateCache(ctx1.group(), pk, 0, 0);
         }
@@ -506,6 +506,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             ctx0.ttl().expire(1);
             ctx1.ttl().expire(1);
 
+            // TODO
             validateCache(ctx0.group(), pk, 0, 0);
             validateCache(ctx1.group(), pk, 0, 0);
         }
@@ -659,6 +660,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         grpCtx0.singleCacheContext().ttl().expire(1);
         grpCtx1.singleCacheContext().ttl().expire(1);
 
+        // TODO
         validateCache(grpCtx0, part, 0, 0);
         validateCache(grpCtx1, part, 0, 0);
 
@@ -714,6 +716,16 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         validateCache(ctx.group(), part, 0, 1);
 
         doSleep(600);
+
+        PendingEntriesTree tree = ctx.topology().localPartition(part).dataStore().pendingTree();
+
+        assertEquals(1, tree.size());
+
+        long now = U.currentTimeMillis();
+
+        assertTrue(tree.findFirst().expireTime < now);
+
+        crd.context().cache().context().evict().processEvictions(false, now).get();
 
         CU.unwindEvicts(ctx);
 
