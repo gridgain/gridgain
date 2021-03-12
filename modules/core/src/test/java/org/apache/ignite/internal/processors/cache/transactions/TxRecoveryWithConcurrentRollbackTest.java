@@ -22,10 +22,10 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -348,51 +348,49 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
     }
 
     /**
-     * Start 3 servers
-     * Start 2 clients
-     * Start two OPTIMISTIC transactions with the same key from different client nodes
-     * Transfer to PREPARED STATE
-     * Stop one client node
-     *
+     * Start 3 servers,
+     * start 2 clients,
+     * start two OPTIMISTIC transactions with the same key from different client nodes,
+     * transfer to PREPARED STATE,
+     * stop one client node.
      */
     @Test
-    public void reproducer() throws Exception {
+    public void testTxDoesntBecamePreparedAfterError() throws Exception {
         backups = 2;
         persistence = true;
         this.syncMode = FULL_ASYNC;
 
         final IgniteEx node0 = startGrids(3);
-        node0.cluster().active(true);
 
-        final Ignite client = startGrid("client");
+        node0.cluster().state(ClusterState.ACTIVE);
+
+        final Ignite client1 = startGrid("client1");
         final Ignite client2 = startGrid("client2");
 
         awaitPartitionMapExchange();
 
-        final IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
+        final IgniteCache<Object, Object> cache = client1.cache(DEFAULT_CACHE_NAME);
         final IgniteCache<Object, Object> cache2 = client2.cache(DEFAULT_CACHE_NAME);
 
         final Integer pk = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
 
-        CountDownLatch latch = new CountDownLatch(1);
-        CountDownLatch latch2 = new CountDownLatch(1);
+        CountDownLatch txPrepareLatch = new CountDownLatch(1);
 
         GridTestUtils.runMultiThreadedAsync(() -> {
-            try (final Transaction tx = client.transactions().withLabel("tx").txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
-
+            try (final Transaction tx = client1.transactions().withLabel("tx").txStart(OPTIMISTIC, READ_COMMITTED, 5000, 1)) {
                 cache.put(pk, Boolean.TRUE);
 
                 TransactionProxyImpl p = (TransactionProxyImpl)tx;
 
-                TestRecordingCommunicationSpi.spi(grid("client")).blockMessages(
-                    (node, msg) -> msg instanceof GridNearTxFinishRequest || msg instanceof TxLocksRequest);
+                TestRecordingCommunicationSpi.spi(grid("client1")).blockMessages(
+                    (node, msg) -> msg instanceof GridNearTxFinishRequest || msg instanceof TxLocksRequest
+                );
 
                 p.tx().prepareNearTxLocal();
 
                 p.tx().currentPrepareFuture().listen((fut) -> {
-                    latch.countDown();
+                    txPrepareLatch.countDown();
                 });
-
             } catch (Exception e) {
                 // No-op.
             }
@@ -402,17 +400,21 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
             cache2.put(pk, Boolean.TRUE);
 
             TestRecordingCommunicationSpi.spi(grid("client2")).blockMessages(
-                (node, msg) -> msg instanceof GridDhtTxFinishRequest || msg instanceof TxLocksRequest);
+                (node, msg) -> msg instanceof GridDhtTxFinishRequest || msg instanceof TxLocksRequest
+            );
 
             TransactionProxyImpl p = (TransactionProxyImpl)tx;
 
             p.tx().prepareNearTxLocal();
 
             p.tx().currentPrepareFuture().listen((fut) -> {
-                latch2.countDown();
+                txPrepareLatch.countDown();
             });
 
-            while (latch2.getCount() > 0 && latch.getCount() > 0) {}
+            txPrepareLatch.await(60, TimeUnit.SECONDS);
+
+            if (txPrepareLatch.getCount() > 0)
+                fail("Failed to await for tx prepare.");
 
             GridDhtTxLocal dhtTxLocal = txs(grid(1)).stream()
                 .filter(t -> t.state() == TransactionState.PREPARING)
@@ -422,23 +424,25 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
             if (dhtTxLocal != null) {
                 UUID clientNodeToFail = dhtTxLocal.eventNodeId();
-                GridDhtTxPrepareFuture prep = GridTestUtils.getFieldValue(dhtTxLocal,"prepFut");
+
+                GridDhtTxPrepareFuture prep = GridTestUtils.getFieldValue(dhtTxLocal, "prepFut");
+
                 prep.get();
 
-                log.info("Transactions check point: "
-                    + txs(grid(1)).stream()
-                    .map(Object::toString)
-                    .collect(Collectors.joining(", ")));
+                List<IgniteInternalTx> txs = txs(grid(1));
 
-                if (clientNodeToFail.equals(((IgniteEx) client).localNode().id())) {
-                    client.close();
-                } else if (clientNodeToFail.equals(((IgniteEx) client2).localNode().id())) {
+                String txsStr = txs.stream().map(Object::toString).collect(Collectors.joining(", "));
+
+                log.info("Transactions check point [count" + txs.size() + ", txs=" + txsStr + "]");
+
+                if (clientNodeToFail.equals(((IgniteEx) client1).localNode().id()))
+                    client1.close();
+                else if (clientNodeToFail.equals(((IgniteEx) client2).localNode().id()))
                     client2.close();
-                }
             }
         }
         catch (Exception e) {
-            log.error("ERROR: " + e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
 
         U.sleep(500);

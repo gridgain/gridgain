@@ -1042,7 +1042,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
      */
     private boolean onComplete(@Nullable GridNearTxPrepareResponse res) {
         if (res.error() != null)
-            tx.state(MARKED_ROLLBACK);
+            tx.setRollbackOnly();
         else if (!tx.onePhaseCommit() && ((last || tx.isSystemInvalidate()) && !(tx.near() && tx.local())))
             tx.state(PREPARED);
 
