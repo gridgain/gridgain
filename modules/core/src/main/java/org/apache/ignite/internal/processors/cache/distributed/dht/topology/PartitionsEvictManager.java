@@ -296,13 +296,15 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
+     * Process evictions asynchronously.
+     *
      * @param tombstone Tombstone.
      * @param newTs New timestamp.
      */
-    public void processEvictions(boolean tombstone, long newTs) {
+    public IgniteInternalFuture<?> processEvictions(boolean tombstone, long newTs) {
         GridKernalContext ctx = cctx.kernalContext();
 
-        ctx.closure().runLocalSafe(new GridPlainRunnable() {
+        return ctx.closure().runLocalSafe(new GridPlainRunnable() {
             @Override public void run() {
                 AtomicLong ts = tombstone ? tombstoneTs : ttlTs;
 
@@ -378,7 +380,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         }
 
         PendingRow pendingRow = queue.peekFirst();
-        //log.info("DBG: fillEvictQueue res=" + total + ", tombstone=" + tombstone + ", queue=" + queue.sizex() + ", first=" + (pendingRow == null ? "NA" : pendingRow.key));
+        //log.info("DBG: fillEvictQueue res=" + total + ", hash=" + queue.hashCode() + ", tombstone=" + tombstone + ", queue=" + queue.sizex() + ", first=" + (pendingRow == null ? "NA" : pendingRow.key));
 
         return total;
     }
@@ -423,8 +425,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     break;
             }
 
-//        if (cleared > 0)
-//            log.info("DBG: removed=" + cleared + ", tombstone=" + tombstone + ", queue=" + queue.sizex());
+//            if (cleared > 0)
+//                log.info("DBG: removed=" + cleared + ", tombstone=" + tombstone + ", queue=" + queue.sizex());
 
             if (queue.sizex() == 0) {
                 if (cleared > 0)
