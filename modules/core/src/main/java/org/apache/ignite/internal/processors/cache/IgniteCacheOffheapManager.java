@@ -51,6 +51,7 @@ import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
+import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -171,28 +172,22 @@ public interface IgniteCacheOffheapManager {
     public void destroyCacheDataStore(CacheDataStore store) throws IgniteCheckedException;
 
     /**
-     * @param cctx Cache context.
      * @param c Closure.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
      *               amount can be greater if a limit has been exceeded.
      * @return {@code True} if unprocessed expired entries remains.
-     * @throws IgniteCheckedException If failed.
      */
-    public boolean expireRows(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount)
-        throws IgniteCheckedException;
+    public boolean expireRows(IgniteClosureX<GridCacheEntryEx, Boolean> c, int amount);
 
     /**
-     * @param cctx Cache context.
      * @param c Closure.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
      *               amount can be greater if a limit has been exceeded.
      * @return {@code True} if unprocessed expired entries remains.
-     * @throws IgniteCheckedException If failed.
      */
-    public boolean expireTombstones(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount)
-        throws IgniteCheckedException;
+    public boolean expireTombstones(IgniteClosureX<GridCacheEntryEx, Boolean> c, int amount);
 
-    public int expire(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> clo) throws IgniteCheckedException;
+    public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> clo) throws IgniteCheckedException;
 
     /**
      * Gets the number of entries pending expire.

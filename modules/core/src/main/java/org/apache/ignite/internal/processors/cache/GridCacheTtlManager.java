@@ -28,7 +28,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
-import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -249,10 +248,10 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             boolean hasTombstones = false;
 
             if (cctx.config().isEagerTtl() && !cctx.shared().evict().evictQueue(false).isEmpty())
-                hasRows = cctx.shared().evict().expire(false, expireC, amount);
+                hasRows = cctx.offheap().expireRows(expireC, amount);
 
             if (!cctx.shared().evict().evictQueue(true).isEmpty())
-                hasTombstones = cctx.shared().evict().expire(true, expireC, amount);
+                hasTombstones = cctx.offheap().expireTombstones(expireC, amount);
 
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();

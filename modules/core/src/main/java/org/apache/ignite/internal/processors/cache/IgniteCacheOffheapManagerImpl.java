@@ -116,6 +116,7 @@ import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
+import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -1371,29 +1372,21 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /** {@inheritDoc} */
     @Override public boolean expireRows(
-        GridCacheContext cctx,
-        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        IgniteClosureX<GridCacheEntryEx, Boolean> c,
         int amount
-    ) throws IgniteCheckedException {
-        assert !cctx.isNear() : cctx.name();
-
-        assert pendingEntries != null;
-
-        return expireInternal(cctx, c, amount, false, U.currentTimeMillis());
+    ) {
+        return ctx.evict().expire(false, c, amount);
     }
 
     /** {@inheritDoc} */
     @Override public boolean expireTombstones(
-        GridCacheContext cctx,
-        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        IgniteClosureX<GridCacheEntryEx, Boolean> c,
         int amount
-    ) throws IgniteCheckedException {
+    ) {
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
         if (tsCnt == 0)
             return false;
-
-        long now = U.currentTimeMillis();
 
         GridDhtPartitionsExchangeFuture fut = ctx.exchange().lastTopologyFuture();
 
@@ -1404,16 +1397,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 ctx.ttl().tombstoneCleanupSuspended()))
             return false;
 
-        if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
+        if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
 
-            now = Long.MAX_VALUE;
-        }
-
         // Tombstones for volatile cache group are always cleared.
-        //return expireInternal(cctx, c, amount, true, now);
-
-        return expireInternal(cctx, c, amount, true, now);
+        return ctx.evict().expire(true, c, amount);
     }
 
     /**
@@ -1495,7 +1483,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /**
-     * @param cctx Cache context.
      * @param tombstone
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
      * @param upper Upper bound.
@@ -1503,7 +1490,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @return A number of scanned entries.
      * @throws IgniteCheckedException If failed.
      */
-    @Override public int expire(
+    @Override public int fillQueue(
         boolean tombstone,
         int amount,
         long upper,
@@ -1520,13 +1507,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     if (!cache.started())
                         continue;
 
-                    cnt += expireInternal(cache.cacheId(), tombstone, amount - cnt, upper, c);
+                    cnt += expireInternal(pendingEntries, cache.cacheId(), tombstone, amount - cnt, upper, c);
 
                     if (amount != -1 && cnt >= amount)
                         break;
                 }
             } else
-                cnt = expireInternal(CU.UNDEFINED_CACHE_ID, tombstone, amount, upper, c);
+                cnt = expireInternal(pendingEntries, CU.UNDEFINED_CACHE_ID, tombstone, amount, upper, c);
         }
         finally {
             busyLock.leaveBusy();
@@ -1535,7 +1522,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         return cnt;
     }
 
-    private int expireInternal(
+    /**
+     * @param pendingEntries Pending entries.
+     * @param cacheId Cache id.
+     * @param tombstone Tombstone.
+     * @param amount Amount.
+     * @param upper Upper.
+     * @param c Closure.
+     */
+    protected int expireInternal(
+        PendingEntriesTree pendingEntries,
         int cacheId,
         boolean tombstone,
         int amount,
