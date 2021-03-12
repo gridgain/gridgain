@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Examples
 {
     using System.IO;
+    using System.Reflection;
     using System.Text.RegularExpressions;
 
     /// <summary>
@@ -42,6 +43,12 @@ namespace Apache.Ignite.Core.Tests.Examples
 
         /** */
         public static readonly string TasksJsonFile = Path.Combine(SourcesPath, ".vscode", "tasks.json");
+
+        /** */
+        public static readonly string ExpectedOutputDir = Path.Combine(
+            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+            "Examples",
+            "ExpectedOutput");
 
         /// <summary>
         /// Gets the assembly file path.

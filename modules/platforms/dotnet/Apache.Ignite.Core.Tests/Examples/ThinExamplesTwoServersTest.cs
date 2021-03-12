@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -16,31 +16,21 @@
 
 namespace Apache.Ignite.Core.Tests.Examples
 {
-    using System.Linq;
     using NUnit.Framework;
 
     /// <summary>
-    /// Tests thick examples.
+    /// Tests thin client examples with two server nodes.
     /// </summary>
     [Category(TestUtils.CategoryExamples)]
-    public class ThickExamplesTest : ExamplesTestBase
+    [TestFixture]
+    public class ThinExamplesTwoServersTest : ThinExamplesTest
     {
-        /** */
-        private static readonly Example[] ThickExamples = Example.AllExamples
-            .Where(e => !e.IsThin && !e.IsClient && !e.RequiresExternalNode)
-            .ToArray();
-
         /// <summary>
-        /// Tests thick mode example.
+        /// Initializes a new instance of <see cref="ThinExamplesTwoServersTest"/>.
         /// </summary>
-        [Test, TestCaseSource(nameof(ThickExamples))]
-        public void TestThickExample(Example example)
+        public ThinExamplesTwoServersTest() : base(2)
         {
-            Assert.IsFalse(example.IsThin);
-
-            example.Run();
-
-            CheckOutput(example, "Ignite node started OK", "Topology snapshot [ver=1");
+            // No-op.
         }
     }
 }
