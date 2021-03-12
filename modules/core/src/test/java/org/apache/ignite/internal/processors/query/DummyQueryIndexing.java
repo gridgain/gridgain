@@ -346,11 +346,6 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteStatisticsManager statsManager() {
-        return null;
-    }
-
-    /** {@inheritDoc} */
     @Override public void defragment(
         CacheGroupContext grpCtx,
         CacheGroupContext newCtx,

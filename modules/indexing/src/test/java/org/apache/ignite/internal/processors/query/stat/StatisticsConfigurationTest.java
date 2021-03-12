@@ -31,6 +31,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
@@ -276,8 +277,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
-        grid(0).context().query().getIndexing().statsManager()
-            .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
+        statisticsMgr(0).dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT,
             (stats) -> stats.forEach(s -> assertNull(s.columnStatistics("A"))));
@@ -313,8 +313,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         stopGrid(1);
 
-        grid(0).context().query().getIndexing().statsManager()
-            .dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
+        statisticsMgr(0).dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT,
             (stats) -> stats.forEach(s -> assertNull("Invalid stats: " + stats, s.columnStatistics("A"))));
@@ -356,7 +355,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         // TODO: must be removed after fix GG-32766
         if (persist)
-            grid(0).context().query().getIndexing().statsManager().dropStatistics(SMALL_TARGET);
+            statisticsMgr(0).dropStatistics(SMALL_TARGET);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, (stats) -> stats.forEach(s -> assertNull(s)));
 
@@ -457,31 +456,30 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         ign0.cluster().state(ClusterState.ACTIVE);
 
         IgniteEx ign1 = grid(1);
-        IgniteStatisticsManager ign0statMgr = ign0.context().query().getIndexing().statsManager();
 
-        assertEquals(ON, ign0statMgr.usageState());
+        assertEquals(ON, statisticsMgr(0).usageState());
 
         createSmallTable(null);
 
         assertTrue(executeStatisticsConfigurationCommands(ign0));
         assertTrue(executeStatisticsConfigurationCommands(ign1));
 
-        ign0statMgr.usageState(NO_UPDATE);
+        statisticsMgr(0).usageState(NO_UPDATE);
 
         assertTrue(executeStatisticsConfigurationCommands(ign0));
         assertTrue(executeStatisticsConfigurationCommands(ign1));
 
-        ign0statMgr.usageState(OFF);
+        statisticsMgr(0).usageState(OFF);
 
         assertFalse(executeStatisticsConfigurationCommands(ign0));
         assertFalse(executeStatisticsConfigurationCommands(ign1));
 
-        ign0statMgr.usageState(NO_UPDATE);
+        statisticsMgr(0).usageState(NO_UPDATE);
 
         assertTrue(executeStatisticsConfigurationCommands(ign0));
         assertTrue(executeStatisticsConfigurationCommands(ign1));
 
-        ign0statMgr.usageState(ON);
+        statisticsMgr(0).usageState(ON);
 
         assertTrue(executeStatisticsConfigurationCommands(ign0));
         assertTrue(executeStatisticsConfigurationCommands(ign1));
@@ -494,7 +492,8 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
      * @return {@code true} if all commands pass successfully, {@code false} - otherwise.
      */
     private boolean executeStatisticsConfigurationCommands(IgniteEx ign) throws IgniteInterruptedCheckedException {
-        IgniteStatisticsManager statMgr = ign.context().query().getIndexing().statsManager();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ign.context().query().getIndexing();
+        IgniteStatisticsManager statMgr = indexing.statsManager();
 
         int success = 0;
         try {
@@ -629,7 +628,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     @NotNull private List<ObjectStatisticsImpl> statisticsAllNodes(String schema, String objName) {
         List<IgniteStatisticsManager> mgrs = G.allGrids().stream()
             .filter(ign -> !((IgniteEx)ign).context().clientNode())
-            .map(ign -> ((IgniteEx)ign).context().query().getIndexing().statsManager())
+            .map(ign -> ((IgniteH2Indexing)((IgniteEx)ign).context().query().getIndexing()).statsManager())
             .collect(Collectors.toList());
 
         return mgrs.stream()

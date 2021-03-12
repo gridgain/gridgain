@@ -15,16 +15,22 @@
  */
 package org.apache.ignite.internal.sql.command;
 
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.sql.SqlKeyword;
 import org.apache.ignite.internal.sql.SqlLexer;
 import org.apache.ignite.internal.sql.SqlLexerToken;
 import org.apache.ignite.internal.sql.SqlLexerTokenType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseQualifiedIdentifier;
 import static org.apache.ignite.internal.sql.SqlParserUtils.skipIfMatchesKeyword;
@@ -33,9 +39,11 @@ import static org.apache.ignite.internal.sql.SqlParserUtils.skipIfMatchesKeyword
  * ANALYZE command to mark object for statistics collection.
  */
 public class SqlAnalyzeCommand extends SqlStatisticsCommands {
-    /** Targets to analyze. */
-    protected Map<StatisticsTarget, Map<String, String>> targets = new HashMap<>();
+    /** OBSOLESCENCE_MAP_PERCENT parameter name. */
+    public static final String MAX_CHANGED_PARTITION_ROWS_PERCENT = "MAX_CHANGED_PARTITION_ROWS_PERCENT";
 
+    /** Targets to analyze. */
+    protected List<StatisticsObjectConfiguration> configs = new ArrayList<>();
     /** {@inheritDoc} */
     @Override public SqlCommand parse(SqlLexer lex) {
         while (true) {
@@ -45,7 +53,8 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
             String[] cols = parseColumnList(lex, true);
             Map<String, String> params = parseParams(lex);
 
-            targets.put(new StatisticsTarget(tblQName.schemaName(), tblQName.name(), cols), params);
+            StatisticsTarget target = new StatisticsTarget(tblQName.schemaName(), tblQName.name(), cols);
+            configs.add(buildConfig(target, params));
 
             if (tryEnd(lex))
                 return this;
@@ -53,10 +62,37 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
     }
 
     /**
+     * Build statistics object configuration from command arguments.
+     *
+     * @param target Statistics target.
+     * @param params Map of parameter to value strings.
+     * @return Statistics object configuration.
+     * @throws IgniteSQLException In case of unexpected parameter.
+     */
+    public StatisticsObjectConfiguration buildConfig(StatisticsTarget target, Map<String, String> params)
+        throws IgniteSQLException {
+        byte maxChangedRows = getByteOrDefault(params, MAX_CHANGED_PARTITION_ROWS_PERCENT,
+            StatisticsObjectConfiguration.DEFAULT_OBSOLESCENCE_MAX_PERCENT);
+
+        if (!params.isEmpty())
+            throw new IgniteSQLException("");
+
+        List<StatisticsColumnConfiguration> colCfgs = Arrays.stream(target.columns())
+            .map(StatisticsColumnConfiguration::new).collect(Collectors.toList());
+
+        return new StatisticsObjectConfiguration(target.key(), colCfgs, maxChangedRows);
+    }
+
+    private static byte getByteOrDefault(Map<String,String> map, String key, byte defaultValue) {
+        String value = map.remove(key);
+        return (value==null) ? defaultValue : Byte.valueOf(value);
+    }
+
+    /**
      * @return Target to params map.
      */
-    public Map<StatisticsTarget, Map<String, String>> targetsMap() {
-        return targets;
+    public Collection<StatisticsObjectConfiguration> configurations() {
+        return configs;
     }
 
     /**

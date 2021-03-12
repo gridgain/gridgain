@@ -59,7 +59,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
 
         GridTestUtils.assertThrows(
             log,
-            () -> grid(0).context().query().getIndexing().statsManager().collectStatistics(t100, t101, tWrong),
+            () -> statisticsMgr(0).collectStatistics(t100, t101, tWrong),
             IgniteSQLException.class,
             "Table doesn't exist [schema=PUBLIC, table=SMALL101wrong]"
         );

@@ -45,20 +45,17 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
      */
     @Test
     public void testStatisticsClear() throws Exception {
-        IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
-
         updateStatistics(SMALL_TARGET);
 
-        Assert.assertNotNull(statMgr0.getLocalStatistics(SMALL_KEY));
+        Assert.assertNotNull(statisticsMgr(0).getLocalStatistics(SMALL_KEY));
 
-        Assert.assertNotNull(statMgr1.getLocalStatistics(SMALL_KEY));
+        Assert.assertNotNull(statisticsMgr(1).getLocalStatistics(SMALL_KEY));
 
-        statMgr1.dropStatistics(SMALL_TARGET);
+        statisticsMgr(1).dropStatistics(SMALL_TARGET);
 
         GridTestUtils.waitForCondition(
-            () -> null == statMgr0.getLocalStatistics(SMALL_KEY)
-            && null == statMgr1.getLocalStatistics(SMALL_KEY), TIMEOUT);
+            () -> null == statisticsMgr(0).getLocalStatistics(SMALL_KEY)
+            && null == statisticsMgr(1).getLocalStatistics(SMALL_KEY), TIMEOUT);
     }
 
     /**
@@ -69,18 +66,15 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
      */
     @Test
     public void testStatisticsClearOnNotExistingTable() throws Exception {
-        IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
-
         GridTestUtils.assertThrows(
             log,
-            () -> statMgr1.dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME")),
+            () -> statisticsMgr(1).dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME")),
             IgniteSQLException.class,
             "Statistic doesn't exist for [schema=PUBLIC, obj=NO_NAME]"
         );
 
-        Assert.assertNull(statMgr0.getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
-        Assert.assertNull(statMgr1.getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
+        Assert.assertNull(statisticsMgr(0).getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
+        Assert.assertNull(statisticsMgr(1).getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
     }
 
     /**

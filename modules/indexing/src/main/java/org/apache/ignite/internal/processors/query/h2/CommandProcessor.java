@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
@@ -95,6 +94,7 @@ import org.apache.ignite.internal.processors.query.messages.GridQueryKillRespons
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.sql.command.SqlAlterTableCommand;
 import org.apache.ignite.internal.sql.command.SqlAlterUserCommand;
 import org.apache.ignite.internal.sql.command.SqlAnalyzeCommand;
@@ -513,17 +513,9 @@ public class CommandProcessor {
     private void processAnalyzeCommand(SqlAnalyzeCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
 
-        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
 
-        Map<StatisticsTarget, Map<String, String>> targets = cmd.targetsMap().entrySet().stream().collect(
-            Collectors.toMap(e -> {
-                StatisticsTarget target = e.getKey();
-                String schema = (target.schema() == null) ? cmd.schemaName() : target.schema();
-                return new StatisticsTarget(schema, target.obj());
-                },
-                e -> e.getValue()));
-
-        statMgr.collectStatistics(targets);
+        indexing.statsManager().collectStatistics(cmd.targets().toArray(new StatisticsObjectConfiguration[0]));
     }
 
     /**
@@ -534,13 +526,13 @@ public class CommandProcessor {
     private void processRefreshStatisticsCommand(SqlRefreshStatitsicsCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.REFRESH_STATISTICS);
 
-        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
 
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        statMgr.refreshStatistics(targets);
+        indexing.statsManager().refreshStatistics(targets);
     }
 
     /**
@@ -551,13 +543,13 @@ public class CommandProcessor {
     private void processDropStatisticsCommand(SqlDropStatisticsCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
 
-        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
 
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        statMgr.dropStatistics(targets);
+        indexing.statsManager().dropStatistics(targets);
     }
 
     /**

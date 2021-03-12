@@ -39,13 +39,11 @@ public class StatisticsObsolescenceTest extends StatisticsAbstractTest {
 
         createSmallTable(null);
 
-        IgniteStatisticsManager statMgr0 = node0.context().query().getIndexing().statsManager();
+        statisticsMgr(0).collectStatistics(SMALL_TARGET);
 
-        statMgr0.collectStatistics(SMALL_TARGET);
+        assertTrue(GridTestUtils.waitForCondition(() -> statisticsMgr(0).getLocalStatistics(SMALL_KEY) != null, TIMEOUT));
 
-        assertTrue(GridTestUtils.waitForCondition(() -> statMgr0.getLocalStatistics(SMALL_KEY) != null, TIMEOUT));
-
-        ObjectStatisticsImpl stat1 = (ObjectStatisticsImpl)statMgr0.getLocalStatistics(SMALL_KEY);
+        ObjectStatisticsImpl stat1 = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 
         assertNotNull(stat1);
 
@@ -53,7 +51,7 @@ public class StatisticsObsolescenceTest extends StatisticsAbstractTest {
             sql(String.format("INSERT INTO small(a, b, c) VALUES(%d, %d, %d)", i, i, i % 10));
 
         assertTrue(GridTestUtils.waitForCondition(() -> {
-            ObjectStatisticsImpl stat2 = (ObjectStatisticsImpl)statMgr0.getLocalStatistics(SMALL_KEY);
+            ObjectStatisticsImpl stat2 = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 
             return stat2.rowCount() > stat1.rowCount();
         }, 7000));

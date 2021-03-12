@@ -520,13 +520,6 @@ public interface GridQueryIndexing {
     }
 
     /**
-     * Get statistics manager.
-     *
-     * @return Statistics manager.
-     */
-    IgniteStatisticsManager statsManager();
-
-    /**
      * Defragment index partition.
      *
      * @param grpCtx Old group context.

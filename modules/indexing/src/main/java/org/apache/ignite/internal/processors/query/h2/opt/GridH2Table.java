@@ -480,9 +480,9 @@ public class GridH2Table extends TableBase {
         if (cacheContext == null)
             return null;
 
-        IgniteStatisticsManager statManager = cacheContext.kernalContext().query().getIndexing().statsManager();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)cacheContext.kernalContext().query().getIndexing();
 
-        return statManager.getLocalStatistics(new StatisticsKey(identifier.schema(), identifier.table()));
+        return indexing.statsManager().getLocalStatistics(new StatisticsKey(identifier.schema(), identifier.table()));
     }
 
     /**
@@ -1382,8 +1382,9 @@ public class GridH2Table extends TableBase {
         if (cacheCtx == null)
             return;
 
+        IgniteH2Indexing indexing = (IgniteH2Indexing)cacheCtx.kernalContext().query().getIndexing();
         try {
-            cacheCtx.kernalContext().query().getIndexing().statsManager().onRowUpdated(this.identifier().schema(),
+            indexing.statsManager().onRowUpdated(this.identifier().schema(),
                 this.identifier.table(), key.partition(), key.valueBytes(this.cacheContext().cacheObjectContext()));
         }
         catch (IgniteCheckedException e) {

@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
@@ -287,16 +288,36 @@ public class IgniteStatisticsConfigurationManager {
             log.debug("Update statistics [targets=" + targets + ']');
 
         for (StatisticsObjectConfiguration target : targets) {
+
+            GridH2Table tbl = schemaMgr.dataTable(target.key().schema(), target.key().obj());
+
+            validate(target, tbl);
+
+            //Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(),
+            //    F.isEmpty(target.columns()) ? Collections.emptyList() : new ArrayList<>(target.columns().keySet()));
+
+            List<StatisticsColumnConfiguration> colCfgs;
+            if (F.isEmpty(target.columns()))
+                colCfgs = Arrays.stream(tbl.getColumns())
+                    .filter(c -> c.getColumnId() >= QueryUtils.DEFAULT_COLUMNS_COUNT)
+                    .map(c -> new StatisticsColumnConfiguration(c.getName()))
+                    .collect(Collectors.toList());
+            else
+                colCfgs = new ArrayList<>(target.columns().values());
+
+
+            StatisticsObjectConfiguration newCfg = new StatisticsObjectConfiguration(target.key(), colCfgs,
+                target.maxPartitionObsolescencePercent());
+
             try {
                 while (true) {
-                    String key = key2String(target.key());
+                    String key = key2String(newCfg.key());
 
                     StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
+                    StatisticsObjectConfiguration resultCfg = (oldCfg == null) ? newCfg :
+                        StatisticsObjectConfiguration.merge(oldCfg, newCfg);
 
-                    if (oldCfg != null)
-                        target = StatisticsObjectConfiguration.merge(oldCfg, target);
-
-                    if (distrMetaStorage.compareAndSet(key, oldCfg, target))
+                    if (distrMetaStorage.compareAndSet(key, oldCfg, resultCfg))
                         break;
                 }
             }
@@ -670,6 +691,32 @@ public class IgniteStatisticsConfigurationManager {
      */
     public StatisticsObjectConfiguration config(StatisticsKey key) throws IgniteCheckedException {
         return distrMetaStorage.read(key2String(key));
+    }
+
+    /**
+     * Validate specified configuration: check that specified table exist and contains all specified columns.
+     *
+     * @param cfg Statistics object configuration to check.
+     * @param tbl Corresponding GridH2Table (if exists).
+     */
+    private void validate(StatisticsObjectConfiguration cfg, GridH2Table tbl) {
+        if (tbl == null) {
+            throw new IgniteSQLException(
+                "Table doesn't exist [schema=" + cfg.key().schema() + ", table=" + cfg.key().obj() + ']',
+                IgniteQueryErrorCode.TABLE_NOT_FOUND);
+        }
+
+        if (!F.isEmpty(cfg.columns())) {
+            for (String col : cfg.columns().keySet()) {
+                if (!tbl.doesColumnExist(col)) {
+                    throw new IgniteSQLException(
+                        "Column doesn't exist [schema=" + cfg.key().schema() +
+                            ", table=" + cfg.key().obj() +
+                            ", column=" + col + ']',
+                        IgniteQueryErrorCode.COLUMN_NOT_FOUND);
+                }
+            }
+        }
     }
 
     /**

@@ -30,11 +30,15 @@ import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Describe configuration of the statistic for a database object (e.g. TABLE).
  */
 public class StatisticsObjectConfiguration implements Serializable {
+    /** Rows limit to renew partition statistics in percent. */
+    public static final byte DEFAULT_OBSOLESCENCE_MAX_PERCENT = 15;
+
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -72,13 +76,13 @@ public class StatisticsObjectConfiguration implements Serializable {
     /**
      * Merge configuration changes with existing configuration.
      *
-     * @param oldCfg Previous configuration. May be {@code null} when new configuration is created.
+     * @param oldCfg Previous configuration.
      * @param newCfg Contains target configuration changes.
      * @return merged configuration.
      */
     public static StatisticsObjectConfiguration merge(
-        StatisticsObjectConfiguration oldCfg,
-        StatisticsObjectConfiguration newCfg
+        @NotNull StatisticsObjectConfiguration oldCfg,
+        @NotNull StatisticsObjectConfiguration newCfg
     ) {
         assert oldCfg.key.equals(newCfg.key) : "Invalid stat config to merge: [oldKey=" + oldCfg.key
             + ", newKey=" + newCfg.key + ']';
@@ -87,6 +91,10 @@ public class StatisticsObjectConfiguration implements Serializable {
 
         for (StatisticsColumnConfiguration c : newCfg.cols.values())
             cols.put(c.name(), StatisticsColumnConfiguration.merge(cols.get(c.name()), c));
+
+        for (StatisticsColumnConfiguration oldC : oldCfg.cols.values())
+            if (!cols.containsKey(oldC.name()))
+                cols.put(oldC.name(), oldC);
 
         return new StatisticsObjectConfiguration(newCfg.key, cols.values(), newCfg.maxPartitionObsolescencePercent);
     }

@@ -45,27 +45,25 @@ public class PSUStatisticsStorageTest extends StatisticsStorageAbstractTest {
 
         IgniteEx ign = grid(0);
 
-        IgniteStatisticsManager statsMgr = ign.context().query().getIndexing().statsManager();
-
         // 1) check that statistics used and optimal plan generated
         checkOptimalPlanChosenForDifferentIndexes(ign, new String[]{"SMALL_B"}, SQL, NO_HINTS);
 
         // 2) partially remove statistics for one extra column and check chat the rest statistics still can be used
-        statsMgr.dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
+        statisticsMgr(0).dropStatistics(new StatisticsTarget("PUBLIC", "SMALL", "A"));
 
         assertTrue(GridTestUtils.waitForCondition(
             () ->
-                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics(SMALL_KEY)).columnStatistics("A") == null,
+                ((ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY)).columnStatistics("A") == null,
                     TIMEOUT));
 
         checkOptimalPlanChosenForDifferentIndexes(ign, new String[]{"SMALL_B"}, SQL, NO_HINTS);
 
         // 3) partially remove necessarily for the query statistics and check that query plan will be changed
-        statsMgr.dropStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
+        statisticsMgr(0).dropStatistics(new StatisticsTarget(SCHEMA, "SMALL", "B"));
 
         assertTrue(GridTestUtils.waitForCondition(
             () ->
-                ((ObjectStatisticsImpl)statsMgr.getLocalStatistics(SMALL_KEY))
+                ((ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY))
                     .columnStatistics("B") == null,
             TIMEOUT));
 
