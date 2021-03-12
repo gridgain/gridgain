@@ -102,6 +102,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_CANCEL_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXECUTE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXEC_REQ;
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_MAP_END;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_PARSE;
 import static org.apache.ignite.spi.tracing.Scope.SQL;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
@@ -570,6 +571,35 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
             checkBasicSelectQuerySpanTree(rootSpan, TEST_TABLE_POPULATION);
     }
 
+    /** */
+    @Test
+    public void testQueryEndSpanWithPlan() throws Exception {
+        String prsnTable = createTableAndPopulate(Person.class, PARTITIONED, 1);
+
+        reducer().context().query()
+            .querySqlFields(new SqlFieldsQuery("SELECT * FROM " + prsnTable), false).getAll();
+
+        handler().flush();
+
+        checkDroppedSpans();
+
+        List<SpanId> rootSpans = findRootSpans(SQL_QRY);
+
+        assertEquals(1, rootSpans.size());
+
+        List<SpanId> mapQryEndSpans = checkSpan(SQL_QRY_MAP_END, null, GRID_CNT, null);
+
+        mapQryEndSpans.forEach(span -> {
+            List<String> logs = getLogs(span);
+
+            assertTrue(
+                "Invalid logs: " + logs,
+                logs.stream()
+                    .anyMatch(msg -> msg.contains("SELECT") && msg.contains("lookupCount"))
+            );
+        });
+    }
+
     /**
      * Checks presence of basic spans that related to SELECT SQL query and are childs of the specfied span.
      *
@@ -682,6 +712,20 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
             .getAttributes()
             .getAttributeMap()
             .get(tag));
+    }
+
+    /**
+     * Logs string from span with specified id.
+     *
+     * @param spanId Id of the target span.
+     * @return Value of the attribute.
+     */
+    protected List<String> getLogs(SpanId spanId) {
+        return handler()
+            .spanById(spanId)
+            .getAnnotations().getEvents().stream()
+            .map(e -> e.getEvent().getDescription())
+            .collect(Collectors.toList());
     }
 
     /**
