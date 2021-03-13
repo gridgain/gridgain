@@ -408,6 +408,7 @@ namespace Apache.Ignite.Core.Tests.Client.Compute
         /// Tests <see cref="IComputeClient.ExecuteJavaTaskAsync{TRes}(string,object)"/> from multiple threads.
         /// </summary>
         [Test]
+        [Category(TestUtils.CategoryIntensive)]
         public void TestExecuteJavaTaskAsyncMultithreaded()
         {
             var count = 5000;

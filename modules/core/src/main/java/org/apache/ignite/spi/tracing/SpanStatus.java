@@ -20,10 +20,18 @@ package org.apache.ignite.spi.tracing;
  * Various statuses for Spans execution.
  */
 public enum SpanStatus {
-    /** Ok. */
+    /** The operation completed successfully. */
     OK,
-    /** Cancelled. */
+
+    /** The operation was cancelled (typically by the caller). */
     CANCELLED,
-    /** Aborted. */
-    ABORTED
+
+    /** The operation was aborted. */
+    ABORTED,
+
+    /**
+     * The service is currently unavailable.
+     * This is a most likely a transient condition and may be corrected by retrying with a backoff.
+     */
+    UNAVAILABLE
 }

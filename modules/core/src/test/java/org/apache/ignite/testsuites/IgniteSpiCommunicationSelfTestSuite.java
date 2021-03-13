@@ -111,7 +111,6 @@ import org.junit.runners.Suite;
 
     GridTcpCommunicationSpiLogTest.class,
 
-    GridTcpCommunicationInverseConnectionEstablishingTest.class,
     GridTotallyUnreachableClientTest.class,
     GridSandboxedClientWithoutNetworkTest.class,
 

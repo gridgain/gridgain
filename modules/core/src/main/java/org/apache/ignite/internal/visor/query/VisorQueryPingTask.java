@@ -18,7 +18,6 @@ package org.apache.ignite.internal.visor.query;
 
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorEither;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
@@ -61,7 +60,7 @@ public class VisorQueryPingTask extends VisorOneNodeTask<VisorQueryNextPageTaskA
         @Override protected VisorEither<VisorQueryPingTaskResult> run(VisorQueryNextPageTaskArg arg) {
             String qryId = arg.getQueryId();
 
-            long start = U.currentTimeMillis();
+            long start = System.currentTimeMillis();
 
             if (debug)
                 start = log(ignite.log(), "Ping of query started: " + qryId, getClass(), start);

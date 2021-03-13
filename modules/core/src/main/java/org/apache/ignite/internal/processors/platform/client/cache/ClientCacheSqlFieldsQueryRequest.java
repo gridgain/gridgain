@@ -24,11 +24,11 @@ import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcStatementType;
-import org.apache.ignite.internal.processors.platform.cache.PlatformCache;
 import org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
+import org.apache.ignite.internal.processors.platform.client.ClientSqlUtils;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxAwareRequest;
@@ -68,7 +68,7 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
         int pageSize = reader.readInt();
         reader.readInt();  // maxRows
         String sql = reader.readString();
-        Object[] args = PlatformCache.readQueryArgs(reader);
+        Object[] args = ClientSqlUtils.readQueryArgs(reader, protocolCtx);
         JdbcStatementType stmtType = JdbcStatementType.fromOrdinal(reader.readByte());
         boolean distributedJoins = reader.readBoolean();
         boolean loc = reader.readBoolean();

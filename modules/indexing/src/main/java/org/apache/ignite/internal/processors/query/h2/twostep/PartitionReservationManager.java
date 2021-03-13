@@ -146,6 +146,8 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
                                 "cacheName=%s]",ctx.localNodeId(), nodeId, reqId, topVer, cacheIds.get(i), cctx.name()));
 
                         reserved.add(r);
+
+                        MTC.span().addLog(() -> "Cache partitions were reserved " + r);
                     }
                 }
                 else { // Try to reserve partitions one by one.
@@ -179,6 +181,9 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
 
                             // Mark that we checked this replicated cache.
                             reservations.putIfAbsent(grpKey, REPLICATED_RESERVABLE);
+
+                            MTC.span().addLog(() -> "Cache partitions were reserved [cache=" + cctx.name() +
+                                ", partitions=[0.." + partsCnt + ']');
                         }
                     }
                     else { // Reserve primary partitions for partitioned cache (if no explicit given).
@@ -260,6 +265,11 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
                             }
                         }
                     }
+
+                        final Collection<Integer> finalPartIds = partIds;
+
+                        MTC.span().addLog(() -> "Cache partitions were reserved [cache=" + cctx.name() +
+                            ", partitions=" + finalPartIds + ", topology=" + topVer + ']');
 
                         if (explicitParts == null && reservedCnt > 0) {
                             // We reserved all the primary partitions for cache, attempt to add group reservation.

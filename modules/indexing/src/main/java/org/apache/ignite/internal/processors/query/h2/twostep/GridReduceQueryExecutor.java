@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -531,13 +532,13 @@ public class GridReduceQueryExecutor {
                         else {
                             ensureQueryNotCancelled(cancel);
 
-                        QueryContext qctx = new QueryContext(
-                            0,
-                            null,
-                            null,
-                            null,
-                            null,
-                            true);
+                            QueryContext qctx = new QueryContext(
+                                0,
+                                null,
+                                null,
+                                null,
+                                null,
+                                true);
 
                             H2Utils.setupConnection(conn, qctx, false, enforceJoinOrder);
 
@@ -551,6 +552,8 @@ public class GridReduceQueryExecutor {
                             H2Utils.bindParameters(stmt, F.asList(rdc.parameters(params)));
 
                             ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId, qryId);
+
+                            r.reducers().forEach(reducer -> reducer.memoryTracker(h2.memTracker(qryInfo)));
 
                             ResultSet res = h2.executeSqlQueryWithTimer(stmt, conn,
                                 rdc.query(),
@@ -748,7 +751,7 @@ public class GridReduceQueryExecutor {
             Reducer reducer;
 
             if (skipMergeTbl)
-                reducer = UnsortedReducer.createDummy(ctx);
+                reducer = UnsortedOneWayReducer.createDummy(ctx);
             else {
                 ReduceTable tbl;
 
