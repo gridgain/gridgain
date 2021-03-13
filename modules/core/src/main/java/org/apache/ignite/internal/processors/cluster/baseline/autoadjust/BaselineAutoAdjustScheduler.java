@@ -97,8 +97,8 @@ class BaselineAutoAdjustScheduler {
         );
 
         if (log.isDebugEnabled()) {
-            log.info("Scheduled new baseline timeout object [data=" +
-                baselineTimeoutObj.baselineAutoAdjustData + ", added=" + added + ']');
+            log.info("New baseline timeout object was " + (added ? "successfully scheduled " : " rejected ") +
+                " [data=" + baselineTimeoutObj.baselineAutoAdjustData + ']');
         }
 
         return added;
