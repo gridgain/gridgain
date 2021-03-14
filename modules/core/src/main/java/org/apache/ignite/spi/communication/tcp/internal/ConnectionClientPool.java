@@ -30,6 +30,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
@@ -121,6 +122,10 @@ public class ConnectionClientPool {
 
     /** Scheduled executor service which closed the socket if handshake timeout is out. **/
     private final ScheduledExecutorService handshakeTimeoutExecutorService;
+
+    /** Enable forcible node kill. */
+    private boolean forcibleNodeKillEnabled = IgniteSystemProperties
+        .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
 
     /**
      * @param cfg Config.
@@ -390,6 +395,13 @@ public class ConnectionClientPool {
                     fut.get(failTimeout);
                 }
                 catch (Throwable triggerException) {
+                    if (forcibleNodeKillEnabled
+                        && node.isClient()
+                        && triggerException instanceof IgniteFutureTimeoutCheckedException
+                    ) {
+                        CommunicationTcpUtils.failNode(node, tcpCommSpi.getSpiContext(), triggerException, log);
+                    }
+
                     IgniteSpiException spiE = new IgniteSpiException(e);
 
                     spiE.addSuppressed(triggerException);

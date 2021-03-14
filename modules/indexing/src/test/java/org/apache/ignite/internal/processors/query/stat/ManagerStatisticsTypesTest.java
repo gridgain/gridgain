@@ -21,7 +21,7 @@ import org.junit.Test;
 import java.math.BigDecimal;
 
 /**
- * Collect statistics on test table dtypes and check that statistics manager will return correct statistics for
+ * Gather statistics on test table dtypes and check that statistics manager will return correct statistics for
  * different data types.
  */
 public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
@@ -31,13 +31,13 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
     @Test
     public void testCollectedStatistics() {
         ObjectStatisticsImpl dtypesStat = (ObjectStatisticsImpl) grid(0).context().query().getIndexing()
-                .statsManager().getLocalStatistics("PUBLIC", "DTYPES");
+                .statsManager().getLocalStatistics(new StatisticsKey(SCHEMA, "DTYPES"));
 
         assertNotNull(dtypesStat);
 
         assertEquals(SMALL_SIZE * 1.5 - 1, dtypesStat.rowCount());
 
-        assertEquals(TYPES.length + 5, dtypesStat.columnsStatistics().size());
+        assertEquals(TYPES.length + 3, dtypesStat.columnsStatistics().size());
 
         for (String type : TYPES) {
             String colName = COL_NAME_PREFIX + type;
@@ -52,6 +52,7 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
 
             assertEquals(dtypesStat.rowCount(), colStat.total());
             assertNotNull(colStat.raw());
+
             if (colName.equals("COL_GEOMETRY")) {
                 assertNull(colStat.min());
                 assertNull(colStat.max());
@@ -280,6 +281,6 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
      */
     private ObjectStatisticsImpl getTypesStats() {
         return (ObjectStatisticsImpl) grid(0).context().query().getIndexing().statsManager()
-                .getLocalStatistics("PUBLIC", "DTYPES");
+                .getLocalStatistics(new StatisticsKey(SCHEMA, "DTYPES"));
     }
 }

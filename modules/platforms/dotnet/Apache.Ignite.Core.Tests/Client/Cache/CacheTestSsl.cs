@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     /// SSL cache test.
     /// </summary>
     [TestFixture]
+    [Category(TestUtils.CategoryIntensive)]
     public sealed class CacheTestSsl : CacheTest
     {
         /// <summary>

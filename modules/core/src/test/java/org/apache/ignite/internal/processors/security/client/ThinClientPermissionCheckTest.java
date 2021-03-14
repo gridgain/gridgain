@@ -16,12 +16,14 @@
 
 package org.apache.ignite.internal.processors.security.client;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import com.google.common.collect.ImmutableSet;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.client.ClientAuthorizationException;
@@ -149,7 +151,9 @@ public class ThinClientPermissionCheckTest extends AbstractSecurityTest {
     public void testCacheTaskPermOperations() throws Exception {
         List<IgniteBiTuple<Consumer<IgniteClient>, String>> ops = Arrays.asList(
             t(c -> c.cache(CACHE).removeAll(), "removeAll"),
-            t(c -> c.cache(CACHE).clear(), "clear")
+            t(c -> c.cache(CACHE).clear(), "clear"),
+            t(c -> c.cache(CACHE).clear("key"), "clearKey"),
+            t(c -> c.cache(CACHE).clearAll(ImmutableSet.of("key")), "clearKeys")
         );
 
         for (IgniteBiTuple<Consumer<IgniteClient>, String> op : ops) {
@@ -185,6 +189,35 @@ public class ThinClientPermissionCheckTest extends AbstractSecurityTest {
      * @param cacheName Cache name.
      */
     private Collection<IgniteBiTuple<Consumer<IgniteClient>, String>> operations(final String cacheName) {
+        List<IgniteBiTuple<Consumer<IgniteClient>, String>> res = new ArrayList<>();
+
+        res.addAll(operationsRead(cacheName));
+        res.addAll(operationsPut(cacheName));
+        res.addAll(operationsRemove(cacheName));
+
+        return res;
+    }
+
+    /**
+     * Gets operations taht require CACHE_READ permission.
+     *
+     * @param cacheName Cache name.
+     */
+    private Collection<IgniteBiTuple<Consumer<IgniteClient>, String>> operationsRead(final String cacheName) {
+        return Arrays.asList(
+            t(c -> c.cache(cacheName).get("key"), "get)"),
+            t(c -> c.cache(cacheName).getAll(Collections.singleton("key")), "getAll"),
+            t(c -> c.cache(cacheName).containsKey("key"), "containsKey"),
+            t(c -> c.cache(cacheName).containsKeys(ImmutableSet.of("key")), "containsKeys")
+        );
+    }
+
+    /**
+     * Gets operations taht require CACHE_PUT permission.
+     *
+     * @param cacheName Cache name.
+     */
+    private Collection<IgniteBiTuple<Consumer<IgniteClient>, String>> operationsPut(final String cacheName) {
         return Arrays.asList(
             t(c -> c.cache(cacheName).put("key", "value"), "put"),
             t(c -> c.cache(cacheName).putAll(singletonMap("key", "value")), "putAll"),
@@ -194,9 +227,22 @@ public class ThinClientPermissionCheckTest extends AbstractSecurityTest {
             t(c -> c.cache(cacheName).remove("key"), "remove"),
             t(c -> c.cache(cacheName).replace("key", "value"), "replace"),
             t(c -> c.cache(cacheName).putIfAbsent("key", "value"), "putIfAbsent"),
+            t(c -> c.cache(cacheName).getAndPutIfAbsent("key", "value"), "getAndPutIfAbsent"),
             t(c -> c.cache(cacheName).getAndPut("key", "value"), "getAndPut"),
             t(c -> c.cache(cacheName).getAndRemove("key"), "getAndRemove"),
             t(c -> c.cache(cacheName).getAndReplace("key", "value"), "getAndReplace")
+        );
+    }
+
+    /**
+     * Gets operations taht require CACHE_REMOVE permission.
+     *
+     * @param cacheName Cache name.
+     */
+    private Collection<IgniteBiTuple<Consumer<IgniteClient>, String>> operationsRemove(final String cacheName) {
+        return Arrays.asList(
+                t(c -> c.cache(cacheName).remove("key"), "remove"),
+                t(c -> c.cache(cacheName).getAndRemove("key"), "getAndRemove")
         );
     }
 

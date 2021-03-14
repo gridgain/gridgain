@@ -385,13 +385,9 @@ public class GridCacheNearOnlyMultiNodeFullApiSelfTest extends GridCachePartitio
                         return false;
                     }
 
-                    if (!internalCache(c).context().deferredDelete()) {
-                        GridCacheEntryEx e0 = internalCache(c).peekEx(key);
+                    GridCacheEntryEx e0 = internalCache(c).peekEx(key);
 
-                        return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
-                    }
-                    else
-                        return true;
+                    return e0 == null || (e0.rawGet() == null && e0.valueBytes() == null);
                 }
                 catch (GridCacheEntryRemovedException ignored) {
                     // If e0.valueBytes() thrown this exception then entry has been removed.

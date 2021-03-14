@@ -350,11 +350,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
-     * Tests reproduces the problem: deferred removal queue should never be cleared during rebalance OR rebalanced
-     * entries could undo deletion causing inconsistency.
+     *
      */
     @Test
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_RemoveQueueCleared() throws Exception {
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates() throws Exception {
         backups = 2;
 
         Ignite prim = startGridsMultiThreaded(SERVER_NODES);
@@ -391,9 +390,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             prim.cache(DEFAULT_CACHE_NAME).remove(keys.get(0));
 
-            doSleep(2000);
-
-            // Ensure queue cleanup is triggered before releasing supply message.
             spiPrim.stopBlock();
             spiBack.stopBlock();
         });

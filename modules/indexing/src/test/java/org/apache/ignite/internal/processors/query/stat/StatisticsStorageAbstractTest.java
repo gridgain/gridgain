@@ -15,12 +15,14 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 
+/**
+ * Tests for IgniteStatisticsStorage implementations.
+ */
 public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -29,10 +31,7 @@ public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTe
         cfg.setConsistentId(igniteInstanceName);
 
         DataStorageConfiguration memCfg = new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(
-                        new DataRegionConfiguration()
-                                .setPersistenceEnabled(true)
-                );
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true));
 
         cfg.setDataStorageConfiguration(memCfg);
 
@@ -46,24 +45,21 @@ public abstract class StatisticsStorageAbstractTest extends StatisticsAbstractTe
 
         //startGridsMultiThreaded(1);
         startGrid(0);
+        startGrid(1);
         grid(0).cluster().state(ClusterState.ACTIVE);
 
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        runSql("DROP TABLE IF EXISTS small");
+        sql("DROP TABLE IF EXISTS small");
 
-        runSql("CREATE TABLE small (a INT PRIMARY KEY, b INT, c INT)");
+        sql("CREATE TABLE small (a INT PRIMARY KEY, b INT, c INT)");
 
-        runSql("CREATE INDEX small_b ON small(b)");
+        sql("CREATE INDEX small_b ON small(b)");
 
-        runSql("CREATE INDEX small_c ON small(c)");
-
-        IgniteCache<Integer, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+        sql("CREATE INDEX small_c ON small(c)");
 
         for (int i = 0; i < SMALL_SIZE; i++)
-            runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
-
-        grid(0).context().query().getIndexing().statsManager().collectObjectStatistics("PUBLIC", "SMALL");
+            sql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
     }
 
     /** {@inheritDoc} */

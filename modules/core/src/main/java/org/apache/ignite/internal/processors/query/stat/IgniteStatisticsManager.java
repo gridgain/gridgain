@@ -18,34 +18,60 @@ package org.apache.ignite.internal.processors.query.stat;
 import org.apache.ignite.IgniteCheckedException;
 
 /**
- * Statistics manager.
+ * Statistics manager. Coordinate statistics collection and act as source of statistics.
  */
 public interface IgniteStatisticsManager {
     /**
-     * Collect object statistics.
+     * Gather object statistics.
      *
-     * @param schemaName Schema name.
-     * @param objName Object to collect statistics by.
-     * @param colNames Columns to collect statistics by.
+     * @param targets Target to gather statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
      */
-    public void collectObjectStatistics(String schemaName, String objName, String... colNames) throws IgniteCheckedException;
-
-    /**
-     * Get local statistics by object.
-     *
-     * @param schemaName Schema name.
-     * @param objName Object to collect statistics by.
-     * @return Object statistics or {@code null} if there are no available statistics by specified object.
-     */
-    public ObjectStatistics getLocalStatistics(String schemaName, String objName);
+    public void collectStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
 
     /**
      * Clear object statistics.
      *
-     * @param schemaName Schema name.
-     * @param objName Object to collect statistics by.
-     * @param colNames Columns to remove statistics by.
+     * @param targets Collection of target to collect statistics by (schema, obj, columns).
+     * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
      */
-    public void clearObjectStatistics(String schemaName, String objName, String... colNames);
+    public void dropStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+
+    /**
+     * Refresh object statistics.
+     *
+     * @param targets Target to refresh statistics by.
+     * @throws IgniteCheckedException  Throws in case of errors.
+     */
+    public void refreshStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+
+    /**
+     * Drop all statistics.
+     */
+    public void dropAll() throws IgniteCheckedException;
+
+    /**
+     * Get local statistics by object.
+     *
+     * @param key Statistic key.
+     * @return Object statistics or {@code null} if there are no available statistics by specified object.
+     */
+    public ObjectStatistics getLocalStatistics(StatisticsKey key);
+
+    /**
+     * Stop statistic manager.
+     */
+    public void stop();
+
+    /**
+     * Set statistics usage state.
+     *
+     * @param state Statistics state.
+     */
+    public void usageState(StatisticsUsageState state) throws IgniteCheckedException;
+
+    /**
+     * @return Statistics usage state.
+     */
+    public StatisticsUsageState usageState();
 }

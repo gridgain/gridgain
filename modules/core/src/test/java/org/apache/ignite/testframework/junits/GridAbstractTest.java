@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -994,6 +994,25 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Starts new grid with given configuration and overriding {@link DependencyResolver}.
+     *
+     * @param cfg Configuration.
+     * @param rslvr Dependency provider.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(IgniteConfiguration cfg, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
+
+        try {
+            return (IgniteEx)startGrid(cfg.getIgniteInstanceName(), cfg, null);
+        }
+        finally {
+            IgnitionEx.dependencyResolver(null);
+        }
+    }
+
+    /**
      * Starts new grid with given index.
      *
      * @param idx Index of the grid to start.
@@ -1007,6 +1026,22 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
     /**
      * Starts new grid with given index and overriding {@link DependencyResolver}.
+     *
+     * @param idx Index of the grid to start.
+     * @param cfgC Configuration mutator. Can be used to avoid oversimplification of {@link #getConfiguration()}.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(int idx, Consumer<IgniteConfiguration> cfgC) throws Exception {
+        return startGrid(getTestIgniteInstanceName(idx), cfg -> {
+            cfgC.accept(cfg);
+
+            return cfg;
+        });
+    }
+
+    /**
+     * Starts new grid with given index.
      *
      * @param idx Index of the grid to start.
      * @param cfgOp Configuration mutator. Can be used to avoid overcomplification of {@link #getConfiguration()}.

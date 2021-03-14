@@ -18,24 +18,40 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
 /**
  * Base test for table statistics.
  */
 public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
+    /** Default SQL schema. */
+    public static final String SCHEMA = "PUBLIC";
+
     /** Counter to avoid query caching. */
     private static final AtomicInteger queryRandomizer = new AtomicInteger(0);
 
@@ -48,8 +64,24 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     /** Small table size. */
     static final int SMALL_SIZE = 100;
 
+    /** Statistics key for small table. */
+    static final StatisticsKey SMALL_KEY = new StatisticsKey(SCHEMA, "SMALL");
+
+    /** Statistics target for the whole small table. */
+    static final StatisticsTarget SMALL_TARGET = new StatisticsTarget(SMALL_KEY, null);
+
+    /** Async operation timeout for test */
+    static final int TIMEOUT = 3_000;
+
     static {
         assertTrue(SMALL_SIZE < MED_SIZE && MED_SIZE < BIG_SIZE);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        cleanPersistenceDir();
     }
 
     /**
@@ -60,7 +92,12 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @param sql Query with placeholders to hint indexes (i1, i2, ...).
      * @param indexes Arrays of indexes to put into placeholders.
      */
-    protected void checkOptimalPlanChosenForDifferentIndexes(IgniteEx grid, String[] optimal, String sql, String[][] indexes) {
+    protected void checkOptimalPlanChosenForDifferentIndexes(
+        IgniteEx grid,
+        String[] optimal,
+        String sql,
+        String[][] indexes
+    ) {
         int size = -1;
         for (String[] idxs : indexes) {
             if (size == -1)
@@ -68,10 +105,12 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
 
             assert idxs == null || idxs.length == size;
         }
+
         sql = replaceIndexHintPlaceholders(sql, indexes);
 
         int spaces = queryRandomizer.incrementAndGet();
         StringBuilder spaceBuilder = new StringBuilder(spaces);
+
         for (int i = 0; i < spaces; i++)
             spaceBuilder.append(' ');
 
@@ -80,7 +119,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         String actual[] = runLocalExplainIdx(grid, sql);
 
         assertTrue(String.format("got %s, expected %s in query %s", Arrays.asList(actual), Arrays.asList(optimal), sql),
-                Arrays.equals(actual, optimal));
+            Arrays.equals(actual, optimal));
     }
 
     /**
@@ -124,7 +163,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         int cntStats = runLocalExplainAnalyze(grid, false, sql);
 
         String res = "Scanned rows count [noStats=" + cntNoStats + ", withStats=" + cntStats +
-                ", diff=" + (cntNoStats - cntStats) + ']';
+            ", diff=" + (cntNoStats - cntStats) + ']';
 
         if (log.isInfoEnabled())
             log.info(res);
@@ -141,7 +180,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected String[] runLocalExplainIdx(Ignite grid, String sql) {
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("EXPLAIN " + sql).setLocal(true))
-                .getAll();
+            .getAll();
         String explainRes = (String)res.get(0).get(0);
 
         // Extract scan count from EXPLAIN ANALYZE with regex: return all numbers after "scanCount: ".
@@ -162,10 +201,9 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected int runLocalExplainAnalyze(Ignite grid, boolean enfJoinOrder, String sql) {
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME)
-                .query(new SqlFieldsQueryEx("EXPLAIN ANALYZE " + sql, null)
-                        .setEnforceJoinOrder(enfJoinOrder)
-                        .setLocal(true))
-                .getAll();
+            .query(new SqlFieldsQueryEx("EXPLAIN ANALYZE " + sql, null).setEnforceJoinOrder(enfJoinOrder)
+                .setLocal(true))
+            .getAll();
 
         if (log.isDebugEnabled())
             log.debug("ExplainAnalyze enfJoinOrder=" + enfJoinOrder + ", res=" + res);
@@ -198,8 +236,43 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      *
      * @param sql Statement to execute.
      */
-    protected void runSql(String sql) {
-        grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(sql)).getAll();
+    protected void sql(String sql) {
+        grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
+    }
+
+    /**
+     * Create SQL table with the given index.
+     *
+     * @param suffix Table idx, if {@code null} - name "SMALL" without index will be used.
+     */
+    protected void createSmallTable(String suffix) {
+        suffix = suffix != null ? suffix : "";
+
+        System.out.println("+++ CREATE small" + suffix);
+
+        sql("DROP TABLE IF EXISTS small" + suffix);
+
+        sql(String.format("CREATE TABLE small%s (a INT PRIMARY KEY, b INT, c INT)" +
+                " with \"BACKUPS=1,CACHE_NAME=SMALL%s\"",
+            suffix, suffix));
+
+        sql(String.format("CREATE INDEX small%s_b ON small%s(b)", suffix, suffix));
+
+        sql(String.format("CREATE INDEX small%s_c ON small%s(c)", suffix, suffix));
+
+        for (int i = 0; i < SMALL_SIZE; i++)
+            sql(String.format("INSERT INTO small%s(a, b, c) VALUES(%d, %d, %d)", suffix, i, i, i % 10));
+    }
+
+    /**
+     * Drop SQL table with the given index.
+     *
+     * @param suffix Table idx, if {@code null} - name "SMALL" without index will be used.
+     */
+    protected void dropSmallTable(String suffix) {
+        suffix = suffix != null ? suffix : "";
+
+        sql("DROP TABLE IF EXISTS small" + suffix);
     }
 
     /**
@@ -270,15 +343,49 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         if (null != tables)
             allTbls.addAll(Arrays.asList(tables));
 
+        StatisticsTarget[] targets = allTbls.stream().map(tbl -> new StatisticsTarget(SCHEMA, tbl.toUpperCase()))
+            .toArray(StatisticsTarget[]::new);
+
+        updateStatistics(targets);
+    }
+
+    /**
+     * Update statistics on specified objects.
+     */
+    protected void updateStatistics(StatisticsTarget... targets) {
         try {
-            for (String tbl : allTbls) {
-                for (Ignite node : G.allGrids()) {
-                    IgniteStatisticsManager statsMgr = ((IgniteEx)node).context().query().getIndexing().statsManager();
-                    statsMgr.collectObjectStatistics("PUBLIC", tbl.toUpperCase());
+            Map<StatisticsTarget, Long> expectedVersion = new HashMap<>();
+
+            for (StatisticsTarget t : targets) {
+                StatisticsObjectConfiguration cfg = ((IgniteStatisticsManagerImpl)
+                    (grid(0).context().query().getIndexing().statsManager()))
+                    .statisticConfiguration().config(t.key());
+
+                Predicate<StatisticsColumnConfiguration> predicate;
+                if (t.columns() != null) {
+                    Set<String> cols = Arrays.stream(t.columns()).collect(Collectors.toSet());
+
+                    predicate = c -> cols.contains(c.name());
                 }
+                else
+                    predicate = c -> true;
+
+                expectedVersion.put(
+                    t,
+                    cfg != null
+                        ? cfg.columnsAll().values().stream()
+                        .filter(predicate)
+                        .mapToLong(c -> c.version())
+                        .min()
+                        .orElse(0L) + 1
+                        : 0L);
             }
+
+            grid(0).context().query().getIndexing().statsManager().collectStatistics(targets);
+
+            awaitStatistics(TIMEOUT, expectedVersion);
         }
-        catch (IgniteCheckedException ex) {
+        catch (Exception ex) {
             throw new IgniteException(ex);
         }
     }
@@ -291,7 +398,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0, 100,
-                0, new byte[0]);
+            0, new byte[0]);
         return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
     }
 
@@ -303,8 +410,194 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
-                100, 0, new byte[0]);
-        return new ObjectPartitionStatisticsImpl(partId, true, 0, 0,
-                Collections.singletonMap("col1", colStatistics));
+            100, 0, new byte[0]);
+
+        return new ObjectPartitionStatisticsImpl(
+            partId, 0, 0,
+            Collections.singletonMap("col1", colStatistics)
+        );
+    }
+
+    /** Check that all statistics collections related tasks is empty in specified node. */
+    protected void checkStatisticTasksEmpty(IgniteEx ign) {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)ign.context().query().getIndexing()
+            .statsManager();
+
+        Map<StatisticsKey, LocalStatisticsGatheringContext> currColls = GridTestUtils.getFieldValue(
+            statMgr,
+            "gatherer", "gatheringInProgress"
+        );
+
+        assertTrue(currColls.isEmpty());
+
+        IgniteThreadPoolExecutor mgmtPool = GridTestUtils.getFieldValue(
+            statMgr,
+            "mgmtPool");
+
+        assertTrue(mgmtPool.getQueue().isEmpty());
+
+        IgniteThreadPoolExecutor gatherPool = GridTestUtils.getFieldValue(
+            statMgr,
+            "gatherPool");
+
+        assertTrue(gatherPool.getQueue().isEmpty());
+    }
+
+    /**
+     * Await statistic gathering is complete on whole cluster.
+     *
+     * @param timeout Timeout.
+     * @param expectedVersions Expected versions for specified targets.
+     * @throws Exception In case of errors.
+     */
+    protected void awaitStatistics(long timeout, Map<StatisticsTarget, Long> expectedVersions) throws Exception {
+        for (Ignite ign : G.allGrids()) {
+            if (!((IgniteEx)ign).context().clientNode())
+                awaitStatistics(timeout, expectedVersions, (IgniteEx)ign);
+        }
+    }
+
+    /**
+     * Await statistic gathering is complete on specified node.
+     *
+     * @param timeout Timeout.
+     * @param expectedVersions Expected versions for specified targets.
+     * @param ign Node to await.
+     * @throws Exception In case of errors.
+     */
+    protected void awaitStatistics(long timeout, Map<StatisticsTarget, Long> expectedVersions, IgniteEx ign)
+        throws Exception {
+        long t0 = U.currentTimeMillis();
+
+        while (true) {
+            try {
+                checkStatisticTasksEmpty(ign);
+
+                expectedVersions.forEach((k, ver) -> {
+                    ObjectStatisticsImpl s = (ObjectStatisticsImpl)ign.context().query().getIndexing().statsManager()
+                        .getLocalStatistics(k.key());
+
+                    long minVer = Long.MAX_VALUE;
+
+                    Set<String> cols;
+                    if (k.columns() != null)
+                        cols = Arrays.stream(k.columns()).collect(Collectors.toSet());
+                    else
+                        cols = s.columnsStatistics().keySet();
+
+                    for (String col : cols) {
+                        if (s.columnStatistics(col).version() < minVer)
+                            minVer = s.columnStatistics(col).version();
+                    }
+
+                    if (minVer == Long.MAX_VALUE)
+                        minVer = -1;
+
+                    assertEquals((long)ver, minVer);
+                });
+
+                return;
+            }
+            catch (Throwable ex) {
+                if (t0 + timeout < U.currentTimeMillis())
+                    throw ex;
+                else
+                    U.sleep(200);
+            }
+        }
+    }
+
+    /**
+     * Get nodes StatisticsGatheringRequestCrawlerImpl.msgMgmtPool lock.
+     * Put additional task into it and return lock to complete these task.
+     *
+     * @param nodeIdx Node idx.
+     * @return Lock to complete pool task and allow it to process next one.
+     */
+    protected Lock nodeMsgsLock(int nodeIdx) throws Exception {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
+            .statsManager();
+        IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(statMgr, "statCrawler", "msgMgmtPool");
+
+        return lockPool(pool);
+    }
+
+    /**
+     * Get nodes StatisticsGatheringImpl.gatMgmtPool lock.
+     * Put additional task into it and return lock to complete these task.
+     *
+     * @param nodeIdx Node idx.
+     * @return Lock to complete pool task and allow it to process next one.
+     */
+    protected Lock nodeGathLock(int nodeIdx) throws Exception {
+        IgniteStatisticsManagerImpl statMgr = (IgniteStatisticsManagerImpl)grid(nodeIdx).context().query().getIndexing()
+            .statsManager();
+        IgniteThreadPoolExecutor pool = GridTestUtils.getFieldValue(statMgr, "statGathering", "gatMgmtPool");
+
+        return lockPool(pool);
+    }
+
+    /**
+     * Lock specified pool with task, waiting for lock release.
+     *
+     * @param pool Pool to block.
+     * @return Lock.
+     */
+    private Lock lockPool(IgniteThreadPoolExecutor pool) {
+        Lock res = new ReentrantLock();
+        res.lock();
+        pool.submit(res::lock);
+
+        return res;
+    }
+
+    /**
+     * Get local or global object statistics from all server nodes.
+     *
+     * @param tblName Object name to get statistics by.
+     * @param type Desired statistics type.
+     * @return Array of local statistics from nodes.
+     */
+    protected ObjectStatisticsImpl[] getStats(String tblName, StatisticsType type) {
+        int nodes = G.allGrids().size();
+        ObjectStatisticsImpl res[] = new ObjectStatisticsImpl[nodes];
+
+        for (int i = 0; i < nodes; i++)
+            res[i] = getStatsFromNode(i, tblName, type);
+
+        return res;
+    }
+
+    /**
+     * Test specified predicate on each object statistics.
+     *
+     * @param cond Predicate to test.
+     * @param stats Statistics to test on.
+     */
+    protected void testCond(Function<ObjectStatisticsImpl, Boolean> cond, ObjectStatisticsImpl... stats) {
+        assertFalse(F.isEmpty(stats));
+
+        for (ObjectStatisticsImpl stat : stats)
+            assertTrue(cond.apply(stat));
+    }
+
+    /**
+     * Get local table statistics by specified node.
+     *
+     * @param nodeIdx Node index to get statistics from.
+     * @param tblName Table name.
+     * @param type Desired statistics type.
+     * @return Local table statistics or {@code null} if there are no such statistics in specified node.
+     */
+    protected ObjectStatisticsImpl getStatsFromNode(int nodeIdx, String tblName, StatisticsType type) {
+        IgniteStatisticsManager statMgr = grid(nodeIdx).context().query().getIndexing().statsManager();
+
+        switch (type) {
+            case LOCAL:
+                return (ObjectStatisticsImpl) statMgr.getLocalStatistics(new StatisticsKey(SCHEMA, tblName));
+            case PARTITION:
+            default:
+                throw new UnsupportedOperationException();
+        }
     }
 }

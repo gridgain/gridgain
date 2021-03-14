@@ -170,7 +170,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     /** First eviction was warned flag. */
     private volatile boolean firstEvictWarn;
 
-
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
         if (cctx.kernalContext().clientNode() && cctx.kernalContext().config().getDataStorageConfiguration() == null)
@@ -957,6 +956,11 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         // No-op.
     }
 
+    /** */
+    public boolean tryCheckpointReadLock() {
+        return true;
+    }
+
     /**
      * No-op for non-persistent storage.
      */
@@ -1482,7 +1486,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                             ((MvccDataEntry)dataEntry).mvccVer());
                     }
                     else
-                        cacheCtx.offheap().remove(cacheCtx, dataEntry.key(), partId, locPart);
+                        cacheCtx.offheap().removeWithTombstone(cacheCtx, dataEntry.key(), dataEntry.writeVersion(), locPart);
 
                     if (dataEntry.partitionCounter() != 0)
                         cacheCtx.offheap().onPartitionInitialCounterUpdated(partId, dataEntry.partitionCounter() - 1, 1);

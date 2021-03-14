@@ -36,7 +36,7 @@ public class RotatedIdPartRecord extends PageDeltaRecord {
     public RotatedIdPartRecord(int grpId, long pageId, int rotatedIdPart) {
         super(grpId, pageId);
 
-        assert rotatedIdPart >= 0 && rotatedIdPart <= 0xFF;
+        assert rotatedIdPart >= 0 && rotatedIdPart <= 0xFF : rotatedIdPart;
 
         this.rotatedIdPart = (byte) rotatedIdPart;
     }

@@ -361,6 +361,9 @@ public abstract class IgniteUtils {
     /** Empty  longs. */
     public static final Field[] EMPTY_FIELDS = new Field[0];
 
+    /** Empty string array. */
+    public static final String[] EMPTY_STRINGS = new String[0];
+
     /** System line separator. */
     private static final String NL = System.getProperty("line.separator");
 
@@ -6059,6 +6062,20 @@ public abstract class IgniteUtils {
         ComputeTaskName nameAnn = getAnnotation(taskCls, ComputeTaskName.class);
 
         return nameAnn == null ? taskCls.getName() : nameAnn.value();
+    }
+
+    /**
+     * Gets resource name.
+     * Returns a task name {@see getTaskName} if it is a Compute task or a class name otherwise.
+     *
+     * @param rscCls Class of resource.
+     * @return Name of resource.
+     */
+    public static String getResourceName(Class rscCls) {
+        if (ComputeTask.class.isAssignableFrom(rscCls))
+            return getTaskName(rscCls);
+
+        return rscCls.getName();
     }
 
     /**

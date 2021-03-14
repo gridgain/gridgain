@@ -112,6 +112,8 @@ public class FreeListCachingTest extends GridCommonAbstractTest {
             }
         }
 
+        clearTombstones(cache);
+
         offheap.cacheDataStores().forEach(cacheData -> {
             PagesList list = (PagesList)cacheData.rowStore().freeList();
 
@@ -136,12 +138,14 @@ public class FreeListCachingTest extends GridCommonAbstractTest {
                 cache.remove(i * partCnt + p);
         }
 
+        clearTombstones(cache);
+
         Map<Integer, List<Long>> partsBucketsSize = new HashMap<>();
 
         offheap.cacheDataStores().forEach(cacheData -> {
             PagesList list = (PagesList)cacheData.rowStore().freeList();
 
-            AtomicLongArray bucketsSize = list.bucketsSize;;
+            AtomicLongArray bucketsSize = list.bucketsSize;
 
             List<Long> bucketsSizeList = new ArrayList<>(bucketsSize.length());
 
@@ -159,8 +163,8 @@ public class FreeListCachingTest extends GridCommonAbstractTest {
                 if (!list.isReuseBucket(i)) {
                     notReuseSize += bucketsSize.get(i);
 
-                    assertNull("Expected null bucket [partId=" + cacheData.partId() + ", i=" + i + ", bucket=" +
-                        bucket + ']', bucket);
+                    assertTrue("Expected empty bucket [partId=" + cacheData.partId() + ", i=" + i + ", bucket=" +
+                        bucket + ']', bucket == null || bucket[0].empty);
 
                     PagesList.PagesCache pagesCache = list.getBucketCache(i, false);
 
@@ -197,8 +201,10 @@ public class FreeListCachingTest extends GridCommonAbstractTest {
                 assertEquals("Wrong pages cache size [partId=" + cacheData.partId() + ", i=" + i + ']',
                     0, pagesCache == null ? 0 : pagesCache.size());
 
-                assertEquals("Bucket size changed after checkpoint [partId=" + cacheData.partId() + ", i=" + i + ']',
-                    (long)partsBucketsSize.get(cacheData.partId()).get(i), bucketSize);
+                if (!list.isReuseBucket(i)) {
+                    assertEquals("Bucket size changed after checkpoint [partId=" + cacheData.partId() + ", i=" + i + ']',
+                        (long) partsBucketsSize.get(cacheData.partId()).get(i), bucketSize);
+                }
             }
         });
 

@@ -80,6 +80,8 @@ public class UsedPagesMetricAbstractTest extends GridCommonAbstractTest {
                 cache.remove(res);
             }
 
+            clearTombstones(cache);
+
             DataRegionMetrics metricsAfterRmv = node.dataRegionMetrics(DEFAULT_DATA_REGION);
 
             afterRmv = metricsAfterRmv.getTotalUsedPages();
