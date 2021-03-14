@@ -456,9 +456,12 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     /** {@inheritDoc} */
     @Override public String toString() {
         String quequeStr;
+        long hwm;
 
         synchronized (this) {
             quequeStr = queue.toString();
+
+            hwm = reserveCntr.get();
         }
 
         return new SB()
@@ -469,7 +472,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
             .a(", maxApplied=")
             .a(highestAppliedCounter())
             .a(", hwm=")
-            .a(reserveCntr.get())
+            .a(hwm)
             .a(", clearCntr=")
             .a(tombstoneClearCounter())
             .a(']')
