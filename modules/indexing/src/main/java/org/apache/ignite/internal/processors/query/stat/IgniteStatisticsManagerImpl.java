@@ -17,14 +17,12 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -37,12 +35,9 @@ import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedEnumProperty;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.typedef.F;
@@ -246,25 +241,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             throw new IgniteException("Can't gather statistics while statistics usage state is OFF.");
 
         statCfgMgr.updateStatistics(targets);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void collectStatistics(StatisticsTarget... targets) throws IgniteCheckedException {
-
-        StatisticsObjectConfiguration[] configs = Arrays.stream(targets)
-            .map(t -> {
-                List<StatisticsColumnConfiguration> colCfgs;
-                if (t.columns() == null)
-                    colCfgs = Collections.emptyList();
-                else
-                    colCfgs = Arrays.stream(t.columns()).map(StatisticsColumnConfiguration::new)
-                        .collect(Collectors.toList());
-
-                return new StatisticsObjectConfiguration(t.key(), colCfgs,
-                    StatisticsObjectConfiguration.DEFAULT_OBSOLESCENCE_MAX_PERCENT);
-            }).toArray(StatisticsObjectConfiguration[]::new);
-
-        collectStatistics(configs);
     }
 
     /** {@inheritDoc} */

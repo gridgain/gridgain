@@ -266,6 +266,15 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
                     log.warning("Error during clearing statistics by key " + k, e);
                 }
             }, false);
+
+            iterateMeta(STAT_OBS_PREFIX, (k, v) -> {
+                try {
+                    metastore.remove(k);
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning("Error during clearing statistics obsolescence info by key " + k, e);
+                }
+            }, false);
         }
         catch (IgniteCheckedException e) {
             log.warning("Error during clearing statistics", e);

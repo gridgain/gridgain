@@ -18,8 +18,6 @@ package org.apache.ignite.internal.processors.query.stat;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 
-import java.util.Map;
-
 /**
  * Statistics manager. Coordinate statistics collection and act as source of statistics.
  */
@@ -31,14 +29,6 @@ public interface IgniteStatisticsManager {
      * @throws IgniteCheckedException  Throws in case of errors.
      */
     public void collectStatistics(StatisticsObjectConfiguration... targets) throws IgniteCheckedException;
-
-    /**
-     * Gather object statistics with all default parameters.
-     *
-     * @param targets Targets to gather statistics by.
-     * @throws IgniteCheckedException Throws in case of errors.
-     */
-    public void collectStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
 
     /**
      * Clear object statistics.

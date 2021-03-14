@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -127,8 +126,8 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
 
         statisticsMgr(0).usageState(StatisticsUsageState.ON);
 
-        assertNotNull(statisticsMgr(0).getLocalStatistics(SMALL_KEY));
-        assertNotNull(statisticsMgr(1).getLocalStatistics(SMALL_KEY));
+        assertTrue(GridTestUtils.waitForCondition(() -> statisticsMgr(0).getLocalStatistics(SMALL_KEY) != null, TIMEOUT));
+        assertTrue(GridTestUtils.waitForCondition(() -> statisticsMgr(1).getLocalStatistics(SMALL_KEY) != null, TIMEOUT));
     }
 
     /**

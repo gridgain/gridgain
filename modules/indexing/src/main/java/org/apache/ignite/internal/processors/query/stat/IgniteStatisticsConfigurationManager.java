@@ -56,7 +56,6 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
-import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -304,7 +303,6 @@ public class IgniteStatisticsConfigurationManager {
                     .collect(Collectors.toList());
             else
                 colCfgs = new ArrayList<>(target.columns().values());
-
 
             StatisticsObjectConfiguration newCfg = new StatisticsObjectConfiguration(target.key(), colCfgs,
                 target.maxPartitionObsolescencePercent());

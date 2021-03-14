@@ -42,6 +42,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
 import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.NO_UPDATE;
 import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.OFF;
 import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageState.ON;
@@ -157,7 +158,6 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
             // No-op.
         }
     }
-
 
     /**
      * Check statistics on cluster after change topology.
@@ -497,7 +497,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         int success = 0;
         try {
-            statMgr.collectStatistics(SMALL_TARGET);
+            statMgr.collectStatistics(buildDefaultConfigurations(SMALL_TARGET));
             success++;
         } catch (Exception e) {
             if (!(e instanceof IgniteException && e.getMessage().contains("while statistics usage state is OFF.")))

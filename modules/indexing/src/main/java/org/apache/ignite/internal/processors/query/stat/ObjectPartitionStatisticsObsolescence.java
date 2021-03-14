@@ -89,13 +89,14 @@ public class ObjectPartitionStatisticsObsolescence implements Externalizable {
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         byte[] rawData = modified.toBytes();
+
         out.writeInt(rawData.length);
         out.write(rawData);
     }
 
     /** {@inheritDoc} */
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        int length = in.read();
+        int length = in.readInt();
         byte[] rawData = new byte[length];
         in.read(rawData);
         modified = HLL.fromBytes(rawData);

@@ -44,6 +44,7 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
 
     /** Targets to analyze. */
     protected List<StatisticsObjectConfiguration> configs = new ArrayList<>();
+
     /** {@inheritDoc} */
     @Override public SqlCommand parse(SqlLexer lex) {
         while (true) {
@@ -85,7 +86,7 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
 
     private static byte getByteOrDefault(Map<String,String> map, String key, byte defaultValue) {
         String value = map.remove(key);
-        return (value==null) ? defaultValue : Byte.valueOf(value);
+        return (value == null) ? defaultValue : Byte.valueOf(value);
     }
 
     /**
@@ -113,7 +114,7 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
 
         String paramsStr = lex.token();
 
-        String[] params =  paramsStr.split(",");
+        String[] params = paramsStr.split(",");
 
         Map<String, String> res = new HashMap<>(params.length);
         for (String param : params) {

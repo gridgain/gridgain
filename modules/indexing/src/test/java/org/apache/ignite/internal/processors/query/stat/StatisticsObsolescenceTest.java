@@ -15,9 +15,10 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
 
 /**
  * Test for statistics obsolescence.
@@ -35,11 +36,10 @@ public class StatisticsObsolescenceTest extends StatisticsAbstractTest {
     @Test
     public void testObsolescence() throws Exception {
         startGridsMultiThreaded(1);
-        IgniteEx node0 = grid(0);
 
         createSmallTable(null);
 
-        statisticsMgr(0).collectStatistics(SMALL_TARGET);
+        statisticsMgr(0).collectStatistics(buildDefaultConfigurations(SMALL_TARGET));
 
         assertTrue(GridTestUtils.waitForCondition(() -> statisticsMgr(0).getLocalStatistics(SMALL_KEY) != null, TIMEOUT));
 

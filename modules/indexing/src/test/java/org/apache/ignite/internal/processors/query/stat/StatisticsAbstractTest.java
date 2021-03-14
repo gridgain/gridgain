@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +46,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+
+import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
 
 /**
  * Base test for table statistics.
@@ -384,7 +387,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                 expectedVersion.put(t, expVer);
             }
 
-            statisticsMgr(0).collectStatistics(targets);
+            statisticsMgr(0).collectStatistics(buildDefaultConfigurations(targets));
 
             awaitStatistics(TIMEOUT, expectedVersion);
         }
@@ -601,8 +604,34 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @return Statistics manager implementation.
      */
     public IgniteStatisticsManagerImpl statisticsMgr(int nodeIdx) {
-        IgniteH2Indexing indexing = (IgniteH2Indexing)grid(0).context().query().getIndexing();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)grid(nodeIdx).context().query().getIndexing();
 
         return (IgniteStatisticsManagerImpl)indexing.statsManager();
+    }
+
+    /**
+     * Get statistics manager by node.
+     *
+     * @param ign IgniteEx.
+     * @return Statistics manager implementation.
+     */
+    public IgniteStatisticsManagerImpl statisticsMgr(IgniteEx ign) {
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ign.context().query().getIndexing();
+
+        return (IgniteStatisticsManagerImpl)indexing.statsManager();
+    }
+
+    public <T> Set<T> setOf(T... vals) {
+        if (F.isEmpty(vals))
+            return Collections.emptySet();
+
+        if (vals.length == 1)
+            return Collections.singleton(vals[0]);
+
+        Set<T> res = new HashSet<>(vals.length);
+
+        Collections.addAll(res, vals);
+
+        return res;
     }
 }

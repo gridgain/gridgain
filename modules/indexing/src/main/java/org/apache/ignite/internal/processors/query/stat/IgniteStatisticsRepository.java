@@ -159,10 +159,9 @@ public class IgniteStatisticsRepository {
                 v = new IntHashMap<>();
 
             ObjectPartitionStatisticsObsolescence newObs = new ObjectPartitionStatisticsObsolescence();
+            newObs.dirty(true);
 
-            if (v.put(partId, newObs) != null)
-                // Need to rewrite old value.
-                newObs.dirty(true);
+            v.put(partId, newObs);
 
             return v;
         });

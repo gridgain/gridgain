@@ -28,9 +28,9 @@ public class SqlParserAnalyzeSelfTest extends SqlParserAbstractSelfTest {
      */
     @Test
     public void testAnalyze() {
-        parseValidate(null, "ANALYZE tbl", new StatisticsTarget(null, "TBL"));
+        parseValidate(null, "ANALYZE tbl", new StatisticsTarget((String)null, "TBL"));
 
-        parseValidate(null, "ANALYZE tbl;", new StatisticsTarget(null, "TBL"));
+        parseValidate(null, "ANALYZE tbl;", new StatisticsTarget((String)null, "TBL"));
 
         parseValidate(null, "ANALYZE schema.tbl", new StatisticsTarget("SCHEMA", "TBL"));
 
@@ -42,18 +42,18 @@ public class SqlParserAnalyzeSelfTest extends SqlParserAbstractSelfTest {
         parseValidate(null, "ANALYZE schema.tbl(a);",
             new StatisticsTarget("SCHEMA", "TBL", "A"));
 
-        parseValidate(null, "ANALYZE tbl(a)", new StatisticsTarget(null, "TBL", "A"));
+        parseValidate(null, "ANALYZE tbl(a)", new StatisticsTarget((String)null, "TBL", "A"));
 
-        parseValidate(null, "ANALYZE tbl(a);", new StatisticsTarget(null, "TBL", "A"));
+        parseValidate(null, "ANALYZE tbl(a);", new StatisticsTarget((String)null, "TBL", "A"));
 
         parseValidate("SOME_SCHEMA", "ANALYZE tbl, schema.tbl2",
-            new StatisticsTarget(null, "TBL"), new StatisticsTarget("SCHEMA", "TBL2"));
+            new StatisticsTarget((String)null, "TBL"), new StatisticsTarget("SCHEMA", "TBL2"));
 
         parseValidate(null, "ANALYZE tbl(a, b, c)",
-            new StatisticsTarget(null, "TBL", "A", "B", "C"));
+            new StatisticsTarget((String)null, "TBL", "A", "B", "C"));
 
         parseValidate(null, "ANALYZE tbl(a), schema.tbl2(a,B)",
-            new StatisticsTarget(null, "TBL", "A"),
+            new StatisticsTarget((String)null, "TBL", "A"),
             new StatisticsTarget("SCHEMA", "TBL2", "A", "B"));
 
         assertParseError(null, "ANALYZE p,", "Unexpected end of command");

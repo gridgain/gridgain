@@ -62,7 +62,7 @@ public class StatisticsColumnConfiguration implements Serializable {
     /**
      * Constructor.
      *
-     * @param cfg Base staticsitcs column configuration
+     * @param cfg Base statistics column configuration
      * @param ver New configuration version.
      * @param tombstone if {@code true} - object represents a tombstone of configuration,
      *                  if {@code false} - live configuration.

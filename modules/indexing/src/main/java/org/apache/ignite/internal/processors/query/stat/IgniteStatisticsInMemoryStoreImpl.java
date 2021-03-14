@@ -55,6 +55,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     /** {@inheritDoc} */
     @Override public void clearAllStatistics() {
         partsStats.clear();
+        obsStats.clear();
     }
 
     /** {@inheritDoc} */
