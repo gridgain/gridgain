@@ -356,7 +356,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
      * stop one client node.
      */
     @Test
-    public void testTxDoesntBecamePreparedAfterError() throws Exception {
+    public void testTxDoesntBecomePreparedAfterError() throws Exception {
         backups = 2;
         persistence = true;
         syncMode = FULL_ASYNC;
