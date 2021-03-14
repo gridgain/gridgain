@@ -17,6 +17,8 @@ package org.apache.ignite.internal.processors.subscription;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
@@ -39,7 +41,8 @@ public class GridInternalSubscriptionProcessor extends GridProcessorAdapter {
     private final List<MetastorageLifecycleListener> metastorageListeners = new ArrayList<>();
 
     /** */
-    private final List<DistributedMetastorageLifecycleListener> distributedMetastorageListeners = new ArrayList<>();
+    private final List<DistributedMetastorageLifecycleListener> distributedMetastorageListeners =
+        new CopyOnWriteArrayList<>();
 
     /** */
     private final List<DatabaseLifecycleListener> dbListeners = new ArrayList<>();
@@ -76,6 +79,13 @@ public class GridInternalSubscriptionProcessor extends GridProcessorAdapter {
     }
 
     /** */
+    public void unregisterDistributedMetastorageListener(@NotNull DistributedMetastorageLifecycleListener lsnr) {
+        requireNonNull(lsnr, "Global metastorage subscriber should be not-null.");
+
+        distributedMetastorageListeners.remove(lsnr);
+    }
+
+    /** */
     public List<DistributedMetastorageLifecycleListener> getDistributedMetastorageSubscribers() {
         return distributedMetastorageListeners;
     }
@@ -92,9 +102,14 @@ public class GridInternalSubscriptionProcessor extends GridProcessorAdapter {
         return dbListeners;
     }
 
-    /** */
+    /**
+     * Register distributed configuration lifecycle listener.
+     *
+     * @param lifecycleListener DistributedConfigurationLifecycleListener to register.
+     */
     public void registerDistributedConfigurationListener(
-        @NotNull DistributedConfigurationLifecycleListener lifecycleListener) {
+        @NotNull DistributedConfigurationLifecycleListener lifecycleListener
+    ) {
         requireNonNull(distributedConfigurationListeners, "Distributed configuration subscriber should be not-null.");
 
         distributedConfigurationListeners.add(lifecycleListener);

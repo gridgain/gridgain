@@ -75,6 +75,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_CACHE_U
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_IDX_RANGE_ROWS;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PAGE_ROWS;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PARSER_CACHE_HIT;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_ID;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_SCHEMA;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.tag;
@@ -101,6 +102,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_CANCEL_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXECUTE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXEC_REQ;
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_MAP_END;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_PARSE;
 import static org.apache.ignite.spi.tracing.Scope.SQL;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
@@ -290,6 +292,10 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
         SpanId rootSpan = executeAndCheckRootSpan(
             "SELECT * FROM " + prsnTable + " AS p JOIN " + orgTable + " AS o ON o.orgId = p.prsnId",
             TEST_SCHEMA, false, true, true);
+
+        String qryId = getAttribute(rootSpan, SQL_QRY_ID);
+        assertTrue(Long.parseLong(qryId.substring(qryId.indexOf('_') + 1)) > 0);
+        UUID.fromString(qryId.substring(0, qryId.indexOf('_')));
 
         checkChildSpan(SQL_QRY_PARSE, rootSpan);
         checkChildSpan(SQL_CURSOR_OPEN, rootSpan);
@@ -565,6 +571,35 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
             checkBasicSelectQuerySpanTree(rootSpan, TEST_TABLE_POPULATION);
     }
 
+    /** */
+    @Test
+    public void testQueryEndSpanWithPlan() throws Exception {
+        String prsnTable = createTableAndPopulate(Person.class, PARTITIONED, 1);
+
+        reducer().context().query()
+            .querySqlFields(new SqlFieldsQuery("SELECT * FROM " + prsnTable), false).getAll();
+
+        handler().flush();
+
+        checkDroppedSpans();
+
+        List<SpanId> rootSpans = findRootSpans(SQL_QRY);
+
+        assertEquals(1, rootSpans.size());
+
+        List<SpanId> mapQryEndSpans = checkSpan(SQL_QRY_MAP_END, null, GRID_CNT, null);
+
+        mapQryEndSpans.forEach(span -> {
+            List<String> logs = getLogs(span);
+
+            assertTrue(
+                "Invalid logs: " + logs,
+                logs.stream()
+                    .anyMatch(msg -> msg.contains("SELECT") && msg.contains("lookupCount"))
+            );
+        });
+    }
+
     /**
      * Checks presence of basic spans that related to SELECT SQL query and are childs of the specfied span.
      *
@@ -573,6 +608,10 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
      */
     protected void checkBasicSelectQuerySpanTree(SpanId rootSpan, int expRows) {
         int fetchedRows = 0;
+
+        String qryId = getAttribute(rootSpan, SQL_QRY_ID);
+        assertTrue(Long.parseLong(qryId.substring(qryId.indexOf('_') + 1)) > 0);
+        UUID.fromString(qryId.substring(0, qryId.indexOf('_')));
 
         SpanId iterSpan = checkChildSpan(SQL_ITER_OPEN, rootSpan);
 
@@ -676,6 +715,20 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
     }
 
     /**
+     * Logs string from span with specified id.
+     *
+     * @param spanId Id of the target span.
+     * @return Value of the attribute.
+     */
+    protected List<String> getLogs(SpanId spanId) {
+        return handler()
+            .spanById(spanId)
+            .getAnnotations().getEvents().stream()
+            .map(e -> e.getEvent().getDescription())
+            .collect(Collectors.toList());
+    }
+
+    /**
      * Executes query with specified parameters.
      *
      * @param sql SQL query to execute.
@@ -732,7 +785,8 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
                 .put(tag(NODE, NAME), reducer().name())
                 .put(SQL_QRY_TEXT, sql)
                 .put(SQL_SCHEMA, schema)
-                .build()
+                .build(),
+            CheckAttributes.CONTAINS
         ).get(0);
     }
 

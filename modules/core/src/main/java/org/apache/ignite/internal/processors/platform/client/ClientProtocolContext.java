@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.platform.client;
 
 import java.util.EnumSet;
+import java.util.TimeZone;
+
 import org.apache.ignite.internal.ThinProtocolFeature;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 
@@ -29,6 +31,9 @@ public class ClientProtocolContext {
 
     /** Features. */
     private final EnumSet<ClientBitmaskFeature> features;
+
+    /** Client timezone. */
+    private TimeZone clientTz;
 
     /**
      * @param ver Protocol version.
@@ -82,5 +87,19 @@ public class ClientProtocolContext {
      */
     public static boolean isFeatureSupported(ClientListenerProtocolVersion ver, ClientProtocolVersionFeature feature) {
         return ver.compareTo(feature.verIntroduced()) >= 0;
+    }
+
+    /**
+     * @return Client time zone.
+     */
+    public TimeZone clientTimeZone() {
+        return clientTz;
+    }
+
+    /**
+     * @param clientTz Client time zone.
+     */
+    public void clientTimeZone(TimeZone clientTz) {
+        this.clientTz = clientTz;
     }
 }

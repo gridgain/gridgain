@@ -223,7 +223,7 @@ namespace Apache.Ignite.Linq.Impl
 
             foreach (var op in queryModel.ResultOperators.Reverse())
             {
-                if (op is CountResultOperator || op is AnyResultOperator)
+                if (op is CountResultOperator || op is AnyResultOperator || op is LongCountResultOperator)
                 {
                     _builder.Append("count (");
                     parenCount++;

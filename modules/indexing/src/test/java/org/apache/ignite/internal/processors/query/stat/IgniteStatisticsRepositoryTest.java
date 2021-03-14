@@ -26,16 +26,17 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 /**
  * Test for statistics repository.
  */
 public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
     /** First default key. */
-    private static final StatisticsKey K1 = new StatisticsKey("PUBLIC", "tab1");
+    private static final StatisticsKey K1 = new StatisticsKey(SCHEMA, "tab1");
 
     /** Second default key. */
-    private static final StatisticsKey K2 = new StatisticsKey("PUBLIC", "tab2");
+    private static final StatisticsKey K2 = new StatisticsKey(SCHEMA, "tab2");
 
     /** Column statistics with 100 nulls. */
     ColumnStatistics cs1 = new ColumnStatistics(null, null, 100, 0, 100,
@@ -53,26 +54,13 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
             4, new byte[0]);
 
     /**
-     * Test ignite statistics repository on client node without persistence.
-     */
-    @Test
-    public void testClientNode() {
-        IgniteStatisticsDummyStoreImpl dummyStore = new IgniteStatisticsDummyStoreImpl(cls -> log);
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(dummyStore, null, cls -> log);
-
-        testRepositoryGlobal(statsRepos);
-    }
-
-    /**
      * Test ignite statistics repository on server node without persistence.
      */
     @Test
     public void testServerWithoutPersistence() {
         IgniteStatisticsStore store = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(store, null, cls -> log);
+        IgniteStatisticsRepository statsRepos = new IgniteStatisticsRepository(store, null, cls -> log);
 
-        testRepositoryGlobal(statsRepos);
-        testRepositoryLocal(statsRepos);
         testRepositoryPartitions(statsRepos);
     }
 
@@ -88,17 +76,14 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
             .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
         IgniteCacheDatabaseSharedManager db = Mockito.mock(IgniteCacheDatabaseSharedManager.class);
 
-        IgniteStatisticsRepositoryImpl statsRepos[] = new IgniteStatisticsRepositoryImpl[1];
-        IgniteStatisticsStore store = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db,
-            (k, s) -> statsRepos[0].cacheLocalStatistics(k, s), cls -> log);
+        IgniteStatisticsRepository statsRepos[] = new IgniteStatisticsRepository[1];
+        IgniteStatisticsStore store = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db, cls -> log);
         IgniteStatisticsHelper helper = Mockito.mock(IgniteStatisticsHelper.class);
-        statsRepos[0] = new IgniteStatisticsRepositoryImpl(store, helper, cls -> log);
+        statsRepos[0] = new IgniteStatisticsRepository(store, helper, cls -> log);
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);
 
-        testRepositoryGlobal(statsRepos[0]);
-        testRepositoryLocal(statsRepos[0]);
         testRepositoryPartitions(statsRepos[0]);
     }
 
@@ -115,7 +100,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
      *
      * @param repo Ignite statistics repository to test.
      */
-    public void testRepositoryPartitions(IgniteStatisticsRepositoryImpl repo) {
+    public void testRepositoryPartitions(IgniteStatisticsRepository repo) {
         ObjectPartitionStatisticsImpl stat1 = getPartitionStatistics(1);
         ObjectPartitionStatisticsImpl stat10 = getPartitionStatistics(10);
         ObjectPartitionStatisticsImpl stat100 = getPartitionStatistics(100);
@@ -148,65 +133,6 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
     }
 
     /**
-     * Test specified repository with local statistics:
-     *
-     * 1) Check that repository doesn't contains test table statistics.
-     * 2) Save local statistics.
-     * 3) Check that it doesn't available by wrong key and available by right one.
-     * 4) Merge local statistics and check that new version available.
-     *
-     * @param repo Ignite statistics repository to test.
-     */
-    public void testRepositoryLocal(IgniteStatisticsRepositoryImpl repo) {
-        assertNull(repo.getLocalStatistics(K1));
-        assertNull(repo.getLocalStatistics(K2));
-
-        ObjectStatisticsImpl stat1 = getStatistics(1);
-
-        repo.saveLocalStatistics(K1, stat1);
-        assertNull(repo.getLocalStatistics(K2));
-
-        assertEquals(1L, repo.getLocalStatistics(K1).rowCount());
-
-        ObjectStatisticsImpl stat2 = getStatistics(2);
-
-        repo.mergeLocalStatistics(K1, stat2);
-
-        assertNull(repo.getLocalStatistics(K2));
-        assertEquals(2L, repo.getLocalStatistics(K1).rowCount());
-    }
-
-    /**
-     * Test specified repository with global statistics:
-     *
-     * 1) Clear empty statistics (whole object and only one column).
-     * 2) Save global statistics.
-     * 3) Check that it doesn't available by wrong key and available by right key.
-     * 4) Merge global statistics and check that new version available.
-     *
-     * @param repo Ignite statistics repository to test.
-     */
-    public void testRepositoryGlobal(IgniteStatisticsRepositoryImpl repo) {
-        assertNull(repo.getGlobalStatistics(K1));
-        repo.clearGlobalStatistics(K1);
-        repo.clearGlobalStatistics(K1, "col10");
-
-        ObjectStatisticsImpl tab1Statistics = getStatistics(1);
-
-        repo.saveGlobalStatistics(K1, tab1Statistics);
-
-        assertNull(repo.getGlobalStatistics(K2));
-
-        assertEquals(1L, repo.getGlobalStatistics(K1).rowCount());
-
-        ObjectStatisticsImpl tab1Statistics2 = getStatistics(2);
-
-        repo.mergeGlobalStatistics(K1, tab1Statistics2);
-
-        assertEquals(2L, repo.getGlobalStatistics(K1).rowCount());
-    }
-
-    /**
      * Test object statistics add:
      *
      * 1) Add statistics with partially the same columns.
@@ -227,7 +153,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         ObjectStatisticsImpl os1 = new ObjectStatisticsImpl(100, colStat1);
         ObjectStatisticsImpl os2 = new ObjectStatisticsImpl(101, colStat2);
 
-        ObjectStatisticsImpl sumStat1 = IgniteStatisticsRepositoryImpl.add(os1, os2);
+        ObjectStatisticsImpl sumStat1 = IgniteStatisticsRepository.add(os1, os2);
 
         assertEquals(101, sumStat1.rowCount());
         assertEquals(3, sumStat1.columnsStatistics().size());
@@ -236,7 +162,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         // 2) Add statistics with new columns.
         ObjectStatisticsImpl os3 = new ObjectStatisticsImpl(101, Collections.singletonMap("col3", cs3));
 
-        ObjectStatisticsImpl sumStat2 = IgniteStatisticsRepositoryImpl.add(os1, os3);
+        ObjectStatisticsImpl sumStat2 = IgniteStatisticsRepository.add(os1, os3);
 
         assertEquals(3, sumStat2.columnsStatistics().size());
 
@@ -247,7 +173,7 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
 
         ObjectStatisticsImpl os4 = new ObjectStatisticsImpl(99, colStat3);
 
-        ObjectStatisticsImpl sumStat3 = IgniteStatisticsRepositoryImpl.add(os1, os4);
+        ObjectStatisticsImpl sumStat3 = IgniteStatisticsRepository.add(os1, os4);
 
         assertEquals(99, sumStat3.rowCount());
         assertEquals(2, sumStat3.columnsStatistics().size());
@@ -268,18 +194,19 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         ObjectStatisticsImpl os = new ObjectStatisticsImpl(100, colStat1);
 
         // 1) Remove not existing column.
-        ObjectStatisticsImpl os1 = IgniteStatisticsRepositoryImpl.subtract(os, new String[]{"col0"});
+        ObjectStatisticsImpl os1 = IgniteStatisticsRepository.subtract(os, Collections.singleton("col0"));
 
         assertEquals(os, os1);
 
         // 2) Remove some columns.
-        ObjectStatisticsImpl os2 = IgniteStatisticsRepositoryImpl.subtract(os, new String[]{"col1"});
+        ObjectStatisticsImpl os2 = IgniteStatisticsRepository.subtract(os, Collections.singleton("col1"));
 
         assertEquals(1, os2.columnsStatistics().size());
         assertEquals(cs2, os2.columnStatistics("col2"));
 
         // 3) Remove all columns.
-        ObjectStatisticsImpl os3 = IgniteStatisticsRepositoryImpl.subtract(os, new String[]{"col2","col1"});
+        ObjectStatisticsImpl os3 = IgniteStatisticsRepository.subtract(os,
+            Arrays.stream(new String[] {"col2", "col1"}).collect(Collectors.toSet()));
 
         assertTrue(os3.columnsStatistics().isEmpty());
     }
