@@ -210,6 +210,9 @@ public enum IgniteFeatures {
      * is improper for PITR*/
     IMPROPER_SCHEDULE_FOR_PITR_WARNING(56),
 
+    /** Node supports capturing incremental snapshot if previous snapshots mismatch from ones on another nodes. */
+    SNAPSHOT_LAST_SNAPSHOTS_MISMATCH_HANDLING_POLICY(57),
+
     /** Rolling upgrade based on distributed metastorage. Improved handling of changing RU state. */
     DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58);
 
