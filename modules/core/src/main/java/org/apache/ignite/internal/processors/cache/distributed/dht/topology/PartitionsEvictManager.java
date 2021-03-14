@@ -124,8 +124,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @param grp Group.
      */
     public void onCacheGroupStarted(CacheGroupContext grp) {
-        if (!grp.isLocal())
-            evictionGroupsMap.put(grp.groupId(), new GroupEvictionContext(grp));
+        evictionGroupsMap.put(grp.groupId(), new GroupEvictionContext(grp));
     }
 
     /**
