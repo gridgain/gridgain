@@ -426,10 +426,12 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
             doSleep(100);
 
+            ctx0.shared().evict().processEvictions(true).get();
+            ctx1.shared().evict().processEvictions(true).get();
+
             ctx0.ttl().expire(1);
             ctx1.ttl().expire(1);
 
-            // TODO
             validateCache(ctx0.group(), pk, 0, 0);
             validateCache(ctx1.group(), pk, 0, 0);
         }
@@ -503,10 +505,12 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
             doSleep(100);
 
+            ctx0.shared().evict().processEvictions(true).get();
+            ctx1.shared().evict().processEvictions(true).get();
+
             ctx0.ttl().expire(1);
             ctx1.ttl().expire(1);
 
-            // TODO
             validateCache(ctx0.group(), pk, 0, 0);
             validateCache(ctx1.group(), pk, 0, 0);
         }
