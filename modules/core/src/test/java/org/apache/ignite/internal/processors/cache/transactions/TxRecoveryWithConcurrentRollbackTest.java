@@ -409,6 +409,11 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
             p.tx().currentPrepareFuture().listen(fut -> txPrepareLatch.countDown());
 
+            txPrepareLatch.await(60, TimeUnit.SECONDS);
+
+            if (txPrepareLatch.getCount() > 0)
+                fail("Failed to await for tx prepare.");
+
             AtomicReference<GridDhtTxLocal> dhtTxLocalRef = new AtomicReference<>();
 
             waitForCondition(() -> {
@@ -422,11 +427,6 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
             }, 60_000);
 
             assertNotNull(dhtTxLocalRef.get());
-
-            txPrepareLatch.await(60, TimeUnit.SECONDS);
-
-            if (txPrepareLatch.getCount() > 0)
-                fail("Failed to await for tx prepare.");
 
             UUID clientNodeToFail = dhtTxLocalRef.get().eventNodeId();
 
