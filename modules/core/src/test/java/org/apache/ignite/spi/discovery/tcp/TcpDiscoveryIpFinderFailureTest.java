@@ -44,7 +44,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 
 /**
  * Check different disconnections scenarios in respect to {@link TcpDiscoverySpi#joinTimeout} cfg
- * alongside possible failures for IpResolver
+ * alongside possible failures in IpResolver.
  */
 public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
 
@@ -108,7 +108,7 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
 
         listeners.add(LogListener.matches(
                 "Unable to get registered addresses from IP finder," +
-                        " timeout is reached (consider increasing 'joinTimeout' for join process " +
+                        " timeout is reached (consider increasing 'joinTimeout' for join process or " +
                         "'netTimeout' for reconnection) [joinTimeout=10000, netTimeout=4000]").build());
 
         listeners.forEach(listeningLog::registerListener);
@@ -146,7 +146,7 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test server node disconnection with dynamic IP finder.
+     * Tests server node disconnection with dynamic IP finder.
      * Server node should catch NODE_LEFT event, no calls to IP resolver.
      */
     @Test
@@ -157,7 +157,7 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test server node disconnection with static IP finder.
+     * Tests server node disconnection with static IP finder.
      * Server node should catch NODE_LEFT event, no calls to IP resolver.
      */
     @Test
@@ -227,7 +227,7 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
             return false;
         });
 
-        if (!GridTestUtils.waitForCondition(() -> done.get(), 10_000)) {
+        if (!GridTestUtils.waitForCondition(done::get, 10_000)) {
             fut.cancel();
 
             Assert.assertEquals("Node was not failed", fut.get(), true);
@@ -295,7 +295,7 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
 
         listeners.add(LogListener.matches(
                 "Unable to get registered addresses from IP finder," +
-                        " timeout is reached (consider increasing 'joinTimeout' for join process " +
+                        " timeout is reached (consider increasing 'joinTimeout' for join process or " +
                         "'netTimeout' for reconnection) [joinTimeout=2000, netTimeout=5000]").build());
 
         listeners.add(LogListener.matches(

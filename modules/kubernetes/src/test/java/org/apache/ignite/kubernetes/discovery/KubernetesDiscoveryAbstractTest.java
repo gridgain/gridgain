@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.discovery;
+package org.apache.ignite.kubernetes.discovery;
 
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.kubernetes.configuration.KubernetesConnectionConfiguration;
@@ -87,7 +87,7 @@ public abstract class KubernetesDiscoveryAbstractTest extends GridCommonAbstract
     }
 
     /**
-     * Mock HTTP server responce
+     * Mocks HTTP server response.
      *
      * @param addrs Address list to return.
      */
@@ -96,7 +96,7 @@ public abstract class KubernetesDiscoveryAbstractTest extends GridCommonAbstract
     }
 
     /**
-     * Mock HTTP server responce
+     * Mocks HTTP server response.
      *
      * @param times How many times mock should return value.
      * @param addrs Address list to return.

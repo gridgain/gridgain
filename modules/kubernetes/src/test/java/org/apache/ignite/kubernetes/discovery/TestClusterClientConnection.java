@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.discovery;
+package org.apache.ignite.kubernetes.discovery;
 
 import org.apache.ignite.Ignition;
 import org.apache.ignite.client.ClientCache;

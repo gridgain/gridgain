@@ -1916,7 +1916,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
      * @throws org.apache.ignite.spi.IgniteSpiException If an error occurs.
      */
     protected Collection<InetSocketAddress> resolvedAddresses() throws IgniteSpiException {
-        // Time when join process started.
+        // Time when resolution process started.
         long resolutionStartNanos = System.nanoTime();
 
         List<InetSocketAddress> res = new ArrayList<>();
@@ -1943,7 +1943,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             try {
                 if (timeout > 0 && U.millisSinceNanos(resolutionStartNanos) > timeout) {
                     LT.warn(log, "Unable to get registered addresses from IP finder, timeout is reached " +
-                            "(consider increasing 'joinTimeout' for join process 'netTimeout' for reconnection) " +
+                            "(consider increasing 'joinTimeout' for join process or 'netTimeout' for reconnection) " +
                             "[joinTimeout=" + joinTimeout + ", netTimeout=" + netTimeout + "]");
 
                     addrs = res;

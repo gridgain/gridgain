@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.discovery;
+package org.apache.ignite.kubernetes.discovery;
 
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -32,7 +32,7 @@ import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
  */
 public class TestKubernetesIpFinderDisconnection extends KubernetesDiscoveryAbstractTest {
 
-    /** Tests that client is disconnected if {@link TcpDiscoverySpi#setReconnectCount(int)} is set.  */
+    /** Tests that client is disconnected if {@link TcpDiscoverySpi#setNetworkTimeout(long)} ()} ) is set.  */
     @Test
     public void testClientNodeDisconnectsWithMaxRetries() throws Exception {
         IgniteConfiguration cfgSrv = getConfiguration(getTestIgniteInstanceName(), false);
@@ -43,10 +43,10 @@ public class TestKubernetesIpFinderDisconnection extends KubernetesDiscoveryAbst
         runSuccessfulDisconnectionTest(cfgSrv, cfgClient);
     }
 
-    /** Tests that client is still trying to connect if {@link TcpDiscoverySpi#setReconnectCount(int)} is not configured.
-     * if {@link TcpDiscoverySpi#setReconnectCount(int)} is big.  */
+    /** Tests that client is still trying to connect
+     * if {@link TcpDiscoverySpi#setNetworkTimeout(long)} ()} ) is big. */
     @Test
-    public void testClientNodeIsNotDisconnectedWithBigReconnectCount() throws Exception {
+    public void testClientNodeIsNotDisconnectedWithBigNetworkTimeout() throws Exception {
         IgniteConfiguration cfgSrv = getConfiguration(getTestIgniteInstanceName(), false);
 
         IgniteConfiguration cfgClient = getConfiguration("client", true);

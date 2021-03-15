@@ -16,8 +16,8 @@
 
 package org.apache.ignite.testsuites;
 
-import org.apache.ignite.discovery.TestClusterClientConnection;
-import org.apache.ignite.discovery.TestKubernetesIpFinderDisconnection;
+import org.apache.ignite.kubernetes.discovery.TestClusterClientConnection;
+import org.apache.ignite.kubernetes.discovery.TestKubernetesIpFinderDisconnection;
 import org.apache.ignite.internal.kubernetes.connection.KubernetesServiceAddressResolverTest;
 import org.apache.ignite.kubernetes.configuration.KubernetesConnectionConfigurationTest;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.kubernetes.TcpDiscoveryKubernetesIpFinderSelfTest;
