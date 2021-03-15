@@ -866,7 +866,7 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** {@inheritDoc} */
-    @Override public boolean onTtlExpired() {
+    @Override public boolean onTtlExpired(long expireTime) {
         return false;
     }
 

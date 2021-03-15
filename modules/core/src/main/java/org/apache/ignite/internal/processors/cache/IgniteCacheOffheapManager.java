@@ -50,7 +50,7 @@ import org.apache.ignite.internal.util.IgniteTree;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
-import org.apache.ignite.internal.util.lang.IgniteClosureX;
+import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -174,18 +174,28 @@ public interface IgniteCacheOffheapManager {
      * @param c Closure.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
      *               amount can be greater if a limit has been exceeded.
+     * @param now Expire time.
      * @return {@code True} if unprocessed expired entries remains.
      */
-    public boolean expireRows(IgniteClosureX<GridCacheEntryEx, Boolean> c, int amount);
+    public boolean expireRows(IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now);
 
     /**
      * @param c Closure.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
      *               amount can be greater if a limit has been exceeded.
+     * @param now Expire time.
      * @return {@code True} if unprocessed expired entries remains.
      */
-    public boolean expireTombstones(IgniteClosureX<GridCacheEntryEx, Boolean> c, int amount);
+    public boolean expireTombstones(IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now);
 
+    /**
+     * @param tombstone
+     * @param amount
+     * @param upper
+     * @param clo
+     * @return
+     * @throws IgniteCheckedException
+     */
     public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> clo) throws IgniteCheckedException;
 
     /**

@@ -74,9 +74,9 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
         ArrayList<Object[]> params = new ArrayList<>();
 
         params.add(new Object[]{ATOMIC, false});
-//        params.add(new Object[]{ATOMIC, true});
-//        params.add(new Object[]{TRANSACTIONAL, false});
-//        params.add(new Object[]{TRANSACTIONAL, true});
+        params.add(new Object[]{ATOMIC, true});
+        params.add(new Object[]{TRANSACTIONAL, false});
+        params.add(new Object[]{TRANSACTIONAL, true});
 
         return params;
     }
@@ -84,9 +84,6 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setFailureDetectionTimeout(100000);
-        cfg.setClientFailureDetectionTimeout(100000);
 
         cfg.setClusterStateOnStart(ClusterState.INACTIVE);
 

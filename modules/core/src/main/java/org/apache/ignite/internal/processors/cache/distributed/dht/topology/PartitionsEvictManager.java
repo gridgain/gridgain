@@ -49,7 +49,7 @@ import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
-import org.apache.ignite.internal.util.lang.IgniteClosureX;
+import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -323,7 +323,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             @Override public void run() {
                 long now = U.currentTimeMillis();
 
-                log.info("DBG: processEvictions tombstone=" + tombstone + ", newTs=" + now);
+                //log.info("DBG: processEvictions tombstone=" + tombstone + ", newTs=" + now);
 
                 int res = fillEvictQueue(tombstone, U.currentTimeMillis());
 
@@ -388,7 +388,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             }
         }
 
-        PendingRow pendingRow = queue.peekFirst();
+        //PendingRow pendingRow = queue.peekFirst();
         // log.info("DBG: fillEvictQueue res=" + total + ", tombstone=" + tombstone + ", queue=" + queue.sizex() + ", first=" + (pendingRow == null ? "NA" : pendingRow.key));
 
         return total;
@@ -398,10 +398,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @param tombstone Tombstone.
      * @param c Closure.
      * @param amount Amount.
+     * @param now Expire time.
      *
      * @return {@code True} is unprocessed entries remain.
      */
-    public boolean expire(boolean tombstone, IgniteClosureX<GridCacheEntryEx, Boolean> c, int amount) {
+    public boolean expire(boolean tombstone, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now) {
         FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
 
         PendingRow row;
@@ -422,7 +423,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     try {
                         GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
 
-                        c.apply(entry);
+                        c.apply(entry, now); // Second argument is used for "forced expiration" logic.
                     }
                     catch (GridDhtInvalidPartitionException ignored) {
                         // Skip renting or evicted partition.

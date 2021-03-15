@@ -116,7 +116,6 @@ import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
-import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -1372,16 +1371,18 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /** {@inheritDoc} */
     @Override public boolean expireRows(
-        IgniteClosureX<GridCacheEntryEx, Boolean> c,
-        int amount
+            IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+            int amount,
+            long now
     ) {
-        return ctx.evict().expire(false, c, amount);
+        return ctx.evict().expire(false, c, amount, now);
     }
 
     /** {@inheritDoc} */
     @Override public boolean expireTombstones(
-        IgniteClosureX<GridCacheEntryEx, Boolean> c,
-        int amount
+            IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+            int amount,
+            long now
     ) {
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
@@ -1397,11 +1398,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 ctx.ttl().tombstoneCleanupSuspended()))
             return false;
 
-        if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
+        if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
 
+            now = Long.MAX_VALUE;
+        }
+
         // Tombstones for volatile cache group are always cleared.
-        return ctx.evict().expire(true, c, amount);
+        return ctx.evict().expire(true, c, amount, now);
     }
 
     /**
