@@ -17,12 +17,10 @@
 package org.apache.ignite.internal;
 
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
-import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -70,20 +68,32 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
         //Start 2 server nodes
         IgniteEx srv1 = startGrid("server1");
         IgniteEx client = startGrid("client");
-        startGrid("server2");
+        IgniteEx srv2 = startGrid("server2");
+
+        String srv2Id = srv2.cluster().localNode().id().toString();
 
         srv1.cluster().active();
+
+        LogListener lsnr = LogListener.matches(CRD_CHANGE_MSG)
+                .andMatches(srv2Id)
+                .build();
+
+        listeningLog.registerListener(lsnr);
 
         stopGrid("server1");
         startGrid("server1");
 
-        LogListener lsnr = LogListener.matches(CRD_CHANGE_MSG).build();
+        assertTrue(lsnr.check());
+
+        lsnr.reset();
+
+        LogListener lsnr2 = LogListener.matches(CRD_CHANGE_MSG).build();
 
         listeningLog.registerListener(lsnr);
 
         stopGrid("client");
 
-        assertFalse(lsnr.check());
+        assertFalse(lsnr2.check());
     }
 
     /**
@@ -99,69 +109,54 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
 
         srv1.cluster().active();
 
-        // Check coordinator = server1
-        assertTrue(((TcpDiscoverySpi) srv1.context().config().getDiscoverySpi()).isLocalNodeCoordinator());
-
         // Add a client node, daemon node and 3rd server node, which is not in the baseline
         startGrid("client");
         IgniteEx daemon = startGrid("daemon");
         IgniteEx srv3 = startGrid("server3");
 
-        LogListener lsnr = LogListener.matches(CRD_CHANGE_MSG).build();
+        LogListener lsnr = LogListener.matches(CRD_CHANGE_MSG)
+                .andMatches(srv2.cluster().localNode().id().toString())
+                .build();
 
         listeningLog.registerListener(lsnr);
 
         stopGrid("server1");
 
-        UUID crdUUID = ((TcpDiscoverySpi)srv3.context().config().getDiscoverySpi()).getCoordinator();
-
-        // Coordinator changed server1 -> server2
-        assertEquals(srv2.localNode().id(), crdUUID);
-
         assertTrue(lsnr.check());
 
-        lsnr.reset();
+        lsnr = LogListener.matches(CRD_CHANGE_MSG).build();
+
+        listeningLog.registerListener(lsnr);
 
         srv1 = startGrid("server1");
 
-        crdUUID = ((TcpDiscoverySpi) srv3.context().config().getDiscoverySpi()).getCoordinator();
-
-        // Server2 is still the coordinator
-        assertEquals(srv2.localNode().id(), crdUUID);
-
         assertFalse(lsnr.check());
 
-        lsnr.reset();
+        lsnr = LogListener.matches(CRD_CHANGE_MSG)
+                .andMatches(srv3.cluster().localNode().id().toString())
+                .build();
+
+        listeningLog.registerListener(lsnr);
 
         stopGrid("server2");
 
-        crdUUID = ((TcpDiscoverySpi) srv3.context().config().getDiscoverySpi()).getCoordinator();
-
-        // Coordinator changed server2 -> daemon
-        assertEquals(daemon.localNode().id(), crdUUID);
-
         assertTrue(lsnr.check());
 
-        lsnr.reset();
+        lsnr = LogListener.matches(CRD_CHANGE_MSG)
+                .build();
 
         stopGrid("client");
 
-        crdUUID = ((TcpDiscoverySpi) srv3.context().config().getDiscoverySpi()).getCoordinator();
-
-        // daemon is still coordinator
-        assertEquals(daemon.localNode().id(), crdUUID);
-
         assertFalse(lsnr.check());
 
-        lsnr.reset();
+        lsnr = LogListener.matches(CRD_CHANGE_MSG)
+                .andMatches(srv1.cluster().localNode().id().toString())
+                .build();
+
+        listeningLog.registerListener(lsnr);
 
         stopGrid("server3");
 
-        crdUUID = ((TcpDiscoverySpi) srv1.context().config().getDiscoverySpi()).getCoordinator();
-
-        // daemon is still coordinator
-        assertEquals(daemon.localNode().id(), crdUUID);
-
-        assertFalse(lsnr.check());
+        assertTrue(lsnr.check());
     }
 }
