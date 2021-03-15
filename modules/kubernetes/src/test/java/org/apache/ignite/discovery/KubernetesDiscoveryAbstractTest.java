@@ -103,29 +103,29 @@ public abstract class KubernetesDiscoveryAbstractTest extends GridCommonAbstract
      */
     protected final void mockServerResponse(int times, String... addrs) {
         String ipAddrs = Arrays.stream(addrs)
-                .map(addr -> String.format("{\"ip\":\"%s\"}", addr))
-                .collect(Collectors.joining(","));
+            .map(addr -> String.format("{\"ip\":\"%s\"}", addr))
+            .collect(Collectors.joining(","));
 
         mockServer
-                .when(
-                        request()
-                                .withMethod("GET")
-                                .withPath(String.format("/api/v1/namespaces/%s/endpoints/%s", namespace, service)),
-                        Times.exactly(times)
-                )
-                .respond(
-                        response()
-                                .withStatusCode(200)
-                                .withBody("{" +
-                                        "  \"subsets\": [" +
-                                        "     {" +
-                                        "        \"addresses\": [" +
-                                        "        " + ipAddrs +
-                                        "        ]" +
-                                        "     }" +
-                                        "  ]" +
-                                        "}"
-                                ));
+            .when(
+                request()
+                    .withMethod("GET")
+                    .withPath(String.format("/api/v1/namespaces/%s/endpoints/%s", namespace, service)),
+                Times.exactly(times)
+            )
+            .respond(
+                response()
+                    .withStatusCode(200)
+                    .withBody("{" +
+                        "  \"subsets\": [" +
+                        "     {" +
+                        "        \"addresses\": [" +
+                        "        " + ipAddrs +
+                        "        ]" +
+                        "     }" +
+                        "  ]" +
+                        "}"
+                    ));
     }
 
     /** */

@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
@@ -204,7 +205,7 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
 
         dynamicIpFinder.breakService();
 
-        final Boolean[] done = {false};
+        AtomicBoolean done = new AtomicBoolean();
 
         IgniteInternalFuture<Boolean> fut = GridTestUtils.runAsync(() -> {
             try {
@@ -220,13 +221,13 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
                 return false;
             }
             finally {
-                done[0] = true;
+                done.set(true);
             }
 
             return false;
         });
 
-        if (!GridTestUtils.waitForCondition(() -> done[0], 10_000)) {
+        if (!GridTestUtils.waitForCondition(() -> done.get(), 10_000)) {
             fut.cancel();
 
             Assert.assertEquals("Node was not failed", fut.get(), true);
@@ -248,7 +249,7 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
         dynamicIpFinder.setShared(false);
         dynamicIpFinder.breakService();
 
-        final Boolean[] done = {false};
+        AtomicBoolean done = new AtomicBoolean();
 
         IgniteInternalFuture<Boolean> fut = GridTestUtils.runAsync(() -> {
             try {
@@ -264,13 +265,13 @@ public class TcpDiscoveryIpFinderFailureTest extends GridCommonAbstractTest {
                 return false;
             }
             finally {
-                done[0] = true;
+                done.set(true);
             }
 
             return false;
         });
 
-        if (!GridTestUtils.waitForCondition(() -> done[0], 5_000)) fut.cancel();
+        if (!GridTestUtils.waitForCondition(() -> done.get(), 5_000)) fut.cancel();
 
         Assert.assertEquals("Node should be stuck in a joining loop", fut.get(), true);
     }
