@@ -23,6 +23,7 @@ import org.apache.ignite.internal.sql.SqlKeyword;
 import org.apache.ignite.internal.sql.SqlLexer;
 import org.apache.ignite.internal.sql.SqlLexerToken;
 import org.apache.ignite.internal.sql.SqlLexerTokenType;
+import org.apache.ignite.internal.util.typedef.F;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,7 +49,6 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
     /** {@inheritDoc} */
     @Override public SqlCommand parse(SqlLexer lex) {
         while (true) {
-
             SqlQualifiedName tblQName = parseQualifiedIdentifier(lex);
 
             String[] cols = parseColumnList(lex, true);
@@ -75,18 +75,29 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
         byte maxChangedRows = getByteOrDefault(params, MAX_CHANGED_PARTITION_ROWS_PERCENT,
             StatisticsObjectConfiguration.DEFAULT_OBSOLESCENCE_MAX_PERCENT);
 
-        if (!params.isEmpty())
+        if (!F.isEmpty(params))
             throw new IgniteSQLException("");
 
-        List<StatisticsColumnConfiguration> colCfgs = Arrays.stream(target.columns())
-            .map(StatisticsColumnConfiguration::new).collect(Collectors.toList());
+        List<StatisticsColumnConfiguration> colCfgs = (target.columns() == null) ? null :
+            Arrays.stream(target.columns()).map(StatisticsColumnConfiguration::new).collect(Collectors.toList());
 
         return new StatisticsObjectConfiguration(target.key(), colCfgs, maxChangedRows);
     }
 
-    private static byte getByteOrDefault(Map<String,String> map, String key, byte defaultValue) {
+    /**
+     * Get byte value or default from specified String2String map.
+     *
+     * @param map Map to get value from.
+     * @param key Key.
+     * @param dfltVal Default value.
+     * @return Value or default value.
+     */
+    private static byte getByteOrDefault(Map<String,String> map, String key, byte dfltVal) {
+        if (map == null)
+            return dfltVal;
+
         String value = map.remove(key);
-        return (value == null) ? defaultValue : Byte.valueOf(value);
+        return (value == null) ? dfltVal : Byte.valueOf(value);
     }
 
     /**

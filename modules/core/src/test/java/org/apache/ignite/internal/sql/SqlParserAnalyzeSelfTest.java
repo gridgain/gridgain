@@ -19,6 +19,9 @@ import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
 import org.apache.ignite.internal.sql.command.SqlAnalyzeCommand;
 import org.junit.Test;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
  * Tests for sql parser: ANALYZE command.
  */
@@ -80,9 +83,13 @@ public class SqlParserAnalyzeSelfTest extends SqlParserAbstractSelfTest {
      * @param targets Expected targets.
      */
     private static void validate(SqlAnalyzeCommand cmd, StatisticsTarget... targets) {
-        assertEquals(cmd.targets().size(), targets.length);
+        assertEquals(cmd.configurations().size(), targets.length);
+
+        Set<StatisticsTarget> cmdTargets = cmd.configurations().stream()
+            .map(c ->  new StatisticsTarget(c.key(), c.columns().keySet().toArray(new String[0])))
+            .collect(Collectors.toSet());
 
         for (StatisticsTarget target : targets)
-            assertTrue(cmd.targets().contains(target));
+            assertTrue(cmdTargets.contains(target));
     }
 }

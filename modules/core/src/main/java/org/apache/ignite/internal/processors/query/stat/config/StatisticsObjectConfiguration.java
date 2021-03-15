@@ -68,10 +68,8 @@ public class StatisticsObjectConfiguration implements Serializable {
         byte maxPartitionObsolescencePercent
     ) {
         this.key = key;
-        this.cols = cols.stream()
-            .collect(
-                Collectors.toMap(StatisticsColumnConfiguration::name, Function.identity())
-            );
+        this.cols = (cols == null) ? null : cols.stream()
+            .collect(Collectors.toMap(StatisticsColumnConfiguration::name, Function.identity()));
         this.maxPartitionObsolescencePercent = maxPartitionObsolescencePercent;
     }
 
@@ -197,7 +195,7 @@ public class StatisticsObjectConfiguration implements Serializable {
      * @return Map column name to column statistics configuration.
      */
     public Map<String, StatisticsColumnConfiguration> columns() {
-        return cols.entrySet().stream()
+        return (cols == null) ? Collections.emptyMap() : cols.entrySet().stream()
             .filter(e -> !e.getValue().tombstone())
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }

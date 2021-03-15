@@ -50,6 +50,8 @@ public class StatisticsObsolescenceTest extends StatisticsAbstractTest {
         for (int i = SMALL_SIZE; i < 2 * SMALL_SIZE; i++)
             sql(String.format("INSERT INTO small(a, b, c) VALUES(%d, %d, %d)", i, i, i % 10));
 
+        statisticsMgr(0).processObsolescence();
+
         assertTrue(GridTestUtils.waitForCondition(() -> {
             ObjectStatisticsImpl stat2 = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 

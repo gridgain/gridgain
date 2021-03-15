@@ -390,7 +390,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     /**
      * Collect or refresh statistics.
      *
-     * @param collect
+     * @param collect If {@code true} - collect new statistics, if {@code false} - update existing.
      * @param targets
      */
     private void makeStatistics(boolean collect, StatisticsTarget... targets) {

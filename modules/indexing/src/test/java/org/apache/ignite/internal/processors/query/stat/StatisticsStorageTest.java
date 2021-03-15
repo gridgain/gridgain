@@ -26,7 +26,7 @@ import org.junit.Test;
 public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTest {
     /** {@inheritDoc} */
     @Override public void beforeTest() throws Exception {
-        updateStatistics(SMALL_TARGET);
+        collectStatistics(SMALL_TARGET);
     }
 
     /**

@@ -174,7 +174,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         createSmallTable(null);
 
-        updateStatistics(SMALL_TARGET);
+        collectStatistics(SMALL_TARGET);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
@@ -200,7 +200,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         createSmallTable(null);
 
-        updateStatistics(SMALL_TARGET);
+        collectStatistics(SMALL_TARGET);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
@@ -222,7 +222,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         createSmallTable(null);
 
-        updateStatistics(SMALL_TARGET);
+        collectStatistics(SMALL_TARGET);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
@@ -273,7 +273,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         createSmallTable(null);
 
-        updateStatistics(SMALL_TARGET);
+        collectStatistics(SMALL_TARGET);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
@@ -282,7 +282,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         waitForStats(SCHEMA, "SMALL", TIMEOUT,
             (stats) -> stats.forEach(s -> assertNull(s.columnStatistics("A"))));
 
-        updateStatistics(SMALL_TARGET);
+        collectStatistics(new StatisticsTarget(SCHEMA, "SMALL", "A"));
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
     }
@@ -307,7 +307,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         createSmallTable(null);
 
-        updateStatistics(SMALL_TARGET);
+        collectStatistics(SMALL_TARGET);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
@@ -344,7 +344,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         createSmallTable(null);
         createSmallTable("_A");
 
-        updateStatistics(
+        collectStatistics(
             new StatisticsTarget(SCHEMA, "SMALL"),
             new StatisticsTarget(SCHEMA, "SMALL_A"));
 
@@ -378,7 +378,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         createSmallTable(null);
 
-        updateStatistics(SMALL_TARGET);
+        collectStatistics(SMALL_TARGET);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 
@@ -413,7 +413,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         createSmallTable(null);
 
-        updateStatistics(SMALL_TARGET);
+        collectStatistics(SMALL_TARGET);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
 

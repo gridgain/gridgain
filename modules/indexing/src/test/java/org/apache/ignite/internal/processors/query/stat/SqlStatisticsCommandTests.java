@@ -67,8 +67,8 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      */
     @Test
     public void testAnalyze() throws IgniteCheckedException {
-        sql("ANALYZE TEST");
 
+        sql("ANALYZE TEST");
         testStatistics(SCHEMA, "TEST", false);
 
         sql("ANALYZE PUBLIC.TEST2(name)");

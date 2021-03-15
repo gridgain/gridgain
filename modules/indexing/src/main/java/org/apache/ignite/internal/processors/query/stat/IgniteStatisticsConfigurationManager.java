@@ -236,6 +236,9 @@ public class IgniteStatisticsConfigurationManager {
 
         if (log.isDebugEnabled())
             log.debug("Statistics configuration manager started.");
+
+        if (distrMetaStorage != null)
+            scanAndCheckLocalStatistics(exchange.readyAffinityVersion());
     }
 
     /**
@@ -409,8 +412,13 @@ public class IgniteStatisticsConfigurationManager {
 
                     validateDropRefresh(target, oldCfg);
 
-                    Set<String> cols = (F.isEmpty(target.columns())) ? Collections.emptySet()
-                        : Arrays.stream(target.columns()).collect(Collectors.toSet());
+                    Set<String> cols;
+                    if (F.isEmpty(target.columns())) {
+                        cols = oldCfg.columns().values().stream().map(StatisticsColumnConfiguration::name)
+                            .collect(Collectors.toSet());
+                    }
+                    else
+                        cols = Arrays.stream(target.columns()).collect(Collectors.toSet());
 
                     StatisticsObjectConfiguration newCfg = oldCfg.refresh(cols);
 

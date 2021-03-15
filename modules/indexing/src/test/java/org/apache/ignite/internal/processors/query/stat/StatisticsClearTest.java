@@ -26,6 +26,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
+
 /**
  * Statistics cleaning tests.
  */
@@ -56,23 +58,25 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         GridTestUtils.waitForCondition(
             () -> null == statisticsMgr(0).getLocalStatistics(SMALL_KEY)
             && null == statisticsMgr(1).getLocalStatistics(SMALL_KEY), TIMEOUT);
+
+        statisticsMgr(1).collectStatistics(buildDefaultConfigurations(SMALL_TARGET));
     }
 
     /**
-     * 1) Clear statistics by non existing table.
-     * 2) Acquire statistics by non existing table.
+     * Clear statistics by non existing table.
      *
      * @throws Exception In case of errors.
      */
-    @Test
+    @Test(expected = Throwable.class)
     public void testStatisticsClearOnNotExistingTable() throws Exception {
-        GridTestUtils.assertThrows(
-            log,
-            () -> statisticsMgr(1).dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME")),
-            IgniteSQLException.class,
-            "Statistic doesn't exist for [schema=PUBLIC, obj=NO_NAME]"
-        );
+        statisticsMgr(1).dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME"));
+    }
 
+    /**
+     * Acquire statistics by non existing table.
+     */
+    @Test
+    public void testGetNonExistingTableStatistics() {
         Assert.assertNull(statisticsMgr(0).getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
         Assert.assertNull(statisticsMgr(1).getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
     }
