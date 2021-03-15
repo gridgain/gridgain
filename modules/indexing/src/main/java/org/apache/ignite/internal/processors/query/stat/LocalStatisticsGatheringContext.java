@@ -39,10 +39,14 @@ public class LocalStatisticsGatheringContext {
     /** Aggregate local statistic future. */
     private final CompletableFuture<ObjectStatisticsImpl> futAggregate;
 
-    /** */
+    /** Successfully complete status. */
     private boolean completeStatus = true;
 
-    /** */
+    /**
+     * Constructor.
+     *
+     * @param remainingParts Set of partition ids to collect.
+     */
     public LocalStatisticsGatheringContext(Set<Integer> remainingParts) {
         this.remainingParts = new HashSet<>(remainingParts);
         this.futGather = new CompletableFuture<>();
@@ -50,7 +54,9 @@ public class LocalStatisticsGatheringContext {
     }
 
     /**
-     * Decrement remaining.
+     * Decrement remaining due to successfully processed partition.
+     *
+     * @param partId Partition id.
      */
     public synchronized void partitionDone(int partId) {
         remainingParts.remove(partId);
@@ -60,7 +66,9 @@ public class LocalStatisticsGatheringContext {
     }
 
     /**
-     * Decrement remaining.
+     * Decrement remaining due to unavailable partition.
+     *
+     * @param partId Unavailable partition id.
      */
     public synchronized void partitionNotAvailable(int partId) {
         remainingParts.remove(partId);

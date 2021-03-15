@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -55,6 +56,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.table.Column;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Holds statistic configuration objects at the distributed metastore
@@ -89,6 +91,116 @@ public class IgniteStatisticsConfigurationManager {
     private final Object mux = new Object();
 
     /** */
+    private final GridInternalSubscriptionProcessor subscriptionProcessor;
+
+    /** */
+    private final GridCachePartitionExchangeManager exchange;
+
+    /** */
+    private final DistributedMetastorageLifecycleListener distrMetaStoreLsnr = new DistributedMetastorageLifecycleListener() {
+        @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+            distrMetaStorage = (DistributedMetaStorage)metastorage;
+
+            distrMetaStorage.listen(
+                (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
+                (k, oldV, newV) -> {
+                    // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
+                    // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
+                    // called on exchange done.
+                    if (!started)
+                        return;
+
+                    mgmtPool.submit(() -> {
+                        try {
+                            onChangeStatisticConfiguration(
+                                (StatisticsObjectConfiguration)oldV,
+                                (StatisticsObjectConfiguration)newV
+                            );
+                        }
+                        catch (Throwable e) {
+                            log.warning("Unexpected exception on change statistic configuration [old="
+                                + oldV + ", new=" + newV + ']', e);
+                        }
+                    });
+                }
+            );
+        }
+    };
+
+    /** Exchange listener. */
+    private final PartitionsExchangeAware exchAwareLsnr = new PartitionsExchangeAware() {
+        @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
+            started = true;
+
+            // Skip join/left client nodes.
+            if (fut.exchangeType() != ExchangeType.ALL)
+                return;
+
+            DiscoveryEvent evt = fut.firstEvent();
+
+            // Skip create/destroy caches.
+            if (evt.type() == DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT) {
+                DiscoveryCustomMessage msg = ((DiscoveryCustomEvent)evt).customMessage();
+
+                if (msg instanceof DynamicCacheChangeBatch)
+                    return;
+            }
+
+            scanAndCheckLocalStatistics(fut.topologyVersion());
+        }
+    };
+
+    /** Drop columns listener. */
+    private final BiConsumer<GridH2Table, List<String>> dropColsLsnr = new BiConsumer<GridH2Table, List<String>>() {
+        /**
+         * Drop statistics after columns dropped.
+         *
+         * @param tbl Table.
+         * @param cols Dropped columns.
+         */
+        @Override public void accept(GridH2Table tbl, List<String> cols) {
+            assert !F.isEmpty(cols);
+
+            dropStatistics(
+                Collections.singletonList(
+                    new StatisticsTarget(
+                        tbl.identifier().schema(),
+                        tbl.getName(),
+                        cols.toArray(IgniteUtils.EMPTY_STRINGS)
+                    )
+                ),
+                false
+            );
+        }
+    };
+
+    /** Drop table listener. */
+    private final BiConsumer<String, String> dropTblLsnr = new BiConsumer<String, String>() {
+        /**
+         * Drop statistics after table dropped.
+         *
+         * @param schema Schema name.
+         * @param name Table name.
+         */
+        @Override public void accept(String schema, String name) {
+            assert !F.isEmpty(schema) && !F.isEmpty(name) : schema + ":" + name;
+
+            StatisticsKey key = new StatisticsKey(schema, name);
+
+            try {
+                StatisticsObjectConfiguration cfg = config(key);
+
+                if (cfg != null && !F.isEmpty(cfg.columns()))
+                    dropStatistics(Collections.singletonList(new StatisticsTarget(schema, name)), false);
+            }
+            catch (Throwable e) {
+                if (!X.hasCause(e, NodeStoppingException.class))
+                    throw new IgniteSQLException("Error on drop statistics for dropped table [key=" + key + ']', e);
+            }
+        }
+    };
+
+    /** */
     public IgniteStatisticsConfigurationManager(
         SchemaManager schemaMgr,
         GridInternalSubscriptionProcessor subscriptionProcessor,
@@ -103,63 +215,44 @@ public class IgniteStatisticsConfigurationManager {
         this.repo = repo;
         this.mgmtPool = mgmtPool;
         this.gatherer = gatherer;
+        this.subscriptionProcessor = subscriptionProcessor;
+        this.exchange = exchange;
+    }
 
-        subscriptionProcessor.registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
-            @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-                distrMetaStorage = (DistributedMetaStorage)metastorage;
+    /**
+     * Start tracking configuration changes and do initial loading.
+     */
+    public void start() {
+        if (log.isTraceEnabled())
+            log.trace("Statistics configuration manager starting...");
 
-                distrMetaStorage.listen(
-                    (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
-                    (k, oldV, newV) -> {
-                        // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
-                        // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
-                        // called on exchange done.
-                        if (!started)
-                            return;
+        subscriptionProcessor.registerDistributedMetastorageListener(distrMetaStoreLsnr);
 
-                        mgmtPool.submit(() -> {
-                            try {
-                                onChangeStatisticConfiguration(
-                                    (StatisticsObjectConfiguration)oldV,
-                                    (StatisticsObjectConfiguration)newV
-                                );
-                            }
-                            catch (Throwable e) {
-                                log.warning("Unexpected exception on change statistic configuration [old="
-                                    + oldV + ", new=" + newV + ']', e);
-                            }
-                        });
-                    }
-                );
-            }
-        });
+        exchange.registerExchangeAwareComponent(exchAwareLsnr);
 
-        exchange.registerExchangeAwareComponent(
-            new PartitionsExchangeAware() {
-                @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
-                    started = true;
+        schemaMgr.registerDropColumnsListener(dropColsLsnr);
+        schemaMgr.registerDropTableListener(dropTblLsnr);
 
-                    // Skip join/left client nodes.
-                    if (fut.exchangeType() != ExchangeType.ALL)
-                        return;
+        if (log.isDebugEnabled())
+            log.debug("Statistics configuration manager started.");
+    }
 
-                    DiscoveryEvent evt = fut.firstEvent();
+    /**
+     * Stop tracking configuration changes.
+     */
+    public void stop() {
+        if (log.isTraceEnabled())
+            log.trace("Statistics configuration manager stopping...");
 
-                    // Skip create/destroy caches.
-                    if (evt.type() == DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT) {
-                        DiscoveryCustomMessage msg = ((DiscoveryCustomEvent)evt).customMessage();
+        subscriptionProcessor.unregisterDistributedMetastorageListener(distrMetaStoreLsnr);
 
-                        if (msg instanceof DynamicCacheChangeBatch)
-                            return;
-                    }
+        exchange.unregisterExchangeAwareComponent(exchAwareLsnr);
 
-                    scanAndCheckLocalStatistics(fut.topologyVersion());
-                }
-            }
-        );
+        schemaMgr.unregisterDropColumnsListener(dropColsLsnr);
+        schemaMgr.unregisterDropTableListener(dropTblLsnr);
 
-        schemaMgr.registerDropColumnsListener(this::onDropColumns);
-        schemaMgr.registerDropTableListener(this::onDropTable);
+        if (log.isDebugEnabled())
+            log.debug("Statistics configuration manager stopped.");
     }
 
     /** */
@@ -223,7 +316,8 @@ public class IgniteStatisticsConfigurationManager {
      * Drop local statistic for specified database objects on the cluster.
      * Remove local aggregated and partitioned statistics that are stored at the local metastorage.
      *
-     * @param targets DB objects to statistics update.
+     * @param targets DB objects to update statistics by.
+     * @param validate if {@code true} - validate statistics existence, otherwise - just try to remove.
      */
     public void dropStatistics(List<StatisticsTarget> targets, boolean validate) {
         if (log.isDebugEnabled())
@@ -318,7 +412,12 @@ public class IgniteStatisticsConfigurationManager {
         }
     }
 
-    /** */
+    /**
+     * Validate target against existing table.
+     *
+     * @param target Statistics target to validate.
+     * @param tbl Table.
+     */
     private void validate(StatisticsTarget target, GridH2Table tbl) {
         if (tbl == null) {
             throw new IgniteSQLException(
@@ -339,8 +438,13 @@ public class IgniteStatisticsConfigurationManager {
         }
     }
 
-    /** */
-    private void validateDropRefresh(StatisticsTarget target, StatisticsObjectConfiguration cfg) {
+    /**
+     * Validate that drop/refresh target exists in specified configuration. For statistics refresh/drop operations.
+     *
+     * @param target Operation targer.
+     * @param cfg Current statistics configuration.
+     */
+    private void validateDropRefresh(@NotNull StatisticsTarget target, @NotNull StatisticsObjectConfiguration cfg) {
         if (cfg == null || F.isEmpty(cfg.columns())) {
             throw new IgniteSQLException(
                 "Statistic doesn't exist for [schema=" + target.schema() + ", obj=" + target.obj() + ']',
@@ -361,7 +465,7 @@ public class IgniteStatisticsConfigurationManager {
                 }
             }
         }
-   }
+    }
 
     /**
      * Scan local statistic saved at the local metastorage, compare ones to statistic configuration.
@@ -519,7 +623,16 @@ public class IgniteStatisticsConfigurationManager {
         }
     }
 
-    /** */
+    /**
+     * Gather local statistics for specified object and partitions.
+     *
+     * @param cfg Statistics object configuration.
+     * @param tbl Table.
+     * @param partsToAggregate Set of partition ids to aggregate.
+     * @param partsToCollect Set of partition ids to gather statistics from.
+     * @param colsToCollect If specified - collect statistics only for this columns,
+     *                      otherwise - collect to all columns from object configuration.
+     */
     private void gatherLocalStatistics(
         StatisticsObjectConfiguration cfg,
         GridH2Table tbl,
@@ -530,9 +643,7 @@ public class IgniteStatisticsConfigurationManager {
         if (F.isEmpty(colsToCollect))
             colsToCollect = cfg.columns();
 
-        Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(), colsToCollect.keySet());
-
-        gatherer.gatherLocalObjectsStatisticsAsync(tbl, cols, colsToCollect, partsToCollect);
+        gatherer.gatherLocalObjectsStatisticsAsync(tbl, colsToCollect, partsToCollect);
 
         gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), partsToAggregate));
     }
@@ -559,40 +670,6 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /** */
-    private void onDropColumns(GridH2Table tbl, List<String> cols) {
-        assert !F.isEmpty(cols);
-
-        dropStatistics(
-            Collections.singletonList(
-                new StatisticsTarget(
-                    tbl.identifier().schema(),
-                    tbl.getName(),
-                    cols.toArray(IgniteUtils.EMPTY_STRINGS)
-                )
-            ),
-            false
-        );
-    }
-
-    /** */
-    private void onDropTable(String schema, String name) {
-        assert !F.isEmpty(schema) && !F.isEmpty(name) : schema + ":" + name;
-
-        StatisticsKey key = new StatisticsKey(schema, name);
-
-        try {
-            StatisticsObjectConfiguration cfg = config(key);
-
-            if (cfg != null && !F.isEmpty(cfg.columns()))
-                dropStatistics(Collections.singletonList(new StatisticsTarget(schema, name)), false);
-        }
-        catch (Throwable e) {
-            if (!X.hasCause(e, NodeStoppingException.class))
-                throw new IgniteSQLException("Error on drop statistics for dropped table [key=" + key + ']', e);
-        }
-    }
-
-    /** */
     private ObjectStatisticsImpl aggregateLocalGathering(StatisticsKey key, Set<Integer> partsToAggregate) {
         synchronized (mux) {
             try {
@@ -611,12 +688,23 @@ public class IgniteStatisticsConfigurationManager {
         }
     }
 
-    /** */
+    /**
+     * Read statistics object configuration by key.
+     *
+     * @param key Statistics key to read configuration by.
+     * @return Statistics object configuration of {@code null} if there are no such configuration.
+     * @throws IgniteCheckedException In case of errors.
+     */
     public StatisticsObjectConfiguration config(StatisticsKey key) throws IgniteCheckedException {
         return distrMetaStorage.read(key2String(key));
     }
 
-    /** */
+    /**
+     * Generate metastorage key by specified statistics key.
+     *
+     * @param key Statistics key.
+     * @return Metastorage key.
+     */
     private static String key2String(StatisticsKey key) {
         StringBuilder sb = new StringBuilder(STAT_OBJ_PREFIX);
 

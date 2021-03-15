@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
@@ -28,6 +29,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
@@ -224,5 +226,43 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
         public static long failFunction(long dummy) {
             throw new RuntimeException("Fail the query.");
         }
+    }
+
+    /**
+     * Functional interface to validate memory metrics values.
+     */
+    protected static interface MemValidator {
+        /**
+         *
+         * @param free freeMem metric value.
+         * @param max maxMem metric value.
+         */
+        void validate(long free, long max);
+    }
+
+    /**
+     * This callback validates that some memory is reserved.
+     */
+    protected static final MemValidator MEMORY_IS_USED = (freeMem, maxMem) -> {
+        if (freeMem == maxMem)
+            fail("Expected some memory reserved.");
+    };
+
+    /**
+     * This callback validates that no "sql" memory is reserved.
+     */
+    protected static final MemValidator MEMORY_IS_FREE = (freeMem, maxMem) -> {
+        if (freeMem < maxMem)
+            fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
+    };
+
+    /**
+     * Checks that a bean with the specified group and name is available and has the expected attribute
+     */
+    protected long getValue(String gridName, String grp, String name, String attributeName) throws Exception {
+        ObjectName mBeanName = IgniteUtils.makeMBeanName(gridName, grp, name);
+        Object attributeVal = grid(gridName).configuration().getMBeanServer().getAttribute(mBeanName, attributeName);
+
+        return (long) attributeVal;
     }
 }

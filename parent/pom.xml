@@ -89,7 +89,7 @@
         <javax.cache.version>1.0.0</javax.cache.version>
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
-        <jetty.version>9.4.35.v20201120</jetty.version>
+        <jetty.version>9.4.37.v20210219</jetty.version>
         <jmh.version>1.13</jmh.version>
         <jms.spec.version>1.1.1</jms.spec.version>
         <jna.version>4.5.2</jna.version>
@@ -1127,6 +1127,7 @@
                                         <exclude>**/*.ps1</exclude>
                                         <exclude>**/*.json</exclude>
                                         <exclude>**/.dockerignore</exclude>
+                                        <exclude>modules/platforms/dotnet/Apache.Ignite.Core.Tests/Examples/ExpectedOutput/*.txt</exclude>
                                         <!-- H2 forked module. -->
                                         <exclude>**/org/gridgain/internal/h2/**</exclude>
                                         <exclude>src/docsrc/**</exclude>
