@@ -181,8 +181,10 @@ public class ConnectionClientPool {
     public void stop() {
         this.stopping = true;
 
-        for (GridFutureAdapter<GridCommunicationClient> fut : clientFuts.values())
+        for (GridFutureAdapter<GridCommunicationClient> fut : clientFuts.values()) {
+            if (!(fut instanceof ConnectFuture))
                 fut.onDone(new IgniteSpiException("SPI is being stopped."));
+        }
 
         handshakeTimeoutExecutorService.shutdown();
     }
