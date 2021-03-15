@@ -641,7 +641,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             LT.warn(log,
                 "DataRegionConfiguration.walHistorySize property is deprecated and is no longer supported. " +
                     "It will be ignored and DataRegionConfiguration.maxWalArchiveSize property will be used " +
-                    "instead to control eviction of archived WAL files"
+                    "instead to control removal of archived WAL files"
             );
 
         if (maxWalArchiveSize != UNLIMITED_WAL_ARCHIVE && maxWalArchiveSize < memCfg.getWalSegmentSize())
