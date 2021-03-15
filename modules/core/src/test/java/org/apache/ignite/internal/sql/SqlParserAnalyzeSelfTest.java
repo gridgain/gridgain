@@ -86,7 +86,7 @@ public class SqlParserAnalyzeSelfTest extends SqlParserAbstractSelfTest {
         assertEquals(cmd.configurations().size(), targets.length);
 
         Set<StatisticsTarget> cmdTargets = cmd.configurations().stream()
-            .map(c ->  new StatisticsTarget(c.key(), c.columns().keySet().toArray(new String[0])))
+            .map(c -> new StatisticsTarget(c.key(), c.columns().keySet().toArray(new String[0])))
             .collect(Collectors.toSet());
 
         for (StatisticsTarget target : targets)
