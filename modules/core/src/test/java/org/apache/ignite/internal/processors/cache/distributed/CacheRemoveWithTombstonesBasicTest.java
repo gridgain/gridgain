@@ -725,7 +725,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         assertTrue(tree.findFirst().expireTime < now);
 
-        crd.context().cache().context().evict().processEvictions(false, now).get();
+        crd.context().cache().context().evict().processEvictions(false).get();
 
         CU.unwindEvicts(ctx);
 

@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -114,9 +113,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /** */
     private FastSizeDeque<PendingRow> ttlEvictQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
 
-    private AtomicLong tombstoneTs = new AtomicLong();
+    /** */
+    private AtomicReference<IgniteInternalFuture<?>> tombstoneFutRef = new AtomicReference<>();
 
-    private AtomicLong ttlTs = new AtomicLong();
+    /** */
+    private AtomicReference<IgniteInternalFuture<?>> ttlFutRef = new AtomicReference<>();
 
     /**
      * Callback on cache group start.
@@ -290,49 +291,58 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         long now = U.currentTimeMillis();
 
-        processEvictions(true, now);
-        processEvictions(false, now);
+        // Start processing tombstones.
+        processEvictions(true);
+        // Start processing ttl rows.
+        processEvictions(false);
     }
 
     /**
-     * Process evictions asynchronously.
-     *
+     * Process pending evictions asynchronously.
      * @param tombstone Tombstone.
-     * @param newTs New timestamp.
+     *
+     * @return A future.
      */
-    public IgniteInternalFuture<?> processEvictions(boolean tombstone, long newTs) {
+    public IgniteInternalFuture<?> processEvictions(boolean tombstone) {
         GridKernalContext ctx = cctx.kernalContext();
 
-        return ctx.closure().runLocalSafe(new GridPlainRunnable() {
+        AtomicReference<IgniteInternalFuture<?>> ref = tombstone ? tombstoneFutRef : ttlFutRef;
+
+        GridFutureAdapter<?> fut = new GridFutureAdapter<>();
+
+        // Only one thread can trigger queue fill.
+        do {
+            IgniteInternalFuture<?> cur = ref.get();
+
+            if (cur != null)
+                return cur;
+        }
+        while (!ref.compareAndSet(null, fut));
+
+        IgniteInternalFuture<?> fut0 = ctx.closure().runLocalSafe(new GridPlainRunnable() {
             @Override public void run() {
-                AtomicLong ts = tombstone ? tombstoneTs : ttlTs;
+                long now = U.currentTimeMillis();
 
-                long cur = ts.get();
+                log.info("DBG: processEvictions tombstone=" + tombstone + ", newTs=" + now);
 
-                if (cur >= newTs)
-                    return;
-
-                if (!ts.compareAndSet(cur, newTs)) {
-                    //log.info("DBG: processEvictions fail to advance");
-
-                    return;
-                }
-
-                //log.info("DBG: processEvictions tombstone=" + tombstone + ", oldTs=" + cur + ", newTs=" + newTs);
-
-                int res = fillEvictQueue(tombstone, ts.get());
+                int res = fillEvictQueue(tombstone, U.currentTimeMillis());
 
                 if (res == 0) {
+                    ref.set(null);
+
+                    // Queue is empty, try later.
                     ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(500) {
                         @Override public void onTimeout() {
-                            processEvictions(tombstone, U.currentTimeMillis());
+                            processEvictions(tombstone);
                         }
                     });
                 }
-//                else
-//                    log.info("DBG: non zero data, pausing " + res);
             }
         });
+
+        fut0.listen(f -> fut.onDone(null, f.error()));
+
+        return fut;
     }
 
     /** */
@@ -379,7 +389,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         }
 
         PendingRow pendingRow = queue.peekFirst();
-        //log.info("DBG: fillEvictQueue res=" + total + ", hash=" + queue.hashCode() + ", tombstone=" + tombstone + ", queue=" + queue.sizex() + ", first=" + (pendingRow == null ? "NA" : pendingRow.key));
+        // log.info("DBG: fillEvictQueue res=" + total + ", tombstone=" + tombstone + ", queue=" + queue.sizex() + ", first=" + (pendingRow == null ? "NA" : pendingRow.key));
 
         return total;
     }
@@ -388,6 +398,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @param tombstone Tombstone.
      * @param c Closure.
      * @param amount Amount.
+     *
+     * @return {@code True} is unprocessed entries remain.
      */
     public boolean expire(boolean tombstone, IgniteClosureX<GridCacheEntryEx, Boolean> c, int amount) {
         FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
@@ -403,12 +415,16 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 // TODO add assertion on row bounds.
                 GridCacheContext<Object, Object> ctx = cctx.cache().context().cacheContext(row.cacheId);
 
+                if (ctx != null && ctx.isNear())
+                    ctx = ctx.near().dht().context();
+
                 if (ctx != null) {
                     try {
                         GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
 
                         c.apply(entry);
-                    } catch (GridDhtInvalidPartitionException ignored) {
+                    }
+                    catch (GridDhtInvalidPartitionException ignored) {
                         // Skip renting or evicted partition.
                     }
                 }
@@ -428,8 +444,14 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 //                log.info("DBG: removed=" + cleared + ", tombstone=" + tombstone + ", queue=" + queue.sizex());
 
             if (queue.sizex() == 0) {
-                if (cleared > 0)
-                    processEvictions(tombstone, U.currentTimeMillis());
+                if (cleared > 0) {
+                    AtomicReference<IgniteInternalFuture<?>> ref = tombstone ? tombstoneFutRef : ttlFutRef;
+
+                    // Trigger queue fill.
+                    ref.set(null);
+
+                    processEvictions(tombstone);
+                }
 
                 return false;
             }
@@ -551,7 +573,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * Shows progress group of eviction.
          */
         private void showProgress() {
-            if (log.isInfoEnabled())
+            if (log.isInfoEnabled() && !grp.isLocal())
                 log.info("Group eviction in progress [grpName=" + grp.cacheOrGroupName() +
                     ", grpId=" + grp.groupId() +
                     ", remainingPartsToEvict=" + (totalTasks.get() - taskInProgress) +

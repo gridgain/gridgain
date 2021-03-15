@@ -1502,6 +1502,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (!busyLock.enterBusy())
             return 0;
 
+        long upper0 = upper;
+
+        if (tombstone) {
+            long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
+
+            if (tsCnt > tsLimit)
+                amount = (int) (tsCnt - tsLimit);
+
+            upper0 = Long.MAX_VALUE;
+        }
+
         int cnt = 0;
 
         try {
@@ -1510,13 +1521,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     if (!cache.started())
                         continue;
 
-                    cnt += expireInternal(pendingEntries, cache.cacheId(), tombstone, amount - cnt, upper, c);
+                    cnt += expireInternal(pendingEntries, cache.cacheId(), tombstone, amount - cnt, upper0, c);
 
                     if (amount != -1 && cnt >= amount)
                         break;
                 }
             } else
-                cnt = expireInternal(pendingEntries, CU.UNDEFINED_CACHE_ID, tombstone, amount, upper, c);
+                cnt = expireInternal(pendingEntries, CU.UNDEFINED_CACHE_ID, tombstone, amount, upper0, c);
         }
         finally {
             busyLock.leaveBusy();
@@ -1544,7 +1555,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (pendingEntries == null)
             return 0;
 
-        GridCursor<PendingRow> cur = pendingEntries.find(new PendingRow(cacheId, tombstone, 0, 0), new PendingRow(cacheId, tombstone, upper, 0));
+        GridCursor<PendingRow> cur = pendingEntries.find(new PendingRow(cacheId, tombstone, 0, 0),
+                new PendingRow(cacheId, tombstone, upper, 0));
 
         if (!cur.next())
             return 0;
