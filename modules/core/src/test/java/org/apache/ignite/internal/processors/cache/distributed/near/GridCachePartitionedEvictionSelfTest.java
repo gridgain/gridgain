@@ -207,9 +207,4 @@ public class GridCachePartitionedEvictionSelfTest extends GridCacheAbstractSelfT
         assertEquals(0, near(jcache(0)).nearSize());
         assertEquals(0, near(jcache(1)).nearSize());
     }
-
-    @Override
-    protected long getTestTimeout() {
-        return super.getTestTimeout() * 100000;
-    }
 }
