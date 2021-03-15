@@ -354,7 +354,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
      * Start 3 servers,
      * start 2 clients,
      * start two OPTIMISTIC transactions with the same key from different client nodes,
-     * transfer to PREPARED STATE,
+     * trying to transfer both to PREPARED state,
      * stop one client node.
      */
     @Test
@@ -390,6 +390,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
                 log.info("Test, preparing tx: xid=" + tx.xid() + ", tx=" + tx);
 
+                // Doing only prepare to try to lock the key, commit is not needed here.
                 p.tx().prepareNearTxLocal();
 
                 p.tx().currentPrepareFuture().listen(fut -> txPrepareLatch.countDown());
@@ -409,14 +410,14 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
             p.tx().currentPrepareFuture().listen(fut -> txPrepareLatch.countDown());
 
-            txPrepareLatch.await(60, TimeUnit.SECONDS);
+            txPrepareLatch.await(6, TimeUnit.SECONDS);
 
             if (txPrepareLatch.getCount() > 0)
                 fail("Failed to await for tx prepare.");
 
             AtomicReference<GridDhtTxLocal> dhtTxLocalRef = new AtomicReference<>();
 
-            waitForCondition(() -> {
+            assertTrue(waitForCondition(() -> {
                 dhtTxLocalRef.set((GridDhtTxLocal) txs(node0).stream()
                     .filter(t -> t.state() == TransactionState.PREPARING)
                     .findFirst()
@@ -424,7 +425,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
                 );
 
                 return dhtTxLocalRef.get() != null;
-            }, 60_000);
+            }, 6_000));
 
             assertNotNull(dhtTxLocalRef.get());
 
