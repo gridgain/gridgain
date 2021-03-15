@@ -78,7 +78,7 @@ public:
                 ++connected;
 
             if (it->message.find("Client disconnected") != std::string::npos)
-                ++connected;
+                ++disconnected;
         }
 
         return connected - disconnected;
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(IgniteClientConnectionFailover)
 
 BOOST_AUTO_TEST_CASE(IgniteClientConnectionLimit)
 {
-    VectorLogger logger("connected");
+    VectorLogger logger("org.apache.ignite.internal.processors.odbc.ClientListenerNioListener", "connected");
 
     ignite::Ignite serverNode0 = StartNodeWithLog("Node0", &logger);
     ignite::Ignite serverNode1 = StartNodeWithLog("Node1", &logger);
@@ -138,6 +138,8 @@ BOOST_AUTO_TEST_CASE(IgniteClientConnectionLimit)
     CheckConnectionsNum(cfg, &logger, 3, 3);
     CheckConnectionsNum(cfg, &logger, 4, 3);
     CheckConnectionsNum(cfg, &logger, 100500, 3);
+
+    ignite::Ignition::StopAll(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

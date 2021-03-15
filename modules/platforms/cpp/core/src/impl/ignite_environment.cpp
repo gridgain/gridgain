@@ -194,7 +194,7 @@ namespace ignite
             if (errorInfoChars)
                 errorInfo.assign(errorInfoChars, errorInfoCharsLen);
 
-            env->Get().Log(LogLevelFromInt(level), message, category, errorInfo);
+            env->Get()->Log(LogLevelFromInt(level), message, category, errorInfo);
         }
 
         bool JNICALL LoggerIsLevelEnabledHandler(void* target, int level)
@@ -204,7 +204,7 @@ namespace ignite
             if (!env)
                 return false;
 
-            return env->Get().IsLogLevelEnabled(LogLevelFromInt(level));
+            return env->Get()->IsLogLevelEnabled(LogLevelFromInt(level));
         }
 
         /**

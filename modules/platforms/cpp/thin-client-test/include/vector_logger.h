@@ -42,12 +42,15 @@ namespace ignite_test
 
         /**
          * Constructor.
-         * @param filter If is not empty, used as a filter substring.
+         *
+         * @param categoryFilter If is not empty, used as a category filter substring.
+         * @param messageFilter If is not empty, used as a message filter substring.
          */
-        VectorLogger(const std::string& filter) :
+        VectorLogger(const std::string& categoryFilter, const std::string& messageFilter) :
             lock(),
             logEvents(),
-            filter(filter)
+            messageFilter(messageFilter),
+            categoryFilter(categoryFilter)
         {
             // No-op.
         }
@@ -63,7 +66,8 @@ namespace ignite_test
         virtual void Log(ignite::impl::LogLevel::Type level, const std::string& message, const std::string& category,
             const std::string& nativeErrorInfo)
         {
-            if (filter.empty() || message.find(filter) != std::string::npos)
+            if ((categoryFilter.empty() || category.find(categoryFilter) != std::string::npos) &&
+                (messageFilter.empty() || message.find(messageFilter) != std::string::npos))
             {
                 ignite::common::concurrent::CsLockGuard guard(lock);
 
@@ -108,8 +112,11 @@ namespace ignite_test
         /** Events. */
         std::vector<Event> logEvents;
 
-        /** Filter. */
-        std::string filter;
+        /** Message filter. */
+        std::string messageFilter;
+
+        /** Category filter. */
+        std::string categoryFilter;
     };
 } //namespace ignite_test
 
