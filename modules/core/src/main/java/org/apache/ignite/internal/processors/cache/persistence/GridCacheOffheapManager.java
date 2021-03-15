@@ -120,7 +120,6 @@ import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
-import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -1296,15 +1295,16 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
     /** {@inheritDoc} */
     @Override public boolean expireRows(
-        IgniteClosureX<GridCacheEntryEx, Boolean> c,
-        int amount
+        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        int amount,
+        long now
     ) {
         // Prevent manager being stopped in the middle of pds operation.
         if (!busyLock.enterBusy())
             return false;
 
         try {
-            return ctx.evict().expire(false, c, amount);
+            return ctx.evict().expire(false, c, amount, now);
         }
         finally {
             busyLock.leaveBusy();
@@ -1313,8 +1313,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
     /** {@inheritDoc} */
     @Override public boolean expireTombstones(
-        IgniteClosureX<GridCacheEntryEx, Boolean> c,
-        int amount
+        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        int amount,
+        long now
     ) {
         long tsCnt = tombstonesCount();
 
@@ -1335,15 +1336,18 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 ctx.ttl().tombstoneCleanupSuspended()))
             return false;
 
-        if (tsCnt > tsLimit) // Force removal of tombstones beyond the limit.
+        if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
             amount = (int) (tsCnt - tsLimit);
+
+            now = Long.MAX_VALUE;
+        }
 
         // Prevent manager being stopped in the middle of pds operation.
         if (!busyLock.enterBusy())
             return false;
 
         try {
-            return ctx.evict().expire(true, c, amount);
+            return ctx.evict().expire(true, c, amount, now);
         }
         finally {
             busyLock.leaveBusy();
@@ -1356,6 +1360,17 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             return 0;
 
         int cnt = 0;
+
+        long upper0 = upper;
+
+        if (tombstone) {
+            long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
+
+            if (tsCnt > tsLimit)
+                amount = (int) (tsCnt - tsLimit);
+
+            upper0 = Long.MAX_VALUE;
+        }
 
         try {
             for (CacheDataStore store : cacheDataStores()) {
@@ -1383,13 +1398,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             if (!cache.started())
                                 continue;
 
-                            cnt += expireInternal(store.pendingTree(), cache.cacheId(), tombstone, amount - cnt, upper, c);
+                            cnt += expireInternal(store.pendingTree(), cache.cacheId(), tombstone, amount - cnt, upper0, c);
 
                             if (amount != -1 && cnt >= amount)
                                 break;
                         }
                     } else
-                        cnt = expireInternal(store.pendingTree(), CU.UNDEFINED_CACHE_ID, tombstone, amount, upper, c);
+                        cnt = expireInternal(store.pendingTree(), CU.UNDEFINED_CACHE_ID, tombstone, amount, upper0, c);
                 }
                 finally {
                     if (part != null)

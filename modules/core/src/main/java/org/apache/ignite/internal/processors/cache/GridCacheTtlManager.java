@@ -28,7 +28,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
-import org.apache.ignite.internal.util.lang.IgniteClosureX;
+import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -66,9 +66,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     private volatile boolean hasTombstonesToEvict;
 
     /** */
-    private final IgniteClosureX<GridCacheEntryEx, Boolean> expireC =
-        new IgniteClosureX<GridCacheEntryEx, Boolean>() {
-            @Override public Boolean applyx(GridCacheEntryEx entry) {
+    private final IgniteClosure2X<GridCacheEntryEx, Long, Boolean> expireC =
+        new IgniteClosure2X<GridCacheEntryEx, Long, Boolean>() {
+            @Override public Boolean applyx(GridCacheEntryEx entry, Long expireTime) {
                 boolean touch = !entry.isNear();
 
                 while (true) {
@@ -76,7 +76,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                         if (log.isTraceEnabled())
                             log.trace("Trying to remove expired entry from cache: " + entry);
 
-                        if (entry.onTtlExpired()) // A successful call will remove an entry from a heap.
+                        if (entry.onTtlExpired(expireTime)) // A successful call will remove an entry from a heap.
                             return true;
 
                         break;
@@ -236,7 +236,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
                         GridNearCacheEntry nearEntry = nearCache.peekExx(e.key);
 
                         if (nearEntry != null)
-                            expireC.apply(nearEntry);
+                            expireC.apply(nearEntry, now);
                     }
                 }
             }
@@ -248,10 +248,10 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             boolean hasTombstones = false;
 
             if (cctx.config().isEagerTtl() && !cctx.shared().evict().evictQueue(false).isEmpty())
-                hasRows = cctx.offheap().expireRows(expireC, amount);
+                hasRows = cctx.offheap().expireRows(expireC, amount, now);
 
             if (!cctx.shared().evict().evictQueue(true).isEmpty())
-                hasTombstones = cctx.offheap().expireTombstones(expireC, amount);
+                hasTombstones = cctx.offheap().expireTombstones(expireC, amount, now);
 
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();
