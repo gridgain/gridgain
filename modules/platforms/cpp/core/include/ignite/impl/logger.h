@@ -83,7 +83,7 @@ namespace ignite
              * @return Value indicating whether the specified log level is enabled.
              */
             virtual bool IsEnabled(LogLevel::Type level) = 0;
-        }
+        };
     }
 }
 

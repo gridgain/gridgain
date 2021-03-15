@@ -22,9 +22,11 @@
 #include <ignite/thin/ignite_client.h>
 
 #include <test_utils.h>
+#include <vector_logger.h>
 
 using namespace ignite::thin;
 using namespace boost::unit_test;
+using namespace ignite_test;
 
 class IgniteClientTestSuiteFixture
 {
@@ -44,26 +46,40 @@ public:
      * connections is equal to the expected value.
      *
      * @param cfg Client configuration.
+     * @param logger Logger.
      * @param limit Limit to set
      * @param expect Expected connections number.
      */
-    void CheckConnectionsNum(IgniteClientConfiguration &cfg, uint32_t limit, size_t expect)
+    void CheckConnectionsNum(IgniteClientConfiguration &cfg, VectorLogger* logger, uint32_t limit, size_t expect)
     {
         cfg.SetConnectionsLimit(limit);
         IgniteClient client = IgniteClient::Start(cfg);
 
-        BOOST_CHECK_EQUAL(GetActiveConnections(), expect);
+        BOOST_CHECK_EQUAL(GetActiveConnections(logger), expect);
     }
 
     /**
      * Get Number of active connections.
      *
+     * @param logger Logger.
      * @return Number of active connections.
      */
-    static size_t GetActiveConnections()
+    static size_t GetActiveConnections(VectorLogger* logger)
     {
-        size_t connected = ignite_test::GetLineOccurrencesInFile("logs/ignite-log-0.txt", "Client connected");
-        size_t disconnected = ignite_test::GetLineOccurrencesInFile("logs/ignite-log-0.txt", "Client disconnected");
+        typedef std::vector<VectorLogger::Event> Events;
+
+        size_t connected = 0;
+        size_t disconnected = 0;
+
+        std::vector<VectorLogger::Event> logs = logger->GetEvents();
+        for (Events::iterator it = logs.begin(); it != logs.end(); ++it)
+        {
+            if (it->message.find("Client connected") != std::string::npos)
+                ++connected;
+
+            if (it->message.find("Client disconnected") != std::string::npos)
+                ++connected;
+        }
 
         return connected - disconnected;
     }
@@ -71,12 +87,12 @@ public:
     /**
      * Start node with logging.
      *
-     * @param id Node id. Used to identify node and log.
+     * @param name Node name.
+     * @param logger Logger.
      */
-    ignite::Ignite StartNodeWithLog(const std::string& id)
+    static ignite::Ignite StartNodeWithLog(const std::string& name, VectorLogger* logger)
     {
-        std::string nodeName = "ServerNode" + id;
-        return ignite_test::StartCrossPlatformServerNode("with-logging-native.xml", nodeName.c_str());
+        return ignite_test::StartCrossPlatformServerNode("cache.xml", name.c_str(), logger);
     }
 };
 
@@ -106,22 +122,22 @@ BOOST_AUTO_TEST_CASE(IgniteClientConnectionFailover)
 
 BOOST_AUTO_TEST_CASE(IgniteClientConnectionLimit)
 {
-    ignite::common::DeletePath("logs");
+    VectorLogger logger("connected");
 
-    ignite::Ignite serverNode0 = StartNodeWithLog("0");
-    ignite::Ignite serverNode1 = StartNodeWithLog("1");
-    ignite::Ignite serverNode2 = StartNodeWithLog("2");
+    ignite::Ignite serverNode0 = StartNodeWithLog("Node0", &logger);
+    ignite::Ignite serverNode1 = StartNodeWithLog("Node1", &logger);
+    ignite::Ignite serverNode2 = StartNodeWithLog("Node2", &logger);
 
     IgniteClientConfiguration cfg;
 
     cfg.SetEndPoints("127.0.0.1:11110,127.0.0.1:11111,127.0.0.1:11112");
 
-    CheckConnectionsNum(cfg, 0, 3);
-    CheckConnectionsNum(cfg, 1, 1);
-    CheckConnectionsNum(cfg, 2, 2);
-    CheckConnectionsNum(cfg, 3, 3);
-    CheckConnectionsNum(cfg, 4, 3);
-    CheckConnectionsNum(cfg, 100500, 3);
+    CheckConnectionsNum(cfg, &logger, 0, 3);
+    CheckConnectionsNum(cfg, &logger, 1, 1);
+    CheckConnectionsNum(cfg, &logger, 2, 2);
+    CheckConnectionsNum(cfg, &logger, 3, 3);
+    CheckConnectionsNum(cfg, &logger, 4, 3);
+    CheckConnectionsNum(cfg, &logger, 100500, 3);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

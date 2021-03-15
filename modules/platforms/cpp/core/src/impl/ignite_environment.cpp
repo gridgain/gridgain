@@ -467,7 +467,6 @@ namespace ignite
         {
             delete[] name;
 
-            delete logger;
             delete ignite;
             delete metaUpdater;
             delete metaMgr;

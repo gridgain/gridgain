@@ -24,6 +24,12 @@
 
 #include "test_utils.h"
 
+namespace ignite
+{
+    Ignite IGNITE_IMPORT_EXPORT StartIgnite(const IgniteConfiguration& cfg, const char* name, IgniteError& err,
+        impl::Logger* logger);
+}
+
 namespace ignite_test
 {
     std::string GetTestConfigDir()
@@ -94,7 +100,7 @@ namespace ignite_test
         cfg.springCfgPath = path.str();
     }
 
-    ignite::Ignite StartServerNode(const char* cfgFile, const char* name)
+    ignite::Ignite StartServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger)
     {
         using namespace ignite;
 
@@ -104,10 +110,16 @@ namespace ignite_test
 
         InitConfig(cfg, cfgFile);
 
-        return Ignition::Start(cfg, name);
+        IgniteError err;
+
+        Ignite node = ignite::StartIgnite(cfg, name, err, logger);
+
+        IgniteError::ThrowIfNeeded(err);
+
+        return node;
     }
 
-    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name)
+    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger)
     {
         std::string config(cfgFile);
 
@@ -117,7 +129,7 @@ namespace ignite_test
         config += "-32.xml";
 #endif //IGNITE_TESTS_32
 
-        return StartServerNode(config.c_str(), name);
+        return StartServerNode(config.c_str(), name, logger);
     }
 
     std::string AppendPath(const std::string& base, const std::string& toAdd)
@@ -135,20 +147,5 @@ namespace ignite_test
         std::string workDir = AppendPath(home, "work");
 
         ignite::common::DeletePath(workDir);
-    }
-
-    size_t GetLineOccurrencesInFile(const std::string& filePath, const std::string& line)
-    {
-        std::ifstream file(filePath.c_str());
-
-        size_t cnt = 0;
-        std::string current;
-        while (std::getline(file, current))
-        {
-            if (current.find(line) != std::string::npos)
-                ++cnt;
-        }
-
-        return cnt;
     }
 }

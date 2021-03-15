@@ -57,31 +57,25 @@ namespace ignite_test
      *
      * @param cfgFile Ignite node config file name without path.
      * @param name Node name.
+     * @param logger Logger to use.
      * @return New node.
      */
-    ignite::Ignite StartServerNode(const char* cfgFile, const char* name);
+    ignite::Ignite StartServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger = 0);
 
     /**
      * Start Ignite node with config path corrected for specific platform.
      *
      * @param cfgFile Ignite node config file name without path.
      * @param name Node name.
+     * @param logger Logger to use.
      * @return New node.
      */
-    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name);
+    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger = 0);
 
     /**
      * Remove all the LFS artifacts.
      */
     void ClearLfs();
-
-    /**
-     * Get a number of occurrences of a given string in the specified file.
-     * @param filePath File path.
-     * @param line Line to find.
-     * @return Number of occurrences.
-     */
-    size_t GetLineOccurrencesInFile(const std::string& filePath, const std::string& line);
 }
 
 #endif // _IGNITE_THIN_CLIENT_TEST_TEST_UTILS
