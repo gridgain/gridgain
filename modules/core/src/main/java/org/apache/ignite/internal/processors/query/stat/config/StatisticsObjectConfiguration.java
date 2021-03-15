@@ -16,10 +16,12 @@
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -122,19 +124,25 @@ public class StatisticsObjectConfiguration implements Serializable {
     /**
      * Creates new configuration object to refresh statistic with current configuration.
      *
+     * @param refreshCols Set of columns to refresh, if {@code null} or empty - all columns will be refreshed.
      * @return Result configuration object.
      */
-    public StatisticsObjectConfiguration refresh(Set<String> refreshColumns) {
-        Map<String, StatisticsColumnConfiguration> newCols = new HashMap<>();
+    public StatisticsObjectConfiguration refresh(Set<String> refreshCols) {
+        List<StatisticsColumnConfiguration> newCols;
 
-        for (StatisticsColumnConfiguration col : cols.values()) {
-            if (F.isEmpty(refreshColumns) || refreshColumns.contains(col.name()))
-                newCols.put(col.name(), col.refresh());
-            else
-                newCols.put(col.name(), col);
+        if (F.isEmpty(refreshCols))
+            newCols = new ArrayList<>(cols.values());
+        else {
+            newCols = new ArrayList<>(cols.size());
+            for (StatisticsColumnConfiguration col : cols.values()) {
+                if (refreshCols.contains(col.name()))
+                    newCols.add(col.refresh());
+                else
+                    newCols.add(col);
+            }
         }
 
-        return new StatisticsObjectConfiguration(key, newCols.values(), maxPartitionObsolescencePercent);
+        return new StatisticsObjectConfiguration(key, newCols, maxPartitionObsolescencePercent);
     }
 
     /**

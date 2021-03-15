@@ -409,10 +409,10 @@ public class IgniteStatisticsConfigurationManager {
 
                     validateDropRefresh(target, oldCfg);
 
-                    StatisticsObjectConfiguration newCfg = oldCfg.refresh(
-                        target.columns() != null ?
-                            Arrays.stream(target.columns()).collect(Collectors.toSet()) :
-                            Collections.emptySet());
+                    Set<String> cols = (F.isEmpty(target.columns())) ? Collections.emptySet()
+                        : Arrays.stream(target.columns()).collect(Collectors.toSet());
+
+                    StatisticsObjectConfiguration newCfg = oldCfg.refresh(cols);
 
                     if (distrMetaStorage.compareAndSet(key, oldCfg, newCfg))
                         break;

@@ -46,6 +46,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
 
@@ -347,47 +348,77 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     /**
      * Update statistics on specified objects in PUBLIC schema.
      *
-     * @param table Table where to update statistics, just to require al least one name.
      * @param tables Tables where to update statistics.
      */
-    protected void updateStatistics(String table, String... tables) {
-        List<String> allTbls = new ArrayList<>();
-        allTbls.add(table);
-        if (null != tables)
-            allTbls.addAll(Arrays.asList(tables));
-
-        StatisticsTarget[] targets = allTbls.stream().map(tbl -> new StatisticsTarget(SCHEMA, tbl.toUpperCase()))
+    protected void updateStatistics(@NotNull String... tables) {
+        StatisticsTarget[] targets = Arrays.stream(tables).map(tbl -> new StatisticsTarget(SCHEMA, tbl.toUpperCase()))
             .toArray(StatisticsTarget[]::new);
 
         updateStatistics(targets);
     }
 
     /**
+     * Collect statistics for specified objects in PUBLIC schema.
+     *
+     * @param tables Tables where to collect statistics.
+     */
+    protected void collectStatistics(@NotNull String... tables) {
+        StatisticsTarget[] targets = Arrays.stream(tables).map(tbl -> new StatisticsTarget(SCHEMA, tbl.toUpperCase()))
+            .toArray(StatisticsTarget[]::new);
+
+        collectStatistics(targets);
+    }
+
+    /**
      * Update statistics on specified objects.
+     *
+     * @param targets Targets to refresh statistics by.
      */
     protected void updateStatistics(StatisticsTarget... targets) {
+        makeStatistics(false, targets);
+    }
+
+    /**
+     * Update statistics on specified objects.
+     *
+     * @param targets Targets to collect statistics by.
+     */
+    protected void collectStatistics(StatisticsTarget... targets) {
+        makeStatistics(true, targets);
+    }
+
+    /**
+     * Collect or refresh statistics.
+     *
+     * @param collect
+     * @param targets
+     */
+    private void makeStatistics(boolean collect, StatisticsTarget... targets) {
         try {
             Map<StatisticsTarget, Long> expectedVersion = new HashMap<>();
+            IgniteStatisticsManagerImpl statMgr = statisticsMgr(0);
+            for (StatisticsTarget target : targets) {
+                StatisticsObjectConfiguration currCfg = statMgr.statisticConfiguration().config(target.key());
 
-            for (StatisticsTarget t : targets) {
-                StatisticsObjectConfiguration cfg = statisticsMgr(0).statisticConfiguration().config(t.key());
-
-                Predicate<StatisticsColumnConfiguration> predicate;
-                if (F.isEmpty(t.columns()))
-                    predicate = c -> true;
+                Predicate<StatisticsColumnConfiguration> pred;
+                if (F.isEmpty(target.columns()))
+                    pred = c -> true;
                 else {
-                    Set<String> cols = Arrays.stream(t.columns()).collect(Collectors.toSet());
+                    Set<String> cols = Arrays.stream(target.columns()).collect(Collectors.toSet());
 
-                    predicate = c -> cols.contains(c.name());
+                    pred = c -> cols.contains(c.name());
                 }
 
-                Long expVer = (cfg == null) ? 0L : cfg.columnsAll().values().stream().filter(predicate)
-                    .mapToLong(StatisticsColumnConfiguration::version).min().orElse(-1L) + 1;
+                Long expVer = (currCfg == null) ? 1L : currCfg.columnsAll().values().stream().filter(pred)
+                    .mapToLong(StatisticsColumnConfiguration::version).min().orElse(0L) + 1;
 
-                expectedVersion.put(t, expVer);
+                expectedVersion.put(target, expVer);
             }
 
-            statisticsMgr(0).collectStatistics(buildDefaultConfigurations(targets));
+            if (collect)
+                statisticsMgr(0).collectStatistics(buildDefaultConfigurations(targets));
+            else
+                statisticsMgr(0).refreshStatistics(targets);
 
             awaitStatistics(TIMEOUT, expectedVersion);
         }
@@ -427,16 +458,16 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
     /** Check that all statistics collections related tasks is empty in specified node. */
     protected void checkStatisticTasksEmpty(IgniteEx ign) {
         Map<StatisticsKey, LocalStatisticsGatheringContext> currColls = GridTestUtils.getFieldValue(
-            statisticsMgr(0), "gatherer", "gatheringInProgress"
+            statisticsMgr(ign), "gatherer", "gatheringInProgress"
         );
 
-        assertTrue(currColls.isEmpty());
+        assertTrue(currColls.toString(), currColls.isEmpty());
 
-        IgniteThreadPoolExecutor mgmtPool = GridTestUtils.getFieldValue(statisticsMgr(0), "mgmtPool");
+        IgniteThreadPoolExecutor mgmtPool = GridTestUtils.getFieldValue(statisticsMgr(ign), "mgmtPool");
 
         assertTrue(mgmtPool.getQueue().isEmpty());
 
-        IgniteThreadPoolExecutor gatherPool = GridTestUtils.getFieldValue(statisticsMgr(0), "gatherPool");
+        IgniteThreadPoolExecutor gatherPool = GridTestUtils.getFieldValue(statisticsMgr(ign), "gatherPool");
 
         assertTrue(gatherPool.getQueue().isEmpty());
     }

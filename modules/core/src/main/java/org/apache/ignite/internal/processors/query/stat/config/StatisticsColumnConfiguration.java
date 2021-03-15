@@ -30,7 +30,7 @@ public class StatisticsColumnConfiguration implements Serializable {
     /** Columns name. */
     private final String name;
 
-    /** Configuration version. */
+    /** Collection version. */
     private final long ver;
 
     /** Tombstone flag: {@code true} statistic for this column is dropped, otherwise {@code false}. */
@@ -42,14 +42,14 @@ public class StatisticsColumnConfiguration implements Serializable {
      * @param name Column name.
      */
     public StatisticsColumnConfiguration(String name) {
-        this(name, 0, false);
+        this(name, 1, false);
     }
 
     /**
      * Constructor.
      *
      * @param name Column name.
-     * @param ver Configuration version.
+     * @param ver Collection version.
      * @param tombstone if {@code true} - object represents a tombstone of configuration,
      *                  if {@code false} - live configuration.
      */
@@ -63,7 +63,7 @@ public class StatisticsColumnConfiguration implements Serializable {
      * Constructor.
      *
      * @param cfg Base statistics column configuration
-     * @param ver New configuration version.
+     * @param ver New collection version.
      * @param tombstone if {@code true} - object represents a tombstone of configuration,
      *                  if {@code false} - live configuration.
      */
@@ -83,9 +83,9 @@ public class StatisticsColumnConfiguration implements Serializable {
     }
 
     /**
-     * Get configuration version.
+     * Get collection version.
      *
-     * @return Configuration version.
+     * @return Collection version.
      */
     public long version() {
         return ver;
@@ -114,10 +114,29 @@ public class StatisticsColumnConfiguration implements Serializable {
         if (oldCfg == null)
             return newCfg;
 
-        if (oldCfg.equals(newCfg))
-            return newCfg;
+        if (oldCfg.collectionAwareEqual(newCfg))
+            return new StatisticsColumnConfiguration(newCfg, oldCfg.ver, oldCfg.tombstone);
 
         return new StatisticsColumnConfiguration(newCfg, oldCfg.ver + 1, false);
+    }
+
+    /**
+     * Compare only collection or gathering related fields of config.
+     *
+     * @param o StatisticsColumnConfiguration to compare with.
+     * @return {@code true} if configurations are equal from the gathering point of view, {@code false} - otherwise.
+     */
+    public boolean collectionAwareEqual(StatisticsColumnConfiguration o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        StatisticsColumnConfiguration that = (StatisticsColumnConfiguration)o;
+
+        return ver == that.ver && tombstone == that.tombstone
+            && Objects.equals(name, that.name);
     }
 
     /**

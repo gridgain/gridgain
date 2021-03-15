@@ -173,10 +173,6 @@ public class IgniteStatisticsRepositoryTest extends IgniteStatisticsRepositorySt
         store.clearAllStatistics();
         repo.start();
 
-        // REMOVEME!
-        if (!(store instanceof IgniteStatisticsPersistenceStoreImpl))
-            return;
-
         assertTrue(statObs.isEmpty());
         assertTrue(store.loadAllObsolescence().isEmpty());
 
@@ -226,7 +222,6 @@ public class IgniteStatisticsRepositoryTest extends IgniteStatisticsRepositorySt
      * Test refresh for partition obsolescence info:
      * 1) Try to refresh partition obsolescence info.
      * 2) Get it as dirty object.
-     *
      */
     @Test
     public void testRefreshObsolescence() {
