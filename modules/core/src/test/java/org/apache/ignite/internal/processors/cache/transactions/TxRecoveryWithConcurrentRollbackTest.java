@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -54,6 +55,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -407,19 +409,28 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
             p.tx().currentPrepareFuture().listen(fut -> txPrepareLatch.countDown());
 
+            AtomicReference<GridDhtTxLocal> dhtTxLocalRef = new AtomicReference<>();
+
+            waitForCondition(() -> {
+                dhtTxLocalRef.set((GridDhtTxLocal) txs(node0).stream()
+                    .filter(t -> t.state() == TransactionState.PREPARING)
+                    .findFirst()
+                    .orElse(null)
+                );
+
+                return dhtTxLocalRef.get() != null;
+            }, 60_000);
+
+            assertNotNull(dhtTxLocalRef.get());
+
             txPrepareLatch.await(60, TimeUnit.SECONDS);
 
             if (txPrepareLatch.getCount() > 0)
                 fail("Failed to await for tx prepare.");
 
-            GridDhtTxLocal dhtTxLocal = (GridDhtTxLocal) txs(node0).stream()
-                .filter(t -> t.state() == TransactionState.PREPARING)
-                .findFirst()
-                .orElseThrow(AssertionError::new);
+            UUID clientNodeToFail = dhtTxLocalRef.get().eventNodeId();
 
-            UUID clientNodeToFail = dhtTxLocal.eventNodeId();
-
-            GridDhtTxPrepareFuture prep = GridTestUtils.getFieldValue(dhtTxLocal, "prepFut");
+            GridDhtTxPrepareFuture prep = GridTestUtils.getFieldValue(dhtTxLocalRef.get(), "prepFut");
 
             prep.get();
 
