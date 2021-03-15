@@ -76,7 +76,7 @@ public:
     ignite::Ignite StartNodeWithLog(const std::string& id)
     {
         std::string nodeName = "ServerNode" + id;
-        return ignite_test::StartCrossPlatformServerNode("with-logging-0.xml", nodeName.c_str());
+        return ignite_test::StartCrossPlatformServerNode("with-logging-native.xml", nodeName.c_str());
     }
 };
 

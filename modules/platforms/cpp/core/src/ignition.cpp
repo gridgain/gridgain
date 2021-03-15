@@ -189,28 +189,7 @@ namespace ignite
         std::vector<char*> opts;
     };
 
-    Ignite Ignition::Start(const IgniteConfiguration& cfg)
-    {
-        return Start(cfg, static_cast<const char*>(0));
-    }
-
-    Ignite Ignition::Start(const IgniteConfiguration& cfg, IgniteError& err)
-    {
-        return Start(cfg, 0, err);
-    }
-
-    Ignite Ignition::Start(const IgniteConfiguration& cfg, const char* name)
-    {
-        IgniteError err;
-
-        Ignite res = Start(cfg, name, err);
-
-        IgniteError::ThrowIfNeeded(err);
-
-        return res;
-    }
-
-    Ignite Ignition::Start(const IgniteConfiguration& cfg, const char* name, IgniteError& err)
+    Ignite IGNITE_IMPORT_EXPORT StartIgnite(const IgniteConfiguration& cfg, const char* name, IgniteError& err, Logger* logger)
     {
         CsLockGuard guard(factoryLock);
 
@@ -222,7 +201,7 @@ namespace ignite
             if (jvmLib.empty())
             {
                 err = IgniteError(IgniteError::IGNITE_ERR_JVM_LIB_NOT_FOUND,
-                    "JVM library is not found (did you set JAVA_HOME environment variable?)");
+                                  "JVM library is not found (did you set JAVA_HOME environment variable?)");
 
                 return Ignite();
             }
@@ -246,7 +225,7 @@ namespace ignite
         if (cp.empty())
         {
             err = IgniteError(IgniteError::IGNITE_ERR_JVM_NO_CLASSPATH,
-                "Java classpath is empty (did you set IGNITE_HOME environment variable?)");
+                              "Java classpath is empty (did you set IGNITE_HOME environment variable?)");
 
             return Ignite();
         }
@@ -274,7 +253,7 @@ namespace ignite
 
         // This is the instance that allows us keep IgniteEnvironment alive
         // till the end of the method call
-        SharedPointer<IgniteEnvironment> env = SharedPointer<IgniteEnvironment>(new IgniteEnvironment(cfg0));
+        SharedPointer<IgniteEnvironment> env = SharedPointer<IgniteEnvironment>(new IgniteEnvironment(cfg0, logger));
 
         // This is the instance with manual control over lifetime which is we
         // going to pass to Java if Java object is constructed and initialized
@@ -282,7 +261,7 @@ namespace ignite
         std::auto_ptr< SharedPointer<IgniteEnvironment> > envGuard(new SharedPointer<IgniteEnvironment>(env));
 
         SharedPointer<JniContext> ctx(
-            JniContext::Create(opts.GetOpts(), opts.GetSize(), env.Get()->GetJniHandlers(envGuard.get()), &jniErr));
+                JniContext::Create(opts.GetOpts(), opts.GetSize(), env.Get()->GetJniHandlers(envGuard.get()), &jniErr));
 
         if (!ctx.Get())
         {
@@ -307,9 +286,13 @@ namespace ignite
             namep = &name0[0];
         }
 
+        bool clientMode = false;
+        bool logEnabled = logger != 0;
+
         interop::InteropUnpooledMemory mem(16);
         interop::InteropOutputStream stream(&mem);
-        stream.WriteBool(false);
+        stream.WriteBool(clientMode);
+        stream.WriteBool(logEnabled);
         stream.Synchronize();
 
         ctx.Get()->IgnitionStart(&springCfgPath0[0], namep, 2, mem.PointerLong(), &jniErr);
@@ -338,6 +321,32 @@ namespace ignite
         IgniteImpl* impl = new IgniteImpl(env);
 
         return Ignite(impl);
+    }
+
+    Ignite Ignition::Start(const IgniteConfiguration& cfg)
+    {
+        return Start(cfg, static_cast<const char*>(0));
+    }
+
+    Ignite Ignition::Start(const IgniteConfiguration& cfg, IgniteError& err)
+    {
+        return Start(cfg, 0, err);
+    }
+
+    Ignite Ignition::Start(const IgniteConfiguration& cfg, const char* name)
+    {
+        IgniteError err;
+
+        Ignite res = Start(cfg, name, err);
+
+        IgniteError::ThrowIfNeeded(err);
+
+        return res;
+    }
+
+    Ignite Ignition::Start(const IgniteConfiguration& cfg, const char* name, IgniteError& err)
+    {
+        return StartIgnite(cfg, name, err, 0);
     }
 
     Ignite Ignition::Get()
