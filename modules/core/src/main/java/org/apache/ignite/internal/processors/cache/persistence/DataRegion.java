@@ -35,6 +35,9 @@ public class DataRegion {
     /** */
     private final PageEvictionTracker evictionTracker;
 
+    /** */
+    private volatile int emptyPagesPoolSize;
+
     /**
      * @param pageMem PageMemory instance.
      * @param memMetrics DataRegionMetrics instance.
@@ -51,6 +54,7 @@ public class DataRegion {
         this.memMetrics = memMetrics;
         this.cfg = cfg;
         this.evictionTracker = evictionTracker;
+        this.emptyPagesPoolSize = cfg.getEmptyPagesPoolSize();
     }
 
     /**
@@ -79,5 +83,23 @@ public class DataRegion {
      */
     public PageEvictionTracker evictionTracker() {
         return evictionTracker;
+    }
+
+    /**
+     * @return {@code true} if increased.
+     */
+    public synchronized boolean increaseEmptyPagesPool() {
+        if (emptyPagesPoolSize < (cfg.getMaxSize() / pageMem.systemPageSize() * (1 - cfg.getEvictionThreshold()))) {
+            emptyPagesPoolSize *= 2;
+
+            return true;
+        }
+        else
+            return false;
+    }
+
+    /** */
+    public int emptyPagesPoolSize() {
+        return emptyPagesPoolSize;
     }
 }

@@ -115,6 +115,8 @@ public class IgniteOOMWithoutNodeFailureTest extends GridCommonAbstractTest {
                     if (X.hasCause(e, IgniteOutOfMemoryException.class)) {
                         exceptionsCnt.incrementAndGet();
 
+                        e.printStackTrace();
+
                         break;
                     }
                 }

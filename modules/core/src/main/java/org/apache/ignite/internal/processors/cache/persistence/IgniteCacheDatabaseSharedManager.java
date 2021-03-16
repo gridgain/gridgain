@@ -1253,7 +1253,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             int emptyDataPagesCnt = freeList.emptyDataPages();
 
             boolean shouldEvict = allocatedPagesCnt > (memorySize / sysPageSize * plcCfg.getEvictionThreshold()) &&
-                emptyDataPagesCnt < plcCfg.getEmptyPagesPoolSize();
+                emptyDataPagesCnt < memPlc.emptyPagesPoolSize();
 
             if (shouldEvict) {
                 warnFirstEvict(plcCfg);

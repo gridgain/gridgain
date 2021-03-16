@@ -30,6 +30,7 @@ import java.util.UUID;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorResult;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCacheRestartingException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -2510,172 +2511,193 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         // Avoid iterator creation.
         for (int i = dhtUpdRes.processedEntriesCount(); i < req.size(); i++) {
-            KeyCacheObject k = req.key(i);
+            while (true) {
+                KeyCacheObject k = req.key(i);
 
-            GridCacheOperation op = req.operation();
+                GridCacheOperation op = req.operation();
 
-            // We are holding java-level locks on entries at this point.
-            // No GridCacheEntryRemovedException can be thrown.
-            try {
-                GridDhtCacheEntry entry = locked.get(i);
+                // We are holding java-level locks on entries at this point.
+                // No GridCacheEntryRemovedException can be thrown.
+                try {
+                    GridDhtCacheEntry entry = locked.get(i);
 
-                GridCacheVersion newConflictVer = req.conflictVersion(i);
-                long newConflictTtl = req.conflictTtl(i);
-                long newConflictExpireTime = req.conflictExpireTime(i);
+                    GridCacheVersion newConflictVer = req.conflictVersion(i);
+                    long newConflictTtl = req.conflictTtl(i);
+                    long newConflictExpireTime = req.conflictExpireTime(i);
 
-                assert !(newConflictVer instanceof GridCacheVersionEx) : newConflictVer;
+                    assert !(newConflictVer instanceof GridCacheVersionEx) : newConflictVer;
 
-                Object writeVal = op == TRANSFORM ? req.entryProcessor(i) : req.writeValue(i);
+                    Object writeVal = op == TRANSFORM ? req.entryProcessor(i) : req.writeValue(i);
 
-                // Get readers before innerUpdate (reader cleared after remove).
-                GridDhtCacheEntry.ReaderId[] readers = entry.readersLocked();
+                    // Get readers before innerUpdate (reader cleared after remove).
+                    GridDhtCacheEntry.ReaderId[] readers = entry.readersLocked();
 
-                GridCacheUpdateAtomicResult updRes = entry.innerUpdate(
-                    ver,
-                    nearNode.id(),
-                    locNodeId,
-                    op,
-                    writeVal,
-                    req.invokeArguments(),
-                    writeThrough() && !req.skipStore(),
-                    !req.skipStore(),
-                    sndPrevVal || req.returnValue(),
-                    req.keepBinary(),
-                    expiry,
-                    /*event*/true,
-                    /*metrics*/true,
-                    /*primary*/true,
-                    /*verCheck*/false,
-                    topVer,
-                    req.filter(),
-                    replicate ? DR_PRIMARY : DR_NONE,
-                    newConflictTtl,
-                    newConflictExpireTime,
-                    newConflictVer,
-                    /*conflictResolve*/true,
-                    intercept,
-                    req.subjectId(),
-                    taskName,
-                    /*prevVal*/null,
-                    /*updateCntr*/null,
-                    dhtFut,
-                    false);
+                    GridCacheUpdateAtomicResult updRes = entry.innerUpdate(
+                        ver,
+                        nearNode.id(),
+                        locNodeId,
+                        op,
+                        writeVal,
+                        req.invokeArguments(),
+                        writeThrough() && !req.skipStore(),
+                        !req.skipStore(),
+                        sndPrevVal || req.returnValue(),
+                        req.keepBinary(),
+                        expiry,
+                        /*event*/true,
+                        /*metrics*/true,
+                        /*primary*/true,
+                        /*verCheck*/false,
+                        topVer,
+                        req.filter(),
+                        replicate ? DR_PRIMARY : DR_NONE,
+                        newConflictTtl,
+                        newConflictExpireTime,
+                        newConflictVer,
+                        /*conflictResolve*/true,
+                        intercept,
+                        req.subjectId(),
+                        taskName,
+                        /*prevVal*/null,
+                        /*updateCntr*/null,
+                        dhtFut,
+                        false);
 
-                if (dhtFut != null) {
-                    if (updRes.sendToDht()) { // Send to backups even in case of remove-remove scenarios.
-                        GridCacheVersionConflictContext<?, ?> conflictCtx = updRes.conflictResolveResult();
+                    if (dhtFut != null) {
+                        if (updRes.sendToDht()) { // Send to backups even in case of remove-remove scenarios.
+                            GridCacheVersionConflictContext<?, ?> conflictCtx = updRes.conflictResolveResult();
 
-                        if (conflictCtx == null)
-                            newConflictVer = null;
-                        else if (conflictCtx.isMerge())
-                            newConflictVer = null; // Conflict version is discarded in case of merge.
+                            if (conflictCtx == null)
+                                newConflictVer = null;
+                            else if (conflictCtx.isMerge())
+                                newConflictVer = null; // Conflict version is discarded in case of merge.
 
-                        EntryProcessor<Object, Object, Object> entryProcessor = null;
+                            EntryProcessor<Object, Object, Object> entryProcessor = null;
 
-                        dhtFut.addWriteEntry(
-                            affAssignment,
-                            entry,
-                            updRes.newValue(),
-                            entryProcessor,
-                            updRes.newTtl(),
-                            updRes.conflictExpireTime(),
-                            newConflictVer,
-                            sndPrevVal,
-                            updRes.oldValue(),
-                            updRes.updateCounter(),
-                            op);
-
-                        if (readers != null)
-                            dhtFut.addNearWriteEntries(
-                                nearNode,
-                                readers,
+                            dhtFut.addWriteEntry(
+                                affAssignment,
                                 entry,
                                 updRes.newValue(),
                                 entryProcessor,
                                 updRes.newTtl(),
-                                updRes.conflictExpireTime());
-                    }
-                    else {
-                        if (log.isDebugEnabled())
-                            log.debug("Entry did not pass the filter or conflict resolution (will skip write) " +
-                                "[entry=" + entry + ", filter=" + Arrays.toString(req.filter()) + ']');
-                    }
-                }
+                                updRes.conflictExpireTime(),
+                                newConflictVer,
+                                sndPrevVal,
+                                updRes.oldValue(),
+                                updRes.updateCounter(),
+                                op);
 
-                if (hasNear) {
-                    if (updRes.sendToDht()) {
-                        if (!ctx.affinity().partitionBelongs(nearNode, entry.partition(), topVer)) {
-                            // If put the same value as in request then do not need to send it back.
-                            if (op == TRANSFORM || writeVal != updRes.newValue()) {
-                                res.addNearValue(i,
+                            if (readers != null)
+                                dhtFut.addNearWriteEntries(
+                                    nearNode,
+                                    readers,
+                                    entry,
                                     updRes.newValue(),
+                                    entryProcessor,
                                     updRes.newTtl(),
                                     updRes.conflictExpireTime());
+                        }
+                        else {
+                            if (log.isDebugEnabled())
+                                log.debug("Entry did not pass the filter or conflict resolution (will skip write) " +
+                                    "[entry=" + entry + ", filter=" + Arrays.toString(req.filter()) + ']');
+                        }
+                    }
+
+                    if (hasNear) {
+                        if (updRes.sendToDht()) {
+                            if (!ctx.affinity().partitionBelongs(nearNode, entry.partition(), topVer)) {
+                                // If put the same value as in request then do not need to send it back.
+                                if (op == TRANSFORM || writeVal != updRes.newValue()) {
+                                    res.addNearValue(i,
+                                        updRes.newValue(),
+                                        updRes.newTtl(),
+                                        updRes.conflictExpireTime());
+                                }
+                                else
+                                    res.addNearTtl(i, updRes.newTtl(), updRes.conflictExpireTime());
+
+                                if (updRes.newValue() != null) {
+                                    IgniteInternalFuture<Boolean> f =
+                                        entry.addReader(nearNode.id(), req.messageId(), topVer);
+
+                                    assert f == null : f;
+                                }
+                            }
+                            else if (GridDhtCacheEntry.ReaderId.contains(readers, nearNode.id())) {
+                                // Reader became primary or backup.
+                                entry.removeReader(nearNode.id(), req.messageId());
                             }
                             else
-                                res.addNearTtl(i, updRes.newTtl(), updRes.conflictExpireTime());
-
-                            if (updRes.newValue() != null) {
-                                IgniteInternalFuture<Boolean> f =
-                                    entry.addReader(nearNode.id(), req.messageId(), topVer);
-
-                                assert f == null : f;
-                            }
-                        }
-                        else if (GridDhtCacheEntry.ReaderId.contains(readers, nearNode.id())) {
-                            // Reader became primary or backup.
-                            entry.removeReader(nearNode.id(), req.messageId());
+                                res.addSkippedIndex(i);
                         }
                         else
                             res.addSkippedIndex(i);
                     }
+
+                    if (updRes.removeVersion() != null) {
+                        if (deleted == null)
+                            deleted = new ArrayList<>(req.size());
+
+                        deleted.add(F.t(entry, updRes.removeVersion()));
+                    }
+
+                    if (op == TRANSFORM) {
+                        assert !req.returnValue();
+
+                        IgniteBiTuple<Object, Exception> compRes = updRes.computedResult();
+
+                        if (compRes != null && (compRes.get1() != null || compRes.get2() != null)) {
+                            if (retVal == null)
+                                retVal = new GridCacheReturn(nearNode.isLocal());
+
+                            retVal.addEntryProcessResult(ctx,
+                                k,
+                                null,
+                                compRes.get1(),
+                                compRes.get2(),
+                                req.keepBinary());
+                        }
+                    }
+                    else {
+                        // Create only once.
+                        if (retVal == null) {
+                            CacheObject ret = updRes.oldValue();
+
+                            retVal = new GridCacheReturn(ctx,
+                                nearNode.isLocal(),
+                                req.keepBinary(),
+                                U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())),
+                                req.returnValue() ? ret : null,
+                                updRes.success());
+                        }
+                    }
+                }
+                catch (IgniteCheckedException e) {
+                    if (X.hasCause(e, IgniteOutOfMemoryException.class)) {
+                        if (!ctx.dataRegion().increaseEmptyPagesPool()) {
+                            throw new IgniteException("Failed to increase empty pool size, currentSize=" +
+                                ctx.dataRegion().emptyPagesPoolSize(), e
+                            );
+                        }
+
+                        try {
+                            ctx.shared().database().ensureFreeSpace(ctx.dataRegion());
+                        }
+                        catch (IgniteCheckedException ex) {
+                            res.addFailedKey(k, ex);
+                        }
+
+                        continue;
+                    }
                     else
-                        res.addSkippedIndex(i);
+                        res.addFailedKey(k, e);
                 }
 
-                if (updRes.removeVersion() != null) {
-                    if (deleted == null)
-                        deleted = new ArrayList<>(req.size());
+                dhtUpdRes.processedEntriesCount(i + 1);
 
-                    deleted.add(F.t(entry, updRes.removeVersion()));
-                }
-
-                if (op == TRANSFORM) {
-                    assert !req.returnValue();
-
-                    IgniteBiTuple<Object, Exception> compRes = updRes.computedResult();
-
-                    if (compRes != null && (compRes.get1() != null || compRes.get2() != null)) {
-                        if (retVal == null)
-                            retVal = new GridCacheReturn(nearNode.isLocal());
-
-                        retVal.addEntryProcessResult(ctx,
-                            k,
-                            null,
-                            compRes.get1(),
-                            compRes.get2(),
-                            req.keepBinary());
-                    }
-                }
-                else {
-                    // Create only once.
-                    if (retVal == null) {
-                        CacheObject ret = updRes.oldValue();
-
-                        retVal = new GridCacheReturn(ctx,
-                            nearNode.isLocal(),
-                            req.keepBinary(),
-                            U.deploymentClassLoader(ctx.kernalContext(), U.contextDeploymentClassLoaderId(ctx.kernalContext())),
-                            req.returnValue() ? ret : null,
-                            updRes.success());
-                    }
-                }
+                break;
             }
-            catch (IgniteCheckedException e) {
-                res.addFailedKey(k, e);
-            }
-
-            dhtUpdRes.processedEntriesCount(i + 1);
         }
 
         dhtUpdRes.returnValue(retVal);
