@@ -201,7 +201,7 @@ public class GridCachePartitionedEvictionSelfTest extends GridCacheAbstractSelfT
             }
         }
 
-        assertTrue(GridTestUtils.waitForCondition(() -> dht0.isEmpty() && dht1.isEmpty(), 5_000));
+        assertTrue(GridTestUtils.waitForCondition(() -> dht0.isEmpty() && dht1.isEmpty(), 15_000));
 
         assertEquals(0, near(jcache(0)).nearSize());
         assertEquals(0, near(jcache(1)).nearSize());

@@ -1600,7 +1600,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (ctx == null)
                 continue;
 
-            row.ctx = ctx;
+            row.deploymentId = ctx.dynamicDeploymentId();
 
             if (row.key.partition() == -1)
                 row.key.partition(grp.config().getAffinity().partition(row.key));
