@@ -174,8 +174,7 @@ public interface IgniteCacheOffheapManager {
 
     /**
      * @param c Closure.
-     * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
-     *               amount can be greater if a limit has been exceeded.
+     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
      * @param now Expire time.
      * @return {@code True} if unprocessed expired entries remains.
      */
@@ -183,22 +182,24 @@ public interface IgniteCacheOffheapManager {
 
     /**
      * @param c Closure.
-     * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
-     *               amount can be greater if a limit has been exceeded.
+     * @param amount Limit of processed entries by single call, {@code -1} for no limit. Real cleared
+     *               amount can be greater if a tombstone limit has been exceeded.
      * @param now Expire time.
      * @return {@code True} if unprocessed expired entries remains.
      */
     public boolean expireTombstones(IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now);
 
     /**
-     * @param tombstone
-     * @param amount
-     * @param upper
-     * @param clo
-     * @return
-     * @throws IgniteCheckedException
+     * Fills the expiration queue.
+     *
+     * @param tombstone {@code True} to process tombstones.
+     * @param amount The amount.
+     * @param upper Upper limit.
+     * @param c Fill closure.
+     * @return The number of entries loaded to expiration queue.
+     * @throws IgniteCheckedException If failed.
      */
-    public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> clo) throws IgniteCheckedException;
+    public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException;
 
     /**
      * Gets the number of entries pending expire.
