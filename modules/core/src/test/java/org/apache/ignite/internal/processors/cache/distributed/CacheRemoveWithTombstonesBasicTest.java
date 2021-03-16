@@ -24,6 +24,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.cache.configuration.FactoryBuilder;
+import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.processor.EntryProcessorException;
@@ -97,7 +98,10 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.cache.CachePeekMode.ALL;
+import static org.apache.ignite.cache.CachePeekMode.NEAR;
 import static org.apache.ignite.cache.CachePeekMode.ONHEAP;
+import static org.apache.ignite.cache.CachePeekMode.PRIMARY;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.junit.Assume.assumeTrue;
 
@@ -979,6 +983,34 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(MILLISECONDS, 500))).remove(part);
 
         validateCache(grid(0).cachex(DEFAULT_CACHE_NAME).context().group(), part, 1, 0);
+    }
+
+    @Test
+    public void testExpiryPolicyRemovesValues() throws Exception {
+        IgniteEx crd = startGrids(2);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        CacheConfiguration<Object, Object> ccfg = cacheConfiguration(atomicityMode).setBackups(0).
+            setNearConfiguration(new NearCacheConfiguration<>());
+
+        IgniteCache<Object, Object> cache = grid(0).createCache(ccfg);
+
+        int key = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
+
+        IgniteCache<Object, Object> cache1 =
+            cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(MILLISECONDS, 200)));
+
+        cache1.put(key, 1);
+        assertEquals(key, cache1.localPeek(key, NEAR));
+        assertTrue(cache1.localPeek(key, PRIMARY) == null);
+        assertEquals(key, cache1.get(key));
+
+        assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            @Override
+            public boolean apply() {
+                return cache1.localPeek(key, ALL) == null;
+            }
+        }, 3000));
     }
 
     /**
