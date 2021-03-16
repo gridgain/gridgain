@@ -424,7 +424,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     ctx = ctx.near().dht().context();
 
                 // Skip rows with outdated contexts.
-                if (ctx != null && ctx == row.ctx) {
+                if (ctx != null && ctx.dynamicDeploymentId().equals(row.deploymentId)) {
                     try {
                         GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
 
