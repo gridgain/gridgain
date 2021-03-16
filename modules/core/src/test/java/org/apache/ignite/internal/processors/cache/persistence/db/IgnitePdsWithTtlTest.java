@@ -78,7 +78,6 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForAllFutures;
 /**
  * Test TTL worker with persistence enabled
  */
-@WithSystemProperty(key = IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, value = "5")
 public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE_NAME_ATOMIC = "expirable-cache-atomic";

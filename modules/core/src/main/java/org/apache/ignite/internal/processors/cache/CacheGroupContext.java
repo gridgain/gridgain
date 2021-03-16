@@ -348,6 +348,7 @@ public class CacheGroupContext {
      * @throws IgniteCheckedException If failed.
      */
     void onCacheStarted(GridCacheContext cctx) throws IgniteCheckedException {
+        // Initialize the cache before publishing the context.
         offheapMgr.onCacheStarted(cctx);
 
         addCacheContext(cctx);

@@ -1618,7 +1618,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "1500") // Reduce tombstone TTL
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable async clearing.
     @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable sync eviction by unwindEvicts.
-    // @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
     public void testCleanupBothTtlAndTombstones() throws Exception {
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);

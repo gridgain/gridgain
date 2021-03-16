@@ -190,7 +190,7 @@ public interface IgniteCacheOffheapManager {
     public boolean expireTombstones(IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now);
 
     /**
-     * Fills the expiration queue.
+     * Fills the expiration queue by scanning suitable rows in PendingTree.
      *
      * @param tombstone {@code True} to process tombstones.
      * @param amount The amount.

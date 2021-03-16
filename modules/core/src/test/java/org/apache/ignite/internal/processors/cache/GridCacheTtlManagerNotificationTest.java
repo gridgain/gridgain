@@ -264,8 +264,6 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
         /** {@inheritDoc} */
         @Override public void run() {
             try {
-                //barrier.await();
-
                 ExpiryPolicy plc1 = new CreatedExpiryPolicy(new Duration(MILLISECONDS, expirationDuration));
 
                 int keyStart = keysRangeGenerator.getAndIncrement() * cnt;

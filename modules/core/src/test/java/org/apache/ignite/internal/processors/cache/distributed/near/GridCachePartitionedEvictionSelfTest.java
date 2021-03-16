@@ -47,7 +47,6 @@ import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 /**
  * Tests for partitioned cache automatic eviction.
  */
-//@WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "5")
 @WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain")
 public class GridCachePartitionedEvictionSelfTest extends GridCacheAbstractSelfTest {
     /** */
