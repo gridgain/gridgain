@@ -157,7 +157,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     }
 
     /**
-     * @param tombstone Tombstone.
+     * @param tombstone {@code True} is a tombstone check.
      */
     public void setHasPendingEntries(boolean tombstone) {
         if (tombstone)
