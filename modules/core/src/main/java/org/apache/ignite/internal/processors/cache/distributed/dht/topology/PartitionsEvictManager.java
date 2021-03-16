@@ -344,7 +344,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         return fut;
     }
 
-
     /**
      * @param tombstone {@code True} for tombstones.
      * @return The queue.

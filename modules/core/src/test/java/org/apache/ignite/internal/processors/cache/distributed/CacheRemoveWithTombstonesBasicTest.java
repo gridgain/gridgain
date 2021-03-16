@@ -1006,8 +1006,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         assertEquals(key, cache1.get(key));
 
         assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
-            @Override
-            public boolean apply() {
+            @Override public boolean apply() {
                 return cache1.localPeek(key, ALL) == null;
             }
         }, 3000));
