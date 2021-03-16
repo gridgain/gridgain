@@ -138,9 +138,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        cfg.setFailureDetectionTimeout(1000000);
-        cfg.setClientFailureDetectionTimeout(1000000);
-
         cfg.setClusterStateOnStart(ClusterState.INACTIVE);
 
         TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
