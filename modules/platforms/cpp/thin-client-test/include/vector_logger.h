@@ -89,6 +89,8 @@ namespace ignite_test
          */
         virtual bool IsEnabled(ignite::impl::LogLevel::Type level)
         {
+            (void) level;
+
             return true;
         }
 
