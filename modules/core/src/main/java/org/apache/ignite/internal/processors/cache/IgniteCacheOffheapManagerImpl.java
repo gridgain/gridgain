@@ -1417,7 +1417,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @return {@code True} if has unprocessed entries.
      * @throws IgniteCheckedException If failed.
      */
-    private boolean expireInternal(
+    private boolean fillQueueInternal(
         GridCacheContext cctx,
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount,
@@ -1522,13 +1522,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     if (!cache.started())
                         continue;
 
-                    cnt += expireInternal(pendingEntries, cache.cacheId(), tombstone, amount - cnt, upper0, c);
+                    cnt += fillQueueInternal(pendingEntries, cache.cacheId(), tombstone, amount - cnt, upper0, c);
 
                     if (amount != -1 && cnt >= amount)
                         break;
                 }
             } else
-                cnt = expireInternal(pendingEntries, CU.UNDEFINED_CACHE_ID, tombstone, amount, upper0, c);
+                cnt = fillQueueInternal(pendingEntries, CU.UNDEFINED_CACHE_ID, tombstone, amount, upper0, c);
         }
         finally {
             busyLock.leaveBusy();
@@ -1545,7 +1545,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param upper Upper.
      * @param c Closure.
      */
-    protected int expireInternal(
+    protected int fillQueueInternal(
         PendingEntriesTree pendingEntries,
         int cacheId,
         boolean tombstone,
@@ -1570,8 +1570,20 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             PendingRow row = cur.get();
 
-            if (row.cacheId == CU.UNDEFINED_CACHE_ID)
-                row.cacheId = grp.singleCacheContext().cacheId();
+            GridCacheContext ctx;
+
+            if (row.cacheId == CU.UNDEFINED_CACHE_ID) {
+                ctx = grp.singleCacheContext();
+
+                row.cacheId = ctx.cacheId();
+            }
+            else
+                ctx = this.ctx.cacheContext(row.cacheId);
+
+            if (ctx == null)
+                continue;
+
+            row.ctx = ctx;
 
             if (row.key.partition() == -1)
                 row.key.partition(grp.config().getAffinity().partition(row.key));

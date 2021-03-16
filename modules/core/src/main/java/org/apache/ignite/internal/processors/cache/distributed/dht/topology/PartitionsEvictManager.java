@@ -307,10 +307,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         GridKernalContext ctx = cctx.kernalContext();
 
         AtomicReference<IgniteInternalFuture<?>> ref = tombstone ? tombstoneFutRef : ttlFutRef;
+        FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
 
         GridFutureAdapter<?> fut = new GridFutureAdapter<>();
 
-        // Only one thread can trigger queue fill.
+        // Only one thread can trigger queue fill. Make sure we always return not null future.
         do {
             IgniteInternalFuture<?> cur = ref.get();
 
@@ -323,11 +324,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             @Override public void run() {
                 long now = U.currentTimeMillis();
 
-                //log.info("DBG: processEvictions tombstone=" + tombstone + ", newTs=" + now);
-
                 int res = fillEvictQueue(tombstone, U.currentTimeMillis());
 
-                if (res == 0) {
+                if (res == 0 && queue.sizex() == 0) {
                     ref.set(null);
 
                     // Queue is empty, try later.
@@ -374,11 +373,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                         total += ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
                             queue.addLast(key);
 
-                            // Stop scanning on queue overflow.
+                            // Stop on queue overflow.
                             return queue.sizex() > MAX_EVICT_QUEUE_SIZE ? 1 : 0;
                         });
                     }
-                    catch (Throwable e) {
+                    catch (IgniteCheckedException e) {
                         log.error("Failed to expire entries", e);
                     }
                 }
@@ -388,8 +387,10 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             }
         }
 
-        //PendingRow pendingRow = queue.peekFirst();
-        // log.info("DBG: fillEvictQueue res=" + total + ", tombstone=" + tombstone + ", queue=" + queue.sizex() + ", first=" + (pendingRow == null ? "NA" : pendingRow.key));
+        if (log.isDebugEnabled()) {
+            log.debug("After fill evict queue [res=" + total + ", tombstone=" + tombstone +
+                ", size=" + queue.sizex() + ']');
+        }
 
         return total;
     }
@@ -413,13 +414,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         try {
             while ((row = queue.pollFirst()) != null) {
-                // TODO add assertion on row bounds.
                 GridCacheContext<Object, Object> ctx = cctx.cache().context().cacheContext(row.cacheId);
 
                 if (ctx != null && ctx.isNear())
                     ctx = ctx.near().dht().context();
 
-                if (ctx != null) {
+                // Skip rows with outdated contexts.
+                if (ctx != null && ctx == row.ctx) {
                     try {
                         GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
 
@@ -441,14 +442,16 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     break;
             }
 
-//            if (cleared > 0)
-//                log.info("DBG: removed=" + cleared + ", tombstone=" + tombstone + ", queue=" + queue.sizex());
+            if (cleared > 0 && log.isDebugEnabled()) {
+                log.debug("After expire [cleared=" + cleared + ", tombstone=" + tombstone +
+                    ", remaining=" + queue.sizex() + ']');
+            }
 
             if (queue.sizex() == 0) {
                 if (cleared > 0) {
                     AtomicReference<IgniteInternalFuture<?>> ref = tombstone ? tombstoneFutRef : ttlFutRef;
 
-                    // Trigger queue fill.
+                    // Allow queue fill.
                     ref.set(null);
 
                     processEvictions(tombstone);

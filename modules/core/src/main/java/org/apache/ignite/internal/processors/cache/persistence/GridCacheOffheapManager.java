@@ -1356,10 +1356,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (tombstone) {
             long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
-            if (tsCnt > tsLimit)
+            if (tsCnt > tsLimit) {
                 amount = (int) (tsCnt - tsLimit);
 
-            upper0 = Long.MAX_VALUE;
+                upper0 = Long.MAX_VALUE;
+            }
         }
 
         try {
@@ -1388,13 +1389,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             if (!cache.started())
                                 continue;
 
-                            cnt += expireInternal(store.pendingTree(), cache.cacheId(), tombstone, amount - cnt, upper0, c);
+                            cnt += fillQueueInternal(store.pendingTree(), cache.cacheId(), tombstone, amount - cnt, upper0, c);
 
                             if (amount != -1 && cnt >= amount)
                                 break;
                         }
                     } else
-                        cnt = expireInternal(store.pendingTree(), CU.UNDEFINED_CACHE_ID, tombstone, amount, upper0, c);
+                        cnt = fillQueueInternal(store.pendingTree(), CU.UNDEFINED_CACHE_ID, tombstone, amount, upper0, c);
                 }
                 finally {
                     if (part != null)
