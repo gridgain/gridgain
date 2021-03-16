@@ -619,6 +619,11 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 }
                 catch (Throwable e) {
                     fut.onDone(e);
+
+                    log.error("Communication connection isn't established due to exception [rmtNode=" + rmtNode.id()
+                        + ", err="+ e.getMessage() + ']', e);
+
+                    throw e;
                 }
                 finally {
                     clientPool.removeFut(connKey, fut);
