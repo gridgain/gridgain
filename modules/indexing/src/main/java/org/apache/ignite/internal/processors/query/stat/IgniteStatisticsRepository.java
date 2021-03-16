@@ -193,19 +193,18 @@ public class IgniteStatisticsRepository {
             StatisticsKey key = localStatsEntry.getKey();
             ObjectStatisticsImpl stat = localStatsEntry.getValue();
             if (column == null) {
-                ColumnStatistics colStat = localStatsEntry.getValue().columnStatistics(column);
-                if (colStat != null) {
-                    StatisticsColumnLocalDataView colStatView = new StatisticsColumnLocalDataView(key, column, stat);
-
-                    res.add(colStatView);
-                }
-
-            }
-            else {
                 for (Map.Entry<String, ColumnStatistics> colStat : localStatsEntry.getValue().columnsStatistics()
                     .entrySet()) {
                     StatisticsColumnLocalDataView colStatView = new StatisticsColumnLocalDataView(key, colStat.getKey(),
                         stat);
+
+                    res.add(colStatView);
+                }
+            }
+            else {
+                ColumnStatistics colStat = localStatsEntry.getValue().columnStatistics(column);
+                if (colStat != null) {
+                    StatisticsColumnLocalDataView colStatView = new StatisticsColumnLocalDataView(key, column, stat);
 
                     res.add(colStatView);
                 }

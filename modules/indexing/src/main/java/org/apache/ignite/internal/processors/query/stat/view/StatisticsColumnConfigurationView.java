@@ -81,10 +81,15 @@ public class StatisticsColumnConfigurationView {
         return colCfg.name();
     }
 
+    @Order(4)
+    public byte maxPartitionObsolescencePercent() {
+        return objCfg.maxPartitionObsolescencePercent();
+    }
+
     /**
      * @return Configuration version.
      */
-    @Order(4)
+    @Order(5)
     public long version() {
         return colCfg.version();
     }

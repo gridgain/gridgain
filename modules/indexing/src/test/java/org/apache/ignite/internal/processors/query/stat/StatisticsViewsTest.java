@@ -1,9 +1,21 @@
+/*
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 import java.sql.Timestamp;
@@ -35,12 +47,11 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     @Test
     public void testConfigurationView() throws Exception {
         List<List<Object>> config = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 1L),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", 1L),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", 1L)
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", (byte)15, 1L),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", (byte)15, 1L),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", (byte)15, 1L)
         );
 
-        U.sleep(999999);
         checkSqlResult("select * from SYS.STATISTICS_CONFIGURATION", null, config::equals);
     }
 

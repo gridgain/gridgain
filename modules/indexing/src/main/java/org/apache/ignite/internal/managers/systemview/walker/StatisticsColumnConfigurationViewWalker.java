@@ -58,7 +58,8 @@ public class StatisticsColumnConfigurationViewWalker implements SystemViewRowAtt
         v.accept(1, "type", String.class);
         v.accept(2, "name", String.class);
         v.accept(3, "column", String.class);
-        v.accept(4, "version", long.class);
+        v.accept(4, "maxPartitionObsolescencePercent", byte.class);
+        v.accept(5, "version", long.class);
     }
 
     /** {@inheritDoc} */
@@ -67,11 +68,12 @@ public class StatisticsColumnConfigurationViewWalker implements SystemViewRowAtt
         v.accept(1, "type", String.class, row.type());
         v.accept(2, "name", String.class, row.name());
         v.accept(3, "column", String.class, row.column());
-        v.acceptLong(4, "version", row.version());
+        v.acceptByte(4, "maxPartitionObsolescencePercent", row.maxPartitionObsolescencePercent());
+        v.acceptLong(5, "version", row.version());
     }
 
     /** {@inheritDoc} */
     @Override public int count() {
-        return 5;
+        return 6;
     }
 }

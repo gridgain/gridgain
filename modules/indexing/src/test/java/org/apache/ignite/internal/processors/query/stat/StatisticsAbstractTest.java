@@ -653,6 +653,12 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         return (IgniteStatisticsManagerImpl)indexing.statsManager();
     }
 
+    /**
+     * Make set from array.
+     *
+     * @param vals Values to populate into the set.
+     * @return Set of specified values.
+     */
     public <T> Set<T> setOf(T... vals) {
         if (F.isEmpty(vals))
             return Collections.emptySet();

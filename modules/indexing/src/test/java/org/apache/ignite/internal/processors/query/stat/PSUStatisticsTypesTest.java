@@ -174,7 +174,6 @@ public class PSUStatisticsTypesTest extends StatisticsTypesAbstractTest {
      */
     @Test
     public void compareSelectWithRealConditions() throws InterruptedException {
-        Thread.sleep(999999);
         doColumnTests("REAL", "<", "-10");
         doColumnTests("REAL", "<", "0.2");
         doColumnTests("REAL", "<=", "0.22");

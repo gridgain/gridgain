@@ -229,7 +229,7 @@ public class IgniteStatisticsConfigurationManager {
         this.subscriptionProcessor = subscriptionProcessor;
         this.exchange = exchange;
 
-        subscriptionProcessor.registerDistributedMetastorageListener(distrMetaStoreLsnr);
+        this.subscriptionProcessor.registerDistributedMetastorageListener(distrMetaStoreLsnr);
 
         sysViewMgr.registerFiltrableView(STAT_CFG_VIEW_NAME, STAT_CFG_VIEW_DESCRIPTION,
             new StatisticsColumnConfigurationViewWalker(), this::columnConfigurationViewSupplier, Function.identity());
