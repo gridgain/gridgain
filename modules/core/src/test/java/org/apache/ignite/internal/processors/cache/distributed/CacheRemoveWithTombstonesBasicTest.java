@@ -661,10 +661,11 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         doSleep(700);
 
+        crd.context().cache().context().evict().processEvictions(true).get();
+
         grpCtx0.singleCacheContext().ttl().expire(1);
         grpCtx1.singleCacheContext().ttl().expire(1);
 
-        // TODO
         validateCache(grpCtx0, part, 0, 0);
         validateCache(grpCtx1, part, 0, 0);
 
