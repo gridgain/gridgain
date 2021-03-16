@@ -87,6 +87,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /** */
     private static final int MAX_EVICT_QUEUE_SIZE = 10_000;
 
+    /** */
+    private static final int PROCESS_EMPTY_EVICT_QUEUE_FREQ = 500;
+
     /** Last time of show eviction progress. */
     private long lastShowProgressTimeNanos = System.nanoTime() - U.millisToNanos(evictionProgressFreqMs);
 
@@ -298,7 +301,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
     /**
      * Process pending evictions asynchronously.
-     * @param tombstone Tombstone.
+     * @param tombstone {@code True} to process tombstones.
      *
      * @return A future.
      */
@@ -327,7 +330,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     ref.set(null);
 
                     // Queue is empty, try later.
-                    ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(500) {
+                    ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(PROCESS_EMPTY_EVICT_QUEUE_FREQ) {
                         @Override public void onTimeout() {
                             processEvictions(tombstone);
                         }
@@ -341,7 +344,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         return fut;
     }
 
-    /** */
+
+    /**
+     * @param tombstone {@code True} for tombstones.
+     * @return The queue.
+     */
     public Deque<PendingRow> evictQueue(boolean tombstone) {
         return tombstone ? tombstoneEvictQueue : ttlEvictQueue;
     }
@@ -385,7 +392,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         }
 
         if (log.isDebugEnabled()) {
-            log.debug("After fill evict queue [res=" + total + ", tombstone=" + tombstone +
+            log.debug("After filling the evict queue [res=" + total + ", tombstone=" + tombstone +
                 ", size=" + queue.sizex() + ']');
         }
 
@@ -393,9 +400,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * @param tombstone Tombstone.
+     * @param tombstone {@code True} to expire tombstones.
      * @param c Closure.
-     * @param amount Amount.
+     * @param amount The amount.
      * @param now Expire time.
      *
      * @return {@code True} is unprocessed entries remain.
@@ -440,7 +447,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             }
 
             if (cleared > 0 && log.isDebugEnabled()) {
-                log.debug("After expire [cleared=" + cleared + ", tombstone=" + tombstone +
+                log.debug("After the expiration [cleared=" + cleared + ", tombstone=" + tombstone +
                     ", remaining=" + queue.sizex() + ']');
             }
 
