@@ -1353,6 +1353,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         long upper0 = upper;
 
+        // Adjust upper bound if tombstone limit is exceeded.
         if (tombstone) {
             long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
