@@ -354,6 +354,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
+     * @param tombstone {@code True} to process tombstones.
      * @param upper Upper bound.
      */
     private int fillEvictQueue(boolean tombstone, long upper) {

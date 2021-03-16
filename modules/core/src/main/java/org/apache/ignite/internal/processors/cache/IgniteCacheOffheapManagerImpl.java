@@ -1371,9 +1371,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /** {@inheritDoc} */
     @Override public boolean expireRows(
-            IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-            int amount,
-            long now
+        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        int amount,
+        long now
     ) {
         if (!busyLock.enterBusy())
             return false;
@@ -1388,9 +1388,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /** {@inheritDoc} */
     @Override public boolean expireTombstones(
-            IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-            int amount,
-            long now
+        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
+        int amount,
+        long now
     ) {
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 

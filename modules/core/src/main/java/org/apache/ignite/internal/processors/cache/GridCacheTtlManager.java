@@ -39,13 +39,6 @@ import org.jetbrains.annotations.Nullable;
  * {@link CacheConfiguration#isEagerTtl()} flag is set.
  */
 public class GridCacheTtlManager extends GridCacheManagerAdapter {
-    /**
-     * Throttling timeout in millis which avoid excessive PendingTree access on unwind
-     * if there is nothing to clean yet.
-     */
-    private final long unwindThrottlingTimeout = Long.getLong(
-        IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
-
     /** Each cache operation removes this amount of entries with expired TTL. */
     private final int ttlBatchSize = IgniteSystemProperties.getInteger(
         IgniteSystemProperties.IGNITE_TTL_EXPIRE_BATCH_SIZE, 5);
@@ -208,12 +201,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
 
         if (amount == 0)
             return false;
-
-        //int size = cctx.shared().evict().evictQueue(false).size();
-
-//        if (!cctx.group().cacheOrGroupName().equals("ignite-sys-cache") && size != 0) {
-//            log.info("DBG: remove " + cctx.name() + " " + amount + " queue=" + size);
-//        }
 
         long now = U.currentTimeMillis();
 
