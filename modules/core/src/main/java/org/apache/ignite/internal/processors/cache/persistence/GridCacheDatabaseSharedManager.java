@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,6 +137,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageParti
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
+import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
@@ -338,6 +339,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Data regions which should be checkpointed. */
     protected final Set<DataRegion> checkpointedDataRegions = new GridConcurrentHashSet<>();
 
+    /** Checkpoint frequency deviation. */
+    private SimpleDistributedProperty<Integer> cpFreqDeviation;
+
     /**
      * @param ctx Kernal context.
      */
@@ -481,6 +485,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (!kernalCtx.clientNode()) {
             kernalCtx.internalSubscriptionProcessor().registerDatabaseListener(new MetastorageRecoveryLifecycle());
 
+            cpFreqDeviation = new SimpleDistributedProperty<>("checkpoint.deviation", Integer::parseInt);
+
+            kernalCtx.internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+                cpFreqDeviation.addListener((name, oldVal, newVal) ->
+                    U.log(log, "Checkpoint frequency deviation changed [oldVal=" + oldVal + ", newVal=" + newVal + "]"));
+
+                dispatcher.registerProperty(cpFreqDeviation);
+            });
+
             checkpointManager = new CheckpointManager(
                 kernalCtx::log,
                 cctx.igniteInstanceName(),
@@ -498,7 +511,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 persistentStoreMetricsImpl(),
                 kernalCtx.longJvmPauseDetector(),
                 kernalCtx.failure(),
-                kernalCtx.cache());
+                kernalCtx.cache(),
+                cpFreqDeviation::get
+            );
 
             final FileLockHolder preLocked = kernalCtx.pdsFolderResolver()
                 .resolveFolders()
@@ -1161,7 +1176,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             changeTracker = null;
 
         PageMemoryImpl pageMem = new PageMemoryImpl(
-            wrapMetricsMemoryProvider(memProvider, memMetrics),
+            wrapMetricsPersistentMemoryProvider(memProvider, memMetrics),
             calculateFragmentSizes(
                 memCfg.getConcurrencyLevel(),
                 cacheSize,
@@ -1202,7 +1217,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @param memMetrics Memory metrics.
      * @return Wrapped memory provider.
      */
-    @Override protected DirectMemoryProvider wrapMetricsMemoryProvider(
+    private DirectMemoryProvider wrapMetricsPersistentMemoryProvider(
         final DirectMemoryProvider memoryProvider0,
         final DataRegionMetricsImpl memMetrics
     ) {
@@ -1523,6 +1538,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /** {@inheritDoc} */
+    @Override public boolean tryCheckpointReadLock() {
+        return checkpointManager.checkpointTimeoutLock().tryCheckpointReadLock();
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean checkpointLockIsHeldByThread() {
         return checkpointManager.checkpointTimeoutLock().checkpointLockIsHeldByThread();
     }
@@ -1572,10 +1592,17 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 assert cctx.wal().reserved(cpEntry.checkpointMark())
                     : "WAL segment for checkpoint " + cpEntry + " has not reserved";
 
-                Long updCntr = cpEntry.partitionCounter(cctx.wal(), grpId, partId);
+                try {
+                    Long updCntr = cpEntry.partitionCounter(cctx.wal(), grpId, partId);
 
-                if (updCntr != null)
-                    grpPartsWithCnts.computeIfAbsent(grpId, k -> new HashMap<>()).put(partId, updCntr);
+                    if (updCntr != null)
+                        grpPartsWithCnts.computeIfAbsent(grpId, k -> new HashMap<>()).put(partId, updCntr);
+                }
+                catch (IgniteCheckedException ex) {
+                    log.warning("Reservation failed because counters are not available [grpId=" + grpId
+                        + ", part=" + partId
+                        + ", cp=(" + cpEntry.checkpointId() + ", " + U.format(cpEntry.timestamp()) + ")]", ex);
+                }
             }
         }
 
@@ -2440,7 +2467,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         cctx.walState().runWithOutWAL(() -> {
             if (it != null)
-                applyUpdates(it, stopPred, entryPred, false, null, false);
+                applyUpdates(it, stopPred, entryPred, true, null, false);
         });
     }
 
@@ -2871,11 +2898,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
-     * Wal truncate callBack.
+     * Wal truncate callback.
      *
-     * @param highBound WALPointer.
+     * @param highBound Upper bound.
+     * @throws IgniteCheckedException If failed.
      */
-    public void onWalTruncated(WALPointer highBound) throws IgniteCheckedException {
+    public void onWalTruncated(@Nullable WALPointer highBound) throws IgniteCheckedException {
         checkpointManager.removeCheckpointsUntil(highBound);
     }
 

@@ -21,10 +21,12 @@ import java.lang.{Long ⇒ JLong, String ⇒ JString}
 import org.apache.ignite.cache.query.SqlFieldsQuery
 import org.apache.ignite.configuration.CacheConfiguration
 import org.apache.ignite.{Ignite, Ignition}
-import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.ignite.spark.IgniteDataFrameSettings._
+import org.apache.logging.log4j.{Level, LogManager}
+import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.config.{Configuration, LoggerConfig}
 
 /**
   * Example application showing use-cases for Ignite implementation of Spark DataFrame API.
@@ -52,8 +54,13 @@ object IgniteDataFrameExample extends App {
             .getOrCreate()
 
         // Adjust the logger to exclude the logs of no interest.
-        Logger.getRootLogger.setLevel(Level.ERROR)
-        Logger.getLogger("org.apache.ignite").setLevel(Level.INFO)
+        val ctx = (LogManager.getContext(false)).asInstanceOf[LoggerContext];
+        val config = ctx.getConfiguration();
+        val loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+        loggerConfig.setLevel(Level.ERROR);
+        val loggerConfig2 = config.getLoggerConfig("org.apache.ignite");
+        loggerConfig2.setLevel(Level.INFO);
+        ctx.updateLoggers(config);
 
         // Executing examples.
 

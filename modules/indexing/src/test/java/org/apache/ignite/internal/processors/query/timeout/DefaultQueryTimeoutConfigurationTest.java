@@ -160,9 +160,9 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         startGrids(2);
         startClientGrid(2);
 
-        setDefaultQueryTimeout(2000);
+        setDefaultQueryTimeout(5000);
 
-        TimedQueryHelper helper = new TimedQueryHelper(1000, DEFAULT_CACHE_NAME);
+        TimedQueryHelper helper = new TimedQueryHelper(2000, DEFAULT_CACHE_NAME);
 
         helper.createCache(grid(0));
 

@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -30,16 +29,17 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -157,7 +157,7 @@ public class CacheRentingStateRepairTest extends GridCommonAbstractTest {
 
                     assertNotNull(locPart);
 
-                    if (locPart.state() != GridDhtPartitionState.EVICTED)
+                    if (locPart.state() != EVICTED)
                         return false;
                 }
 
@@ -168,9 +168,9 @@ public class CacheRentingStateRepairTest extends GridCommonAbstractTest {
              * Force renting state before node stop.
              * This also could be achieved by stopping node just after RENTING state is set.
              */
-            part.setState(GridDhtPartitionState.RENTING);
+            part.setState(RENTING);
 
-            assertEquals(GridDhtPartitionState.RENTING, part.state());
+            assertEquals(RENTING, part.state());
 
             stopGrid(0);
 
@@ -181,21 +181,12 @@ public class CacheRentingStateRepairTest extends GridCommonAbstractTest {
             part = dht(g0.cache(DEFAULT_CACHE_NAME)).topology().localPartition(delayEvictPart);
 
             assertNotNull(part);
+            assertTrue(part.state() == RENTING || part.state() == EVICTED);
 
             final GridDhtLocalPartition finalPart = part;
 
-            CountDownLatch evictLatch = new CountDownLatch(1);
-
-            part.rent().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
-                @Override public void apply(IgniteInternalFuture<?> fut) {
-                    assertEquals(GridDhtPartitionState.EVICTED, finalPart.state());
-
-                    evictLatch.countDown();
-                }
-            });
-
-            assertTrue("Failed to wait for partition eviction after restart",
-                evictLatch.await(5_000, TimeUnit.MILLISECONDS));
+            assertTrue("Failed to wait for partition eviction after restart " + finalPart,
+                GridTestUtils.waitForCondition(() -> finalPart.state() == EVICTED, 5_000));
 
             awaitPartitionMapExchange(true, true, null);
         }

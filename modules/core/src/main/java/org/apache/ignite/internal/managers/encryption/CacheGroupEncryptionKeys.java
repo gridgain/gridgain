@@ -83,7 +83,7 @@ class CacheGroupEncryptionKeys {
     @Nullable GroupKey getKey(int grpId, int keyId) {
         List<GroupKey> keys = grpKeys.get(grpId);
 
-        if (keys == null)
+        if (F.isEmpty(keys))
             return null;
 
         for (GroupKey groupKey : keys) {
@@ -319,6 +319,15 @@ class CacheGroupEncryptionKeys {
         }
 
         return null;
+    }
+
+    /**
+     * @return {@code True} if any key reserved for WAL reading can be removed.
+     */
+    boolean isReleaseWalKeysRequired(long walIdx) {
+        Iterator<TrackedWalSegment> iter = trackedWalSegments.iterator();
+
+        return iter.hasNext() && iter.next().idx <= walIdx;
     }
 
     /**

@@ -34,9 +34,9 @@ public interface PartitionUpdateCounter extends Iterable<long[]> {
      * Restores update counter state.
      *
      * @param initUpdCntr LWM.
-     * @param cntrUpdData Counter updates raw data.
+     * @param updCntrGapsData Updates counters gaps raw data.
      */
-    public void init(long initUpdCntr, @Nullable byte[] cntrUpdData);
+    public void init(long initUpdCntr, @Nullable byte[] updCntrGapsData);
 
     /**
      * @deprecated TODO LWM should be used as initial counter https://ggsystems.atlassian.net/browse/GG-17396
@@ -142,4 +142,17 @@ public interface PartitionUpdateCounter extends Iterable<long[]> {
      * @return Cache group context.
      */
     public CacheGroupContext context();
+
+    /**
+     * Update tombstone clear counter. Should be called when a tombstone is removed.
+     * @param cntr New counter value.
+     */
+    public void updateTombstoneClearCounter(long cntr);
+
+    /**
+     * Returns the clear counter - some tombstones up to this counter can be removed, later tombstones are not cleared.
+     *
+     * @return Counter value.
+     */
+    public long tombstoneClearCounter();
 }

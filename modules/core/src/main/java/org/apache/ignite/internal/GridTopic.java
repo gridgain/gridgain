@@ -157,7 +157,10 @@ public enum GridTopic {
     TOPIC_COMM_SYSTEM,
 
     /** Message topic for the distributed process. See {@link DistributedProcess}. */
-    TOPIC_DISTRIBUTED_PROCESS;
+    TOPIC_DISTRIBUTED_PROCESS,
+
+    /** Statistics related messages topic. */
+    TOPIC_STATISTICS;
 
     /** Enum values. */
     private static final GridTopic[] VALS = values();

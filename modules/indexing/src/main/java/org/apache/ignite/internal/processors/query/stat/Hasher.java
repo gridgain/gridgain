@@ -41,7 +41,7 @@ public class Hasher {
     private long h2;
 
     /** */
-    private int length;
+    private int len;
 
     /**
      * Calculate hash by specified byte array.
@@ -64,12 +64,12 @@ public class Hasher {
     public long fastHash(byte[] arr, int off, int len) {
         h1 = SEED;
         h2 = SEED;
-        length = 0;
+        this.len = 0;
 
         ByteBuffer bb = ByteBuffer.wrap(arr, off, len).order(ByteOrder.LITTLE_ENDIAN);
-        while (bb.remaining() >= CHUNK_SIZE) {
+        while (bb.remaining() >= CHUNK_SIZE)
             process(bb);
-        }
+
         if (bb.remaining() > 0)
             processRemaining(bb);
 
@@ -105,7 +105,7 @@ public class Hasher {
         long k1 = bb.getLong();
         long k2 = bb.getLong();
         bmix64(k1, k2);
-        length += CHUNK_SIZE;
+        len += CHUNK_SIZE;
     }
 
     /**
@@ -126,7 +126,7 @@ public class Hasher {
     private void processRemaining(ByteBuffer bb) {
         long k1 = 0;
         long k2 = 0;
-        length += bb.remaining();
+        len += bb.remaining();
         switch (bb.remaining()) {
             case 15:
                 k2 ^= (long) toInt(bb.get(14)) << 48; // fall through
@@ -173,8 +173,8 @@ public class Hasher {
      * @return Long hash value.
      */
     private long makeHash() {
-        h1 ^= length;
-        h2 ^= length;
+        h1 ^= len;
+        h2 ^= len;
 
         h1 += h2;
         h2 += h1;

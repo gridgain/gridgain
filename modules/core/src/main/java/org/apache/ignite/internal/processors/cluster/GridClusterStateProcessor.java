@@ -1213,6 +1213,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         boolean forceChangeBaselineTop,
         boolean isAutoAdjust
     ) {
+        if (ctx.maintenanceRegistry().isMaintenanceMode()) {
+            return new GridFinishedFuture<>(
+                new IgniteCheckedException("Failed to " + prettyString(state) + " (node is in maintenance mode).")
+            );
+        }
+
         boolean isBaselineAutoAdjustEnabled = isBaselineAutoAdjustEnabled();
 
         if (forceChangeBaselineTop && isBaselineAutoAdjustEnabled != isAutoAdjust)

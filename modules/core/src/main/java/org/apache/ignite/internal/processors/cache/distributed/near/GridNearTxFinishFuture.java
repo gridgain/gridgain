@@ -985,12 +985,11 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
         /** {@inheritDoc} */
         @Override boolean onNodeLeft(UUID nodeId, boolean discoThread) {
             if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
-                if (concat(of(m.primary().id()), tx.transactionNodes().getOrDefault(nodeId, emptySet()).stream())
+                if (concat(of(m.primary().id()), tx.transactionNodes().getOrDefault(m.primary().id(), emptySet()).stream())
                     .noneMatch(uuid -> cctx.discovery().alive(uuid))) {
                     onDone(new CacheInvalidStateException(ALL_PARTITION_OWNERS_LEFT_GRID_MSG +
                         m.entries().stream().map(e -> " [cacheName=" + e.cached().context().name() +
-                            ", partition=" + e.key().partition() +
-                            (S.includeSensitive() ? ", key=" + e.key() : "") +
+                            ", partition=" + e.key().partition() + ", key=" + e.key() +
                             "]").findFirst().orElse("")));
 
                     return true;

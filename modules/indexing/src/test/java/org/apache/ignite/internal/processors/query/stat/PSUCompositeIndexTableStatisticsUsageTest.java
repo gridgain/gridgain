@@ -15,14 +15,14 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMode;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import java.util.Arrays;
-import java.util.Collection;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -41,10 +41,10 @@ public class PSUCompositeIndexTableStatisticsUsageTest extends StatisticsAbstrac
      * @return Test parameters.
      */
     @Parameterized.Parameters(name = "cacheMode={0}")
-    public static Collection parameters() {
+    public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
-                { REPLICATED },
-                { PARTITIONED },
+            { REPLICATED },
+            { PARTITIONED },
         });
     }
 
@@ -57,17 +57,17 @@ public class PSUCompositeIndexTableStatisticsUsageTest extends StatisticsAbstrac
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        runSql("DROP TABLE IF EXISTS ci_table");
+        sql("DROP TABLE IF EXISTS ci_table");
 
-        runSql("CREATE TABLE ci_table (ID INT, col_a int, col_b int, col_c int, col_d int, " +
-                "PRIMARY key (ID, col_a, col_b, col_c)) WITH \"TEMPLATE=" + cacheMode + "\"");
+        sql("CREATE TABLE ci_table (ID INT, col_a int, col_b int, col_c int, col_d int, " +
+            "PRIMARY key (ID, col_a, col_b, col_c)) WITH \"TEMPLATE=" + cacheMode + "\"");
 
-        runSql("CREATE INDEX ci_table_abc ON ci_table(col_a, col_b, col_c)");
+        sql("CREATE INDEX ci_table_abc ON ci_table(col_a, col_b, col_c)");
 
         for (int i = 0; i < BIG_SIZE; i++) {
             String sql = String.format("INSERT INTO ci_table(id, col_a, col_b, col_c) VALUES(%d, %d, %d, %d)", i, i,
-                    i * 2, i * 10);
-            runSql(sql);
+                i * 2, i * 10);
+            sql(sql);
         }
         updateStatistics("ci_table");
     }
@@ -88,12 +88,12 @@ public class PSUCompositeIndexTableStatisticsUsageTest extends StatisticsAbstrac
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"CI_TABLE_ABC"}, sql, new String[1][]);
 
-        runSql("CREATE INDEX ci_table_c ON ci_table(col_c)");
+        sql("CREATE INDEX ci_table_c ON ci_table(col_c)");
         updateStatistics("ci_table");
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"CI_TABLE_ABC"}, sql, new String[1][]);
 
-        runSql("DROP INDEX IF EXISTS ci_table_c");
+        sql("DROP INDEX IF EXISTS ci_table_c");
         updateStatistics("ci_table");
     }
 
@@ -113,12 +113,12 @@ public class PSUCompositeIndexTableStatisticsUsageTest extends StatisticsAbstrac
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, sql, new String[1][]);
 
-        runSql("CREATE INDEX ci_table_c ON ci_table(col_c)");
+        sql("CREATE INDEX ci_table_c ON ci_table(col_c)");
         updateStatistics("ci_table");
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"CI_TABLE_C"}, sql, new String[1][]);
 
-        runSql("DROP INDEX IF EXISTS ci_table_c");
+        sql("DROP INDEX IF EXISTS ci_table_c");
         updateStatistics("ci_table");
     }
 

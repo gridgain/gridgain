@@ -1777,52 +1777,50 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         assert !async || msg instanceof GridIoUserMessage : msg; // Async execution was added only for IgniteMessaging.
         assert topicOrd >= 0 || !(topic instanceof GridTopic) : msg;
 
-        try (TraceSurroundings ignored = support(null)) {
-            MTC.span().addLog(() -> "Create communication msg - " + traceName(msg));
+        MTC.span().addLog(() -> "Create communication msg - " + traceName(msg));
 
-            GridIoMessage ioMsg = createGridIoMessage(topic, topicOrd, msg, plc, ordered, timeout, skipOnTimeout);
+        GridIoMessage ioMsg = createGridIoMessage(topic, topicOrd, msg, plc, ordered, timeout, skipOnTimeout);
 
-            if (locNodeId.equals(node.id())) {
+        if (locNodeId.equals(node.id())) {
 
-                assert plc != P2P_POOL;
+            assert plc != P2P_POOL;
 
-                CommunicationListener commLsnr = this.commLsnr;
+            CommunicationListener commLsnr = this.commLsnr;
 
-                if (commLsnr == null)
-                    throw new IgniteCheckedException("Trying to send message when grid is not fully started.");
+            if (commLsnr == null)
+                throw new IgniteCheckedException("Trying to send message when grid is not fully started.");
 
-                if (ordered)
-                    processOrderedMessage(locNodeId, ioMsg, plc, null);
-                else if (async)
-                    processRegularMessage(locNodeId, ioMsg, plc, NOOP);
+            if (ordered)
+                processOrderedMessage(locNodeId, ioMsg, plc, null);
+            else if (async)
+                processRegularMessage(locNodeId, ioMsg, plc, NOOP);
+            else
+                processRegularMessage0(ioMsg, locNodeId);
+
+            if (ackC != null)
+                ackC.apply(null);
+        }
+        else {
+            if (topicOrd < 0)
+                ioMsg.topicBytes(U.marshal(marsh, topic));
+
+            try {
+                if ((CommunicationSpi<?>)getSpi() instanceof TcpCommunicationSpi)
+                    getTcpCommunicationSpi().sendMessage(node, ioMsg, ackC);
                 else
-                    processRegularMessage0(ioMsg, locNodeId);
-
-                if (ackC != null)
-                    ackC.apply(null);
+                    getSpi().sendMessage(node, ioMsg);
             }
-            else {
-                if (topicOrd < 0)
-                    ioMsg.topicBytes(U.marshal(marsh, topic));
+            catch (IgniteSpiException e) {
+                if (e.getCause() instanceof ClusterTopologyCheckedException)
+                    throw (ClusterTopologyCheckedException)e.getCause();
 
-                try {
-                    if ((CommunicationSpi<?>)getSpi() instanceof TcpCommunicationSpi)
-                        getTcpCommunicationSpi().sendMessage(node, ioMsg, ackC);
-                    else
-                        getSpi().sendMessage(node, ioMsg);
-                }
-                catch (IgniteSpiException e) {
-                    if (e.getCause() instanceof ClusterTopologyCheckedException)
-                        throw (ClusterTopologyCheckedException)e.getCause();
+                if (!ctx.discovery().alive(node))
+                    throw new ClusterTopologyCheckedException("Failed to send message, node left: " + node.id(), e);
 
-                    if (!ctx.discovery().alive(node))
-                        throw new ClusterTopologyCheckedException("Failed to send message, node left: " + node.id(), e);
-
-                    throw new IgniteCheckedException("Failed to send message (node may have left the grid or " +
-                        "TCP connection cannot be established due to firewall issues) " +
-                        "[node=" + node + ", topic=" + topic +
-                        ", msg=" + msg + ", policy=" + plc + ']', e);
-                }
+                throw new IgniteCheckedException("Failed to send message (node may have left the grid or " +
+                    "TCP connection cannot be established due to firewall issues) " +
+                    "[node=" + node + ", topic=" + topic +
+                    ", msg=" + msg + ", policy=" + plc + ']', e);
             }
         }
     }

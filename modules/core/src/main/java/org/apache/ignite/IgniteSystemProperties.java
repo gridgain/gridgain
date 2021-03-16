@@ -192,8 +192,22 @@ public final class IgniteSystemProperties {
 
     /**
      * Setting to {@code true} enables writing sensitive information in {@code toString()} output.
+     *
+     * @deprecated Use {@link #IGNITE_SENSITIVE_DATA_LOGGING} instead.
      */
+    @Deprecated
     public static final String IGNITE_TO_STRING_INCLUDE_SENSITIVE = "IGNITE_TO_STRING_INCLUDE_SENSITIVE";
+
+    /**
+     * Setting to {@code "plain"} enables writing sensitive information in {@code toString()} output.
+     * Setting to {@code "hash"} enables writing hash of sensitive information in {@code toString()} output.
+     * Setting to {@code "none"} disables writing sensitive information in {@code toString()} output.
+     *
+     * {@link #IGNITE_TO_STRING_INCLUDE_SENSITIVE} has higher priority. If it is explicitly set, then it is converted:
+     * "true" -> "plain",
+     * "false" -> "none".
+     */
+    public static final String IGNITE_SENSITIVE_DATA_LOGGING = "IGNITE_SENSITIVE_DATA_LOGGING";
 
     /** Maximum length for {@code toString()} result. */
     public static final String IGNITE_TO_STRING_MAX_LENGTH = "IGNITE_TO_STRING_MAX_LENGTH";
@@ -376,10 +390,20 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_OFFHEAP_SAFE_RELEASE = "IGNITE_OFFHEAP_SAFE_RELEASE";
 
-    /** Maximum size for atomic cache queue delete history (default is 200 000 entries per partition). */
+    /**
+     * Maximum size for atomic cache queue delete history (default is 200 000 entries per partition).
+     *
+     * @deprecated No longer used.
+     */
+    @Deprecated
     public static final String IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE = "IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE";
 
-    /** Ttl of removed cache entries (ms). */
+    /**
+     * Ttl of removed cache entries (ms).
+     *
+     * @deprecated No longer used.
+     */
+    @Deprecated
     public static final String IGNITE_CACHE_REMOVED_ENTRIES_TTL = "IGNITE_CACHE_REMOVED_ENTRIES_TTL";
 
     /**
@@ -761,8 +785,8 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL = "IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL";
 
     /**
-     * When cache has entries with expired TTL, each user operation will also remove this amount of expired entries.
-     * Defaults to {@code 5}.
+     * When cache has entries with expired TTL and/or tombstones, each user operation will also remove this amount of
+     * expired entries. Defaults to {@code 5}. Setting the value to {@code 0} will disable this behavior.
      */
     public static final String IGNITE_TTL_EXPIRE_BATCH_SIZE = "IGNITE_TTL_EXPIRE_BATCH_SIZE";
 
@@ -797,7 +821,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
 
     /**
-     * Prefer historical rebalance if there's enough history regardless off all heuristics.
+     * Prefer historical rebalance if there's enough history regardless of all heuristics.
      * This property is intended for integration or performance tests.
      * Default is {@code false}.
      */
@@ -1467,6 +1491,23 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE =
         "IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE";
+
+    /**
+     * There can be background tasks that can be interrupted due to node stop, node fail, or cluster deactivation,
+     * but need to be completed, so they start after node start or cluster activation. If this option is set to
+     * {@code false}, then tasks will not be started.
+     */
+    public static final String IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE =
+        "IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE";
+
+    /**
+     * Set to true only during the junit tests.
+     * Signals that the cluster is running in a test environment.
+     *
+     * Can be used for changing behaviour of tightly coupled code pieces during the tests.
+     * Use it as a last resort only, prefer another toolchain like DI, mocks and etc. if possible
+     */
+    public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
 
     /**
      * Enforces singleton.

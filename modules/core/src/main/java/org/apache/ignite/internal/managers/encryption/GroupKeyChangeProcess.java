@@ -163,7 +163,7 @@ class GroupKeyChangeProcess {
             }
 
             grpIds[n] = grpDesc.groupId();
-            keyIds[n] = (byte)(ctx.encryption().groupKey(grpDesc.groupId()).unsignedId() + 1);
+            keyIds[n] = (byte)(ctx.encryption().getActiveKey(grpDesc.groupId()).unsignedId() + 1);
 
             n += 1;
         }
@@ -218,7 +218,7 @@ class GroupKeyChangeProcess {
                             "Encrypted cache group not found [grpId=" + grpId + "]"));
                 }
 
-                GroupKey currKey = ctx.encryption().groupKey(grpId);
+                GroupKey currKey = ctx.encryption().getActiveKey(grpId);
 
                 for (int locKeyId : keyIds) {
                     if (locKeyId != keyId)

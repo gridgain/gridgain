@@ -1345,6 +1345,13 @@ public class CacheGroupContext {
     }
 
     /**
+     * @return {@code True} if need create temporary tombstones entries for removed data.
+     */
+    public boolean supportsTombstone() {
+        return !mvccEnabled && !isLocal();
+    }
+
+    /**
      * @return Metrics.
      */
     public CacheGroupMetricsImpl metrics() {

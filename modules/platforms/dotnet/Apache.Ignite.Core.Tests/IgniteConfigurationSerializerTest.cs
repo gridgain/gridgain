@@ -103,6 +103,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(10000, cfg.MvccVacuumFrequency);
             Assert.AreEqual(4, cfg.MvccVacuumThreadCount);
             Assert.AreEqual(123, cfg.SqlQueryHistorySize);
+            Assert.AreEqual(true, cfg.JavaPeerClassLoadingEnabled);
 
             Assert.IsNotNull(cfg.SqlSchemas);
             Assert.AreEqual(2, cfg.SqlSchemas.Count);
@@ -183,6 +184,10 @@ namespace Apache.Ignite.Core.Tests
             Assert.IsNotNull(af);
             Assert.AreEqual(99, af.Partitions);
             Assert.IsTrue(af.ExcludeNeighbors);
+
+            var afBf = af.AffinityBackupFilter as ClusterNodeAttributeAffinityBackupFilter;
+            Assert.IsNotNull(afBf);
+            Assert.AreEqual(new[] {"foo1", "bar2"}, afBf.AttributeNames);
 
             var platformCacheConfiguration = cacheCfg.PlatformCacheConfiguration;
             Assert.AreEqual("int", platformCacheConfiguration.KeyTypeName);
@@ -785,7 +790,11 @@ namespace Apache.Ignite.Core.Tests
                         AffinityFunction = new RendezvousAffinityFunction
                         {
                             ExcludeNeighbors = true,
-                            Partitions = 48
+                            Partitions = 48,
+                            AffinityBackupFilter = new ClusterNodeAttributeAffinityBackupFilter
+                            {
+                                AttributeNames = new[] {"foo", "baz", "bar"}
+                            }
                         },
                         ExpiryPolicyFactory = new MyPolicyFactory(),
                         EnableStatistics = true,
@@ -1063,6 +1072,7 @@ namespace Apache.Ignite.Core.Tests
                     Timeout = TimeSpan.FromSeconds(10)
                 },
                 SqlQueryHistorySize = 345,
+                JavaPeerClassLoadingEnabled = true,
                 ExecutorConfiguration = new[]
                 {
                     new ExecutorConfiguration

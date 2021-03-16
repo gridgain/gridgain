@@ -36,6 +36,16 @@ public interface EncryptionSpi extends IgniteSpi {
     byte[] masterKeyDigest();
 
     /**
+     * Returns master key digest by name.
+     * Should always return same digest for a same key.
+     * Digest used for a configuration consistency check.
+     *
+     * @param masterKeyName Master key name.
+     * @return Master key digest.
+     */
+    byte[] masterKeyDigest(String masterKeyName);
+
+    /**
      * Creates new key for an encryption/decryption of cache persistent data: pages, WAL records.
      *
      * @return Newly created encryption key.
@@ -87,12 +97,31 @@ public interface EncryptionSpi extends IgniteSpi {
     byte[] encryptKey(Serializable key);
 
     /**
+     * Encrypts a key with the master key specified by name.
+     * Adds some info to check key integrity on decryption.
+     *
+     * @param key Key to encrypt.
+     * @param masterKeyName Master key name.
+     * @return Encrypted key.
+     */
+    byte[] encryptKey(Serializable key, String masterKeyName);
+
+    /**
      * Decrypts key and checks it integrity.
      * 
      * @param key Key to decrypt.
      * @return Encrypted key.
      */
     Serializable decryptKey(byte[] key);
+
+    /**
+     * Decrypts key and checks its integrity using the master key specified by name.
+     *
+     * @param key Key to decrypt.
+     * @param masterKeyName Master key name.
+     * @return Encrypted key.
+     */
+    Serializable decryptKey(byte[] key, String masterKeyName);
 
     /**
      * @param dataSize Size of plain data in bytes.

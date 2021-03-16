@@ -69,6 +69,7 @@ ignite_tests_SOURCES = \
 	src/interop_test.cpp \
 	src/cluster_group_test.cpp \
 	src/cluster_node_test.cpp \
+	src/cluster_test.cpp \
 	src/cache_invoke_test.cpp \
 	src/handle_registry_test.cpp \
 	src/ignite_error_test.cpp \

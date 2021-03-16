@@ -53,6 +53,7 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryTy
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_ID;
 
 /**
  * Keep information about all running queries.
@@ -190,17 +191,20 @@ public class RunningQueryManager {
      * @param schemaName Schema name.
      * @param loc Local query flag.
      * @param cancel Query cancel. Should be passed in case query is cancelable, or {@code null} otherwise.
+     * @param enforceJoinOrder Enforce join order flag.
+     * @param lazy Lazy flag.
+     * @param distributedJoins Distributed joins flag.
      * @return Id of registered query.
      */
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
         @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel,
-        String qryInitiatorId) {
+        String qryInitiatorId, boolean enforceJoinOrder, boolean lazy, boolean distributedJoins) {
         long qryId = qryIdGen.incrementAndGet();
 
         if (qryInitiatorId == null)
             qryInitiatorId = SqlFieldsQuery.threadedQueryInitiatorId();
 
-        GridRunningQueryInfo run = new GridRunningQueryInfo(
+        final GridRunningQueryInfo run = new GridRunningQueryInfo(
             qryId,
             locNodeId,
             qry,
@@ -210,7 +214,10 @@ public class RunningQueryManager {
             cancel,
             loc,
             memTracker == null ? DUMMY_TRACKER : memTracker,
-            qryInitiatorId
+            qryInitiatorId,
+            enforceJoinOrder,
+            lazy,
+            distributedJoins
         );
 
         GridRunningQueryInfo preRun = runs.putIfAbsent(qryId, run);
@@ -252,6 +259,8 @@ public class RunningQueryManager {
                 throw new IgniteException(ex.getMessage(), ex);
             }
         }
+
+        run.span().addTag(SQL_QRY_ID, run::globalQueryId);
 
         return qryId;
     }

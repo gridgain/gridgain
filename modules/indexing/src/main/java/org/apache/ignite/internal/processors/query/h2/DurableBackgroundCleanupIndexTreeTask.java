@@ -20,17 +20,28 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
+import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 
@@ -96,14 +107,18 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         if (trees0 == null) {
             trees0 = new ArrayList<>(rootPages.size());
 
-            GridCacheContext cctx = ctx.cache().context().cacheContext(CU.cacheId(cacheName));
+            CacheGroupContext grpCtx = ctx.cache().cacheGroup(CU.cacheGroupId(cacheName, cacheGrpName));
+
+            // If group context is null, it means that group doesn't exist and we don't need this task anymore.
+            if (grpCtx == null)
+                return;
 
             IoStatisticsHolderIndex stats = new IoStatisticsHolderIndex(
                 SORTED_INDEX,
-                cctx.name(),
+                cacheGrpName,
                 idxName,
-                cctx.group().statisticsHolderData(),
-                cctx.kernalContext().metric()
+                grpCtx.statisticsHolderData(),
+                ctx.metric()
             );
 
             for (int i = 0; i < rootPages.size(); i++) {
@@ -116,19 +131,19 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                 try {
                     String treeName = "deletedTree_" + i + "_" + shortName();
 
-                    H2Tree tree = new H2Tree(
-                        cctx,
+                    H2TreeToDestroy tree = new H2TreeToDestroy(
+                        grpCtx,
                         null,
                         treeName,
                         idxName,
                         cacheName,
                         null,
-                        cctx.offheap().reuseListForIndex(treeName),
+                        grpCtx.offheap().reuseListForIndex(treeName),
                         CU.cacheGroupId(cacheName, cacheGrpName),
                         cacheGrpName,
-                        cctx.dataRegion().pageMemory(),
+                        grpCtx.dataRegion().pageMemory(),
                         ctx.cache().context().wal(),
-                        cctx.offheap().globalRemoveId(),
+                        grpCtx.offheap().globalRemoveId(),
                         rootPage,
                         false,
                         Collections.emptyList(),
@@ -191,5 +206,119 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(DurableBackgroundCleanupIndexTreeTask.class, this);
+    }
+
+    /**
+     * H2Tree that can be used only to destroy it.
+     */
+    public static class H2TreeToDestroy extends H2Tree {
+        /** */
+        private final CacheGroupContext grpCtx;
+
+        /**
+         * Constructor.
+         *
+         * @param grpCtx                  Cache group context.
+         * @param table                   Owning table.
+         * @param name                    Name of the tree.
+         * @param idxName                 Name of the index.
+         * @param cacheName               Name of the cache.
+         * @param tblName                 Name of the table.
+         * @param reuseList               Reuse list.
+         * @param grpId                   Cache group ID.
+         * @param grpName                 Name of the cache group.
+         * @param pageMem                 Page memory.
+         * @param wal                     Write ahead log manager.
+         * @param globalRmvId             Global remove ID counter.
+         * @param metaPageId              Meta page ID.
+         * @param initNew                 if {@code true} new tree will be initialized, else meta page info will be read.
+         * @param unwrappedCols           Unwrapped indexed columns.
+         * @param wrappedCols             Original indexed columns.
+         * @param maxCalculatedInlineSize Keep max calculated inline size for current index.
+         * @param pk                      {@code true} for primary key.
+         * @param affinityKey             {@code true} for affinity key.
+         * @param mvccEnabled             Mvcc flag.
+         * @param rowCache                Row cache.
+         * @param failureProcessor        if the tree is corrupted.
+         * @param log                     Logger.
+         * @param stats                   Statistics holder.
+         * @param factory                 Inline helper factory.
+         * @param configuredInlineSize    Size that has been set by user during index creation.
+         * @param pageIoRslvr             Page IO resolver.
+         * @throws IgniteCheckedException If failed.
+         */
+        public H2TreeToDestroy(
+            CacheGroupContext grpCtx,
+            GridH2Table table,
+            String name,
+            String idxName,
+            String cacheName,
+            String tblName,
+            ReuseList reuseList,
+            int grpId,
+            String grpName,
+            PageMemory pageMem,
+            IgniteWriteAheadLogManager wal,
+            AtomicLong globalRmvId,
+            long metaPageId,
+            boolean initNew,
+            List<IndexColumn> unwrappedCols,
+            List<IndexColumn> wrappedCols,
+            AtomicInteger maxCalculatedInlineSize,
+            boolean pk,
+            boolean affinityKey,
+            boolean mvccEnabled,
+            @Nullable H2RowCache rowCache,
+            @Nullable FailureProcessor failureProcessor,
+            IgniteLogger log, IoStatisticsHolder stats,
+            InlineIndexColumnFactory factory,
+            int configuredInlineSize,
+            PageIoResolver pageIoRslvr) throws IgniteCheckedException {
+            super(
+                null,
+                table,
+                name,
+                idxName,
+                cacheName,
+                tblName,
+                reuseList,
+                grpId,
+                grpName,
+                pageMem,
+                wal,
+                globalRmvId,
+                metaPageId,
+                initNew,
+                unwrappedCols,
+                wrappedCols,
+                maxCalculatedInlineSize,
+                pk,
+                affinityKey,
+                mvccEnabled,
+                rowCache,
+                failureProcessor,
+                log,
+                stats,
+                factory,
+                configuredInlineSize,
+                pageIoRslvr
+            );
+
+            this.grpCtx = grpCtx;
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void temporaryReleaseLock() {
+            grpCtx.shared().database().checkpointReadUnlock();
+            grpCtx.shared().database().checkpointReadLock();
+        }
+
+        /** {@inheritDoc} */
+        @Override protected long maxLockHoldTime() {
+            long sysWorkerBlockedTimeout = grpCtx.shared().kernalContext().workersRegistry().getSystemWorkerBlockedTimeout();
+
+            // Using timeout value reduced by 10 times to increase possibility of lock releasing before timeout.
+            return sysWorkerBlockedTimeout == 0 ? Long.MAX_VALUE : (sysWorkerBlockedTimeout / 10);
+        }
     }
 }

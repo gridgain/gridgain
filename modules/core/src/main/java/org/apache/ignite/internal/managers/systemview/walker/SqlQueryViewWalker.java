@@ -43,6 +43,9 @@ public class SqlQueryViewWalker implements SystemViewRowAttributeWalker<SqlQuery
         v.accept(10, "memoryCurrent", long.class);
         v.accept(11, "memoryMax", long.class);
         v.accept(12, "schemaName", String.class);
+        v.accept(13, "distributedJoins", boolean.class);
+        v.accept(14, "enforceJoinOrder", boolean.class);
+        v.accept(15, "lazy", boolean.class);
     }
 
     /** {@inheritDoc} */
@@ -60,10 +63,13 @@ public class SqlQueryViewWalker implements SystemViewRowAttributeWalker<SqlQuery
         v.acceptLong(10, "memoryCurrent", row.memoryCurrent());
         v.acceptLong(11, "memoryMax", row.memoryMax());
         v.accept(12, "schemaName", String.class, row.schemaName());
+        v.acceptBoolean(13, "distributedJoins", row.distributedJoins());
+        v.acceptBoolean(14, "enforceJoinOrder", row.enforceJoinOrder());
+        v.acceptBoolean(15, "lazy", row.lazy());
     }
 
     /** {@inheritDoc} */
     @Override public int count() {
-        return 13;
+        return 16;
     }
 }

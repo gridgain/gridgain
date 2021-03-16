@@ -24,7 +24,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,6 +40,7 @@ import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteState;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.IgnitionListener;
@@ -52,8 +55,11 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.maintenance.MaintenanceFileStore;
+import org.apache.ignite.internal.pagemem.store.PageStoreCollection;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationFileUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.util.lang.IgniteThrowableConsumer;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -63,6 +69,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationFileUtils.defragmentationCompletionMarkerFile;
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationFileUtils.defragmentedIndexFile;
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationFileUtils.defragmentedPartFile;
@@ -79,7 +86,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
     public static final int PARTS = 5;
 
     /** */
-    public static final int ADDED_KEYS_COUNT = 150;
+    public static final int ADDED_KEYS_COUNT = 1500;
 
     /** */
     protected static final String GRP_NAME = "group";
@@ -204,6 +211,19 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         waitForDefragmentation(0);
 
+        assertEquals(ClusterState.INACTIVE, grid(0).context().state().clusterState().state());
+
+        GridTestUtils.assertThrowsAnyCause(
+            log,
+            () -> {
+                grid(0).cluster().state(ClusterState.ACTIVE);
+
+                return null;
+            },
+            IgniteCheckedException.class,
+            "Failed to activate cluster (node is in maintenance mode)"
+        );
+
         long[] newPartLen = partitionSizes(workDir);
 
         for (int p = 0; p < PARTS; p++)
@@ -225,6 +245,25 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
         assertFalse(completionMarkerFile.exists());
 
         validateCache(grid(0).cache(DEFAULT_CACHE_NAME));
+
+        validateLeftovers(workDir);
+    }
+
+    protected long[] partitionSizes(CacheGroupContext grp) {
+        final int grpId = grp.groupId();
+
+        return IntStream.concat(
+            IntStream.of(INDEX_PARTITION),
+            IntStream.range(0, grp.shared().affinity().affinity(grpId).partitions())
+        ).mapToLong(p -> {
+            try {
+                final FilePageStore store = (FilePageStore) ((PageStoreCollection) grp.shared().pageStore()).getStore(grpId, p);
+
+                return new File(store.getFileAbsolutePath()).length();
+            } catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }).toArray();
     }
 
     /**
@@ -264,12 +303,19 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
     }
 
     /** */
-    protected void createMaintenanceRecord() throws IgniteCheckedException {
+    protected void createMaintenanceRecord(String... cacheNames) throws IgniteCheckedException {
         IgniteEx grid = grid(0);
 
         MaintenanceRegistry mntcReg = grid.context().maintenanceRegistry();
 
-        mntcReg.registerMaintenanceTask(toStore(Collections.singletonList(DEFAULT_CACHE_NAME)));
+        final List<String> caches = new ArrayList<>();
+
+        caches.add(DEFAULT_CACHE_NAME);
+
+        if (cacheNames != null && cacheNames.length != 0)
+            caches.addAll(Arrays.asList(cacheNames));
+
+        mntcReg.registerMaintenanceTask(toStore(caches));
     }
 
     /**
@@ -495,9 +541,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         stopGrid(0);
 
-        IgniteEx ex = startGrid(0);
-
-        ex.cluster().state(ClusterState.ACTIVE);
+        startGrid(0);
 
         waitForDefragmentation(0);
 
@@ -574,6 +618,37 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
                 assertNull(val);
             else
                 assertNotNull(val);
+        }
+    }
+
+    /**
+     * Start node, wait for defragmentation and validate that sizes of caches are less than those before the defragmentation.
+     * @param gridId Idx of ignite grid.
+     * @param groups Cache groups to check.
+     * @throws Exception If failed.
+     */
+    protected void defragmentAndValidateSizesDecreasedAfterDefragmentation(int gridId, CacheGroupContext... groups) throws Exception {
+        for (CacheGroupContext grp : groups) {
+            final long[] oldPartLen = partitionSizes(grp);
+
+            startGrid(0);
+
+            waitForDefragmentation(0);
+
+            stopGrid(0);
+
+            final long[] newPartLen = partitionSizes(grp);
+
+            boolean atLeastOneSmaller = false;
+
+            for (int p = 0; p < oldPartLen.length; p++) {
+                assertTrue(newPartLen[p] <= oldPartLen[p]);
+
+                if (newPartLen[p] < oldPartLen[p])
+                    atLeastOneSmaller = true;
+            }
+
+            assertTrue(atLeastOneSmaller);
         }
     }
 }

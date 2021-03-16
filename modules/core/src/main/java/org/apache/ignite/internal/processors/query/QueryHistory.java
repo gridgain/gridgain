@@ -42,7 +42,8 @@ public class QueryHistory {
      * @param failed {@code True} query executed unsuccessfully {@code false} otherwise.
      */
     public QueryHistory(GridRunningQueryInfo info, boolean failed) {
-        key = new QueryHistoryKey(info.query(), info.schemaName(), info.local());
+        key = new QueryHistoryKey(info.query(), info.schemaName(), info.local(), info.distributedJoins(),
+            info.enforceJoinOrder(), info.lazy());
 
         long failures = failed ? 1 : 0;
         long duration = System.currentTimeMillis() - info.startTime();
@@ -205,6 +206,27 @@ public class QueryHistory {
      */
     public long lastStartTime() {
         return val.lastStartTime();
+    }
+
+    /**
+     * @return Distributed joins.
+     */
+    public boolean distributedJoins() {
+        return key.distributedJoins();
+    }
+
+    /**
+     * @return Enforce join order.
+     */
+    public boolean enforceJoinOrder() {
+        return key.enforceJoinOrder();
+    }
+
+    /**
+     * @return Lazy flag.
+     */
+    public boolean lazy() {
+        return key.lazy();
     }
 
     /**

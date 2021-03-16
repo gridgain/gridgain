@@ -30,6 +30,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
@@ -270,6 +271,7 @@ public class RepairEntryProcessorTest {
      * delete queue border.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-27419")
     public void testRecheckVersionNullAndTtlEntryShouldNotAlreadyRemovedAndNewUpdateCounterLessDelQueueSizeOpRemove() {
         Map<UUID, VersionedValue> data = new HashMap<>();
         data.put(OTHRER_NODE_ID, new VersionedValue(
@@ -299,6 +301,7 @@ public class RepairEntryProcessorTest {
      * delete queue border.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-27419")
     public void testRecheckVersionNullAndTtlEntryShouldNotAlreadyRemovedAndNewUpdateCounterLessDelQueueSizeOpSet() {
         Map<UUID, VersionedValue> data = new HashMap<>();
         data.put(OTHRER_NODE_ID, new VersionedValue(

@@ -53,8 +53,6 @@ import org.apache.ignite.internal.processors.cache.BinaryMetadataRegistrationIns
 import org.apache.ignite.internal.processors.cache.CacheAffinityCallSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheAffinityKeyConfigurationMismatchTest;
 import org.apache.ignite.internal.processors.cache.CacheAtomicSingleMessageCountSelfTest;
-import org.apache.ignite.internal.processors.cache.CacheDeferredDeleteQueueTest;
-import org.apache.ignite.internal.processors.cache.CacheDeferredDeleteSanitySelfTest;
 import org.apache.ignite.internal.processors.cache.CacheFutureExceptionSelfTest;
 import org.apache.ignite.internal.processors.cache.CachePutEventListenerErrorSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheTxFastFinishTest;
@@ -326,8 +324,6 @@ public class IgniteCacheTestSuite {
         GridTestUtils.addTestIfNeeded(suite, GridCacheReplicatedLocalStoreSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheTxPartitionedLocalStoreSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteCacheSystemTransactionsSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, CacheDeferredDeleteSanitySelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, CacheDeferredDeleteQueueTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCachePartitionsStateValidatorSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCachePartitionsStateValidationTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCachePartitionsUpdateCountersAndSizeTest.class, ignoredTests);

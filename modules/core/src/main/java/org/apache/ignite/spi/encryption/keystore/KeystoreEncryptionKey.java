@@ -19,6 +19,7 @@ package org.apache.ignite.spi.encryption.keystore;
 import java.io.Serializable;
 import java.security.Key;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Objects;
 import org.jetbrains.annotations.Nullable;
 
@@ -79,5 +80,10 @@ public final class KeystoreEncryptionKey implements Serializable {
         result = 31 * result + Arrays.hashCode(digest);
 
         return result;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return Base64.getEncoder().encodeToString(digest);
     }
 }

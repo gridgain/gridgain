@@ -23,7 +23,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV3;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -60,7 +59,8 @@ public class MetaPageUpdatePartitionDataRecordV3 extends MetaPageUpdatePartition
         int allocatedIdxCandidate,
         long link,
         int encryptedPageIdx,
-        int encryptedPageCnt) {
+        int encryptedPageCnt
+    ) {
         super(grpId, pageId, updateCntr, globalRmvId, partSize, cntrsPageId, state, allocatedIdxCandidate, link);
 
         this.encryptedPageIdx = encryptedPageIdx;
@@ -81,7 +81,7 @@ public class MetaPageUpdatePartitionDataRecordV3 extends MetaPageUpdatePartition
     @Override public void applyDelta(PageMemory pageMem, long pageAddr) throws IgniteCheckedException {
         super.applyDelta(pageMem, pageAddr);
 
-        PagePartitionMetaIOV3 io = (PagePartitionMetaIOV3)PagePartitionMetaIO.VERSIONS.forPage(pageAddr);
+        PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(pageAddr);
 
         io.setEncryptedPageIndex(pageAddr, encryptedPageIdx);
         io.setEncryptedPageCount(pageAddr, encryptedPageCnt);

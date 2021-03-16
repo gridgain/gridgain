@@ -1015,6 +1015,18 @@ public class CommandHandlerParsingTest {
 
         assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
             + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set");
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "DISCOVERY"));
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "discovery"));
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "Discovery"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "TX"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "tx"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "Tx"));
     }
 
     /**
@@ -1102,6 +1114,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
             cmd == CommandList.SET_STATE ||
+            cmd == CommandList.ENCRYPTION ||
             cmd == CommandList.METADATA ||
             cmd == CommandList.WARM_UP ||
             cmd == CommandList.PROPERTY ||

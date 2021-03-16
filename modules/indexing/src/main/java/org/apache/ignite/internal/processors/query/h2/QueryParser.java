@@ -61,6 +61,7 @@ import org.apache.ignite.internal.sql.SqlParser;
 import org.apache.ignite.internal.sql.SqlStrictParseException;
 import org.apache.ignite.internal.sql.command.SqlAlterTableCommand;
 import org.apache.ignite.internal.sql.command.SqlAlterUserCommand;
+import org.apache.ignite.internal.sql.command.SqlAnalyzeCommand;
 import org.apache.ignite.internal.sql.command.SqlBeginTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
 import org.apache.ignite.internal.sql.command.SqlCommand;
@@ -68,8 +69,10 @@ import org.apache.ignite.internal.sql.command.SqlCommitTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlCreateIndexCommand;
 import org.apache.ignite.internal.sql.command.SqlCreateUserCommand;
 import org.apache.ignite.internal.sql.command.SqlDropIndexCommand;
+import org.apache.ignite.internal.sql.command.SqlDropStatisticsCommand;
 import org.apache.ignite.internal.sql.command.SqlDropUserCommand;
 import org.apache.ignite.internal.sql.command.SqlKillQueryCommand;
+import org.apache.ignite.internal.sql.command.SqlRefreshStatitsicsCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashMap;
@@ -79,6 +82,7 @@ import org.gridgain.internal.h2.command.Prepared;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlQuerySplitter.keyColumn;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PARSER_CACHE_HIT;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_PARSE;
 
 /**
@@ -90,7 +94,7 @@ public class QueryParser {
 
     /** A pattern for commands having internal implementation in Ignite. */
     private static final Pattern INTERNAL_CMD_RE = Pattern.compile(
-        "^(create|drop)\\s+index|^alter\\s+table|^copy|^set|^begin|^commit|^rollback|^(create|alter|drop)\\s+user" +
+        "^(create|drop)\\s+index|^analyze\\s|^refresh\\sstatistics|^drop\\sstatistics|^alter\\s+table|^copy|^set|^begin|^commit|^rollback|^(create|alter|drop)\\s+user" +
             "|^kill\\s+query|show|help|grant|revoke",
         Pattern.CASE_INSENSITIVE);
 
@@ -203,6 +207,8 @@ public class QueryParser {
         if (cached != null) {
             metricsHolder.countCacheHit();
 
+            MTC.span().addTag(SQL_PARSER_CACHE_HIT, () -> "true");
+
             return new QueryParserResult(
                 qryDesc,
                 queryParameters(qry),
@@ -215,6 +221,8 @@ public class QueryParser {
         }
 
         metricsHolder.countCacheMiss();
+
+        MTC.span().addTag(SQL_PARSER_CACHE_HIT, () -> "false");
 
         // Try parsing as native command.
         QueryParserResult parseRes = parseNative(schemaName, qry, remainingAllowed);
@@ -268,7 +276,10 @@ public class QueryParser {
                 || nativeCmd instanceof SqlCreateUserCommand
                 || nativeCmd instanceof SqlAlterUserCommand
                 || nativeCmd instanceof SqlDropUserCommand
-                || nativeCmd instanceof SqlKillQueryCommand)
+                || nativeCmd instanceof SqlKillQueryCommand
+                || nativeCmd instanceof SqlAnalyzeCommand
+                || nativeCmd instanceof SqlRefreshStatitsicsCommand
+                || nativeCmd instanceof SqlDropStatisticsCommand)
             )
                 return null;
 

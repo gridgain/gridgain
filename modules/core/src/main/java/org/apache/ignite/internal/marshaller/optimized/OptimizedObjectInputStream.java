@@ -106,7 +106,6 @@ class OptimizedObjectInputStream extends ObjectInputStream {
     /** Suppress errors on this type due to compatibility. */
     private static final Set<String> EXCLUDED_MARSHALLING_ERROR_TYPES =
         Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-        "org.gridgain.grid.internal.processors.security.SecuritySubjectAdapter",
             "org.gridgain.grid.internal.processors.cache.database.snapshot.schedule.SnapshotSchedule")));
 
     /** */

@@ -51,7 +51,7 @@ import static org.apache.ignite.internal.commandline.persistence.PersistenceSubc
 import static org.apache.ignite.internal.commandline.persistence.PersistenceSubcommands.of;
 
 /** */
-public class PersistenceCommand implements Command<PersistenceArguments> {
+public class PersistenceCommand extends AbstractCommand<PersistenceArguments> {
     /** */
     private PersistenceArguments cleaningArgs;
 

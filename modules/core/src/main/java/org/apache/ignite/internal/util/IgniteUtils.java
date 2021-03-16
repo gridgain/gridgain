@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,7 +138,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.jar.JarFile;
 import java.util.logging.ConsoleHandler;
@@ -361,14 +360,14 @@ public abstract class IgniteUtils {
     /** Empty  longs. */
     public static final Field[] EMPTY_FIELDS = new Field[0];
 
+    /** Empty string array. */
+    public static final String[] EMPTY_STRINGS = new String[0];
+
     /** System line separator. */
     private static final String NL = System.getProperty("line.separator");
 
     /** Default user version. */
     public static final String DFLT_USER_VERSION = "0";
-
-    /** Lock hold message. */
-    public static final String LOCK_HOLD_MESSAGE = "ReadLock held the lock more than ";
 
     /** Cache for {@link GridPeerDeployAware} fields to speed up reflection. */
     private static final ConcurrentMap<String, IgniteBiTuple<Class<?>, Collection<Field>>> p2pFields =
@@ -6065,6 +6064,20 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Gets resource name.
+     * Returns a task name {@see getTaskName} if it is a Compute task or a class name otherwise.
+     *
+     * @param rscCls Class of resource.
+     * @return Name of resource.
+     */
+    public static String getResourceName(Class rscCls) {
+        if (ComputeTask.class.isAssignableFrom(rscCls))
+            return getTaskName(rscCls);
+
+        return rscCls.getName();
+    }
+
+    /**
      * Creates SPI attribute name by adding prefix to the attribute name.
      * Prefix is an SPI name + '.'.
      *
@@ -10035,6 +10048,16 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * @param ctx Kernal context.
+     * @return Whether current node is oldest.
+     */
+    public static boolean isCurrentNodeOldest(GridKernalContext ctx) {
+        ClusterNode oldest = ctx.grid().cluster().forServers().forOldest().node();
+
+        return F.eq(ctx.localNodeId(), oldest.id());
+    }
+
+    /**
      * @param ptr Address.
      * @param size Size.
      * @return Bytes.
@@ -11782,180 +11805,6 @@ public abstract class IgniteUtils {
         };
     }
 
-    /** */
-    public static class ReentrantReadWriteLockTracer extends ReentrantReadWriteLock {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Read lock. */
-        private final ReadLockTracer readLock;
-
-        /** Write lock. */
-        private final WriteLockTracer writeLock;
-
-        /** Lock print threshold. */
-        private long readLockThreshold;
-
-        /** */
-        private IgniteLogger log;
-
-        /**
-         * @param delegate RWLock delegate.
-         * @param log Ignite logger.
-         * @param readLockThreshold ReadLock threshold timeout.
-         *
-         */
-        public ReentrantReadWriteLockTracer(ReentrantReadWriteLock delegate, IgniteLogger log, long readLockThreshold) {
-            this.log = log;
-
-            readLock = new ReadLockTracer(delegate, log, readLockThreshold);
-
-            writeLock = new WriteLockTracer(delegate);
-
-            this.readLockThreshold = readLockThreshold;
-        }
-
-        /** {@inheritDoc} */
-        @Override public ReadLock readLock() {
-            return readLock;
-        }
-
-        /** {@inheritDoc} */
-        @Override public WriteLock writeLock() {
-            return writeLock;
-        }
-
-        /** */
-        public long lockWaitThreshold() {
-            return readLockThreshold;
-        }
-    }
-
-    /** */
-    private static class ReadLockTracer extends ReentrantReadWriteLock.ReadLock {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Delegate. */
-        private final ReentrantReadWriteLock.ReadLock delegate;
-
-        /** */
-        private static final ThreadLocal<T2<Integer, Long>> READ_LOCK_HOLDER_TS =
-            ThreadLocal.withInitial(() -> new T2<>(0, 0L));
-
-        /** */
-        private IgniteLogger log;
-
-        /** */
-        private long readLockThreshold;
-
-        /** */
-        public ReadLockTracer(ReentrantReadWriteLock lock, IgniteLogger log, long readLockThreshold) {
-            super(lock);
-
-            delegate = lock.readLock();
-
-            this.log = log;
-
-            this.readLockThreshold = readLockThreshold;
-        }
-
-        /** */
-        private void inc() {
-            T2<Integer, Long> val = READ_LOCK_HOLDER_TS.get();
-
-            int cntr = val.get1();
-
-            if (cntr == 0)
-                val.set2(U.currentTimeMillis());
-
-            val.set1(++cntr);
-
-            READ_LOCK_HOLDER_TS.set(val);
-        }
-
-        /** */
-        private void dec() {
-            T2<Integer, Long> val = READ_LOCK_HOLDER_TS.get();
-
-            int cntr = val.get1();
-
-            if (--cntr == 0) {
-                long timeout = U.currentTimeMillis() - val.get2();
-
-                if (timeout > readLockThreshold) {
-                    GridStringBuilder sb = new GridStringBuilder();
-
-                    sb.a(LOCK_HOLD_MESSAGE + timeout + " ms." + nl());
-
-                    U.printStackTrace(Thread.currentThread().getId(), sb);
-
-                    U.warn(log, sb.toString());
-                }
-            }
-
-            val.set1(cntr);
-
-            READ_LOCK_HOLDER_TS.set(val);
-        }
-
-        /** {@inheritDoc} */
-        @SuppressWarnings("LockAcquiredButNotSafelyReleased")
-        @Override public void lock() {
-            delegate.lock();
-
-            inc();
-        }
-
-        /** {@inheritDoc} */
-        @SuppressWarnings("LockAcquiredButNotSafelyReleased")
-        @Override public void lockInterruptibly() throws InterruptedException {
-            delegate.lockInterruptibly();
-
-            inc();
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean tryLock() {
-            if (delegate.tryLock()) {
-                inc();
-
-                return true;
-            }
-            else
-                return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean tryLock(long time, @NotNull TimeUnit unit) throws InterruptedException {
-            if (delegate.tryLock(time, unit)) {
-                inc();
-
-                return true;
-            }
-            else
-                return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void unlock() {
-            delegate.unlock();
-
-            dec();
-        }
-    }
-
-    /** */
-    private static class WriteLockTracer extends ReentrantReadWriteLock.WriteLock {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** */
-        public WriteLockTracer(ReentrantReadWriteLock lock) {
-            super(lock);
-        }
-    }
-
     /**
      * @param key Cipher Key.
      * @param encMode Enc mode see {@link Cipher#ENCRYPT_MODE}, {@link Cipher#DECRYPT_MODE}, etc.
@@ -12601,7 +12450,7 @@ public abstract class IgniteUtils {
         /** Return collection of local network interfaces. */
         Enumeration<NetworkInterface> getInterfaces() throws SocketException;
     }
-    
+
     /**
      * @param ctx Kernel context.
      * @param depInfo Deployment info.
@@ -12612,5 +12461,33 @@ public abstract class IgniteUtils {
         GridDeployment dep = ctx.deploy().getDeployment(clsName);
 
         return dep == null || dep.classLoaderId().equals(depInfo.classLoaderId());
+    }
+
+    /**
+     * Getting the total size of uncompressed data in zip.
+     *
+     * @param zip Zip file.
+     * @return Total uncompressed size.
+     * @throws IOException If failed.
+     */
+    public static long uncompressedSize(File zip) throws IOException {
+        try (ZipFile zipFile = new ZipFile(zip)) {
+            long size = 0;
+
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+
+            while (entries.hasMoreElements())
+                size += entries.nextElement().getSize();
+
+            return size;
+        }
+    }
+
+    /**
+     * @param enabled Parameter.
+     * @return Returns "enabled" or "disabled" string.
+     */
+    public static String enabledString(boolean enabled) {
+        return enabled ? "enabled" : "disabled";
     }
 }

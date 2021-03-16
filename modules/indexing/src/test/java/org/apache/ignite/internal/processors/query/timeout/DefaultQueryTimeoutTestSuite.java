@@ -26,9 +26,6 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     DefaultQueryTimeoutConfigurationTest.class,
     DefaultQueryTimeoutThickJavaTest.class,
-    DefaultQueryTimeoutThickJavaLazyTest.class,
-    DefaultQueryTimeoutThickJavaUpdateTest.class,
-    DefaultQueryTimeoutThickJavaUpdateLazyTest.class,
     DefaultQueryTimeoutThinJavaTest.class,
     DefaultQueryTimeoutThinJdbcTest.class
 })

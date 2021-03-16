@@ -30,6 +30,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
@@ -121,6 +122,10 @@ public class ConnectionClientPool {
 
     /** Scheduled executor service which closed the socket if handshake timeout is out. **/
     private final ScheduledExecutorService handshakeTimeoutExecutorService;
+
+    /** Enable forcible node kill. */
+    private boolean forcibleNodeKillEnabled = IgniteSystemProperties
+        .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
 
     /**
      * @param cfg Config.
@@ -379,27 +384,44 @@ public class ConnectionClientPool {
 
             fut = triggerFut;
 
-            try {
-                connRequestor.request(node, connIdx);
+            if (nodeGetter.apply(node.id()) != null) {
+                try {
+                    connRequestor.request(node, connIdx);
 
-                long failTimeout = cfg.failureDetectionTimeoutEnabled()
-                    ? cfg.failureDetectionTimeout()
-                    : cfg.connectionTimeout();
+                    long failTimeout = cfg.failureDetectionTimeoutEnabled()
+                        ? cfg.failureDetectionTimeout()
+                        : cfg.connectionTimeout();
 
-                fut.get(failTimeout);
+                    fut.get(failTimeout);
+                }
+                catch (Throwable triggerException) {
+                    if (forcibleNodeKillEnabled
+                        && node.isClient()
+                        && triggerException instanceof IgniteFutureTimeoutCheckedException
+                    ) {
+                        CommunicationTcpUtils.failNode(node, tcpCommSpi.getSpiContext(), triggerException, log);
+                    }
+
+                    IgniteSpiException spiE = new IgniteSpiException(e);
+
+                    spiE.addSuppressed(triggerException);
+
+                    String msg = "Failed to wait for establishing inverse communication connection from node " + node;
+
+                    log.warning(msg, spiE);
+
+                    fut.onDone(spiE);
+
+                    throw spiE;
+                }
             }
-            catch (Throwable triggerException) {
-                IgniteSpiException spiE = new IgniteSpiException(e);
+            else {
+                ClusterTopologyCheckedException topE = new ClusterTopologyCheckedException("Failed to send message " +
+                    "(node left topology): " + node);
 
-                spiE.addSuppressed(triggerException);
+                fut.onDone(topE);
 
-                String msg = "Failed to wait for establishing inverse communication connection from node " + node;
-
-                log.warning(msg, spiE);
-
-                fut.onDone(spiE);
-
-                throw spiE;
+                throw topE;
             }
         }
         else {
@@ -715,6 +737,19 @@ public class ConnectionClientPool {
                 }
             }
         }
+
+        ClusterTopologyCheckedException topE = new ClusterTopologyCheckedException("Failed to wait for " +
+            "establishing inverse connection (node left topology): " + nodeId);
+
+        clientFuts.entrySet().stream()
+            .filter(e -> e.getKey().nodeId().equals(nodeId))
+            .forEach(e -> {
+                if (log.isDebugEnabled())
+                    log.debug("Cancelling inverse connection request (node left topology): " + e.getKey());
+
+                e.getValue().onDone(topE);
+            }
+        );
     }
 
     /**

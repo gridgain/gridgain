@@ -67,9 +67,15 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     /** Default preload resend timeout. */
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
 
+    /** */
+    public static final String PRELOADER_FORCE_CLEAR = "PRELOADER_FORCE_CLEAR";
+
     /** Disable rebalancing cancellation optimization. */
     private final boolean disableRebalancingCancellationOptimization =
         IgniteSystemProperties.getBoolean(IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION);
+
+    /** */
+    private final boolean forceClear = IgniteSystemProperties.getBoolean(PRELOADER_FORCE_CLEAR);
 
     /** */
     private GridDhtPartitionTopology top;
@@ -195,7 +201,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         GridDhtPartitionTopology top = grp.topology();
 
         if (!grp.rebalanceEnabled())
-            return new GridDhtPreloaderAssignments(exchId, top.readyTopologyVersion(), false);
+            return new GridDhtPreloaderAssignments(exchId, top.readyTopologyVersion(), false, false);
 
         int partitions = grp.affinity().partitions();
 
@@ -209,7 +215,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             ", topVer=" + top.readyTopologyVersion() + ']';
 
         GridDhtPreloaderAssignments assignments = new GridDhtPreloaderAssignments(exchId, topVer,
-            exchFut != null && exchFut.affinityReassign());
+            exchFut != null && exchFut.affinityReassign(), forceClear);
 
         AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
 

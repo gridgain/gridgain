@@ -29,6 +29,11 @@ namespace Apache.Ignite.Core.Tests
     /// </summary>
     public class ConsoleRedirectTest
     {
+#if !NETCOREAPP
+        /** */
+        private const string PrintlnTask = "org.apache.ignite.platform.PlatformPrintlnTask";
+#endif
+
         /** */
         private StringBuilder _outSb;
 
@@ -81,7 +86,7 @@ namespace Apache.Ignite.Core.Tests
             {
                 Logger = null
             };
-            
+
             using (Ignition.Start(cfg))
             {
                 Assert.AreEqual(1, Regex.Matches(_outSb.ToString(), "ver=1, locNode=[a-fA-F0-9]{8,8}, servers=1, clients=0,").Count);
@@ -136,7 +141,7 @@ namespace Apache.Ignite.Core.Tests
                 {
                     Logger = null
                 };
-                
+
                 Assert.IsTrue(cfg.RedirectJavaConsoleOutput);
 
                 cfg.RedirectJavaConsoleOutput = false;
@@ -166,34 +171,30 @@ namespace Apache.Ignite.Core.Tests
             {
                 Logger = null
             };
-            
+
             using (var ignite = Ignition.Start(cfg))
             {
-                Assert.AreEqual(1, Regex.Matches(_outSb.ToString(), "ver=1, locNode=[a-fA-F0-9]{8,8}, servers=1, clients=0,").Count);
+                ignite.GetCompute().ExecuteJavaTask<string>(PrintlnTask, "[Primary Domain]");
+                StringAssert.Contains("[Primary Domain]", _outSb.ToString());
 
                 // Run twice
-                RunInNewDomain();
-                RunInNewDomain();
+                RunInNewDomain("[Domain 2]");
+                RunInNewDomain("[Domain 3]");
 
+                // Check topology version (1 running + 2 started + 2 stopped = 5)
                 Assert.AreEqual(5, ignite.GetCluster().TopologyVersion);
 
+                // Check output from other domains
                 var outTxt = _outSb.ToString();
-
-                // Check output from another domain (2 started + 2 stopped = 4)
-                Assert.AreEqual(4, Regex.Matches(outTxt, ">>> Ignite instance name: newDomainGrid").Count);
-
-                // Both domains produce the topology snapshot on node enter
-                Assert.AreEqual(2, Regex.Matches(outTxt, "ver=2, locNode=[a-fA-F0-9]{8,8}, servers=2, clients=0,").Count);
-                Assert.AreEqual(1, Regex.Matches(outTxt, "ver=3, locNode=[a-fA-F0-9]{8,8}, servers=1, clients=0,").Count);
-                Assert.AreEqual(2, Regex.Matches(outTxt, "ver=4, locNode=[a-fA-F0-9]{8,8}, servers=2, clients=0,").Count);
-                Assert.AreEqual(1, Regex.Matches(outTxt, "ver=5, locNode=[a-fA-F0-9]{8,8}, servers=1, clients=0,").Count);
+                StringAssert.Contains("[Domain 2]", outTxt);
+                StringAssert.Contains("[Domain 3]", outTxt);
             }
         }
 
         /// <summary>
         /// Runs the Ignite in a new domain.
         /// </summary>
-        private static void RunInNewDomain()
+        private static void RunInNewDomain(string arg)
         {
             AppDomain childDomain = null;
 
@@ -213,7 +214,7 @@ namespace Apache.Ignite.Core.Tests
                 var runner = (IIgniteRunner)childDomain.CreateInstanceAndUnwrap(
                     type.Assembly.FullName, type.FullName);
 
-                runner.Run();
+                runner.Run(arg);
             }
             finally
             {
@@ -224,18 +225,20 @@ namespace Apache.Ignite.Core.Tests
 
         private interface IIgniteRunner
         {
-            void Run();
+            void Run(string arg);
         }
 
         private class IgniteRunner : MarshalByRefObject, IIgniteRunner
         {
-            public void Run()
+            public void Run(string arg)
             {
-                Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
+                var ignite = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
                 {
                     IgniteInstanceName = "newDomainGrid",
                     Logger = null
                 });
+
+                ignite.GetCompute().ExecuteJavaTask<string>(PrintlnTask, arg);
 
                 // Will be stopped automatically on domain unload.
             }

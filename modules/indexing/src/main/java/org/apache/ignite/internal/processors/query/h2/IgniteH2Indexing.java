@@ -64,6 +64,7 @@ import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
@@ -81,7 +82,9 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.mvcc.StaticMvccQueryTracker;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
-import org.apache.ignite.internal.processors.cache.persistence.defragmentation.GridQueryIndexingDefragmentation;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointTimeoutLock;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.LinkMap;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
@@ -173,6 +176,7 @@ import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridEmptyCloseableIterator;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -192,6 +196,7 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.api.AggregateFunction;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.JavaObjectSerializer;
@@ -521,7 +526,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 true,
                 null,
                 null,
-                null);
+                null,
+                false,
+                false,
+                false
+            );
 
             Throwable failReason = null;
             try {
@@ -741,7 +750,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             true,
             null,
             null,
-            qryInitiatorId);
+            qryInitiatorId,
+            false,
+            false,
+            false
+        );
 
         Exception failReason = null;
 
@@ -978,6 +991,27 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                 H2Utils.session(conn).queryDescription(null);
             }
+        }
+    }
+
+    /** */
+    public H2MemoryTracker memTracker(H2QueryInfo qryInfo) {
+        assert qryInfo.runningQueryId() != null;
+
+        GridRunningQueryInfo runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
+
+        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() != null
+            && !(runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker))
+            return null;
+
+        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
+            return ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
+        else {
+            assert false : "Cannot find running query info to get memory tracker [qryInfo=" + qryInfo + ']';
+
+            log.warning("Cannot find running query info to get memory tracker [qryInfo=" + qryInfo + ']');
+
+            return null;
         }
     }
 
@@ -1619,7 +1653,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryDesc.local(),
             memoryMgr.createQueryMemoryTracker(qryParams.maxMemory()),
             cancel,
-            qryDesc.queryInitiatorId()
+            qryDesc.queryInitiatorId(),
+            qryDesc.enforceJoinOrder(),
+            qryParams.lazy(),
+            qryDesc.distributedJoins()
         );
     }
 
@@ -2505,6 +2542,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         memoryMgr.close();
 
+        statsMgr.stop();
+
         if (log.isDebugEnabled())
             log.debug("Cache query index stopped.");
     }
@@ -2546,7 +2585,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean rmvIdx) {
+    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean destroy) {
         rowCache.onCacheUnregistered(cacheInfo);
 
         String cacheName = cacheInfo.name();
@@ -2554,7 +2593,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         partReservationMgr.onCacheStop(cacheName);
 
         // Drop schema (needs to be called after callback to DML processor because the latter depends on schema).
-        schemaMgr.onCacheDestroyed(cacheName, rmvIdx);
+        schemaMgr.onCacheDestroyed(cacheName, destroy);
 
         // Unregister connection.
         connMgr.onCacheDestroyed();
@@ -2653,7 +2692,20 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     /** {@inheritDoc} */
     @Override public IndexingQueryFilter backupFilter(@Nullable final AffinityTopologyVersion topVer,
         @Nullable final int[] parts) {
-        return new IndexingQueryFilterImpl(ctx, topVer, parts);
+        return backupFilter(topVer, parts, false);
+    }
+
+    /**
+     * Returns backup filter.
+     *
+     * @param topVer Topology version.
+     * @param parts Partitions.
+     * @param treatReplicatedAsPartitioned true if need to treat replicated as partitioned (for outer joins).
+     * @return Backup filter.
+     */
+    public IndexingQueryFilter backupFilter(@Nullable final AffinityTopologyVersion topVer, @Nullable final int[] parts,
+            boolean treatReplicatedAsPartitioned) {
+        return new IndexingQueryFilterImpl(ctx, topVer, parts, treatReplicatedAsPartitioned);
     }
 
     /**
@@ -3388,7 +3440,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public GridQueryIndexingDefragmentation defragmentator() {
-        return defragmentation;
+    @Override public void defragment(
+        CacheGroupContext grpCtx,
+        CacheGroupContext newCtx,
+        PageMemoryEx partPageMem,
+        IntMap<LinkMap> mappingByPart,
+        CheckpointTimeoutLock cpLock,
+        Runnable cancellationChecker,
+        IgniteThreadPoolExecutor defragmentationThreadPool
+    ) throws IgniteCheckedException {
+        defragmentation.defragment(grpCtx, newCtx, partPageMem, mappingByPart, cpLock, cancellationChecker, log, defragmentationThreadPool);
     }
 }

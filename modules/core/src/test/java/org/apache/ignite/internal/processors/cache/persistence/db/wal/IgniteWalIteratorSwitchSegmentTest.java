@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import java.io.File;
 import java.nio.channels.Channel;
-import java.nio.file.Paths;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -74,30 +73,30 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
     /** Segment file size. */
     private static final int SEGMENT_SIZE = 1024 * 1024;
 
+    /** Node dir. */
+    private static final String NODE_DIR = "NODE";
+
     /** WAL segment file sub directory. */
-    private static final String WORK_SUB_DIR = "/NODE/wal";
+    private static final String WORK_SUB_DIR = String.join(File.separator, "", NODE_DIR, "wal");
 
     /** WAL archive segment file sub directory. */
-    private static final String ARCHIVE_SUB_DIR = "/NODE/walArchive";
+    private static final String ARCHIVE_SUB_DIR = String.join(File.separator, "", NODE_DIR, "walArchive");
 
     /** Serializer versions for check. */
-    private int[] checkSerializerVers = new int[] {
-        1,
-        2
-    };
+    private final int[] checkSerializerVers = new int[] {1, 2};
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        U.delete(Paths.get(U.defaultWorkDirectory()));
+        deleteNodeDir();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        U.delete(Paths.get(U.defaultWorkDirectory()));
+        deleteNodeDir();
     }
 
     /**
@@ -109,6 +108,40 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
     public void testCheckSerializer() throws Exception {
         for (int serVer : checkSerializerVers) {
             checkInvariantSwitchSegmentSize(serVer);
+        }
+    }
+
+    /**
+     * Test for check invariant, size of SWITCH_SEGMENT_RECORD should be 1 byte.
+     *
+     * @throws Exception If some thing failed.
+     */
+    @Test
+    public void testInvariantSwitchSegment() throws Exception {
+        for (int serVer : checkSerializerVers) {
+            try {
+                checkInvariantSwitchSegment(serVer);
+            }
+            finally {
+                deleteNodeDir();
+            }
+        }
+    }
+
+    /**
+     * Test for check switch segment from work dir to archive dir during iteration.
+     *
+     * @throws Exception If some thing failed.
+     */
+    @Test
+    public void testSwitchReadingSegmentFromWorkToArchive() throws Exception {
+        for (int serVer : checkSerializerVers) {
+            try {
+                checkSwitchReadingSegmentDuringIteration(serVer);
+            }
+            finally {
+                deleteNodeDir();
+            }
         }
     }
 
@@ -157,40 +190,6 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
         int recordSize = serializer.size(switchSegmentRecord);
 
         Assert.assertEquals(1, recordSize);
-    }
-
-    /**
-     * Test for check invariant, size of SWITCH_SEGMENT_RECORD should be 1 byte.
-     *
-     * @throws Exception If some thing failed.
-     */
-    @Test
-    public void testInvariantSwitchSegment() throws Exception {
-        for (int serVer : checkSerializerVers) {
-            try {
-                checkInvariantSwitchSegment(serVer);
-            }
-            finally {
-                U.delete(Paths.get(U.defaultWorkDirectory()));
-            }
-        }
-    }
-
-    /**
-     * Test for check switch segment from work dir to archive dir during iteration.
-     *
-     * @throws Exception If some thing failed.
-     */
-    @Test
-    public void testSwitchReadingSegmentFromWorkToArchive() throws Exception {
-        for (int serVer : checkSerializerVers) {
-            try {
-                checkSwitchReadingSegmentDuringIteration(serVer);
-            }
-            finally {
-                U.delete(Paths.get(U.defaultWorkDirectory()));
-            }
-        }
     }
 
     /**
@@ -268,8 +267,10 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
 
         walMgr.flush(null, true);
 
+        SegmentAware segmentAware = GridTestUtils.getFieldValue(walMgr, "segmentAware");
+
         // Await archiver move segment to WAL archive.
-        Thread.sleep(5000);
+        waitForCondition(() -> segmentAware.lastArchivedAbsoluteIndex() == 0, 5_000);
 
         // If switchSegmentRecordSize more that 1, it mean that invariant is broke.
         // Filling tail some garbage. Simulate tail garbage on rotate segment in WAL work directory.
@@ -298,7 +299,7 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
             seg0.close();
         }
 
-        int expectedRecords = recordsToWrite;
+        int expRecords = recordsToWrite;
         int actualRecords = 0;
 
         // Check that switch segment works as expected and all record is reachable.
@@ -313,7 +314,7 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
             }
         }
 
-        Assert.assertEquals("Not all records read during iteration.", expectedRecords, actualRecords);
+        Assert.assertEquals("Not all records read during iteration.", expRecords, actualRecords);
     }
 
     /**
@@ -338,75 +339,72 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
 
         SegmentAware segmentAware = GridTestUtils.getFieldValue(walMgr, "segmentAware");
 
-        //guard from archivation before iterator would be created.
-        segmentAware.checkCanReadArchiveOrReserveWorkSegment(0);
+        // Guard from archiving before iterator would be created.
+        assertTrue(segmentAware.lock(0));
 
         for (int i = 0; i < recordsToWrite; i++)
             walMgr.log(new MetastoreDataRecord(rec.key(), rec.value()));
 
         walMgr.flush(null, true);
 
-        int expectedRecords = recordsToWrite;
         AtomicInteger actualRecords = new AtomicInteger(0);
 
         AtomicReference<String> startedSegmentPath = new AtomicReference<>();
         AtomicReference<String> finishedSegmentPath = new AtomicReference<>();
 
-        CountDownLatch startedIteratorLatch = new CountDownLatch(1);
+        CountDownLatch startedIterLatch = new CountDownLatch(1);
         CountDownLatch finishedArchivedLatch = new CountDownLatch(1);
 
-        IgniteInternalFuture<Object> future = GridTestUtils.runAsync(
-            () -> {
-                // Check that switch segment works as expected and all record is reachable.
-                try (WALIterator it = walMgr.replay(null)) {
-                    Object handle = getFieldValueHierarchy(it, "currWalSegment");
-                    FileInput in = getFieldValueHierarchy(handle, "in");
-                    Object delegate = getFieldValueHierarchy(in.io(), "delegate");
-                    Channel ch = getFieldValueHierarchy(delegate, "ch");
-                    String path = getFieldValueHierarchy(ch, "path");
+        IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
+            // Check that switch segment works as expected and all record is reachable.
+            try (WALIterator it = walMgr.replay(null)) {
+                Object handle = getFieldValueHierarchy(it, "currWalSegment");
+                FileInput in = getFieldValueHierarchy(handle, "in");
+                Object delegate = getFieldValueHierarchy(in.io(), "delegate");
+                Channel ch = getFieldValueHierarchy(delegate, "ch");
+                String path = getFieldValueHierarchy(ch, "path");
 
-                    startedSegmentPath.set(path);
+                startedSegmentPath.set(path);
 
-                    startedIteratorLatch.countDown();
+                startedIterLatch.countDown();
 
-                    while (it.hasNext()) {
-                        IgniteBiTuple<WALPointer, WALRecord> tup = it.next();
+                while (it.hasNext()) {
+                    IgniteBiTuple<WALPointer, WALRecord> tup = it.next();
 
-                        WALRecord rec0 = tup.get2();
+                    WALRecord rec0 = tup.get2();
 
-                        if (rec0.type() == METASTORE_DATA_RECORD)
-                            actualRecords.incrementAndGet();
+                    if (rec0.type() == METASTORE_DATA_RECORD)
+                        actualRecords.incrementAndGet();
 
-                        finishedArchivedLatch.await();
-                    }
-
-                    in = getFieldValueHierarchy(handle, "in");
-                    delegate = getFieldValueHierarchy(in.io(), "delegate");
-                    ch = getFieldValueHierarchy(delegate, "ch");
-                    path = getFieldValueHierarchy(ch, "path");
-
-                    finishedSegmentPath.set(path);
+                    finishedArchivedLatch.await();
                 }
 
-                return null;
+                in = getFieldValueHierarchy(handle, "in");
+                delegate = getFieldValueHierarchy(in.io(), "delegate");
+                ch = getFieldValueHierarchy(delegate, "ch");
+                path = getFieldValueHierarchy(ch, "path");
+
+                finishedSegmentPath.set(path);
             }
-        );
 
-        startedIteratorLatch.await();
+            return null;
+        });
 
-        segmentAware.releaseWorkSegment(0);
+        startedIterLatch.await();
+
+        segmentAware.unlock(0);
 
         waitForCondition(() -> segmentAware.lastArchivedAbsoluteIndex() == 0, 5000);
 
         finishedArchivedLatch.countDown();
 
-        future.get();
+        fut.get();
 
         //should started iteration from work directory but finish from archive directory.
-        assertEquals(workDir + WORK_SUB_DIR + "/0000000000000000.wal", startedSegmentPath.get());
-        assertEquals(workDir + ARCHIVE_SUB_DIR + "/0000000000000000.wal", finishedSegmentPath.get());
+        assertEquals(workDir + WORK_SUB_DIR + File.separator + "0000000000000000.wal", startedSegmentPath.get());
+        assertEquals(workDir + ARCHIVE_SUB_DIR + File.separator + "0000000000000000.wal", finishedSegmentPath.get());
 
-        Assert.assertEquals("Not all records read during iteration.", expectedRecords, actualRecords.get());
+        Assert.assertEquals("Not all records read during iteration.", recordsToWrite, actualRecords.get());
     }
 
     /***
@@ -489,5 +487,12 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
             .createSerializer(walMgr.serializerVersion());
 
         return new T2<>(walMgr, recordSerializer);
+    }
+
+    /**
+     * Delete node dir.
+     */
+    private void deleteNodeDir() throws Exception {
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), NODE_DIR, false));
     }
 }

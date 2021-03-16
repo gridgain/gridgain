@@ -289,7 +289,6 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SHUTDOWN_POLI
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SPI_CLASS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_USER_NAME;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_VALIDATE_CACHE_REQUESTS;
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.BUILD_TSTAMP_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
@@ -1165,6 +1164,18 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             startProcessor(mntcProcessor);
 
             if (mntcProcessor.isMaintenanceMode()) {
+                if (log.isInfoEnabled()) {
+                    log.info(
+                        "Node is being started in maintenance mode. " +
+                        "Starting IsolatedDiscoverySpi instead of configured discovery SPI."
+                    );
+                }
+
+                cfg.setClusterStateOnStart(ClusterState.INACTIVE);
+
+                if (log.isInfoEnabled())
+                    log.info("Overriding 'clusterStateOnStart' configuration to 'INACTIVE'.");
+
                 ctx.config().setDiscoverySpi(new IsolatedDiscoverySpi());
 
                 discoMgr = new GridDiscoveryManager(ctx);
@@ -1788,8 +1799,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         add(ATTR_CLIENT_MODE, cfg.isClientMode());
 
         add(ATTR_CONSISTENCY_CHECK_SKIPPED, getBoolean(IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK));
-
-        add(ATTR_VALIDATE_CACHE_REQUESTS, Boolean.TRUE);
 
         if (cfg.getConsistentId() != null)
             add(ATTR_NODE_CONSISTENT_ID, cfg.getConsistentId());

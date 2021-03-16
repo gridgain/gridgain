@@ -23,6 +23,9 @@ import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.UUID;
 
+/**
+ * Common parts to test statistics collection for different types.
+ */
 public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest {
     /** Types to test. */
     protected static final String TYPES[] = new String[]{"BOOLEAN", "INT", "TINYINT", "SMALLINT","BIGINT",
@@ -53,7 +56,8 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
         Calendar cal = Calendar.getInstance();
         try {
             cal.setTime(SDF.parse(START_DATE));
-        } catch (ParseException e) {
+        }
+        catch (ParseException e) {
             // No-op.
         }
         TIMESTART = cal.getTimeInMillis();
@@ -72,7 +76,7 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        runSql("DROP TABLE IF EXISTS dtypes");
+        sql("DROP TABLE IF EXISTS dtypes");
 
         StringBuilder create = new StringBuilder("CREATE TABLE dtypes (ID INT PRIMARY KEY, col_index int, col_no_index int");
         for (String type : TYPES)
@@ -80,17 +84,17 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
 
         create.append(")");
 
-        runSql(create.toString());
+        sql(create.toString());
 
-        runSql("CREATE INDEX dtypes_col_index ON dtypes(col_index)");
+        sql("CREATE INDEX dtypes_col_index ON dtypes(col_index)");
         for (String type : TYPES)
-            runSql(String.format("CREATE INDEX dtypes_%s ON dtypes(col_%s)", type, type));
+            sql(String.format("CREATE INDEX dtypes_%s ON dtypes(col_%s)", type, type));
 
         for (int i = 1; i < SMALL_SIZE; i++)
-            runSql(insert(i));
+            sql(insert(i));
 
         for (int i = 0; i > -SMALL_SIZE / 2; i--)
-            runSql(insertNulls(i));
+            sql(insertNulls(i));
 
         updateStatistics("dtypes");
     }
@@ -99,61 +103,61 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
      * Generate unique value by type and counter.
      *
      * @param type Type.
-     * @param counter Counter.
+     * @param cntr Counter.
      * @return Generated value.
      */
-    private String getVal(String type, long counter) {
+    private String getVal(String type, long cntr) {
 
         switch (type) {
             case "BOOLEAN":
-                return ((counter & 1) == 0) ? "False" : "True";
+                return ((cntr & 1) == 0) ? "False" : "True";
 
             case "INT":
-                return String.valueOf(counter % 2147483648L);
+                return String.valueOf(cntr % 2147483648L);
 
             case "TINYINT":
-                return String.valueOf(counter % 128);
+                return String.valueOf(cntr % 128);
 
             case "SMALLINT":
-                return String.valueOf(counter % 32768);
+                return String.valueOf(cntr % 32768);
 
             case "BIGINT":
-                return String.valueOf(counter);
+                return String.valueOf(cntr);
 
             case "DECIMAL":
             case "DOUBLE":
             case "REAL":
-                return String.valueOf((double)counter / 100);
+                return String.valueOf((double) cntr / 100);
 
             case "TIME":
                 Calendar timeCalendar = Calendar.getInstance();
                 timeCalendar.setTimeInMillis(TIMESTART);
-                timeCalendar.add(Calendar.SECOND, (int)counter);
+                timeCalendar.add(Calendar.SECOND, (int) cntr);
                 return "'" + TIME_FORMATTER.format(timeCalendar.getTime()) + "'";
 
             case "DATE":
                 Calendar dateCalendar = Calendar.getInstance();
                 dateCalendar.setTimeInMillis(TIMESTART);
-                dateCalendar.add(Calendar.DATE, (int)counter);
+                dateCalendar.add(Calendar.DATE, (int) cntr);
                 return "'" + DATE_FORMATTER.format(dateCalendar.getTime()) + "'";
 
             case "TIMESTAMP":
-                Calendar timestampCalendar = Calendar.getInstance();
-                timestampCalendar.setTimeInMillis(TIMESTART);
-                timestampCalendar.add(Calendar.SECOND, (int)counter);
-                return "'" + TIMESTAMP_FORMATTER.format(timestampCalendar.getTime()) + "'";
+                Calendar tsCalendar = Calendar.getInstance();
+                tsCalendar.setTimeInMillis(TIMESTART);
+                tsCalendar.add(Calendar.SECOND, (int) cntr);
+                return "'" + TIMESTAMP_FORMATTER.format(tsCalendar.getTime()) + "'";
 
             case "VARCHAR":
-                return "'varchar" + counter + "'";
+                return "'varchar" + cntr + "'";
 
             case "CHAR":
-                return "'" + (char)((int)'A' + counter % 26) + "'";
+                return "'" + (char)((int)'A' + cntr % 26) + "'";
 
             case "UUID":
-                return "'" + new UUID(0L, counter) + "'";
+                return "'" + new UUID(0L, cntr) + "'";
 
             case "BINARY":
-                return String.valueOf(counter);
+                return String.valueOf(cntr);
 
             case "GEOMETRY":
                 return "null";
@@ -166,34 +170,35 @@ public abstract class StatisticsTypesAbstractTest extends StatisticsAbstractTest
     /**
      * Generate insert SQL command by counter value.
      *
-     * @param counter Counter value to generate by.
+     * @param cntr Counter value to generate by.
      * @return Insert into dtypes command.
      */
-    private String insertNulls(long counter) {
-        return String.format("INSERT INTO dtypes(id) values (%d)", counter);
+    private String insertNulls(long cntr) {
+        return String.format("INSERT INTO dtypes(id) values (%d)", cntr);
     }
 
     /**
      * Build insert SQL command for single row by counter.
      *
-     * @param counter Counter.
+     * @param cntr Counter.
      * @return Insert SQL.
      */
-    private String insert(long counter) {
+    private String insert(long cntr) {
         StringBuilder insert = new StringBuilder("INSERT INTO dtypes(id, col_index, col_no_index");
 
-        for (int i = 0; i < TYPES.length; i++)
-            insert.append(", col_").append(TYPES[i]);
+        for (String type : TYPES)
+            insert.append(", col_").append(type);
 
         insert.append(") VALUES (")
-                .append(counter).append(", ")
-                .append(counter).append(", ")
-                .append(counter);
+                .append(cntr).append(", ")
+                .append(cntr).append(", ")
+                .append(cntr);
 
-        for (int i = 0; i < TYPES.length; i++)
-            insert.append(", ").append(getVal(TYPES[i], counter));
+        for (String type : TYPES)
+            insert.append(", ").append(getVal(type, cntr));
 
         insert.append(")");
+
         return insert.toString();
     }
 }

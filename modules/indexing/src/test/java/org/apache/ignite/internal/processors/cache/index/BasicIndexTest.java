@@ -22,6 +22,7 @@ import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,12 +42,14 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -329,6 +332,102 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         expect = Arrays.asList("F3", "F2");
 
         checkPkFldSequence(tblName, expect, idx);
+    }
+
+    /**
+     * Checks that fields in primary index have correct order after node restart.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCorrectPkFldsSequenceAfterRestart() throws Exception {
+        inlineSize = 10;
+
+        IgniteEx ig0 = startGrid(getConfiguration("0").setDataStorageConfiguration(
+            new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration().setPersistenceEnabled(true)
+            )
+        ));
+
+        ig0.cluster().state(ClusterState.ACTIVE);
+
+        {
+            GridQueryProcessor qryProc = ig0.context().query();
+
+            IgniteH2Indexing idx = (IgniteH2Indexing)(ig0).context().query().getIndexing();
+
+            String tblName = "T1";
+
+            qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+                "CONSTRAINT PK PRIMARY KEY (F2, F1))"), true).getAll();
+
+            List<String> expect = Arrays.asList("F2", "F1");
+
+            checkPkFldSequence(tblName, expect, idx);
+        }
+
+        stopAllGrids();
+
+        ig0 = startGrid(getConfiguration("0").setDataStorageConfiguration(
+            new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration().setPersistenceEnabled(true)
+            )
+        ));
+
+        ig0.cluster().state(ClusterState.ACTIVE);
+
+        {
+            IgniteH2Indexing idx = (IgniteH2Indexing)(ig0).context().query().getIndexing();
+
+            String tblName = "T1";
+
+            List<String> expect = Arrays.asList("F2", "F1");
+
+            checkPkFldSequence(tblName, expect, idx);
+        }
+    }
+
+    /**
+     * Checks that fields in primary index have incorrect order
+     * if grid has a node that doesn't support this feature.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPkFldsSequenceFeatureUnsupported() throws Exception {
+        inlineSize = 10;
+
+        List<IgniteEx> nodes = new ArrayList<>();
+
+        nodes.add(startGrid(0));
+
+        String prev = System.getProperty(SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED);
+
+        try {
+            System.setProperty(SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED, "true");
+
+            nodes.add(startGrid(1));
+        }
+        finally {
+            if (prev == null)
+                System.clearProperty(SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED);
+            else
+                System.setProperty(SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED, prev);
+        }
+
+        int i = 0;
+        for (IgniteEx ig : nodes) {
+            GridQueryProcessor qryProc = ig.context().query();
+
+            IgniteH2Indexing idx = (IgniteH2Indexing)(ig).context().query().getIndexing();
+
+            String tblName = "T" + i++;
+
+            qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+                "CONSTRAINT PK PRIMARY KEY (F2, F1))"), true).getAll();
+
+            checkPkFldSequence(tblName, Arrays.asList("F1", "F2"), idx);
+        }
     }
 
     /**
@@ -1629,6 +1728,21 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }, CacheException.class, null);
 
         assertFalse(grid().context().isStopping());
+    }
+
+    /** */
+    @Test
+    public void testOpenRangePredicateOnCompoundPk() throws Exception {
+        inlineSize = 10;
+
+        startGrid();
+
+        sql("create table test (id1 int, id2 int, val int, constraint pk primary key (id1, id2))");
+
+        for (int i = 1; i <= 5; i++)
+            sql("insert into test (id1, id2, val) values (?, ?, ?)", 0, i, i);
+
+        assertEquals(5, sql("select * from test where id1 = 0 and id2 > 0").getAll().size());
     }
 
     /**

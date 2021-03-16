@@ -29,10 +29,10 @@ import org.junit.Test;
  */
 public class ClientQueryQuotaTest extends DiskSpillingAbstractTest {
     /** */
-    private static final String QUERY_512_TO_1024 = "SELECT DISTINCT id FROM person WHERE id < 8";
+    private static final String QUERY_512_TO_1024 = "SELECT DISTINCT id FROM person WHERE id < 5";
 
     /** */
-    private static final String QUERY_1024_TO_2048 = "SELECT DISTINCT id FROM person WHERE id < 16";
+    private static final String QUERY_1024_TO_2048 = "SELECT DISTINCT id FROM person WHERE id < 10";
 
     /** */
     private boolean client;

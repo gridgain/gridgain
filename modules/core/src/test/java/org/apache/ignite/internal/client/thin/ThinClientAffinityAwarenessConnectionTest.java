@@ -19,6 +19,7 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientConnectionException;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
@@ -72,14 +73,11 @@ public class ThinClientAffinityAwarenessConnectionTest extends ThinClientAbstrac
 
         awaitPartitionMapExchange();
 
-        try {
-            initClient(getClientConfiguration(4, 5, 6), 4, 5, 6);
-
-            fail("Must throw exception");
-        }
-        catch (ClientConnectionException err) {
-            assertTrue(err.getMessage().contains("Ignite cluster is unavailable"));
-        }
+        GridTestUtils.assertThrows(
+                null,
+                () -> initClient(getClientConfiguration(4, 5, 6), 4, 5, 6),
+                ClientConnectionException.class,
+                null);
     }
 
     /**

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.managers.encryption.EncryptionCacheKeyProvider;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
@@ -73,9 +74,10 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
      * Create an instance of V2 data serializer.
      *
      * @param cctx Cache shared context.
+     * @param keyProvider Encryption key provider.
      */
-    public RecordDataV2Serializer(GridCacheSharedContext cctx) {
-        super(cctx);
+    public RecordDataV2Serializer(GridCacheSharedContext cctx, EncryptionCacheKeyProvider keyProvider) {
+        super(cctx, keyProvider);
 
         this.txRecordSerializer = new TxRecordSerializer();
     }

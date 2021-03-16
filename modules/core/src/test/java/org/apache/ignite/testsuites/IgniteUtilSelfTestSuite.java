@@ -21,6 +21,7 @@ import org.apache.ignite.internal.pagemem.impl.PageIdUtilsSelfTest;
 import org.apache.ignite.internal.util.BasicRateLimiterTest;
 import org.apache.ignite.internal.util.GridArraysSelfTest;
 import org.apache.ignite.internal.util.GridConcurrentMultiPairQueueTest;
+import org.apache.ignite.internal.util.HostAndPortRangeTest;
 import org.apache.ignite.internal.util.IgniteDevOnlyLogTest;
 import org.apache.ignite.internal.util.IgniteExceptionRegistrySelfTest;
 import org.apache.ignite.internal.util.IgniteUtilsSelfTest;
@@ -34,6 +35,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringBuilderSelfTest;
 import org.apache.ignite.internal.util.tostring.IncludeSensitiveAtomicTest;
 import org.apache.ignite.internal.util.tostring.IncludeSensitiveTransactionalTest;
 import org.apache.ignite.internal.util.tostring.TransactionSensitiveDataTest;
+import org.apache.ignite.internal.util.tostring.SensitiveDataToStringTest;
 import org.apache.ignite.lang.GridByteArrayListSelfTest;
 import org.apache.ignite.spi.discovery.ClusterMetricsSelfTest;
 import org.apache.ignite.spi.discovery.ClusterMetricsSnapshotSerializeCompatibilityTest;
@@ -100,6 +102,7 @@ import org.junit.runners.Suite;
     IncludeSensitiveAtomicTest.class,
     IncludeSensitiveTransactionalTest.class,
     TransactionSensitiveDataTest.class,
+    SensitiveDataToStringTest.class,
 
     // Metrics.
     ClusterMetricsSnapshotSerializeSelfTest.class,
@@ -119,7 +122,9 @@ import org.junit.runners.Suite;
     //dbx
     PageIdUtilsSelfTest.class,
 
-    BasicRateLimiterTest.class
+    BasicRateLimiterTest.class,
+
+    HostAndPortRangeTest.class
 })
 public class IgniteUtilSelfTestSuite {
 }

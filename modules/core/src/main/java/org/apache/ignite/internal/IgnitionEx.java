@@ -2543,7 +2543,7 @@ public class IgnitionEx {
                     Class<?> log4jCls;
 
                     try {
-                        log4jCls = Class.forName("org.apache.ignite.logger.log4j.Log4JLogger");
+                        log4jCls = Class.forName("org.apache.ignite.logger.log4j2.Log4J2Logger");
                     }
                     catch (ClassNotFoundException | NoClassDefFoundError ignored) {
                         log4jCls = null;
@@ -2551,13 +2551,13 @@ public class IgnitionEx {
 
                     if (log4jCls != null) {
                         try {
-                            URL url = U.resolveIgniteUrl("config/ignite-log4j.xml");
+                            URL url = U.resolveIgniteUrl("config/ignite-log4j2.xml");
 
                             if (url == null) {
-                                File cfgFile = new File("config/ignite-log4j.xml");
+                                File cfgFile = new File("config/ignite-log4j2.xml");
 
                                 if (!cfgFile.exists())
-                                    cfgFile = new File("../config/ignite-log4j.xml");
+                                    cfgFile = new File("../config/ignite-log4j2.xml");
 
                                 if (cfgFile.exists()) {
                                     try {
@@ -2566,14 +2566,9 @@ public class IgnitionEx {
                                     catch (MalformedURLException ignore) {
                                         // No-op.
                                     }
+                                } else {
+                                    url = getClass().getClassLoader().getResource("META-INF/ignite-log4j2.xml");
                                 }
-                            }
-
-                            if (url != null) {
-                                boolean configured = (Boolean)log4jCls.getMethod("isConfigured").invoke(null);
-
-                                if (configured)
-                                    url = null;
                             }
 
                             if (url != null) {
@@ -2581,8 +2576,6 @@ public class IgnitionEx {
 
                                 cfgLog = (IgniteLogger)ctor.newInstance(url);
                             }
-                            else
-                                cfgLog = (IgniteLogger)log4jCls.newInstance();
                         }
                         catch (Exception e) {
                             log4jInitErr = e;
@@ -2602,12 +2595,13 @@ public class IgnitionEx {
                     ((LoggerNodeIdAware)cfgLog).setNodeId(nodeId);
 
                 if (log4jInitErr != null)
-                    U.warn(cfgLog, "Failed to initialize Log4JLogger (falling back to standard java logging): "
+                    U.warn(cfgLog, "Failed to initialize Log4J2Logger (falling back to standard java logging): "
                         + log4jInitErr.getCause());
 
                 return cfgLog;
             }
             catch (Exception e) {
+
                 throw new IgniteCheckedException("Failed to create logger.", e);
             }
         }

@@ -985,7 +985,13 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DATA_REGION_PAGE_LISTS.BUCKET_NUMBER.null.10",
                 sysSchemaName() + ".DATA_REGION_PAGE_LISTS.BUCKET_SIZE.null.19",
                 sysSchemaName() + ".DATA_REGION_PAGE_LISTS.STRIPES_COUNT.null.10",
-                sysSchemaName() + ".DATA_REGION_PAGE_LISTS.CACHED_PAGES_COUNT.null.10"
+                sysSchemaName() + ".DATA_REGION_PAGE_LISTS.CACHED_PAGES_COUNT.null.10",
+                sysSchemaName() + ".SQL_QUERIES_HISTORY.ENFORCE_JOIN_ORDER.null.1",
+                sysSchemaName() + ".SQL_QUERIES.LAZY.null.1",
+                sysSchemaName() + ".SQL_QUERIES_HISTORY.DISTRIBUTED_JOINS.null.1",
+                sysSchemaName() + ".SQL_QUERIES.DISTRIBUTED_JOINS.null.1",
+                sysSchemaName() + ".SQL_QUERIES_HISTORY.LAZY.null.1",
+                sysSchemaName() + ".SQL_QUERIES.ENFORCE_JOIN_ORDER.null.1"
             ));
 
             if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {

@@ -42,7 +42,12 @@ public abstract class AbstractPendingEntryInnerIO extends BPlusInnerIO<PendingRo
         assert row.link != 0;
         assert row.expireTime != 0;
 
-        PageUtils.putLong(pageAddr, off, row.expireTime);
+        long expireTime = row.expireTime;
+
+        if (row.tombstone)
+            expireTime |= 0x8000000000000000L;
+
+        PageUtils.putLong(pageAddr, off, expireTime);
         PageUtils.putLong(pageAddr, off + 8, row.link);
 
         if (storeCacheId()) {
@@ -78,7 +83,16 @@ public abstract class AbstractPendingEntryInnerIO extends BPlusInnerIO<PendingRo
     /** {@inheritDoc} */
     @Override public PendingRow getLookupRow(BPlusTree<PendingRow, ?> tree, long pageAddr, int idx)
         throws IgniteCheckedException {
-        return new PendingRow(getCacheId(pageAddr, idx), getExpireTime(pageAddr, idx), getLink(pageAddr, idx));
+        long expireTime = getExpireTime(pageAddr, idx);
+
+        boolean tombstone = false;
+
+        if ((expireTime & 0x8000000000000000L) != 0) {
+            tombstone = true;
+            expireTime &= ~0x8000000000000000L;
+        }
+
+        return new PendingRow(getCacheId(pageAddr, idx), tombstone, expireTime, getLink(pageAddr, idx));
     }
 
     /** {@inheritDoc} */
