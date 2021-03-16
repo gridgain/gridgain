@@ -32,10 +32,12 @@ import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2DefaultTableEngine;
 import org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.Driver;
 import org.gridgain.internal.h2.api.JavaObjectSerializer;
 import org.gridgain.internal.h2.engine.Database;
+import org.gridgain.internal.h2.engine.DbSettings;
 import org.gridgain.internal.h2.jdbc.JdbcConnection;
 import org.gridgain.internal.h2.store.DataHandler;
 

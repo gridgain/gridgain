@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.command.Prepared;
@@ -139,9 +140,9 @@ public class H2QueryInfo {
             .append(", schema=").append(schema);
 
         msgSb.append(", sql='")
-            .append(sql);
+            .append(H2Utils.sensitiveData(sql));
 
-        msgSb.append("', plan=").append(stmt.getPlanSQL(false));
+        msgSb.append("', plan=").append(H2Utils.sensitiveData(stmt.getPlanSQL(false)));
 
         printInfo(msgSb);
 
@@ -162,7 +163,7 @@ public class H2QueryInfo {
             + ", enforceJoinOrder=" + enforceJoinOrder
             + ", lazy=" + lazy
             + ", schema=" + schema
-            + ", sql='" + sql + "']";
+            + ", sql='" + H2Utils.sensitiveData(sql) + "']";
     }
 
     /**

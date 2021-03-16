@@ -84,6 +84,16 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         super.afterTest();
     }
 
+    /** */
+    protected Pattern longRunningPattern() {
+        return Pattern.compile(LONG_QUERY_EXEC_MSG);
+    }
+
+    /** */
+    protected Pattern hugeResultsPattern() {
+        return Pattern.compile("Query produced big result set");
+    }
+
     /**
      *
      */
@@ -139,7 +149,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         GridWorker checkWorker = GridTestUtils.getFieldValue(longRunningQueryManager(), "checkWorker");
 
         LogListener logLsnr = LogListener
-            .matches(LONG_QUERY_EXEC_MSG)
+            .matches(longRunningPattern())
             .andMatches(logStr -> currentThread().getName().startsWith(checkWorker.name()))
             .build();
 
@@ -158,7 +168,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         ListeningTestLogger testLog = testLog();
 
         LogListener lsnr = LogListener
-            .matches(Pattern.compile(LONG_QUERY_EXEC_MSG))
+            .matches(longRunningPattern())
             .build();
 
         testLog.registerListener(lsnr);
@@ -178,7 +188,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         ListeningTestLogger testLog = testLog();
 
         LogListener lsnr = LogListener
-            .matches(LONG_QUERY_EXEC_MSG)
+            .matches(longRunningPattern())
             .build();
 
         testLog.registerListener(lsnr);
@@ -194,7 +204,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         ListeningTestLogger testLog = testLog();
 
         LogListener lsnr = LogListener
-            .matches("Query produced big result set")
+            .matches(hugeResultsPattern())
             .build();
 
         testLog.registerListener(lsnr);

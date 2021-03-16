@@ -390,7 +390,7 @@ class MapQueryResult {
             try {
                 Prepared stmt = GridSqlQueryParser.prepared((PreparedStatement)rs.getStatement());
 
-                return stmt.getPlanSQL(false);
+                return H2Utils.sensitiveData(stmt.getPlanSQL(false));
             }
             catch (SQLException ex) {
                 log.error("Unexpected exception", ex);
