@@ -177,6 +177,8 @@ namespace ignite
             int errorInfoCharsLen,
             int64_t memPtr)
         {
+            (void) memPtr;
+
             SharedPointer<IgniteEnvironment>* env = static_cast<SharedPointer<IgniteEnvironment>*>(target);
 
             if (!env)
