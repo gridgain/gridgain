@@ -43,7 +43,7 @@ public class PendingRow {
     /** */
     public KeyCacheObject key;
 
-    /** A cache context the row belongs to. */
+    /** A cache deployment the row belongs to. */
     public IgniteUuid deploymentId;
 
     /**
