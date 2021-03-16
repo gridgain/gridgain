@@ -90,6 +90,9 @@
     <ClInclude Include="..\..\include\ignite\cache\cache_peek_mode.h">
       <Filter>Code\cache</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ignite\impl\logger.h">
+      <Filter>Code\impl</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\ignite\impl\ignite_impl.h">
       <Filter>Code\impl</Filter>
     </ClInclude>
