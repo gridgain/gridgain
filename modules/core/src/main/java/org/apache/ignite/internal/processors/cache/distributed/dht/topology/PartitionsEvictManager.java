@@ -289,10 +289,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
 
-        long now = U.currentTimeMillis();
-
         // Start processing tombstones.
         processEvictions(true);
+
         // Start processing ttl rows.
         processEvictions(false);
     }
@@ -322,8 +321,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         IgniteInternalFuture<?> fut0 = ctx.closure().runLocalSafe(new GridPlainRunnable() {
             @Override public void run() {
-                long now = U.currentTimeMillis();
-
                 int res = fillEvictQueue(tombstone, U.currentTimeMillis());
 
                 if (res == 0 && queue.sizex() == 0) {

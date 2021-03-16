@@ -1375,7 +1375,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             int amount,
             long now
     ) {
-        return ctx.evict().expire(false, c, amount, now);
+        if (!busyLock.enterBusy())
+            return false;
+
+        try {
+            return ctx.evict().expire(false, c, amount, now);
+        }
+        finally {
+            busyLock.leaveBusy();
+        }
     }
 
     /** {@inheritDoc} */
@@ -1405,7 +1413,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         // Tombstones for volatile cache group are always cleared.
-        return ctx.evict().expire(true, c, amount, now);
+        if (!busyLock.enterBusy())
+            return false;
+
+        try {
+            return ctx.evict().expire(true, c, amount, now);
+        }
+        finally {
+            busyLock.leaveBusy();
+        }
     }
 
     /**
@@ -1487,7 +1503,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /**
-     * @param tombstone
+     * @param tombstone {@code True} to process tomstones.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
      * @param upper Upper bound.
      * @param c Closure.
