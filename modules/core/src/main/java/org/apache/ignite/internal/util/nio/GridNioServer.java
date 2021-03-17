@@ -55,7 +55,6 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
@@ -923,7 +922,7 @@ public class GridNioServer<T> {
             }
             else
                 return new GridNioFinishedFuture<>(
-                    new NodeStoppingException("Failed to create session, server is stopped."));
+                    new GridNioException("Failed to create session, server is stopped."));
         }
         catch (IOException e) {
             return new GridNioFinishedFuture<>(e);
