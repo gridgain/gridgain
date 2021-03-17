@@ -1512,7 +1512,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             PendingRow row = cur.get();
 
-            row.cacheId = ctx.cacheId();
+            if (row.cacheId == CU.UNDEFINED_CACHE_ID)
+                row.cacheId = ctx.cacheId();
+
             row.deploymentId = ctx.dynamicDeploymentId();
 
             if (row.key.partition() == -1)
