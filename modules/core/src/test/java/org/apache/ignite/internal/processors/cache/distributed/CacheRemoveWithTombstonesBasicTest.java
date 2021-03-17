@@ -1796,7 +1796,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PartitionsEvictManager evict = crd.context().cache().context().evict();
 
-        evict.processEvictions(false); // Ensure all available entries will be processed.
+        evict.processEvictions(false).get(); // Ensure all available entries will be processed.
 
         Deque<PendingRow> ttlQueue = evict.evictQueue(false);
         Deque<PendingRow> tsQueue = evict.evictQueue(true);
