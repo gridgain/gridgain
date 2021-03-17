@@ -1293,24 +1293,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public boolean expireRows(
-        IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-        int amount,
-        long now
-    ) {
-        // Prevent manager being stopped in the middle of pds operation.
-        if (!busyLock.enterBusy())
-            return false;
-
-        try {
-            return ctx.evict().expire(false, c, amount, now);
-        }
-        finally {
-            busyLock.leaveBusy();
-        }
-    }
-
-    /** {@inheritDoc} */
     @Override public boolean expireTombstones(
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
         int amount,
