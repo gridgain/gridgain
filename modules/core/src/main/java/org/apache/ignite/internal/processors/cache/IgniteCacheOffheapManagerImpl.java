@@ -1450,10 +1450,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (tombstone) {
             long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
-            if (tsCnt > tsLimit)
+            if (tsCnt > tsLimit) {
                 amount = (int) (tsCnt - tsLimit);
 
-            upper0 = Long.MAX_VALUE;
+                upper0 = Long.MAX_VALUE;
+            }
         }
 
         int cnt = 0;

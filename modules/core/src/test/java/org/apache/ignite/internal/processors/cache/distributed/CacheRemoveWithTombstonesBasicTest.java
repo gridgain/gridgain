@@ -1661,7 +1661,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         final int part = 0;
 
         IgniteCache<Object, Object> cache = client.createCache(cacheCfg);
-        CacheGroupContext grpCtx0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().group();
+        CacheGroupContext grpCtx0 = crd.cachex(DEFAULT_CACHE_NAME).context().group();
         GridCacheTtlManager ttl = grpCtx0.singleCacheContext().ttl();
 
         List<Integer> keys = partitionKeys(cache, part, 20, 0);
@@ -1669,16 +1669,19 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         keys.forEach(k -> cache.put(k, 0));
 
         PendingEntriesTree tree =
-            crd.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(part).dataStore().pendingTree();
+            grpCtx0.topology().localPartition(part).dataStore().pendingTree();
 
         // 12 tombstones, 8 expired rows.
         keys.subList(0, 12).forEach(cache::remove);
 
         assertFalse("Expecting unprocessed entries", ttl.expire(1));
 
-        doSleep(2000);
+        doSleep(1600);
 
         assertEquals(keys.size(), tree.size());
+
+        crd.context().cache().context().evict().processEvictions(true).get();
+        crd.context().cache().context().evict().processEvictions(false).get();
 
         assertTrue(ttl.expire(4));
 
