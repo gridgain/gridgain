@@ -1456,19 +1456,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         int cnt = 0;
 
         try {
-            if (grp.sharedGroup()) {
-                for (GridCacheContext ctx : grp.caches()) {
-                    if (!ctx.started())
-                        continue;
+            for (GridCacheContext ctx : grp.caches()) {
+                if (!ctx.started())
+                    continue;
 
-                    cnt += fillQueueInternal(pendingEntries, ctx, ctx.cacheId(), tombstone, amount - cnt, upper0, c);
+                cnt += fillQueueInternal(pendingEntries, ctx, grp.sharedGroup() ? ctx.cacheId() : CU.UNDEFINED_CACHE_ID,
+                    tombstone, amount - cnt, upper0, c);
 
-                    if (amount != -1 && cnt >= amount)
-                        break;
-                }
+                if (amount != -1 && cnt >= amount)
+                    break;
             }
-            else
-                cnt = fillQueueInternal(pendingEntries, grp.singleCacheContext(), CU.UNDEFINED_CACHE_ID, tombstone, amount, upper0, c);
         }
         finally {
             busyLock.leaveBusy();
