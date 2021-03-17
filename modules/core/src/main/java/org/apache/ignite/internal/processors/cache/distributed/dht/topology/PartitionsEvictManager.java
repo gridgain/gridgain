@@ -361,39 +361,44 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
 
-        for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
-            if (cctx.kernalContext().isStopping())
-                return 0;
+        try {
+            for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
+                if (cctx.kernalContext().isStopping())
+                    return 0;
 
-            if (!ctx0.busyLock.readLock().tryLock())
-                continue;
+                if (!ctx0.busyLock.readLock().tryLock())
+                    continue;
 
-            int size = queue.sizex();
-            int amount = MAX_EVICT_QUEUE_SIZE - size;
+                int size = queue.sizex();
+                int amount = MAX_EVICT_QUEUE_SIZE - size;
 
-            try {
-                if (amount > 0) {
-                    try {
-                        total += ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
-                            queue.addLast(key);
+                try {
+                    if (amount > 0) {
+                        try {
+                            total += ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
+                                queue.addLast(key);
 
-                            // Stop on queue overflow.
-                            return queue.sizex() > MAX_EVICT_QUEUE_SIZE ? 1 : 0;
-                        });
-                    }
-                    catch (IgniteCheckedException e) {
-                        log.error("Failed to expire entries", e);
+                                // Stop on queue overflow.
+                                return queue.sizex() > MAX_EVICT_QUEUE_SIZE ? 1 : 0;
+                            });
+                        }
+                        catch (IgniteCheckedException e) {
+                            log.error("Failed to expire entries", e);
+                        }
                     }
                 }
+                finally {
+                    ctx0.busyLock.readLock().unlock();
+                }
             }
-            finally {
-                ctx0.busyLock.readLock().unlock();
+
+            if (log.isDebugEnabled()) {
+                log.debug("After filling the evict queue [res=" + total + ", tombstone=" + tombstone +
+                    ", size=" + queue.sizex() + ']');
             }
         }
-
-        if (log.isDebugEnabled()) {
-            log.debug("After filling the evict queue [res=" + total + ", tombstone=" + tombstone +
-                ", size=" + queue.sizex() + ']');
+        catch (Throwable e) {
+            log.error("Failed to fill eviction queue [tombstone=" + tombstone + ']', e);
         }
 
         return total;

@@ -1394,19 +1394,16 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     continue;
 
                 try {
-                    if (grp.sharedGroup()) {
-                        for (GridCacheContext ctx : grp.caches()) {
-                            if (!ctx.started())
-                                continue;
+                    for (GridCacheContext ctx : grp.caches()) {
+                        if (!ctx.started())
+                            continue;
 
-                            cnt += fillQueueInternal(store.pendingTree(), ctx, ctx.cacheId(), tombstone, amount - cnt, upper0, c);
+                        cnt += fillQueueInternal(store.pendingTree(), ctx, grp.sharedGroup() ? ctx.cacheId() :
+                            CU.UNDEFINED_CACHE_ID, tombstone, amount - cnt, upper0, c);
 
-                            if (amount != -1 && cnt >= amount)
-                                break;
-                        }
+                        if (amount != -1 && cnt >= amount)
+                            break;
                     }
-                    else
-                        cnt = fillQueueInternal(store.pendingTree(), grp.singleCacheContext(), CU.UNDEFINED_CACHE_ID, tombstone, amount, upper0, c);
                 }
                 finally {
                     if (part != null)
