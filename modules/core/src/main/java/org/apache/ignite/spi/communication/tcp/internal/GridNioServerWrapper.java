@@ -740,6 +740,8 @@ public class GridNioServerWrapper {
 
             ctx.resolveCommunicationFailure(node, errs);
         }
+        else
+            log.error("Session creation error: " + errs.getMessage(), errs);
 
         if (!commErrResolve && forcibleNodeKillEnabled) {
             if (ctx.node(node.id()) != null
