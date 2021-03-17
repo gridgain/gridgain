@@ -24,8 +24,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-
 /**
  * Test of static methods of Ignite statistics repository.
  */

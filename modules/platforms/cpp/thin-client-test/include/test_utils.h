@@ -57,18 +57,20 @@ namespace ignite_test
      *
      * @param cfgFile Ignite node config file name without path.
      * @param name Node name.
+     * @param logger Logger to use.
      * @return New node.
      */
-    ignite::Ignite StartServerNode(const char* cfgFile, const char* name);
+    ignite::Ignite StartServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger = 0);
 
     /**
      * Start Ignite node with config path corrected for specific platform.
      *
      * @param cfgFile Ignite node config file name without path.
      * @param name Node name.
+     * @param logger Logger to use.
      * @return New node.
      */
-    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name);
+    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger = 0);
 
     /**
      * Remove all the LFS artifacts.
