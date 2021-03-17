@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE(MemoryReallocationTest)
     using common::concurrent::SharedPointer;
 
     IgniteConfiguration cfg;
-    SP_IgniteEnvironment env = SP_IgniteEnvironment(new IgniteEnvironment(cfg));
+    SP_IgniteEnvironment env = SP_IgniteEnvironment(new IgniteEnvironment(cfg, 0));
 
     SharedPointer<InteropMemory> mem = env.Get()->AllocateMemory();
 

@@ -51,9 +51,6 @@ public class PlatformDotNetConfigurationClosure extends PlatformAbstractConfigur
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Whether to use platform logger (when custom logger is defined on .NET side). */
-    private final boolean useLogger;
-
     /** Configuration. */
     private IgniteConfiguration cfg;
 
@@ -64,11 +61,10 @@ public class PlatformDotNetConfigurationClosure extends PlatformAbstractConfigur
      * Constructor.
      *
      * @param envPtr Environment pointer.
+     * @param useLogger Whether use platform logger or not.
      */
     public PlatformDotNetConfigurationClosure(long envPtr, boolean useLogger) {
-        super(envPtr);
-
-        this.useLogger = useLogger;
+        super(envPtr, useLogger);
     }
 
     /** {@inheritDoc} */
@@ -95,8 +91,7 @@ public class PlatformDotNetConfigurationClosure extends PlatformAbstractConfigur
             igniteCfg.setGridLogger(logger);
         }
 
-        PlatformDotNetConfigurationEx dotNetCfg0 = new PlatformDotNetConfigurationEx(dotNetCfg, gate, memMgr,
-            logger);
+        PlatformDotNetConfigurationEx dotNetCfg0 = new PlatformDotNetConfigurationEx(dotNetCfg, gate, memMgr, logger);
 
         igniteCfg.setPlatformConfiguration(dotNetCfg0);
 

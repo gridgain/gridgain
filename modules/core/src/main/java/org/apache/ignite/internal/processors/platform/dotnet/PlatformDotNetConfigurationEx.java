@@ -54,6 +54,7 @@ public class PlatformDotNetConfigurationEx extends PlatformDotNetConfiguration i
      * @param cfg Configuration to copy.
      * @param gate Native gateway.
      * @param memMgr Memory manager.
+     * @param logger Logger to use.
      */
     public PlatformDotNetConfigurationEx(PlatformDotNetConfiguration cfg, PlatformCallbackGateway gate,
         PlatformMemoryManagerImpl memMgr, PlatformLogger logger) {

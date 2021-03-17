@@ -24,6 +24,7 @@ import org.apache.ignite.binary.BinaryBasicNameMapper;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.PlatformConfiguration;
+import org.apache.ignite.internal.logger.platform.PlatformLogger;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractConfigurationClosure;
 import org.apache.ignite.internal.processors.platform.memory.PlatformMemoryManagerImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -44,9 +45,10 @@ public class PlatformCppConfigurationClosure extends PlatformAbstractConfigurati
      * Constructor.
      *
      * @param envPtr Environment pointer.
+     * @param useLogger Whether use platform logger or not.
      */
-    public PlatformCppConfigurationClosure(long envPtr) {
-        super(envPtr);
+    public PlatformCppConfigurationClosure(long envPtr, boolean useLogger) {
+        super(envPtr, useLogger);
     }
 
     /** {@inheritDoc} */
@@ -64,9 +66,17 @@ public class PlatformCppConfigurationClosure extends PlatformAbstractConfigurati
         if (cppCfg == null)
             cppCfg = new PlatformCppConfiguration();
 
+        PlatformLogger logger = null;
+
+        if (useLogger) {
+            logger = new PlatformLogger();
+            logger.setGateway(gate);
+            igniteCfg.setGridLogger(logger);
+        }
+
         PlatformMemoryManagerImpl memMgr = new PlatformMemoryManagerImpl(gate, 1024);
 
-        PlatformCppConfigurationEx cppCfg0 = new PlatformCppConfigurationEx(cppCfg, gate, memMgr);
+        PlatformCppConfigurationEx cppCfg0 = new PlatformCppConfigurationEx(cppCfg, gate, memMgr, logger);
 
         igniteCfg.setPlatformConfiguration(cppCfg0);
 
