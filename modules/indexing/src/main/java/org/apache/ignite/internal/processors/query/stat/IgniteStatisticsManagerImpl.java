@@ -198,7 +198,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             }
 
         }, OBSOLESCENCE_INTERVAL * 1000, OBSOLESCENCE_INTERVAL * 1000);
-
     }
 
     /**
