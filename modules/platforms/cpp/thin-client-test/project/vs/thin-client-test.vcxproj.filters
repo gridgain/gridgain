@@ -49,6 +49,9 @@
     <ClInclude Include="..\..\include\test_utils.h">
       <Filter>Code</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\vector_logger.h">
+      <Filter>Code</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\ignite\complex_type.h">
       <Filter>Code\Types</Filter>
     </ClInclude>

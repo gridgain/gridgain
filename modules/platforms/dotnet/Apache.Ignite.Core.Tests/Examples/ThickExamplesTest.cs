@@ -23,7 +23,7 @@ namespace Apache.Ignite.Core.Tests.Examples
     /// Tests thick examples.
     /// </summary>
     [Category(TestUtils.CategoryExamples)]
-    public class ThickExamplesTest
+    public class ThickExamplesTest : ExamplesTestBase
     {
         /** */
         private static readonly Example[] ThickExamples = Example.AllExamples
@@ -39,6 +39,8 @@ namespace Apache.Ignite.Core.Tests.Examples
             Assert.IsFalse(example.IsThin);
 
             example.Run();
+
+            CheckOutput(example, "Ignite node started OK", "Topology snapshot [ver=1");
         }
     }
 }
