@@ -1511,29 +1511,6 @@ public class GridDhtPartitionDemander {
             }
         }
 
-        /** {@inheritDoc} */
-        @Override public boolean onDone(@Nullable Boolean res, @Nullable Throwable err) {
-            if (super.onDone(res, err)) {
-                if (!isInitial()) {
-                    sendRebalanceFinishedEvent();
-
-                    // Complete sync future only if rebalancing was not cancelled.
-                    if (res && !grp.preloader().syncFuture().isDone())
-                        ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
-
-                    if (isChainFinished())
-                        onChainFinished();
-                }
-
-                if (next != null)
-                    next.requestPartitions(); // Process next group.
-
-                return true;
-            }
-
-            return false;
-        }
-
         /**
          * @param topVer Rebalancing topology version.
          * @param rebalanceId Rebalance id.
@@ -1603,13 +1580,15 @@ public class GridDhtPartitionDemander {
         }
 
         /**
-         * Cancel running future or mark for cancel {@code RebalanceFutureState#MARK_CANCELLED}.
+         * Cancel running future or mark for cancel {@code RebalanceFutureState#MARK_CANCELLED}, if it not started yet.
          */
         private void tryCancel() {
             if (STATE_UPD.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.MARK_CANCELLED)) {
                 U.log(log, "Rebalancing marked as cancelled [grp=" + grp.cacheOrGroupName() +
                     ", topVer=" + topologyVersion() + ", rebalanceId=" + rebalanceId + "]");
 
+                // Don't call #cancel() for this future from INIT state, as it will trigger #requestPartitions()
+                // for #next future.
                 return;
             }
 
@@ -1666,6 +1645,20 @@ public class GridDhtPartitionDemander {
 
                 if (log != null && log.isInfoEnabled() && !isInitial())
                     log.info("Completed rebalance future: " + this + (isFailed() ? ", error=" + err : ""));
+
+                if (!isInitial()) {
+                    sendRebalanceFinishedEvent();
+
+                    // Complete sync future only if rebalancing was not cancelled.
+                    if (res && !grp.preloader().syncFuture().isDone())
+                        ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
+
+                    if (isChainFinished())
+                        onChainFinished();
+                }
+
+                if (next != null)
+                    next.requestPartitions(); // Process next group.
             }
 
             return byThisCall;
