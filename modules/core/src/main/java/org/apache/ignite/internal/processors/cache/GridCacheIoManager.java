@@ -1185,8 +1185,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         else if (msg instanceof GridCacheIdMessage) {
             GridCacheContext ctx = cctx.cacheContext(((GridCacheIdMessage)msg).cacheId());
 
-            if (ctx != null)
-                CU.unwindEvictsSafe(ctx);
+            if (ctx != null && !(msg instanceof GridCacheQueryRequest))
+                CU.unwindEvicts(ctx);
         }
     }
 
