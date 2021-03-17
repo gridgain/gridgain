@@ -83,6 +83,7 @@ public class TestCases extends TestDb {
         testExecuteTrace();
         testExplain();
         testExplainAnalyze();
+        testGroupSortedReset();
         if (config.memory) {
             return;
         }
@@ -1151,6 +1152,7 @@ public class TestCases extends TestDb {
                 "FROM \"PUBLIC\".\"ORGANIZATION\"\n" +
                 "    /* PUBLIC.PRIMARY_KEY_D: ID = ?1 */\n" +
                 "    /* scanCount: 2 */\n" +
+                "    /* lookupCount: 1 */\n" +
                 "WHERE \"ID\" = ?1",
             rs.getString(1));
 
@@ -1177,12 +1179,14 @@ public class TestCases extends TestDb {
                 "    /* WHERE P.ID = ?1\n" +
                 "    */\n" +
                 "    /* scanCount: 2 */\n" +
+                "    /* lookupCount: 1 */\n" +
                 "INNER JOIN \"PUBLIC\".\"ORGANIZATION\" \"O\"\n" +
                 "    /* PUBLIC.PRIMARY_KEY_D: ID = ?1\n" +
                 "        AND ID = P.ID\n" +
                 "     */\n" +
                 "    ON 1=1\n" +
                 "    /* scanCount: 2 */\n" +
+                "    /* lookupCount: 1 */\n" +
                 "WHERE ((\"O\".\"ID\" = ?1)\n" +
                 "    AND (\"O\".\"ID\" = \"P\".\"ID\"))\n" +
                 "    AND (\"P\".\"ID\" = ?1)",
@@ -1924,6 +1928,19 @@ public class TestCases extends TestDb {
         assertEquals("fo%", rs.getString(1));
         assertTrue(rs.next());
         assertEquals("%oo", rs.getString(1));
+        conn.close();
+    }
+
+    private void testGroupSortedReset() throws SQLException {
+        // This test case didn't reproduce the issue in the TestScript.
+        deleteDb("cases");
+        Connection conn = getConnection("cases");
+        Statement stat = conn.createStatement();
+        stat.execute("CREATE TABLE T1(A INT PRIMARY KEY, B INT) AS VALUES (1, 4), (2, 5), (3, 6)");
+        String sql = "SELECT B FROM T1 LEFT JOIN (VALUES 2) T2(A) ON T1.A = T2.A WHERE T2.A = 2 GROUP BY T1.A";
+        stat.execute(sql);
+        stat.execute("UPDATE T1 SET B = 7 WHERE A = 3");
+        stat.execute(sql);
         conn.close();
     }
 }

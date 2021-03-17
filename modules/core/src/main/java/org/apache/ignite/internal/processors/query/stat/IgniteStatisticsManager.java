@@ -27,7 +27,7 @@ public interface IgniteStatisticsManager {
      * @param targets Target to gather statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
      */
-    public void updateStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+    public void collectStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
 
     /**
      * Clear object statistics.
@@ -62,4 +62,16 @@ public interface IgniteStatisticsManager {
      * Stop statistic manager.
      */
     public void stop();
+
+    /**
+     * Set statistics usage state.
+     *
+     * @param state Statistics state.
+     */
+    public void usageState(StatisticsUsageState state) throws IgniteCheckedException;
+
+    /**
+     * @return Statistics usage state.
+     */
+    public StatisticsUsageState usageState();
 }

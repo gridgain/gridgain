@@ -50,15 +50,15 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
 
         updateStatistics(SMALL_TARGET);
 
-        Assert.assertNotNull(statMgr0.getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL")));
+        Assert.assertNotNull(statMgr0.getLocalStatistics(SMALL_KEY));
 
-        Assert.assertNotNull(statMgr1.getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL")));
+        Assert.assertNotNull(statMgr1.getLocalStatistics(SMALL_KEY));
 
         statMgr1.dropStatistics(SMALL_TARGET);
 
         GridTestUtils.waitForCondition(
-            () -> null == statMgr0.getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"))
-            && null == statMgr1.getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL")), TIMEOUT);
+            () -> null == statMgr0.getLocalStatistics(SMALL_KEY)
+            && null == statMgr1.getLocalStatistics(SMALL_KEY), TIMEOUT);
     }
 
     /**
