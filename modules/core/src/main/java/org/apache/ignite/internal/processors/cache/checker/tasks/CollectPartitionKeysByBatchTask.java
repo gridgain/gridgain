@@ -225,6 +225,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
         /** {@inheritDoc} */
         @Override protected ExecutionResult<T2<List<VersionedKey>, Long>> execute0() {
+            System.out.println("qdsvdsdfd start recon");
             IgniteCache<Object, Object> cache = ignite.cache(partBatch.cacheName());
 
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
@@ -249,7 +250,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             GridDhtLocalPartition part = grpCtx.topology().localPartition(partBatch.partitionId());
 
-            IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
+            IgniteCacheOffheapManagerImpl.CacheDataStoreImpl cacheDataStore = (IgniteCacheOffheapManagerImpl.CacheDataStoreImpl) grpCtx.offheap().dataStore(part);
 
             assert part != null;
 
@@ -257,10 +258,17 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = cacheDataStore.reconciliationCtx();
 
-//            if (lowerKey == null)
-//                synchronized (partReconciliationCtx.reconciliationMux()) {
-//                    partReconciliationCtx.isReconciliationInProgress(true);
-//                }
+            if (!partReconciliationCtx.isReconciliationInProgress()) {
+                cacheDataStore.busyLock.block();
+
+                try {
+                    partReconciliationCtx.isReconciliationInProgress(true);
+                    partReconciliationCtx.cacheId = cacheId;
+                }
+                finally {
+                    cacheDataStore.busyLock.unblock();
+                }
+            }
 
             KeyCacheObject lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
 
@@ -273,384 +281,126 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             else if (lastKeyForSizes != null)
                 keyToStart = lastKeyForSizes;
 
+            partReconciliationCtx.sizes.putIfAbsent(cacheId, new AtomicLong());
 
-//            synchronized (partReconciliationCtx.reconciliationMux()) {
+            AtomicLong partSize = partReconciliationCtx.sizes.get(cacheId);
 
-            GridCursor<? extends CacheDataRow> cursor = null;
+            partReconciliationCtx.cursorIteration = true;
 
-            CacheDataRow row = null;
+            KeyCacheObject oldBorderKey = partReconciliationCtx.lastKeys().get(cacheId);
 
-            boolean first = false;
+            KeyCacheObject newLastKey = null;
 
-//            try {
-//                sleep(2000);
-//            }
-//            catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
+            partReconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
 
-//            try {
-//                GridCursor<? extends CacheDataRow> cursor1 = grpCtx.offheap().dataStore(part).cursor(cacheId, null, null);
-//
-//                List<KeyCacheObject> keys = new ArrayList<>();
-//
-//                while (cursor1.next()) {
-//                    KeyCacheObject key = cursor1.get().key();
-//                    keys.add(key);
-//                }
-//                cursor1.close();
-//            }
-//            catch (Exception e) {
-//                e.printStackTrace();
-//            }
+            Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = partReconciliationCtx.tempMap.get(cacheId);
 
-            partReconciliationCtx.keysInBatch.putIfAbsent(cacheId, Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>()));
+            try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
+                grpCtx.offheap().dataStore(part).cursor(cacheId, null, null) :
+                grpCtx.offheap().dataStore(part).cursor(cacheId, keyToStart, null)) {
+                System.out.println("qdsadfvers start cursor");
 
-            Set<KeyCacheObject> keysInBatch = partReconciliationCtx.keysInBatch.get(cacheId);
-
-            AtomicLong partSize = new AtomicLong();
-
-            try {
-                partReconciliationCtx.lockPutRemove.writeLock().lock();
-
-//                while(partReconciliationCtx.putRemoveInProgress.get() != 0) {
-//                    try {
-//                        sleep(5);
-//                    }
-//                    catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-
-                try {
-                    partReconciliationCtx.lock.writeLock().lock();
-
-                    try /*synchronized (partReconciliationCtx.reconciliationMux())*/ {
-
-                        Long partSize0 = partBatch.partSizesMap().get(ignite.localNode().id());
-
-                        if (partSize0 != null)
-                            partSize.set(partSize0);
-                        else
-                            System.out.println("qefdsrsdf");
-
-                        partReconciliationCtx.keysAfterCounters.putIfAbsent(cacheId, new AtomicLong());
-
-                        partReconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
-
-                        System.out.println("qcdsfre2 keysAfter " + partReconciliationCtx.keysAfter);
-
-////                    if (!keysInBatch.isEmpty()) {
-//                        partReconciliationCtx.keysAfter.get(cacheId).entrySet().forEach(e -> {
-//                            if (KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.lastKey(cacheId)) <= 0 &&
-//                                KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.firstKey(cacheId)) >= 0) {
-//                                long count = e.getValue().get();
-//                                if (count > 0 && !keysInBatch.contains(e.getKey())) {
-//                                    partSize.addAndGet(count);
-//                                    System.out.println("qwqwfdeds keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
-//                                }
-//                                if (count < 0 && keysInBatch.contains(e.getKey())) {
-//                                    partSize.addAndGet(count);
-//                                    System.out.println("qcdsvrdsv keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
-//                                }
-//                                System.out.println("qwddxvfgrt2 key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
-//                            }
-//                        });
-//
-//                        keysInBatch.clear();
-////                    }
-
-//                    partReconciliationCtx.keysAfter.get(cacheId).clear();
-
-//                    partReconciliationCtx.keysInBatch.get(cacheId).clear();
-
-//                    partReconciliationCtx.keysAfter.get(cacheId).clear();
-
-                        partReconciliationCtx.isReconciliationInProgress(true);
-                        partReconciliationCtx.isBatchesInProgress(true);
-
-//                    if (partReconciliationCtx.lastKey(cacheId) != null)
-//                        partReconciliationCtx.firstKey(cacheId, partReconciliationCtx.lastKey(cacheId));
-
-//                    partReconciliationCtx.isBatchInProgress = true;
-
-                        System.out.println("qfbaftgr before cursor partSize " + partSize.get());
-
-//                    System.out.println("qfdvgrtd value of key0: " + cache.get(0));
-
-                        cursor = keyToStart == null ?
-                            grpCtx.offheap().dataStore(part).cursor(cacheId, null, null) :
-                            grpCtx.offheap().dataStore(part).cursor(cacheId, keyToStart, null);
-
-                        System.out.println("qfbaftgr after cursor");
-
-                        if (cursor.next()) {
-                            row = cursor.get();
-
-                            if (partReconciliationCtx.lastKey(cacheId) != null && partReconciliationCtx.lastKey(cacheId).equals(row.key())) {
-                                row = null;
-
-                                if (cursor.next())
-                                    row = cursor.get();
-                            }
-
-                            System.out.println("qefrasgbdt1");
-                        }
-
-                        System.out.println("qdsvrresadsc keysInBatch: " + keysInBatch);
-
-                        if (row != null) {
-                            first = true;
-
-//                    if (!keysInBatch.isEmpty()) {
-                            partReconciliationCtx.keysAfter.get(cacheId).entrySet().forEach(e -> {
-                                if (KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.lastKey(cacheId)) <= 0 &&
-                                    KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.firstKey(cacheId)) >= 0) {
-                                    long count = e.getValue().get();
-                                    if (count > 0 && !keysInBatch.contains(e.getKey())) {
-                                        partSize.addAndGet(count);
-                                        System.out.println("qwqwfdeds keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
-                                    }
-                                    if (count < 0 && keysInBatch.contains(e.getKey())) {
-                                        partSize.addAndGet(count);
-                                        System.out.println("qcdsvrdsv keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
-                                    }
-                                    System.out.println("qwddxvfgrt2 key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
-                                }
-                            });
-
-                            keysInBatch.clear();
-
-                            partReconciliationCtx.keysAfter.get(cacheId).clear();
-//                    }
-
-                            keysInBatch.add(row.key());
-
-                            partReconciliationCtx.firstKey(cacheId, row.key());
-
-                            partReconciliationCtx.lastKey(cacheId, row.key());
-
-//                            partReconciliationCtx.keysAfter.clear();
-
-                        }
-                        else {
-//                        partReconciliationCtx.removeFirstKey(cacheId);
-//                        partReconciliationCtx.isBatchesInProgress(false);
-                        }
-
-                        CacheDataRow row0 = row;
-
-                        System.out.println("qffvsre1 before iteration partSize " + partSize.get());
-
-//                    synchronized (partReconciliationCtx.reconciliationMux()) {
-//                        System.out.println("qsfvrsv1 " + partReconciliationCtx.keysAfter);
-//                        partReconciliationCtx.keysAfter.entrySet().forEach(e -> {
-//                            if (row0 == null|| partReconciliationCtx.lastKey(cacheId) == null || KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.lastKey(cacheId)) <= 0) {
-//                                long count = e.getValue().get();
-//                                partSize.addAndGet(count);
-////                                if (count > 0 && !keysInBatch.contains(e.getKey())) {
-////                                    partSize.addAndGet(count);
-//                                    System.out.println("qsdvsd keysAfter first after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
-////                                }
-////                                if (count < 0 && keysInBatch.contains(e.getKey())) {
-////                                    partSize.addAndGet(count);
-////                                    System.out.println("qcdsvrdsv keysAfter first after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
-////                                }
-//                                System.out.println("qdsvrafdv " + ((KeyCacheObjectImpl)e.getKey()).value());
-//                            }
-//                        });
-//
-//                        partReconciliationCtx.keysAfterCounters.get(cacheId).set(0);
-//
-//                        partReconciliationCtx.keysAfter.clear();
-//                    }
-
-//                    if (row == null) {
-//                        grpCtx.offheap().dataStore(part).flushReconciliationResult(cacheId, partSize.get());
-//                    }
-
-                        System.out.println("qsersvsdd1 partSize " + partSize.get());
-                    }
-                    finally {
-                        partReconciliationCtx.lock.writeLock().unlock();
-                    }
-                }
-                finally {
-                    partReconciliationCtx.lockPutRemove.writeLock().unlock();
-                }
-            }
-            catch (IgniteCheckedException e) {
-                e.printStackTrace();
-            }
-
-            try {
                 List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
-//                synchronized (partReconciliationCtx.reconciliationMux()) {
+                boolean isEmptyCursor = true;
 
-                for (int i = 0; i < batchSize && (row != null || cursor.next()); i++) {
-//                    System.out.println("qfvndrfg");
+                for (int i = 0; i < batchSize && cursor.next(); i++) {
+                    isEmptyCursor = false;
 
                     try {
-                        sleep(100);
+                        sleep(1);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();
                     }
 
-//                    synchronized (partReconciliationCtx.reconciliationMux()) {
-                        if (row == null) {
-                            row = cursor.get();
+                    CacheDataRow row = cursor.get();
 
-                            System.out.println("qefrasgbdt2");
-                        }
-
-                    keysInBatch.add(row.key());
-
-                        if (first || /*partReconciliationCtx.firstKey(cacheId) == null ||*/ KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(cacheId), row.key()) < 0) {
-                            partSize.incrementAndGet();
-                        }
-
-                        if (first || /*partReconciliationCtx.firstKey(cacheId) == null ||*/ KEY_COMPARATOR.compare(partReconciliationCtx.lastKey(cacheId), row.key()) < 0) {
-
-                            partReconciliationCtx.keysAfterCounters.get(cacheId).set(0);
-
-
-//                            partReconciliationCtx.keysCheckedInBatch.get(cacheId).add(row.key());
-
-                            partReconciliationCtx.lastKey(cacheId, row.key());
-
-//                            partReconciliationCtx.firstKey(cacheId, row.key());
-//                            System.out.println("qqedfks1 " + ignite.localNode().id() +
-//                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
+//                    System.out.println("qqedfks1 " + ignite.localNode().id() +
+//                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (oldBorderKey == null ? "null" : oldBorderKey) +
 //                                " ||| _row.key()_:" + row.key() +
-//                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
+//                                " ||| compare: " + (oldBorderKey == null ? "null" : KEY_COMPARATOR.compare(oldBorderKey, row.key())) +
 //                                " ||| partId: " + part +
 //                                " ||| partSize: " + partSize);
-                            System.out.println("qqedfks2 " + ignite.localNode().id() +
-                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value() == null ? "null" : ((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value()) +
-                                " ||| _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() +
-                                " ||| compare: " + (((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value() == null ? "null" : ((Integer)((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value()) > ((Integer)((KeyCacheObjectImpl)row.key()).value())) +
-                                " ||| partId: " + part +
-                                " ||| partSize: " + partSize);
-                        }
-                        else {
-//                            System.out.println("qftsbg1 " + ignite.localNode().id() +
-//                                " reconcilation execute0 else. _cacheDataStore.lastKey()_: " + (cacheDataStore.lastKey() == null ? "null" : cacheDataStore.lastKey()) +
-//                                " ||| _row.key()_:" + cacheDataStore.lastKey() +
-//                                " ||| compare: " + (cacheDataStore.lastKey() == null ? "null" : KEY_COMPARATOR.compare(cacheDataStore.lastKey(), row.key())) +
-//                                " ||| partId: " + part +
-//                                " ||| partSize: " + partSize);
-                            System.out.println("qftsbg2 " + ignite.localNode().id() +
-                                " reconcilation execute0 else. _cacheDataStore.lastKey()_: " + (((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value() == null ? "null" : ((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value()) +
-                                " ||| _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() +
-                                " ||| compare: " + (((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value() == null ? "null" : ((Integer)((KeyCacheObjectImpl)partReconciliationCtx.lastKey(cacheId)).value()) > ((Integer)((KeyCacheObjectImpl)row.key()).value())) +
-                                " ||| partId: " + part +
-                                " ||| partSize: " + partSize);
-                        }
-//                        }
+//
+//                    System.out.println("qqedfks2 " + ignite.localNode().id() +
+//                        " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + ((oldBorderKey) == null ? "null" : ((KeyCacheObjectImpl)oldBorderKey).value()) +
+//                        " ||| _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() +
+//                        " ||| compare: " + ((oldBorderKey) == null ? "null" : ((Integer)((KeyCacheObjectImpl)oldBorderKey).value()) > ((Integer)((KeyCacheObjectImpl)row.key()).value())) +
+//                        " ||| partId: " + part +
+//                        " ||| partSize: " + partSize);
 
-//                    System.out.println("qdvrfgad " + ignite.localNode().id() + " _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() + ", lowerKey: " + (lowerKey == null ? "null" : ((KeyCacheObjectImpl)lowerKey).value()) + ", row.key(): " + row.key() + ", lowerKey: " + lowerKey);
-                        if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0) {
-//                    if (lowerKey == null || !((KeyCacheObjectImpl)row.key()).value().equals(((KeyCacheObjectImpl)lowerKey).value())) {
-//                        partSize++;
-//                        System.out.println("qdrvgsrwe partSize: " + partSize);
-//                            System.out.println("qwerdcs " + ignite.localNode().id() + " _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value());
-                            partEntryHashRecords.add(new VersionedKey(
-                                ignite.localNode().id(),
-                                row.key(),
-                                row.version()
-                            ));
-                        }
-                        else
-                            i--;
+//                    System.out.println("qdscaerv recon tempMap " + tempMap);
+
+//                    if (oldBorderKey == null || KEY_COMPARATOR.compare(oldBorderKey, row.key()) < 0) {
+//                        if (!tempMap.containsKey(row.key())) {
+//                            T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(oldBorderKey, 1);
+//
+//                            tempMap.put(row.key(), borderKeyTuple);
+//                        }
+//                        else if (tempMap.get(row.key()).get2() == -1)
+//                            tempMap.remove(row.key());
+//
+////                        partReconciliationCtx.lastKey(cacheId, row.key());
 //                    }
 
-                    row = null;
+                    if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0) {
+                        partEntryHashRecords.add(new VersionedKey(
+                            ignite.localNode().id(),
+                            row.key(),
+                            row.version()
+                        ));
+                    }
+                    else
+                        i--;
 
-                    first = false;
+                    newLastKey = row.key();
+
+                    System.out.println("qwdsfsf newLastKey " + newLastKey);
                 }
 
-//                try {
-//                    sleep(2);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
+                newLastKey = partReconciliationCtx.lastKey(cacheId);
+
+                System.out.println("qzsdfvfe after newLastKey");
+
+                if (newLastKey != null)
+                    partReconciliationCtx.lastKeys().put(cacheId, newLastKey);
+
+                partReconciliationCtx.cursorIteration = false;
 
                 System.out.println("qvdrftga2 after iteration " + partSize.get());
 
-//                if (partReconciliationCtx.firstKey(cacheId) != null) {
+                if (/*newLastKey == null || */newLastKey.equals(oldBorderKey)) {
+//                if (partSize.get() == 300) {
+                    cacheDataStore.busyLock.block();
 
-//                try {
-//                    sleep(100);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
+                    try {
+                        partReconciliationCtx.isReconciliationInProgress(false);
 
-//                partReconciliationCtx.lock.writeLock().lock();
-//
-//                try /*synchronized (partReconciliationCtx.reconciliationMux())*/ {
-//                        System.out.println("qfrskotd2 " + partReconciliationCtx.keysAfter);
-//
-////                    if (row != null) {
-////                    if (!keysInBatch.isEmpty()) {
-////                        partReconciliationCtx.keysAfter.get(cacheId).entrySet().forEach(e -> {
-////                            if (KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.lastKey(cacheId)) <= 0 &&
-////                                KEY_COMPARATOR.compare(e.getKey(), partReconciliationCtx.firstKey(cacheId)) >= 0) {
-////                                long count = e.getValue().get();
-////                                if (count > 0 && !keysInBatch.contains(e.getKey())) {
-////                                    partSize.addAndGet(count);
-////                                    System.out.println("qwqwfdeds keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
-////                                }
-////                                if (count < 0 && keysInBatch.contains(e.getKey())) {
-////                                    partSize.addAndGet(count);
-////                                    System.out.println("qcdsvrdsv keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
-////                                }
-////                                System.out.println("qwddxvfgrt2 key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
-////                            }
-////                        });
-////
-////                        partReconciliationCtx.keysAfter.get(cacheId).clear();
-////                    }
-//
-////                        if (keysInBatch.isEmpty())
-////                            partReconciliationCtx.isBatchesInProgress(false);
-//
-//                        partReconciliationCtx.keysAfterCounters.get(cacheId).set(0);
-//
-//
-//                    System.out.println("qcfdrfae2 " + partSize.get());
-//
-//                    }
-//                    finally {
-//                        partReconciliationCtx.lock.writeLock().unlock();
-//                }
+                        for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : tempMap.entrySet()) {
+                            System.out.println("qrolpdtd");
+                            if (entry.getValue().get2() == 1)
+                                partSize.incrementAndGet();
+                        }
 
-//                    if (row == null) {
-//                        try {
-//                            sleep(100);
-//                        }
-//                        catch (InterruptedException e) {
-//                            e.printStackTrace();
-//                        }
+                        cacheDataStore.storageSize.set(partSize.get());
+                    }
+                    finally {
+                        cacheDataStore.busyLock.unblock();
+                    }
+                }
 //
-//
+//                if (partReconciliationCtx.isReconciliationInProgress()) {
+//                    for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : tempMap.entrySet()) {
+//                        System.out.println("qdsfvrds " + entry);
+//                        if (KEY_COMPARATOR.compare(entry.getKey(), newLastKey) <= 0 && entry.getValue().get2() == 1)
+//                            partSize.incrementAndGet();
+//                        else if (!(entry.getValue().get1() != null && entry.getValue().get1().equals(oldBorderKey) && entry.getValue().get2() == -1))
+//                            partSize.decrementAndGet();
 //                    }
 //                }
-//                else {
-//                    scheduleHighPriority(new RepairSizes(partBatch.sessionId(), partBatch.workloadChainId(), partBatch.cacheName(), partBatch.partitionId(), partBatch.partSizesMap()));
-//                }
-
-//                try {
-//                    sleep(2);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-
-//                System.out.println("qflyruc cursor.next(): " + cursor.next());
+//
+//                tempMap.clear();
 
                 return new ExecutionResult<>(new T2<>(partEntryHashRecords, partSize.get()));
             }
@@ -662,13 +412,6 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 return new ExecutionResult<>(errMsg + " " + e.getMessage());
             }
             finally {
-
-                try {
-                    cursor.close();
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
-                }
 
                 part.release();
             }

@@ -24,6 +24,8 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -52,6 +54,9 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RemoveRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.ReplaceRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.SplitExistingPageRecord;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.DataStructure;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO;
@@ -66,6 +71,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseL
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
+import org.apache.ignite.internal.processors.cache.tree.DataRow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.GridArrays;
 import org.apache.ignite.internal.util.GridLongList;
@@ -74,6 +80,7 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridTreePrinter;
 import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -98,6 +105,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
  */
 @SuppressWarnings({"ConstantValueVariableUse"})
 public abstract class BPlusTree<L, T extends L> extends DataStructure implements IgniteTree<L, T> {
+    public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx;
     /** */
     private static final Object[] EMPTY = {};
 
@@ -424,6 +432,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             byte[] newRowBytes = io.store(pageAddr, idx, newRow, null, needWal);
 
+            System.out.println("qdsedsdsaw");
+
+            if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress())
+                p.recon(newRow);
+
             if (needWal)
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
@@ -457,6 +470,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             // Do insert.
             L moveUpRow = p.insert(pageId, page, pageAddr, io, idx, lvl);
+
+            System.out.println("qfskorwgs");
+
+            if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress())
+                p.recon(p.row);
 
             // Check if split happened.
             if (moveUpRow != null) {
@@ -3612,6 +3630,63 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             this.needOld = needOld;
         }
 
+//        public KeyCacheObject key;
+
+        public void recon(L newRow) {
+
+            if (newRow instanceof DataRow) {
+                DataRow row0 = (DataRow) newRow;
+
+                if (row0.value() instanceof TombstoneCacheObject) {
+                    if (true/*reconciliationCtx.isReconciliationInProgress()*/) {
+                        if (reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0) {
+                            reconciliationCtx.sizes.get(reconciliationCtx.cacheId).decrementAndGet();
+                        }
+                        else {
+                            if (reconciliationCtx.cursorIteration) {
+                                reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
+
+                                Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx.tempMap.get(reconciliationCtx.cacheId);
+
+                                if (!tempMap.containsKey(row0.key())) {
+                                    T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx.lastKeys.get(reconciliationCtx.cacheId), -1);
+
+                                    tempMap.put(row0.key(), borderKeyTuple);
+                                }
+                                else if (tempMap.get(row0.key()).get2() == 1) {
+                                    tempMap.remove(row0.key());
+                                }
+                            }
+                        }
+                    }
+
+                }
+                else {
+                    if (reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0) {
+                        reconciliationCtx.sizes.get(reconciliationCtx.cacheId).incrementAndGet();
+                    }
+                    else {
+                        if (reconciliationCtx.cursorIteration) {
+                            Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx.tempMap.get(reconciliationCtx.cacheId);
+
+                            if (!tempMap.containsKey(row0.key())) {
+                                T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx.lastKeys.get(reconciliationCtx.cacheId), 1);
+
+                                tempMap.put(row0.key(), borderKeyTuple);
+                            }
+                            else if (tempMap.get(row0.key()).get2() == -1) {
+                                T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx.lastKeys.get(reconciliationCtx.cacheId), 1);
+
+                                tempMap.put(row0.key(), borderKeyTuple);
+                            }
+                        }
+                    }
+
+                }
+            }
+
+        }
+
         /** {@inheritDoc} */
         @Override boolean found(BPlusIO<L> io, long pageAddr, int idx, int lvl) {
             if (lvl == 0) // Leaf: need to stop.
@@ -5769,11 +5844,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * Forward cursor.
      */
     private final class ForwardCursor extends AbstractForwardCursor implements GridCursor<T> {
+        public boolean reconCursor;
+
         /** */
         final Object x;
 
         /** */
         private T[] rows = (T[])EMPTY;
+        private T[] lastRows = null;
 
         /** */
         private int row = -1;
@@ -5796,6 +5874,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         /** {@inheritDoc} */
         @Override boolean fillFromBuffer0(long pageAddr, BPlusIO<L> io, int startIdx, int cnt) throws IgniteCheckedException {
+            System.out.println("qdtfgsrt");
             if (startIdx == -1) {
                 if (lowerBound != null)
                     startIdx = findLowerBound(pageAddr, io, cnt);
@@ -5814,11 +5893,73 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (rows == EMPTY)
                 rows = (T[])new Object[cnt0];
 
-            int resCnt = 0;
+            if (/*reconCursor && */reconciliationCtx.isReconciliationInProgress()) {
+                System.out.println("qdrdsrjir");
+                AtomicLong partSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
 
+                if (reconciliationCtx.isReconciliationInProgress()) {
+                    reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
+
+                    KeyCacheObject lastKey = reconciliationCtx.lastKey(reconciliationCtx.cacheId);
+
+                    for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).entrySet()) {
+                        System.out.println("qdsfvrds " + entry);
+                        if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), lastKey) <= 0 &&
+//                        if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), ((DataRow)rows[0]).key()) < 0 &&
+                            entry.getValue().get2() == 1)
+                            partSize.incrementAndGet();
+//                        else if (!(entry.getValue().get1() != null && entry.getValue().get1().equals(lastKey) && entry.getValue().get2() == -1))
+//                        else if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), lastKey) <= 0 &&
+//                                entry.getValue().get2() == -1)
+//                            partSize.decrementAndGet();
+                    }
+                }
+
+                reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).clear();
+            }
+
+            int resCnt = 0;
+//здесь заполняется буфер курсора под read локом
             for (int idx = startIdx; idx < cnt; idx++) {
                 if (c == null || c.apply(BPlusTree.this, io, pageAddr, idx))
                     rows = GridArrays.set(rows, resCnt++, getRow(io, pageAddr, idx, x));
+            }
+
+            if (/*reconCursor && */reconciliationCtx.isReconciliationInProgress()) {
+                T[] lastRows = Arrays.copyOf(rows, rows.length);
+
+                KeyCacheObject oldBorderKey = reconciliationCtx.lastKeys().get(reconciliationCtx.cacheId);
+
+                reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
+
+                Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx.tempMap.get(reconciliationCtx.cacheId);
+
+                KeyCacheObject lastKey = null;
+
+                for (T row : rows) {
+                    System.out.println("qdrfjkiadre");
+
+                    DataRow row0 = (DataRow) row;
+
+                    if (oldBorderKey == null || reconciliationCtx.KEY_COMPARATOR.compare(oldBorderKey, row0.key()) < 0) {
+                        if (!tempMap.containsKey(row0.key())) {
+                            T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(oldBorderKey, 1);
+
+                            tempMap.put(row0.key(), borderKeyTuple);
+                        }
+                        else if (tempMap.get(row0.key()).get2() == -1)
+                            tempMap.remove(row0.key());
+
+//                        reconciliationCtx.lastKey(cacheId, row.key());
+                    }
+
+                    lastKey = row0.key();
+                }
+                if (lastKey != null) {
+                    reconciliationCtx.lastKey(reconciliationCtx.cacheId, lastKey);
+                }
+
+                lastRows = null;
             }
 
             if (resCnt == 0) {

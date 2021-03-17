@@ -121,6 +121,7 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -1519,7 +1520,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private final CacheGroupContext grp;
 
         /** */
-        private final GridSpinBusyLock busyLock;
+        public final GridSpinBusyLock busyLock;
 
         /** Update counter. */
         protected final PartitionUpdateCounter pCntr;
@@ -1594,6 +1595,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             mvccApplyChanges = new MvccApplyChangesHandler(grp);
 
             reconciliationCtx = new ReconciliationContext();
+
+            this.dataTree.reconciliationCtx = reconciliationCtx;
         }
 
 //        /** {@inheritDoc} */
@@ -1745,31 +1748,31 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void updateSize(int cacheId, long delta, KeyCacheObject key) {
-            try {
-                sleep(70);
-            }
-            catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                sleep(70);
+//            }
+//            catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
             if (delta < 0)
                 System.out.println("qdrdsfsdf delta " + delta);
             if (delta > 0)
                 System.out.println("qfsvfrsd delta " + delta);
             if (delta == 0)
                 System.out.println("qfsrbxdg delta " + delta);
-            System.out.println("qdrvgdrfa updateSize key before synchronized: " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
+//            System.out.println("qdrvgdrfa updateSize key before synchronized: " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
 
-            reconciliationCtx.lock.readLock().lock();
+//            reconciliationCtx.lock.readLock().lock();
 
-            try /*synchronized (reconciliationCtx.reconciliationMux())*/ {
-                System.out.println("qsddcvasda Thread " + Thread.currentThread().getName());
-                System.out.println("qdrvgdrfa updateSize key before isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
-                if (reconciliationCtx.isReconciliationInProgress()) {
+//            try /*synchronized (reconciliationCtx.reconciliationMux())*/ {
+//                System.out.println("qsddcvasda Thread " + Thread.currentThread().getName());
+//                System.out.println("qdrvgdrfa updateSize key before isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
+                if (false/*reconciliationCtx.isReconciliationInProgress()*/) {
 
-                    System.out.println("qdrvgdrfa updateSize key after isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
-                    reconciliationCtx.keysAfterCounters.putIfAbsent(cacheId, new AtomicLong());
-                    reconciliationCtx.keysAfterCounters.get(cacheId).addAndGet(delta);
-                    System.out.println("qdrvlkiyt updateSize key after isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
+//                    System.out.println("qdrvgdrfa updateSize key after isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
+//                    reconciliationCtx.keysAfterCounters.putIfAbsent(cacheId, new AtomicLong());
+//                    reconciliationCtx.keysAfterCounters.get(cacheId).addAndGet(delta);
+//                    System.out.println("qdrvlkiyt updateSize key after isReconciliationInProgress(): " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
 
 //                if (reconciliationCtx.isBatchesInProgress()) {
 //                    while (reconciliationCtx.lastKey(cacheId) == null && reconciliationCtx.isReconciliationInProgress()) {
@@ -1793,19 +1796,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
 //                        storageSize.addAndGet(delta);
 
-                        System.out.println("qergdf1 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                            "updateSize inner if. _key_: " + key +
-                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.lastKey(cacheId)) +
-                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId))) +
-                            " ||| storageSize:" + storageSize.get() +
-                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-
-                        System.out.println("qergdf2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)key).value() +
-                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)key).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                            " ||| storageSize:" + storageSize.get() +
-                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+//                        System.out.println("qergdf1 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                            "updateSize inner if. _key_: " + key +
+//                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.lastKey(cacheId)) +
+//                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId))) +
+//                            " ||| storageSize:" + storageSize.get() +
+//                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+//
+//                        System.out.println("qergdf2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)key).value() +
+//                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+//                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)key).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+//                            " ||| storageSize:" + storageSize.get() +
+//                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
                     }
                     if ((reconciliationCtx.firstKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.firstKey(cacheId)) >= 0)/* || (reconciliationCtx.keysToCheck.containsKey(cacheId) && !reconciliationCtx.keysToCheck.get(cacheId).contains(key))*/) {
 //                        reconciliationCtx.keysAfterCounter.addAndGet(delta);
@@ -1816,20 +1819,20 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //                        reconciliationCtx.keysAfter.get(cacheId).get(key).addAndGet(delta);
                         reconciliationCtx.keysAfter.get(cacheId).put(key, new AtomicLong(delta));
 
-                        System.out.println("qergdf1 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                            "updateSize inner if. _key_: " + key +
-                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.lastKey(cacheId)) +
-                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId))) +
-                            " ||| storageSize:" + storageSize.get() +
-                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-
-                        System.out.println("qdrefgs2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                            " updateSize keysAfter. _key_: " + ((KeyCacheObjectImpl)key).value() +
-                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)key).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                            " ||| storageSize:" + storageSize.get() +
-                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-                        System.out.println("qwsfrsee keysAfter " + reconciliationCtx.keysAfter);
+//                        System.out.println("qergdf1 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                            "updateSize inner if. _key_: " + key +
+//                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.lastKey(cacheId)) +
+//                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId))) +
+//                            " ||| storageSize:" + storageSize.get() +
+//                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+//
+//                        System.out.println("qdrefgs2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                            " updateSize keysAfter. _key_: " + ((KeyCacheObjectImpl)key).value() +
+//                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+//                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)key).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+//                            " ||| storageSize:" + storageSize.get() +
+//                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+//                        System.out.println("qwsfrsee keysAfter " + reconciliationCtx.keysAfter);
                     }
                     if ((reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) > 0)/* || (reconciliationCtx.keysToCheck.containsKey(cacheId) && !reconciliationCtx.keysToCheck.get(cacheId).contains(key))*/) {
 //                        reconciliationCtx.keysAfterCounter.addAndGet(delta);
@@ -1863,19 +1866,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 else {
 //                    storageSize.addAndGet(delta);
 
-                    System.out.println("qjnghdae1 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                        " updateSize else. _key_: " + key +
-                        " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.lastKey(cacheId)) +
-                        " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId))) +
-                        " ||| storageSize:" + storageSize.get() +
-                        " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-
-                    System.out.println("qjnghdae2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                        " updateSize else. _key_: " + ((KeyCacheObjectImpl)key).value() +
-                        " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                        " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) reconciliationCtx.lastKey(cacheId)).value())) +
-                        " ||| storageSize:" + storageSize.get() +
-                        " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+//                    System.out.println("qjnghdae1 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                        " updateSize else. _key_: " + key +
+//                        " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.lastKey(cacheId)) +
+//                        " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId))) +
+//                        " ||| storageSize:" + storageSize.get() +
+//                        " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+//
+//                    System.out.println("qjnghdae2 " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                        " updateSize else. _key_: " + ((KeyCacheObjectImpl)key).value() +
+//                        " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+//                        " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl) key).value()) > ((Integer)((KeyCacheObjectImpl) reconciliationCtx.lastKey(cacheId)).value())) +
+//                        " ||| storageSize:" + storageSize.get() +
+//                        " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
                 }
 
 //                reconciliationCtx.keysAfter += delta;
@@ -1894,10 +1897,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     size.addAndGet(delta);
                 }
-            }
-            finally {
-                reconciliationCtx.lock.readLock().unlock();
-            }
+//            }
+//            finally {
+//                reconciliationCtx.lock.readLock().unlock();
+//            }
 
             reconciliationCtx.putRemoveInProgress.decrementAndGet();
 //            storageSize.addAndGet(delta);
@@ -2119,8 +2122,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public void invoke(GridCacheContext cctx, KeyCacheObject key, OffheapInvokeClosure c)
             throws IgniteCheckedException {
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(10);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+//            if (!busyLock.enterBusy()) {
+//                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+//            }
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -3102,6 +3116,28 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             if (!hasOldVal) {
                 incrementSize(cctx.cacheId(), newRow.key());
+
+                if (reconciliationCtx().isReconciliationInProgress()) {
+                    if (reconciliationCtx().lastKey(cctx.cacheId()) != null && reconciliationCtx().KEY_COMPARATOR.compare(newRow.key(), reconciliationCtx().lastKey(cctx.cacheId())) <= 0) {
+                        reconciliationCtx().sizes.get(cctx.cacheId()).incrementAndGet();
+                    }
+                    else {
+                        if (reconciliationCtx().cursorIteration) {
+                            Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx().tempMap.get(cctx.cacheId());
+
+                            if (!tempMap.containsKey(newRow.key())) {
+                                T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx().lastKeys.get(cctx.cacheId()), 1);
+
+                                tempMap.put(newRow.key(), borderKeyTuple);
+                            }
+                            else if (tempMap.get(newRow.key()).get2() == -1) {
+                                T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx().lastKeys.get(cctx.cacheId()), 1);
+
+                                tempMap.put(newRow.key(), borderKeyTuple);
+                            }
+                        }
+                    }
+                }
             }
 
             GridCacheQueryManager qryMgr = cctx.queries();
@@ -3185,11 +3221,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         public static class ReconciliationContext {
             public volatile Map<Integer, AtomicLong> keysAfterCounters = new ConcurrentHashMap<>();
 
+            public int cacheId;
+
             /** */
             private volatile boolean isReconciliationInProgress;
 
             /** */
             private volatile boolean isBatchesInProgress;
+
+            public volatile boolean cursorIteration;
 
             /** */
             private final Object reconciliationMux = new Object();
@@ -3207,17 +3247,21 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             private final Map<Integer, KeyCacheObject> firstKeys = new ConcurrentHashMap<>();
 
             /** */
-            private final Map<Integer, KeyCacheObject> lastKeys = new ConcurrentHashMap<>();
+            public final Map<Integer, KeyCacheObject> lastKeys = new ConcurrentHashMap<>();
 
             public final Map<Integer, List<KeyCacheObject>> keysCheckedInBatch = new ConcurrentHashMap<>();
 
             public final Map<Integer, Map<KeyCacheObject, AtomicLong>> keysAfter = new ConcurrentHashMap<>();
 
+            public final Map<Integer, AtomicLong> sizes = new ConcurrentHashMap<>();
+
+            public final Map<Integer, Map<KeyCacheObject, T2<KeyCacheObject, Integer>>> tempMap = new ConcurrentHashMap<>();
+
             public Map<Integer, Set<KeyCacheObject>> keysInBatch = new ConcurrentHashMap<>();
 //            public Map<Integer, Set<KeyCacheObject>> keysInBatch = Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>());
 
             /** */
-            private static final KeyComparator KEY_COMPARATOR = new KeyComparator();
+            public static final KeyComparator KEY_COMPARATOR = new KeyComparator();
 
             /** */
             public boolean isReconciliationInProgress() {
@@ -3415,6 +3459,38 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             @Nullable CacheDataRow oldRow,
             @Nullable CacheDataRow tombstoneRow
         ) throws IgniteCheckedException {
+//            Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx().tempMap.get(cctx.cacheId());
+//
+//            if (!tempMap.containsKey(key)) {
+//                T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx().lastKeys.get(cctx.cacheId()), -1);
+//
+//                tempMap.put(key, borderKeyTuple);
+//            }
+//            else if (tempMap.get(key).get2() == 1)
+//                tempMap.remove(key);
+
+//            if (reconciliationCtx().isReconciliationInProgress()) {
+//                if (reconciliationCtx().lastKey(cctx.cacheId()) != null && reconciliationCtx().KEY_COMPARATOR.compare(key, reconciliationCtx().lastKey(cctx.cacheId())) <= 0) {
+//                    reconciliationCtx().sizes.get(cctx.cacheId()).decrementAndGet();
+//                }
+//                else {
+//                    if (reconciliationCtx().cursorIteration) {
+//                        reconciliationCtx().tempMap.putIfAbsent(cctx.cacheId(), new ConcurrentHashMap<>());
+//
+//                        Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx().tempMap.get(cctx.cacheId());
+//
+//                        if (!tempMap.containsKey(key)) {
+//                            T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx().lastKeys.get(cctx.cacheId()), -1);
+//
+//                            tempMap.put(key, borderKeyTuple);
+//                        }
+//                        else if (tempMap.get(key).get2() == 1) {
+//                            tempMap.remove(key);
+//                        }
+//                    }
+//                }
+//            }
+
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean oldVal = oldRow != null && !oldRow.tombstone();
 
