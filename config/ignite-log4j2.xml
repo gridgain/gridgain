@@ -58,7 +58,10 @@
 
         <Logger name="org.springframework" level="WARN"/>
         <Logger name="org.eclipse.jetty" level="WARN"/>
-        <Logger name="org.glassfish.grizzly" level="WARN"/>
+
+        <Logger name="org.gridgain.control.springframework" level="WARN"/>
+        <Logger name="org.gridgain.control.glassfish.grizzly" level="WARN"/>
+        <Logger name="org.gridgain.control.jackson" level="ERROR"/>
 
         <!--
         Avoid warnings about failed bind attempt when multiple nodes running on the same host.
