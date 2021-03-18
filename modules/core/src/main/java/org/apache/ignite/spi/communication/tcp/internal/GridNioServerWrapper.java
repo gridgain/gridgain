@@ -414,6 +414,8 @@ public class GridNioServerWrapper {
                                 sesFromRecovery.close();
                         }
 
+                        log.info("Descriptor was not reserved.");
+
                         return null;
                     }
 
@@ -458,8 +460,11 @@ public class GridNioServerWrapper {
                                 recoveryDesc.received(),
                                 connIdx));
 
-                        if (rcvCnt == ALREADY_CONNECTED)
+                        if (rcvCnt == ALREADY_CONNECTED) {
+                            log.info("Already connected.");
+
                             return null;
+                        }
                         else if (rcvCnt == NODE_STOPPING) {
                             // Safe to remap on remote node stopping.
                             throw new ClusterTopologyCheckedException("Remote node started stop procedure: " + node.id());

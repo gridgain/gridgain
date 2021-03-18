@@ -888,36 +888,36 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         /** {@inheritDoc} */
         @Override public void apply(Boolean success) {
             if (success) {
-                try {
-                    IgniteInClosure<IgniteInternalFuture<?>> lsnr = msgFut -> {
-                        try {
-                            msgFut.get();
-
-                            GridTcpNioCommunicationClient client =
-                                connected(recoveryDesc, ses, rmtNode, msg.received(), false, createClient);
-
-                            fut.onDone(client);
-                        }
-                        catch (IgniteCheckedException e) {
-                            if (log.isDebugEnabled()) {
-                                log.debug("Failed to send recovery handshake " +
-                                    "[rmtNode=" + rmtNode.id() + ", err=" + e + ']');
-                            }
-
-                            recoveryDesc.release();
-
-                            fut.onDone();
-                        }
-                        finally {
-                            clientPool.removeFut(connKey, fut);
-                        }
-                    };
-
-                    nioSrvWrapper.nio().sendSystem(ses, new RecoveryLastReceivedMessage(recoveryDesc.received()), lsnr);
-                }
-                catch (IgniteCheckedException e) {
-                    U.error(log, "Failed to send message: " + e, e);
-                }
+//                try {
+//                    IgniteInClosure<IgniteInternalFuture<?>> lsnr = msgFut -> {
+//                        try {
+//                            msgFut.get();
+//
+//                            GridTcpNioCommunicationClient client =
+//                                connected(recoveryDesc, ses, rmtNode, msg.received(), false, createClient);
+//
+//                            fut.onDone(client);
+//                        }
+//                        catch (IgniteCheckedException e) {
+//                            if (log.isDebugEnabled()) {
+//                                log.debug("Failed to send recovery handshake " +
+//                                    "[rmtNode=" + rmtNode.id() + ", err=" + e + ']');
+//                            }
+//
+//                            recoveryDesc.release();
+//
+//                            fut.onDone();
+//                        }
+//                        finally {
+//                            clientPool.removeFut(connKey, fut);
+//                        }
+//                    };
+//
+//                    nioSrvWrapper.nio().sendSystem(ses, new RecoveryLastReceivedMessage(recoveryDesc.received()), lsnr);
+//                }
+//                catch (IgniteCheckedException e) {
+//                    U.error(log, "Failed to send message: " + e, e);
+//                }
             }
             else {
                 try {
