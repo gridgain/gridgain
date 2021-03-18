@@ -25,8 +25,8 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
@@ -70,7 +70,7 @@ public class GridNioRecoveryDescriptor {
     private final IgniteLogger log;
 
     /** Incoming connection request from remote node. */
-    private IgniteBiTuple<Long, IgniteInClosure<Boolean>> handshakeReq;
+    private IgniteBiTuple<Long, IgniteBiInClosure<GridNioSession, Boolean>> handshakeReq;
 
     /** Connected flag. */
     private boolean connected;
@@ -329,11 +329,11 @@ public class GridNioRecoveryDescriptor {
             connected = true;
 
             if (handshakeReq != null) {
-                IgniteInClosure<Boolean> c = handshakeReq.get2();
+                IgniteBiInClosure<GridNioSession, Boolean> c = handshakeReq.get2();
 
                 assert c != null;
 
-                c.apply(false);
+                c.apply(ses, false);
 
                 handshakeReq = null;
             }
@@ -381,13 +381,13 @@ public class GridNioRecoveryDescriptor {
             connected = false;
 
             if (handshakeReq != null) {
-                IgniteInClosure<Boolean> c = handshakeReq.get2();
+                IgniteBiInClosure<GridNioSession, Boolean> c = handshakeReq.get2();
 
                 assert c != null;
 
                 handshakeReq = null;
 
-                c.apply(true);
+                c.apply(ses, true);
             }
             else {
                 reserved = false;
@@ -411,10 +411,10 @@ public class GridNioRecoveryDescriptor {
      * @param c Closure to run on reserve.
      * @return {@code True} if reserved.
      */
-    public boolean tryReserve(long id, IgniteInClosure<Boolean> c) {
+    public boolean tryReserve(long id, IgniteBiInClosure<GridNioSession, Boolean> c) {
         synchronized (this) {
             if (connected) {
-                c.apply(false);
+                c.apply(ses, false);
 
                 return false;
             }
@@ -428,16 +428,16 @@ public class GridNioRecoveryDescriptor {
                     assert id0 != id : id0;
 
                     if (id > id0) {
-                        IgniteInClosure<Boolean> c0 = handshakeReq.get2();
+                        IgniteBiInClosure<GridNioSession, Boolean> c0 = handshakeReq.get2();
 
                         assert c0 != null;
 
-                        c0.apply(false);
+                        c0.apply(ses, false);
 
                         handshakeReq = new IgniteBiTuple<>(id, c);
                     }
                     else
-                        c.apply(false);
+                        c.apply(ses, false);
                 }
                 else
                     handshakeReq = new IgniteBiTuple<>(id, c);
