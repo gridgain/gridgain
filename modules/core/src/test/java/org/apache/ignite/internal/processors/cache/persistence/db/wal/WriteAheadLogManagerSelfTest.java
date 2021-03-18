@@ -188,11 +188,9 @@ public class WriteAheadLogManagerSelfTest extends GridCommonAbstractTest {
 
         assertNotNull(GridTestUtils.getFieldValue(walMgr(n), "nextAutoArchiveTimeoutObj"));
 
-        assertTrue(waitForCondition(() -> {
-            n.cache(DEFAULT_CACHE_NAME).put(current().nextInt(), new byte[16]);
+        n.cache(DEFAULT_CACHE_NAME).put(current().nextInt(), new byte[16]);
 
-            return logLsnr.check();
-        }, getTestTimeout()));
+        assertTrue(waitForCondition(() -> logLsnr.check(), getTestTimeout()));
     }
 
     /**
