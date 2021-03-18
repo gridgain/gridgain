@@ -174,10 +174,11 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             partSizesMap.put(nodeId, nodeRes.result().get2());
         }
 
-//         if (lastKey == null)
-//             System.out.println("qgrtsngd null");
-//         else
-//             System.out.println("qgrtsngd " + ((KeyCacheObjectImpl)lastKey).value());
+         if (lastKey == null)
+             System.out.println("qgrtsngd null");
+         else
+             System.out.println("qgrtsngd " + ((KeyCacheObjectImpl)lastKey).value());
+        System.out.println("qgrtsngd " + lastKey);
 
         return new ExecutionResult<>(new T3<>(lastKey, totalRes, partSizesMap));
     }
@@ -258,7 +259,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = cacheDataStore.reconciliationCtx();
 
-            if (!partReconciliationCtx.isReconciliationInProgress()) {
+            if (!partReconciliationCtx.isReconciliationInProgress() && partReconciliationCtx.lastKey(cacheId) == null) {
                 cacheDataStore.busyLock.block();
 
                 try {
@@ -274,11 +275,11 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             KeyCacheObject keyToStart = null;
 
-            if (lowerKey != null && lastKeyForSizes != null)
-                keyToStart = KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
-            else if (lowerKey != null)
-                keyToStart = lowerKey;
-            else if (lastKeyForSizes != null)
+//            if (lowerKey != null && lastKeyForSizes != null)
+//                keyToStart = KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
+//            else if (lowerKey != null)
+//                keyToStart = lowerKey;
+            /*else */if (lastKeyForSizes != null)
                 keyToStart = lastKeyForSizes;
 
             partReconciliationCtx.sizes.putIfAbsent(cacheId, new AtomicLong());
@@ -304,7 +305,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                 boolean isEmptyCursor = true;
 
-                for (int i = 0; i < batchSize && cursor.next(); i++) {
+                for (int i = 0; (i < batchSize && (newLastKey == null || !newLastKey.equals(partReconciliationCtx.lastKey(cacheId))) && cursor.next()); i++) {
                     isEmptyCursor = false;
 
                     try {
@@ -344,7 +345,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 ////                        partReconciliationCtx.lastKey(cacheId, row.key());
 //                    }
 
-                    if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0) {
+                    if (oldBorderKey == null || KEY_COMPARATOR.compare(oldBorderKey, row.key()) < 0) {
                         partEntryHashRecords.add(new VersionedKey(
                             ignite.localNode().id(),
                             row.key(),
@@ -363,25 +364,51 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                 System.out.println("qzsdfvfe after newLastKey");
 
-                if (newLastKey != null)
-                    partReconciliationCtx.lastKeys().put(cacheId, newLastKey);
+//                if (newLastKey != null)
+//                    partReconciliationCtx.lastKeys().put(cacheId, newLastKey);
 
                 partReconciliationCtx.cursorIteration = false;
 
-                System.out.println("qvdrftga2 after iteration " + partSize.get());
+                System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
+                System.out.println("qvdrftga2 after iteration newLastKey " + newLastKey + " oldBorderKey " + oldBorderKey);
 
-                if (/*newLastKey == null || */newLastKey.equals(oldBorderKey)) {
+                System.out.println("qdresdvscs tempMap " + tempMap);
+
+                if ((newLastKey == null || oldBorderKey == null || newLastKey.equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress()) {
 //                if (partSize.get() == 300) {
                     cacheDataStore.busyLock.block();
 
                     try {
                         partReconciliationCtx.isReconciliationInProgress(false);
 
+//                        for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : partReconciliationCtx.tempMap.get(partReconciliationCtx.cacheId).entrySet()) {
+//                            System.out.println("qdsfvrds " + entry);
+//                            if (partReconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), newLastKey) <= 0 &&
+////                        if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), ((DataRow)rows[0]).key()) < 0 &&
+//                                entry.getValue().get2() == 1)
+//                                partSize.incrementAndGet();
+////                        else if (!(entry.getValue().get1() != null && entry.getValue().get1().equals(lastKey) && entry.getValue().get2() == -1))
+////                        else if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), lastKey) <= 0 &&
+////                                entry.getValue().get2() == -1)
+////                            partSize.decrementAndGet();
+//                        }
+
                         for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : tempMap.entrySet()) {
-                            System.out.println("qrolpdtd");
-                            if (entry.getValue().get2() == 1)
+                            System.out.println("qrolpdtd entry " + entry + " lastKey " + newLastKey);
+                            if (partReconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), newLastKey) <= 0 &&
+//                          if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), ((DataRow)rows[0]).key()) < 0 &&
+                                entry.getValue().get2() == 1) {
+                                System.out.println("qdsvfred1 increment part size in recon" + entry.getKey());
                                 partSize.incrementAndGet();
+                            }
+                            else if (entry.getValue().get2() == 1) {
+                                System.out.println("qdsvfred2 increment part size in recon" + entry.getKey());
+                                partSize.incrementAndGet();
+                            }
+//                            partSize.addAndGet(entry.getValue().get2());
                         }
+
+                        System.out.println("qfgtopes partSize " + partSize);
 
                         cacheDataStore.storageSize.set(partSize.get());
                     }

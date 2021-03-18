@@ -155,20 +155,20 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     }
 
     @Test
-    public void testRepairUnderLoad() throws Exception {
+    public void testRepairUnderLoad() throws Exception {//Value is not ready
         CollectPartitionKeysByBatchTask.msg.clear();
         CollectPartitionKeysByBatchTask.msg1.clear();
 
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 100;
+        int endKey = 600;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
 
         for (int i = startKey; i < endKey; i++) {
-            i += 1;
+            i += 2;
             if (i < endKey) {
                 cache.put(i, i);
                 putCount.incrementAndGet();
@@ -203,70 +203,72 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         AtomicReference<ReconciliationResult> res = new AtomicReference<>();
 
-//        IgniteInternalFuture loadFut0 = GridTestUtils.runAsync(() -> {
-//            System.out.println("qvsdhntsd loadFut start");
-//
-////            try {
-////                sleep(50);
-////            }
-////            catch (InterruptedException e) {
-////                e.printStackTrace();
-////            }
-//
-//            int i = 0;
-//
-//            int max = 0;
-//
-//            while(res.get() == null/* || i < endKey*/) {
-//
-//                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-////                if (!cache.containsKey(i1)) {
-//                    cache.put(i1, 1);
-//                    putCount.incrementAndGet();
-////                }
-//
-////                try {
-////                    sleep(100);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-////                if (cache.containsKey(i1)) {
-////                    cache.remove(i1);
-////                    removeCount.incrementAndGet();
-////                }
-//
-////                try {
-////                    sleep(10);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                try {
-////                    sleep(3);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                System.out.println("qfegsdg put random: " + i1);
-////                doSleep(3);
-//
-////                if (i1 > max)
-////                    max = i1;
-//
-////                if (i < endKey) {
-////                    cache.put(i, i);
-////                    i++;
-////                }
+        IgniteInternalFuture loadFut0 = GridTestUtils.runAsync(() -> {
+            System.out.println("qvsdhntsd loadFut start");
+
+//            try {
+//                sleep(2);
 //            }
-//
-//            System.out.println("qvraslpf loadFut stop" + i);
-//            System.out.println("qmfgtssf loadFut max" + max);
-//        });
+//            catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+
+            int i = 0;
+
+            int max = 0;
+
+            while(res.get() == null/* || i < endKey*/) {
+
+                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (!cache.containsKey(i1)) {
+                    cache.put(i1, 1);
+                    putCount.incrementAndGet();
+                System.out.println("qdervdvds after put in test");
+//                }
+
+//                try {
+//                    sleep(1);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (cache.containsKey(i1)) {
+//                    cache.remove(i1);
+//                    removeCount.incrementAndGet();
+                System.out.println("qdflpltis after remove in test");
+//                }
+
+//                try {
+//                    sleep(10);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                try {
+//                    sleep(3);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                System.out.println("qfegsdg put random: " + i1);
+//                doSleep(3);
+
+//                if (i1 > max)
+//                    max = i1;
+
+//                if (i < endKey) {
+//                    cache.put(i, i);
+//                    i++;
+//                }
+            }
+
+            System.out.println("qvraslpf loadFut stop" + i);
+            System.out.println("qmfgtssf loadFut max" + max);
+        });
 
 //        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
 //            System.out.println("qvsdhntsd loadFut1 start");
@@ -342,7 +344,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         ReconciliationResult reconciliationRes = res.get();
 
-//        loadFut0.get();
+        loadFut0.get();
 //        loadFut1.get();
 //        loadFut2.get();
 
@@ -371,11 +373,13 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        cache.put(101, 102);
 
         System.out.println("qssefvsdae cacheSize after recon " + cache.size());
+        System.out.println("qssefvsdae key 0 after recon " + cache.get(0));
+        System.out.println("qssefvsdae key 1 after recon " + cache.get(1));
 
         for (int i = startKey; i < endKey; i++) {
-            cache.put(i, i);
+            grid(0).cache(DEFAULT_CACHE_NAME).put(i, i);
             putCount.incrementAndGet();
-            cache.remove(i + endKey);
+//            cache.remove(i + endKey);
             removeCount.incrementAndGet();
 
             System.out.println("qfegsdg put after all: " + i);

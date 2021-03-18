@@ -370,6 +370,9 @@ public abstract class PageHandler<X, R> {
 
             R res = h.run(grpId, pageId, page, pageAddr, init, walPlc, arg, intArg, statHolder);
 
+            System.out.println("qsdcfer writePage " + h.getClass() + " || " + arg);
+//            if (arg instanceof BPlusTree.Remove)
+
             ok = true;
 
             return res;
