@@ -26,6 +26,7 @@
 #include <ignite/impl/interop/interop_memory.h>
 #include <ignite/impl/binary/binary_type_manager.h>
 #include <ignite/impl/handle_registry.h>
+#include <ignite/impl/logger.h>
 
 namespace ignite
 {
@@ -71,8 +72,9 @@ namespace ignite
              * Constructor.
              *
              * @param cfg Node configuration.
+             * @param logger Logger.
              */
-            IgniteEnvironment(const IgniteConfiguration& cfg);
+            IgniteEnvironment(const IgniteConfiguration& cfg, Logger* logger);
 
             /**
              * Destructor.
@@ -334,6 +336,24 @@ namespace ignite
             ignite::Ignite* GetIgnite();
 
             /**
+             * Log message.
+             * @param level Log level.
+             * @param message Message.
+             * @param category Category.
+             * @param errorInfo Error information.
+             */
+            void Log(LogLevel::Type level, const std::string& message, const std::string& category,
+                 const std::string& errorInfo);
+
+            /**
+             * Is log level enabled.
+             *
+             * @param level Log level.
+             * @return @c true if log level is supported.
+             */
+            bool IsLogLevelEnabled(LogLevel::Type level);
+
+            /**
              * InLongOutLong callback.
              * Allow access to private nodes member.
              *
@@ -379,6 +399,9 @@ namespace ignite
 
             /** Ignite node. */
             ignite::Ignite* ignite;
+
+            /** Logger. */
+            Logger* logger;
 
             IGNITE_NO_COPY_ASSIGNMENT(IgniteEnvironment);
         };

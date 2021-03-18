@@ -32,6 +32,9 @@ import org.jetbrains.annotations.Nullable;
  * Base interop bootstrap implementation.
  */
 public abstract class PlatformAbstractBootstrap implements PlatformBootstrap {
+    /** Use logger flag. */
+    protected boolean useLogger;
+
     /** {@inheritDoc} */
     @Override public PlatformProcessor start(IgniteConfiguration cfg, @Nullable GridSpringResourceContext springCtx,
         long envPtr) {
@@ -71,6 +74,6 @@ public abstract class PlatformAbstractBootstrap implements PlatformBootstrap {
      * @param input Input stream.
      */
     protected void processInput(PlatformInputStream input) {
-        // No-op.
+        useLogger = input.readBoolean();
     }
 }
