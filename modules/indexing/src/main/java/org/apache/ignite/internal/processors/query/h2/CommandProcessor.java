@@ -525,6 +525,7 @@ public class CommandProcessor {
                 else
                     return t;
             }).toArray(StatisticsObjectConfiguration[]::new);
+
         indexing.statsManager().collectStatistics(objCfgs);
     }
 

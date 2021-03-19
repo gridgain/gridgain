@@ -43,15 +43,6 @@ public class ObjectPartitionStatisticsObsolescence implements Externalizable {
     }
 
     /**
-     * Constructor.
-     *
-     * @param modified Modified counter.
-     */
-    public ObjectPartitionStatisticsObsolescence(HLL modified) {
-        this.modified = modified;
-    }
-
-    /**
      * @param key Save specified key in modified keys counter.
      */
     public synchronized void modify(byte[] key) {
@@ -77,7 +68,7 @@ public class ObjectPartitionStatisticsObsolescence implements Externalizable {
     }
 
     /**
-     * Set dirty flag
+     * Set dirty flag.
      *
      * @param dirty The new dirty flag value.
      */

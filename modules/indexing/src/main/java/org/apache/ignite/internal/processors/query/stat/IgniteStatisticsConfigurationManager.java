@@ -29,7 +29,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
@@ -100,6 +102,9 @@ public class IgniteStatisticsConfigurationManager {
     private final Object mux = new Object();
 
     /** */
+    private final IgniteCluster cluster;
+
+    /** */
     private final GridInternalSubscriptionProcessor subscriptionProcessor;
 
     /** */
@@ -113,7 +118,6 @@ public class IgniteStatisticsConfigurationManager {
             distrMetaStorage.listen(
                 (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
                 (k, oldV, newV) -> {
-
                     // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
                     // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
                     // called on exchange done.
@@ -143,7 +147,7 @@ public class IgniteStatisticsConfigurationManager {
             started = true;
 
             // Skip join/left client nodes.
-            if (fut.exchangeType() != ExchangeType.ALL)
+            if (fut.exchangeType() != ExchangeType.ALL || cluster.state() != ClusterState.ACTIVE)
                 return;
 
             DiscoveryEvent evt = fut.firstEvent();
@@ -215,6 +219,7 @@ public class IgniteStatisticsConfigurationManager {
         SchemaManager schemaMgr,
         GridInternalSubscriptionProcessor subscriptionProcessor,
         GridSystemViewManager sysViewMgr,
+        IgniteCluster cluster,
         GridCachePartitionExchangeManager exchange,
         IgniteStatisticsRepository repo,
         StatisticsGatherer gatherer,
@@ -226,6 +231,7 @@ public class IgniteStatisticsConfigurationManager {
         this.repo = repo;
         this.mgmtPool = mgmtPool;
         this.gatherer = gatherer;
+        this.cluster = cluster;
         this.subscriptionProcessor = subscriptionProcessor;
         this.exchange = exchange;
 
