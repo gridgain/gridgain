@@ -201,7 +201,7 @@ public class WriteAheadLogManagerSelfTest extends GridCommonAbstractTest {
         n.cluster().state(ACTIVE);
         awaitPartitionMapExchange();
 
-        GridTimeoutObject timeoutObj = nextAutoArchiveTimeoutObj(n);
+        GridTimeoutObject timeoutObj = timeoutRollover(n);
         assertNotNull(timeoutObj);
 
         n.cache(DEFAULT_CACHE_NAME).put(current().nextInt(), new byte[16]);
@@ -235,7 +235,7 @@ public class WriteAheadLogManagerSelfTest extends GridCommonAbstractTest {
             n.cluster().state(ACTIVE);
             awaitPartitionMapExchange();
 
-            GridTimeoutObject timeoutObj = nextAutoArchiveTimeoutObj(n);
+            GridTimeoutObject timeoutObj = timeoutRollover(n);
             assertNotNull(timeoutObj);
 
             n.cache(DEFAULT_CACHE_NAME).put(current().nextInt(), new byte[16]);
@@ -290,13 +290,13 @@ public class WriteAheadLogManagerSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Getting {@code FileWriteAheadLogManager#nextAutoArchiveTimeoutObj};
+     * Getting {@code FileWriteAheadLogManager#timeoutRollover};
      *
      * @param n Node.
      * @return Timeout object.
      */
-    @Nullable private GridTimeoutObject nextAutoArchiveTimeoutObj(IgniteEx n) {
-        return getFieldValue(walMgr(n), "nextAutoArchiveTimeoutObj");
+    @Nullable private GridTimeoutObject timeoutRollover(IgniteEx n) {
+        return getFieldValue(walMgr(n), "timeoutRollover");
     }
 
     /**
