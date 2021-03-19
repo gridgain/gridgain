@@ -481,7 +481,8 @@ public class IgniteStatisticsRepository {
             statsToAgg
         );
 
-        saveLocalStatistics(cfg.key(), locStat);
+        if (locStat != null)
+            saveLocalStatistics(cfg.key(), locStat);
 
         return locStat;
     }

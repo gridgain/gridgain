@@ -238,7 +238,9 @@ public class ColumnStatisticsCollector {
         // Total size in bytes
         long totalSize = 0;
 
-        long ver = F.first(partStats).version();
+        ColumnStatistics firstStat = F.first(partStats);
+        long ver = firstStat.version();
+        long createdAt = firstStat.createdAt();
 
         for (ColumnStatistics partStat : partStats) {
             assert ver == partStat.version() : "Aggregate statistics with different version [stats=" + partStats + ']';
@@ -255,13 +257,15 @@ public class ColumnStatisticsCollector {
 
             if (max == null || (partStat.max() != null && comp.compare(partStat.max(), max) > 0))
                 max = partStat.max();
+
+            if (createdAt < partStat.createdAt())
+                createdAt = partStat.createdAt();
         }
 
         int averageSize = averageSize(totalSize, total, nullsCnt);
 
         return new ColumnStatistics(min, max, nullsPercent(nullsCnt, total),
-            cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes(), ver,
-            U.currentTimeMillis());
+            cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes(), ver, createdAt);
     }
 
     /**

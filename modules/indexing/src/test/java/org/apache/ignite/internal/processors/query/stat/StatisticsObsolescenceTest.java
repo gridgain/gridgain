@@ -80,6 +80,13 @@ public class StatisticsObsolescenceTest extends StatisticsAbstractTest {
         return cfg;
     }
 
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
     /**
      * Test activation with statistics with topology changes.
      *

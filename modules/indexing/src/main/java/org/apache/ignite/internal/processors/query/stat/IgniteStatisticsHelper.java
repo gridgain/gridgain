@@ -84,6 +84,8 @@ public class IgniteStatisticsHelper {
             if (log.isDebugEnabled())
                 log.debug(String.format("Removing statistics for object %s.%s cause table doesn't exists.",
                         keyMsg.schema(), keyMsg.obj()));
+
+            return null;
         }
 
         return aggregateLocalStatistics(tbl, filterColumns(tbl.getColumns(), keyMsg.colNames()), stats, log);
