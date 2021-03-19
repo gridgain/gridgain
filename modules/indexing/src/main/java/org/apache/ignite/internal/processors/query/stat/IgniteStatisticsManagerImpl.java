@@ -150,7 +150,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             schemaMgr,
             ctx.internalSubscriptionProcessor(),
             ctx.systemView(),
-            ctx.cluster().get(),
+            ctx.state(),
             ctx.cache().context().exchange(),
             statsRepos,
             gatherer,
