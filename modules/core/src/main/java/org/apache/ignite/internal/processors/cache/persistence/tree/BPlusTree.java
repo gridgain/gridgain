@@ -3636,7 +3636,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         public void recon(L newRow) {
             System.out.println("qglopdslt " + newRow);
 
-            if (newRow instanceof DataRow) {
+            if (newRow instanceof DataRow && reconciliationCtx.isBatchesInProgress()) {
                 DataRow row0 = (DataRow) newRow;
 
                 if (row0.value() instanceof TombstoneCacheObject) {
@@ -3661,6 +3661,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 //                                }
                                 if (tempMap.containsKey(row0.key()) && tempMap.get(row0.key()).get2() == 1) {
                                     tempMap.remove(row0.key());
+                                    System.out.println("qfrszvr remove from tempMap in Put" + row0.key());
                                 }
 //                            }
                         }
@@ -3692,6 +3693,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx.lastKeys.get(reconciliationCtx.cacheId), 1);
 
                             tempMap.put(row0.key(), borderKeyTuple);
+                            System.out.println("qfrpoysvs add to tempMap in Put" + row0.key());
                         }
 //                        }
                     }
@@ -5908,13 +5910,22 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (rows == EMPTY)
                 rows = (T[])new Object[cnt0];
 
-            if (/*reconCursor && */reconciliationCtx.isReconciliationInProgress()) {
+            int resCnt = 0;
+//здесь заполняется буфер курсора под read локом
+            for (int idx = startIdx; idx < cnt; idx++) {
+                if (c == null || c.apply(BPlusTree.this, io, pageAddr, idx))
+                    rows = GridArrays.set(rows, resCnt++, getRow(io, pageAddr, idx, x));
+            }
+
+            if (/*reconCursor && */resCnt > 0 && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+                reconciliationCtx.isBatchesInProgress(true);
+
                 System.out.println("qdrdsrjir reconciliationCtx.tempMap.get(reconciliationCtx.cacheId)" + reconciliationCtx.tempMap.get(reconciliationCtx.cacheId));
                 AtomicLong partSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
 
                 KeyCacheObject lastKey = reconciliationCtx.lastKey(reconciliationCtx.cacheId);
 
-                if (reconciliationCtx.isReconciliationInProgress() && lastKey != null) {
+                if (reconciliationCtx.isReconciliationInProgress()/* && lastKey != null*/) {
                     reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
 
                     for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).entrySet()) {
@@ -5937,13 +5948,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).clear();
             }
 
-            int resCnt = 0;
-//здесь заполняется буфер курсора под read локом
-            for (int idx = startIdx; idx < cnt; idx++) {
-                if (c == null || c.apply(BPlusTree.this, io, pageAddr, idx))
-                    rows = GridArrays.set(rows, resCnt++, getRow(io, pageAddr, idx, x));
-            }
-
             if (/*reconCursor && */reconciliationCtx.isReconciliationInProgress()) {
                 T[] lastRows = Arrays.copyOf(rows, rows.length);
 
@@ -5957,7 +5961,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 KeyCacheObject firstKey = null;
 
                 for (T row : rows) {
-                    System.out.println("qdrfjkiadre");
+                    System.out.println("qgkplstjte rows " + Arrays.toString(rows));
 
                     try {
                         sleep(2);
@@ -5968,15 +5972,21 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                     DataRow row0 = (DataRow) row;
 
+                    if (row0.tombstone()) {
+                        System.out.println("qflikpte");
+                        continue;
+                    }
+
                     if (row0 != null) {
                         if (row0 == null)
-                            System.out.println("qfloprtfs " + row0);
+                            System.out.println("qfloprtfs fillFromBuffer0 " + row0);
 
-                        if (oldBorderKey == null || reconciliationCtx.KEY_COMPARATOR.compare(oldBorderKey, row0.key()) < 0) {
-                            if (!tempMap.containsKey(row0.key())) {
+                        if (oldBorderKey == null || (reconciliationCtx.KEY_COMPARATOR.compare(oldBorderKey, row0.key()) < 0 && row0.value() != null)) { //из-за проверки значения бывает ошибка Value is not ready из CacheDataRowAdapter
+                            if (!tempMap.containsKey(row0.key()) && row0.value() != null) {
                                 T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(oldBorderKey, 1);
 
                                 tempMap.put(row0.key(), borderKeyTuple);
+                                System.out.println("qfioptmjk add to tempMap in fillFromBuffer0 " + row0.key() + " row " + row0);
                             }
 //                            else if (tempMap.get(row0.key()).get2() == -1)
 //                                tempMap.remove(row0.key());
@@ -5989,13 +5999,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                         lastKey = row0.key();
                     }
+
+                    System.out.println("qglpyikljis rows " + tempMap);
                 }
 
-                if (firstKey != null && (reconciliationCtx.firstKey(reconciliationCtx.cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(reconciliationCtx.firstKey(reconciliationCtx.cacheId), firstKey) > 0)) {
+                if (firstKey != null && (reconciliationCtx.firstKey(reconciliationCtx.cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(reconciliationCtx.firstKey(reconciliationCtx.cacheId), firstKey) < 0)) {
                     reconciliationCtx.firstKey(reconciliationCtx.cacheId, firstKey);
                 }
 
-                if (lastKey != null && (reconciliationCtx.lastKey(reconciliationCtx.cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(reconciliationCtx.lastKey(reconciliationCtx.cacheId), lastKey) > 0)) {
+                if (lastKey != null && (reconciliationCtx.lastKey(reconciliationCtx.cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(reconciliationCtx.lastKey(reconciliationCtx.cacheId), lastKey) < 0)) {
                     reconciliationCtx.lastKey(reconciliationCtx.cacheId, lastKey);
                 }
 

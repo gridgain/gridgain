@@ -395,20 +395,20 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                         for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : tempMap.entrySet()) {
                             System.out.println("qrolpdtd entry " + entry + " lastKey " + newLastKey);
-                            if (partReconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), newLastKey) <= 0 &&
-//                          if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), ((DataRow)rows[0]).key()) < 0 &&
-                                entry.getValue().get2() == 1) {
-                                System.out.println("qdsvfred1 increment part size in recon" + entry.getKey());
-                                partSize.incrementAndGet();
-                            }
-                            else if (entry.getValue().get2() == 1) {
+//                            if (partReconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), newLastKey) <= 0 &&
+////                          if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), ((DataRow)rows[0]).key()) < 0 &&
+//                                entry.getValue().get2() == 1) {
+//                                System.out.println("qdsvfred1 increment part size in recon" + entry.getKey());
+//                                partSize.incrementAndGet();
+//                            }
+                            /*else */if (entry.getValue().get2() == 1) {
                                 System.out.println("qdsvfred2 increment part size in recon" + entry.getKey());
                                 partSize.incrementAndGet();
                             }
 //                            partSize.addAndGet(entry.getValue().get2());
                         }
 
-                        System.out.println("qfgtopes partSize " + partSize);
+                        System.out.println("qfgtopes partSize ************************* " + partSize);
 
                         cacheDataStore.storageSize.set(partSize.get());
                     }

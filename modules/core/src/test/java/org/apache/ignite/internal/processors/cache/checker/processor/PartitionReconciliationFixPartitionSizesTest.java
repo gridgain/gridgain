@@ -162,7 +162,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 600;
+        int endKey = 700;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -198,7 +198,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         objects.add(DEFAULT_CACHE_NAME);
 //        objects.add("qqq");
         builder.caches(objects);
-        builder.batchSize(10);
+        builder.batchSize(700);
 
 
         AtomicReference<ReconciliationResult> res = new AtomicReference<>();
@@ -235,7 +235,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
                 i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (cache.containsKey(i1)) {
-//                    cache.remove(i1);
+                    cache.remove(i1);
 //                    removeCount.incrementAndGet();
                 System.out.println("qdflpltis after remove in test");
 //                }
