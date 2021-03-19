@@ -15,8 +15,16 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.Ignite;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+
+import java.util.Map;
 
 import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
 
@@ -57,5 +65,55 @@ public class StatisticsObsolescenceTest extends StatisticsAbstractTest {
 
             return stat2.rowCount() > stat1.rowCount();
         }, 7000));
+    }
+
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setConsistentId(igniteInstanceName);
+
+        DataStorageConfiguration memCfg = new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true));
+
+        cfg.setDataStorageConfiguration(memCfg);
+
+        return cfg;
+    }
+
+    /**
+     * Test activation with statistics with topology changes.
+     *
+     * 1) Start two node cluster.
+     * 2) Activate cluster.
+     * 3) Create table and analyze it.
+     * 4) Inactivate cluster and change it's topology.
+     * 5) Get obsolescence map size for created table.
+     * 6) Activate cluster again.
+     * 7) Check that obsolescence map size changed due to new topology.
+     *
+     * @throws Exception In case of errors.
+     */
+    @Test
+    public void testInactiveLoad() throws Exception {
+        Ignite ignite = startGrid(0);
+        Ignite ignite1 = startGrid(1);
+
+        ignite.cluster().state(ClusterState.ACTIVE);
+
+        createSmallTable(null);
+        sql("ANALYZE SMALL");
+
+        ignite.cluster().state(ClusterState.INACTIVE);
+
+        ignite1.close();
+
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> statObs = GridTestUtils
+            .getFieldValue(statisticsMgr(0).statisticsRepository(), "statObs");
+
+        Integer oldSize = statObs.get(SMALL_KEY).size();
+
+        ignite.cluster().state(ClusterState.ACTIVE);
+
+        assertTrue(GridTestUtils.waitForCondition(() -> statObs.get(SMALL_KEY).size() > oldSize, TIMEOUT));
     }
 }
