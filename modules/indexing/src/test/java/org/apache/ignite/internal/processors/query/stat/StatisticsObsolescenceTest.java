@@ -67,6 +67,7 @@ public class StatisticsObsolescenceTest extends StatisticsAbstractTest {
         }, 7000));
     }
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -78,6 +79,13 @@ public class StatisticsObsolescenceTest extends StatisticsAbstractTest {
         cfg.setDataStorageConfiguration(memCfg);
 
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
     }
 
     /**
