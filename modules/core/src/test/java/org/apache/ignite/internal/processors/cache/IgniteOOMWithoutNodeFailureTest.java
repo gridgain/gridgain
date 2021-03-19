@@ -16,7 +16,9 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -135,6 +137,19 @@ public class IgniteOOMWithoutNodeFailureTest extends GridCommonAbstractTest {
             IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
                 task.apply(random -> cache.replace(random.nextInt(), function.apply(random)));
             });
+
+            futures.add(fut);
+        }
+
+        for (int i = 0; i < 3; i++) {
+            IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> task.apply(random -> {
+                Map<Integer, Object> map = new HashMap<>();
+
+                map.put(random.nextInt(), function.apply(random));
+                map.put(random.nextInt(), function.apply(random));
+
+                cache.putAll(map);
+            }));
 
             futures.add(fut);
         }
