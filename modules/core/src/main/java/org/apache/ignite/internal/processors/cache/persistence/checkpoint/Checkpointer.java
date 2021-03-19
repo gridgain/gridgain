@@ -654,7 +654,14 @@ public class Checkpointer extends GridWorker {
                 });
             }
 
-            doneFut.get();
+            blockingSectionBegin();
+
+            try {
+                doneFut.get();
+            }
+            finally {
+                blockingSectionEnd();
+            }
         }
     }
 
