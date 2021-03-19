@@ -44,6 +44,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Exc
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
@@ -93,7 +94,7 @@ public class IgniteStatisticsConfigurationManager {
     private final Object mux = new Object();
 
     /** */
-    private final IgniteCluster cluster;
+    private final GridClusterStateProcessor cluster;
 
     /** */
     private final GridInternalSubscriptionProcessor subscriptionProcessor;
@@ -138,7 +139,7 @@ public class IgniteStatisticsConfigurationManager {
             started = true;
 
             // Skip join/left client nodes.
-            if (fut.exchangeType() != ExchangeType.ALL || cluster.state() != ClusterState.ACTIVE)
+            if (fut.exchangeType() != ExchangeType.ALL || cluster.clusterState().lastState() != ClusterState.ACTIVE)
                 return;
 
             DiscoveryEvent evt = fut.firstEvent();
@@ -209,7 +210,7 @@ public class IgniteStatisticsConfigurationManager {
     public IgniteStatisticsConfigurationManager(
         SchemaManager schemaMgr,
         GridInternalSubscriptionProcessor subscriptionProcessor,
-        IgniteCluster cluster,
+        GridClusterStateProcessor cluster,
         GridCachePartitionExchangeManager exchange,
         IgniteStatisticsRepository repo,
         StatisticsGatherer gatherer,
