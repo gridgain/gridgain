@@ -35,7 +35,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.metric.LongMetric;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
@@ -53,7 +52,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
  */
 @RunWith(Parameterized.class)
 @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "3000")
-@WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "10000000")
+@WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "10000000") // Disable background clearing.
 public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTest {
     /** */
     private static final String TS_METRIC_NAME = "Tombstones";
@@ -147,7 +146,6 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
             crd.cache(DEFAULT_CACHE_NAME).remove(i); // Should create tombstones on both nodes.
         }
 
-        // Cache group context is not initialized properly on demander while calculating metric.
         long tsCnt = demander.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).offheap().tombstonesCount();
 
         Assert.assertEquals(keysWithTombstone.size(), tsCnt);
@@ -169,7 +167,6 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
 
         final int grpId = groupIdForCache(demander, DEFAULT_CACHE_NAME);
 
-        // Tombstone metrics are unavailable before join to topology, using internal api.
         tsCnt = demander.context().cache().cacheGroup(grpId).offheap().tombstonesCount();
 
         Assert.assertEquals(keysWithTombstone.size(), tsCnt);
@@ -180,11 +177,15 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
 
         awaitPartitionMapExchange();
 
+        // Ensure the evict queue is filled.
+        demander.context().cache().context().evict().processEvictions(true).get();
+
         final LongMetric tombstoneMetric1 = demander.context().metric().registry(
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);
 
-        // Tombstones should be removed after join to topology.
-        assertTrue(GridTestUtils.waitForCondition(() -> tombstoneMetric1.value() == 0, 30_000));
+        demander.context().cache().context().cacheContext(CU.cacheId(DEFAULT_CACHE_NAME)).ttl().expire(KEYS / 2);
+
+        assertEquals(0, tombstoneMetric1.value());
     }
 
     /**

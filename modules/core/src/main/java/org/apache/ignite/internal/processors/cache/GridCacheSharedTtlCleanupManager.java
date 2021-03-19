@@ -341,7 +341,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                             // Need to be sure that the cache to be processed will not be unregistered and,
                             // therefore, stopped during the process of expiration is in progress.
                             mgrs.computeIfPresent(processedCacheID, (id, m) -> {
-                                if (m.expire(CLEANUP_WORKER_ENTRIES_PROCESS_LIMIT, true))
+                                if (m.expire(CLEANUP_WORKER_ENTRIES_PROCESS_LIMIT))
                                     expiredRemains.set(true);
 
                                 return m;
