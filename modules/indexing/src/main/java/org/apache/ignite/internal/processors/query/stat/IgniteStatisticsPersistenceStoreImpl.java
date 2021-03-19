@@ -292,7 +292,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
         try {
             iterateMeta(prefix, (k, v) -> {
                 StatisticsKey key = getStatsKey(k);
-                ObjectPartitionStatisticsImpl stat = (ObjectPartitionStatisticsImpl)v ;
+                ObjectPartitionStatisticsImpl stat = (ObjectPartitionStatisticsImpl)v;
 
                 res.computeIfAbsent(key, k1 -> new ArrayList<>()).add(stat);
             }, true);

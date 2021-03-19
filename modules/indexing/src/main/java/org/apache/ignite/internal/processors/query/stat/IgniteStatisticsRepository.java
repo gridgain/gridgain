@@ -103,7 +103,6 @@ public class IgniteStatisticsRepository {
             Function.identity());
     }
 
-
     /**
      * Statistics column partition data view filterable supplier.
      *
