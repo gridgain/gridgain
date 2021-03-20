@@ -1,60 +1,45 @@
 package org.apache.ignite.internal.commandline.indexreader;
 
-import static java.lang.System.lineSeparator;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
-import static org.apache.ignite.internal.client.GridClientConfiguration.DFLT_CONNECT_TIMEOUT;
+import static org.apache.ignite.internal.commandline.Command.usageParams;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.errorMessage;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
-import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
-import static org.apache.ignite.internal.commandline.CommonArgParser.getCommonOptions;
-import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
-import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_PORT;
-import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
+import static org.apache.ignite.internal.commandline.indexreader.IndexReaderCommandArg.CHECK_PARTS;
+import static org.apache.ignite.internal.commandline.indexreader.IndexReaderCommandArg.DEST_FILE;
+import static org.apache.ignite.internal.commandline.indexreader.IndexReaderCommandArg.DIR;
+import static org.apache.ignite.internal.commandline.indexreader.IndexReaderCommandArg.INDEXES;
+import static org.apache.ignite.internal.commandline.indexreader.IndexReaderCommandArg.PAGE_SIZE;
+import static org.apache.ignite.internal.commandline.indexreader.IndexReaderCommandArg.PAGE_STORE_VER;
+import static org.apache.ignite.internal.commandline.indexreader.IndexReaderCommandArg.PART_CNT;
 
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.client.GridClientAuthenticationException;
-import org.apache.ignite.internal.client.GridClientClosedException;
-import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientDisconnectedException;
-import org.apache.ignite.internal.client.GridClientHandshakeException;
-import org.apache.ignite.internal.client.GridServerUnreachableException;
-import org.apache.ignite.internal.client.impl.connection.GridClientConnectionResetException;
-import org.apache.ignite.internal.client.ssl.GridSslBasicContextFactory;
-import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.commandline.CommandList;
 import org.apache.ignite.internal.commandline.CommandLogger;
-import org.apache.ignite.internal.commandline.CommonArgParser;
-import org.apache.ignite.internal.commandline.ConnectionAndSslParameters;
-import org.apache.ignite.internal.commandline.GridConsole;
-import org.apache.ignite.internal.commandline.GridConsoleAdapter;
+import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.apache.ignite.logger.java.JavaLoggerFileHandler;
 import org.apache.ignite.logger.java.JavaLoggerFormatter;
-import org.apache.ignite.plugin.security.SecurityCredentials;
-import org.apache.ignite.plugin.security.SecurityCredentialsBasicProvider;
-import org.apache.ignite.plugin.security.SecurityCredentialsProvider;
-import org.apache.ignite.ssl.SslContextFactory;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.PrintStream;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Scanner;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
@@ -63,7 +48,6 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.StreamHandler;
-import java.util.stream.Collectors;
 
 /**
  * Class that execute index reader commands passed via command line.
@@ -71,9 +55,6 @@ import java.util.stream.Collectors;
 public class IndexReaderCommandHandler {
     /** */
     static final String CMD_HELP = "--help";
-
-    /** */
-    public static final String CONFIRM_MSG = "y";
 
     /** */
     public static final String DELIM = "--------------------------------------------------------------------------------";
@@ -88,40 +69,16 @@ public class IndexReaderCommandHandler {
     public static final int EXIT_CODE_INVALID_ARGUMENTS = 1;
 
     /** */
-    public static final int EXIT_CODE_CONNECTION_FAILED = 2;
-
-    /** */
-    public static final int ERR_AUTHENTICATION_FAILED = 3;
-
-    /** */
-    public static final int EXIT_CODE_UNEXPECTED_ERROR = 4;
-
-    /** */
-    public static final int EXIT_CODE_ILLEGAL_STATE_ERROR = 5;
-
-    /** */
-    private static final long DFLT_PING_INTERVAL = 5000L;
-
-    /** */
-    private static final long DFLT_PING_TIMEOUT = 30_000L;
+    public static final int EXIT_CODE_UNEXPECTED_ERROR = 2;
 
     /** JULs logger. */
     protected final Logger logger;
-
-    /** */
-    private final Scanner in = new Scanner(System.in);
 
     /** Session. */
     protected final String ses = U.id8(UUID.randomUUID());
 
     /** Date format. */
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-
-    /** Console instance. Public access needs for tests. */
-    public GridConsole console = GridConsoleAdapter.getInstance();
-
-    /** */
-    private Object lastOperationRes;
 
     /**
      *
@@ -207,14 +164,6 @@ public class IndexReaderCommandHandler {
     }
 
     /**
-     * @param rawArgs Arguments to parse.
-     * @return Parsed parameters.
-     */
-    protected ConnectionAndSslParameters parseAndValidate(List<String> rawArgs) {
-        return new CommonArgParser(logger).parseAndValidate(rawArgs.iterator());
-    }
-
-    /**
      * Returns {@code true}, if the given command should be skipped.
      * @param cmd Command.
      */
@@ -238,10 +187,7 @@ public class IndexReaderCommandHandler {
         logger.info("User: " + System.getProperty("user.name"));
         logger.info("Time: " + startTime.format(formatter));
 
-        String commandName = "";
-
         Throwable err = null;
-        boolean verbose = false;
 
         try {
             if (F.isEmpty(rawArgs) || (rawArgs.size() == 1 && CMD_HELP.equalsIgnoreCase(rawArgs.get(0)))) {
@@ -250,11 +196,39 @@ public class IndexReaderCommandHandler {
                 return EXIT_CODE_OK;
             }
 
-            final IndexReaderCommand cmd = new IndexReaderCommand();
-            cmd.parseArguments(new CommandArgIterator(rawArgs.iterator(), Collections.emptySet()));
-            lastOperationRes = cmd.execute(null, logger);
+            final Arguments args = parseAndValidate(new CommandArgIterator(rawArgs.iterator(), Collections.emptySet()));
 
-        } finally {
+            final IgniteIndexReaderFilePageStoreFactoryImpl factory = new IgniteIndexReaderFilePageStoreFactoryImpl(
+                    new File(args.dir()),
+                    args.pageSize(),
+                    args.partCnt(),
+                    args.pageStoreVer()
+            );
+
+            try (IgniteIndexReader idxReader = new IgniteIndexReader(
+                    args.indexes() != null ? idx -> args.indexes().contains(idx) : null,
+                    args.checkParts(),
+                    args.destFile() != null ? new PrintStream(args.destFile()) : null,
+                    factory
+            )) {
+                idxReader.readIdx();
+            }
+
+            return EXIT_CODE_OK;
+        }
+        catch (IllegalArgumentException e) {
+            logger.severe("Check arguments. " + errorMessage(e));
+
+            return EXIT_CODE_INVALID_ARGUMENTS;
+        }
+        catch (Throwable e) {
+            logger.severe(errorMessage(e));
+
+            err = e;
+
+            return EXIT_CODE_UNEXPECTED_ERROR;
+        }
+        finally {
             LocalDateTime endTime = LocalDateTime.now();
 
             Duration diff = Duration.between(startTime, endTime);
@@ -262,7 +236,7 @@ public class IndexReaderCommandHandler {
             if (nonNull(err))
                 logger.info("Error stack trace:" + System.lineSeparator() + X.getFullStackTrace(err));
 
-            logger.info("Control utility has completed execution at: " + endTime.format(formatter));
+            logger.info("Index reader utility has completed execution at: " + endTime.format(formatter));
             logger.info("Execution time: " + diff.toMillis() + " ms");
 
             Arrays.stream(logger.getHandlers())
@@ -272,316 +246,68 @@ public class IndexReaderCommandHandler {
     }
 
     /**
-     * Requests interactive user confirmation if forthcoming operation is dangerous.
-     *
-     * @return {@code true} if operation confirmed (or not needed), {@code false} otherwise.
+     * Parse command line arguments.
+     * @return Command parsed arguments.
+     * @throws IllegalArgumentException In case arguments aren't valid.
      */
-    private boolean confirm(String str) {
-        if (str == null)
-            return true;
+    private Arguments parseAndValidate(CommandArgIterator argIter) {
+        String dir = "";
+        int partCnt = 0;
+        int pageSize = 4096;
+        int pageStoreVer = 2;
+        Set<String> indexes = null;
+        String destFile = null;
+        boolean checkParts = false;
 
-        String prompt = str + lineSeparator() + "Press '" + CONFIRM_MSG + "' to continue . . . ";
+        int indexReaderArgsCnt = 7;
 
-        return CONFIRM_MSG.equalsIgnoreCase(readLine(prompt));
-    }
+        while (argIter.hasNextSubArg() && indexReaderArgsCnt-- > 0) {
+            String nextArg = argIter.nextArg("");
 
-    /**
-     * @param e Exception to check.
-     * @return {@code true} if specified exception is a connection error.
-     */
-    private static boolean isConnectionError(Throwable e) {
-        return e instanceof GridClientClosedException ||
-                e instanceof GridClientConnectionResetException ||
-                e instanceof GridClientDisconnectedException ||
-                e instanceof GridClientHandshakeException ||
-                e instanceof GridServerUnreachableException;
-    }
+            IndexReaderCommandArg arg = CommandArgUtils.of(nextArg, IndexReaderCommandArg.class);
 
-    /**
-     * Analyses passed exception to find out whether it is caused by server closing connection silently.
-     * This happens when client tries to establish unprotected connection
-     * to the cluster supporting only secured communications (e.g. when server is configured to use SSL certificates
-     * and client is not).
-     *
-     * (!) Implementation depends heavily on structure of exception stack trace
-     * thus is very fragile to any changes in that structure.
-     *
-     * @param e Exception to analyse.
-     * @return {@code True} if exception may be related to the attempt to establish unprotected connection
-     * to secured cluster.
-     */
-    private boolean isConnectionClosedSilentlyException(Throwable e) {
-        if (!(e instanceof GridClientDisconnectedException))
-            return false;
+            if (isNull(arg) && !nextArg.isEmpty())
+                throw new IllegalArgumentException("Unexpected argument: " + nextArg);
 
-        Throwable cause = e.getCause();
+            switch (arg) {
+                case DIR:
+                    dir = argIter.nextArg("partition directory, where index.bin and (optionally) partition files are located");
 
-        if (cause == null)
-            return false;
+                    break;
 
-        cause = cause.getCause();
+                case PART_CNT:
+                    partCnt = argIter.nextIntArg("full partitions count in cache group.");
 
-        if (cause instanceof GridClientConnectionResetException &&
-                cause.getMessage() != null &&
-                cause.getMessage().contains("Failed to perform handshake")
-        )
-            return true;
+                    break;
 
-        return false;
-    }
+                case PAGE_SIZE:
+                    pageSize = argIter.nextIntArg("page size.");
 
-    /**
-     * Analyses passed exception to find out whether it is related to SSL misconfiguration issues.
-     *
-     * (!) Implementation depends heavily on structure of exception stack trace
-     * thus is very fragile to any changes in that structure.
-     *
-     * @param e Exception to analyze.
-     *
-     * @return {@code True} if exception may be related to SSL misconfiguration issues.
-     */
-    private boolean isSSLMisconfigurationError(Throwable e) {
-        return e != null && e.getMessage() != null && e.getMessage().contains("SSL");
-    }
+                    break;
 
+                case PAGE_STORE_VER:
+                    pageStoreVer = argIter.nextIntArg("page store version.");
 
-    /**
-     * Provides a prompt, then reads a single line of text from the console.
-     *
-     * @param prompt text
-     * @return A string containing the line read from the console
-     */
-    private String readLine(String prompt) {
-        System.out.print(prompt);
+                    break;
 
-        return in.nextLine();
-    }
+                case INDEXES:
+                    indexes = argIter.nextStringSet("index tree names.");
 
-    /**
-     * @param args Common arguments.
-     * @return Thin client configuration to connect to cluster.
-     * @throws IgniteCheckedException If error occur.
-     */
-    @NotNull
-    private GridClientConfiguration getClientConfiguration(
-            ConnectionAndSslParameters args
-    ) throws IgniteCheckedException {
-        return getClientConfiguration(args.userName(), args.password(), args);
-    }
+                    break;
 
-    /**
-     * @param userName User name for authorization.
-     * @param password Password for authorization.
-     * @param args Common arguments.
-     * @return Thin client configuration to connect to cluster.
-     * @throws IgniteCheckedException If error occur.
-     */
-    @NotNull private GridClientConfiguration getClientConfiguration(
-            String userName,
-            String password,
-            ConnectionAndSslParameters args
-    ) throws IgniteCheckedException {
-        GridClientConfiguration clientCfg = new GridClientConfiguration();
+                case DEST_FILE:
+                    destFile = argIter.nextArg("Expected file to print the report to.");
 
-        clientCfg.setPingInterval(args.pingInterval());
+                    break;
 
-        clientCfg.setPingTimeout(args.pingTimeout());
+                case CHECK_PARTS:
+                    checkParts = true;
 
-        clientCfg.setConnectTimeout(args.connectionTimeout());
-
-        clientCfg.setServers(Collections.singletonList(args.host() + ":" + args.port()));
-
-        if (!F.isEmpty(userName))
-            clientCfg.setSecurityCredentialsProvider(getSecurityCredentialsProvider(userName, password, clientCfg));
-
-        if (!F.isEmpty(args.sslKeyStorePath()))
-            clientCfg.setSslContextFactory(createSslSupportFactory(args));
-
-        return clientCfg;
-    }
-
-    /**
-     * @param userName User name for authorization.
-     * @param password Password for authorization.
-     * @param clientCfg Thin client configuration to connect to cluster.
-     * @return Security credentials provider with usage of given user name and password.
-     * @throws IgniteCheckedException If error occur.
-     */
-    @NotNull private SecurityCredentialsProvider getSecurityCredentialsProvider(
-            String userName,
-            String password,
-            GridClientConfiguration clientCfg
-    ) throws IgniteCheckedException {
-        SecurityCredentialsProvider securityCredential = clientCfg.getSecurityCredentialsProvider();
-
-        if (securityCredential == null)
-            return new SecurityCredentialsBasicProvider(new SecurityCredentials(userName, password));
-
-        final SecurityCredentials credential = securityCredential.credentials();
-        credential.setLogin(userName);
-        credential.setPassword(password);
-
-        return securityCredential;
-    }
-
-    /**
-     * @param rawArgs Arguments which user has provided.
-     * @return String which could be shown in console and pritned to log.
-     */
-    private String argumentsToString(List<String> rawArgs) {
-        boolean hide = false;
-
-        SB sb = new SB();
-
-        for (int i = 0; i < rawArgs.size(); i++) {
-            if (hide) {
-                sb.a("***** ");
-
-                hide = false;
-
-                continue;
+                    break;
             }
-
-            String arg = rawArgs.get(i);
-
-            sb.a(arg).a(' ');
-
-            hide = CommonArgParser.isSensitiveArgument(arg);
         }
 
-        return sb.toString();
-    }
-
-    /**
-     * Does one of three things:
-     * <ul>
-     *     <li>returns user name from connection parameters if it is there;</li>
-     *     <li>returns user name from client configuration if it is there;</li>
-     *     <li>requests user input and returns entered name.</li>
-     * </ul>
-     *
-     * @param args Connection parameters.
-     * @param clientCfg Client configuration.
-     * @throws IgniteCheckedException If security credetials cannot be provided from client configuration.
-     */
-    private String retrieveUserName(
-            ConnectionAndSslParameters args,
-            GridClientConfiguration clientCfg
-    ) throws IgniteCheckedException {
-        if (!F.isEmpty(args.userName()))
-            return args.userName();
-        else if (clientCfg.getSecurityCredentialsProvider() == null)
-            return requestDataFromConsole("user: ");
-        else
-            return (String)clientCfg.getSecurityCredentialsProvider().credentials().getLogin();
-    }
-
-    /**
-     * Requests user data from console with message.
-     *
-     * @param msg Message.
-     * @return Input user data.
-     */
-    private String requestDataFromConsole(String msg) {
-        if (console != null)
-            return console.readLine(msg);
-        else {
-            Scanner scanner = new Scanner(System.in);
-
-            logger.info(msg);
-
-            return scanner.nextLine();
-        }
-    }
-
-    /**
-     * @param args Commond args.
-     * @return Ssl support factory.
-     */
-    @NotNull private GridSslBasicContextFactory createSslSupportFactory(ConnectionAndSslParameters args) {
-        GridSslBasicContextFactory factory = new GridSslBasicContextFactory();
-
-        List<String> sslProtocols = split(args.sslProtocol(), ",");
-
-        String sslProtocol = F.isEmpty(sslProtocols) ? DFLT_SSL_PROTOCOL : sslProtocols.get(0);
-
-        factory.setProtocol(sslProtocol);
-        factory.setKeyAlgorithm(args.sslKeyAlgorithm());
-
-        if (sslProtocols.size() > 1)
-            factory.setProtocols(sslProtocols);
-
-        factory.setCipherSuites(split(args.getSslCipherSuites(), ","));
-
-        factory.setKeyStoreFilePath(args.sslKeyStorePath());
-
-        if (args.sslKeyStorePassword() != null)
-            factory.setKeyStorePassword(args.sslKeyStorePassword());
-        else {
-            char[] keyStorePwd = requestPasswordFromConsole("SSL keystore password: ");
-
-            args.sslKeyStorePassword(keyStorePwd);
-            factory.setKeyStorePassword(keyStorePwd);
-        }
-
-        factory.setKeyStoreType(args.sslKeyStoreType());
-
-        if (F.isEmpty(args.sslTrustStorePath()))
-            factory.setTrustManagers(GridSslBasicContextFactory.getDisabledTrustManager());
-        else {
-            factory.setTrustStoreFilePath(args.sslTrustStorePath());
-
-            if (args.sslTrustStorePassword() != null)
-                factory.setTrustStorePassword(args.sslTrustStorePassword());
-            else {
-                char[] trustStorePwd = requestPasswordFromConsole("SSL truststore password: ");
-
-                args.sslTrustStorePassword(trustStorePwd);
-                factory.setTrustStorePassword(trustStorePwd);
-            }
-
-            factory.setTrustStoreType(args.sslTrustStoreType());
-        }
-
-        return factory;
-    }
-
-    /**
-     * Split string into items.
-     *
-     * @param s String to process.
-     * @param delim Delimiter.
-     * @return List with items.
-     */
-    private static List<String> split(String s, String delim) {
-        if (F.isEmpty(s))
-            return Collections.emptyList();
-
-        return Arrays.stream(s.split(delim))
-                .map(String::trim)
-                .filter(item -> !item.isEmpty())
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * @param e Exception to check.
-     * @return {@code true} if specified exception is {@link GridClientAuthenticationException}.
-     */
-    public static boolean isAuthError(Throwable e) {
-        return X.hasCause(e, GridClientAuthenticationException.class);
-    }
-
-    /**
-     * Requests password from console with message.
-     *
-     * @param msg Message.
-     * @return Password.
-     */
-    private char[] requestPasswordFromConsole(String msg) {
-        if (console == null)
-            throw new UnsupportedOperationException("Failed to securely read password (console is unavailable): " + msg);
-        else
-            return console.readPassword(msg);
+        return new Arguments(dir, partCnt, pageSize, pageStoreVer, indexes, destFile, checkParts);
     }
 
     /**
@@ -597,38 +323,102 @@ public class IndexReaderCommandHandler {
                 "The command has the following syntax:");
         logger.info("");
 
-        logger.info(INDENT + CommandLogger.join(" ", CommandLogger.join(" ", utilityName(), CommandLogger.join(" ", getCommonOptions())),
-                optional("command"), "<command_parameters>"));
-        logger.info("");
-        logger.info("");
-
-        logger.info("This utility can do the following commands:");
-
-        printCommandsUsage();
+        logger.info(DOUBLE_INDENT + CommandLogger.join(" ", UTILITY_NAME, CommandLogger.join(" ",
+                DIR, optional(PART_CNT), optional(PAGE_SIZE), optional(PAGE_STORE_VER), optional(INDEXES), optional(DEST_FILE), optional(CHECK_PARTS))));
 
         logger.info("");
-        logger.info("By default commands affecting the cluster require interactive confirmation.");
-        logger.info("Use " + CMD_AUTO_CONFIRMATION + " option to disable it.");
-        logger.info("");
+        logger.info(DOUBLE_INDENT + "Parameters:");
 
-        logger.info("Default values:");
-        logger.info(DOUBLE_INDENT + "HOST_OR_IP=" + DFLT_HOST);
-        logger.info(DOUBLE_INDENT + "PORT=" + DFLT_PORT);
-        logger.info(DOUBLE_INDENT + "PING_INTERVAL=" + DFLT_PING_INTERVAL);
-        logger.info(DOUBLE_INDENT + "PING_TIMEOUT=" + DFLT_PING_TIMEOUT);
-        logger.info(DOUBLE_INDENT + "CONNECTION_TIMEOUT=" + DFLT_CONNECT_TIMEOUT);
-        logger.info(DOUBLE_INDENT + "SSL_PROTOCOL=" + SslContextFactory.DFLT_SSL_PROTOCOL);
-        logger.info(DOUBLE_INDENT + "SSL_KEY_ALGORITHM=" + SslContextFactory.DFLT_KEY_ALGORITHM);
-        logger.info(DOUBLE_INDENT + "KEYSTORE_TYPE=" + SslContextFactory.DFLT_STORE_TYPE);
-        logger.info(DOUBLE_INDENT + "TRUSTSTORE_TYPE=" + SslContextFactory.DFLT_STORE_TYPE);
+        usageParams(Arrays.stream(IndexReaderCommandArg.values())
+                .collect(toMap(IndexReaderCommandArg::argName, IndexReaderCommandArg::desc)), DOUBLE_INDENT + INDENT, logger);
 
         logger.info("");
 
         logger.info("Exit codes:");
         logger.info(DOUBLE_INDENT + EXIT_CODE_OK + " - successful execution.");
         logger.info(DOUBLE_INDENT + EXIT_CODE_INVALID_ARGUMENTS + " - invalid arguments.");
-        logger.info(DOUBLE_INDENT + EXIT_CODE_CONNECTION_FAILED + " - connection failed.");
-        logger.info(DOUBLE_INDENT + ERR_AUTHENTICATION_FAILED + " - authentication failed.");
         logger.info(DOUBLE_INDENT + EXIT_CODE_UNEXPECTED_ERROR + " - unexpected error.");
+    }
+
+    /**
+     * Container for command arguments.
+     */
+    public static class Arguments {
+        /** Partition directory. */
+        private String dir;
+
+        /** Full partitions count in cache group. */
+        private int partCnt;
+
+        /** Page size. */
+        private int pageSize;
+
+        /** Page store version. */
+        private int pageStoreVer;
+
+        /** Index tree names. */
+        private Set<String> indexes;
+
+        /**  File to print the report to. */
+        private String destFile;
+
+        /** Check cache data tree in partition files and it's consistency with indexes. */
+        private boolean checkParts;
+
+        public Arguments(String dir,
+                         int partCnt,
+                         int pageSize,
+                         int pageStoreVer,
+                         Set<String> indexes,
+                         String destFile,
+                         boolean checkParts) {
+            this.dir = dir;
+            this.partCnt = partCnt;
+            this.pageSize = pageSize;
+            this.pageStoreVer = pageStoreVer;
+            this.indexes = indexes;
+            this.destFile = destFile;
+            this.checkParts = checkParts;
+        }
+
+        /** Partition directory. */
+        public String dir() {
+            return dir;
+        }
+
+        /** Full partitions count in cache group. */
+        public int partCnt() {
+            return partCnt;
+        }
+
+        /** Page size. */
+        public int pageSize() {
+            return pageSize;
+        }
+
+        /** Page store version. */
+        public int pageStoreVer() {
+            return pageStoreVer;
+        }
+
+        /** Index tree names. */
+        public Set<String> indexes() {
+            return indexes;
+        }
+
+        /** File to print the report to. */
+        public String destFile() {
+            return destFile;
+        }
+
+        /** Check cache data tree in partition files and it's consistency with indexes. */
+        public boolean checkParts() {
+            return checkParts;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(Arguments.class, this);
+        }
     }
 }
