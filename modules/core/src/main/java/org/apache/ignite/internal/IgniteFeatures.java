@@ -217,7 +217,9 @@ public enum IgniteFeatures {
     DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58),
 
     /** Chains of snapshot operations. */
-    SNAPSHOT_OPERATIONS_CHAINING(59);
+    SNAPSHOT_OPERATIONS_CHAINING(59),
+
+    SNAPSHOT_SFTP_UPLOAD_V2(60);
 
     /**
      * Unique feature identifier.
