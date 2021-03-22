@@ -301,9 +301,6 @@ public class IgniteStatisticsConfigurationManager {
 
             validate(target, tbl);
 
-            //Column[] cols = IgniteStatisticsHelper.filterColumns(tbl.getColumns(),
-            //    F.isEmpty(target.columns()) ? Collections.emptyList() : new ArrayList<>(target.columns().keySet()));
-
             List<StatisticsColumnConfiguration> colCfgs;
             if (F.isEmpty(target.columns()))
                 colCfgs = Arrays.stream(tbl.getColumns())
@@ -608,6 +605,9 @@ public class IgniteStatisticsConfigurationManager {
 
             if (!F.isEmpty(diff.updateCols())) {
                 GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
+
+                if (tbl == null)
+                    return;
 
                 GridCacheContext cctx = tbl.cacheContext();
 
