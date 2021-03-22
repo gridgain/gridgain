@@ -1282,8 +1282,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     @TestOnly
     @Deprecated
     public void simulateNodeFailure() {
-        if (nioSrvWrapper.nio() != null)
-            nioSrvWrapper.nio().stop();
+        nioSrvWrapper.stop();
 
         if (commWorker != null)
             U.interrupt(commWorker.runner());
