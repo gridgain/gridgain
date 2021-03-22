@@ -381,9 +381,9 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
             UUID id = connId.nodeId();
 
-            if (log.isInfoEnabled()) {
+            if (log.isDebugEnabled()) {
                 String errMsg = e != null ? e.getMessage() : null;
-                log.info("The node was disconnected [nodeId=" + id + ", err=" + errMsg + "]");
+                log.debug("The node was disconnected [nodeId=" + id + ", err=" + errMsg + "]");
             }
 
             GridCommunicationClient[] nodeClients = clientPool.clientFor(id);
@@ -394,19 +394,9 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                         ((GridTcpNioCommunicationClient)client).session() == ses) {
                         client.close();
 
-                        if (clientPool.removeNodeClient(id, client)) {
-                            log.info("Client removed [idx=" + client.connectionIndex()
-                                + ", hash=" + client.hashCode() + ']');
-                        }
+                        clientPool.removeNodeClient(id, client);
                     }
                 }
-
-                nodeClients = clientPool.clientFor(id);
-
-                if (nodeClients != null && nodeClients.length > 0)
-                    log.info("Node have some available clients: [node=" + id
-                        + ", client=" + ((nodeClients.length > 0 && nodeClients[0] != null) ? ("[idx=" + nodeClients[0].connectionIndex() + ", hash=" + nodeClients[0].hashCode() + ']') : "N/A")
-                        + ", clients=" + nodeClients.length + ']');
             }
 
             if (!stopping) {
@@ -415,8 +405,8 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 if (outDesc != null) {
                     if (outDesc.nodeAlive(nodeGetter.apply(id))) {
                         if (!outDesc.messagesRequests().isEmpty()) {
-                            if (log.isInfoEnabled()) {
-                                log.info("Session was closed but there are unacknowledged messages, " +
+                            if (log.isDebugEnabled()) {
+                                log.debug("Session was closed but there are unacknowledged messages, " +
                                     "will try to reconnect [rmtNode=" + outDesc.node().id() + ']');
                             }
 

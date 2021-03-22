@@ -453,9 +453,6 @@ public class GridNioServerWrapper {
 
                         timeout = connTimeoutStgy.nextTimeout(timeout);
 
-                        if (log.isInfoEnabled())
-                            log.info("The node is sanding handshake to remote [rmtNode=" + node.id() + ']');
-
                         rcvCnt = safeTcpHandshake(ch,
                             node.id(),
                             timeout,
@@ -739,26 +736,19 @@ public class GridNioServerWrapper {
     ) throws IgniteCheckedException {
         assert errs != null;
 
-        boolean commErrResolve = false;
+        if (!isRecoverableException(errs)
+            && !X.hasCause(errs, GridNioException.class))
+            throw errs;
 
         IgniteSpiContext ctx = stateProvider.getSpiContext();
 
-        if (isRecoverableException(errs) && ctx.communicationFailureResolveSupported()) {
-            commErrResolve = true;
-
+        if (ctx.communicationFailureResolveSupported())
             ctx.resolveCommunicationFailure(node, errs);
-        }
-
-        if (!commErrResolve && forcibleNodeKillEnabled) {
-            if (ctx.node(node.id()) != null
-                && node.isClient()
-                && !locNodeSupplier.get().isClient()
-                && isRecoverableException(errs)
-            ) {
-                CommunicationTcpUtils.failNode(node,
-                    ctx, errs, log);
-            }
-        }
+        else if (forcibleNodeKillEnabled
+            && ctx.node(node.id()) != null
+            && node.isClient()
+            && !locNodeSupplier.get().isClient())
+            CommunicationTcpUtils.failNode(node, ctx, errs, log);
 
         throw errs;
     }
