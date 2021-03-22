@@ -472,7 +472,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             // Do insert.
             L moveUpRow = p.insert(pageId, page, pageAddr, io, idx, lvl);
 
-            System.out.println("qfskorwgs");
+//            System.out.println("qfskorwgs");
 
             if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress())
                 p.recon(p.row);
@@ -3636,7 +3636,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         public void recon(L newRow) {
             System.out.println("qglopdslt " + newRow);
 
-            if (newRow instanceof DataRow && reconciliationCtx.isBatchesInProgress()) {
+            if (newRow instanceof DataRow/* && reconciliationCtx.isBatchesInProgress()*/) {
                 DataRow row0 = (DataRow) newRow;
 
                 if (row0.value() instanceof TombstoneCacheObject) {
@@ -3668,7 +3668,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     }
 
                 }
-                else {
+                else /*if (reconciliationCtx.isBatchesInProgress())*/ {
                     if (reconciliationCtx.firstKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.firstKey(reconciliationCtx.cacheId)) < 0) {
                         reconciliationCtx.sizes.get(reconciliationCtx.cacheId).incrementAndGet();
                         System.out.println("qfrolkips increment part size in Put" + row0.key());
@@ -5917,10 +5917,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     rows = GridArrays.set(rows, resCnt++, getRow(io, pageAddr, idx, x));
             }
 
-            if (/*reconCursor && */resCnt > 0 && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+            if (reconciliationCtx.isReconciliationInProgress())
                 reconciliationCtx.isBatchesInProgress(true);
 
-                System.out.println("qdrdsrjir reconciliationCtx.tempMap.get(reconciliationCtx.cacheId)" + reconciliationCtx.tempMap.get(reconciliationCtx.cacheId));
+            if (/*reconCursor && */resCnt > 0 && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+
+                Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx.tempMap.get(reconciliationCtx.cacheId);
+
+                System.out.println("qdrdsrjir reconciliationCtx.tempMap.get(reconciliationCtx.cacheId)" + tempMap);
                 AtomicLong partSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
 
                 KeyCacheObject lastKey = reconciliationCtx.lastKey(reconciliationCtx.cacheId);
@@ -5928,8 +5932,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 if (reconciliationCtx.isReconciliationInProgress()/* && lastKey != null*/) {
                     reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
 
-                    for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).entrySet()) {
-                        System.out.println("qdsfvrds entry " + entry + " lastKey " + lastKey);
+                    for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : tempMap.entrySet()) {
+//                        System.out.println("qdsfvrds entry " + entry + " lastKey " + lastKey);
+
+//                        final T2<KeyCacheObject, Integer> remove = tempMap.remove(entry.getKey());
+
                         if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), lastKey) <= 0 &&
 //                        if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), ((DataRow)rows[0]).key()) < 0 &&
                             entry.getValue().get2() == 1) {

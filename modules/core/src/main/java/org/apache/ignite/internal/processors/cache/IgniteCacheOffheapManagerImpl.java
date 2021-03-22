@@ -1754,12 +1754,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //            catch (InterruptedException e) {
 //                e.printStackTrace();
 //            }
-            if (delta < 0)
-                System.out.println("qdrdsfsdf delta " + delta + " cacheId " + cacheId + " key " + key);
-            if (delta > 0)
-                System.out.println("qfsvfrsd delta " + delta + " cacheId " + cacheId + " key " + key);
-            if (delta == 0)
-                System.out.println("qfsrbxdg delta " + delta + " cacheId " + cacheId + " key " + key);
+//            if (delta < 0)
+//                System.out.println("qdrdsfsdf delta " + delta + " cacheId " + cacheId + " key " + key);
+//            if (delta > 0)
+//                System.out.println("qfsvfrsd delta " + delta + " cacheId " + cacheId + " key " + key);
+//            if (delta == 0)
+//                System.out.println("qfsrbxdg delta " + delta + " cacheId " + cacheId + " key " + key);
 //            System.out.println("qdrvgdrfa updateSize key before synchronized: " + ((KeyCacheObjectImpl) key).value() + ", delta: " + delta);
 
 //            reconciliationCtx.lock.readLock().lock();
@@ -2156,7 +2156,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             throws IgniteCheckedException {
             assert cctx.shared().database().checkpointLockIsHeldByThread();
 
-            System.out.println("qdtdsldop");
+//            System.out.println("qdtdsldop");
 //            reconciliationCtx.lockPutRemove.readLock().lock();
 
 //            try {

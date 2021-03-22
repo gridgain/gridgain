@@ -198,7 +198,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         objects.add(DEFAULT_CACHE_NAME);
 //        objects.add("qqq");
         builder.caches(objects);
-        builder.batchSize(700);
+        builder.batchSize(100);
 
 
         AtomicReference<ReconciliationResult> res = new AtomicReference<>();
@@ -227,17 +227,17 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //                }
 
 //                try {
-//                    sleep(1);
+//                    sleep(20);
 //                }
 //                catch (InterruptedException e) {
 //                    e.printStackTrace();
 //                }
 
-                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (cache.containsKey(i1)) {
-                    cache.remove(i1);
+//                    cache.remove(i1);
 //                    removeCount.incrementAndGet();
-                System.out.println("qdflpltis after remove in test");
+//                System.out.println("qdflpltis after remove in test");
 //                }
 
 //                try {
