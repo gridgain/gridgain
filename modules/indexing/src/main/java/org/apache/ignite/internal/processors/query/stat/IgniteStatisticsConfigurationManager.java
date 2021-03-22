@@ -29,7 +29,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.DiscoveryEvent;
