@@ -368,7 +368,7 @@ public class CommunicationWorker extends GridWorker {
 
         try {
             if (log.isInfoEnabled())
-                log.debug("Recovery reconnect [rmtNode=" + recoveryDesc.node().id() + ']');
+                log.info("Recovery reconnect [rmtNode=" + recoveryDesc.node().id() + ']');
 
             GridCommunicationClient client = clientPool.reserveClient(node, sesInfo.connectionIndex());
 

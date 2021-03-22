@@ -424,6 +424,9 @@ public class GridNioServerWrapper {
                     GridSslMeta sslMeta = null;
 
                     try {
+                        if (stopping)
+                            throw new IgniteSpiException("Node is stopping.");
+
                         timeout = connTimeoutStgy.nextTimeout();
 
                         ch.socket().connect(addr, (int)timeout);
@@ -448,6 +451,9 @@ public class GridNioServerWrapper {
                                 "fully initialized [isStopping=" + stateProvider.isStopping() + ']');
 
                         timeout = connTimeoutStgy.nextTimeout(timeout);
+
+                        if (log.isInfoEnabled())
+                            log.info("The node is sanding handshake to remote [rmtNode=" + node.id() + ']');
 
                         rcvCnt = safeTcpHandshake(ch,
                             node.id(),
