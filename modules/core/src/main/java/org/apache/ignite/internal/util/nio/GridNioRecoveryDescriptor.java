@@ -25,6 +25,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
@@ -295,6 +296,8 @@ public class GridNioRecoveryDescriptor {
                 reserved = true;
 
                 reserveCnt++;
+
+                U.dumpStack(log, "Descriptor is reserved [reserveCnt=" + reserveCnt + ']');
             }
 
             return !connected;
@@ -358,6 +361,8 @@ public class GridNioRecoveryDescriptor {
 
             reserved = false;
 
+            U.dumpStack(log, "Descriptor is released [reserveCnt=" + reserveCnt + ']');
+
             notifyAll();
 
             if (nodeLeft && !msgReqs.isEmpty()) {
@@ -382,6 +387,8 @@ public class GridNioRecoveryDescriptor {
                 reserved = true;
 
                 reserveCnt++;
+
+                U.dumpStack(log, "Descriptor is reserved [reserveCnt=" + reserveCnt + ']');
 
                 return true;
             }
