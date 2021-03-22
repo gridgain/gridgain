@@ -57,6 +57,7 @@ import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridConnectionBytesVerifyFilter;
 import org.apache.ignite.internal.util.nio.GridDirectParser;
 import org.apache.ignite.internal.util.nio.GridNioCodecFilter;
+import org.apache.ignite.internal.util.nio.GridNioException;
 import org.apache.ignite.internal.util.nio.GridNioFilter;
 import org.apache.ignite.internal.util.nio.GridNioMessageReaderFactory;
 import org.apache.ignite.internal.util.nio.GridNioMessageWriterFactory;
@@ -362,7 +363,7 @@ public class GridNioServerWrapper {
 
             while (ses == null) { // Reconnection on handshake timeout.
                 if (stopping)
-                    throw new IgniteSpiException("Node is stopping.");
+                    throw new GridNioException("Failed to create session, server is stopped.");
 
                 if (isLocalNodeAddress(addr)) {
                     if (log.isDebugEnabled())
@@ -425,7 +426,7 @@ public class GridNioServerWrapper {
 
                     try {
                         if (stopping)
-                            throw new IgniteSpiException("Node is stopping.");
+                            throw new GridNioException("Failed to create session, server is stopped.");
 
                         timeout = connTimeoutStgy.nextTimeout();
 
