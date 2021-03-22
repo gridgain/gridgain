@@ -621,7 +621,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 .append(", reserveCnt=").append(desc.reserveCount())
                 .append(", connected=").append(desc.connected())
                 .append(", reserved=").append(desc.reserved())
-                .append(", handshakeIdx=").append(desc.handshakeIndex())
                 .append(", descIdHash=").append(System.identityHashCode(desc))
                 .append(']').append(U.nl());
         }

@@ -372,9 +372,6 @@ public class ConnectionClientPool {
                 catch (Throwable t) {
                     fut0.onDone(t);
                 }
-                finally {
-                    clientFuts.remove(key, triggerFut);
-                }
             });
 
             clientFuts.put(key, triggerFut);

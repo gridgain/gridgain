@@ -414,8 +414,6 @@ public class GridNioServerWrapper {
                                 sesFromRecovery.close();
                         }
 
-                        log.info("Descriptor was not reserved.");
-
                         return null;
                     }
 
@@ -461,8 +459,6 @@ public class GridNioServerWrapper {
                                 connIdx));
 
                         if (rcvCnt == ALREADY_CONNECTED) {
-                            log.info("Already connected.");
-
                             return null;
                         }
                         else if (rcvCnt == NODE_STOPPING) {
@@ -559,7 +555,7 @@ public class GridNioServerWrapper {
                     if (X.hasCause(e, "Too many open files", SocketException.class))
                         throw new IgniteTooManyOpenFilesException(e);
 
-                    // check if timeout occured in case of unrecoverable exception
+                    // check if timeout occurred in case of unrecoverable exception
                     if (connTimeoutStgy.checkTimeout()) {
                         U.warn(log, "Connection timed out (will stop attempts to perform the connect) " +
                             "[node=" + node.id() + ", connTimeoutStgy=" + connTimeoutStgy +
@@ -745,8 +741,6 @@ public class GridNioServerWrapper {
 
             ctx.resolveCommunicationFailure(node, errs);
         }
-        else
-            log.error("Session creation error: " + errs.getMessage(), errs);
 
         if (!commErrResolve && forcibleNodeKillEnabled) {
             if (ctx.node(node.id()) != null

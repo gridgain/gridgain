@@ -26,7 +26,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.tracing.MTC;
@@ -43,8 +42,6 @@ import org.apache.ignite.internal.util.nio.GridShmemCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiInClosure;
-import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -408,8 +405,8 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 if (outDesc != null) {
                     if (outDesc.nodeAlive(nodeGetter.apply(id))) {
                         if (!outDesc.messagesRequests().isEmpty()) {
-                            if (log.isInfoEnabled()) {
-                                log.info("Session was closed but there are unacknowledged messages, " +
+                            if (log.isDebugEnabled()) {
+                                log.debug("Session was closed but there are unacknowledged messages, " +
                                     "will try to reconnect [rmtNode=" + outDesc.node().id() + ']');
                             }
 
@@ -519,18 +516,14 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         if (cfg.usePairedConnections() && usePairedConnections(rmtNode, attributeNames.pairedConnection())) {
             final GridNioRecoveryDescriptor recoveryDesc = nioSrvWrapper.inRecoveryDescriptor(rmtNode, connKey);
 
-            ConnectClosureNew c = new ConnectClosureNew(recoveryDesc, rmtNode);
-
-            boolean reserve = recoveryDesc.tryReserve(msg0.connectCount(), c);
+            boolean reserve = recoveryDesc.tryReserve();
 
             if (reserve)
                 connectedNew(recoveryDesc, ses, true);
             else {
-                if (c.failed) {
-                    ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
+                ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
 
-                    closeStaleConnections(connKey);
-                }
+                closeStaleConnections(connKey);
             }
         }
         else {
@@ -602,8 +595,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                         }
                     }
 
-                    boolean reserved = recoveryDesc.tryReserve(msg0.connectCount(),
-                        new ConnectClosure(recoveryDesc, rmtNode, connKey, msg0, !hasShmemClient, fut));
+                    boolean reserved = recoveryDesc.tryReserve();
 
                     if (log.isDebugEnabled()) {
                         log.debug("Received incoming connection from remote node " +
@@ -616,6 +608,11 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                             connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
 
                         fut.onDone(client);
+                    }
+                    else {
+                        ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
+
+                        fut.onDone();
                     }
                 }
                 catch (Throwable e) {
@@ -640,15 +637,24 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                     ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
                 }
                 else {
-                    // The code below causes a race condition between shmem and TCP (see IGNITE-1294)
-                    boolean reserved = recoveryDesc.tryReserve(msg0.connectCount(),
-                        new ConnectClosure(recoveryDesc, rmtNode, connKey, msg0, !hasShmemClient, fut));
+                    try {
+                        // The code below causes a race condition between shmem and TCP (see IGNITE-1294)
+                        boolean reserved = recoveryDesc.tryReserve();
 
-                    if (reserved) {
-                        GridTcpNioCommunicationClient client =
-                            connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
+                        if (reserved) {
+                            GridTcpNioCommunicationClient client =
+                                connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
 
-                        oldFut.onDone(client);
+                            oldFut.onDone(client);
+                        }
+                        else {
+                            ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
+
+                            oldFut.onDone();
+                        }
+                    }
+                    finally {
+                        clientPool.removeFut(connKey, oldFut);
                     }
                 }
             }
@@ -738,184 +744,6 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to send message: " + e, e);
-        }
-    }
-
-    /**
-     *
-     */
-    class ConnectClosureNew implements IgniteBiInClosure<GridNioSession, Boolean> {
-        /**
-         *
-         */
-        private static final long serialVersionUID = 0L;
-
-        /**
-         *
-         */
-        private final GridNioRecoveryDescriptor recoveryDesc;
-
-        /**
-         *
-         */
-        private final ClusterNode rmtNode;
-
-        /**
-         *
-         */
-        private boolean failed;
-
-        /**
-         * @param recoveryDesc Recovery descriptor.
-         * @param rmtNode Remote node.
-         */
-        ConnectClosureNew (
-            GridNioRecoveryDescriptor recoveryDesc,
-            ClusterNode rmtNode
-        ) {
-            this.recoveryDesc = recoveryDesc;
-            this.rmtNode = rmtNode;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void apply(GridNioSession ses, Boolean success) {
-            try {
-                failed = !success;
-
-                if (success) {
-                    IgniteInClosure<IgniteInternalFuture<?>> lsnr = msgFut -> {
-                        try {
-                            msgFut.get();
-
-                            connectedNew(recoveryDesc, ses, false);
-                        }
-                        catch (IgniteCheckedException e) {
-                            if (log.isDebugEnabled()) {
-                                log.debug("Failed to send recovery handshake " +
-                                    "[rmtNode=" + rmtNode.id() + ", err=" + e + ']');
-                            }
-
-                            recoveryDesc.release();
-                        }
-                    };
-
-                    nioSrvWrapper.nio().sendSystem(ses, new RecoveryLastReceivedMessage(recoveryDesc.received()), lsnr);
-                }
-                else
-                    nioSrvWrapper.nio().sendSystem(ses, new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
-            }
-            catch (IgniteCheckedException e) {
-                U.error(log, "Failed to send message: " + e, e);
-            }
-        }
-    }
-
-    /**
-     *
-     */
-    @SuppressWarnings("PackageVisibleInnerClass")
-    class ConnectClosure implements IgniteBiInClosure<GridNioSession, Boolean> {
-        /**
-         *
-         */
-        private static final long serialVersionUID = 0L;
-
-        /**
-         *
-         */
-        private final GridNioRecoveryDescriptor recoveryDesc;
-
-        /**
-         *
-         */
-        private final ClusterNode rmtNode;
-
-        /**
-         *
-         */
-        private final HandshakeMessage msg;
-
-        /**
-         *
-         */
-        private final GridFutureAdapter<GridCommunicationClient> fut;
-
-        /**
-         *
-         */
-        private final boolean createClient;
-
-        /**
-         *
-         */
-        private final ConnectionKey connKey;
-
-        /**
-         * @param recoveryDesc Recovery descriptor.
-         * @param rmtNode Remote node.
-         * @param connKey Connection key.
-         * @param msg Handshake message.
-         * @param createClient If {@code true} creates NIO communication client.
-         * @param fut Connect future.
-         */
-        ConnectClosure(
-            GridNioRecoveryDescriptor recoveryDesc,
-            ClusterNode rmtNode,
-            ConnectionKey connKey,
-            HandshakeMessage msg,
-            boolean createClient,
-            GridFutureAdapter<GridCommunicationClient> fut
-        ) {
-            this.recoveryDesc = recoveryDesc;
-            this.rmtNode = rmtNode;
-            this.connKey = connKey;
-            this.msg = msg;
-            this.createClient = createClient;
-            this.fut = fut;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void apply(GridNioSession ses, Boolean success) {
-            if (success) {
-                try {
-                    IgniteInClosure<IgniteInternalFuture<?>> lsnr = msgFut -> {
-                        try {
-                            msgFut.get();
-
-                            GridTcpNioCommunicationClient client =
-                                connected(recoveryDesc, ses, rmtNode, msg.received(), false, createClient);
-
-                            fut.onDone(client);
-                        }
-                        catch (IgniteCheckedException e) {
-                            if (log.isDebugEnabled()) {
-                                log.debug("Failed to send recovery handshake " +
-                                    "[rmtNode=" + rmtNode.id() + ", err=" + e + ']');
-                            }
-
-                            recoveryDesc.release();
-
-                            fut.onDone();
-                        }
-                        finally {
-                            clientPool.removeFut(connKey, fut);
-                        }
-                    };
-
-                    nioSrvWrapper.nio().sendSystem(ses, new RecoveryLastReceivedMessage(recoveryDesc.received()), lsnr);
-                }
-                catch (IgniteCheckedException e) {
-                    U.error(log, "Failed to send message: " + e, e);
-                }
-            }
-            else {
-                try {
-                    fut.onDone();
-                }
-                finally {
-                    clientPool.removeFut(connKey, fut);
-                }
-            }
         }
     }
 
