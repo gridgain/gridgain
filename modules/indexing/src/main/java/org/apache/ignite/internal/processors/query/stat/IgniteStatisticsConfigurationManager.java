@@ -606,6 +606,7 @@ public class IgniteStatisticsConfigurationManager {
             if (!F.isEmpty(diff.updateCols())) {
                 GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
 
+                // Drop table handles by dropTblLsnr.
                 if (tbl == null)
                     return;
 
