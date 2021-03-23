@@ -805,7 +805,7 @@ public class GridH2Table extends TableBase {
             }
         }
         finally {
-            updateStatistics(row0, prevRow0);
+            updateStatistics(row0.key());
 
             row0.clearValuesCache();
 
@@ -1356,19 +1356,6 @@ public class GridH2Table extends TableBase {
         res.sortType = sorting;
 
         return res;
-    }
-
-    /**
-     * Process statistics by update/insert rows.
-     *
-     * @param row New row value.
-     * @param prevRow Previous row value (if exists).
-     */
-    private void updateStatistics(CacheDataRow row, @Nullable CacheDataRow prevRow) {
-        if (prevRow != null)
-            updateStatistics(prevRow.key());
-        else if (row != null)
-            updateStatistics(row.key());
     }
 
     /**
