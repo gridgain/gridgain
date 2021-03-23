@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.cache.GridCachePreloader;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplier;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.crc.WalTestUtils;
@@ -87,6 +88,8 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -100,6 +103,9 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache";
+
+    private static final Logger log = Logger.getLogger(GridDhtPartitionDemander.class.getName());
+    private static final Logger log1 = Logger.getLogger(GridDhtPartitionSupplier.class.getName());
 
     /** Partitions count. */
     private static final int PARTS_CNT = 32;
@@ -122,6 +128,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
+        log.setLevel(Level.DEBUG);
+        log1.setLevel(Level.DEBUG);
         cfg.setConsistentId(gridName);
 
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(CACHE_NAME)
@@ -739,8 +747,6 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             false,
             preloadFut.get());
 
-        awaitPartitionMapExchange(true, true, null);
-
         // Check data consistency.
         assertPartitionsSame(idleVerify(restartedDemander, cacheName));
 
@@ -1054,7 +1060,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
     /**
      * Injects a new instance of FailingIOFactory into wal manager for the given supplier node.
-     * This allows to break historical rebalance fo=rom the supplier.
+     * This allows to break historical rebalance from the supplier.
      *
      * @param supplier Supplier node to be modified.
      * @return Instance of FailingIOFactory that was injected.
