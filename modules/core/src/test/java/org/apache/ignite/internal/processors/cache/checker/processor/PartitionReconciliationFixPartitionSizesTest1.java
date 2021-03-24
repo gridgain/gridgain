@@ -26,13 +26,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -44,382 +44,13 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import static java.lang.Thread.sleep;
 
 /**
  * Tests count of calls the recheck process with different inputs.
  */
-public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
-    /** Nodes. */
-    protected static final int NODES_CNT = 1;
-
-    /** Crd server node. */
-    protected IgniteEx ig;
-
-    /** Client. */
-    protected IgniteEx client;
-
-    private Random rnd = new Random();
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(name);
-
-        CacheConfiguration ccfg = new CacheConfiguration();
-        ccfg.setName(DEFAULT_CACHE_NAME);
-//        ccfg.setGroupName("zzz");
-        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 1));
-        ccfg.setBackups(NODES_CNT - NODES_CNT);
-        ccfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
-
-        cfg.setCacheConfiguration(ccfg);
-        cfg.setConsistentId(name);
-
-        return cfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-
-        ig = startGrids(NODES_CNT);
-
-        client = startClientGrid(NODES_CNT);
-
-        ig.cluster().active(true);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
-
-    @Test
-    public void testRepair() throws Exception {
-        IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
-
-        for (int i = 0; i < 100; i++) {
-            cache.put(i, i);
-        }
-
-        setPartitionSize(grid(0), DEFAULT_CACHE_NAME, 0, 58);
-        setPartitionSize(grid(0), DEFAULT_CACHE_NAME, 1, -129);
-        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
-        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
-
-        assertFalse(cache.size() == 100);
-
-//        doSleep(500);
-
-        VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
-        builder.repair(true);
-        builder.parallelism(1);
-//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
-        Set<String> objects = new HashSet<>();
-        objects.add(DEFAULT_CACHE_NAME);
-//        objects.add("qqq");
-        builder.caches(objects);
-
-        AtomicReference<ReconciliationResult> res = new AtomicReference<>();
-
-        GridTestUtils.runMultiThreadedAsync(() -> res.set(partitionReconciliation(client, builder)), 1, "reconciliation");
-
-        GridTestUtils.waitForCondition(() -> res.get() != null, 40_000);
-
-        ReconciliationResult reconciliationRes = res.get();
-
-
-        assertEquals(100, cache.size());
-//        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());
-//        org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResultCollector.Simple.partSizesMap
-//        internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0)
-//        PartitionReconciliationProcessor#execute
-//        CollectPartitionKeysByBatchTask.CollectPartitionKeysByBatchJob.execute0
-    }
-
-    @Test
-    public void testRepairUnderLoad() throws Exception {//Value is not ready
-        CollectPartitionKeysByBatchTask.msg.clear();
-        CollectPartitionKeysByBatchTask.msg1.clear();
-
-        IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
-
-        int startKey = 0;
-        int endKey = 700;
-
-        AtomicInteger putCount = new AtomicInteger();
-        AtomicInteger removeCount = new AtomicInteger();
-
-        for (int i = startKey; i < endKey; i++) {
-            i += 2;
-            if (i < endKey) {
-                cache.put(i, i);
-                putCount.incrementAndGet();
-            }
-        }
-
-//        cache.removeAll();
-
-        int startSize = cache.size();
-
-//        setPartitionSize(grid(0), DEFAULT_CACHE_NAME, 0, 58);
-//        setPartitionSize(grid(0), DEFAULT_CACHE_NAME, 1, -129);
-//        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
-//        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
-
-        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
-//
-        assertFalse(cache.size() == startSize);
-
-//        doSleep(500);
-
-        VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
-        builder.repair(true);
-        builder.parallelism(1);
-//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
-        Set<String> objects = new HashSet<>();
-        objects.add(DEFAULT_CACHE_NAME);
-//        objects.add("qqq");
-        builder.caches(objects);
-        builder.batchSize(100);
-
-
-        AtomicReference<ReconciliationResult> res = new AtomicReference<>();
-
-        IgniteInternalFuture loadFut0 = GridTestUtils.runAsync(() -> {
-            System.out.println("qvsdhntsd loadFut start");
-
-//            try {
-//                sleep(2);
-//            }
-//            catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-
-            int i = 0;
-
-            int max = 0;
-
-            while(res.get() == null/* || i < endKey*/) {
-
-                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                if (!cache.containsKey(i1)) {
-                    cache.put(i1, 1);
-                    putCount.incrementAndGet();
-                System.out.println("qdervdvds after put in test");
-//                }
-
-//                try {
-//                    sleep(20);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-
-//                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                if (cache.containsKey(i1)) {
-//                    cache.remove(i1);
-//                    removeCount.incrementAndGet();
-//                System.out.println("qdflpltis after remove in test");
-//                }
-
-//                try {
-//                    sleep(10);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-
-//                try {
-//                    sleep(3);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-
-//                System.out.println("qfegsdg put random: " + i1);
-//                doSleep(3);
-
-//                if (i1 > max)
-//                    max = i1;
-
-//                if (i < endKey) {
-//                    cache.put(i, i);
-//                    i++;
-//                }
-            }
-
-            System.out.println("qvraslpf loadFut stop" + i);
-            System.out.println("qmfgtssf loadFut max" + max);
-        });
-
-//        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
-//            System.out.println("qvsdhntsd loadFut1 start");
-//
-//            int i = 0;
-//
-//            int max = 0;
-//
-//            while(res.get() == null/* || i < endKey*/) {
-//
-//                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-////                if (!cache.containsKey(i1)) {
-//                cache.put(i1, 1);
-//                putCount.incrementAndGet();
-////                }
-//
-////                try {
-////                    sleep(30);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-//                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-////                if (cache.containsKey(i1)) {
-//                cache.remove(i1);
-////                    removeCount.incrementAndGet();
-////                }
-//
-////                try {
-////                    sleep(10);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                try {
-////                    sleep(3);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                System.out.println("qfegsdg put random: " + i1);
-////                doSleep(3);
-//
-////                if (i1 > max)
-////                    max = i1;
-//
-////                if (i < endKey) {
-////                    cache.put(i, i);
-////                    i++;
-////                }
-//            }
-//
-//            System.out.println("qvraslpf loadFut1 stop" + i);
-//            System.out.println("qmfgtssf loadFut1 max" + max);
-//        });
-
-        System.out.println("qvsdhntsd partitionReconciliation start");
-
-        GridTestUtils.runMultiThreadedAsync(() -> res.set(partitionReconciliation(client, builder)), 1, "reconciliation");
-
-//        CollectPartitionKeysByBatchTask.latch.await();
-
-//        cache.removeAll();
-
-//        System.out.println("qfdrbad removeAll");
-
-        GridTestUtils.waitForCondition(() -> res.get() != null, 60_000);
-
-        System.out.println("qvsdhntsd partitionReconciliation stop");
-
-        ReconciliationResult reconciliationRes = res.get();
-
-        loadFut0.get();
-//        loadFut1.get();
-//        loadFut2.get();
-
-//        doSleep(500);
-
-//        endKey = 1000;
-
-//        try {
-//            FinalizeCountersDiscoveryMessage msg = new FinalizeCountersDiscoveryMessage();
-//
-//            msg.partSizesMap = res.get().partSizesMap();
-//
-//
-//            System.out.println("qsdzgsdfg msg.partSizesMap.size(): " + msg.partSizesMap.size());
-//
-//            grid(0).context().discovery().sendCustomEvent(msg);
-//        }
-//        catch (IgniteCheckedException e) {
-//            e.printStackTrace();
-//        }
-
-//        doSleep(200);
-
-//        assertTrue(cache.size() == 300);
-
-//        cache.put(101, 102);
-
-        System.out.println("qssefvsdae cacheSize after recon " + cache.size());
-        System.out.println("qssefvsdae key 0 after recon " + cache.get(0));
-        System.out.println("qssefvsdae key 1 after recon " + cache.get(1));
-
-        for (int i = startKey; i < endKey; i++) {
-            grid(0).cache(DEFAULT_CACHE_NAME).put(i, i);
-            putCount.incrementAndGet();
-//            cache.remove(i + endKey);
-            removeCount.incrementAndGet();
-
-            System.out.println("qfegsdg put after all: " + i);
-        }
-
-        System.out.println("qdsvdrd " + CollectPartitionKeysByBatchTask.msg);
-        System.out.println("qcsdfrs " + CollectPartitionKeysByBatchTask.msg1);
-
-        System.out.println("qfsvrsdsdsd putCount " + putCount + ", removeCount " + removeCount);
-
-        assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size());
-
-//        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());
-//        org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResultCollector.Simple.partSizesMap
-//        internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0)
-//        PartitionReconciliationProcessor#execute
-//        CollectPartitionKeysByBatchTask.CollectPartitionKeysByBatchJob.execute0
-
-//        int cacheId = client.context().cache().cache(DEFAULT_CACHE_NAME).context().cacheId();
-//        long delta00 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
-    }
-
-    private void setPartitionSize(IgniteEx grid, String cacheName, int partId, int delta) {
-
-        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
-
-        int cacheId = cctx.cacheId();
-
-        cctx.group().topology().localPartition(partId).dataStore().updateSize(cacheId, delta);
-    }
-
-    private void setPartitionSize(IgniteEx grid, String cacheName) {
-
-        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
-
-        int cacheId = cctx.cacheId();
-
-        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, rnd.nextInt()));
-
-//        cctx.group().topology().localPartition(partId).dataStore().updateSize(cacheId, delta);
-    }
-
-    private void breakCacheSizes(List<IgniteEx> nodes, List<String> cacheNames) {
-        nodes.forEach(node -> {
-            cacheNames.forEach(cacheName -> {
-                setPartitionSize(node, cacheName);
-            });
-        });
-    }
-
+public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbstractTest {
     public static void main1(String[] args) {
         Map<String, String> map = new ConcurrentHashMap<>();
 
@@ -444,16 +75,18 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     }
 
-    public static void main(String[] args) throws Exception {
+    @Test
+    public void main(/*String[] args*/) throws Exception {
         int partCount = 100;
         int maxKey = partCount * partCount;
 
         Part part = new Part(partCount);
 
-        Random rnd = new Random();
+//        Random rnd = new Random();
 
         for (int i = 0; i < maxKey; i += 2) {
-            part.put(i);
+            if (!(i > 350 && i < 450) && !(i > 750 && i < 850))
+                part.put(i);
             System.out.println("preload put " + i);
         }
 
@@ -461,6 +94,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         IgniteInternalFuture loadFut = GridTestUtils.runAsync(() -> {
             System.out.println("qvsdhntsd loadFut start");
+
+            ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
             while (doLoad.get()) {
                 int i = rnd.nextInt(maxKey);
@@ -479,7 +114,29 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             }
         });
 
-//        doSleep(100);
+        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
+            System.out.println("qvsdhntsd loadFut start");
+
+            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+            while (doLoad.get()) {
+                int i = rnd.nextInt(maxKey);
+                part.put(i);
+
+                int sleep = 5;
+
+//                doSleep(sleep);
+
+                i = rnd.nextInt(maxKey);
+                part.remove(i);
+
+//                doSleep(sleep);
+
+                System.out.println("async load remove " + i);
+            }
+        });
+
+        doSleep(100);
 
         IgniteInternalFuture reconFut = GridTestUtils.runAsync(() -> {
             doRecon(part);
@@ -490,17 +147,15 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         reconFut.get();
         loadFut.get();
+        loadFut1.get();
 
         System.out.println("part.realSize() " + part.realSize());
         System.out.println("part.size " + part.size);
         System.out.println("part.reconSize " + part.reconSize);
 
-    }
+        assertTrue(part.size.get() == part.realSize());
 
-    @Test
-    public void testPoC() throws Exception {
     }
-
     static void doRecon(Part part) {
 //        IgniteInternalFuture loadFut = GridTestUtils.runAsync(() -> {
             part.partLock.writeLock().lock();
@@ -558,7 +213,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
                         System.out.println("in recon added key to tempMap: key " + key + " delta " + 1);
                         part.tempMap.put(key, +1);
 
-                        doSleep(1);
+//                        doSleep(10);
                     }
 
 //                    System.out.println("key in recon --------------- reconSize " + part.reconSize);
