@@ -77,15 +77,17 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
 
     @Test
     public void main(/*String[] args*/) throws Exception {
-        int partCount = 100;
+        int partCount = 20;
         int maxKey = partCount * partCount;
 
         Part part = new Part(partCount);
 
+        part.size.set(100_000);
+
 //        Random rnd = new Random();
 
         for (int i = 0; i < maxKey; i += 2) {
-            if (!(i > 350 && i < 450) && !(i > 750 && i < 850))
+//            if (!(i > 3500 && i < 4500) && !(i > 6500 && i < 8500))
                 part.put(i);
             System.out.println("preload put " + i);
         }
@@ -101,12 +103,13 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
                 int i = rnd.nextInt(maxKey);
                 part.put(i);
 
-                int sleep = 5;
+                int sleep = 2;
 
 //                doSleep(sleep);
 
                 i = rnd.nextInt(maxKey);
-                part.remove(i);
+//                if (i % 2 == 0)
+                    part.remove(i);
 
 //                doSleep(sleep);
 
@@ -114,29 +117,30 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
             }
         });
 
-        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
-            System.out.println("qvsdhntsd loadFut start");
+//        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
+//            System.out.println("qvsdhntsd loadFut start");
+//
+//            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+//
+//            while (doLoad.get()) {
+//                int i = rnd.nextInt(maxKey);
+//                part.put(i);
+//
+//                int sleep = 3;
+//
+////                doSleep(sleep);
+//
+//                i = rnd.nextInt(maxKey);
+////                if (i % 2 == 0)
+//                    part.remove(i);
+//
+////                doSleep(sleep);
+//
+//                System.out.println("async load remove " + i);
+//            }
+//        });
 
-            ThreadLocalRandom rnd = ThreadLocalRandom.current();
-
-            while (doLoad.get()) {
-                int i = rnd.nextInt(maxKey);
-                part.put(i);
-
-                int sleep = 5;
-
-//                doSleep(sleep);
-
-                i = rnd.nextInt(maxKey);
-                part.remove(i);
-
-//                doSleep(sleep);
-
-                System.out.println("async load remove " + i);
-            }
-        });
-
-        doSleep(100);
+//        doSleep(30);
 
         IgniteInternalFuture reconFut = GridTestUtils.runAsync(() -> {
             doRecon(part);
@@ -147,7 +151,7 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
 
         reconFut.get();
         loadFut.get();
-        loadFut1.get();
+//        loadFut1.get();
 
         System.out.println("part.realSize() " + part.realSize());
         System.out.println("part.size " + part.size);
@@ -193,15 +197,30 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
                     while (tempMapIter.hasNext()) {
                         Map.Entry<Integer, Integer> entry = tempMapIter.next();
 
+                        part.tempMap.computeIfPresent(entry.getKey(), (k, v) -> {
+                            if (entry.getKey() < part.borderKey) {
+                                part.reconSize.addAndGet(entry.getValue());
+
+//                                tempMapIter.remove();
+                                return null;
+                            }
+                            else {
+                                tempMapIter.remove();
+
+                                return null;
+                            }
+
+                        });
+
+//                        if (entry.getKey() < part.borderKey) {
+//                            part.reconSize.addAndGet(entry.getValue());
+//
+//                                tempMapIter.remove();
+//                        }
+//                        else
+//                            tempMapIter.remove();
+
                         System.out.println("entry from iterator " + entry);
-
-                        if (entry.getKey() < part.borderKey) {
-                            part.reconSize.addAndGet(entry.getValue());
-
-                            tempMapIter.remove();
-                        }
-                        else
-                            tempMapIter.remove();
                     }
 
 //                    System.out.println("in recon --------------- reconSize after iter tempMap " + part.reconSize);
@@ -213,7 +232,7 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
                         System.out.println("in recon added key to tempMap: key " + key + " delta " + 1);
                         part.tempMap.put(key, +1);
 
-//                        doSleep(10);
+                        doSleep(3);
                     }
 
 //                    System.out.println("key in recon --------------- reconSize " + part.reconSize);
@@ -246,7 +265,9 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
 
                 part.reconInProgress = false;
 
-//                part.size.set(part.reconSize.get());
+                System.out.println("old part.size " + part.size.get());
+                part.size.set(part.reconSize.get());
+                System.out.println("new part.size " + part.size.get());
             }
             finally {
                 part.partLock.writeLock().unlock();
@@ -369,7 +390,7 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
                         if (reconInProgress) {
                             if (borderKey != null && key < borderKey) {
                                 reconSize.decrementAndGet();
-                                System.out.println("in REMOVE after deccrement reconSize: key " + key + " reconSize " + reconSize.get());
+                                System.out.println("in REMOVE after decrement reconSize: key " + key + " reconSize " + reconSize.get());
                             }
                             else
                                 tempMap.compute(key, (k, v) -> {
@@ -379,7 +400,8 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
                                     }
                                     else {
                                         System.out.println("in REMOVE added key to tempMap: key " + key + " delta " + -1);
-                                        return -1;
+//                                        return -1;
+                                        return null;
                                     }
                                 });
                         }
