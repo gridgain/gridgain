@@ -435,7 +435,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectStatisticsImpl getStatistics(long rowsCnt) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0, 100,
-            0, new byte[0]);
+            0, new byte[0], 0, U.currentTimeMillis());
         return new ObjectStatisticsImpl(rowsCnt, Collections.singletonMap("col1", colStatistics));
     }
 
@@ -447,7 +447,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      */
     protected ObjectPartitionStatisticsImpl getPartitionStatistics(int partId) {
         ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
-            100, 0, new byte[0]);
+            100, 0, new byte[0], 0, U.currentTimeMillis());
 
         return new ObjectPartitionStatisticsImpl(
             partId, 0, 0,
@@ -652,6 +652,12 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         return (IgniteStatisticsManagerImpl)indexing.statsManager();
     }
 
+    /**
+     * Make set from array.
+     *
+     * @param vals Values to populate into the set.
+     * @return Set of specified values.
+     */
     public <T> Set<T> setOf(T... vals) {
         if (F.isEmpty(vals))
             return Collections.emptySet();
@@ -664,5 +670,32 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         Collections.addAll(res, vals);
 
         return res;
+    }
+
+    /**
+     * Run specified sql and test result.
+     *
+     * @param sql Sql to execute.
+     * @param nodeFilter Node filter, if {@code null} - run on all nodes.
+     * @param checker Result checker.
+     * @throws Exception In case of error.
+     */
+    protected void checkSqlResult(
+        String sql,
+        Predicate<Ignite> nodeFilter,
+        Predicate<List<List<?>>> checker
+    ) throws Exception {
+        List<Ignite> nodes = G.allGrids();
+
+        if (nodeFilter != null)
+            nodes = nodes.stream().filter(nodeFilter).collect(Collectors.toList());
+
+        for (Ignite ign : nodes) {
+            assertTrue(GridTestUtils.waitForCondition(() -> {
+                List<List<?>> res = ign.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(sql)).getAll();
+
+                return checker.test(res);
+            }, 1000));
+        }
     }
 }

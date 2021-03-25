@@ -282,6 +282,37 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     }
 
     /** {@inheritDoc} */
+    @Override public Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> getAllLocalPartitionsStatistics(
+        String schema
+    ) {
+        String prefix = (schema == null) ? STAT_DATA_PREFIX : STAT_DATA_PREFIX + META_SEPARATOR + schema;
+
+        Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> res = new HashMap<>();
+
+        try {
+            iterateMeta(prefix, (k, v) -> {
+                StatisticsKey key = getStatsKey(k);
+                StatisticsObjectData statData = (StatisticsObjectData)v;
+                try {
+                    ObjectPartitionStatisticsImpl stat = StatisticsUtils.toObjectPartitionStatistics(null, statData);
+
+                    res.computeIfAbsent(key, k1 -> new ArrayList<>()).add(stat);
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning(String.format(
+                        "Error during reading statistics %s.%s by key %s",
+                        key.schema(), key.obj(), k
+                    ));
+                }
+            }, true);
+        } catch (IgniteCheckedException e) {
+            log.warning("Unable to read local partition statistcs", e);
+        }
+
+        return res;
+    }
+
+    /** {@inheritDoc} */
     @Override public void replaceLocalPartitionsStatistics(
             StatisticsKey key,
             Collection<ObjectPartitionStatisticsImpl> statistics

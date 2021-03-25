@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.value.ValueInt;
 import org.junit.Test;
 
@@ -35,18 +36,19 @@ public class IgniteStatisticsRepositoryStaticTest extends StatisticsAbstractTest
 
     /** Column statistics with 100 nulls. */
     protected ColumnStatistics cs1 = new ColumnStatistics(null, null, 100, 0, 100,
-        0, new byte[0]);
+        0, new byte[0], 0, U.currentTimeMillis());
 
     /** Column statistics with 100 integers 0-100. */
     protected ColumnStatistics cs2 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(100), 0, 100, 100,
-        4, new byte[0]);
+        4, new byte[0], 0, U.currentTimeMillis());
 
     /** Column statistics with 0 rows. */
-    protected ColumnStatistics cs3 = new ColumnStatistics(null, null, 0, 0, 0, 0, new byte[0]);
+    protected ColumnStatistics cs3 = new ColumnStatistics(null, null, 0, 0, 0, 0,
+        new byte[0], 0, U.currentTimeMillis());
 
     /** Column statistics with 100 integers 0-10. */
     protected ColumnStatistics cs4 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(10), 0, 10, 100,
-        4, new byte[0]);
+        4, new byte[0], 0, U.currentTimeMillis());
 
     /**
      * Test object statistics add:

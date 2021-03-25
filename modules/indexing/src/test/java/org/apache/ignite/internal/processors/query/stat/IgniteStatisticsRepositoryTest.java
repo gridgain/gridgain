@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
@@ -68,8 +69,12 @@ public class IgniteStatisticsRepositoryTest extends IgniteStatisticsRepositorySt
         ArrayList<Object[]> params = new ArrayList<>();
 
         // Without persistence
-        IgniteStatisticsStore storeInMemory = new IgniteStatisticsInMemoryStoreImpl(cls -> getLogger(cls));
-        params.add(new Object[] {false, new IgniteStatisticsRepository(storeInMemory, null, cls -> getLogger(cls))});
+        IgniteStatisticsStore storeInMemory = new IgniteStatisticsInMemoryStoreImpl(
+            IgniteStatisticsRepositoryTest::getLogger);
+        GridSystemViewManager sysViewMgr = Mockito.mock(GridSystemViewManager.class);
+        IgniteStatisticsRepository inMemRepo = new IgniteStatisticsRepository(storeInMemory, sysViewMgr, null,
+            IgniteStatisticsRepositoryTest::getLogger);
+        params.add(new Object[] {false, inMemRepo});
 
         // With persistence
         MetastorageLifecycleListener lsnr[] = new MetastorageLifecycleListener[1];
@@ -81,9 +86,10 @@ public class IgniteStatisticsRepositoryTest extends IgniteStatisticsRepositorySt
 
         IgniteStatisticsRepository statsRepos[] = new IgniteStatisticsRepository[1];
         IgniteStatisticsStore storePersistent = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db,
-            cls -> getLogger(cls));
+            IgniteStatisticsRepositoryTest::getLogger);
         IgniteStatisticsHelper helper = Mockito.mock(IgniteStatisticsHelper.class);
-        statsRepos[0] = new IgniteStatisticsRepository(storePersistent, helper, cls -> getLogger(cls));
+        statsRepos[0] = new IgniteStatisticsRepository(storePersistent, sysViewMgr, helper,
+            IgniteStatisticsRepositoryTest::getLogger);
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);
@@ -153,8 +159,6 @@ public class IgniteStatisticsRepositoryTest extends IgniteStatisticsRepositorySt
      * Test obsolescence work with statistics repository:
      * 1) Test no obsolescence info present.
      * 2) Check to load obsolescence by
-     *
-     * @param repo Repository to test.
      */
     @Test
     public void testObsolescenceLoadSave() {

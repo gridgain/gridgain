@@ -30,6 +30,14 @@ public interface IgniteStatisticsStore {
     public void clearAllStatistics();
 
     /**
+     * Get all local partition statistics.
+     *
+     * @param schema Schema name, if {@code null} - returl local partitions statistics for all schemas.
+     * @return Map with all local partitions statistics.
+     */
+    public Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> getAllLocalPartitionsStatistics(String schema);
+
+    /**
      * Replace all tables partition statistics with specified ones.
      *
      * @param key Statistics key to replace statistics by.

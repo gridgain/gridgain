@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -31,11 +30,9 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
 
     /**
      * Test that statistics manager will return local statistics after cleaning of statistics repository.
-     * @throws IgniteCheckedException In case of errors.
      */
     @Test
-    public void clearAllTest() throws Exception {
-
+    public void clearAllTest() {
         IgniteStatisticsRepository statsRepo = statisticsMgr(0).statisticsRepository();
         IgniteStatisticsStore statsStore = statsRepo.statisticsStore();
 
@@ -63,12 +60,16 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
         ObjectStatisticsImpl locStat2 = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 
         // Reset version to compare statistic.
-        for (ColumnStatistics c : locStat2.columnsStatistics().values())
+        for (ColumnStatistics c : locStat2.columnsStatistics().values()) {
             GridTestUtils.setFieldValue(c, "ver", 0);
+            GridTestUtils.setFieldValue(c, "createdAt", 0);
+        }
 
         // Reset version to compare statistic.
-        for (ColumnStatistics c : locStat.columnsStatistics().values())
+        for (ColumnStatistics c : locStat.columnsStatistics().values()) {
             GridTestUtils.setFieldValue(c, "ver", 0);
+            GridTestUtils.setFieldValue(c, "createdAt", 0);
+        }
 
         assertEquals(locStat, locStat2);
     }
@@ -91,12 +92,16 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
             .getLocalStatistics(new StatisticsKey(SCHEMA, "SMALL"));
 
         // Reset version to compare statistic.
-        for (ColumnStatistics c : locStat2.columnsStatistics().values())
+        for (ColumnStatistics c : locStat2.columnsStatistics().values()) {
             GridTestUtils.setFieldValue(c, "ver", 0);
+            GridTestUtils.setFieldValue(c, "createdAt", 0);
+        }
 
         // Reset version to compare statistic.
-        for (ColumnStatistics c : locStat.columnsStatistics().values())
+        for (ColumnStatistics c : locStat.columnsStatistics().values()) {
             GridTestUtils.setFieldValue(c, "ver", 0);
+            GridTestUtils.setFieldValue(c, "createdAt", 0);
+        }
 
         assertEquals(locStat, locStat2);
     }
