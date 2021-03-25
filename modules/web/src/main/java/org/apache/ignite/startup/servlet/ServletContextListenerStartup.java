@@ -57,7 +57,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
  * by either all web applications or by only one. See web container class loading architecture:
  * <ul>
  * <li><a target=_blank href="http://tomcat.apache.org/tomcat-7.0-doc/class-loader-howto.html">http://tomcat.apache.org/tomcat-7.0-doc/class-loader-howto.html</a></li>
- * <li><a target=_blank href="http://docs.codehaus.org/display/JETTY/Classloading">http://docs.codehaus.org/display/JETTY/Classloading</a></li>
+ * <li><a target=_blank href="http://www.eclipse.org/jetty/documentation/jetty-11/programming_guide.php">http://www.eclipse.org/jetty/documentation/jetty-11/programming_guide.php</a></li>
  * </ul>
  * <p>
  * <h2 class="header">Tomcat</h2>
