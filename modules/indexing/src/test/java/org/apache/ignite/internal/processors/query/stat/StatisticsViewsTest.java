@@ -31,7 +31,6 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
         super.beforeTestsStarted();
         cleanPersistenceDir();
 
-        //startGridsMultiThreaded(1);
         startGrid(0);
         grid(0).cluster().state(ClusterState.ACTIVE);
 
@@ -83,11 +82,14 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
 
         for (List<Object> exp : expected) {
             boolean found = false;
+
             for (List<?> act : actual) {
                 found = checkEqualWithNull(exp, act);
+
                 if (found)
                     break;
             }
+            
             if (!found)
                 fail("Unable to found " + exp + " in specified dataset");
         }
