@@ -287,6 +287,9 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         return true;
                     });
 
+                    if (picked.isEmpty())
+                        picked = remoteOwners(p, topVer, node -> true);
+
                     if (!picked.isEmpty()) {
                         ClusterNode n = picked.get(p % picked.size());
 

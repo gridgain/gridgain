@@ -747,6 +747,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             false,
             preloadFut.get());
 
+        awaitPartitionMapExchange(true, true, null);
+
         // Check data consistency.
         assertPartitionsSame(idleVerify(restartedDemander, cacheName));
 
