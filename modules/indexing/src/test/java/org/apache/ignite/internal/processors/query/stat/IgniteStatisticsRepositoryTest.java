@@ -159,8 +159,6 @@ public class IgniteStatisticsRepositoryTest extends IgniteStatisticsRepositorySt
      * Test obsolescence work with statistics repository:
      * 1) Test no obsolescence info present.
      * 2) Check to load obsolescence by
-     *
-     * @param repo Repository to test.
      */
     @Test
     public void testObsolescenceLoadSave() {
