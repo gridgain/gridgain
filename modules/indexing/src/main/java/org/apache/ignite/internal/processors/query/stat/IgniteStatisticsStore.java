@@ -15,7 +15,10 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.internal.util.collection.IntMap;
+
 import java.util.Collection;
+import java.util.Map;
 
 /**
  * Statistics store interface.
@@ -81,4 +84,27 @@ public interface IgniteStatisticsStore {
      * @param statistics Statistics to save.
      */
     public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics);
+
+    /**
+     *
+     * @param obsolescence
+     */
+    public void saveObsolescenceInfo(
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence
+    );
+
+    /**
+     * Remove obsolescence info for the given key and partitions (if specified).
+     *
+     * @param key Statistics key to remove obsolescense info by.
+     * @param partIds Partition ids, if {@code null} - remove all partitions info for specified key.
+     */
+    public void clearObsolescenceInfo(StatisticsKey key, Collection<Integer> partIds);
+
+    /**
+     * Load all obsolescence info from store.
+     *
+     * @return StatisticsKey to partitionId to obsolescence info map.
+     */
+    public Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> loadAllObsolescence();
 }

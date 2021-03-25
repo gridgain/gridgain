@@ -22,7 +22,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -67,8 +67,8 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      */
     @Test
     public void testAnalyze() throws IgniteCheckedException {
-        sql("ANALYZE TEST");
 
+        sql("ANALYZE TEST");
         testStatistics(SCHEMA, "TEST", false);
 
         sql("ANALYZE PUBLIC.TEST2(name)");
@@ -246,7 +246,7 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      * @throws IgniteCheckedException In case of errors.
      */
     private void clearStat() throws IgniteCheckedException {
-        grid(0).context().query().getIndexing().statsManager().dropAll();
+        statisticsMgr(0).dropAll();
     }
 
     /**
@@ -258,8 +258,9 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
     private void testStatistics(String schema, String obj, boolean isNull) throws IgniteInterruptedCheckedException {
         assertTrue(GridTestUtils.waitForCondition(() -> {
             for (Ignite node : G.allGrids()) {
-                IgniteStatisticsManager nodeStatMgr = ((IgniteEx) node).context().query().getIndexing().statsManager();
-                ObjectStatistics localStat = nodeStatMgr.getLocalStatistics(new StatisticsKey(schema, obj));
+                IgniteH2Indexing indexing = (IgniteH2Indexing)((IgniteEx) node).context().query().getIndexing();
+
+                ObjectStatistics localStat = indexing.statsManager().getLocalStatistics(new StatisticsKey(schema, obj));
 
                 if (!(isNull == (localStat == null)))
                     return false;
@@ -277,9 +278,9 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
     private void testStatisticsVersion(String schema, String obj, Predicate<Long> verChecker) throws IgniteInterruptedCheckedException {
         assertTrue(GridTestUtils.waitForCondition(() -> {
             for (Ignite node : G.allGrids()) {
-                IgniteStatisticsManager nodeStatMgr = ((IgniteEx) node).context().query().getIndexing().statsManager();
+                IgniteH2Indexing indexing = (IgniteH2Indexing)((IgniteEx) node).context().query().getIndexing();
 
-                ObjectStatisticsImpl localStat = (ObjectStatisticsImpl)nodeStatMgr.getLocalStatistics(
+                ObjectStatisticsImpl localStat = (ObjectStatisticsImpl)indexing.statsManager().getLocalStatistics(
                     new StatisticsKey(schema, obj)
                 );
 
@@ -299,8 +300,8 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      * Get average version of the column statistics for specified DB object.
      */
     long sumStatisticsVersion(String schema, String obj) {
-        IgniteStatisticsManager nodeStatMgr = ((IgniteEx)F.first(G.allGrids())).context().query().getIndexing().statsManager();
-        ObjectStatisticsImpl localStat = (ObjectStatisticsImpl)nodeStatMgr.getLocalStatistics(new StatisticsKey(schema, obj));
+        ObjectStatisticsImpl localStat = (ObjectStatisticsImpl)statisticsMgr(0)
+            .getLocalStatistics(new StatisticsKey(schema, obj));
 
         if (localStat == null)
             return -1;

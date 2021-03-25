@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.stat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,11 +26,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.gridgain.internal.h2.table.Column;
@@ -138,6 +142,29 @@ public class IgniteStatisticsHelper {
         ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
 
         return tblStats;
+    }
+
+    /**
+     * Build object configurations array with all default parameters from specified targets.
+     *
+     * @param targets Targets to build configurations from.
+     * @return StatisticsObjectConfiguration array.
+     */
+    public static StatisticsObjectConfiguration[] buildDefaultConfigurations(StatisticsTarget... targets) {
+        StatisticsObjectConfiguration[] res = Arrays.stream(targets)
+            .map(t -> {
+                List<StatisticsColumnConfiguration> colCfgs;
+                if (t.columns() == null)
+                    colCfgs = Collections.emptyList();
+                else
+                    colCfgs = Arrays.stream(t.columns()).map(StatisticsColumnConfiguration::new)
+                        .collect(Collectors.toList());
+
+                return new StatisticsObjectConfiguration(t.key(), colCfgs,
+                    StatisticsObjectConfiguration.DEFAULT_OBSOLESCENCE_MAX_PERCENT);
+            }).toArray(StatisticsObjectConfiguration[]::new);
+
+        return res;
     }
 
     /**

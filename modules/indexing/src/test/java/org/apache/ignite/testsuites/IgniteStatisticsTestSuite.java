@@ -20,6 +20,7 @@ import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsUsa
 import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollectorAggregationTest;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollectorTest;
 import org.apache.ignite.internal.processors.query.stat.HasherSelfTest;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepositoryStaticTest;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepositoryTest;
 import org.apache.ignite.internal.processors.query.stat.ManagerStatisticsTypesTest;
 import org.apache.ignite.internal.processors.query.stat.PSUBasicValueDistributionTableStatisticsUsageTest;
@@ -32,6 +33,7 @@ import org.apache.ignite.internal.processors.query.stat.SqlStatisticsCommandTest
 import org.apache.ignite.internal.processors.query.stat.StatisticsClearTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsConfigurationTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsObsolescenceTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageInMemoryTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStoragePersistenceTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageRestartTest;
@@ -53,6 +55,7 @@ import org.junit.runners.Suite;
     ColumnStatisticsCollectorTest.class,
     ManagerStatisticsTypesTest.class,
     IgniteStatisticsRepositoryTest.class,
+    IgniteStatisticsRepositoryStaticTest.class,
     StatisticsStorageRestartTest.class,
     StatisticsGatheringTest.class,
     StatisticsClearTest.class,
@@ -78,6 +81,9 @@ import org.junit.runners.Suite;
     SqlParserDropStatisticsSelfTest.class,
     SqlStatisticsCommandTests.class,
     StatisticsConfigurationTest.class,
+
+    // Obsolescence
+    StatisticsObsolescenceTest.class,
 })
 public class IgniteStatisticsTestSuite {
 }

@@ -28,20 +28,20 @@ public class SqlParserDropStatisticsSelfTest extends SqlParserAbstractSelfTest {
      */
     @Test
     public void testDrop() {
-        parseValidate(null, "DROP STATISTICS tbl", new StatisticsTarget(null, "TBL"));
-        parseValidate(null, "DROP STATISTICS tbl;", new StatisticsTarget(null, "TBL"));
+        parseValidate(null, "DROP STATISTICS tbl", new StatisticsTarget((String)null, "TBL"));
+        parseValidate(null, "DROP STATISTICS tbl;", new StatisticsTarget((String)null, "TBL"));
         parseValidate(null, "DROP STATISTICS schema.tbl", new StatisticsTarget("SCHEMA", "TBL"));
         parseValidate(null, "DROP STATISTICS schema.tbl;", new StatisticsTarget("SCHEMA", "TBL"));
         parseValidate(null, "DROP STATISTICS schema.tbl(a)",
             new StatisticsTarget("SCHEMA", "TBL", "A"));
         parseValidate(null, "DROP STATISTICS schema.tbl(a);",
             new StatisticsTarget("SCHEMA", "TBL", "A"));
-        parseValidate(null, "DROP STATISTICS tbl(a)", new StatisticsTarget(null, "TBL", "A"));
-        parseValidate(null, "DROP STATISTICS tbl(a);", new StatisticsTarget(null, "TBL", "A"));
+        parseValidate(null, "DROP STATISTICS tbl(a)", new StatisticsTarget((String)null, "TBL", "A"));
+        parseValidate(null, "DROP STATISTICS tbl(a);", new StatisticsTarget((String)null, "TBL", "A"));
         parseValidate(null, "DROP STATISTICS tbl(a, b, c)",
-            new StatisticsTarget(null, "TBL", "A", "B", "C"));
+            new StatisticsTarget((String)null, "TBL", "A", "B", "C"));
         parseValidate(null, "DROP STATISTICS tbl(a), schema.tbl2(a,B)",
-            new StatisticsTarget(null, "TBL", "A"),
+            new StatisticsTarget((String)null, "TBL", "A"),
             new StatisticsTarget("SCHEMA", "TBL2", "A", "B"));
 
         assertParseError(null, "DROP STATISTICS p,", "Unexpected end of command");
