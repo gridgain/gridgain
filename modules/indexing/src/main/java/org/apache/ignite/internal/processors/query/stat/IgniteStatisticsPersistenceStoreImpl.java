@@ -292,9 +292,18 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
         try {
             iterateMeta(prefix, (k, v) -> {
                 StatisticsKey key = getStatsKey(k);
-                ObjectPartitionStatisticsImpl stat = (ObjectPartitionStatisticsImpl)v;
+                StatisticsObjectData statData = (StatisticsObjectData)v;
+                try {
+                    ObjectPartitionStatisticsImpl stat = StatisticsUtils.toObjectPartitionStatistics(null, statData);
 
-                res.computeIfAbsent(key, k1 -> new ArrayList<>()).add(stat);
+                    res.computeIfAbsent(key, k1 -> new ArrayList<>()).add(stat);
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning(String.format(
+                        "Error during reading statistics %s.%s by key %s",
+                        key.schema(), key.obj(), k
+                    ));
+                }
             }, true);
         } catch (IgniteCheckedException e) {
             log.warning("Unable to read local partition statistcs", e);

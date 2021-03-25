@@ -15,6 +15,8 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 
 /**
@@ -23,6 +25,15 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 public class StatisticsViewsPersistenceTest extends StatisticsViewsTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setConsistentId(igniteInstanceName);
+
+        DataStorageConfiguration memCfg = new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true));
+
+        cfg.setDataStorageConfiguration(memCfg);
+
+        return cfg;
     }
 }
