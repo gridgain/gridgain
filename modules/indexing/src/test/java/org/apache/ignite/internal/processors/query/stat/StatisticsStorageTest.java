@@ -31,11 +31,9 @@ public abstract class StatisticsStorageTest extends StatisticsStorageAbstractTes
 
     /**
      * Test that statistics manager will return local statistics after cleaning of statistics repository.
-     * @throws IgniteCheckedException In case of errors.
      */
     @Test
-    public void clearAllTest() throws Exception {
-
+    public void clearAllTest() {
         IgniteStatisticsRepository statsRepo = statisticsMgr(0).statisticsRepository();
         IgniteStatisticsStore statsStore = statsRepo.statisticsStore();
 

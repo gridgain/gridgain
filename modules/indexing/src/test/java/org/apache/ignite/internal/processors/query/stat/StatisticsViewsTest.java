@@ -89,7 +89,7 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
                 if (found)
                     break;
             }
-            
+
             if (!found)
                 fail("Unable to found " + exp + " in specified dataset");
         }
