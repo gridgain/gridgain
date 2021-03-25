@@ -104,9 +104,6 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache";
 
-    private static final Logger log = Logger.getLogger(GridDhtPartitionDemander.class.getName());
-    private static final Logger log1 = Logger.getLogger(GridDhtPartitionSupplier.class.getName());
-
     /** Partitions count. */
     private static final int PARTS_CNT = 32;
 
@@ -128,8 +125,6 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        log.setLevel(Level.DEBUG);
-        log1.setLevel(Level.DEBUG);
         cfg.setConsistentId(gridName);
 
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(CACHE_NAME)
