@@ -1229,15 +1229,16 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * See {@code GridCacheMapEntry#ensureFreeSpace()}
      *
      * @param memPlc data region.
+     * @return Whether evicted something.
      */
-    public void ensureFreeSpace(DataRegion memPlc) throws IgniteCheckedException {
+    public boolean ensureFreeSpace(DataRegion memPlc) throws IgniteCheckedException {
         if (memPlc == null)
-            return;
+            return false;
 
         DataRegionConfiguration plcCfg = memPlc.config();
 
         if (plcCfg.getPageEvictionMode() == DataPageEvictionMode.DISABLED || plcCfg.isPersistenceEnabled())
-            return;
+            return false;
 
         long memorySize = plcCfg.getMaxSize();
 
@@ -1246,6 +1247,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         int sysPageSize = pageMem.systemPageSize();
 
         CacheFreeList freeList = freeListMap.get(plcCfg.getName());
+
+        boolean evicted = false;
 
         for (;;) {
             long allocatedPagesCnt = pageMem.loadedPages();
@@ -1261,9 +1264,13 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                 memPlc.evictionTracker().evictDataPage();
 
                 memPlc.memoryMetrics().updateEvictionRate();
+
+                evicted = true;
             } else
                 break;
         }
+
+        return evicted;
     }
 
     /**

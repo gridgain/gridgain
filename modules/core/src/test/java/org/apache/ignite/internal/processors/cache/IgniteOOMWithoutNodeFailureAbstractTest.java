@@ -15,14 +15,22 @@
  */
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.cache.Cache;
+import javax.cache.configuration.Factory;
+import javax.cache.integration.CacheWriter;
+import javax.cache.integration.CacheWriterException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -36,44 +44,77 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
-import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Test;
 
 /**
  * Tests how eviction behaves when {@link DataRegionConfiguration#getEmptyPagesPoolSize()} is not enough for large
  * values.
  */
-public class IgniteOOMWithoutNodeFailureTest extends GridCommonAbstractTest {
+public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractTest {
+    /** */
+    protected static final String TX_CACHE_NAME = "tx-cache";
+
+    /** */
+    protected IgniteEx ignite;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         DataStorageConfiguration memCfg = new DataStorageConfiguration();
 
-        memCfg.setDefaultDataRegionConfiguration(
+        memCfg.setDataRegionConfigurations(
             new DataRegionConfiguration()
+                .setName("atomic")
+                .setMaxSize(30L * 1024 * 1024)
+                .setPageEvictionMode(DataPageEvictionMode.RANDOM_2_LRU),
+            new DataRegionConfiguration()
+                .setName("tx")
                 .setMaxSize(30L * 1024 * 1024)
                 .setPageEvictionMode(DataPageEvictionMode.RANDOM_2_LRU)
         );
 
         cfg.setDataStorageConfiguration(memCfg);
 
-        CacheConfiguration<Object, Object> baseCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+        CacheConfiguration<Object, Object> baseCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(CacheAtomicityMode.ATOMIC)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setBackups(0)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.PRIMARY_SYNC)
+            .setWriteThrough(true)
+            .setCacheWriterFactory(new CacheWriterFactory())
+            .setDataRegionName("atomic");
 
-        baseCfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
-        baseCfg.setCacheMode(CacheMode.PARTITIONED);
-        baseCfg.setBackups(0);
-        baseCfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.PRIMARY_SYNC);
+        CacheConfiguration<Object, Object> txCacheCfg = new CacheConfiguration<>(TX_CACHE_NAME)
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setBackups(0)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.PRIMARY_SYNC)
+            .setDataRegionName("tx");
 
         cfg.setMetricsLogFrequency(1_000);
         cfg.setFailureHandler(new StopNodeOrHaltFailureHandler(false, 0));
-        cfg.setCacheConfiguration(baseCfg);
+        cfg.setCacheConfiguration(baseCfg, txCacheCfg);
 
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        ignite = startGrids(1);
+
+        awaitPartitionMapExchange();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        super.afterTest();
     }
 
     /**
@@ -82,45 +123,26 @@ public class IgniteOOMWithoutNodeFailureTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test
-    public void testIgniteOOMWithoutNodeFailure() throws Exception {
-        IgniteEx sn = startGrids(1);
-
-        awaitPartitionMapExchange();
-
-        IgniteCache<Object, Object> cache = sn.cache(DEFAULT_CACHE_NAME);
-
+    protected void testIgniteOOMWithoutNodeFailure(IgniteCache<Object, Object> cache, Consumer<Runnable> cacheOpWrapper) throws Exception {
         List<IgniteInternalFuture<Object>> futures = new ArrayList<>();
 
         Function<ThreadLocalRandom, byte[]> function = random -> new byte[random.nextInt(3) * 100 * 1024];
 
-        AtomicInteger exceptionsCnt = new AtomicInteger();
+        AtomicReference<Exception> exceptionsRef = new AtomicReference<>();
 
-        AtomicInteger successfulOpCountAfterException = new AtomicInteger();
-
-        final int exceptionsLimit = 2;
+        AtomicBoolean running = new AtomicBoolean();
 
         IgniteInClosure<IgniteInClosure<ThreadLocalRandom>> task = op -> {
             ThreadLocalRandom random = ThreadLocalRandom.current();
 
-            while (true) {
-                if (exceptionsCnt.get() >= exceptionsLimit)
-                    break;
-
+            while (running.get()) {
                 try {
-                    op.apply(random);
-
-                    if (exceptionsCnt.get() > 0)
-                        successfulOpCountAfterException.incrementAndGet();
+                    cacheOpWrapper.accept(() -> op.apply(random));
                 }
                 catch (CachePartialUpdateException e) {
-                    if (X.hasCause(e, IgniteOutOfMemoryException.class)) {
-                        exceptionsCnt.incrementAndGet();
+                    exceptionsRef.compareAndSet(null, e);
 
-                        e.printStackTrace();
-
-                        break;
-                    }
+                    running.set(false);
                 }
             }
         };
@@ -154,12 +176,48 @@ public class IgniteOOMWithoutNodeFailureTest extends GridCommonAbstractTest {
             futures.add(fut);
         }
 
+        doSleep(10_000);
+
+        running.set(false);
+
         for (IgniteInternalFuture<Object> future : futures)
-            future.get(2, TimeUnit.MINUTES);
+            future.get(5, TimeUnit.SECONDS);
 
-        assertTrue(exceptionsCnt.get() >= exceptionsLimit);
-        assertTrue(successfulOpCountAfterException.get() > 0);
+        assertNull(exceptionsRef.get());
+    }
 
-        log.info("Successful operations after exception: " + successfulOpCountAfterException.get());
+    /**
+     *
+     */
+    private static class CacheWriterImpl implements CacheWriter<Object, Object>, Serializable {
+        /** {@inheritDoc} */
+        @Override public void write(Cache.Entry<?, ?> entry) throws CacheWriterException {
+            // No-op.
+        }
+
+        /** {@inheritDoc} */
+        @Override public void writeAll(Collection<Cache.Entry<?, ?>> collection) throws CacheWriterException {
+            // No-op.
+        }
+
+        /** {@inheritDoc} */
+        @Override public void delete(Object o) throws CacheWriterException {
+            // No-op.
+        }
+
+        /** {@inheritDoc} */
+        @Override public void deleteAll(Collection<?> collection) throws CacheWriterException {
+            // No-op.
+        }
+    }
+
+    /**
+     *
+     */
+    private static class CacheWriterFactory implements Factory<CacheWriter<Object, Object>>, Serializable {
+        /** {@inheritDoc} */
+        @Override public CacheWriter<Object, Object> create() {
+            return new CacheWriterImpl();
+        }
     }
 }

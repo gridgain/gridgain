@@ -38,10 +38,12 @@ import org.apache.ignite.internal.processors.cache.GridCacheLongRunningTransacti
 import org.apache.ignite.internal.processors.cache.GridCacheVersionGenerationWithCacheStorageTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGetCustomCollectionsSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheLoadRebalanceEvictionSelfTest;
-import org.apache.ignite.internal.processors.cache.IgniteOOMWithoutNodeFailureTest;
+import org.apache.ignite.internal.processors.cache.IgniteOOMWithoutNodeFailureAtomicTest;
+import org.apache.ignite.internal.processors.cache.IgniteOOMWithoutNodeFailureTxTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheAtomicPrimarySyncBackPressureTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheOperationsInterruptTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesBasicTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesFailoverTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesPreloadingTest;
 import org.apache.ignite.internal.processors.cache.distributed.FailBackupOnAtomicOperationTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePrimarySyncTest;
@@ -49,7 +51,6 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCachePrim
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCacheWriteSynchronizationModesMultithreadedTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConcurrentRemoveObjectsTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.HistoricalRebalanceRemovesConsistencyTest;
-import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesFailoverTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstoneClearingCountersTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstonesManagementTest;
 import org.apache.ignite.internal.processors.cache.transactions.PartitionUpdateCounterTest;
@@ -163,7 +164,8 @@ public class IgniteCacheTestSuite9 {
 
         GridTestUtils.addTestIfNeeded(suite, HistoricalRebalanceRemovesConsistencyTest.class, ignoredTests);
 
-        GridTestUtils.addTestIfNeeded(suite, IgniteOOMWithoutNodeFailureTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteOOMWithoutNodeFailureAtomicTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteOOMWithoutNodeFailureTxTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesBasicTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheRemoveWithTombstonesFailoverTest.class, ignoredTests);

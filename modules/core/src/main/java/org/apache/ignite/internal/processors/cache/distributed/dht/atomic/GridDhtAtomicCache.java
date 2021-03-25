@@ -30,7 +30,6 @@ import java.util.UUID;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorResult;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCacheRestartingException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -143,6 +142,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_D
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_NEAR_PROCESS_ATOMIC_UPDATE_REQUEST;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_NEAR_PROCESS_ATOMIC_UPDATE_RESPONSE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PROCESS_CHECK_UPDATE_REQUEST;
+import static org.apache.ignite.internal.util.IgniteUtils.preventOutOfMemoryOperationFailure;
 
 /**
  * Non-transactional partitioned cache.
@@ -2674,24 +2674,12 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     }
                 }
                 catch (IgniteCheckedException e) {
-                    if (X.hasCause(e, IgniteOutOfMemoryException.class)) {
-                        if (!ctx.dataRegion().increaseEmptyPagesPool()) {
-                            throw new IgniteException("Failed to increase empty pool size, currentSize=" +
-                                ctx.dataRegion().emptyPagesPoolSize(), e
-                            );
-                        }
+                    IgniteCheckedException ex = e;
 
-                        try {
-                            ctx.shared().database().ensureFreeSpace(ctx.dataRegion());
-                        }
-                        catch (IgniteCheckedException ex) {
-                            res.addFailedKey(k, ex);
-                        }
-
+                    if (X.hasCause(e, IgniteOutOfMemoryException.class) && (ex = preventOutOfMemoryOperationFailure(ctx, e)) == null)
                         continue;
-                    }
                     else
-                        res.addFailedKey(k, e);
+                        res.addFailedKey(k, ex);
                 }
 
                 dhtUpdRes.processedEntriesCount(i + 1);
@@ -2749,212 +2737,221 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         CacheStorePartialUpdateException storeErr = null;
 
-        try {
-            GridCacheOperation op;
+        while (true) {
+            try {
+                GridCacheOperation op;
 
-            if (putMap != null) {
-                try {
-                    Map<? extends KeyCacheObject, IgniteBiTuple<? extends CacheObject, GridCacheVersion>> view = F.viewReadOnly(putMap,
-                        new C1<CacheObject, IgniteBiTuple<? extends CacheObject, GridCacheVersion>>() {
-                            @Override public IgniteBiTuple<? extends CacheObject, GridCacheVersion> apply(CacheObject val) {
-                                return F.t(val, ver);
+                if (putMap != null) {
+                    try {
+                        Map<? extends KeyCacheObject, IgniteBiTuple<? extends CacheObject, GridCacheVersion>> view = F.viewReadOnly(putMap,
+                            new C1<CacheObject, IgniteBiTuple<? extends CacheObject, GridCacheVersion>>() {
+                                @Override
+                                public IgniteBiTuple<? extends CacheObject, GridCacheVersion> apply(CacheObject val) {
+                                    return F.t(val, ver);
+                                }
+                            });
+
+                        ctx.store().putAll(null, view);
+                    }
+                    catch (CacheStorePartialUpdateException e) {
+                        storeErr = e;
+                    }
+
+                    op = UPDATE;
+                }
+                else {
+                    try {
+                        ctx.store().removeAll(null, rmvKeys);
+                    }
+                    catch (CacheStorePartialUpdateException e) {
+                        storeErr = e;
+                    }
+
+                    op = DELETE;
+                }
+
+                boolean intercept = ctx.config().getInterceptor() != null;
+
+                AffinityAssignment affAssignment = ctx.affinity().assignment(topVer);
+
+                final GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
+
+                Collection<Object> failedToUnwrapKeys = null;
+
+                // Avoid iterator creation.
+                for (int i = 0; i < entries.size(); i++) {
+                    GridDhtCacheEntry entry = entries.get(i);
+
+                    assert entry.lockedByCurrentThread();
+
+                    if (entry.obsolete()) {
+                        assert req.operation() == DELETE : "Entry can become obsolete only after remove: " + entry;
+
+                        continue;
+                    }
+
+                    if (storeErr != null) {
+                        Object key = entry.key();
+
+                        try {
+                            key = entry.key().value(ctx.cacheObjectContext(), false);
+                        }
+                        catch (BinaryInvalidTypeException e) {
+                            if (log.isDebugEnabled()) {
+                                if (failedToUnwrapKeys == null)
+                                    failedToUnwrapKeys = new ArrayList<>();
+
+                                // To limit keys count in log message.
+                                if (failedToUnwrapKeys.size() < 5)
+                                    failedToUnwrapKeys.add(key);
                             }
-                        });
+                        }
 
-                    ctx.store().putAll(null, view);
-                }
-                catch (CacheStorePartialUpdateException e) {
-                    storeErr = e;
-                }
-
-                op = UPDATE;
-            }
-            else {
-                try {
-                    ctx.store().removeAll(null, rmvKeys);
-                }
-                catch (CacheStorePartialUpdateException e) {
-                    storeErr = e;
-                }
-
-                op = DELETE;
-            }
-
-            boolean intercept = ctx.config().getInterceptor() != null;
-
-            AffinityAssignment affAssignment = ctx.affinity().assignment(topVer);
-
-            final GridDhtAtomicAbstractUpdateFuture dhtFut = dhtUpdRes.dhtFuture();
-
-            Collection<Object> failedToUnwrapKeys = null;
-
-            // Avoid iterator creation.
-            for (int i = 0; i < entries.size(); i++) {
-                GridDhtCacheEntry entry = entries.get(i);
-
-                assert entry.lockedByCurrentThread();
-
-                if (entry.obsolete()) {
-                    assert req.operation() == DELETE : "Entry can become obsolete only after remove: " + entry;
-
-                    continue;
-                }
-
-                if (storeErr != null) {
-                    Object key = entry.key();
+                        if (storeErr.failedKeys().contains(key))
+                            continue;
+                    }
 
                     try {
-                        key = entry.key().value(ctx.cacheObjectContext(), false);
-                    }
-                    catch (BinaryInvalidTypeException e) {
-                        if (log.isDebugEnabled()) {
-                            if (failedToUnwrapKeys == null)
-                                failedToUnwrapKeys = new ArrayList<>();
+                        // We are holding java-level locks on entries at this point.
+                        CacheObject writeVal = op == UPDATE ? writeVals.get(i) : null;
 
-                            // To limit keys count in log message.
-                            if (failedToUnwrapKeys.size() < 5)
-                                failedToUnwrapKeys.add(key);
-                        }
-                    }
+                        assert writeVal != null || op == DELETE : "null write value found.";
 
-                    if (storeErr.failedKeys().contains(key))
-                        continue;
-                }
+                        // Get readers before innerUpdate (reader cleared after remove).
+                        GridDhtCacheEntry.ReaderId[] readers = entry.readersLocked();
 
-                try {
-                    // We are holding java-level locks on entries at this point.
-                    CacheObject writeVal = op == UPDATE ? writeVals.get(i) : null;
+                        EntryProcessor<Object, Object, Object> entryProcessor =
+                            entryProcessorMap == null ? null : entryProcessorMap.get(entry.key());
 
-                    assert writeVal != null || op == DELETE : "null write value found.";
-
-                    // Get readers before innerUpdate (reader cleared after remove).
-                    GridDhtCacheEntry.ReaderId[] readers = entry.readersLocked();
-
-                    EntryProcessor<Object, Object, Object> entryProcessor =
-                        entryProcessorMap == null ? null : entryProcessorMap.get(entry.key());
-
-                    GridCacheUpdateAtomicResult updRes = entry.innerUpdate(
-                        ver,
-                        nearNode.id(),
-                        locNodeId,
-                        op,
-                        writeVal,
-                        null,
-                        /*write-through*/false,
-                        /*read-through*/false,
-                        /*retval*/sndPrevVal,
-                        req.keepBinary(),
-                        expiry,
-                        /*event*/true,
-                        /*metrics*/true,
-                        /*primary*/true,
-                        /*verCheck*/false,
-                        topVer,
-                        null,
-                        replicate ? DR_PRIMARY : DR_NONE,
-                        CU.TTL_NOT_CHANGED,
-                        CU.EXPIRE_TIME_CALCULATE,
-                        null,
-                        /*conflict resolve*/false,
-                        /*intercept*/false,
-                        req.subjectId(),
-                        taskName,
-                        null,
-                        null,
-                        dhtFut,
-                        entryProcessor != null);
-
-                    assert !updRes.success() || updRes.newTtl() == CU.TTL_NOT_CHANGED || expiry != null :
-                        "success=" + updRes.success() + ", newTtl=" + updRes.newTtl() + ", expiry=" + expiry;
-
-                    if (intercept) {
-                        if (op == UPDATE) {
-                            ctx.config().getInterceptor().onAfterPut(new CacheLazyEntry(
-                                ctx,
-                                entry.key(),
-                                updRes.newValue(),
-                                req.keepBinary()));
-                        }
-                        else {
-                            assert op == DELETE : op;
-
-                            // Old value should be already loaded for 'CacheInterceptor.onBeforeRemove'.
-                            ctx.config().getInterceptor().onAfterRemove(new CacheLazyEntry(ctx, entry.key(),
-                                updRes.oldValue(), req.keepBinary()));
-                        }
-                    }
-
-                    dhtUpdRes.addDeleted(entry, updRes, entries);
-
-                    if (dhtFut != null) {
-
-                        dhtFut.addWriteEntry(
-                            affAssignment,
-                            entry,
+                        GridCacheUpdateAtomicResult updRes = entry.innerUpdate(
+                            ver,
+                            nearNode.id(),
+                            locNodeId,
+                            op,
                             writeVal,
-                            entryProcessor,
-                            updRes.newTtl(),
+                            null,
+                            /*write-through*/false,
+                            /*read-through*/false,
+                            /*retval*/sndPrevVal,
+                            req.keepBinary(),
+                            expiry,
+                            /*event*/true,
+                            /*metrics*/true,
+                            /*primary*/true,
+                            /*verCheck*/false,
+                            topVer,
+                            null,
+                            replicate ? DR_PRIMARY : DR_NONE,
+                            CU.TTL_NOT_CHANGED,
                             CU.EXPIRE_TIME_CALCULATE,
                             null,
-                            sndPrevVal,
-                            updRes.oldValue(),
-                            updRes.updateCounter(),
-                            op);
+                            /*conflict resolve*/false,
+                            /*intercept*/false,
+                            req.subjectId(),
+                            taskName,
+                            null,
+                            null,
+                            dhtFut,
+                            entryProcessor != null);
 
-                        if (readers != null)
-                            dhtFut.addNearWriteEntries(
-                                nearNode,
-                                readers,
+                        assert !updRes.success() || updRes.newTtl() == CU.TTL_NOT_CHANGED || expiry != null :
+                            "success=" + updRes.success() + ", newTtl=" + updRes.newTtl() + ", expiry=" + expiry;
+
+                        if (intercept) {
+                            if (op == UPDATE) {
+                                ctx.config().getInterceptor().onAfterPut(new CacheLazyEntry(
+                                    ctx,
+                                    entry.key(),
+                                    updRes.newValue(),
+                                    req.keepBinary()));
+                            }
+                            else {
+                                assert op == DELETE : op;
+
+                                // Old value should be already loaded for 'CacheInterceptor.onBeforeRemove'.
+                                ctx.config().getInterceptor().onAfterRemove(new CacheLazyEntry(ctx, entry.key(),
+                                    updRes.oldValue(), req.keepBinary()));
+                            }
+                        }
+
+                        dhtUpdRes.addDeleted(entry, updRes, entries);
+
+                        if (dhtFut != null) {
+                            dhtFut.addWriteEntry(
+                                affAssignment,
                                 entry,
                                 writeVal,
                                 entryProcessor,
                                 updRes.newTtl(),
-                                CU.EXPIRE_TIME_CALCULATE);
-                    }
+                                CU.EXPIRE_TIME_CALCULATE,
+                                null,
+                                sndPrevVal,
+                                updRes.oldValue(),
+                                updRes.updateCounter(),
+                                op);
 
-                    if (hasNear) {
-                        if (!ctx.affinity().partitionBelongs(nearNode, entry.partition(), topVer)) {
-                            int idx = firstEntryIdx + i;
-
-                            if (req.operation() == TRANSFORM) {
-                                res.addNearValue(idx,
+                            if (readers != null)
+                                dhtFut.addNearWriteEntries(
+                                    nearNode,
+                                    readers,
+                                    entry,
                                     writeVal,
+                                    entryProcessor,
                                     updRes.newTtl(),
                                     CU.EXPIRE_TIME_CALCULATE);
+                        }
+
+                        if (hasNear) {
+                            if (!ctx.affinity().partitionBelongs(nearNode, entry.partition(), topVer)) {
+                                int idx = firstEntryIdx + i;
+
+                                if (req.operation() == TRANSFORM) {
+                                    res.addNearValue(idx,
+                                        writeVal,
+                                        updRes.newTtl(),
+                                        CU.EXPIRE_TIME_CALCULATE);
+                                }
+                                else
+                                    res.addNearTtl(idx, updRes.newTtl(), CU.EXPIRE_TIME_CALCULATE);
+
+                                if (writeVal != null || entry.hasValue()) {
+                                    IgniteInternalFuture<Boolean> f = entry.addReader(nearNode.id(), req.messageId(), topVer);
+
+                                    assert f == null : f;
+                                }
+                            }
+                            else if (GridDhtCacheEntry.ReaderId.contains(readers, nearNode.id())) {
+                                // Reader became primary or backup.
+                                entry.removeReader(nearNode.id(), req.messageId());
                             }
                             else
-                                res.addNearTtl(idx, updRes.newTtl(), CU.EXPIRE_TIME_CALCULATE);
-
-                            if (writeVal != null || entry.hasValue()) {
-                                IgniteInternalFuture<Boolean> f = entry.addReader(nearNode.id(), req.messageId(), topVer);
-
-                                assert f == null : f;
-                            }
+                                res.addSkippedIndex(firstEntryIdx + i);
                         }
-                        else if (GridDhtCacheEntry.ReaderId.contains(readers, nearNode.id())) {
-                            // Reader became primary or backup.
-                            entry.removeReader(nearNode.id(), req.messageId());
-                        }
-                        else
-                            res.addSkippedIndex(firstEntryIdx + i);
                     }
-                }
-                catch (GridCacheEntryRemovedException e) {
-                    assert false : "Entry cannot become obsolete while holding lock.";
+                    catch (GridCacheEntryRemovedException e) {
+                        assert false : "Entry cannot become obsolete while holding lock.";
 
-                    e.printStackTrace();
+                        e.printStackTrace();
+                    }
+
+                    dhtUpdRes.processedEntriesCount(firstEntryIdx + i + 1);
                 }
 
-                dhtUpdRes.processedEntriesCount(firstEntryIdx + i + 1);
+                if (failedToUnwrapKeys != null) {
+                    log.warning("Failed to get values of keys: " + failedToUnwrapKeys +
+                        " (the binary objects will be used instead).");
+                }
+            }
+            catch (IgniteCheckedException e) {
+                IgniteCheckedException ex = e;
+
+                if (X.hasCause(e, IgniteOutOfMemoryException.class) && (ex = preventOutOfMemoryOperationFailure(ctx, e)) == null)
+                    continue;
+                else
+                    res.addFailedKeys(putMap != null ? putMap.keySet() : rmvKeys, ex);
             }
 
-            if (failedToUnwrapKeys != null) {
-                log.warning("Failed to get values of keys: " + failedToUnwrapKeys +
-                    " (the binary objects will be used instead).");
-            }
-        }
-        catch (IgniteCheckedException e) {
-            res.addFailedKeys(putMap != null ? putMap.keySet() : rmvKeys, e);
+            break;
         }
 
         if (storeErr != null) {

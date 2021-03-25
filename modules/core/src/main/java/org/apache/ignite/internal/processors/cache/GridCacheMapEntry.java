@@ -42,6 +42,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.UnregisteredBinaryTypeException;
 import org.apache.ignite.internal.UnregisteredClassException;
+import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
@@ -100,6 +101,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -130,6 +132,7 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_MA
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.compareIgnoreOpCounter;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
+import static org.apache.ignite.internal.util.IgniteUtils.preventOutOfMemoryOperationFailure;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
@@ -5729,19 +5732,33 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 }
             }
 
-            if (val != null) {
-                newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(
-                    entry.cctx,
-                    entry.key,
-                    val,
-                    ver,
-                    expireTime,
-                    oldRow);
-            }
-            else {
-                // Create tombstone for preloaded removal.
-                newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(entry.cctx, entry.key(),
-                    TombstoneCacheObject.INSTANCE, ver, entry.cctx.shared().ttl().tombstoneExpireTime(), oldRow);
+            while (true) {
+                try {
+                    if (val != null) {
+                        newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(
+                            entry.cctx,
+                            entry.key,
+                            val,
+                            ver,
+                            expireTime,
+                            oldRow);
+                    }
+                    else {
+                        // Create tombstone for preloaded removal.
+                        newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(entry.cctx, entry.key(),
+                            TombstoneCacheObject.INSTANCE, ver, entry.cctx.shared().ttl().tombstoneExpireTime(), oldRow);
+                    }
+                }
+                catch (IgniteCheckedException e) {
+                    IgniteCheckedException ex = e;
+
+                    if (X.hasCause(e, IgniteOutOfMemoryException.class) && (ex = preventOutOfMemoryOperationFailure(entry.cctx, e)) == null)
+                        continue;
+                    else
+                        throw ex;
+                }
+
+                break;
             }
 
             treeOp = oldRow != null && oldRow.link() == newRow.link() ?
