@@ -140,9 +140,9 @@ public class H2QueryInfo {
             .append(", schema=").append(schema);
 
         msgSb.append(", sql='")
-            .append(H2Utils.sensitiveData(sql));
+            .append(H2Utils.sensitiveData(() -> sql));
 
-        msgSb.append("', plan=").append(H2Utils.sensitiveData(stmt.getPlanSQL(false)));
+        msgSb.append("', plan=").append(H2Utils.sensitiveData(() -> stmt.getPlanSQL(false)));
 
         printInfo(msgSb);
 
@@ -163,7 +163,7 @@ public class H2QueryInfo {
             + ", enforceJoinOrder=" + enforceJoinOrder
             + ", lazy=" + lazy
             + ", schema=" + schema
-            + ", sql='" + H2Utils.sensitiveData(sql) + "']";
+            + ", sql='" + H2Utils.sensitiveData(() -> sql) + "']";
     }
 
     /**

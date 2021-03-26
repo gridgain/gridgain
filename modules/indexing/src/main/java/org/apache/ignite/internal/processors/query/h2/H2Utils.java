@@ -39,6 +39,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
+
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -1206,10 +1208,10 @@ public class H2Utils {
     }
 
     /**
-     * @param val Original sensitive data.
+     * @param s Supplier of the original sensitive data.
      * @return Original string or hidden.
      */
-    public static String sensitiveData(String val) {
-        return GridToStringBuilder.includeSensitive() ? val : SENSITIVE_DATA_MSG;
+    public static String sensitiveData(Supplier<String> s) {
+        return GridToStringBuilder.includeSensitive() ? s.get() : SENSITIVE_DATA_MSG;
     }
 }
