@@ -30,6 +30,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.lang.GridPlainCallable;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.P1;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -264,6 +265,8 @@ public class GridCacheDistributedQueryFuture<K, V, R> extends GridCacheQueryFutu
 
     /** {@inheritDoc} */
     @Override public void onTimeout() {
+        log.warning("Distributed scan query timed out: " + toString());
+
         firstPageLatch.countDown();
 
         super.onTimeout();
@@ -277,5 +280,13 @@ public class GridCacheDistributedQueryFuture<K, V, R> extends GridCacheQueryFutu
 
         if (qryMgr != null)
             qryMgr.removeQueryFuture(reqId);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(GridCacheDistributedQueryFuture.class, this,
+                "topology", cctx.discovery().topologyVersion(),
+                "nodes", this.subgrid,
+                "super", super.toString());
     }
 }
