@@ -3434,8 +3434,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         return map;
     }
 
-    /** {@inheritDoc} */
-    @Override public IgniteStatisticsManager statsManager() {
+    /**
+     * @return Statistics manager.
+     */
+    public IgniteStatisticsManager statsManager() {
         return statsMgr;
     }
 

@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 
 /**
  * Statistics manager. Coordinate statistics collection and act as source of statistics.
@@ -24,10 +25,10 @@ public interface IgniteStatisticsManager {
     /**
      * Gather object statistics.
      *
-     * @param targets Target to gather statistics by.
+     * @param targets Target to params map to gather statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
      */
-    public void collectStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+    public void collectStatistics(StatisticsObjectConfiguration... targets) throws IgniteCheckedException;
 
     /**
      * Clear object statistics.
@@ -74,4 +75,14 @@ public interface IgniteStatisticsManager {
      * @return Statistics usage state.
      */
     public StatisticsUsageState usageState();
+
+    /**
+     * To track statistics invalidation. Skip value if no statistics for the given table exists.
+     *
+     * @param schemaName Schema name.
+     * @param objName Object name.
+     * @param partId Partition id.
+     * @param keyBytes Row key bytes.
+     */
+    public void onRowUpdated(String schemaName, String objName, int partId, byte[] keyBytes);
 }

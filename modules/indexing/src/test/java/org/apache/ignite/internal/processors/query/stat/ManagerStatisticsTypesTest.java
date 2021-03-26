@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.gridgain.internal.h2.value.ValueUuid;
 import org.junit.Test;
 
@@ -30,8 +31,10 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
      */
     @Test
     public void testCollectedStatistics() {
-        ObjectStatisticsImpl dtypesStat = (ObjectStatisticsImpl) grid(0).context().query().getIndexing()
-                .statsManager().getLocalStatistics(new StatisticsKey(SCHEMA, "DTYPES"));
+
+        IgniteH2Indexing indexing = (IgniteH2Indexing) grid(0).context().query().getIndexing();
+        ObjectStatisticsImpl dtypesStat = (ObjectStatisticsImpl) indexing.statsManager().getLocalStatistics(
+            new StatisticsKey(SCHEMA, "DTYPES"));
 
         assertNotNull(dtypesStat);
 
@@ -280,7 +283,6 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
      * @return Local object statistics for dtypes table.
      */
     private ObjectStatisticsImpl getTypesStats() {
-        return (ObjectStatisticsImpl) grid(0).context().query().getIndexing().statsManager()
-                .getLocalStatistics(new StatisticsKey(SCHEMA, "DTYPES"));
+        return (ObjectStatisticsImpl) statisticsMgr(0).getLocalStatistics(new StatisticsKey(SCHEMA, "DTYPES"));
     }
 }

@@ -39,13 +39,6 @@ import org.jetbrains.annotations.Nullable;
  * {@link CacheConfiguration#isEagerTtl()} flag is set.
  */
 public class GridCacheTtlManager extends GridCacheManagerAdapter {
-    /**
-     * Throttling timeout in millis which avoid excessive PendingTree access on unwind
-     * if there is nothing to clean yet.
-     */
-    private final long unwindThrottlingTimeout = Long.getLong(
-        IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
-
     /** Each cache operation removes this amount of entries with expired TTL. */
     private final int ttlBatchSize = IgniteSystemProperties.getInteger(
         IgniteSystemProperties.IGNITE_TTL_EXPIRE_BATCH_SIZE, 5);
@@ -53,17 +46,17 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     /** Entries pending removal. This collection tracks entries for near cache only. */
     private GridConcurrentSkipListSetEx pendingEntries;
 
-    /** Indicates that  */
-    protected volatile boolean hasPendingEntries;
-
-    /** Timestamp when next clean try will be allowed. Used for throttling on per-cache basis. */
-    protected volatile long nextCleanTime;
-
     /** */
     private GridCacheContext dhtCtx;
 
     /** */
-    private ReentrantReadWriteLock topChangeGuard = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock topChangeGuard = new ReentrantReadWriteLock();
+
+    /** */
+    private volatile boolean hasRowsToEvict;
+
+    /** */
+    private volatile boolean hasTombstonesToEvict;
 
     /** */
     private final IgniteClosure2X<GridCacheEntryEx, Long, Boolean> expireC =
@@ -156,19 +149,21 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     }
 
     /**
-     * Updates the flag {@code hasPendingEntries} with the given value.
-     *
-     * @param update {@code true} if the underlying pending tree has entries with expire policy enabled.
+     * @return {@code True} if the underlying pending tree has entries to process.
+     * @param tombstone {@code True} is a tombstone check.
      */
-    public void hasPendingEntries(boolean update) {
-        hasPendingEntries = update;
+    public boolean hasPendingEntries(boolean tombstone) {
+        return tombstone ? hasTombstonesToEvict : hasRowsToEvict;
     }
 
     /**
-     * @return {@code true} if the underlying pending tree has entries with expire policy enabled.
+     * @param tombstone {@code True} is a tombstone check.
      */
-    public boolean hasPendingEntries() {
-        return hasPendingEntries;
+    public void setHasPendingEntries(boolean tombstone) {
+        if (tombstone)
+            hasTombstonesToEvict = true;
+        else
+            hasRowsToEvict = true;
     }
 
     /** {@inheritDoc} */
@@ -189,24 +184,7 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * @return {@code True} if unprocessed expired entries remains.
      */
     public boolean expire() {
-        return expire(ttlBatchSize, false);
-    }
-
-    /**
-     * Processes expired entries with default batch size.
-     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
-     * @return {@code True} if unprocessed expired entries remains.
-     */
-    public boolean expire(int amount) {
-        return expire(amount, false);
-    }
-
-    /**
-     * Processes expired entries with default batch size under cache gate lock.
-     * @return {@code True} if unprocessed expired entries remains.
-     */
-    public boolean expireSafe() {
-        return expire(ttlBatchSize, true);
+        return expire(ttlBatchSize);
     }
 
     /**
@@ -216,10 +194,9 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
      * and tombstones cleanup is executed, so the real amount of deleted entries can be up to {@code amount * 2}.
      *
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
-     * @param lock {@code True} to acquire cache gate lock.
      * @return {@code True} if unprocessed expired entries remains.
      */
-    public boolean expire(int amount, boolean lock) {
+    public boolean expire(int amount) {
         assert cctx != null;
 
         if (amount == 0)
@@ -254,39 +231,28 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
             if (!cctx.affinityNode())
                 return false;  /* Pending tree never contains entries for that cache */
 
-            if (!hasPendingEntries || nextCleanTime > U.currentTimeMillis())
-                return false;
+            boolean hasRows = false;
+            boolean hasTombstones = false;
 
-            if (lock && !dhtCtx.gate().enterIfNotStopped())
-                return false; // Stopped.
+            if (cctx.config().isEagerTtl() && !cctx.shared().evict().evictQueue(false).isEmpty())
+                hasRows = cctx.offheap().expireRows(expireC, amount, now);
 
-            // Locked.
-            try {
-                if (cctx.offheap().expire(dhtCtx, expireC, amount))
-                    return true;
-            }
-            finally {
-                if (lock)
-                    dhtCtx.gate().leave();
-            }
-
-            // There is nothing to clean, so the next clean up can be postponed.
-            nextCleanTime = U.currentTimeMillis() + unwindThrottlingTimeout;
+            if (!cctx.shared().evict().evictQueue(true).isEmpty())
+                hasTombstones = cctx.offheap().expireTombstones(expireC, amount, now);
 
             if (amount != -1 && pendingEntries != null) {
                 EntryWrapper e = pendingEntries.firstx();
 
                 return e != null && e.expireTime <= now;
             }
+
+            return hasRows || hasTombstones;
         }
         catch (GridDhtInvalidPartitionException e) {
             if (log.isDebugEnabled())
                 log.debug("Partition became invalid during rebalancing (will ignore): " + e.partition());
 
             return false;
-        }
-        catch (IgniteCheckedException e) {
-            U.error(log, "Failed to process entry expiration: " + e, e);
         }
         catch (IgniteException e) {
             if (e.hasCause(NodeStoppingException.class)) {
