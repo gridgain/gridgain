@@ -2745,8 +2745,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     try {
                         Map<? extends KeyCacheObject, IgniteBiTuple<? extends CacheObject, GridCacheVersion>> view = F.viewReadOnly(putMap,
                             new C1<CacheObject, IgniteBiTuple<? extends CacheObject, GridCacheVersion>>() {
-                                @Override
-                                public IgniteBiTuple<? extends CacheObject, GridCacheVersion> apply(CacheObject val) {
+                                @Override public IgniteBiTuple<? extends CacheObject, GridCacheVersion> apply(CacheObject val) {
                                     return F.t(val, ver);
                                 }
                             });
