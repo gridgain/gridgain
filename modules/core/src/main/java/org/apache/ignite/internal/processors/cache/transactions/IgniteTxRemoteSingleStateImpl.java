@@ -44,7 +44,7 @@ public class IgniteTxRemoteSingleStateImpl extends IgniteTxRemoteStateAdapter {
         GridCacheContext ctx = cctx.cacheContext(entry.cacheId());
 
         if (ctx != null)
-            CU.unwindEvictsSafe(ctx);
+            CU.unwindEvicts(ctx);
     }
 
     /** {@inheritDoc} */

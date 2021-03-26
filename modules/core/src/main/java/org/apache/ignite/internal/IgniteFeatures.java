@@ -217,7 +217,10 @@ public enum IgniteFeatures {
     SNAPSHOT_LAST_SNAPSHOTS_MISMATCH_HANDLING_POLICY(57),
 
     /** Rolling upgrade based on distributed metastorage. Improved handling of changing RU state. */
-    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58);
+    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58),
+
+    /** Chains of snapshot operations. */
+    SNAPSHOT_OPERATIONS_CHAINING(59);
 
     /**
      * Unique feature identifier.

@@ -21,12 +21,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
+import org.apache.ignite.internal.sql.SqlKeyword;
 import org.apache.ignite.internal.sql.SqlLexer;
 import org.apache.ignite.internal.sql.SqlLexerToken;
 import org.apache.ignite.internal.sql.SqlLexerTokenType;
 
 import static org.apache.ignite.internal.sql.SqlParserUtils.error;
 import static org.apache.ignite.internal.sql.SqlParserUtils.errorUnexpectedToken;
+import static org.apache.ignite.internal.sql.SqlParserUtils.matchesKeyword;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseIdentifier;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseQualifiedIdentifier;
 import static org.apache.ignite.internal.sql.SqlParserUtils.skipCommaOrRightParenthesis;
@@ -38,7 +40,7 @@ public abstract class SqlStatisticsCommands implements SqlCommand {
     /** Schema name. */
     private String schemaName;
 
-    /** Targets to analyze. */
+    /** Targets to process. */
     protected Collection<StatisticsTarget> targets = new ArrayList<>();
 
     /** {@inheritDoc} */
@@ -64,7 +66,7 @@ public abstract class SqlStatisticsCommands implements SqlCommand {
 
             SqlQualifiedName tblQName = parseQualifiedIdentifier(lex);
 
-            String[] cols = parseColumnList(lex);
+            String[] cols = parseColumnList(lex, false);
 
             targets.add(new StatisticsTarget(tblQName.schemaName(), tblQName.name(), cols));
 
@@ -79,18 +81,23 @@ public abstract class SqlStatisticsCommands implements SqlCommand {
      * @param lex Sql lexer.
      * @return {@code true} if end of command found, {@code false} - otherwise.
      */
-    private boolean tryEnd(SqlLexer lex) {
+    protected boolean tryEnd(SqlLexer lex) {
         return !lex.shift() || lex.tokenType() == SqlLexerTokenType.SEMICOLON;
     }
 
     /**
      * @param lex Lexer.
+     * @param allowParams If {@code true} - allow params instead columns list.
      */
-    private String[] parseColumnList(SqlLexer lex) {
+    protected String[] parseColumnList(SqlLexer lex, boolean allowParams) {
         SqlLexerToken nextTok = lex.lookAhead();
         if (nextTok.token() == null || nextTok.tokenType() == SqlLexerTokenType.SEMICOLON
             || nextTok.tokenType() == SqlLexerTokenType.COMMA)
             return null;
+
+        if (allowParams && matchesKeyword(nextTok, SqlKeyword.WITH))
+            return null;
+
         lex.shift();
 
         if (lex.tokenType() != SqlLexerTokenType.PARENTHESIS_LEFT)
