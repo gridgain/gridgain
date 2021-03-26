@@ -263,7 +263,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
         long reserved = reserveCntr.getAndAdd(delta);
 
-        assert reserved >= cntr : "LWM after HWM: lwm=" + cntr + ", hwm=" + reserved;
+        assert reserved >= cntr : "LWM after HWM: lwm=" + cntr + ", hwm=" + reserved + ", cntr=" + toString();
 
         return reserved;
     }
@@ -456,25 +456,34 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     /** {@inheritDoc} */
     @Override public String toString() {
         String quequeStr;
+        long lwm;
         long hwm;
+        long maxApplied;
+        long clearCntr;
 
         synchronized (this) {
             quequeStr = queue.toString();
 
+            lwm = get();
+
             hwm = reserveCntr.get();
+
+            maxApplied = highestAppliedCounter();
+
+            clearCntr = tombstoneClearCounter();
         }
 
         return new SB()
             .a("Counter [lwm=")
-            .a(get())
+            .a(lwm)
             .a(", holes=")
             .a(quequeStr)
             .a(", maxApplied=")
-            .a(highestAppliedCounter())
+            .a(maxApplied)
             .a(", hwm=")
             .a(hwm)
             .a(", clearCntr=")
-            .a(tombstoneClearCounter())
+            .a(clearCntr)
             .a(']')
             .toString();
     }

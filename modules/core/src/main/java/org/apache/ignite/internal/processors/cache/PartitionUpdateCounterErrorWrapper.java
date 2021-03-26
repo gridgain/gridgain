@@ -16,14 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Iterator;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Iterator;
 
 /**
  * Update counter wrapper for error logging.
@@ -54,26 +53,24 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public long reserve(long delta) {
-        String before = toString();
-
         try {
             return delegate.reserve(delta);
         } catch (AssertionError e) {
             SB sb = new SB();
 
-            sb.a("[op=reserve" +
-                ", grpId=" + grp.groupId() +
-                ", grpName=" + grp.cacheOrGroupName() +
-                ", caches=" + grp.caches() +
-                ", atomicity=" + grp.config().getAtomicityMode() +
-                ", syncMode=" + grp.config().getWriteSynchronizationMode() +
-                ", mode=" + grp.config().getCacheMode() +
-                ", partId=" + partId +
-                ", delta=" + delta +
-                ", before=" + before);
+            sb.a("Failed to increment HWM")
+                .a("[op=reserve")
+                .a(", grpId=").a(grp.groupId())
+                .a(", grpName=").a(grp.cacheOrGroupName())
+                .a(", caches=").a(grp.caches())
+                .a(", atomicity=").a(grp.config().getAtomicityMode())
+                .a(", syncMode=").a(grp.config().getWriteSynchronizationMode())
+                .a(", mode=").a(grp.config().getCacheMode())
+                .a(", partId=").a(partId)
+                .a(", delta=").a(delta)
+                .a("]");
 
-            U.error(log, sb.a(", after=" + toString() +
-                    ']').toString());
+            U.error(log, sb.toString());
 
             throw e;
         }
