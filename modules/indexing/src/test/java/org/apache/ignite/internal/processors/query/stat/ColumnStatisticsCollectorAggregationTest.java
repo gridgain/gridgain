@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.internal.processors.query.stat.hll.HLL;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.gridgain.internal.h2.value.Value;
 import org.gridgain.internal.h2.value.ValueDecimal;
@@ -44,7 +45,7 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     public void aggregateSingleTest() {
         List<ColumnStatistics> statistics = new ArrayList<>();
         ColumnStatistics stat1 = new ColumnStatistics(null, null, 100, 0, 100, 0,
-            getHLL(-1).toBytes());
+            getHLL(-1).toBytes(), 0, U.currentTimeMillis());
         statistics.add(stat1);
 
         ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
@@ -60,9 +61,9 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     public void aggregateNullTest() {
         List<ColumnStatistics> statistics = new ArrayList<>();
         ColumnStatistics stat1 = new ColumnStatistics(null, null, 100, 0, 100, 0,
-            getHLL(-1).toBytes());
+            getHLL(-1).toBytes(), 0, U.currentTimeMillis());
         ColumnStatistics stat2 = new ColumnStatistics(null, null, 100, 0, 10, 0,
-            getHLL(-1).toBytes());
+            getHLL(-1).toBytes(), 0, U.currentTimeMillis());
 
         statistics.add(stat1);
         statistics.add(stat2);
@@ -86,9 +87,9 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     public void aggregateTest() {
         List<ColumnStatistics> statistics = new ArrayList<>();
         ColumnStatistics stat1 = new ColumnStatistics(ValueDecimal.get(BigDecimal.ONE), ValueDecimal.get(BigDecimal.TEN),
-            50, 10, 1000, 0, getHLL(50).toBytes());
+            50, 10, 1000, 0, getHLL(50).toBytes(), 0, U.currentTimeMillis());
         ColumnStatistics stat2 = new ColumnStatistics(ValueDecimal.get(BigDecimal.ZERO), ValueDecimal.get(BigDecimal.ONE),
-            10, 100, 10, 0, getHLL(9).toBytes());
+            10, 100, 10, 0, getHLL(9).toBytes(), 0, U.currentTimeMillis());
 
         statistics.add(stat1);
         statistics.add(stat2);
