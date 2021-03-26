@@ -19,6 +19,8 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictionTracker;
 
+import static org.apache.ignite.configuration.DataRegionConfiguration.DFLT_EMPTY_PAGES_POOL_SIZE;
+
 /**
  * Data region provides access to objects configured with {@link DataRegionConfiguration} configuration.
  */
@@ -54,7 +56,7 @@ public class DataRegion {
         this.memMetrics = memMetrics;
         this.cfg = cfg;
         this.evictionTracker = evictionTracker;
-        this.emptyPagesPoolSize = cfg.getEmptyPagesPoolSize();
+        this.emptyPagesPoolSize = cfg == null ? DFLT_EMPTY_PAGES_POOL_SIZE : cfg.getEmptyPagesPoolSize();
     }
 
     /**
