@@ -30,6 +30,8 @@ import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
@@ -71,6 +73,9 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     private String schemaName;
 
     /** */
+    private final String treeName;
+
+    /** */
     private String idxName;
 
     /** */
@@ -83,6 +88,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         String cacheGrpName,
         String cacheName,
         String schemaName,
+        String treeName,
         String idxName
     ) {
         this.rootPages = rootPages;
@@ -91,6 +97,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         this.cacheGrpName = cacheGrpName;
         this.cacheName = cacheName;
         this.schemaName = schemaName;
+        this.treeName = treeName;
         this.idxName = idxName;
         this.id = UUID.randomUUID().toString();
     }
@@ -112,6 +119,31 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
             // If group context is null, it means that group doesn't exist and we don't need this task anymore.
             if (grpCtx == null)
                 return;
+
+            IgniteCacheOffheapManager offheap = grpCtx.offheap();
+
+            if (treeName != null) {
+                ctx.cache().context().database().checkpointReadLock();
+
+                try {
+                    int cacheId = CU.cacheId(cacheName);
+
+                    for (int segment = 0; segment < rootPages.size(); segment++) {
+                        try {
+                            RootPage rootPage = offheap.findRootPageForIndex(cacheId, treeName, segment);
+
+                            if (rootPage != null && rootPages.get(segment) == rootPage.pageId().pageId())
+                                offheap.dropRootPageForIndex(cacheId, treeName, segment);
+                        }
+                        catch (IgniteCheckedException e) {
+                            throw new IgniteException(e);
+                        }
+                    }
+                }
+                finally {
+                    ctx.cache().context().database().checkpointReadUnlock();
+                }
+            }
 
             IoStatisticsHolderIndex stats = new IoStatisticsHolderIndex(
                 SORTED_INDEX,
@@ -138,12 +170,12 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                         idxName,
                         cacheName,
                         null,
-                        grpCtx.offheap().reuseListForIndex(treeName),
+                        offheap.reuseListForIndex(treeName),
                         CU.cacheGroupId(cacheName, cacheGrpName),
                         cacheGrpName,
                         grpCtx.dataRegion().pageMemory(),
                         ctx.cache().context().wal(),
-                        grpCtx.offheap().globalRemoveId(),
+                        offheap.globalRemoveId(),
                         rootPage,
                         false,
                         Collections.emptyList(),

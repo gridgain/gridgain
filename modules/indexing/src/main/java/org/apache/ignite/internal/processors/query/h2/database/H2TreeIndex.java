@@ -616,6 +616,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
                         cctx.group().name() == null ? cctx.cache().name() : cctx.group().name(),
                         cctx.cache().name(),
                         table.getSchema().getName(),
+                        treeName,
                         idxName
                 );
 

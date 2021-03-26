@@ -597,6 +597,13 @@ public interface IgniteCacheOffheapManager {
      * @param idxName Index name.
      * @throws IgniteCheckedException If failed.
      */
+    public RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+
+    /**
+     * @param cacheId Cache ID.
+     * @param idxName Index name.
+     * @throws IgniteCheckedException If failed.
+     */
     public void dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
 
     /**
