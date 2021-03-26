@@ -16,9 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
-import com.sun.tools.javac.util.List;
+import com.sun.org.apache.xpath.internal.operations.Bool;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -51,161 +54,746 @@ import org.junit.Test;
  * Tests count of calls the recheck process with different inputs.
  */
 public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbstractTest {
+//    @Test
+//    public void main1(/*String[] args*/) {
+//        Map<String, String> map = new ConcurrentHashMap<>();
+//
+//        map.put("1", "1");
+//        map.put("2", "2");
+//        map.put("3", "3");
+//
+//        Iterator<Map.Entry<String, String>> iterator = map.entrySet().iterator();
+//
+//        Map.Entry<String, String> next = iterator.next();
+//
+//        System.out.println(next);
+//
+//        map.put("1", "1qwer");
+//        map.put("4", "4");
+//        map.put("3", "3qwer");
+//
+//        while(iterator.hasNext()) {
+//            next = iterator.next();
+//            System.out.println(next);
+//        }
+//
+//    }
+//
+//    @Test
+//    public void main2(/*String[] args*/) {
+//        Map<String, String> map = new ConcurrentHashMap<>();
+//
+//        map.put("1", "1");
+//        map.put("2", "2");
+//        map.put("3", "3");
+//
+//        map.compute("4", (k, v) -> {
+//            System.out.println("qwer" + k + v);
+//            return null;
+//        });
+//
+//        System.out.println(map);
+//
+//    }
+//
+//    @Test
+//    public void main3(/*String[] args*/) throws Exception {
+//        Map<String, String> map = new ConcurrentHashMap<>();
+////        Map<String, String> map = new ConcurrentSkipListMap<>();
+//
+//        map.put("1", "1");
+////        map.put("2", "1");
+//
+//        IgniteInternalFuture fut0 = GridTestUtils.runAsync(() -> {
+//            map.compute("1", (k, v) -> {
+//                if (v.equals("1")) {
+//                    System.out.println("in compute before sleep");
+//                    doSleep(5000);
+//                    System.out.println("in compute after sleep");
+//                    return "2";
+//                }
+//                else {
+//                    return "3";
+//                }
+//            });
+//
+//            }
+//        );
+//
+//        IgniteInternalFuture fut1 = GridTestUtils.runAsync(() -> {
+//            doSleep(1000);
+//            System.out.println("before compute");
+//            map.compute("1", (k, v) -> {
+//                System.out.println("in compute");
+//                if (v.equals("1")) {
+//                    System.out.println("in compute in if");
+//                    return "4";
+//                }
+//                else {
+//                    return "5";
+//                }
+//            });
+//
+//            }
+//        );
+//
+//        fut0.get();
+//        fut1.get();
+//
+//        System.out.println(map);
+//
+//    }
+
+    static Map params;
+
+//    @Test
+//    public void test() throws Exception {
+//        params = new HashMap();
+//
+//        params.put("pagesCount", 20);
+//        params.put("keysCount", 2000);
+//        params.put("loadTreads", 2);
+////        params.put("puts/removes", 2);
+////        params.put("sleepInLoadFutures", 0);
+//        params.put("sleepInLoadFuture1", 0);
+//        params.put("sleepInLoadFuture2", 1);
+//        params.put("sleepInReconTempMapPut", 0);
+//        params.put("sleepInPutOpTempMapPut", 0);
+//        params.put("sleepInRemoveOpTempMapRemove", 0);
+//        params.put("sleepInReconCompute", 0);
+////        params.put("sleepInPutOpCompute", 0);
+//        params.put("sleepInRemoveOpCompute", 0);
+//        params.put("firstPagesIsEmpty", true);
+//        params.put("lastPagesIsEmpty", true);
+//        params.put("middlePagesIsEmpty", true);
+//
+//        main();
+//    }
+
+//    @Test
+//    public void test0() throws Exception {
+//        params = new HashMap();
+//
+//        params.put("pagesCount", 1);
+//        params.put("keysCount", 0);
+//        params.put("loadTreads", 2);
+////        params.put("puts/removes", 2);
+////        params.put("sleepInLoadFutures", 0);
+//        params.put("sleepInLoadFuture1", 0);
+//        params.put("sleepInLoadFuture2", 0);
+//        params.put("sleepInReconTempMapPut", 0);
+//        params.put("sleepInPutOpTempMapPut", 0);
+//        params.put("sleepInRemoveOpTempMapRemove", 0);
+//        params.put("sleepInReconCompute", 0);
+////        params.put("sleepInPutOpCompute", 0);
+//        params.put("sleepInRemoveOpCompute", 0);
+//        params.put("firstPagesIsEmpty", false);
+//        params.put("lastPagesIsEmpty", false);
+//        params.put("middlePagesIsEmpty", false);
+//
+//        main();
+//    }
+
+//    @Test
+//    public void test1() throws Exception {
+//        params = new HashMap();
+//
+//        params.put("pagesCount", 1);
+//        params.put("keysCount", 1);
+//        params.put("loadTreads", 2);
+////        params.put("puts/removes", 2);
+////        params.put("sleepInLoadFutures", 0);
+//        params.put("sleepInLoadFuture1", 0);
+//        params.put("sleepInLoadFuture2", 0);
+//        params.put("sleepInReconTempMapPut", 0);
+//        params.put("sleepInPutOpTempMapPut", 0);
+//        params.put("sleepInRemoveOpTempMapRemove", 0);
+//        params.put("sleepInReconCompute", 0);
+////        params.put("sleepInPutOpCompute", 0);
+//        params.put("sleepInRemoveOpCompute", 0);
+//        params.put("firstPagesIsEmpty", false);
+//        params.put("lastPagesIsEmpty", false);
+//        params.put("middlePagesIsEmpty", false);
+//
+//        main();
+//    }
+
     @Test
-    public void main1(/*String[] args*/) {
-        Map<String, String> map = new ConcurrentHashMap<>();
+    public void test2() throws Exception {
+        params = new HashMap();
 
-        map.put("1", "1");
-        map.put("2", "2");
-        map.put("3", "3");
+        params.put("pagesCount", 1);
+        params.put("keysCount", 2);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
 
-        Iterator<Map.Entry<String, String>> iterator = map.entrySet().iterator();
-
-        Map.Entry<String, String> next = iterator.next();
-
-        System.out.println(next);
-
-        map.put("1", "1qwer");
-        map.put("4", "4");
-        map.put("3", "3qwer");
-
-        while(iterator.hasNext()) {
-            next = iterator.next();
-            System.out.println(next);
-        }
-
+        main();
     }
 
     @Test
-    public void main2(/*String[] args*/) {
-        Map<String, String> map = new ConcurrentHashMap<>();
+    public void test3() throws Exception {
+        params = new HashMap();
 
-        map.put("1", "1");
-        map.put("2", "2");
-        map.put("3", "3");
+        params.put("pagesCount", 1);
+        params.put("keysCount", 3);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
 
-        map.compute("4", (k, v) -> {
-            System.out.println("qwer" + k + v);
-            return null;
-        });
+        main();
+    }
 
-        System.out.println(map);
+//    @Test
+//    public void test4() throws Exception {
+//        params = new HashMap();
+//
+//        params.put("pagesCount", 2);
+//        params.put("keysCount", 0);
+//        params.put("loadTreads", 2);
+////        params.put("puts/removes", 2);
+////        params.put("sleepInLoadFutures", 0);
+//        params.put("sleepInLoadFuture1", 0);
+//        params.put("sleepInLoadFuture2", 0);
+//        params.put("sleepInReconTempMapPut", 0);
+//        params.put("sleepInPutOpTempMapPut", 0);
+//        params.put("sleepInRemoveOpTempMapRemove", 0);
+//        params.put("sleepInReconCompute", 0);
+////        params.put("sleepInPutOpCompute", 0);
+//        params.put("sleepInRemoveOpCompute", 0);
+//        params.put("firstPagesIsEmpty", false);
+//        params.put("lastPagesIsEmpty", false);
+//        params.put("middlePagesIsEmpty", false);
+//
+//        main();
+//    }
 
+//    @Test
+//    public void test5() throws Exception {
+//        params = new HashMap();
+//
+//        params.put("pagesCount", 2);
+//        params.put("keysCount", 1);
+//        params.put("loadTreads", 2);
+////        params.put("puts/removes", 2);
+////        params.put("sleepInLoadFutures", 0);
+//        params.put("sleepInLoadFuture1", 0);
+//        params.put("sleepInLoadFuture2", 0);
+//        params.put("sleepInReconTempMapPut", 0);
+//        params.put("sleepInPutOpTempMapPut", 0);
+//        params.put("sleepInRemoveOpTempMapRemove", 0);
+//        params.put("sleepInReconCompute", 0);
+////        params.put("sleepInPutOpCompute", 0);
+//        params.put("sleepInRemoveOpCompute", 0);
+//        params.put("firstPagesIsEmpty", false);
+//        params.put("lastPagesIsEmpty", false);
+//        params.put("middlePagesIsEmpty", false);
+//
+//        main();
+//    }
+
+    @Test
+    public void test6() throws Exception {
+        params = new HashMap();
+
+        params.put("pagesCount", 2);
+        params.put("keysCount", 2);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
+
+        main();
+    }
+
+//    @Test
+//    public void test7() throws Exception {
+//        params = new HashMap();
+//
+//        params.put("pagesCount", 2);
+//        params.put("keysCount", 3);
+//        params.put("loadTreads", 2);
+////        params.put("puts/removes", 2);
+////        params.put("sleepInLoadFutures", 0);
+//        params.put("sleepInLoadFuture1", 0);
+//        params.put("sleepInLoadFuture2", 0);
+//        params.put("sleepInReconTempMapPut", 0);
+//        params.put("sleepInPutOpTempMapPut", 0);
+//        params.put("sleepInRemoveOpTempMapRemove", 0);
+//        params.put("sleepInReconCompute", 0);
+////        params.put("sleepInPutOpCompute", 0);
+//        params.put("sleepInRemoveOpCompute", 0);
+//        params.put("firstPagesIsEmpty", false);
+//        params.put("lastPagesIsEmpty", false);
+//        params.put("middlePagesIsEmpty", false);
+//
+//        main();
+//    }
+
+//    @Test
+//    public void test8() throws Exception {
+//        params = new HashMap();
+//
+//        params.put("pagesCount", 3);
+//        params.put("keysCount", 0);
+//        params.put("loadTreads", 2);
+////        params.put("puts/removes", 2);
+////        params.put("sleepInLoadFutures", 0);
+//        params.put("sleepInLoadFuture1", 0);
+//        params.put("sleepInLoadFuture2", 0);
+//        params.put("sleepInReconTempMapPut", 0);
+//        params.put("sleepInPutOpTempMapPut", 0);
+//        params.put("sleepInRemoveOpTempMapRemove", 0);
+//        params.put("sleepInReconCompute", 0);
+////        params.put("sleepInPutOpCompute", 0);
+//        params.put("sleepInRemoveOpCompute", 0);
+//        params.put("firstPagesIsEmpty", false);
+//        params.put("lastPagesIsEmpty", false);
+//        params.put("middlePagesIsEmpty", false);
+//
+//        main();
+//    }
+
+//    @Test
+//    public void test9() throws Exception {
+//        params = new HashMap();
+//
+//        params.put("pagesCount", 3);
+//        params.put("keysCount", 1);
+//        params.put("loadTreads", 2);
+////        params.put("puts/removes", 2);
+////        params.put("sleepInLoadFutures", 0);
+//        params.put("sleepInLoadFuture1", 0);
+//        params.put("sleepInLoadFuture2", 0);
+//        params.put("sleepInReconTempMapPut", 0);
+//        params.put("sleepInPutOpTempMapPut", 0);
+//        params.put("sleepInRemoveOpTempMapRemove", 0);
+//        params.put("sleepInReconCompute", 0);
+////        params.put("sleepInPutOpCompute", 0);
+//        params.put("sleepInRemoveOpCompute", 0);
+//        params.put("firstPagesIsEmpty", false);
+//        params.put("lastPagesIsEmpty", false);
+//        params.put("middlePagesIsEmpty", false);
+//
+//        main();
+//    }
+
+//    @Test
+//    public void test10() throws Exception {
+//        params = new HashMap();
+//
+//        params.put("pagesCount", 3);
+//        params.put("keysCount", 2);
+//        params.put("loadTreads", 2);
+////        params.put("puts/removes", 2);
+////        params.put("sleepInLoadFutures", 0);
+//        params.put("sleepInLoadFuture1", 0);
+//        params.put("sleepInLoadFuture2", 0);
+//        params.put("sleepInReconTempMapPut", 0);
+//        params.put("sleepInPutOpTempMapPut", 0);
+//        params.put("sleepInRemoveOpTempMapRemove", 0);
+//        params.put("sleepInReconCompute", 0);
+////        params.put("sleepInPutOpCompute", 0);
+//        params.put("sleepInRemoveOpCompute", 0);
+//        params.put("firstPagesIsEmpty", false);
+//        params.put("lastPagesIsEmpty", false);
+//        params.put("middlePagesIsEmpty", false);
+//
+//        main();
+//    }
+
+    @Test
+    public void test11() throws Exception {
+        params = new HashMap();
+
+        params.put("pagesCount", 3);
+        params.put("keysCount", 3);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
+
+        main();
     }
 
     @Test
-    public void main3(/*String[] args*/) throws Exception {
-        Map<String, String> map = new ConcurrentHashMap<>();
-//        Map<String, String> map = new ConcurrentSkipListMap<>();
+    public void test12() throws Exception {
+        params = new HashMap();
 
-        map.put("1", "1");
-//        map.put("2", "1");
+        params.put("pagesCount", 1000);
+        params.put("keysCount", 1000);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
 
-        IgniteInternalFuture fut0 = GridTestUtils.runAsync(() -> {
-            map.compute("1", (k, v) -> {
-                if (v.equals("1")) {
-                    System.out.println("in compute before sleep");
-                    doSleep(5000);
-                    System.out.println("in compute after sleep");
-                    return "2";
-                }
-                else {
-                    return "3";
-                }
-            });
-
-            }
-        );
-
-        IgniteInternalFuture fut1 = GridTestUtils.runAsync(() -> {
-            doSleep(1000);
-            System.out.println("before compute");
-            map.compute("1", (k, v) -> {
-                System.out.println("in compute");
-                if (v.equals("1")) {
-                    System.out.println("in compute in if");
-                    return "4";
-                }
-                else {
-                    return "5";
-                }
-            });
-
-            }
-        );
-
-        fut0.get();
-        fut1.get();
-
-        System.out.println(map);
-
+        main();
     }
 
     @Test
-    public void main(/*String[] args*/) throws Exception {
-        int pagesCount = 2;
+    public void test13() throws Exception {
+        params = new HashMap();
+
+        params.put("pagesCount", 1000);
+        params.put("keysCount", 2000);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
+
+        main();
+    }
+
+    @Test
+    public void test14() throws Exception {
+        params = new HashMap();
+
+        params.put("pagesCount", 1000);
+        params.put("keysCount", 5000);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
+
+        main();
+    }
+
+    @Test
+    public void test15() throws Exception {
+        params = new HashMap();
+
+        params.put("pagesCount", 1000);
+        params.put("keysCount", 10000);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
+
+        main();
+    }
+
+//    WITH EMPTY PAGES
+    @Test
+    public void test16() throws Exception {
+        params = new HashMap();
+
+        params.put("pagesCount", 20);
+        params.put("keysCount", 60);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", true);
+        params.put("lastPagesIsEmpty", true);
+        params.put("middlePagesIsEmpty", true);
+
+        main();
+    }
+
+    //    WITH SLEEP
+    //    (all sleeps)
+    @Test
+    public void test17() throws Exception {
+        params = new HashMap();
+
+        params.put("pagesCount", 2);
+        params.put("keysCount", 2);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 1);
+        params.put("sleepInLoadFuture2", 1);
+        params.put("sleepInReconTempMapPut", 1);
+        params.put("sleepInPutOpTempMapPut", 1);
+        params.put("sleepInRemoveOpTempMapRemove", 1);
+        params.put("sleepInReconCompute", 1);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 1);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
+
+        main();
+    }
+
+    //    (not sleep in load)
+    @Test
+    public void test18() throws Exception {
+        params = new HashMap();
+
+        params.put("pagesCount", 2);
+        params.put("keysCount", 2);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 1);
+        params.put("sleepInPutOpTempMapPut", 1);
+        params.put("sleepInRemoveOpTempMapRemove", 1);
+        params.put("sleepInReconCompute", 1);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 1);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
+
+        main();
+    }
+
+    @Test
+    public void test19() throws Exception {
+        params = new HashMap();
+
+        params.put("pagesCount", 200);
+        params.put("keysCount", 20000);
+        params.put("loadTreads", 2);
+//        params.put("puts/removes", 2);
+//        params.put("sleepInLoadFutures", 0);
+        params.put("sleepInLoadFuture1", 0);
+        params.put("sleepInLoadFuture2", 0);
+        params.put("sleepInReconTempMapPut", 0);
+        params.put("sleepInPutOpTempMapPut", 0);
+        params.put("sleepInRemoveOpTempMapRemove", 0);
+        params.put("sleepInReconCompute", 0);
+//        params.put("sleepInPutOpCompute", 0);
+        params.put("sleepInRemoveOpCompute", 0);
+        params.put("firstPagesIsEmpty", false);
+        params.put("lastPagesIsEmpty", false);
+        params.put("middlePagesIsEmpty", false);
+
+        main();
+    }
+
+//    @Test
+    public void main() throws Exception {
+        int pagesCount = (Integer) params.get("pagesCount");
 //        int maxKey = partCount * partCount;
-        int maxKey = 2;
+        int maxKey = (Integer) params.get("keysCount");
         int keysPerPage = maxKey / pagesCount;
 
         Part part = new Part(pagesCount, keysPerPage);
 
-        part.size.set(100_000);
+        part.size.set(1_000_000);
 
 //        Random rnd = new Random();
 
         for (int i = 0; i < maxKey; i += 2) {
 //            if (!(i > 3500 && i < 4500) && !(i > 6500 && i < 8500))
 //            if ((i > 1000) && (i < 8500))
-                part.put(i);
+
+            Boolean firstEmpty = (Boolean)params.get("firstPagesIsEmpty");
+            Boolean middleEmpty = (Boolean)params.get("lastPagesIsEmpty");
+            Boolean lastEmpty = (Boolean)params.get("middlePagesIsEmpty");
+            if ((firstEmpty && i < keysPerPage + keysPerPage) ||
+//                (firstEmpty && i > keysPerPage + keysPerPage && pagesCount >= 8) ||
+                (lastEmpty && i > maxKey - keysPerPage + keysPerPage))
+                continue;
+            part.put(i);
             System.out.println("preload put " + i);
         }
 
         AtomicBoolean doLoad = new AtomicBoolean(true);
 
-        IgniteInternalFuture loadFut = GridTestUtils.runAsync(() -> {
-            System.out.println("qvsdhntsd loadFut start");
+        List<IgniteInternalFuture> loadFuts = new ArrayList<>();
 
-            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+                System.out.println("qvsdhntsd loadFut start");
 
-            while (doLoad.get()) {
-                int i = rnd.nextInt(maxKey);
-                part.put(i);
+                ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-                int sleep = 1;
+                int sleep = (Integer)params.get("sleepInLoadFuture1");
 
-                doSleep(sleep);
+                while (doLoad.get()) {
+                    int i = rnd.nextInt(maxKey);
+//                    if (!(i % 2 == 0))
+                        part.put(i);
 
-                i = rnd.nextInt(maxKey);
+                    if (sleep > 0)
+                        doSleep(sleep);
+
+                    i = rnd.nextInt(maxKey);
+
+//                    if (!(i % 2 == 0))
+                        part.remove(i);
+
+                    if (sleep > 0)
+                        doSleep(sleep);
+                }
+            },
+            "qwerthread0")
+        );
+
+        if ((Integer)params.get("loadTreads") > 1) {
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                    System.out.println("qvsdhntsd loadFut start");
+
+                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+                    int sleep = (Integer) params.get("sleepInLoadFuture2");
+
+                    while (doLoad.get()) {
+                        int i = rnd.nextInt(maxKey);
+//                        if (!(i % 2 == 0))
+                            part.put(i);
+
+                        if (sleep > 0)
+                            doSleep(sleep);
+
+                        i = rnd.nextInt(maxKey);
+//                        if (!(i % 2 == 0))
+                            part.remove(i);
+
+                        if (sleep > 0)
+                            doSleep(sleep);
+                    }
+                },
+                "qwerthread1")
+            );
+        }
+
+        if ((Integer)params.get("loadTreads") > 2) {
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                    System.out.println("qvsdhntsd loadFut start");
+
+                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+                    int sleep = (Integer) params.get("sleepInLoadFuture2");
+
+                    while (doLoad.get()) {
+                        int i = rnd.nextInt(maxKey);
+                        part.put(i);
+
+                        if (sleep > 0)
+                            doSleep(sleep);
+
+                        i = rnd.nextInt(maxKey);
 //                if (i % 2 == 0)
-                    part.remove(i);
+                        part.remove(i);
 
-                doSleep(sleep);
-            }
-        },
-             "qwerthread0");
+                        if (sleep > 0)
+                            doSleep(sleep);
+                    }
+                },
+                "qwerthread2")
+            );
+        }
 
-        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
-            System.out.println("qvsdhntsd loadFut start");
+        if ((Integer)params.get("loadTreads") > 3) {
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                    System.out.println("qvsdhntsd loadFut start");
 
-            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-            while (doLoad.get()) {
-                int i = rnd.nextInt(maxKey);
-                part.put(i);
+                    int sleep = (Integer) params.get("sleepInLoadFuture2");
 
-                int sleep = 2;
+                    while (doLoad.get()) {
+                        int i = rnd.nextInt(maxKey);
+                        part.put(i);
 
-//                doSleep(sleep);
+                        if (sleep > 0)
+                            doSleep(sleep);
 
-                i = rnd.nextInt(maxKey);
+                        i = rnd.nextInt(maxKey);
 //                if (i % 2 == 0)
-                    part.remove(i);
+                        part.remove(i);
 
-//                doSleep(sleep);
-            }
-        },
-            "qwerthread1");
+                        if (sleep > 0)
+                            doSleep(sleep);
+                    }
+                },
+                "qwerthread3")
+            );
+        }
 
 //        doSleep(30);
 
@@ -217,8 +805,10 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
         );
 
         reconFut.get();
-        loadFut.get();
-        loadFut1.get();
+
+        for (IgniteInternalFuture fut : loadFuts) {
+            fut.get();
+        }
 
         System.out.println("part.realSize() " + part.realSize());
         System.out.println("part.size " + part.size);
@@ -273,10 +863,15 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
 
                     while (tempMapIter.hasNext()) {
                         Map.Entry<Integer, Integer> entry = tempMapIter.next();
-                        doSleep(1);
+
+                        int sleep0 = (Integer)params.get("sleepInReconCompute");
+
                         part.tempMap.computeIfPresent(entry.getKey(), (k, v) -> {
                             if (k != null && v!= null && entry.getKey() < firstKey.get()) {
 //                                if (!part.removesInProgress.contains(entry.getKey()))
+                                if (sleep0 > 0)
+                                    doSleep(sleep0);
+
                                 part.reconSize.addAndGet(entry.getValue());
 
 //                                tempMapIter.remove();
@@ -289,6 +884,8 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
                             }
                             else {
 //                                tempMapIter.remove();
+                                if (sleep0 > 0)
+                                    doSleep(sleep0);
 
                                 System.out.println("RECON tempMap iter remove key: "
                                     + "key " + k
@@ -315,11 +912,15 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
                     //iterate over page
 
 //                    System.out.println("key in recon ---------------");
+
+                    int sleep = (Integer)params.get("sleepInReconTempMapPut");
+
                     for (Integer key : page.keys) {
                         System.out.println("in recon added key to tempMap: key " + key + " delta " + 1);
                         part.tempMap.put(key, +1);
 
-                        doSleep(1);
+                        if (sleep > 0)
+                            doSleep(sleep);
                     }
 
 //                    System.out.println("key in recon --------------- reconSize " + part.reconSize);
@@ -426,14 +1027,19 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
 //                    }
 
                         if (reconInProgress) {
+                            Integer sleep = (Integer)params.get("sleepInPutOpTempMapPut");
+
+                            if (sleep > 0)
+                                doSleep(sleep);
+
                             if (borderKey != null && key <= borderKey) {
-                                doSleep(1);
+                                if (sleep > 0)
+                                    doSleep(sleep);
+
                                 reconSize.incrementAndGet();
                                 System.out.println("in PUT after increment reconSize: key " + key + " reconSize " + reconSize.get());
                             }
                             else {
-                                doSleep(1);
-
 //                                tempMap.compute(key, (k, v) -> {
 //                                    if (v != null && !v.equals(1)) {
 //                                        System.out.println("in PUT remove key from tempMap: key " + key);
@@ -446,6 +1052,9 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
 //                                    else
 //                                        return v;
 //                                });
+                                if (sleep > 0)
+                                    doSleep(sleep);
+
                                 tempMap.put(key, 1);
                                 System.out.println("in PUT added key to tempMap: key " + key);
                             }
@@ -493,36 +1102,51 @@ public class PartitionReconciliationFixPartitionSizesTest1 extends GridCommonAbs
 //                    }
 
                         if (reconInProgress) {
+                            Integer sleep = (Integer)params.get("sleepInRemoveOpTempMapRemove");
 //                            tempMap.remove(key);
+
+                            if (sleep > 0)
+                                doSleep(sleep);
 
 //                            removesInProgress.add(key);
 
                             if (borderKey != null && key <= borderKey) {
+                                if (sleep > 0)
+                                    doSleep(sleep);
 
-                                doSleep(1);
                                 reconSize.decrementAndGet();
                                 System.out.println("in REMOVE after decrement reconSize: key " + key + " reconSize " + reconSize.get() + " " + strThread);
                             }
                             else {
-                                doSleep(1);
+                                if (sleep > 0)
+                                    doSleep(sleep);
+
+                                Integer sleep0 = (Integer)params.get("sleepInRemoveOpCompute");
 
                                 System.out.println("in REMOVE before compute " + strThread);
 
                                 tempMap.compute(key, (k, v) -> {
 //                                    System.out.println("k: " + k + ", v: " + v);
                                     if (k != null && v != null /*&& v.equals(1)*/) {
+                                        if (sleep0 > 0)
+                                            doSleep(sleep0);
+
                                         System.out.println("in REMOVE compute: remove key " + key + " " + strThread);
 
                                         return null;
                                     }
                                     else if (v == null && borderKey != null && key <= borderKey) {
-                                        doSleep(1);
+//                                        doSleep(2);
+                                        if (sleep0 > 0)
+                                            doSleep(sleep0);
                                         reconSize.decrementAndGet();
                                         System.out.println("in REMOVE compute: decrement and remove key " + key + " " + strThread);
 
                                         return null;
                                     }
                                     else {
+                                        if (sleep0 > 0)
+                                            doSleep(sleep0);
                                         System.out.println("in REMOVE compute: do nothing key " + key + " " + strThread);
                                         return v;
                                     }
