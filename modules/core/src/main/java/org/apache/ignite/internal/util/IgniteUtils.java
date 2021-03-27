@@ -12508,7 +12508,7 @@ public abstract class IgniteUtils {
 
         try {
             if (!ctx.shared().database().ensureFreeSpace(ctx.dataRegion()))
-                return new IgniteCheckedException("Nothing evicted [emptyPoolSize=" + ctx.dataRegion().emptyPagesPoolSize() + "]");
+                return new IgniteCheckedException("Nothing evicted [emptyPoolSize=" + ctx.dataRegion().emptyPagesPoolSize() + "]", e);
         }
         catch (IgniteCheckedException ex) {
             return ex;
