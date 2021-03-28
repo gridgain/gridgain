@@ -16,6 +16,8 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import org.junit.Test;
+
 /**
  *
  */
@@ -30,5 +32,10 @@ public class GridTcpCommunicationSpiConcurrentConnectSslSelfTest extends GridTcp
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
         return super.getTestTimeout() * 4;
+    }
+
+    @Test
+    @Override public void testMultithreaded_NoPairedConnections() throws Exception {
+        super.testMultithreaded_NoPairedConnections();
     }
 }
