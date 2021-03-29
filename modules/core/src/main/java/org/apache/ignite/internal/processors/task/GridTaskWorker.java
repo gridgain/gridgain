@@ -1614,6 +1614,8 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
      * @param cancelChildren Whether to cancel children in case the task become cancelled.
      */
     void finishTask(@Nullable R res, @Nullable Throwable e, boolean cancelChildren) {
+        U.dumpStack(log, "Task finished: " + ses == null ? "ses is null " + name() : ses.getTaskName());
+
         // Avoid finishing a job more than once from
         // different threads.
         synchronized (mux) {
