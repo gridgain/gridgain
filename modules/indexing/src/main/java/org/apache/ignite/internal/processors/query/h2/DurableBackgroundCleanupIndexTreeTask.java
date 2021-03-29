@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
+import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -162,8 +163,17 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
 
                 assert rootPage != null;
 
-                if (skipDeletedRoot(grpId, pageMem, rootPage))
+                if (skipDeletedRoot(grpId, pageMem, rootPage)) {
+                    ctx.log(getClass()).warning(S.toString("Skipping deletion of the index tree",
+                        "cacheGrpName", cacheGrpName, false,
+                        "cacheName", cacheName, false,
+                        "idxName", idxName, false,
+                        "segment", i, false,
+                        "rootPageId", PageIdUtils.toDetailString(rootPage), false
+                    ));
+
                     continue;
+                }
 
                 // Below we create a fake index tree using it's root page, stubbing some parameters,
                 // because we just going to free memory pages that are occupied by tree structure.
