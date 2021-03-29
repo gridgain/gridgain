@@ -36,14 +36,17 @@ import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static java.lang.Thread.currentThread;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.processors.query.h2.LongRunningQueryManager.LONG_QUERY_EXEC_MSG;
 
 /**
  * Tests for log print for long running query.
  */
+@WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
 public class LongRunningQueryTest extends AbstractIndexingCommonTest {
     /** Keys count. */
     private static final int KEY_CNT = 1000;
