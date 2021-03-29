@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Meta store.
@@ -53,7 +54,7 @@ public interface IndexStorage {
      * @return Root ID or null if no page was found.
      * @throws IgniteCheckedException  If failed.
      */
-    public RootPage findCacheIndex(Integer cacheId, String idxName, int segment) throws IgniteCheckedException;
+    public @Nullable RootPage findCacheIndex(Integer cacheId, String idxName, int segment) throws IgniteCheckedException;
 
     /**
      * Deallocate index page and remove from tree.

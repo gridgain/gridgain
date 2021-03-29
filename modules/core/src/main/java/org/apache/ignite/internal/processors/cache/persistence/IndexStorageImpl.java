@@ -163,7 +163,7 @@ public class IndexStorageImpl implements IndexStorage {
     }
 
     /** {@inheritDoc} */
-    @Override public RootPage findCacheIndex(Integer cacheId, String idxName, int segment)
+    @Override public @Nullable RootPage findCacheIndex(Integer cacheId, String idxName, int segment)
         throws IgniteCheckedException
     {
         idxName = maskCacheIndexName(cacheId, idxName, segment);

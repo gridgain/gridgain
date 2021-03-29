@@ -1128,7 +1128,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException {
+    @Override public @Nullable RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException {
         return indexStorage.findCacheIndex(cacheId, idxName, segment);
     }
 
