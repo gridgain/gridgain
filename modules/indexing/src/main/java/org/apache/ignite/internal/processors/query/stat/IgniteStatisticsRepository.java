@@ -17,21 +17,47 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnLocalDataViewWalker;
+import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnPartitionDataViewWalker;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnConfigurationView;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnLocalDataView;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnPartitionDataView;
+import org.apache.ignite.internal.util.collection.IntHashMap;
+import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
  * Statistics repository implementation.
  */
 public class IgniteStatisticsRepository {
+    /** */
+    public static final String STAT_PART_DATA_VIEW = "statisticsPartitionData";
+
+    /** */
+    public static final String STAT_PART_DATA_VIEW_DESC = "Statistics per partition data.";
+
+    /** */
+    public static final String STAT_LOCAL_DATA_VIEW = "statisticsLocalData";
+
+    /** */
+    public static final String STAT_LOCAL_DATA_VIEW_DESC = "Statistics local node data.";
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -39,27 +65,152 @@ public class IgniteStatisticsRepository {
     private final IgniteStatisticsStore store;
 
     /** Local (for current node) object statistics. */
-    private final Map<StatisticsKey, ObjectStatisticsImpl> locStats;
+    private final Map<StatisticsKey, ObjectStatisticsImpl> locStats = new ConcurrentHashMap<>();
+
+    /** Obsolescence for each partition. */
+    private final Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> statObs = new ConcurrentHashMap<>();
 
     /** Statistics gathering. */
     private final IgniteStatisticsHelper helper;
+
+    /** Started flag. */
+    private AtomicBoolean started = new AtomicBoolean(false);
 
     /**
      * Constructor.
      *
      * @param store Ignite statistics store to use.
+     * @param sysViewMgr Grid system view manager.
      * @param helper IgniteStatisticsHelper.
      * @param logSupplier Ignite logger supplier to get logger from.
      */
     public IgniteStatisticsRepository(
             IgniteStatisticsStore store,
+            GridSystemViewManager sysViewMgr,
             IgniteStatisticsHelper helper,
             Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.store = store;
-        this.locStats = new ConcurrentHashMap<>();
         this.helper = helper;
         this.log = logSupplier.apply(IgniteStatisticsRepository.class);
+
+        sysViewMgr.registerFiltrableView(STAT_PART_DATA_VIEW, STAT_PART_DATA_VIEW_DESC,
+            new StatisticsColumnPartitionDataViewWalker(), this::columnPartitionStatisticsViewSupplier,
+            Function.identity());
+
+        sysViewMgr.registerFiltrableView(STAT_LOCAL_DATA_VIEW, STAT_LOCAL_DATA_VIEW_DESC,
+            new StatisticsColumnLocalDataViewWalker(), this::columnLocalStatisticsViewSupplier,
+            Function.identity());
+    }
+
+    /**
+     * Statistics column partition data view filterable supplier.
+     *
+     * @param filter Filter.
+     * @return Iterable with statistics column partition data views.
+     */
+    private Iterable<StatisticsColumnPartitionDataView> columnPartitionStatisticsViewSupplier(
+        Map<String, Object> filter
+    ) {
+        String type = (String)filter.get(StatisticsColumnPartitionDataViewWalker.TYPE_FILTER);
+        if (type != null && !StatisticsColumnConfigurationView.TABLE_TYPE.equalsIgnoreCase(type))
+            return Collections.emptyList();
+
+        String schema = (String)filter.get(StatisticsColumnPartitionDataViewWalker.SCHEMA_FILTER);
+        String name = (String)filter.get(StatisticsColumnPartitionDataViewWalker.NAME_FILTER);
+        Integer partId = (Integer)filter.get(StatisticsColumnPartitionDataViewWalker.PARTITION_FILTER);
+        String column = (String)filter.get(StatisticsColumnPartitionDataViewWalker.COLUMN_FILTER);
+
+        Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> partsStatsMap;
+        if (!F.isEmpty(schema) && !F.isEmpty(name)) {
+            StatisticsKey key = new StatisticsKey(schema, name);
+            Collection<ObjectPartitionStatisticsImpl> keyStat;
+            if (partId == null)
+                keyStat = store.getLocalPartitionsStatistics(key);
+            else {
+                ObjectPartitionStatisticsImpl partStat = store.getLocalPartitionStatistics(key, partId);
+                keyStat = (partStat == null) ? Collections.emptyList() : Collections.singletonList(partStat);
+            }
+            partsStatsMap = Collections.singletonMap(key, keyStat);
+        }
+        else
+            partsStatsMap = store.getAllLocalPartitionsStatistics(schema);
+
+        List<StatisticsColumnPartitionDataView> res = new ArrayList<>();
+
+        for (Map.Entry<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> partsStatsEntry : partsStatsMap.entrySet()) {
+            StatisticsKey key = partsStatsEntry.getKey();
+            for (ObjectPartitionStatisticsImpl partStat : partsStatsEntry.getValue()) {
+                if (column == null) {
+                    for (Map.Entry<String, ColumnStatistics> colStatEntry : partStat.columnsStatistics().entrySet())
+                        res.add(new StatisticsColumnPartitionDataView(key, colStatEntry.getKey(), partStat));
+                }
+                else {
+                    ColumnStatistics colStat = partStat.columnStatistics(column);
+                    if (colStat != null)
+                        res.add(new StatisticsColumnPartitionDataView(key, column, partStat));
+                }
+            }
+        }
+
+        return res;
+    }
+
+    /**
+     * Statistics column local node data view filterable supplier.
+     *
+     * @param filter Filter.
+     * @return Iterable with statistics column local node data views.
+     */
+    private Iterable<StatisticsColumnLocalDataView> columnLocalStatisticsViewSupplier(Map<String, Object> filter) {
+        String type = (String)filter.get(StatisticsColumnPartitionDataViewWalker.TYPE_FILTER);
+        if (type != null && !StatisticsColumnConfigurationView.TABLE_TYPE.equalsIgnoreCase(type))
+            return Collections.emptyList();
+
+        String schema = (String)filter.get(StatisticsColumnLocalDataViewWalker.SCHEMA_FILTER);
+        String name = (String)filter.get(StatisticsColumnLocalDataViewWalker.NAME_FILTER);
+        String column = (String)filter.get(StatisticsColumnPartitionDataViewWalker.COLUMN_FILTER);
+
+        Map<StatisticsKey, ObjectStatisticsImpl> localStatsMap;
+        if (!F.isEmpty(schema) && !F.isEmpty(name)) {
+            StatisticsKey key = new StatisticsKey(schema, name);
+
+            ObjectStatisticsImpl objLocalStat = locStats.get(key);
+
+            if (objLocalStat == null)
+                return Collections.emptyList();
+
+            localStatsMap = Collections.singletonMap(key, objLocalStat);
+        }
+        else
+            localStatsMap = locStats.entrySet().stream().filter(e -> F.isEmpty(schema) || schema.equals(e.getKey().schema()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        List<StatisticsColumnLocalDataView> res = new ArrayList<>();
+
+        for (Map.Entry<StatisticsKey, ObjectStatisticsImpl> localStatsEntry : localStatsMap.entrySet()) {
+            StatisticsKey key = localStatsEntry.getKey();
+            ObjectStatisticsImpl stat = localStatsEntry.getValue();
+            if (column == null) {
+                for (Map.Entry<String, ColumnStatistics> colStat : localStatsEntry.getValue().columnsStatistics()
+                    .entrySet()) {
+                    StatisticsColumnLocalDataView colStatView = new StatisticsColumnLocalDataView(key, colStat.getKey(),
+                        stat);
+
+                    res.add(colStatView);
+                }
+            }
+            else {
+                ColumnStatistics colStat = localStatsEntry.getValue().columnStatistics(column);
+                if (colStat != null) {
+                    StatisticsColumnLocalDataView colStatView = new StatisticsColumnLocalDataView(key, column, stat);
+
+                    res.add(colStatView);
+                }
+            }
+        }
+
+        return res;
     }
 
     /**
@@ -104,12 +255,15 @@ public class IgniteStatisticsRepository {
 
         if (newStatistics.isEmpty()) {
             store.clearLocalPartitionsStatistics(key);
+            store.clearObsolescenceInfo(key, null);
 
             return;
         }
 
-        if (!partitionsToRmv.isEmpty())
+        if (!partitionsToRmv.isEmpty()) {
             store.clearLocalPartitionsStatistics(key, partitionsToRmv);
+            store.clearObsolescenceInfo(key, partitionsToRmv);
+        }
 
         store.replaceLocalPartitionsStatistics(key, newStatistics);
     }
@@ -131,6 +285,26 @@ public class IgniteStatisticsRepository {
             ObjectPartitionStatisticsImpl combinedStats = add(oldPartStat, statistics);
             store.saveLocalPartitionStatistics(key, combinedStats);
         }
+    }
+
+    /**
+     * Refresh statistics obsolescence after partition gathering.
+     *
+     * @param key Statistics key.
+     * @param partId Partition id.
+     */
+    public void refreshObsolescence(StatisticsKey key, int partId) {
+        statObs.compute(key, (k,v) -> {
+            if (v == null)
+                v = new IntHashMap<>();
+
+            ObjectPartitionStatisticsObsolescence newObs = new ObjectPartitionStatisticsObsolescence();
+            newObs.dirty(true);
+
+            v.put(partId, newObs);
+
+            return v;
+        });
     }
 
     /**
@@ -306,7 +480,8 @@ public class IgniteStatisticsRepository {
             statsToAgg
         );
 
-        saveLocalStatistics(cfg.key(), locStat);
+        if (locStat != null)
+            saveLocalStatistics(cfg.key(), locStat);
 
         return locStat;
     }
@@ -314,8 +489,9 @@ public class IgniteStatisticsRepository {
     /**
      * Stop repository.
      */
-    public void stop() {
+    public synchronized void stop() {
         locStats.clear();
+        started.set(false);
 
         if (log.isDebugEnabled())
             log.debug("Statistics repository started.");
@@ -324,8 +500,163 @@ public class IgniteStatisticsRepository {
     /**
      * Start repository.
      */
-    public void start() {
+    public synchronized void start() {
         if (log.isDebugEnabled())
             log.debug("Statistics repository started.");
+    }
+
+    /**
+     * Load obsolescence info from local metastorage and cache it. Remove parts, that doesn't match configuration.
+     * Create missing partitions info.
+     *
+     * @param cfg Partitions configuration.
+     */
+    public void loadObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence = store.loadAllObsolescence();
+
+        Map<StatisticsKey, Set<Integer>> deleted = updateObsolescenceInfo(obsolescence, cfg);
+
+        statObs.putAll(obsolescence);
+
+        for (Map.Entry<StatisticsKey, Set<Integer>> objDeleted : deleted.entrySet())
+            store.clearObsolescenceInfo(objDeleted.getKey(), objDeleted.getValue());
+
+    }
+
+    /**
+     * Update obsolescence info cache to fit specified cfg.
+     *
+     * @param cfg Obsolescence configuration.
+     */
+    public void updateObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
+        Map<StatisticsKey, Set<Integer>> deleted = updateObsolescenceInfo(statObs, cfg);
+
+        for (Map.Entry<StatisticsKey, Set<Integer>> objDeleted : deleted.entrySet())
+            store.clearObsolescenceInfo(objDeleted.getKey(), objDeleted.getValue());
+    }
+
+    /**
+     * Load or update obsolescence info cache to fit specified cfg.
+     *
+     * @param cfg Map object statistics configuration to primary partitions set.
+     */
+    public synchronized void checkObsolescenceInfo(Map<StatisticsObjectConfiguration, Set<Integer>> cfg) {
+        if (!started.compareAndSet(false, true))
+            loadObsolescenceInfo(cfg);
+        else
+            updateObsolescenceInfo(cfg);
+    }
+
+    /**
+     * Make obsolescence map correlated with configuration and return removed elements map.
+     *
+     * @param obsolescence Obsolescence info map.
+     * @param cfg Obsolescence configuration.
+     * @return Removed from obsolescence info map partitions.
+     */
+    private static Map<StatisticsKey, Set<Integer>> updateObsolescenceInfo(
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence,
+        Map<StatisticsObjectConfiguration, Set<Integer>> cfg
+    ) {
+        Map<StatisticsKey, Set<Integer>> res = new HashMap<>();
+
+        Set<StatisticsKey> keys = cfg.keySet().stream().map(StatisticsObjectConfiguration::key).collect(Collectors.toSet());
+
+        for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> objObs : obsolescence.entrySet()) {
+            StatisticsKey key = objObs.getKey();
+            if (!keys.contains(key)) {
+                IntMap<ObjectPartitionStatisticsObsolescence> rmv = obsolescence.remove(key);
+
+                res.put(key, IntStream.of(rmv.keys()).boxed().collect(Collectors.toSet()));
+            }
+        }
+
+        for (Map.Entry<StatisticsObjectConfiguration, Set<Integer>> objObsCfg : cfg.entrySet()) {
+            StatisticsKey key = objObsCfg.getKey().key();
+            IntMap<ObjectPartitionStatisticsObsolescence> objObs = obsolescence.get(objObsCfg.getKey().key());
+            if (objObs == null) {
+                objObs = new IntHashMap<>();
+
+                obsolescence.put(key, objObs);
+            }
+
+            IntMap<ObjectPartitionStatisticsObsolescence> objObsFinal = objObs;
+
+            Set<Integer> partIds = new HashSet<>(objObsCfg.getValue());
+
+            objObs.forEach((partId, v) -> {
+                if (!partIds.remove(partId)) {
+                    objObsFinal.remove(partId);
+                    res.computeIfAbsent(key, k -> new HashSet<>()).add(partId);
+                }
+            });
+
+            partIds.forEach(partId -> objObsFinal.put(partId, new ObjectPartitionStatisticsObsolescence()));
+        }
+
+        return res;
+    }
+
+    /**
+     * Try to count modified to specified object and partition.
+     *
+     * @param key Statistics key.
+     * @param partId Partition id.
+     * @param changedKey Changed key bytes.
+     */
+    public void addRowsModified(StatisticsKey key, int partId, byte[] changedKey) {
+        IntMap<ObjectPartitionStatisticsObsolescence> objObs = statObs.get(key);
+        if (objObs == null)
+            return;
+
+        ObjectPartitionStatisticsObsolescence objPartObs = objObs.get(partId);
+        if (objPartObs == null)
+            return;
+
+        objPartObs.modify(changedKey);
+    }
+
+    /**
+     * Save all modified obsolescence info to local metastorage.
+     *
+     * @return Map with all partitions of objects with dirty partitions.
+     */
+    public synchronized Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> saveObsolescenceInfo() {
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> dirtyObs = new HashMap<>();
+
+        boolean hasDirty[] = new boolean[1];
+        for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> objObs : statObs.entrySet()) {
+            hasDirty[0] = false;
+
+            objObs.getValue().forEach((k,v) -> {
+                if (v.dirty()) {
+                    v.dirty(false);
+                    hasDirty[0] = true;
+                }
+            });
+
+            if (hasDirty[0]) {
+                IntMap<ObjectPartitionStatisticsObsolescence> objDirtyObs = new IntHashMap<>();
+
+                objObs.getValue().forEach((k,v) -> objDirtyObs.put(k, v));
+
+                dirtyObs.put(objObs.getKey(), objDirtyObs);
+            }
+        }
+
+        store.saveObsolescenceInfo(dirtyObs);
+
+        return dirtyObs;
+    }
+
+    /**
+     * Remove statistics obsolescence info by the given key.
+     *
+     * @param key Statistics key to remove obsolescence info by.
+     */
+    public void removeObsolescenceInfo(StatisticsKey key) {
+        statObs.remove(key);
+
+        store.clearObsolescenceInfo(key, null);
     }
 }

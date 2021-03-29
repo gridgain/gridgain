@@ -69,7 +69,8 @@ public class PSUCompositeIndexTableStatisticsUsageTest extends StatisticsAbstrac
                 i * 2, i * 10);
             sql(sql);
         }
-        updateStatistics("ci_table");
+
+        collectStatistics("ci_table");
     }
 
     /**

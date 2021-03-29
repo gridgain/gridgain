@@ -40,6 +40,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
@@ -54,7 +55,6 @@ import org.apache.ignite.internal.processors.query.h2.database.H2IndexType;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
@@ -479,9 +479,9 @@ public class GridH2Table extends TableBase {
         if (cacheContext == null)
             return null;
 
-        IgniteStatisticsManager statManager = cacheContext.kernalContext().query().getIndexing().statsManager();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)cacheContext.kernalContext().query().getIndexing();
 
-        return statManager.getLocalStatistics(new StatisticsKey(identifier.schema(), identifier.table()));
+        return indexing.statsManager().getLocalStatistics(new StatisticsKey(identifier.schema(), identifier.table()));
     }
 
     /**
@@ -805,6 +805,8 @@ public class GridH2Table extends TableBase {
             }
         }
         finally {
+            updateStatistics(row0.key());
+
             row0.clearValuesCache();
 
             if (prevRow0 != null)
@@ -824,6 +826,8 @@ public class GridH2Table extends TableBase {
      */
     public boolean remove(CacheDataRow row) throws IgniteCheckedException {
         H2CacheRow row0 = desc.createRow(row);
+
+        boolean res = false;
 
         lock(false);
 
@@ -848,11 +852,15 @@ public class GridH2Table extends TableBase {
                 size.decrement();
             }
 
-            return rmv;
+            res = rmv;
         }
         finally {
             unlock(false);
         }
+
+        updateStatistics(row0.key());
+
+        return res;
     }
 
     /**
@@ -1348,6 +1356,27 @@ public class GridH2Table extends TableBase {
         res.sortType = sorting;
 
         return res;
+    }
+
+    /**
+     * Update key statistics.
+     *
+     * @param key Updated key.
+     */
+    private void updateStatistics(KeyCacheObject key) {
+        GridCacheContext cacheCtx = cacheInfo.cacheContext();
+        if (cacheCtx == null)
+            return;
+
+        IgniteH2Indexing indexing = (IgniteH2Indexing)cacheCtx.kernalContext().query().getIndexing();
+        try {
+            indexing.statsManager().onRowUpdated(this.identifier().schema(),
+                this.identifier.table(), key.partition(), key.valueBytes(this.cacheContext().cacheObjectContext()));
+        }
+        catch (IgniteCheckedException e) {
+            if (log.isDebugEnabled())
+                log.debug("Error while updating statistics obsolescence due to " + e.getMessage());
+        }
     }
 
     /**
