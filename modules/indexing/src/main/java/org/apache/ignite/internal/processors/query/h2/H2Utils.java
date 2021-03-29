@@ -39,6 +39,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
+
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -69,6 +71,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowMessa
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
 import org.apache.ignite.internal.util.GridStringBuilder;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -144,6 +147,9 @@ public class H2Utils {
 
     /** */
     public static final IndexColumn[] EMPTY_COLUMNS = new IndexColumn[0];
+
+    /** Message appears instead of sensitive data. */
+    public static final String SENSITIVE_DATA_MSG = "Data hidden due to IGNITE_SENSITIVE_DATA_LOGGING flag";
 
     /** Spatial index class name. */
     private static final String SPATIAL_IDX_CLS =
@@ -1190,5 +1196,13 @@ public class H2Utils {
         GridQueryIndexing indexing = ctx.query().getIndexing();
 
         return indexing instanceof IgniteH2Indexing ? ((IgniteH2Indexing)indexing).dataHandler() : null;
+    }
+
+    /**
+     * @param s Supplier of the original sensitive data.
+     * @return Original string or hidden.
+     */
+    public static String sensitiveData(Supplier<String> s) {
+        return GridToStringBuilder.includeSensitive() ? s.get() : SENSITIVE_DATA_MSG;
     }
 }
