@@ -246,9 +246,8 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
             return this;
         }
 
-        if (entryCompressionStrategy == null) {
+        if (entryCompressionStrategy == null)
             return this;
-        }
 
         byte[] tryCompressed = entryCompressionStrategy.tryCompress(arr);
 
