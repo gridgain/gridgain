@@ -114,7 +114,9 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         if (trees0 == null) {
             trees0 = new ArrayList<>(rootPages.size());
 
-            CacheGroupContext grpCtx = ctx.cache().cacheGroup(CU.cacheGroupId(cacheName, cacheGrpName));
+            int grpId = CU.cacheGroupId(cacheName, cacheGrpName);
+
+            CacheGroupContext grpCtx = ctx.cache().cacheGroup(grpId);
 
             // If group context is null, it means that group doesn't exist and we don't need this task anymore.
             if (grpCtx == null)
@@ -153,10 +155,15 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                 ctx.metric()
             );
 
+            PageMemory pageMem = grpCtx.dataRegion().pageMemory();
+
             for (int i = 0; i < rootPages.size(); i++) {
                 Long rootPage = rootPages.get(i);
 
                 assert rootPage != null;
+
+                if (skipDeletedRoot(grpId, pageMem, rootPage))
+                    continue;
 
                 // Below we create a fake index tree using it's root page, stubbing some parameters,
                 // because we just going to free memory pages that are occupied by tree structure.
@@ -171,9 +178,9 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                         cacheName,
                         null,
                         offheap.reuseListForIndex(treeName),
-                        CU.cacheGroupId(cacheName, cacheGrpName),
+                        grpId,
                         cacheGrpName,
-                        grpCtx.dataRegion().pageMemory(),
+                        pageMem,
                         ctx.cache().context().wal(),
                         offheap.globalRemoveId(),
                         rootPage,
@@ -217,6 +224,36 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         }
         finally {
             ctx.cache().context().database().checkpointReadUnlock();
+        }
+    }
+
+    /**
+     * Checks that pageId is still relevant and has not been deleted / reused.
+     * @param grpId Cache group id.
+     * @param pageMem Page memory instance.
+     * @param rootPageId Root page identifier.
+     * @return {@code true} if root page was deleted/reused, {@code false} otherwise.
+     */
+    private boolean skipDeletedRoot(int grpId, PageMemory pageMem, long rootPageId) {
+        try {
+            long page = pageMem.acquirePage(grpId, rootPageId);
+
+            try {
+                long pageAddr = pageMem.readLock(grpId, rootPageId, page);
+
+                try {
+                    return pageAddr == 0;
+                }
+                finally {
+                    pageMem.readUnlock(grpId, rootPageId, page);
+                }
+            }
+            finally {
+                pageMem.releasePage(grpId, rootPageId, page);
+            }
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Cannot acquire tree root page.", e);
         }
     }
 
