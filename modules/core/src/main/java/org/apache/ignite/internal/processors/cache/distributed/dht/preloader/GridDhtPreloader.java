@@ -283,7 +283,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     int partId = p;
                     List<ClusterNode> picked = remoteOwners(p, topVer, (node, owners) -> {
                         if (owners.size() == 1)
-                            return  true;
+                            return true;
 
                         return exchFut == null || exchFut.isNodeApplicableForFullRebalance(node.id(), grp.groupId(), partId);
                     });
