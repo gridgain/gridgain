@@ -27,9 +27,12 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
+import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
@@ -71,6 +74,9 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     private String schemaName;
 
     /** */
+    private final String treeName;
+
+    /** */
     private String idxName;
 
     /** */
@@ -83,6 +89,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         String cacheGrpName,
         String cacheName,
         String schemaName,
+        String treeName,
         String idxName
     ) {
         this.rootPages = rootPages;
@@ -91,6 +98,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         this.cacheGrpName = cacheGrpName;
         this.cacheName = cacheName;
         this.schemaName = schemaName;
+        this.treeName = treeName;
         this.idxName = idxName;
         this.id = UUID.randomUUID().toString();
     }
@@ -107,11 +115,38 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         if (trees0 == null) {
             trees0 = new ArrayList<>(rootPages.size());
 
-            CacheGroupContext grpCtx = ctx.cache().cacheGroup(CU.cacheGroupId(cacheName, cacheGrpName));
+            int grpId = CU.cacheGroupId(cacheName, cacheGrpName);
+
+            CacheGroupContext grpCtx = ctx.cache().cacheGroup(grpId);
 
             // If group context is null, it means that group doesn't exist and we don't need this task anymore.
             if (grpCtx == null)
                 return;
+
+            IgniteCacheOffheapManager offheap = grpCtx.offheap();
+
+            if (treeName != null) {
+                ctx.cache().context().database().checkpointReadLock();
+
+                try {
+                    int cacheId = CU.cacheId(cacheName);
+
+                    for (int segment = 0; segment < rootPages.size(); segment++) {
+                        try {
+                            RootPage rootPage = offheap.findRootPageForIndex(cacheId, treeName, segment);
+
+                            if (rootPage != null && rootPages.get(segment) == rootPage.pageId().pageId())
+                                offheap.dropRootPageForIndex(cacheId, treeName, segment);
+                        }
+                        catch (IgniteCheckedException e) {
+                            throw new IgniteException(e);
+                        }
+                    }
+                }
+                finally {
+                    ctx.cache().context().database().checkpointReadUnlock();
+                }
+            }
 
             IoStatisticsHolderIndex stats = new IoStatisticsHolderIndex(
                 SORTED_INDEX,
@@ -121,10 +156,24 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                 grpCtx.statisticsHolderData()
             );
 
+            PageMemory pageMem = grpCtx.dataRegion().pageMemory();
+
             for (int i = 0; i < rootPages.size(); i++) {
                 Long rootPage = rootPages.get(i);
 
                 assert rootPage != null;
+
+                if (skipDeletedRoot(grpId, pageMem, rootPage)) {
+                    ctx.log(getClass()).warning(S.toString("Skipping deletion of the index tree",
+                        "cacheGrpName", cacheGrpName, false,
+                        "cacheName", cacheName, false,
+                        "idxName", idxName, false,
+                        "segment", i, false,
+                        "rootPageId", PageIdUtils.toDetailString(rootPage), false
+                    ));
+
+                    continue;
+                }
 
                 // Below we create a fake index tree using it's root page, stubbing some parameters,
                 // because we just going to free memory pages that are occupied by tree structure.
@@ -138,12 +187,12 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                         idxName,
                         cacheName,
                         null,
-                        grpCtx.offheap().reuseListForIndex(treeName),
-                        CU.cacheGroupId(cacheName, cacheGrpName),
+                        offheap.reuseListForIndex(treeName),
+                        grpId,
                         cacheGrpName,
-                        grpCtx.dataRegion().pageMemory(),
+                        pageMem,
                         ctx.cache().context().wal(),
-                        grpCtx.offheap().globalRemoveId(),
+                        offheap.globalRemoveId(),
                         rootPage,
                         false,
                         Collections.emptyList(),
@@ -188,6 +237,36 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         }
     }
 
+    /**
+     * Checks that pageId is still relevant and has not been deleted / reused.
+     * @param grpId Cache group id.
+     * @param pageMem Page memory instance.
+     * @param rootPageId Root page identifier.
+     * @return {@code true} if root page was deleted/reused, {@code false} otherwise.
+     */
+    private boolean skipDeletedRoot(int grpId, PageMemory pageMem, long rootPageId) {
+        try {
+            long page = pageMem.acquirePage(grpId, rootPageId);
+
+            try {
+                long pageAddr = pageMem.readLock(grpId, rootPageId, page);
+
+                try {
+                    return pageAddr == 0;
+                }
+                finally {
+                    pageMem.readUnlock(grpId, rootPageId, page);
+                }
+            }
+            finally {
+                pageMem.releasePage(grpId, rootPageId, page);
+            }
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Cannot acquire tree root page.", e);
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public void complete() {
         completed = true;
@@ -206,5 +285,119 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(DurableBackgroundCleanupIndexTreeTask.class, this);
+    }
+
+    /**
+     * H2Tree that can be used only to destroy it.
+     */
+    public static class H2TreeToDestroy extends H2Tree {
+        /** */
+        private final CacheGroupContext grpCtx;
+
+        /**
+         * Constructor.
+         *
+         * @param grpCtx                  Cache group context.
+         * @param table                   Owning table.
+         * @param name                    Name of the tree.
+         * @param idxName                 Name of the index.
+         * @param cacheName               Name of the cache.
+         * @param tblName                 Name of the table.
+         * @param reuseList               Reuse list.
+         * @param grpId                   Cache group ID.
+         * @param grpName                 Name of the cache group.
+         * @param pageMem                 Page memory.
+         * @param wal                     Write ahead log manager.
+         * @param globalRmvId             Global remove ID counter.
+         * @param metaPageId              Meta page ID.
+         * @param initNew                 if {@code true} new tree will be initialized, else meta page info will be read.
+         * @param unwrappedCols           Unwrapped indexed columns.
+         * @param wrappedCols             Original indexed columns.
+         * @param maxCalculatedInlineSize Keep max calculated inline size for current index.
+         * @param pk                      {@code true} for primary key.
+         * @param affinityKey             {@code true} for affinity key.
+         * @param mvccEnabled             Mvcc flag.
+         * @param rowCache                Row cache.
+         * @param failureProcessor        if the tree is corrupted.
+         * @param log                     Logger.
+         * @param stats                   Statistics holder.
+         * @param factory                 Inline helper factory.
+         * @param configuredInlineSize    Size that has been set by user during index creation.
+         * @param pageIoRslvr             Page IO resolver.
+         * @throws IgniteCheckedException If failed.
+         */
+        public H2TreeToDestroy(
+            CacheGroupContext grpCtx,
+            GridH2Table table,
+            String name,
+            String idxName,
+            String cacheName,
+            String tblName,
+            ReuseList reuseList,
+            int grpId,
+            String grpName,
+            PageMemory pageMem,
+            IgniteWriteAheadLogManager wal,
+            AtomicLong globalRmvId,
+            long metaPageId,
+            boolean initNew,
+            List<IndexColumn> unwrappedCols,
+            List<IndexColumn> wrappedCols,
+            AtomicInteger maxCalculatedInlineSize,
+            boolean pk,
+            boolean affinityKey,
+            boolean mvccEnabled,
+            @Nullable H2RowCache rowCache,
+            @Nullable FailureProcessor failureProcessor,
+            IgniteLogger log, IoStatisticsHolder stats,
+            InlineIndexColumnFactory factory,
+            int configuredInlineSize,
+            PageIoResolver pageIoRslvr) throws IgniteCheckedException {
+            super(
+                null,
+                table,
+                name,
+                idxName,
+                cacheName,
+                tblName,
+                reuseList,
+                grpId,
+                grpName,
+                pageMem,
+                wal,
+                globalRmvId,
+                metaPageId,
+                initNew,
+                unwrappedCols,
+                wrappedCols,
+                maxCalculatedInlineSize,
+                pk,
+                affinityKey,
+                mvccEnabled,
+                rowCache,
+                failureProcessor,
+                log,
+                stats,
+                factory,
+                configuredInlineSize,
+                pageIoRslvr
+            );
+
+            this.grpCtx = grpCtx;
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void temporaryReleaseLock() {
+            grpCtx.shared().database().checkpointReadUnlock();
+            grpCtx.shared().database().checkpointReadLock();
+        }
+
+        /** {@inheritDoc} */
+        @Override protected long maxLockHoldTime() {
+            long sysWorkerBlockedTimeout = grpCtx.shared().kernalContext().workersRegistry().getSystemWorkerBlockedTimeout();
+
+            // Using timeout value reduced by 10 times to increase possibility of lock releasing before timeout.
+            return sysWorkerBlockedTimeout == 0 ? Long.MAX_VALUE : (sysWorkerBlockedTimeout / 10);
+        }
     }
 }
