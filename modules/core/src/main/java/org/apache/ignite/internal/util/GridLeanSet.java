@@ -45,7 +45,7 @@ public class GridLeanSet<E> extends GridSetWrapper<E> implements Cloneable {
      * @param size Initial size.
      */
     public GridLeanSet(int size) {
-        super(new GridLeanMap<E, Object>(size));
+        super(new GridLeanMap<>(size));
     }
 
     /**
