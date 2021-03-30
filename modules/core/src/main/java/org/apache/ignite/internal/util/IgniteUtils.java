@@ -12507,8 +12507,16 @@ public abstract class IgniteUtils {
         }
 
         try {
-            if (!ctx.shared().database().ensureFreeSpace(ctx.dataRegion()))
-                return new IgniteCheckedException("Nothing evicted [emptyPoolSize=" + ctx.dataRegion().emptyPagesPoolSize() + "]", e);
+            if (!ctx.shared().database().ensureFreeSpace(ctx.dataRegion())) {
+                return new IgniteCheckedException("Nothing evicted [" +
+                    "pageEvictionMode=" + ctx.dataRegion().config().getPageEvictionMode() +
+                    ", emptyPoolSize=" + ctx.dataRegion().emptyPagesPoolSize() +
+                    ", memoryMaxSize=" + ctx.dataRegion().config().getMaxSize() +
+                    ", pageSize=" + ctx.dataRegion().pageMemory().systemPageSize() +
+                    ", evictionThreshold=" + ctx.dataRegion().config().getEvictionThreshold() + "]",
+                    e
+                );
+            }
         }
         catch (IgniteCheckedException ex) {
             return ex;
