@@ -58,7 +58,7 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
         } catch (AssertionError e) {
             SB sb = new SB();
 
-            sb.a("Failed to increment HWM")
+            sb.a("Failed to increment HWM ")
                 .a("[op=reserve")
                 .a(", grpId=").a(grp.groupId())
                 .a(", grpName=").a(grp.cacheOrGroupName())
