@@ -3432,14 +3432,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 // assert c.operationType() == PUT || c.operationType() == IN_PLACE : c.operationType();
 
                 if (c.operationType() != NOOP) {
-                    reconciliationCtx.lockPutRemove.readLock().lock();
+//                    reconciliationCtx.lockPutRemove.readLock().lock();
 
-                    try {
+//                    try {
                         finishRemove(cctx, key, c.oldRow, c.newRow);
-                    }
-                    finally {
-                        reconciliationCtx.lockPutRemove.readLock().unlock();
-                    }
+//                    }
+//                    finally {
+//                        reconciliationCtx.lockPutRemove.readLock().unlock();
+//                    }
                 }
             }
             finally {

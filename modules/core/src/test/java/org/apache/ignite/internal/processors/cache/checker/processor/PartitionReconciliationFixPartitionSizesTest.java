@@ -152,7 +152,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
-        int endKey = 700;
+//        int endKey = 337;
+        int endKey = 2000;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -175,10 +176,10 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
         breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
-//
+
         assertFalse(cache.size() == startSize);
 
-//        doSleep(500);
+        doSleep(500);
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
@@ -188,7 +189,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         objects.add(DEFAULT_CACHE_NAME);
 //        objects.add("qqq");
         builder.caches(objects);
-        builder.batchSize(100);
+        builder.batchSize(10000);
 
 
         AtomicReference<ReconciliationResult> res = new AtomicReference<>();
@@ -197,7 +198,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             System.out.println("qvsdhntsd loadFut start");
 
 //            try {
-//                sleep(2);
+//                sleep(1);
 //            }
 //            catch (InterruptedException e) {
 //                e.printStackTrace();
@@ -212,16 +213,16 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
                 int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (!cache.containsKey(i1)) {
                     cache.put(i1, 1);
-                    putCount.incrementAndGet();
-                System.out.println("qdervdvds after put in test");
+//                    putCount.incrementAndGet();
+//                System.out.println("qdervdvds after put in test");
 //                }
 
-//                try {
-//                    sleep(20);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
+                try {
+                    sleep(1);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
 
 //                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (cache.containsKey(i1)) {
@@ -379,6 +380,12 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         System.out.println("qcsdfrs " + CollectPartitionKeysByBatchTask.msg1);
 
         System.out.println("qfsvrsdsdsd putCount " + putCount + ", removeCount " + removeCount);
+
+//        for (int i = startKey; i < endKey; i++) {
+//            grid(0).cache(DEFAULT_CACHE_NAME).get(i);
+//
+//            System.out.println("qfegsdg get after all: " + i);
+//        }
 
         assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size());
 
