@@ -1311,11 +1311,14 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                 try {
                     ClusterNode node = ctx.discovery().node(nodeId);
 
-                    if (node != null)
+                    if (node != null) {
+                        U.dumpStack(log, "Job cancel message is sending...");
+
                         ctx.io().sendToGridTopic(node,
                             TOPIC_JOB_CANCEL,
                             new GridJobCancelRequest(ses.getId(), res.getJobContext().getJobId(), /*courtesy*/true),
                             PUBLIC_POOL);
+                    }
                 }
                 catch (ClusterTopologyCheckedException e) {
                     if (log.isDebugEnabled())

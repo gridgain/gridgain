@@ -151,6 +151,8 @@ public class GridJobSiblingImpl implements ComputeJobSibling, Externalizable {
         for (ClusterNode node : nodes) {
             if (!ctx.localNodeId().equals(node.id())) {
                 try {
+                    U.dumpStack(ctx.log(GridJobSiblingImpl.class), "Job cancel message is sending...");
+
                     ctx.io().sendToGridTopic(node, TOPIC_JOB_CANCEL, new GridJobCancelRequest(sesId, jobId), SYSTEM_POOL);
                 }
                 catch (ClusterTopologyCheckedException e) {
