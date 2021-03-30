@@ -176,7 +176,7 @@ public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractT
             futures.add(fut);
         }
 
-        doSleep(10_000);
+        doSleep(30_000);
 
         running.set(false);
 
