@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.qa.query;
+package org.apache.ignite.internal.processors.query.schema;
 
-import org.apache.ignite.testframework.junits.WithSystemProperty;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import org.apache.ignite.IgniteCheckedException;
 
 /**
- * Tests for log print for long running query.
+ * Exception occurred when canceling index rebuild via {@link SchemaIndexOperationCancellationToken}.
  */
-@WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-public class WarningOnBigQueryLazyResultsTest extends WarningOnBigQueryResultsTest {
-    /** {@inheritDoc} */
-    @Override protected boolean lazy() {
-        return true;
+public class SchemaIndexOperationCancellationException extends IgniteCheckedException {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 0L;
+
+    /**
+     * Constructor.
+     *
+     * @param msg Error message.
+     */
+    public SchemaIndexOperationCancellationException(String msg) {
+        super(msg);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -160,11 +161,14 @@ import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQuery
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2DmlRequest;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2DmlResponse;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheFuture;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationException;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationToken;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -347,6 +351,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Statistic manager. */
     private IgniteStatisticsManager statsMgr;
+
+    /** Index rebuilding futures for caches. Mapping: cacheId -> rebuild indexes future. */
+    private final Map<Integer, SchemaIndexCacheFuture> idxRebuildFuts = new ConcurrentHashMap<>();
 
     /**
      * @return Kernal context.
@@ -2162,11 +2169,16 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
 
-        //to avoid possible data race
+        // To avoid possible data race.
         GridFutureAdapter<Void> outRebuildCacheIdxFut = new GridFutureAdapter<>();
 
         if (cctx.group().metrics() != null)
             cctx.group().metrics().addIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
+
+        // An internal future for the ability to cancel index rebuilding.
+        // This behavior should be discussed in IGNITE-14321.
+        SchemaIndexCacheFuture intRebFut = new SchemaIndexCacheFuture(new SchemaIndexOperationCancellationToken());
+        cancelIndexRebuildFuture(idxRebuildFuts.put(cctx.cacheId(), intRebFut));
 
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
@@ -2184,9 +2196,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
 
             outRebuildCacheIdxFut.onDone(err);
+
+            idxRebuildFuts.remove(cctx.cacheId(), intRebFut);
+            intRebFut.onDone(err);
         });
 
-        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut);
+        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
 
         return outRebuildCacheIdxFut;
     }
@@ -2197,13 +2212,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param cctx Cache context.
      * @param clo Closure.
      * @param rebuildIdxFut Future for rebuild indexes.
+     * @param cancel Cancellation token.
      */
     protected void rebuildIndexesFromHash0(
         GridCacheContext cctx,
         SchemaIndexCacheVisitorClosure clo,
-        GridFutureAdapter<Void> rebuildIdxFut
+        GridFutureAdapter<Void> rebuildIdxFut,
+        SchemaIndexOperationCancellationToken cancel
     ) {
-        new SchemaIndexCacheVisitorImpl(cctx, null, rebuildIdxFut).visit(clo);
+        new SchemaIndexCacheVisitorImpl(cctx, cancel, rebuildIdxFut).visit(clo);
     }
 
     /**
@@ -2586,6 +2603,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean destroy) {
+        cancelIndexRebuildFuture(idxRebuildFuts.remove(cacheInfo.cacheId()));
         rowCache.onCacheUnregistered(cacheInfo);
 
         String cacheName = cacheInfo.name();
@@ -3452,5 +3470,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         IgniteThreadPoolExecutor defragmentationThreadPool
     ) throws IgniteCheckedException {
         defragmentation.defragment(grpCtx, newCtx, partPageMem, mappingByPart, cpLock, cancellationChecker, log, defragmentationThreadPool);
+    }
+
+    /**
+     * Cancel rebuilding indexes for the cache through a future.
+     *
+     * @param rebFut Index rebuilding future.
+     */
+    private void cancelIndexRebuildFuture(@Nullable SchemaIndexCacheFuture rebFut) {
+        if (rebFut != null && !rebFut.isDone() && rebFut.cancelToken().cancel()) {
+            try {
+                rebFut.get();
+            }
+            catch (IgniteCheckedException e) {
+                if (!(e instanceof SchemaIndexOperationCancellationException))
+                    log.warning("Error after canceling index rebuild.", e);
+            }
+        }
     }
 }

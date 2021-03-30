@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -139,9 +140,9 @@ public class H2QueryInfo {
             .append(", schema=").append(schema);
 
         msgSb.append(", sql='")
-            .append(sql);
+            .append(H2Utils.sensitiveData(() -> sql));
 
-        msgSb.append("', plan=").append(stmt.getPlanSQL(false));
+        msgSb.append("', plan=").append(H2Utils.sensitiveData(() -> stmt.getPlanSQL(false)));
 
         printInfo(msgSb);
 
@@ -162,7 +163,7 @@ public class H2QueryInfo {
             + ", enforceJoinOrder=" + enforceJoinOrder
             + ", lazy=" + lazy
             + ", schema=" + schema
-            + ", sql='" + sql + "']";
+            + ", sql='" + H2Utils.sensitiveData(() -> sql) + "']";
     }
 
     /**

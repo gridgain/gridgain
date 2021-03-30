@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.qa.query;
+package org.apache.ignite.internal.processors.query;
 
+import java.util.regex.Pattern;
+
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
@@ -23,10 +26,15 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOG
 /**
  * Tests for log print for long running query.
  */
-@WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-public class WarningOnBigQueryLazyResultsTest extends WarningOnBigQueryResultsTest {
+@WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "none")
+public class SensitiveInformationForLongRunningQueryTest extends LongRunningQueryTest {
     /** {@inheritDoc} */
-    @Override protected boolean lazy() {
-        return true;
+    @Override protected Pattern longRunningPattern() {
+        return Pattern.compile(H2Utils.SENSITIVE_DATA_MSG);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Pattern hugeResultsPattern() {
+        return Pattern.compile(H2Utils.SENSITIVE_DATA_MSG);
     }
 }
