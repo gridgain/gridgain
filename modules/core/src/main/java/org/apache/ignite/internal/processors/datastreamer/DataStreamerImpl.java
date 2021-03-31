@@ -1509,7 +1509,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
         /** Node. */
         private final ClusterNode node;
 
-        /** Active futures. */
+        /** Active futures for a local updates. */
         private final Collection<IgniteInternalFuture<Object>> locFuts;
 
         /** Buffered entries. */
@@ -1521,7 +1521,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
         /** ID generator. */
         private final AtomicLong idGen = new AtomicLong();
 
-        /** Active futures. */
+        /** Active futures related to the remote node. */
         private final ConcurrentMap<Long, GridFutureAdapter<Object>> reqs;
 
         /** */
@@ -1970,11 +1970,17 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                         log.debug("Sent request to node [nodeId=" + node.id() + ", req=" + req + ']');
                 }
                 catch (ClusterTopologyCheckedException e) {
+                    // This request was not sent probably.
+                    // Anyway it does not not make sense to track it.
+                    reqs.remove(reqId);
+
                     GridFutureAdapter<Object> fut0 = ((GridFutureAdapter<Object>)fut);
 
                     fut0.onDone(e);
                 }
                 catch (IgniteCheckedException e) {
+                    reqs.remove(reqId);
+
                     GridFutureAdapter<Object> fut0 = ((GridFutureAdapter<Object>)fut);
 
                     if (X.hasCause(e, IgniteClientDisconnectedCheckedException.class, IgniteClientDisconnectedException.class))
