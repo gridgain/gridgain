@@ -16,11 +16,6 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
-import com.google.common.collect.ImmutableMap;
-import io.opencensus.trace.SpanId;
-import io.opencensus.trace.Status;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.export.SpanData;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -32,6 +27,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import com.google.common.collect.ImmutableMap;
+import io.opencensus.trace.SpanId;
+import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -58,13 +59,11 @@ import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
 import static java.util.regex.Pattern.compile;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA;
