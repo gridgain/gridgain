@@ -255,7 +255,8 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                     return pageAddr == 0;
                 }
                 finally {
-                    pageMem.readUnlock(grpId, rootPageId, page);
+                    if (pageAddr != 0)
+                        pageMem.readUnlock(grpId, rootPageId, page);
                 }
             }
             finally {
