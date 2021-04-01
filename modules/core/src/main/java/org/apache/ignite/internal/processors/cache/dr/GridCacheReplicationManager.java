@@ -101,6 +101,13 @@ public interface GridCacheReplicationManager extends GridCacheManager {
      */
     public void resetMetrics();
 
-    /** Tombstone cleanup callback. */
-    default void onTombstoneCleaned(int id, long counter) {};
+    /**
+     * Tombstone cleanup callback.
+     *
+     * @param part Partition.
+     * @param updCnt Removed tombstone update countder.
+     */
+    default void onTombstoneCleaned(int part, long updCnt) {
+        // No op.
+    }
 }
