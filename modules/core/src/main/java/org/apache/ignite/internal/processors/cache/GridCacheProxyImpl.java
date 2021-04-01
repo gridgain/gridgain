@@ -889,15 +889,21 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
 
     /** {@inheritDoc} */
     @Override public Iterator<Cache.Entry<K, V>> scanIterator(boolean keepBinary,
-        @Nullable IgniteBiPredicate<Object, Object> p) throws IgniteCheckedException {
+        @Nullable IgniteBiPredicate<Object, Object> p, long timeout) throws IgniteCheckedException {
         CacheOperationContext prev = onEnter(opCtx);
 
         try {
-            return delegate.scanIterator(keepBinary, p);
+            return delegate.scanIterator(keepBinary, p, timeout);
         }
         finally {
             onLeave(prev);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public Iterator<Cache.Entry<K, V>> scanIterator(boolean keepBinary,
+        @Nullable IgniteBiPredicate<Object, Object> p) throws IgniteCheckedException {
+        return scanIterator(keepBinary, p, 0);
     }
 
     /** {@inheritDoc} */
