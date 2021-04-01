@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-if [ ! -z "${IGNITE_SCRIPT_STRICT_MODE:-}" ]
+if [ -n "${IGNITE_SCRIPT_STRICT_MODE:-}" ]
 then
     set -o nounset
     set -o errexit
@@ -60,10 +60,8 @@ setIgniteHome
 . "${SCRIPTS_HOME}"/include/build-classpath.sh # Will be removed in the binary release.
 CP="${IGNITE_LIBS}"
 
-RANDOM_NUMBER=$("$JAVA" -cp "${CP}" org.apache.ignite.startup.cmdline.CommandLineRandomNumberGenerator)
-
 # Mac OS specific support to display correct name in the dock.
-osname=`uname`
+osname=$(uname)
 
 if [ "${DOCK_OPTS:-}" == "" ]; then
     DOCK_OPTS="-Xdock:name=Ignite Node"
@@ -75,7 +73,7 @@ fi
 # ADD YOUR/CHANGE ADDITIONAL OPTIONS HERE
 #
 if [ -z "${CONTROL_JVM_OPTS:-}" ] ; then
-    if [[ `"$JAVA" -version 2>&1 | egrep "1\.[7]\."` ]]; then
+    if "$JAVA" -version 2>&1 | grep -qE "1\.[7]\." ; then
         CONTROL_JVM_OPTS="-Xms256m -Xmx1g"
     else
         CONTROL_JVM_OPTS="-Xms256m -Xmx1g"
@@ -132,7 +130,7 @@ fi
 #
 # Final CONTROL_JVM_OPTS for Java 9+ compatibility
 #
-if [ $version -gt 8 ] && [ $version -lt 11 ]; then
+if [ "$version" -gt 8 ] && [ "$version" -lt 11 ]; then
     CONTROL_JVM_OPTS="\
         --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
         --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
@@ -143,7 +141,7 @@ if [ $version -gt 8 ] && [ $version -lt 11 ]; then
         --add-modules=java.xml.bind \
         ${CONTROL_JVM_OPTS}"
 
-elif [ $version -ge 11 ] ; then
+elif [ "$version" -ge 11 ] ; then
     CONTROL_JVM_OPTS="\
         --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
         --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
@@ -164,11 +162,11 @@ case $osname in
     Darwin*)
         "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} "${DOCK_OPTS}" \
          -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
-         -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} $@
+         -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
     ;;
     *)
         "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} \
          -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
-         -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} $@
+         -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
     ;;
 esac
