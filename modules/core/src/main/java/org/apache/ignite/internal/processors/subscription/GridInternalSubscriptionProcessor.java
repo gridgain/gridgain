@@ -36,14 +36,14 @@ import static java.util.Objects.requireNonNull;
  */
 public class GridInternalSubscriptionProcessor extends GridProcessorAdapter {
     /** */
-    private final List<MetastorageLifecycleListener> metastorageListeners = new CopyOnWriteArrayList<>();;
+    private final List<MetastorageLifecycleListener> metastorageListeners = new CopyOnWriteArrayList<>();
 
     /** */
     private final List<DistributedMetastorageLifecycleListener> distributedMetastorageListeners =
         new CopyOnWriteArrayList<>();
 
     /** */
-    private final List<DatabaseLifecycleListener> dbListeners = new CopyOnWriteArrayList<>();;
+    private final List<DatabaseLifecycleListener> dbListeners = new CopyOnWriteArrayList<>();
 
     /**
      * Listeners of distributed configuration controlled by {@link org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor}.
