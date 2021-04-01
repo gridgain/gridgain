@@ -1059,9 +1059,7 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
 
         // Wait for expiration
 
-        Thread.sleep((long)(ttl * 1.2));
-
-        assertEquals(0, ignite(loc ? 0 : 3).cache(CACHE1).size());
+        assertTrue(GridTestUtils.waitForCondition(() -> ignite(loc ? 0 : 3).cache(CACHE1).size() == 0, ttl * 2));
     }
 
     /**
