@@ -2760,6 +2760,30 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      * Creates user's predicate based scan query.
      *
      * @param filter Scan filter.
+     * @param part Partition.
+     * @param keepBinary Keep binary flag.
+     * @param dataPageScanEnabled Flag to enable data page scan.
+     * @param timeout Timeout or zero if no timeout.
+     * @return Created query.
+     */
+    public <R> CacheQuery<R> createScanQuery(@Nullable IgniteBiPredicate<K, V> filter,
+                                             @Nullable Integer part, boolean keepBinary, Boolean dataPageScanEnabled,
+                                             long timeout) {
+        return new GridCacheQueryAdapter(cctx,
+                SCAN,
+                filter,
+                null,
+                part,
+                keepBinary,
+                false,
+                dataPageScanEnabled,
+                timeout);
+    }
+
+    /**
+     * Creates user's predicate based scan query.
+     *
+     * @param filter Scan filter.
      * @param trans Transformer.
      * @param part Partition.
      * @param keepBinary Keep binary flag.

@@ -1650,6 +1650,16 @@ public interface IgniteInternalCache<K, V> extends Iterable<Cache.Entry<K, V>> {
         throws IgniteCheckedException;
 
     /**
+     * @param keepBinary Keep binary flag.
+     * @param p Optional key/value predicate.
+     * @param timeout Timeout or zero if no timeout.
+     * @return Scan query iterator.
+     * @throws IgniteCheckedException If failed.
+     */
+    public Iterator<Cache.Entry<K, V>> scanIterator(boolean keepBinary, @Nullable IgniteBiPredicate<Object, Object> p, long timeout)
+            throws IgniteCheckedException;
+
+    /**
      * @return {@link ExpiryPolicy} associated with this projection.
      */
     @Nullable public ExpiryPolicy expiry();
