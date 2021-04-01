@@ -266,6 +266,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                 try {
                     partReconciliationCtx.isReconciliationInProgress(true);
+                    System.out.println("qlopfots set isReconciliationInProgress to true");
                     partReconciliationCtx.cacheId = cacheId;
                 }
                 finally {
@@ -297,6 +298,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             partReconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
 
             Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = partReconciliationCtx.tempMap.get(cacheId);
+
+            CacheDataRow lastRow = null;
 
             try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
                 grpCtx.offheap().dataStore(part).cursor(cacheId, null, null) :
@@ -351,24 +354,27 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 ////                        partReconciliationCtx.lastKey(cacheId, row.key());
 //                    }
 
-                    newLastKey = row.key();
+                    newLastKey = partReconciliationCtx.lastKeys().get(cacheId);//row.key();
 
-                    if (oldBorderKey == null || KEY_COMPARATOR.compare(oldBorderKey, row.key()) < 0) {
-                        partEntryHashRecords.add(new VersionedKey(
-                            ignite.localNode().id(),
-//                            row.key(),
-                            partReconciliationCtx.lastKey(cacheId),
-                            row.version()
-                        ));
-                    }
-//                    else
-//                        i--;
+                    if (oldBorderKey != null && KEY_COMPARATOR.compare(oldBorderKey, newLastKey) <= 0)
+                        i--;
+
+                    lastRow = row;
 
                     System.out.println("qwdsfsf newLastKey " + newLastKey);
                     System.out.println("qwdsfsf end of iteration " + iters + " || " + newLastKey + " || " + partReconciliationCtx.lastKey(cacheId));
                 }
 
                 newLastKey = partReconciliationCtx.lastKey(cacheId);
+
+                if (newLastKey != null && (oldBorderKey == null || KEY_COMPARATOR.compare(oldBorderKey, newLastKey) < 0)) {
+                    partEntryHashRecords.add(new VersionedKey(
+                        ignite.localNode().id(),
+//                            row.key(),
+                        partReconciliationCtx.lastKey(cacheId),
+                        new GridCacheVersion()
+                    ));
+                }
 
                 System.out.println("qzsdfvfe after newLastKey iters " + iters);
 
@@ -380,7 +386,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
                 System.out.println("qvdrftga2 after iteration newLastKey " + newLastKey + " oldBorderKey " + oldBorderKey);
 
-                if ((newLastKey == null || /*oldBorderKey == null ||*/ newLastKey.equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress()) {
+                if ((partReconciliationCtx.lastKeys().get(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKeys().get(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress()) {
 //                if (partSize.get() == 300) {
                     cacheDataStore.busyLock.block();
 
@@ -425,7 +431,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                             Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry = tempMapIter.next();
 
 //                    if (entry.getKey() < part.borderKey) {
-                            partSize.addAndGet(entry.getValue().getValue());
+                            partSize.addAndGet(1);
+
+                            System.out.println("qkoplstfo in recon final increment: key " + entry.getKey() + " reconSize " + partSize);
 
 //                        tempMapIter.remove();
 //                    }
