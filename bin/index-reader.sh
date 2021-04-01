@@ -53,16 +53,12 @@ checkJava
 #
 setIgniteHome
 
-if [ "${DEFAULT_CONFIG:-}" == "" ]; then
-    DEFAULT_CONFIG=config/default-config.xml
-fi
-
 #
 # Set IGNITE_LIBS.
 #
 . "${SCRIPTS_HOME}"/include/setenv.sh
 . "${SCRIPTS_HOME}"/include/build-classpath.sh # Will be removed in the binary release.
-CP="${IGNITE_LIBS}:${IGNITE_HOME}/libs/optional/ignite-zookeeper/*"
+CP="${IGNITE_LIBS}"
 
 RANDOM_NUMBER=$("$JAVA" -cp "${CP}" org.apache.ignite.startup.cmdline.CommandLineRandomNumberGenerator)
 
@@ -124,7 +120,7 @@ fi
 # Set main class to start service (grid node by default).
 #
 if [ "${MAIN_CLASS:-}" = "" ]; then
-    MAIN_CLASS=org.apache.ignite.internal.commandline.indexreader.IndexReaderCommandHandler
+    MAIN_CLASS=org.apache.ignite.internal.commandline.indexreader.IgniteIndexReader
 fi
 
 #
