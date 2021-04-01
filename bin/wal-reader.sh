@@ -132,14 +132,8 @@ fi
 #
 # Final CONTROL_JVM_OPTS for Java 9+ compatibility
 #
-if [ $version -eq 8 ] ; then
+if [ $version -gt 8 ] && [ $version -lt 11 ]; then
     CONTROL_JVM_OPTS="\
-        -XX:+AggressiveOpts \
-         ${CONTROL_JVM_OPTS}"
-
-elif [ $version -gt 8 ] && [ $version -lt 11 ]; then
-    CONTROL_JVM_OPTS="\
-        -XX:+AggressiveOpts \
         --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
         --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
         --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
