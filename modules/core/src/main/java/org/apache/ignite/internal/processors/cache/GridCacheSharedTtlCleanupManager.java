@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
@@ -72,7 +73,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     public static final String TS_CLEANUP = "tombstones.suspended.cleanup";
 
     /** */
-    private static final String DEFAULT_TOMBSTONE_TTL = "DEFAULT_TOMBSTONE_TTL";
+    private static final String DEFAULT_TOMBSTONE_TTL_PROP = "DEFAULT_TOMBSTONE_TTL";
 
     /** Cleanup worker. */
     private CleanupWorker cleanupWorker;
@@ -92,9 +93,15 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     /** Tombstones suspended cleanup state. */
     private DistributedBooleanProperty tsSuspendedCleanup = detachedBooleanProperty(TS_CLEANUP);
 
+    /** Default tombstone TTL. */
+    private long dfltTombstoneTtl;
+
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
         super.start0();
+
+        dfltTombstoneTtl = IgniteSystemProperties.getLong(DEFAULT_TOMBSTONE_TTL_PROP,
+            calcDfltTombstoneTTL(cctx.kernalContext().config()));
 
         cctx.kernalContext().internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
             tsLimit.addListener((name, oldVal, newVal) -> {
@@ -201,7 +208,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
      * @return Tombstone time to live.
      */
     public final long tombstoneTTL() {
-        return tsTtl.getOrDefault(IgniteSystemProperties.getLong(DEFAULT_TOMBSTONE_TTL, defaultTombstoneTtl()));
+        return tsTtl.getOrDefault(dfltTombstoneTtl);
     }
 
     /**
@@ -214,19 +221,19 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     /**
      * @return Tombstone TTL in millisecond, based on failure detection timeout.
      */
-    private long defaultTombstoneTtl() {
-        CommunicationSpi cfg0 = cctx.kernalContext().config().getCommunicationSpi();
+    private static long calcDfltTombstoneTTL(IgniteConfiguration cfg) {
+        CommunicationSpi commSpi = cfg.getCommunicationSpi();
 
         long totalTimeout = 0;
 
-        if (cfg0 instanceof TcpCommunicationSpi) {
-            TcpCommunicationSpi cfg = (TcpCommunicationSpi) cfg0;
+        if (commSpi instanceof TcpCommunicationSpi) {
+            TcpCommunicationSpi cfg0 = (TcpCommunicationSpi) commSpi;
 
-            totalTimeout = cfg.failureDetectionTimeoutEnabled() ? cfg.failureDetectionTimeout() :
+            totalTimeout = cfg0.failureDetectionTimeoutEnabled() ? cfg0.failureDetectionTimeout() :
                 ExponentialBackoffTimeoutStrategy.totalBackoffTimeout(
-                    cfg.getConnectTimeout(),
-                    cfg.getMaxConnectTimeout(),
-                    cfg.getReconnectCount()
+                    cfg0.getConnectTimeout(),
+                    cfg0.getMaxConnectTimeout(),
+                    cfg0.getReconnectCount()
                 );
         }
 
