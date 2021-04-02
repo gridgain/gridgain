@@ -219,6 +219,13 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     }
 
     /**
+     * @return Tombstone TTL distibuted property.
+     */
+    public DistributedLongProperty tobmstoneTtlProperty() {
+        return tsTtl;
+    }
+
+    /**
      * @return Tombstone TTL in millisecond, based on failure detection timeout.
      */
     private static long calcDfltTombstoneTTL(IgniteConfiguration cfg) {
