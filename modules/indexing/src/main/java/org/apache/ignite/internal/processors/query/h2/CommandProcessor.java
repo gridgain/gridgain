@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
@@ -91,8 +92,9 @@ import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillRequest;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillResponse;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.sql.command.SqlAlterTableCommand;
 import org.apache.ignite.internal.sql.command.SqlAlterUserCommand;
 import org.apache.ignite.internal.sql.command.SqlAnalyzeCommand;
@@ -508,15 +510,23 @@ public class CommandProcessor {
      *
      * @param cmd Sql analyze command.
      */
-    private void processAnalyzeCommand(SqlAnalyzeCommand cmd) {
+    private void processAnalyzeCommand(SqlAnalyzeCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
-        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
-        StatisticsTarget[] targets = cmd.targets().stream()
-            .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
-            .toArray(StatisticsTarget[]::new);
 
-        // TODO: save config after GG-32420
-        statMgr.gatherObjectStatisticsAsync(targets);
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
+
+        StatisticsObjectConfiguration objCfgs[] = cmd.configurations().stream()
+            .map(t -> {
+                if (t.key().schema() == null) {
+                    StatisticsKey key = new StatisticsKey(cmd.schemaName(), t.key().obj());
+                    return new StatisticsObjectConfiguration(key, t.columns().values(),
+                        t.maxPartitionObsolescencePercent());
+                }
+                else
+                    return t;
+            }).toArray(StatisticsObjectConfiguration[]::new);
+
+        indexing.statsManager().collectStatistics(objCfgs);
     }
 
     /**
@@ -524,15 +534,16 @@ public class CommandProcessor {
      *
      * @param cmd Refresh statistics command.
      */
-    private void processRefreshStatisticsCommand(SqlRefreshStatitsicsCommand cmd) {
+    private void processRefreshStatisticsCommand(SqlRefreshStatitsicsCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.REFRESH_STATISTICS);
-        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
+
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        // TODO: load config after GG-32420
-        statMgr.gatherObjectStatisticsAsync(targets);
+        indexing.statsManager().refreshStatistics(targets);
     }
 
     /**
@@ -540,19 +551,16 @@ public class CommandProcessor {
      *
      * @param cmd Drop statistics command.
      */
-    private void processDropStatisticsCommand(SqlDropStatisticsCommand cmd) {
+    private void processDropStatisticsCommand(SqlDropStatisticsCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
-        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
+
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
-        try {
-            // TODO: clean config after GG-32420
-            statMgr.clearObjectStatistics(targets);
-        } catch (IgniteCheckedException e) {
-            throw new IgniteSQLException("Failed to drop statistics on targets " + cmd.targets() + ", err="
-                + e.getMessage() + "]", e);
-        }
+
+        indexing.statsManager().dropStatistics(targets);
     }
 
     /**
@@ -838,6 +846,9 @@ public class CommandProcessor {
                 }
                 else {
                     ctx.security().authorize(tbl.cacheName(), SecurityPermission.CACHE_DESTROY);
+
+                    String schema = tbl.getSchema().getName();
+                    String tblName = tbl.getName();
 
                     ctx.query().dynamicTableDrop(tbl.cacheName(), cmd.tableName(), cmd.ifExists());
                 }

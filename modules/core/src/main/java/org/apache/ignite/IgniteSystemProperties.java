@@ -1100,7 +1100,10 @@ public final class IgniteSystemProperties {
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind if there is nothing to clean yet.
      *
      * Default is 500 ms.
+     *
+     * @deprecated No longer used.
      */
+    @Deprecated
     public static final String IGNITE_UNWIND_THROTTLING_TIMEOUT = "IGNITE_UNWIND_THROTTLING_TIMEOUT";
 
     /**
@@ -1483,9 +1486,6 @@ public final class IgniteSystemProperties {
      * all system actions will be prohibited.
      */
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
-
-    /** Preserve local store classLoaders. */
-    public static final String IGNITE_DEPLOYMENT_PRESERVE_LOCAL = "IGNITE_DEPLOYMENT_PRESERVE_LOCAL";
 
     /**
      * Defragmentation region size percentage of configured region size.

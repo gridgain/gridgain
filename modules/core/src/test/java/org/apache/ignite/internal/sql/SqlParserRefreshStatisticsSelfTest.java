@@ -20,7 +20,7 @@ import org.apache.ignite.internal.sql.command.SqlRefreshStatitsicsCommand;
 import org.junit.Test;
 
 /**
- * Test for SQL parser: REFREST STATISTICS command.
+ * Test for SQL parser: REFRESH STATISTICS command.
  */
 public class SqlParserRefreshStatisticsSelfTest extends SqlParserAbstractSelfTest {
     /**
@@ -28,8 +28,8 @@ public class SqlParserRefreshStatisticsSelfTest extends SqlParserAbstractSelfTes
      */
     @Test
     public void testRefresh() {
-        parseValidate(null, "REFRESH STATISTICS tbl", new StatisticsTarget(null, "TBL"));
-        parseValidate(null, "REFRESH STATISTICS tbl;", new StatisticsTarget(null, "TBL"));
+        parseValidate(null, "REFRESH STATISTICS tbl", new StatisticsTarget((String)null, "TBL"));
+        parseValidate(null, "REFRESH STATISTICS tbl;", new StatisticsTarget((String)null, "TBL"));
         parseValidate(null, "REFRESH STATISTICS schema.tbl",
             new StatisticsTarget("SCHEMA", "TBL"));
         parseValidate(null, "REFRESH STATISTICS schema.tbl;",
@@ -39,13 +39,13 @@ public class SqlParserRefreshStatisticsSelfTest extends SqlParserAbstractSelfTes
         parseValidate(null, "REFRESH STATISTICS schema.tbl(a);",
             new StatisticsTarget("SCHEMA", "TBL", "A"));
         parseValidate(null, "REFRESH STATISTICS tbl(a)",
-            new StatisticsTarget(null, "TBL", "A"));
+            new StatisticsTarget((String)null, "TBL", "A"));
         parseValidate(null, "REFRESH STATISTICS tbl(a);",
-            new StatisticsTarget(null, "TBL", "A"));
+            new StatisticsTarget((String)null, "TBL", "A"));
         parseValidate(null, "REFRESH STATISTICS tbl(a, b, c)",
-            new StatisticsTarget(null, "TBL", "A", "B", "C"));
+            new StatisticsTarget((String)null, "TBL", "A", "B", "C"));
         parseValidate(null, "REFRESH STATISTICS tbl(a), schema.tbl2(a,B)",
-            new StatisticsTarget(null, "TBL", "A"),
+            new StatisticsTarget((String)null, "TBL", "A"),
             new StatisticsTarget("SCHEMA", "TBL2", "A", "B"));
 
         assertParseError(null, "REFRESH STATISTICS p,", "Unexpected end of command");

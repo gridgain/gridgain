@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -94,6 +95,8 @@ public class RowCountTableStatisticsSurvivesNodeRestartTest extends TableStatist
         stopGrid(0);
 
         startGrid(0);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
 
         checkOptimalPlanChosenForDifferentJoinOrders(grid(0), sql, "small", "big");
     }

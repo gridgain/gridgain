@@ -20,7 +20,7 @@ namespace Apache.Ignite.Core.Tests.Services
     using System.Collections;
     using System.Collections.Generic;
     using Apache.Ignite.Core.Binary;
-    using org.apache.ignite.platform.model;
+    using Apache.Ignite.Platform.Model;
 
     /// <summary>
     /// Explicit service proxy over dynamic variable.
@@ -373,7 +373,7 @@ namespace Apache.Ignite.Core.Tests.Services
         /** <inheritDoc /> */
         public void testUTCDateFromCache()
         {
-            _svc.testDateFromCache();
+            _svc.testUTCDateFromCache();
         }
 
         /** <inheritDoc /> */

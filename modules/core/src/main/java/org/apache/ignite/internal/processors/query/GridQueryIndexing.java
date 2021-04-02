@@ -45,7 +45,6 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemor
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.collection.IntMap;
@@ -217,10 +216,10 @@ public interface GridQueryIndexing {
      * Unregisters cache.
      *
      * @param cacheInfo Cache context info.
-     * @param rmvIdx If {@code true}, will remove index.
+     * @param destroy If {@code true}, will remove index.
      * @throws IgniteCheckedException If failed to drop cache schema.
      */
-    public void unregisterCache(GridCacheContextInfo cacheInfo, boolean rmvIdx) throws IgniteCheckedException;
+    public void unregisterCache(GridCacheContextInfo cacheInfo, boolean destroy) throws IgniteCheckedException;
 
     /**
      * Destroy founded index which belongs to stopped cache.
@@ -518,13 +517,6 @@ public interface GridQueryIndexing {
     default TimeZone clusterTimezone() {
         return TimeZone.getDefault();
     }
-
-    /**
-     * Get statistics manager.
-     *
-     * @return Statistics manager.
-     */
-    IgniteStatisticsManager statsManager();
 
     /**
      * Defragment index partition.

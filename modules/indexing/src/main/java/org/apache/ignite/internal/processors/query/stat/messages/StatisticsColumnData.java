@@ -53,6 +53,12 @@ public class StatisticsColumnData implements Message {
     /** Raw data. */
     private byte[] rawData;
 
+    /** Version. */
+    private long ver;
+
+    /** Created at time, milliseconds. */
+    private long createdAt;
+
     /**
      * Default constructor.
      */
@@ -69,6 +75,8 @@ public class StatisticsColumnData implements Message {
      * @param total Total values in column.
      * @param size Average size, for variable size types (in bytes).
      * @param rawData Raw data to make statistics aggregate.
+     * @param ver Statistics version.
+     * @param createdAt Created at time, milliseconds.
      */
     public StatisticsColumnData(
         GridH2ValueMessage min,
@@ -77,7 +85,9 @@ public class StatisticsColumnData implements Message {
         int cardinality,
         long total,
         int size,
-        byte[] rawData
+        byte[] rawData,
+        long ver,
+        long createdAt
     ) {
         this.min = min;
         this.max = max;
@@ -86,6 +96,8 @@ public class StatisticsColumnData implements Message {
         this.total = total;
         this.size = size;
         this.rawData = rawData;
+        this.ver = ver;
+        this.createdAt = createdAt;
     }
 
     /**
@@ -137,6 +149,20 @@ public class StatisticsColumnData implements Message {
         return rawData;
     }
 
+    /**
+     * @return Raw data.
+     */
+    public long version() {
+        return ver;
+    }
+
+    /**
+     * @return Created at time, milliseconds.
+     */
+    public long createdAt() {
+        return createdAt;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
@@ -156,37 +182,49 @@ public class StatisticsColumnData implements Message {
                 writer.incrementState();
 
             case 1:
-                if (!writer.writeMessage("max", max))
+                if (!writer.writeLong("createdAt", createdAt))
                     return false;
 
                 writer.incrementState();
 
             case 2:
-                if (!writer.writeMessage("min", min))
+                if (!writer.writeMessage("max", max))
                     return false;
 
                 writer.incrementState();
 
             case 3:
-                if (!writer.writeInt("nulls", nulls))
+                if (!writer.writeMessage("min", min))
                     return false;
 
                 writer.incrementState();
 
             case 4:
-                if (!writer.writeByteArray("rawData", rawData))
+                if (!writer.writeInt("nulls", nulls))
                     return false;
 
                 writer.incrementState();
 
             case 5:
-                if (!writer.writeInt("size", size))
+                if (!writer.writeByteArray("rawData", rawData))
                     return false;
 
                 writer.incrementState();
 
             case 6:
+                if (!writer.writeInt("size", size))
+                    return false;
+
+                writer.incrementState();
+
+            case 7:
                 if (!writer.writeLong("total", total))
+                    return false;
+
+                writer.incrementState();
+
+            case 8:
+                if (!writer.writeLong("ver", ver))
                     return false;
 
                 writer.incrementState();
@@ -213,7 +251,7 @@ public class StatisticsColumnData implements Message {
                 reader.incrementState();
 
             case 1:
-                max = reader.readMessage("max");
+                createdAt = reader.readLong("createdAt");
 
                 if (!reader.isLastRead())
                     return false;
@@ -221,7 +259,7 @@ public class StatisticsColumnData implements Message {
                 reader.incrementState();
 
             case 2:
-                min = reader.readMessage("min");
+                max = reader.readMessage("max");
 
                 if (!reader.isLastRead())
                     return false;
@@ -229,7 +267,7 @@ public class StatisticsColumnData implements Message {
                 reader.incrementState();
 
             case 3:
-                nulls = reader.readInt("nulls");
+                min = reader.readMessage("min");
 
                 if (!reader.isLastRead())
                     return false;
@@ -237,7 +275,7 @@ public class StatisticsColumnData implements Message {
                 reader.incrementState();
 
             case 4:
-                rawData = reader.readByteArray("rawData");
+                nulls = reader.readInt("nulls");
 
                 if (!reader.isLastRead())
                     return false;
@@ -245,7 +283,7 @@ public class StatisticsColumnData implements Message {
                 reader.incrementState();
 
             case 5:
-                size = reader.readInt("size");
+                rawData = reader.readByteArray("rawData");
 
                 if (!reader.isLastRead())
                     return false;
@@ -253,7 +291,23 @@ public class StatisticsColumnData implements Message {
                 reader.incrementState();
 
             case 6:
+                size = reader.readInt("size");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 7:
                 total = reader.readLong("total");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 8:
+                ver = reader.readLong("ver");
 
                 if (!reader.isLastRead())
                     return false;
@@ -272,7 +326,7 @@ public class StatisticsColumnData implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 7;
+        return 9;
     }
 
     /** {@inheritDoc} */

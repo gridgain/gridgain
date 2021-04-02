@@ -15,16 +15,17 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.function.Consumer;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.function.Consumer;
+import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
 
 /**
  * Statistics cleaning tests.
@@ -45,71 +46,48 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
      */
     @Test
     public void testStatisticsClear() throws Exception {
-        IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
+        updateStatistics(SMALL_TARGET);
 
-        statMgr0.gatherObjectStatistics(SMALL_TARGET);
+        Assert.assertNotNull(statisticsMgr(0).getLocalStatistics(SMALL_KEY));
 
-        Assert.assertNotNull(statMgr0.getLocalStatistics(SCHEMA, "SMALL"));
-        Assert.assertNotNull(statMgr0.getGlobalStatistics(SCHEMA, "SMALL"));
+        Assert.assertNotNull(statisticsMgr(1).getLocalStatistics(SMALL_KEY));
 
-        Assert.assertNotNull(statMgr1.getLocalStatistics(SCHEMA, "SMALL"));
-        assertTrue(GridTestUtils.waitForCondition(() -> {
-            try {
-                return null != statMgr1.getGlobalStatistics(SCHEMA, "SMALL");
-            } catch (IgniteCheckedException e) {
-                return false;
-            }
-        }, TIMEOUT));
+        statisticsMgr(1).dropStatistics(SMALL_TARGET);
 
-        // Await till gathered statistics spreaded between all nodes.
-        U.sleep(1000);
+        GridTestUtils.waitForCondition(
+            () -> null == statisticsMgr(0).getLocalStatistics(SMALL_KEY)
+            && null == statisticsMgr(1).getLocalStatistics(SMALL_KEY), TIMEOUT);
 
-        statMgr1.clearObjectStatistics(SMALL_TARGET);
-
-        assertTrue(GridTestUtils.waitForCondition(() -> {
-            try {
-                return null == statMgr0.getLocalStatistics(SCHEMA, "SMALL")
-                    && null == statMgr1.getLocalStatistics(SCHEMA, "SMALL")
-                    && null == statMgr0.getGlobalStatistics(SCHEMA, "SMALL")
-                    && null == statMgr1.getGlobalStatistics(SCHEMA, "SMALL");
-            }
-            catch (IgniteCheckedException e) {
-                fail(e.getMessage());
-            }
-            return false;
-        }, TIMEOUT ));
+        statisticsMgr(1).collectStatistics(buildDefaultConfigurations(SMALL_TARGET));
     }
 
     /**
-     * 1) Clear statistics by non existing table.
-     * 2) Acquire statistics by non existing table.
+     * Clear statistics by non existing table.
      *
      * @throws Exception In case of errors.
      */
-    @Test
+    @Test(expected = Throwable.class)
     public void testStatisticsClearOnNotExistingTable() throws Exception {
-        IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
+        statisticsMgr(1).dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME"));
+    }
 
-        statMgr1.clearObjectStatistics(SMALL_TARGET);
-
-        Assert.assertNull(statMgr0.getLocalStatistics(SCHEMA, "NO_NAME"));
-        Assert.assertNull(statMgr1.getLocalStatistics(SCHEMA, "NO_NAME"));
-
-        Assert.assertNull(statMgr0.getGlobalStatistics(SCHEMA, "NO_NAME"));
-        Assert.assertNull(statMgr1.getGlobalStatistics(SCHEMA, "NO_NAME"));
+    /**
+     * Acquire statistics by non existing table.
+     */
+    @Test
+    public void testGetNonExistingTableStatistics() {
+        Assert.assertNull(statisticsMgr(0).getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
+        Assert.assertNull(statisticsMgr(1).getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
     }
 
     /**
      * 1) Restart without statistics version
-     * 2) Check that statistics was cleared
+     * 2) Check that statistics was refreshed.
      *
      * @throws Exception In case of error.
      */
     @Test
     public void testRestartWrongVersion() throws Exception {
-
         testRestartVersion(metaStorage -> {
             try {
                 metaStorage.write("stats.version", 2);
@@ -163,9 +141,10 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
     private void testRestartVersion(Consumer<MetaStorage> verCorruptor) throws Exception {
         IgniteCacheDatabaseSharedManager db = grid(0).context().cache().context().database();
 
-        checkStatisticsExist(db);
+        checkStatisticsExist(db, TIMEOUT);
 
         db.checkpointReadLock();
+
         try {
             verCorruptor.accept(db.metaStorage());
         }
@@ -174,19 +153,24 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         }
 
         stopGrid(0);
-
         startGrid(0);
 
         grid(0).cluster().state(ClusterState.ACTIVE);
 
         db = grid(0).context().cache().context().database();
+
+        db.checkpointReadLock();
+
         try {
-            checkStatisticsExist(db);
-            throw new Exception("Statistics exists after restart.");
+            assertEquals(1, db.metaStorage().read("stats.version"));
         }
-        catch (AssertionError e) {
-            // NoOp.
+        finally {
+            db.checkpointReadUnlock();
         }
+
+        db = grid(0).context().cache().context().database();
+
+        checkStatisticsExist(db, TIMEOUT);
     }
 
     /**
@@ -195,17 +179,25 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
      * @param db IgniteCacheDatabaseSharedManager to test in.
      * @throws IgniteCheckedException In case of errors.
      */
-    private void checkStatisticsExist(IgniteCacheDatabaseSharedManager db) throws IgniteCheckedException {
-        db.checkpointReadLock();
-        try {
-            boolean found[] = new boolean[1];
+    private void checkStatisticsExist(IgniteCacheDatabaseSharedManager db, long timeout) throws IgniteCheckedException {
+        assertTrue(
+            GridTestUtils.waitForCondition(() -> {
+                db.checkpointReadLock();
 
-            db.metaStorage().iterate("stats.data.PUBLIC.SMALL.", (k, v) -> found[0] = true, true);
+                try {
+                    boolean found[] = new boolean[1];
 
-            Assert.assertTrue(found[0]);
-        }
-        finally {
-            db.checkpointReadUnlock();
-        }
+                    db.metaStorage().iterate("stats.data.PUBLIC.SMALL.", (k, v) -> found[0] = true, true);
+
+                    return found[0];
+                }
+                catch (Throwable ex) {
+                    return false;
+                }
+                finally {
+                    db.checkpointReadUnlock();
+                }
+            }, timeout)
+        );
     }
 }
