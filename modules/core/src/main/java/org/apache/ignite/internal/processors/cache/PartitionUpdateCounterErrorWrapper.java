@@ -133,9 +133,8 @@ public class PartitionUpdateCounterErrorWrapper implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
-        if (o instanceof PartitionUpdateCounterErrorWrapper) {
+        if (o instanceof PartitionUpdateCounterErrorWrapper)
             return delegate.equals(((PartitionUpdateCounterErrorWrapper)o).delegate);
-        }
 
         return false;
     }
