@@ -44,7 +44,7 @@ public class StatisticsUtils {
         GridH2ValueMessage msgMax = stat.max() == null ? null : GridH2ValueMessageFactory.toMessage(stat.max());
 
         return new StatisticsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(),
-            stat.total(), stat.size(), stat.raw(), stat.version());
+            stat.total(), stat.size(), stat.raw(), stat.version(), stat.createdAt());
     }
 
     /**
@@ -63,7 +63,7 @@ public class StatisticsUtils {
         Value max = (data.max() == null) ? null : data.max().value(ctx);
 
         return new ColumnStatistics(min, max, data.nulls(), data.cardinality(),
-            data.total(), data.size(), data.rawData(), data.version());
+            data.total(), data.size(), data.rawData(), data.version(), data.createdAt());
     }
 
     /**

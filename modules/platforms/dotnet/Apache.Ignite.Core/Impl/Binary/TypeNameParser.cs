@@ -171,7 +171,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         public string GetNamespace()
         {
-            return NameStart == 0 ? null : _typeName.Substring(_start, NameStart);
+            return NameStart == 0 ? null : _typeName.Substring(_start, NameStart - _start);
         }
 
         /// <summary>

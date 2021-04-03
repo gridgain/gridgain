@@ -20,6 +20,7 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Test about statistics reload after restart.
@@ -52,9 +53,13 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
 
         grid(0).cluster().state(ClusterState.ACTIVE);
 
+        U.sleep(100);
+
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
         createStatisticTarget(null);
+
+        collectStatistics(SMALL_TARGET);
     }
 
     /**

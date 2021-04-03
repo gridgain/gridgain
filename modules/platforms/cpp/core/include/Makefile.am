@@ -73,6 +73,7 @@ nobase_include_HEADERS = \
 	ignite/impl/ignite_binding_impl.h \
 	ignite/impl/ignite_environment.h \
 	ignite/impl/ignite_impl.h \
+	ignite/impl/logger.h \
 	ignite/impl/interop/interop_external_memory.h \
 	ignite/impl/interop/interop_target.h \
 	ignite/impl/module_manager.h \

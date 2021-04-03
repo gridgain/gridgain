@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.communication.tcp.internal;
+package org.apache.ignite.internal.processors.query.schema;
 
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.nio.GridCommunicationClient;
+import org.apache.ignite.IgniteCheckedException;
 
 /**
- * Marker future implementation, just like {@link ConnectFuture}, but meaning that we're waiting for the inverse
- * connection.
+ * Exception occurred when canceling index rebuild via {@link SchemaIndexOperationCancellationToken}.
  */
-public class ConnectionRequestFuture extends GridFutureAdapter<GridCommunicationClient> {
+public class SchemaIndexOperationCancellationException extends IgniteCheckedException {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 0L;
+
+    /**
+     * Constructor.
+     *
+     * @param msg Error message.
+     */
+    public SchemaIndexOperationCancellationException(String msg) {
+        super(msg);
+    }
 }

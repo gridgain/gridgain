@@ -50,7 +50,7 @@ public class StatisticsTarget {
      * @param key Statistic key.
      * @param columns Array of column names or {@code null} if target - all columns.
      */
-    public StatisticsTarget(StatisticsKey key, String[] columns) {
+    public StatisticsTarget(StatisticsKey key, String... columns) {
         this.key = key;
         this.columns = (columns == null || columns.length == 0) ? null : columns;
     }

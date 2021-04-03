@@ -77,7 +77,7 @@ namespace Apache.Ignite.Examples.Thick.Cache.Store
                     ));
 
                 Console.WriteLine();
-                Console.WriteLine(">>> Put entry to cache. ");
+                Console.WriteLine(">>> Put entry to cache.");
                 Console.WriteLine(">>> Current cache size: " + cache.GetSize());
 
                 // Clear values again.

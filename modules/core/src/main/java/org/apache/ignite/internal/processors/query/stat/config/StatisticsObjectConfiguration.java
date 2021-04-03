@@ -16,10 +16,12 @@
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -30,11 +32,15 @@ import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Describe configuration of the statistic for a database object (e.g. TABLE).
  */
 public class StatisticsObjectConfiguration implements Serializable {
+    /** Rows limit to renew partition statistics in percent. */
+    public static final byte DEFAULT_OBSOLESCENCE_MAX_PERCENT = 15;
+
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -46,28 +52,37 @@ public class StatisticsObjectConfiguration implements Serializable {
     @GridToStringInclude
     private final Map<String, StatisticsColumnConfiguration> cols;
 
-    /** */
+    /** Max percent of obsolescence row. */
+    private final byte maxPartitionObsolescencePercent;
+
+    /**
+     * Constructor.
+     *
+     * @param key Statistics key.
+     * @param cols Column statistics configuration.
+     * @param maxPartitionObsolescencePercent Maximum number of changed rows per partition.
+     */
     public StatisticsObjectConfiguration(
         StatisticsKey key,
-        Collection<StatisticsColumnConfiguration> cols
+        Collection<StatisticsColumnConfiguration> cols,
+        byte maxPartitionObsolescencePercent
     ) {
         this.key = key;
-        this.cols = cols.stream()
-            .collect(
-                Collectors.toMap(StatisticsColumnConfiguration::name, Function.identity())
-            );
+        this.cols = (cols == null) ? null : cols.stream()
+            .collect(Collectors.toMap(StatisticsColumnConfiguration::name, Function.identity()));
+        this.maxPartitionObsolescencePercent = maxPartitionObsolescencePercent;
     }
 
     /**
      * Merge configuration changes with existing configuration.
      *
-     * @param oldCfg Previous configuration. May be {@code null} when new configuration is created.
+     * @param oldCfg Previous configuration.
      * @param newCfg Contains target configuration changes.
      * @return merged configuration.
      */
     public static StatisticsObjectConfiguration merge(
-        StatisticsObjectConfiguration oldCfg,
-        StatisticsObjectConfiguration newCfg
+        @NotNull StatisticsObjectConfiguration oldCfg,
+        @NotNull StatisticsObjectConfiguration newCfg
     ) {
         assert oldCfg.key.equals(newCfg.key) : "Invalid stat config to merge: [oldKey=" + oldCfg.key
             + ", newKey=" + newCfg.key + ']';
@@ -77,7 +92,11 @@ public class StatisticsObjectConfiguration implements Serializable {
         for (StatisticsColumnConfiguration c : newCfg.cols.values())
             cols.put(c.name(), StatisticsColumnConfiguration.merge(cols.get(c.name()), c));
 
-        return new StatisticsObjectConfiguration(newCfg.key, cols.values());
+        for (StatisticsColumnConfiguration oldC : oldCfg.cols.values())
+            if (!cols.containsKey(oldC.name()))
+                cols.put(oldC.name(), oldC);
+
+        return new StatisticsObjectConfiguration(newCfg.key, cols.values(), newCfg.maxPartitionObsolescencePercent);
     }
 
     /**
@@ -97,25 +116,31 @@ public class StatisticsObjectConfiguration implements Serializable {
                 newCols.put(col.name(), col);
         }
 
-        return new StatisticsObjectConfiguration(key, newCols.values());
+        return new StatisticsObjectConfiguration(key, newCols.values(), maxPartitionObsolescencePercent);
     }
 
     /**
      * Creates new configuration object to refresh statistic with current configuration.
      *
+     * @param refreshCols Set of columns to refresh, if {@code null} or empty - all columns will be refreshed.
      * @return Result configuration object.
      */
-    public StatisticsObjectConfiguration refresh(Set<String> refreshColumns) {
-        Map<String, StatisticsColumnConfiguration> newCols = new HashMap<>();
+    public StatisticsObjectConfiguration refresh(Set<String> refreshCols) {
+        List<StatisticsColumnConfiguration> newCols;
 
-        for (StatisticsColumnConfiguration col : cols.values()) {
-            if (F.isEmpty(refreshColumns) || refreshColumns.contains(col.name()))
-                newCols.put(col.name(), col.refresh());
-            else
-                newCols.put(col.name(), col);
+        if (F.isEmpty(refreshCols))
+            newCols = new ArrayList<>(cols.values());
+        else {
+            newCols = new ArrayList<>(cols.size());
+            for (StatisticsColumnConfiguration col : cols.values()) {
+                if (refreshCols.contains(col.name()))
+                    newCols.add(col.refresh());
+                else
+                    newCols.add(col);
+            }
         }
 
-        return new StatisticsObjectConfiguration(key, newCols.values());
+        return new StatisticsObjectConfiguration(key, newCols, maxPartitionObsolescencePercent);
     }
 
     /**
@@ -170,9 +195,16 @@ public class StatisticsObjectConfiguration implements Serializable {
      * @return Map column name to column statistics configuration.
      */
     public Map<String, StatisticsColumnConfiguration> columns() {
-        return cols.entrySet().stream()
+        return (cols == null) ? Collections.emptyMap() : cols.entrySet().stream()
             .filter(e -> !e.getValue().tombstone())
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    /**
+     * @return Maximum number of changed rows per partition.
+     */
+    public byte maxPartitionObsolescencePercent() {
+        return maxPartitionObsolescencePercent;
     }
 
     /** {@inheritDoc} */
@@ -186,12 +218,13 @@ public class StatisticsObjectConfiguration implements Serializable {
         StatisticsObjectConfiguration that = (StatisticsObjectConfiguration)o;
 
         return Objects.equals(key, that.key)
-            && Objects.equals(cols, that.cols);
+            && Objects.equals(cols, that.cols)
+            && maxPartitionObsolescencePercent == that.maxPartitionObsolescencePercent;
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(key, cols);
+        return Objects.hash(key, cols, maxPartitionObsolescencePercent);
     }
 
     /** {@inheritDoc} */

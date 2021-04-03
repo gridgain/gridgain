@@ -37,6 +37,9 @@ public class PlatformCppConfigurationEx extends PlatformCppConfiguration impleme
     /** Memory manager. */
     private final PlatformMemoryManagerImpl memMgr;
 
+    /** Logger. */
+    private final PlatformLogger logger;
+
     /** Warnings */
     private Collection<String> warns;
 
@@ -46,13 +49,15 @@ public class PlatformCppConfigurationEx extends PlatformCppConfiguration impleme
      * @param cfg Configuration to copy.
      * @param gate Native gateway.
      * @param memMgr Memory manager.
+     * @param logger Logger to use.
      */
     public PlatformCppConfigurationEx(PlatformCppConfiguration cfg, PlatformCallbackGateway gate,
-        PlatformMemoryManagerImpl memMgr) {
+        PlatformMemoryManagerImpl memMgr, PlatformLogger logger) {
         super(cfg);
 
         this.gate = gate;
         this.memMgr = memMgr;
+        this.logger = logger;
     }
 
     /** {@inheritDoc} */
@@ -77,7 +82,7 @@ public class PlatformCppConfigurationEx extends PlatformCppConfiguration impleme
 
     /** {@inheritDoc} */
     @Override public PlatformLogger logger() {
-        return null;
+        return logger;
     }
 
     /** {@inheritDoc} */

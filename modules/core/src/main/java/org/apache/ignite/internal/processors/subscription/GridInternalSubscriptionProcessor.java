@@ -79,13 +79,6 @@ public class GridInternalSubscriptionProcessor extends GridProcessorAdapter {
     }
 
     /** */
-    public void unregisterDistributedMetastorageListener(@NotNull DistributedMetastorageLifecycleListener lsnr) {
-        requireNonNull(lsnr, "Global metastorage subscriber should be not-null.");
-
-        distributedMetastorageListeners.remove(lsnr);
-    }
-
-    /** */
     public List<DistributedMetastorageLifecycleListener> getDistributedMetastorageSubscribers() {
         return distributedMetastorageListeners;
     }

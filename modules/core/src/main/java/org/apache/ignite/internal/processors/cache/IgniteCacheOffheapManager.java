@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.ToIntFunction;
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
@@ -37,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.persistence.partstorage.Parti
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
+import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccLinkAwareSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
@@ -171,15 +173,33 @@ public interface IgniteCacheOffheapManager {
     public void destroyCacheDataStore(CacheDataStore store) throws IgniteCheckedException;
 
     /**
-     * @param cctx Cache context.
      * @param c Closure.
-     * @param amount Limit of processed entries by single call, {@code -1} for no limit. For tombstones, real cleared
-     *               amount can be greater if a limit has been exceeded.
+     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     * @param now Expire time.
      * @return {@code True} if unprocessed expired entries remains.
+     */
+    public boolean expireRows(IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now);
+
+    /**
+     * @param c Closure.
+     * @param amount Limit of processed entries by single call, {@code -1} for no limit. Real cleared
+     *               amount can be greater if a tombstone limit has been exceeded.
+     * @param now Expire time.
+     * @return {@code True} if unprocessed expired entries remains.
+     */
+    public boolean expireTombstones(IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now);
+
+    /**
+     * Fills the expiration queue by scanning suitable rows in PendingTree.
+     *
+     * @param tombstone {@code True} to process tombstones.
+     * @param amount The amount.
+     * @param upper Upper limit.
+     * @param c Fill closure.
+     * @return The number of entries loaded to expiration queue.
      * @throws IgniteCheckedException If failed.
      */
-    public boolean expire(GridCacheContext cctx, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount)
-        throws IgniteCheckedException;
+    public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException;
 
     /**
      * Gets the number of entries pending expire.
@@ -571,6 +591,13 @@ public interface IgniteCacheOffheapManager {
      * @throws IgniteCheckedException If failed.
      */
     public RootPage rootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+
+    /**
+     * @param cacheId Cache ID.
+     * @param idxName Index name.
+     * @throws IgniteCheckedException If failed.
+     */
+    public @Nullable RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
 
     /**
      * @param cacheId Cache ID.
