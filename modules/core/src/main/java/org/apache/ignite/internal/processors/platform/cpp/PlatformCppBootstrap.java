@@ -20,11 +20,11 @@ import org.apache.ignite.internal.processors.platform.PlatformAbstractBootstrap;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractConfigurationClosure;
 
 /**
- * Platform .Net bootstrap.
+ * Platform C++ bootstrap.
  */
 public class PlatformCppBootstrap extends PlatformAbstractBootstrap {
     /** {@inheritDoc} */
     @Override protected PlatformAbstractConfigurationClosure closure(long envPtr) {
-        return new PlatformCppConfigurationClosure(envPtr);
+        return new PlatformCppConfigurationClosure(envPtr, useLogger);
     }
 }

@@ -185,7 +185,10 @@ public enum IgniteFeatures {
     SAFE_CLUSTER_DEACTIVATION(51),
 
     /** Custom snapshot operations. */
-    CUSTOM_SNAPSHOT_OPERATIONS(53);
+    CUSTOM_SNAPSHOT_OPERATIONS(53),
+
+    /** Chains of snapshot operations. */
+    SNAPSHOT_OPERATIONS_CHAINING(59);
 
     /**
      * Unique feature identifier.

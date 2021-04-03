@@ -28,6 +28,9 @@ public abstract class PlatformAbstractConfigurationClosure
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** Whether to use platform logger (when custom logger is defined on platform side). */
+    protected final boolean useLogger;
+
     /** Native gateway. */
     protected final PlatformCallbackGateway gate;
 
@@ -35,9 +38,11 @@ public abstract class PlatformAbstractConfigurationClosure
      * Constructor.
      *
      * @param envPtr Environment pointer.
+     * @param useLogger Whether use platform logger or not.
      */
-    protected PlatformAbstractConfigurationClosure(long envPtr) {
+    protected PlatformAbstractConfigurationClosure(long envPtr, boolean useLogger) {
         this.gate = new PlatformCallbackGateway(envPtr);
+        this.useLogger = useLogger;
     }
 
     /** {@inheritDoc} */
