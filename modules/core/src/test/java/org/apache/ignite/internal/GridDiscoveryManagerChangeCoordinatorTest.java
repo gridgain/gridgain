@@ -20,8 +20,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-
 import org.junit.Test;
+
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 
 /**
  * Tests change coordinator event logging.
@@ -65,14 +66,14 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
      */
     @Test
     public void testChangeCoordinatorLogging() throws Exception {
-        //Start 2 server nodes
+        //Start two server and one client nodes
         IgniteEx srv1 = startGrid("server1");
-        IgniteEx client = startGrid("client");
+        startGrid("client");
         IgniteEx srv2 = startGrid("server2");
 
         String srv2Id = srv2.cluster().localNode().id().toString();
 
-        srv1.cluster().active();
+        srv1.cluster().state(ACTIVE);
 
         LogListener lsnr = LogListener.matches(CRD_CHANGE_MSG)
                 .andMatches(srv2Id)
@@ -107,11 +108,11 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
         IgniteEx srv1 = startGrid("server1");
         IgniteEx srv2 = startGrid("server2");
 
-        srv1.cluster().active();
+        srv1.cluster().state(ACTIVE);
 
         // Add a client node, daemon node and 3rd server node, which is not in the baseline
         startGrid("client");
-        IgniteEx daemon = startGrid("daemon");
+        startGrid("daemon");
         IgniteEx srv3 = startGrid("server3");
 
         LogListener lsnr = LogListener.matches(CRD_CHANGE_MSG)
@@ -122,6 +123,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
 
         stopGrid("server1");
 
+        // Coordinator changed server1 -> server2
         assertTrue(lsnr.check());
 
         lsnr = LogListener.matches(CRD_CHANGE_MSG).build();
@@ -130,6 +132,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
 
         srv1 = startGrid("server1");
 
+        // Coordinator didn't change
         assertFalse(lsnr.check());
 
         lsnr = LogListener.matches(CRD_CHANGE_MSG)
@@ -140,6 +143,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
 
         stopGrid("server2");
 
+        // Coordinator changed server2 -> server3
         assertTrue(lsnr.check());
 
         lsnr = LogListener.matches(CRD_CHANGE_MSG)
@@ -147,6 +151,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
 
         stopGrid("client");
 
+        // Coordinator didn't change
         assertFalse(lsnr.check());
 
         lsnr = LogListener.matches(CRD_CHANGE_MSG)
@@ -157,6 +162,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
 
         stopGrid("server3");
 
+        // Coordinator changed server3 -> server1
         assertTrue(lsnr.check());
     }
 }
