@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -23,6 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
@@ -39,12 +41,15 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -111,13 +116,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStopCache_Volatile() throws Exception {
-        testOperationDuringEviction(false, 1, new Runnable() {
-            @Override public void run() {
-                IgniteInternalFuture fut = runAsync(() -> grid(0).cache(DEFAULT_CACHE_NAME).close());
+        testOperationDuringEviction(false, 1, p -> {
+            IgniteInternalFuture fut = runAsync(() -> grid(0).cache(DEFAULT_CACHE_NAME).close());
 
-                doSleep(500);
-            }
-        });
+            doSleep(500);
+        }, this::preload);
 
         awaitPartitionMapExchange(true, true, null);
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
@@ -130,13 +133,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStopCache_Persistence() throws Exception {
-        testOperationDuringEviction(true, 1, new Runnable() {
-            @Override public void run() {
-                IgniteInternalFuture fut = runAsync(() -> grid(0).cache(DEFAULT_CACHE_NAME).close());
+        testOperationDuringEviction(true, 1, p -> {
+            IgniteInternalFuture fut = runAsync(() -> grid(0).cache(DEFAULT_CACHE_NAME).close());
 
-                doSleep(500);
-            }
-        });
+            doSleep(500);
+        }, this::preload);
 
         awaitPartitionMapExchange(true, true, null);
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
@@ -149,17 +150,15 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testDeactivation_Volatile() throws Exception {
         AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
 
-        testOperationDuringEviction(false, 1, new Runnable() {
-            @Override public void run() {
-                IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(ClusterState.INACTIVE));
+        testOperationDuringEviction(false, 1, p -> {
+            IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(ClusterState.INACTIVE));
 
-                ref.set(fut);
+            ref.set(fut);
 
-                doSleep(1000);
+            doSleep(1000);
 
-                assertFalse(fut.isDone());
-            }
-        });
+            assertFalse(fut.isDone());
+        }, this::preload);
 
         ref.get().get();
 
@@ -173,29 +172,19 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testDeactivation_Persistence() throws Exception {
         AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
 
-        testOperationDuringEviction(true, 1, new Runnable() {
-            @Override public void run() {
-                IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(ClusterState.INACTIVE));
+        testOperationDuringEviction(true, 1, p -> {
+            IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(ClusterState.INACTIVE));
 
-                ref.set(fut);
+            ref.set(fut);
 
-                doSleep(1000);
+            doSleep(1000);
 
-                assertFalse(fut.isDone());
-            }
-        });
+            assertFalse(fut.isDone());
+        }, this::preload);
 
         ref.get().get();
 
         assertTrue(grid(0).cluster().state() == ClusterState.INACTIVE);
-    }
-
-    /**
-     * Checks if a failure handler is called if a clearing throws unexpected exception.
-     */
-    @Test
-    public void testFailureHandler() {
-
     }
 
     /** */
@@ -203,13 +192,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testEvictionMetrics() throws Exception {
         stats = true;
 
-        testOperationDuringEviction(true, 1, new Runnable() {
-            @Override public void run() {
-                CacheMetricsImpl metrics = grid(0).cachex(DEFAULT_CACHE_NAME).context().cache().metrics0();
+        testOperationDuringEviction(true, 1, p -> {
+            CacheMetricsImpl metrics = grid(0).cachex(DEFAULT_CACHE_NAME).context().cache().metrics0();
 
-                assertTrue(metrics.evictingPartitionsLeft() > 0);
-            }
-        });
+            assertTrue(metrics.evictingPartitionsLeft() > 0);
+        }, this::preload);
 
         awaitPartitionMapExchange(true, true, null);
         CacheMetricsImpl metrics = grid(0).cachex(DEFAULT_CACHE_NAME).context().cache().metrics0();
@@ -223,19 +210,17 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testSysPoolStarvation() throws Exception {
         sysPoolSize = 1;
 
-        testOperationDuringEviction(true, 1, new Runnable() {
-            @Override public void run() {
-                try {
-                    grid(0).context().closure().runLocalSafe(new Runnable() {
-                        @Override public void run() {
-                            // No-op.
-                        }
-                    }, true).get(5_000);
-                } catch (IgniteCheckedException e) {
-                    fail(X.getFullStackTrace(e));
-                }
+        testOperationDuringEviction(true, 1, p -> {
+            try {
+                grid(0).context().closure().runLocalSafe(new Runnable() {
+                    @Override public void run() {
+                        // No-op.
+                    }
+                }, true).get(5_000);
+            } catch (IgniteCheckedException e) {
+                fail(X.getFullStackTrace(e));
             }
-        });
+        }, this::preload);
 
         awaitPartitionMapExchange(true, true, null);
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
@@ -248,21 +233,19 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testCacheGroupDestroy_Volatile() throws Exception {
         AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
 
-        testOperationDuringEviction(false, 1, new Runnable() {
-            @Override public void run() {
-                IgniteInternalFuture fut = runAsync(new Runnable() {
-                    @Override public void run() {
-                        grid(0).destroyCache(DEFAULT_CACHE_NAME);
-                    }
-                });
+        testOperationDuringEviction(false, 1, p -> {
+            IgniteInternalFuture fut = runAsync(new Runnable() {
+                @Override public void run() {
+                    grid(0).destroyCache(DEFAULT_CACHE_NAME);
+                }
+            });
 
-                doSleep(500);
+            doSleep(500);
 
-                assertFalse(fut.isDone()); // Cache stop should be blocked by concurrent unfinished eviction.
+            assertFalse(fut.isDone()); // Cache stop should be blocked by concurrent unfinished eviction.
 
-                ref.set(fut);
-            }
-        });
+            ref.set(fut);
+        }, this::preload);
 
         try {
             ref.get().get(10_000);
@@ -292,21 +275,19 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     public void testStopNodeDuringEviction() throws Exception {
         AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
 
-        testOperationDuringEviction(false, 1, new Runnable() {
-            @Override public void run() {
-                IgniteInternalFuture fut = runAsync(new Runnable() {
-                    @Override public void run() {
-                        grid(0).close();
-                    }
-                });
+        testOperationDuringEviction(false, 1, p -> {
+            IgniteInternalFuture fut = runAsync(new Runnable() {
+                @Override public void run() {
+                    grid(0).close();
+                }
+            });
 
-                doSleep(500);
+            doSleep(500);
 
-                assertFalse(fut.isDone()); // Cache stop should be blocked by concurrent unfinished eviction.
+            assertFalse(fut.isDone()); // Cache stop should be blocked by concurrent unfinished eviction.
 
-                ref.set(fut);
-            }
-        });
+            ref.set(fut);
+        }, this::preload);
 
         try {
             ref.get().get(10_000);
@@ -411,15 +392,13 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testCheckpoint() throws Exception {
-        testOperationDuringEviction(true, 1, new Runnable() {
-            @Override public void run() {
-                doSleep(500);
+        testOperationDuringEviction(true, 1, p -> {
+            doSleep(500);
 
-                grid(0).context().cache().context().database().wakeupForCheckpoint("Forced checkpoint");
+            grid(0).context().cache().context().database().wakeupForCheckpoint("Forced checkpoint");
 
-                doSleep(500);
-            }
-        });
+            doSleep(500);
+        }, this::preload);
 
         awaitPartitionMapExchange(true, true, null);
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
@@ -432,13 +411,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
 
-        testOperationDuringEviction(true, 1, new Runnable() {
-            @Override public void run() {
-                IgniteInternalFuture fut = runAsync(() -> stopAllGrids());
+        testOperationDuringEviction(true, 1, p -> {
+            IgniteInternalFuture fut = runAsync(() -> stopAllGrids());
 
-                ref.set(fut);
-            }
-        });
+            ref.set(fut);
+        }, this::preload);
 
         ref.get().get();
 
@@ -448,14 +425,76 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange();
     }
 
+    /** */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500")
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
+    @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
+    @WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain")
+    public void testTombstoneCleanupInEvictingPartition_Volatile() throws Exception {
+        doTestTombstoneCleanupInEvictingPartition(false);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500")
+    @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
+    @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
+    @WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain")
+    public void testTombstoneCleanupInEvictingPartition_Persistence() throws Exception {
+        doTestTombstoneCleanupInEvictingPartition(true);
+    }
+
+    /**
+     * @param persistence Persistence.
+     */
+    private void doTestTombstoneCleanupInEvictingPartition(boolean persistence) throws Exception {
+        testOperationDuringEviction(persistence, 3, p -> {
+            doSleep(1100);
+
+            GridCacheContext<Object, Object> ctx = grid(0).cachex(DEFAULT_CACHE_NAME).context();
+
+            Deque<PendingRow> queue = grid(0).context().cache().context().evict().evictQueue(true);
+
+            assertFalse(queue.isEmpty());
+
+            ctx.ttl().expire(1000);
+
+            assertTrue(queue.isEmpty());
+        }, new Consumer<Integer>() {
+            @Override public void accept(Integer p0) {
+                IgniteEx g0 = grid(0);
+
+                final int cnt = 1_000;
+
+                IgniteCache<Object, Object> cache = g0.cache(DEFAULT_CACHE_NAME);
+
+                List<Integer> keys = partitionKeys(cache, p0, cnt, 0);
+
+                try (IgniteDataStreamer<Object, Object> ds = g0.dataStreamer(DEFAULT_CACHE_NAME)) {
+                    for (Integer key : keys)
+                        ds.addData(key, key);
+                }
+
+                for (Integer key : keys)
+                    cache.remove(key);
+            }
+        });
+
+        awaitPartitionMapExchange(true, true, null);
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+    }
+
     /**
      * @param persistence {@code True} to use persistence.
      * @param mode        Mode: <ul><li>0 - block before clearing start</li>
      *                    <li>1 - block in the middle of clearing</li></ul>
-     * @param r           A runnable to run while eviction is blocked.
+     * @param c           A closure to run while eviction is blocked.
      * @throws Exception If failed.
      */
-    protected void testOperationDuringEviction(boolean persistence, int mode, Runnable r) throws Exception {
+    protected void testOperationDuringEviction(boolean persistence, int mode, Consumer<Integer> c, Consumer<Integer> initC) throws Exception {
         this.persistence = persistence;
 
         AtomicInteger holder = new AtomicInteger();
@@ -497,14 +536,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         int p0 = allEvicting.get(0);
         holder.set(p0);
 
-        final int cnt = 5_000;
-
-        List<Integer> keys = partitionKeys(g0.cache(DEFAULT_CACHE_NAME), p0, cnt, 0);
-
-        try (IgniteDataStreamer<Object, Object> ds = g0.dataStreamer(DEFAULT_CACHE_NAME)) {
-            for (Integer key : keys)
-                ds.addData(key, key);
-        }
+        initC.accept(p0);
 
         IgniteEx joining = startGrid(2);
 
@@ -513,7 +545,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         assertTrue(U.await(l1, 30_000, TimeUnit.MILLISECONDS));
 
-        r.run();
+        c.accept(p0);
 
         l2.countDown();
     }
@@ -526,5 +558,21 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
             setBackups(1).
             setStatisticsEnabled(stats).
             setAffinity(new RendezvousAffinityFunction(false, persistence ? 64 : 1024));
+    }
+
+    /**
+     * @param part Partition.
+     */
+    private void preload(Integer part) {
+        IgniteEx g0 = grid(0);
+
+        final int cnt = 5_000;
+
+        List<Integer> keys = partitionKeys(g0.cache(DEFAULT_CACHE_NAME), part, cnt, 0);
+
+        try (IgniteDataStreamer<Object, Object> ds = g0.dataStreamer(DEFAULT_CACHE_NAME)) {
+            for (Integer key : keys)
+                ds.addData(key, key);
+        }
     }
 }
