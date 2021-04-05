@@ -1410,8 +1410,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     ) {
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
-        if (tsCnt == 0)
-            return false;
+        // Even if tombstones count is zero, we have some entries in the queue and they must be processed.
 
         GridDhtPartitionsExchangeFuture fut = ctx.exchange().lastTopologyFuture();
 

@@ -1305,8 +1305,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     ) {
         long tsCnt = tombstonesCount();
 
-        if (tsCnt == 0)
-            return false;
+        // Even if tombstones count is zero, we have some entries in the queue and they must be processed.
 
         DiscoCache discoCache = ctx.discovery().discoCache();
 

@@ -452,31 +452,16 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
      * @param persistence Persistence.
      */
     private void doTestTombstoneCleanupInEvictingPartition(boolean persistence) throws Exception {
-        testOperationDuringEviction(persistence, 3, p -> {
+        int evicted = testOperationDuringEviction(persistence, 2, p -> {
             doSleep(600);
 
             GridCacheContext<Object, Object> ctx = grid(0).cachex(DEFAULT_CACHE_NAME).context();
 
             Deque<PendingRow> queue = grid(0).context().cache().context().evict().evictQueue(true);
 
-            try {
-                if (!queue.isEmpty()) {
-                    ctx.ttl().expire(1000);
+            ctx.ttl().expire(queue.size());
 
-                    assertTrue(queue.isEmpty());
-                }
-
-                ctx.shared().evict().processEvictions(true).get();
-                ctx.ttl().expire(1000);
-
-                PendingEntriesTree t = ctx.group().topology().localPartition(p).dataStore().pendingTree();
-
-                assertTrue(queue.isEmpty());
-                assertEquals(0, t.size());
-            }
-            catch (IgniteCheckedException e) {
-                fail(X.getFullStackTrace(e));
-            }
+            assertTrue("Expire should't leave garbage", queue.isEmpty());
         }, new Consumer<Integer>() {
             @Override public void accept(Integer p0) {
                 IgniteEx g0 = grid(0);
@@ -499,6 +484,15 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange(true, true, null);
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+
+        Deque<PendingRow> queue = grid(0).context().cache().context().evict().evictQueue(true);
+
+        assertTrue(queue.isEmpty());
+
+        if (!persistence) {
+            assertTrue(grid(0).cachex(DEFAULT_CACHE_NAME).context().topology().
+                localPartition(evicted).dataStore().pendingTree().isEmpty());
+        }
     }
 
     /**
@@ -506,9 +500,10 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
      * @param mode        Mode: <ul><li>0 - block before clearing start</li>
      *                    <li>1 - block in the middle of clearing</li></ul>
      * @param c           A closure to run while eviction is blocked.
+     * @return Evicted partition.
      * @throws Exception If failed.
      */
-    protected void testOperationDuringEviction(boolean persistence, int mode, Consumer<Integer> c, Consumer<Integer> initC) throws Exception {
+    protected int testOperationDuringEviction(boolean persistence, int mode, Consumer<Integer> c, Consumer<Integer> initC) throws Exception {
         this.persistence = persistence;
 
         AtomicInteger holder = new AtomicInteger();
@@ -562,6 +557,8 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         c.accept(p0);
 
         l2.countDown();
+
+        return p0;
     }
 
     /** */
