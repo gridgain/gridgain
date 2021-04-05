@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /**
- *
+ * Tests that put/putAll/replace to in-memory transactional cache doesn't cause IgniteOutOfMemoryException.
  */
 @RunWith(Parameterized.class)
 public class IgniteOOMWithoutNodeFailureTxTest extends IgniteOOMWithoutNodeFailureAbstractTest {
@@ -56,7 +56,7 @@ public class IgniteOOMWithoutNodeFailureTxTest extends IgniteOOMWithoutNodeFailu
         );
     }
 
-    /** */
+    /** Tests that put/putAll/replace to in-memory transactional cache doesn't cause IgniteOutOfMemoryException. */
     @Test
     public void testTxCache() throws Exception {
         testIgniteOOMWithoutNodeFailure(ignite.cache(TX_CACHE_NAME), op -> {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ package org.apache.ignite.internal.processors.cache;
 import org.junit.Test;
 
 /**
- *
+ * Tests that put/putAll/replace to in-memory atomic cache doesn't cause IgniteOutOfMemoryException.
  */
 public class IgniteOOMWithoutNodeFailureAtomicTest extends IgniteOOMWithoutNodeFailureAbstractTest {
-    /** */
+    /** Tests that put/putAll/replace to in-memory atomic cache doesn't cause IgniteOutOfMemoryException. */
     @Test
     public void testAtomicCache() throws Exception {
         testIgniteOOMWithoutNodeFailure(ignite.cache(DEFAULT_CACHE_NAME), Runnable::run);

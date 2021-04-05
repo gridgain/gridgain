@@ -5752,7 +5752,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 catch (IgniteCheckedException e) {
                     IgniteCheckedException ex = e;
 
-                    if (X.hasCause(e, IgniteOutOfMemoryException.class) && (ex = preventOutOfMemoryOperationFailure(entry.cctx, e)) == null)
+                    if (X.hasCause(e, IgniteOutOfMemoryException.class)
+                        && (ex = preventOutOfMemoryOperationFailure(entry.cctx, e)) == null)
                         continue;
                     else
                         throw ex;

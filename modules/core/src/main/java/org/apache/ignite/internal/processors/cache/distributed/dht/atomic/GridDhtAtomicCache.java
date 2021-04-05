@@ -2676,7 +2676,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 catch (IgniteCheckedException e) {
                     IgniteCheckedException ex = e;
 
-                    if (X.hasCause(e, IgniteOutOfMemoryException.class) && (ex = preventOutOfMemoryOperationFailure(ctx, e)) == null)
+                    if (X.hasCause(e, IgniteOutOfMemoryException.class)
+                        && (ex = preventOutOfMemoryOperationFailure(ctx, e)) == null)
                         continue;
                     else
                         res.addFailedKey(k, ex);
@@ -2737,7 +2738,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         CacheStorePartialUpdateException storeErr = null;
 
-        while (true) {
+        //while (true) {
             try {
                 GridCacheOperation op;
 
@@ -2942,16 +2943,17 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 }
             }
             catch (IgniteCheckedException e) {
-                IgniteCheckedException ex = e;
+                /*IgniteCheckedException ex = e;
 
-                if (X.hasCause(e, IgniteOutOfMemoryException.class) && (ex = preventOutOfMemoryOperationFailure(ctx, e)) == null)
+                if (X.hasCause(e, IgniteOutOfMemoryException.class)
+                    && (ex = preventOutOfMemoryOperationFailure(ctx, e)) == null)
                     continue;
-                else
-                    res.addFailedKeys(putMap != null ? putMap.keySet() : rmvKeys, ex);
+                else*/
+                    res.addFailedKeys(putMap != null ? putMap.keySet() : rmvKeys, e/*x*/);
             }
 
-            break;
-        }
+            //break;
+        //}
 
         if (storeErr != null) {
             ArrayList<KeyCacheObject> failed = new ArrayList<>(storeErr.failedKeys().size());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,9 +41,9 @@ import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -95,7 +95,6 @@ public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractT
             .setDataRegionName("tx");
 
         cfg.setMetricsLogFrequency(1_000);
-        cfg.setFailureHandler(new StopNodeOrHaltFailureHandler(false, 0));
         cfg.setCacheConfiguration(baseCfg, txCacheCfg);
 
         return cfg;
@@ -104,6 +103,8 @@ public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractT
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
+
+        stopAllGrids();
 
         ignite = startGrids(1);
 
@@ -121,16 +122,25 @@ public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractT
      * Tests how eviction behaves when {@link DataRegionConfiguration#getEmptyPagesPoolSize()} is not enough for large
      * values.
      *
+     * @param cache Cache.
+     * @param cacheOpWrapper Wrapper for cache operations.
      * @throws Exception If failed.
      */
-    protected void testIgniteOOMWithoutNodeFailure(IgniteCache<Object, Object> cache, Consumer<Runnable> cacheOpWrapper) throws Exception {
+    protected void testIgniteOOMWithoutNodeFailure(
+        IgniteCache<Object, Object> cache,
+        Consumer<Runnable> cacheOpWrapper
+    ) throws Exception {
         List<IgniteInternalFuture<Object>> futures = new ArrayList<>();
 
         Function<ThreadLocalRandom, byte[]> function = random -> new byte[random.nextInt(3) * 100 * 1024];
 
         AtomicReference<Exception> exceptionsRef = new AtomicReference<>();
 
-        AtomicBoolean running = new AtomicBoolean();
+        AtomicBoolean running = new AtomicBoolean(true);
+
+        DataRegion dataRegion = ignite.context().cache().cache(cache.getName()).context().dataRegion();
+
+        int emptyPagesPoolSizeInitial = dataRegion.emptyPagesPoolSize();
 
         IgniteInClosure<IgniteInClosure<ThreadLocalRandom>> task = op -> {
             ThreadLocalRandom random = ThreadLocalRandom.current();
@@ -176,7 +186,7 @@ public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractT
             futures.add(fut);
         }
 
-        doSleep(30_000);
+        doSleep(10_000);
 
         running.set(false);
 
@@ -184,6 +194,7 @@ public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractT
             future.get(5, TimeUnit.SECONDS);
 
         assertNull(exceptionsRef.get());
+        assertTrue(dataRegion.emptyPagesPoolSize() > emptyPagesPoolSizeInitial);
     }
 
     /**

@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictionTracker;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.configuration.DataRegionConfiguration.DFLT_EMPTY_PAGES_POOL_SIZE;
 
@@ -26,18 +27,18 @@ import static org.apache.ignite.configuration.DataRegionConfiguration.DFLT_EMPTY
  */
 public class DataRegion {
     /** */
-    private final PageMemory pageMem;
+    @Nullable private final PageMemory pageMem;
 
     /** */
-    private final DataRegionMetricsImpl memMetrics;
+    @Nullable private final DataRegionMetricsImpl memMetrics;
 
     /** */
-    private final DataRegionConfiguration cfg;
+    @Nullable private final DataRegionConfiguration cfg;
 
     /** */
-    private final PageEvictionTracker evictionTracker;
+    @Nullable private final PageEvictionTracker evictionTracker;
 
-    /** */
+    /** Current size of empty pages pool. */
     private volatile int emptyPagesPoolSize;
 
     /**
@@ -47,10 +48,10 @@ public class DataRegion {
      * @param evictionTracker Eviction tracker.
      */
     public DataRegion(
-        PageMemory pageMem,
-        DataRegionConfiguration cfg,
-        DataRegionMetricsImpl memMetrics,
-        PageEvictionTracker evictionTracker
+        @Nullable PageMemory pageMem,
+        @Nullable DataRegionConfiguration cfg,
+        @Nullable DataRegionMetricsImpl memMetrics,
+        @Nullable PageEvictionTracker evictionTracker
     ) {
         this.pageMem = pageMem;
         this.memMetrics = memMetrics;
@@ -88,10 +89,13 @@ public class DataRegion {
     }
 
     /**
+     * Increase the pool of empty pages, if it is too small.
+     *
      * @return {@code true} if increased.
      */
     public synchronized boolean increaseEmptyPagesPool() {
-        if (emptyPagesPoolSize < (cfg.getMaxSize() / pageMem.systemPageSize() * (1 - cfg.getEvictionThreshold()))) {
+        if (cfg != null && pageMem != null
+            && emptyPagesPoolSize < (cfg.getMaxSize() / pageMem.systemPageSize() * (1 - cfg.getEvictionThreshold()) * 2)) {
             emptyPagesPoolSize *= 2;
 
             return true;
@@ -100,7 +104,7 @@ public class DataRegion {
             return false;
     }
 
-    /** */
+    /** Current size of empty pages pool. */
     public int emptyPagesPoolSize() {
         return emptyPagesPoolSize;
     }
