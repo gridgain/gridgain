@@ -44,6 +44,7 @@ import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.typedef.X;
@@ -452,17 +453,30 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
      */
     private void doTestTombstoneCleanupInEvictingPartition(boolean persistence) throws Exception {
         testOperationDuringEviction(persistence, 3, p -> {
-            doSleep(1100);
+            doSleep(600);
 
             GridCacheContext<Object, Object> ctx = grid(0).cachex(DEFAULT_CACHE_NAME).context();
 
             Deque<PendingRow> queue = grid(0).context().cache().context().evict().evictQueue(true);
 
-            assertFalse(queue.isEmpty());
+            try {
+                if (!queue.isEmpty()) {
+                    ctx.ttl().expire(1000);
 
-            ctx.ttl().expire(1000);
+                    assertTrue(queue.isEmpty());
+                }
 
-            assertTrue(queue.isEmpty());
+                ctx.shared().evict().processEvictions(true).get();
+                ctx.ttl().expire(1000);
+
+                PendingEntriesTree t = ctx.group().topology().localPartition(p).dataStore().pendingTree();
+
+                assertTrue(queue.isEmpty());
+                assertEquals(0, t.size());
+            }
+            catch (IgniteCheckedException e) {
+                fail(X.getFullStackTrace(e));
+            }
         }, new Consumer<Integer>() {
             @Override public void accept(Integer p0) {
                 IgniteEx g0 = grid(0);

@@ -377,7 +377,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /** {@inheritDoc} */
     @Override public void removePendingRow(PendingRow row) throws IgniteCheckedException {
-        partitionData(row.key.partition()).pendingTree().remove(row);
+        CacheDataStore store = partitionData(row.key.partition());
+
+        if (store != null)
+            store.pendingTree().remove(row);
     }
 
     /**
