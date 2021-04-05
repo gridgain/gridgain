@@ -3670,7 +3670,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     if (/*borderKey != null && key <= borderKey*/reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0) {
                         reconSize.incrementAndGet();
 //                        System.out.println("in PUT after increment reconSize: key " + key + " reconSize " + reconSize.get());
-                        System.out.println("qjkdpotd in PUT remove key from tempMap: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                        System.out.println("qjkdpotd in PUT reconSize.incrementAndGet(): key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                             " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
                             " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                             " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
@@ -3798,6 +3798,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             }
                             else {
 //                                System.out.println("in REMOVE compute: do nothing key " + row0.key() + " ");
+                                System.out.println("qfhydopdgw " + k);
+
                                 System.out.println("qolpfdtyhs in REMOVE compute: decrement and remove key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                                     " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
                                     " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
@@ -3812,7 +3814,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 //                    *******************************************
 
                 }
-                else if (row0.isReady()){
+                else if (row0.isReady() && !row0.tombstone() && (oldRow == null || oldIsTombstone)) {
                     System.out.println("reconInsert in Replace start");
                     reconInsert(newRow);
                     System.out.println("reconInsert in Replace finish");

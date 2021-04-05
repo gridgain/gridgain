@@ -76,6 +76,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
      */
     private static final long serialVersionUID = 0L;
 
+    public static int i;
+
     public static final CountDownLatch latch = new CountDownLatch(1);
 
     public static final Map<Integer, String> msg = new ConcurrentHashMap<>();
@@ -301,6 +303,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             CacheDataRow lastRow = null;
 
+            i++;
+
             try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
                 grpCtx.offheap().dataStore(part).cursor(cacheId, null, null) :
                 grpCtx.offheap().dataStore(part).cursor(cacheId, keyToStart, null)) {
@@ -318,7 +322,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     iters++;
 
                     try {
-                        sleep(1);
+                        sleep(20);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();

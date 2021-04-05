@@ -30,6 +30,7 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -39,9 +40,11 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitio
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static java.lang.Thread.sleep;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 
 /**
  * Tests count of calls the recheck process with different inputs.
@@ -61,6 +64,11 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
+
+        DataStorageConfiguration storageConfiguration = new DataStorageConfiguration();
+        storageConfiguration.setPageSize(1024);
+
+        cfg.setDataStorageConfiguration(storageConfiguration);
 
         CacheConfiguration ccfg = new CacheConfiguration();
         ccfg.setName(DEFAULT_CACHE_NAME);
@@ -158,17 +166,19 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     }
 
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testRepairUnderLoad() throws Exception {//Value is not ready
         CollectPartitionKeysByBatchTask.msg.clear();
         CollectPartitionKeysByBatchTask.msg1.clear();
+        CollectPartitionKeysByBatchTask.i = 0;
         BPlusTree.i0 = 0;
 
-        IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, TestValue> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
 //        int endKey = 337;
 //        int endKey = 667;//qssefvsdae cacheSize after recon 170
-        int endKey = 1000;
+        int endKey = 110;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -176,7 +186,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = startKey; i < endKey; i++) {
             i += 1;
             if (i < endKey) {
-                cache.put(i, i);
+                cache.put(i, new TestValue());
                 putCount.incrementAndGet();
             }
         }
@@ -209,69 +219,72 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         AtomicReference<ReconciliationResult> res = new AtomicReference<>();
 
+//        IgniteInternalFuture loadFut0 = GridTestUtils.runAsync(() -> {
+//            System.out.println("qvsdhntsd loadFut start");
+//
+////            try {
+////                sleep(1);
+////            }
+////            catch (InterruptedException e) {
+////                e.printStackTrace();
+////            }
+//
+//            int i = 0;
+//            int i1 = 0;
+//
+//            int max = 0;
+//
+//            while(res.get() == null && i1 < endKey/* || i < endKey*/) {
+//
+////                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+////                if (!cache.containsKey(i1)) {
+//                System.out.println("qdervdvds before put in test key: " + i1);
+//                cache.put(i1, 1);
+////                    putCount.incrementAndGet();
+//                System.out.println("qdervdvds after put in test key: " + i1);
+////                }
+//
+//                i1++/* + ((endKey - startKey) / 10)*/;
+//
+//                try {
+//                    sleep(8);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//
+////                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+////                System.out.println("qdflpltis before remove in test key: " + i1);
+////                if (cache.containsKey(i1)) {
+////                    cache.remove(i1);
+////                    removeCount.incrementAndGet();
+////                System.out.println("qdflpltis after remove in test key: " + i1);
+////                }
+//
+////                try {
+////                    sleep(3);
+////                }
+////                catch (InterruptedException e) {
+////                    e.printStackTrace();
+////                }
+//
+////                System.out.println("qfegsdg put random: " + i1);
+////                doSleep(3);
+//
+////                if (i1 > max)
+////                    max = i1;
+//
+////                if (i < endKey) {
+////                    cache.put(i, i);
+////                    i++;
+////                }
+//            }
+//
+//            System.out.println("qvraslpf loadFut stop" + i);
+//            System.out.println("qmfgtssf loadFut max" + max);
+//        });
+
         IgniteInternalFuture loadFut0 = GridTestUtils.runAsync(() -> {
-            System.out.println("qvsdhntsd loadFut start");
-
-//            try {
-//                sleep(1);
-//            }
-//            catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-
-            int i = 0;
-
-            int max = 0;
-
-            while(res.get() == null/* || i < endKey*/) {
-
-                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                if (!cache.containsKey(i1)) {
-                System.out.println("qdervdvds before put in test key: " + i1);
-                    cache.put(i1, 1);
-//                    putCount.incrementAndGet();
-                System.out.println("qdervdvds after put in test key: " + i1);
-//                }
-
-//                try {
-//                    sleep(3);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-
-                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-                System.out.println("qdflpltis before remove in test key: " + i1);
-//                if (cache.containsKey(i1)) {
-                    cache.remove(i1);
-//                    removeCount.incrementAndGet();
-                System.out.println("qdflpltis after remove in test key: " + i1);
-//                }
-
-//                try {
-//                    sleep(3);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-
-//                System.out.println("qfegsdg put random: " + i1);
-//                doSleep(3);
-
-//                if (i1 > max)
-//                    max = i1;
-
-//                if (i < endKey) {
-//                    cache.put(i, i);
-//                    i++;
-//                }
-            }
-
-            System.out.println("qvraslpf loadFut stop" + i);
-            System.out.println("qmfgtssf loadFut max" + max);
-        });
-
-        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
             System.out.println("qvsdhntsd loadFut1 start");
 
             int i = 0;
@@ -282,12 +295,14 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
                 int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (!cache.containsKey(i1)) {
-                cache.put(i1, 1);
+                System.out.println("qdervdvds before put in test key: " + i1);
+                cache.put(i1, new TestValue());
+                System.out.println("qdervdvds after put in test key: " + i1);
 //                putCount.incrementAndGet();
 //                }
 
 //                try {
-//                    sleep(30);
+//                    sleep(40);
 //                }
 //                catch (InterruptedException e) {
 //                    e.printStackTrace();
@@ -295,8 +310,17 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
                 i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (cache.containsKey(i1)) {
+                System.out.println("qdflpltis before remove in test key: " + i1);
                 cache.remove(i1);
+                System.out.println("qdflpltis after remove in test key: " + i1);
 //                    removeCount.incrementAndGet();
+//                }
+
+//                try {
+//                    sleep(40);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
 //                }
 
 //                try {
@@ -329,9 +353,82 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             System.out.println("qmfgtssf loadFut1 max" + max);
         });
 
+        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
+            System.out.println("qvsdhntsd loadFut1 start");
+
+            int i = 0;
+
+            int max = 0;
+
+            while(res.get() == null/* || i < endKey*/) {
+
+                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (!cache.containsKey(i1)) {
+                System.out.println("qdervdvds before put in test key: " + i1);
+                cache.put(i1, new TestValue());
+                System.out.println("qdervdvds after put in test key: " + i1);
+//                putCount.incrementAndGet();
+//                }
+
+//                try {
+//                    sleep(40);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (cache.containsKey(i1)) {
+                System.out.println("qdflpltis before remove in test key: " + i1);
+                cache.remove(i1);
+                System.out.println("qdflpltis after remove in test key: " + i1);
+//                    removeCount.incrementAndGet();
+//                }
+
+//                try {
+//                    sleep(40);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                try {
+//                    sleep(10);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                try {
+//                    sleep(3);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                System.out.println("qfegsdg put random: " + i1);
+//                doSleep(3);
+
+//                if (i1 > max)
+//                    max = i1;
+
+//                if (i < endKey) {
+//                    cache.put(i, i);
+//                    i++;
+//                }
+            }
+
+            System.out.println("qvraslpf loadFut1 stop " + i);
+            System.out.println("qmfgtssf loadFut1 max " + max);
+        });
+
         System.out.println("qvsdhntsd partitionReconciliation start");
 
-        GridTestUtils.runMultiThreadedAsync(() -> res.set(partitionReconciliation(client, builder)), 1, "reconciliation");
+        GridTestUtils.runMultiThreadedAsync(() -> {
+            doSleep(30);
+
+            res.set(partitionReconciliation(client, builder));
+        }, 1, "reconciliation");
 
 //        CollectPartitionKeysByBatchTask.latch.await();
 
@@ -345,8 +442,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         ReconciliationResult reconciliationRes = res.get();
 
-//        loadFut0.get();
-//        loadFut1.get();
+        loadFut0.get();
+        loadFut1.get();
 //        loadFut2.get();
 
 //        doSleep(500);
@@ -374,8 +471,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        cache.put(101, 102);
 
         System.out.println("qssefvsdae cacheSize after recon " + cache.size());
-        System.out.println("qssefvsdae key 0 after recon " + cache.get(0));
-        System.out.println("qssefvsdae key 1 after recon " + cache.get(1));
+//        System.out.println("qssefvsdae key 0 after recon " + cache.get(0));
+//        System.out.println("qssefvsdae key 1 after recon " + cache.get(1));
 
 //        for (int i = startKey; i < endKey; i++) {
 //            Object o = grid(0).cache(DEFAULT_CACHE_NAME).get(i);
@@ -401,6 +498,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         System.out.println("qwghptikd putsAftreAll " + putsAftreAll);//991+173(172)=1164
         System.out.println("qdsvdrd " + CollectPartitionKeysByBatchTask.msg);
         System.out.println("qcsdfrs " + CollectPartitionKeysByBatchTask.msg1);
+        System.out.println("qcgpolhuj batches " + CollectPartitionKeysByBatchTask.i);
         System.out.println("qetfstrghbe i0 " + BPlusTree.i0);
 
         System.out.println("qfsvrsdsdsd putCount " + putCount + ", removeCount " + removeCount);
@@ -473,6 +571,262 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             System.out.println(next);
         }
 
+    }
+
+    static class TestKey {
+        int i;
+
+        int[] array0 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array1 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array2 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array3 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array4 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array5 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array6 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array7 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array8 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array9 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+
+        TestKey(int i) {
+            this.i = i;
+        }
+    }
+
+    static class TestValue {
+        int[] array0 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array1 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array2 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array3 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array4 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array5 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array6 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array7 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array8 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        int[] array9 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+
+        TestValue() {
+
+        }
     }
 
 }
