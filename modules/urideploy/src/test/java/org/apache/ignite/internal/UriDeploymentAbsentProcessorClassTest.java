@@ -67,7 +67,7 @@ public class UriDeploymentAbsentProcessorClassTest extends GridCommonAbstractTes
      * @throws Exception if failed.
      */
     @Test
-    public void testDeploymentFromSecondAndThird() throws Exception {
+    public void test() throws Exception {
         try {
             startGrid(1);
 

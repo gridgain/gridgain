@@ -35,8 +35,7 @@ public class ExternalEntryProcessor implements EntryProcessor<Object, Object, Ob
     private IgniteLogger log;
 
     /** */
-    @Override
-    public Object process(MutableEntry<Object, Object> entry, Object... arguments) throws EntryProcessorException {
+    @Override public Object process(MutableEntry<Object, Object> entry, Object... arguments) throws EntryProcessorException {
         log.info("!!!!! I am entry processor " + entry.getKey() + " on " + ignite.name());
 
         return 42;
