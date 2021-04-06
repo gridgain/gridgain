@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import com.sun.tools.javac.util.List;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -173,12 +174,12 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         CollectPartitionKeysByBatchTask.i = 0;
         BPlusTree.i0 = 0;
 
-        IgniteCache<Integer, TestValue> cache = client.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
 //        int endKey = 337;
 //        int endKey = 667;//qssefvsdae cacheSize after recon 170
-        int endKey = 110;
+        int endKey = 5000;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -186,7 +187,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = startKey; i < endKey; i++) {
             i += 1;
             if (i < endKey) {
-                cache.put(i, new TestValue());
+                cache.put(i, i);
                 putCount.incrementAndGet();
             }
         }
@@ -239,7 +240,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 ////                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 ////                if (!cache.containsKey(i1)) {
 //                System.out.println("qdervdvds before put in test key: " + i1);
-//                cache.put(i1, 1);
+//                cache.put(i1, new TestValue());
 ////                    putCount.incrementAndGet();
 //                System.out.println("qdervdvds after put in test key: " + i1);
 ////                }
@@ -295,9 +296,10 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
                 int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (!cache.containsKey(i1)) {
-                System.out.println("qdervdvds before put in test key: " + i1);
-                cache.put(i1, new TestValue());
+                System.out.println("qdervdvds before put in test key: " + cache.containsKey(i1) + " " + i1);
+                cache.put(i1, i1);
                 System.out.println("qdervdvds after put in test key: " + i1);
+
 //                putCount.incrementAndGet();
 //                }
 
@@ -310,7 +312,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
                 i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (cache.containsKey(i1)) {
-                System.out.println("qdflpltis before remove in test key: " + i1);
+                System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
                 cache.remove(i1);
                 System.out.println("qdflpltis after remove in test key: " + i1);
 //                    removeCount.incrementAndGet();
@@ -352,7 +354,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             System.out.println("qvraslpf loadFut1 stop" + i);
             System.out.println("qmfgtssf loadFut1 max" + max);
         });
-
+//
         IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
             System.out.println("qvsdhntsd loadFut1 start");
 
@@ -365,7 +367,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
                 int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (!cache.containsKey(i1)) {
                 System.out.println("qdervdvds before put in test key: " + i1);
-                cache.put(i1, new TestValue());
+                cache.put(i1, i1);
                 System.out.println("qdervdvds after put in test key: " + i1);
 //                putCount.incrementAndGet();
 //                }
@@ -422,6 +424,144 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             System.out.println("qmfgtssf loadFut1 max " + max);
         });
 
+        IgniteInternalFuture loadFut2 = GridTestUtils.runAsync(() -> {
+            System.out.println("qvsdhntsd loadFut1 start");
+
+            int i = 0;
+
+            int max = 0;
+
+            while(res.get() == null/* || i < endKey*/) {
+
+                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (!cache.containsKey(i1)) {
+                System.out.println("qdervdvds before put in test key: " + i1);
+                cache.put(i1, i1);
+                System.out.println("qdervdvds after put in test key: " + i1);
+//                putCount.incrementAndGet();
+//                }
+
+//                try {
+//                    sleep(40);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (cache.containsKey(i1)) {
+                System.out.println("qdflpltis before remove in test key: " + i1);
+                cache.remove(i1);
+                System.out.println("qdflpltis after remove in test key: " + i1);
+//                    removeCount.incrementAndGet();
+//                }
+
+//                try {
+//                    sleep(40);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                try {
+//                    sleep(10);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                try {
+//                    sleep(3);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                System.out.println("qfegsdg put random: " + i1);
+//                doSleep(3);
+
+//                if (i1 > max)
+//                    max = i1;
+
+//                if (i < endKey) {
+//                    cache.put(i, i);
+//                    i++;
+//                }
+            }
+
+            System.out.println("qvraslpf loadFut1 stop " + i);
+            System.out.println("qmfgtssf loadFut1 max " + max);
+        });
+//
+//        IgniteInternalFuture loadFut3 = GridTestUtils.runAsync(() -> {
+//            System.out.println("qvsdhntsd loadFut1 start");
+//
+//            int i = 0;
+//
+//            int max = 0;
+//
+//            while(res.get() == null/* || i < endKey*/) {
+//
+//                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+////                if (!cache.containsKey(i1)) {
+//                System.out.println("qdervdvds before put in test key: " + i1);
+//                cache.put(i1, new TestValue());
+//                System.out.println("qdervdvds after put in test key: " + i1);
+////                putCount.incrementAndGet();
+////                }
+//
+////                try {
+////                    sleep(40);
+////                }
+////                catch (InterruptedException e) {
+////                    e.printStackTrace();
+////                }
+//
+//                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+////                if (cache.containsKey(i1)) {
+//                System.out.println("qdflpltis before remove in test key: " + i1);
+//                cache.remove(i1);
+//                System.out.println("qdflpltis after remove in test key: " + i1);
+////                    removeCount.incrementAndGet();
+////                }
+//
+////                try {
+////                    sleep(40);
+////                }
+////                catch (InterruptedException e) {
+////                    e.printStackTrace();
+////                }
+//
+////                try {
+////                    sleep(10);
+////                }
+////                catch (InterruptedException e) {
+////                    e.printStackTrace();
+////                }
+//
+////                try {
+////                    sleep(3);
+////                }
+////                catch (InterruptedException e) {
+////                    e.printStackTrace();
+////                }
+//
+////                System.out.println("qfegsdg put random: " + i1);
+////                doSleep(3);
+//
+////                if (i1 > max)
+////                    max = i1;
+//
+////                if (i < endKey) {
+////                    cache.put(i, i);
+////                    i++;
+////                }
+//            }
+//
+//            System.out.println("qvraslpf loadFut1 stop " + i);
+//            System.out.println("qmfgtssf loadFut1 max " + max);
+//        });
+
         System.out.println("qvsdhntsd partitionReconciliation start");
 
         GridTestUtils.runMultiThreadedAsync(() -> {
@@ -444,6 +584,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         loadFut0.get();
         loadFut1.get();
+        loadFut2.get();
+//        loadFut3.get();
 //        loadFut2.get();
 
 //        doSleep(500);
@@ -703,7 +845,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     }
 
     static class TestValue {
-        int[] array0 = {
+        long[] array0 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -715,7 +857,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             81, 82, 83, 84, 88, 86, 87, 88, 89,
             91, 92, 93, 94, 95, 96, 97, 98, 99
         };
-        int[] array1 = {
+        long[] array1 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -727,7 +869,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             81, 82, 83, 84, 88, 86, 87, 88, 89,
             91, 92, 93, 94, 95, 96, 97, 98, 99
         };
-        int[] array2 = {
+        long[] array2 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -739,7 +881,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             81, 82, 83, 84, 88, 86, 87, 88, 89,
             91, 92, 93, 94, 95, 96, 97, 98, 99
         };
-        int[] array3 = {
+        long[] array3 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -751,7 +893,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             81, 82, 83, 84, 88, 86, 87, 88, 89,
             91, 92, 93, 94, 95, 96, 97, 98, 99
         };
-        int[] array4 = {
+        long[] array4 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -763,7 +905,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             81, 82, 83, 84, 88, 86, 87, 88, 89,
             91, 92, 93, 94, 95, 96, 97, 98, 99
         };
-        int[] array5 = {
+        long[] array5 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -775,7 +917,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             81, 82, 83, 84, 88, 86, 87, 88, 89,
             91, 92, 93, 94, 95, 96, 97, 98, 99
         };
-        int[] array6 = {
+        long[] array6 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -787,7 +929,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             81, 82, 83, 84, 88, 86, 87, 88, 89,
             91, 92, 93, 94, 95, 96, 97, 98, 99
         };
-        int[] array7 = {
+        long[] array7 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -799,7 +941,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             81, 82, 83, 84, 88, 86, 87, 88, 89,
             91, 92, 93, 94, 95, 96, 97, 98, 99
         };
-        int[] array8 = {
+        long[] array8 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -811,7 +953,127 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             81, 82, 83, 84, 88, 86, 87, 88, 89,
             91, 92, 93, 94, 95, 96, 97, 98, 99
         };
-        int[] array9 = {
+        long[] array9 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array10 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array11 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array12 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array13 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array14 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array15 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array16 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array17 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array18 = {
+            1, 2, 3, 4, 5, 6, 7, 8, 9,
+            11, 12, 13, 14, 15, 16, 17, 18, 19,
+            21, 22, 23, 24, 25, 26, 27, 28, 29,
+            31, 32, 33, 34, 35, 36, 37, 38, 39,
+            41, 42, 43, 44, 45, 46, 47, 48, 49,
+            51, 52, 53, 54, 55, 56, 57, 58, 59,
+            66, 62, 63, 64, 66, 66, 67, 68, 69,
+            77, 72, 73, 74, 77, 76, 77, 78, 79,
+            81, 82, 83, 84, 88, 86, 87, 88, 89,
+            91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+        long[] array19 = {
             1, 2, 3, 4, 5, 6, 7, 8, 9,
             11, 12, 13, 14, 15, 16, 17, 18, 19,
             21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -827,6 +1089,12 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         TestValue() {
 
         }
+
+//        @Override public String toString() {
+//            return "TestValue{" +
+//                "array0=" + Arrays.toString(array0) +
+//                '}';
+//        }
     }
 
 }

@@ -29,6 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -266,6 +267,22 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             if (!partReconciliationCtx.isReconciliationInProgress() && partReconciliationCtx.lastKey(cacheId) == null) {
                 cacheDataStore.busyLock.block();
 
+                try(GridCursor<? extends CacheDataRow> cursor = grpCtx.offheap().dataStore(part).cursor(cacheId, null, null);) {
+
+                    List q = new ArrayList();
+
+                    while (cursor.next()) {
+                        CacheDataRow row = cursor.get();
+                        q.add(row);
+                    }
+
+                    System.out.println("qfdopjfilkd cache data on start recon " + q);
+
+                }
+                catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
                 try {
                     partReconciliationCtx.isReconciliationInProgress(true);
                     System.out.println("qlopfots set isReconciliationInProgress to true");
@@ -322,7 +339,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     iters++;
 
                     try {
-                        sleep(20);
+                        sleep(2);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();
@@ -443,6 +460,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                    }
 //                    else
 //                        tempMapIter.remove();
+
+                            try {
+                                sleep(2);
+                            }
+                            catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
                         }
 
                         partReconciliationCtx.isReconciliationInProgress(false);
