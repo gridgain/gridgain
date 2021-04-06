@@ -639,6 +639,11 @@ public interface IgniteCacheOffheapManager {
     public void preloadPartition(int part) throws IgniteCheckedException;
 
     /**
+     * @param row Row.
+     */
+    public void removePendingRow(PendingRow row) throws IgniteCheckedException;
+
+    /**
      *
      */
     interface OffheapInvokeClosure extends IgniteTree.InvokeClosure<CacheDataRow> {

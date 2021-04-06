@@ -51,7 +51,7 @@ public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
      * @param grp Group.
      * @param id Id.
      * @param recovery Recovery.
-     * @param mode Delay mode: 0 - delay before rent, 1 - delay in the middle of clearing, 2 - delay after tryFinishEviction
+     * @param mode Delay mode: 0 - delay before rent, 1 - delay in the middle of clearing, 2 - delay after clearing
      *             3 - delay before clearing.
      * @param lock Clearing lock latch.
      * @param unlock Clearing unlock latch.

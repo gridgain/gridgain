@@ -375,6 +375,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         throw new IgniteCheckedException("Operation only applicable to caches with enabled persistence");
     }
 
+    /** {@inheritDoc} */
+    @Override public void removePendingRow(PendingRow row) throws IgniteCheckedException {
+        CacheDataStore store = partitionData(row.key.partition());
+
+        if (store != null)
+            store.pendingTree().remove(row);
+    }
+
     /**
      * @param p Partition.
      * @return Partition data.
@@ -1402,8 +1410,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     ) {
         long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
-        if (tsCnt == 0)
-            return false;
+        // Even if tombstones count is zero, we have some entries in the queue and they must be processed.
 
         GridDhtPartitionsExchangeFuture fut = ctx.exchange().lastTopologyFuture();
 
