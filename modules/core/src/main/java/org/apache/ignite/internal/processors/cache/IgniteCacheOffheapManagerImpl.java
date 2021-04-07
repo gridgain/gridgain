@@ -3040,22 +3040,25 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 updatePendingEntries(cctx, tombstoneRow, null);
             }
 
-            if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
-                rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
-
             if (isIncrementalDrEnabled(cctx)) {
-                if (oldRow != null) {
-                    assert oldRow.version().updateCounter() != 0;
-
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
-                }
-
                 if (tombstoneRow != null) {
                     assert tombstoneRow.version().updateCounter() != 0;
 
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
                 }
+
+                if (oldRow != null) {
+                    assert oldRow.version().updateCounter() != 0;
+
+                    if (oldTombstone && tombstoneRow == null)
+                        cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
+
+                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                }
             }
+
+            if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
+                rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
         }
 
         /**
