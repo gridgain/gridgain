@@ -15,11 +15,12 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Test about statistics reload after restart.
@@ -48,11 +49,17 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
 
         cleanPersistenceDir();
 
-        startGridsMultiThreaded(nodes());
+        startGrids(nodes());
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        U.sleep(100);
 
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        createSmallTable(null);
+        createStatisticTarget(null);
+
+        collectStatistics(SMALL_TARGET);
     }
 
     /**
@@ -61,28 +68,17 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
      * @param idx Table idx, if {@code null} - name "SMALL" without index will be used.
      * @return Target to created table.
      */
-    protected StatisticsTarget createSmallTable(Integer idx) {
+    protected StatisticsTarget createStatisticTarget(Integer idx) {
         String strIdx = (idx == null) ? "" : String.valueOf(idx);
 
-        runSql("DROP TABLE IF EXISTS small" + strIdx);
-
-        runSql(String.format("CREATE TABLE small%s (a INT PRIMARY KEY, b INT, c INT) with \"BACKUPS=1\"", strIdx));
-
-        runSql(String.format("CREATE INDEX small%s_b ON small%s(b)", strIdx, strIdx));
-
-        runSql(String.format("CREATE INDEX small%s_c ON small%s(c)", strIdx, strIdx));
-
-        IgniteCache<Integer, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
-
-        for (int i = 0; i < SMALL_SIZE; i++)
-            runSql(String.format("INSERT INTO small%s(a, b, c) VALUES(%d, %d, %d)", strIdx, i, i, i % 10));
+        createSmallTable(strIdx);
 
         return new StatisticsTarget(SCHEMA, "SMALL" + strIdx);
     }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws IgniteCheckedException {
-        grid(0).context().query().getIndexing().statsManager().gatherObjectStatistics(SMALL_TARGET);
+        updateStatistics(SMALL_TARGET);
     }
 
     /**

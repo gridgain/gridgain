@@ -155,6 +155,7 @@ import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_WARN_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_IO_DUMP_ON_TIMEOUT;
@@ -999,6 +1000,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         U.join(exchWorker, log);
 
+        if (cctx.kernalContext().clientDisconnected())
+            cctx.affinity().removeGroupHolders();
+
         // Finish all exchange futures.
         ExchangeFutureSet exchFuts0 = exchFuts;
 
@@ -1327,7 +1331,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      *
      * @param comp Component to be registered.
      */
-    public void registerExchangeAwareComponent(PartitionsExchangeAware comp) {
+    public void registerExchangeAwareComponent(@NotNull PartitionsExchangeAware comp) {
+        requireNonNull(comp, "Partition exchange aware component should be not-null.");
+
         exchangeAwareComps.add(comp);
     }
 
@@ -1336,7 +1342,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      *
      * @param comp Component to be registered.
      */
-    public void unregisterExchangeAwareComponent(PartitionsExchangeAware comp) {
+    public void unregisterExchangeAwareComponent(@NotNull PartitionsExchangeAware comp) {
+        requireNonNull(comp, "Partition exchange aware component should be not-null.");
+
         exchangeAwareComps.remove(comp);
     }
 

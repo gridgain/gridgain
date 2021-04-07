@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,6 +30,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
@@ -72,16 +72,15 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.GridCacheTtlManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIterator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIteratorException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
@@ -251,6 +250,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         assert grp.dataRegion().pageMemory() instanceof PageMemoryEx;
 
         syncMetadata(ctx);
+
+        // Double flushing memory buckets for decrease a time on write lock.
+        syncMetadata(ctx, ctx.executor(), false);
     }
 
     /** {@inheritDoc} */
@@ -667,38 +669,41 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public long restorePartitionStates(Map<GroupPartitionId, Integer> partitionRecoveryStates) throws IgniteCheckedException {
-        if (grp.isLocal() || !grp.affinityNode() || !grp.dataRegion().config().isPersistenceEnabled())
-            return 0;
+    @Override public Map<Integer, Long> restorePartitionStates(
+        Map<GroupPartitionId, Integer> partRecoveryStates
+    ) throws IgniteCheckedException {
+        if (grp.isLocal() || !grp.affinityNode() || !grp.dataRegion().config().isPersistenceEnabled()
+            || partitionStatesRestored)
+            return Collections.emptyMap();
 
-        if (partitionStatesRestored)
-            return 0;
-
-        long processed = 0;
+        Map<Integer, Long> processed = new HashMap<>();
 
         PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
 
         for (int p = 0; p < grp.affinity().partitions(); p++) {
-            Integer recoverState = partitionRecoveryStates.get(new GroupPartitionId(grp.groupId(), p));
+            Integer recoverState = partRecoveryStates.get(new GroupPartitionId(grp.groupId(), p));
 
             long startTime = U.currentTimeMillis();
+
+            if (log.isDebugEnabled())
+                log.debug("Started restoring partition state [grp=" + grp.cacheOrGroupName() + ", p=" + p + ']');
 
             if (ctx.pageStore().exists(grp.groupId(), p)) {
                 ctx.pageStore().ensure(grp.groupId(), p);
 
                 if (ctx.pageStore().pages(grp.groupId(), p) <= 1) {
-                    if (log.isDebugEnabled())
+                    if (log.isDebugEnabled()) {
                         log.debug("Skipping partition on recovery (pages less than 1) " +
                             "[grp=" + grp.cacheOrGroupName() + ", p=" + p + "]");
+                    }
 
                     continue;
                 }
 
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("Creating partition on recovery (exists in page store) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + "]");
-
-                processed++;
+                }
 
                 GridDhtLocalPartition part = grp.topology().forceCreatePartition(p);
 
@@ -724,22 +729,24 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                                 updateState(part, recoverState);
 
-                                if (log.isDebugEnabled())
+                                if (log.isDebugEnabled()) {
                                     log.debug("Restored partition state (from WAL) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
                                         ", updCntr=" + part.initialUpdateCounter() +
                                         ", size=" + part.fullSize() + "]");
+                                }
                             }
                             else {
                                 int stateId = io.getPartitionState(pageAddr);
 
                                 updateState(part, stateId);
 
-                                if (log.isDebugEnabled())
+                                if (log.isDebugEnabled()) {
                                     log.debug("Restored partition state (from page memory) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
                                         ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
                                         ", size=" + part.fullSize() + "]");
+                                }
                             }
                         }
                         finally {
@@ -753,30 +760,35 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 finally {
                     ctx.database().checkpointReadUnlock();
                 }
+
+                processed.put(p, U.currentTimeMillis() - startTime);
             }
             else if (recoverState != null) { // Pre-create partition if having valid state.
                 GridDhtLocalPartition part = grp.topology().forceCreatePartition(p);
 
                 updateState(part, recoverState);
 
-                processed++;
+                processed.put(p, U.currentTimeMillis() - startTime);
 
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("Restored partition state (from WAL) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
                         ", updCntr=" + part.initialUpdateCounter() +
                         ", size=" + part.fullSize() + "]");
+                }
             }
             else {
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("Skipping partition on recovery (no page store OR wal state) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + "]");
+                }
             }
 
-            if (log.isDebugEnabled())
+            if (log.isDebugEnabled()) {
                 log.debug("Finished restoring partition state " +
                     "[grp=" + grp.cacheOrGroupName() + ", p=" + p +
-                    ", time=" + (U.currentTimeMillis() - startTime) + " ms]");
+                    ", time=" + U.humanReadableDuration(U.currentTimeMillis() - startTime) + ']');
+            }
         }
 
         partitionStatesRestored = true;
@@ -1117,6 +1129,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
+    @Override public @Nullable RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException {
+        return indexStorage.findCacheIndex(cacheId, idxName, segment);
+    }
+
+    /** {@inheritDoc} */
     @Override public void dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException {
         indexStorage.dropCacheIndex(cacheId, idxName, segment);
     }
@@ -1243,11 +1260,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
 
-        FileWALPointer latestReservedPointer = (FileWALPointer)database.latestWalPointerReservedForPreloading();
-
-        if (latestReservedPointer == null)
-            throw new IgniteHistoricalIteratorException("Historical iterator wasn't created, because WAL isn't reserved.");
-
         Map<Integer, Long> partsCounters = new HashMap<>();
 
         for (int i = 0; i < partCntrs.size(); i++) {
@@ -1257,15 +1269,20 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             partsCounters.put(p, initCntr);
         }
 
-        FileWALPointer minPtr = database.checkpointHistory().searchEarliestWalPointer(grp.groupId(),
-            partsCounters, latestReservedPointer, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
-
-        assert latestReservedPointer.compareTo(minPtr) <= 0
-            : "Historical iterator tries to iterate WAL out of reservation [cache=" + grp.cacheOrGroupName()
-            + ", reservedPointer=" + database.latestWalPointerReservedForPreloading()
-            + ", historicalPointer=" + minPtr + ']';
-
         try {
+            FileWALPointer minPtr = database.checkpointHistory().searchEarliestWalPointer(grp.groupId(),
+                partsCounters, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
+
+            FileWALPointer latestReservedPointer = (FileWALPointer)database.latestWalPointerReservedForPreloading();
+
+            assert latestReservedPointer == null || latestReservedPointer.compareTo(minPtr) <= 0
+                : "Historical iterator tries to iterate WAL out of reservation [cache=" + grp.cacheOrGroupName()
+                + ", reservedPointer=" + latestReservedPointer
+                + ", historicalPointer=" + minPtr + ']';
+
+            if (latestReservedPointer == null)
+                log.warning("History for the preloading has not reserved yet.");
+
             WALIterator it = grp.shared().wal().replay(minPtr);
 
             WALHistoricalIterator iterator = new WALHistoricalIterator(log, grp, partCntrs, partsCounters, it);
@@ -1284,82 +1301,110 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public boolean expire(
-        GridCacheContext cctx,
+    @Override public boolean expireTombstones(
         IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-        int amount
-    ) throws IgniteCheckedException {
-        assert !cctx.isNear() : cctx.name();
+        int amount,
+        long now
+    ) {
+        long tsCnt = tombstonesCount();
+
+        // Even if tombstones count is zero, we have some entries in the queue and they must be processed.
+
+        DiscoCache discoCache = ctx.discovery().discoCache();
+
+        long tsLimit = ctx.ttl().tombstonesLimit();
+
+        // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
+        // This will allow offline node to join faster using fast full rebalancing.
+        GridDhtPartitionsExchangeFuture fut = ctx.exchange().lastTopologyFuture();
+
+        if (tsCnt <= tsLimit &&
+            (!discoCache.fullBaseline() ||
+                !(fut.isDone() && fut.rebalanced()) ||
+                ctx.ttl().tombstoneCleanupSuspended()))
+            return false;
+
+        if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
+            amount = (int) (tsCnt - tsLimit);
+
+            now = Long.MAX_VALUE;
+        }
 
         // Prevent manager being stopped in the middle of pds operation.
         if (!busyLock.enterBusy())
             return false;
 
-        long now = U.currentTimeMillis();
-
         try {
-            int expRmvCnt = 0;
-            int tsRmvCnt = 0;
-
-            List<CacheDataStore> stores = new ArrayList<>();
-            cacheDataStores().forEach(stores::add);
-
-            if (cctx.config().isEagerTtl()) {
-                Collections.shuffle(stores); // Randomize partitions to clear.
-
-                for (CacheDataStore store : stores) {
-                    expRmvCnt += ((GridCacheDataStore) store).purgeExpired(cctx, c, amount - expRmvCnt, false, now);
-
-                    if (amount != -1 && expRmvCnt >= amount)
-                        break;
-                }
-            }
-
-            long tsCnt = tombstonesCount();
-
-            if (tsCnt == 0)
-                return amount != -1 && expRmvCnt >= amount;
-
-            DiscoCache discoCache = cctx.discovery().discoCache();
-
-            long tsLimit = ctx.ttl().tombstonesLimit();
-
-            // Do not clear tombstones if not full baseline or while rebalancing is going and if the limit is not exceeded.
-            // This will allow offline node to join faster using fast full rebalancing.
-            if (tsCnt <= tsLimit && (!discoCache.fullBaseline() || !ctx.exchange().lastFinishedFuture().rebalanced() ||
-                ctx.ttl().tombstoneCleanupSuspended()))
-                return amount != -1 && expRmvCnt >= amount; // Can have some uncleared TTL entries.
-
-            if (tsCnt > tsLimit) { // Force removal of tombstones beyond the limit.
-                amount = (int) (tsCnt - tsLimit);
-
-                now = Long.MAX_VALUE;
-            }
-
-            // Sort by descending tombstones count.
-            GridDhtPartitionTopology top = grp.topology();
-
-            Map<Integer, Long> cntCache = U.newHashMap(top.localPartitions().size());
-
-            stores.sort((o1, o2) -> {
-                long c1 = cntCache.computeIfAbsent(o1.partId(), k -> tombstoneCount(top.localPartition(o1.partId())));
-                long c2 = cntCache.computeIfAbsent(o2.partId(), k -> tombstoneCount(top.localPartition(o2.partId())));
-
-                return Long.compare(c2, c1);
-            });
-
-            for (CacheDataStore store : stores) {
-                tsRmvCnt += ((GridCacheDataStore)store).purgeExpired(cctx, c, amount - tsRmvCnt, true, now);
-
-                if (amount != -1 && tsRmvCnt >= amount)
-                    break;
-            }
-
-            return amount != -1 && (expRmvCnt >= amount || tsRmvCnt >= amount);
+            return ctx.evict().expire(true, c, amount, now);
         }
         finally {
             busyLock.leaveBusy();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException {
+        if (!busyLock.enterBusy())
+            return 0;
+
+        int cnt = 0;
+
+        long upper0 = upper;
+
+        // Adjust upper bound if tombstone limit is exceeded.
+        if (tombstone) {
+            long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
+
+            if (tsCnt > tsLimit) {
+                amount = (int) (tsCnt - tsLimit);
+
+                upper0 = Long.MAX_VALUE;
+            }
+        }
+
+        try {
+            for (CacheDataStore store : cacheDataStores()) {
+                if (!store.init())
+                    continue;
+
+                GridDhtLocalPartition part = null;
+
+                int partId = store.partId();
+
+                if (!grp.isLocal()) {
+                    part = grp.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
+
+                    // Skip non-owned partitions.
+                    if (part == null || part.state() != OWNING && part.state() != MOVING)
+                        continue;
+                }
+
+                if (part != null && !part.reserve())
+                    continue;
+
+                try {
+                    for (GridCacheContext ctx : grp.caches()) {
+                        if (!ctx.started())
+                            continue;
+
+                        cnt += fillQueueInternal(store.pendingTree(), ctx, grp.sharedGroup() ? ctx.cacheId() :
+                            CU.UNDEFINED_CACHE_ID, tombstone, amount - cnt, upper0, c);
+
+                        if (amount != -1 && cnt >= amount)
+                            break;
+                    }
+                }
+                finally {
+                    if (part != null)
+                        part.release();
+                }
+            }
+        }
+        finally {
+            busyLock.leaveBusy();
+        }
+
+        return cnt;
     }
 
     /**
@@ -2319,9 +2364,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     pendingTree = pendingTree0;
 
-                    if (!pendingTree0.isEmpty())
-                        grp.caches().forEach(cctx -> cctx.ttl().hasPendingEntries(true));
-
                     long partMetaId = pageMem.partitionMetaPageId(grpId, partId);
                     long partMetaPage = pageMem.acquirePage(grpId, partMetaId);
 
@@ -3188,129 +3230,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             CacheDataStore delegate0 = init0(true);
 
             return delegate0 == null ? 0 : pendingTree.size();
-        }
-
-        /**
-         * Try to remove expired entries from data store.
-         *
-         * @param cctx Cache context.
-         * @param c Expiry closure that should be applied to expired entry. See {@link GridCacheTtlManager} for details.
-         * @param amount Limit of processed entries by single call, {@code -1} for no limit.
-         * @param tombstone {@code True} to clear tombstones.
-         * @param upper Upper limit.
-         * @return cleared entries count.
-         * @throws IgniteCheckedException If failed.
-         */
-        public int purgeExpired(
-            GridCacheContext cctx,
-            IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-            int amount,
-            boolean tombstone,
-            long upper
-        ) throws IgniteCheckedException {
-            CacheDataStore delegate0 = init0(true);
-
-            if (delegate0 == null)
-                return 0;
-
-            assert pendingTree != null : "Partition data store was not initialized.";
-
-            return purgeExpiredInternal(cctx, c, amount, tombstone, upper);
-        }
-
-        /**
-         * Removes expired entries from data store.
-         *
-         * @param cctx Cache context.
-         * @param c Expiry closure that should be applied to expired entry. See {@link GridCacheTtlManager} for details.
-         * @param amount Limit of processed entries by single call, {@code -1} for no limit.
-         * @param tombstone {@code True} if cleaning tombstones.
-         * @param upper Upper limit.
-         * @return cleared entries count.
-         * @throws IgniteCheckedException If failed.
-         */
-        private int purgeExpiredInternal(
-            GridCacheContext cctx,
-            IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c,
-            int amount,
-            boolean tombstone,
-            long upper
-        ) throws IgniteCheckedException {
-            GridDhtLocalPartition part = null;
-
-            if (!grp.isLocal()) {
-                part = cctx.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
-
-                // Skip non-owned partitions.
-                if (part == null || part.state() != OWNING && part.state() != MOVING)
-                    return 0;
-            }
-
-            cctx.shared().database().checkpointReadLock();
-
-            try {
-                if (part != null && !part.reserve())
-                    return 0;
-
-                try {
-                    if (part == null || part.state() != OWNING && part.state() != MOVING)
-                        return 0;
-
-                    GridCursor<PendingRow> cur;
-
-                    int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
-
-                    cur = pendingTree.find(new PendingRow(cacheId, tombstone, 0, 0),
-                        new PendingRow(cacheId, tombstone, upper, 0));
-
-                    if (!cur.next())
-                        return 0;
-
-                    GridCacheVersion obsoleteVer = cctx.versions().startVersion();
-
-                    int cleared = 0;
-
-                    do {
-                        PendingRow row = cur.get();
-
-                        if (amount != -1 && cleared >= amount)
-                            return cleared;
-
-                        assert row.key != null && row.link != 0 && row.expireTime != 0 && row.tombstone == tombstone : row;
-
-                        row.key.partition(partId);
-
-                        // Can't throw GridDhtInvalidPartitionException because the partition is reserved.
-                        GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
-
-                        if (entry != null)
-                            c.apply(entry, upper);
-
-                        cleared++;
-
-                        if ((cleared & 127) == 0) {
-                            cctx.shared().database().checkpointReadUnlock();
-                            cctx.shared().database().checkpointReadLock();
-                        }
-                    }
-                    while (cur.next());
-
-                    if (log.isDebugEnabled()) {
-                        log.debug("Finished processing expired batch [cleared=" + cleared +
-                            ", remaining=" + pendingTree.size() + ", part=" + partId +
-                            ", grp=" + grp.cacheOrGroupName() + ", cacheId=" + cacheId + ']');
-                    }
-
-                    return cleared;
-                }
-                finally {
-                    if (part != null)
-                        part.release();
-                }
-            }
-            finally {
-                cctx.shared().database().checkpointReadUnlock();
-            }
         }
 
         /** {@inheritDoc} */

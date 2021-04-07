@@ -40,7 +40,6 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemor
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.collection.IntMap;
@@ -173,7 +172,7 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean rmvIdx) throws IgniteCheckedException {
+    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean destroy) throws IgniteCheckedException {
 
     }
 
@@ -342,11 +341,6 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         String schemaNamePtrn,
         String tblNamePtrn,
         String colNamePtrn) {
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteStatisticsManager statsManager() {
         return null;
     }
 

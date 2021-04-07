@@ -30,6 +30,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
@@ -122,6 +123,10 @@ public class ConnectionClientPool {
     /** Scheduled executor service which closed the socket if handshake timeout is out. **/
     private final ScheduledExecutorService handshakeTimeoutExecutorService;
 
+    /** Enable forcible node kill. */
+    private boolean forcibleNodeKillEnabled = IgniteSystemProperties
+        .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
+
     /**
      * @param cfg Config.
      * @param attrs Attributes.
@@ -176,12 +181,8 @@ public class ConnectionClientPool {
     public void stop() {
         this.stopping = true;
 
-        for (GridFutureAdapter<GridCommunicationClient> fut : clientFuts.values()) {
-            if (fut instanceof ConnectionRequestFuture) {
-                // There's no way it would be done by itself at this point.
-                fut.onDone(new IgniteSpiException("SPI is being stopped."));
-            }
-        }
+        for (GridFutureAdapter<GridCommunicationClient> fut : clientFuts.values())
+            fut.onDone(new IgniteSpiException("SPI is being stopped."));
 
         handshakeTimeoutExecutorService.shutdown();
     }
@@ -362,7 +363,7 @@ public class ConnectionClientPool {
 
             final ConnectionKey key = new ConnectionKey(node.id(), connIdx, -1);
 
-            ConnectionRequestFuture triggerFut = new ConnectionRequestFuture();
+            GridFutureAdapter<GridCommunicationClient> triggerFut = new GridFutureAdapter<>();
 
             triggerFut.listen(f -> {
                 try {
@@ -370,8 +371,6 @@ public class ConnectionClientPool {
                 }
                 catch (Throwable t) {
                     fut0.onDone(t);
-                } finally {
-                    clientFuts.remove(key, triggerFut);
                 }
             });
 
@@ -390,6 +389,13 @@ public class ConnectionClientPool {
                     fut.get(failTimeout);
                 }
                 catch (Throwable triggerException) {
+                    if (forcibleNodeKillEnabled
+                        && node.isClient()
+                        && triggerException instanceof IgniteFutureTimeoutCheckedException
+                    ) {
+                        CommunicationTcpUtils.failNode(node, tcpCommSpi.getSpiContext(), triggerException, log);
+                    }
+
                     IgniteSpiException spiE = new IgniteSpiException(e);
 
                     spiE.addSuppressed(triggerException);

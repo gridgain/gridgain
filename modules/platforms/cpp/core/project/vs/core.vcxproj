@@ -245,6 +245,7 @@
     <ClInclude Include="..\..\include\ignite\impl\helpers.h" />
     <ClInclude Include="..\..\include\ignite\impl\ignite_environment.h" />
     <ClInclude Include="..\..\include\ignite\impl\ignite_impl.h" />
+    <ClInclude Include="..\..\include\ignite\impl\logger.h" />
     <ClInclude Include="..\..\include\ignite\impl\handle_registry.h" />
     <ClInclude Include="..\..\include\ignite\impl\interop\interop_external_memory.h" />
     <ClInclude Include="..\..\include\ignite\impl\interop\interop_target.h" />

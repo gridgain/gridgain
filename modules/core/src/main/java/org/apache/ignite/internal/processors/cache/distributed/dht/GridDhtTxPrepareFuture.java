@@ -949,7 +949,9 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 res.completedVersions(versPair.get1(), versPair.get2());
             }
 
-            res.pending(localDhtPendingVersions(tx.writeEntries(), min));
+            // Pending versions are required for near caches only.
+            if (req.near())
+                res.pending(localDhtPendingVersions(tx.writeEntries(), min));
 
             tx.implicitSingleResult(ret);
         }
@@ -1040,7 +1042,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
      * @return {@code True} if {@code done} flag was changed as a result of this call.
      */
     private boolean onComplete(@Nullable GridNearTxPrepareResponse res) {
-        if (!tx.onePhaseCommit() && ((last || tx.isSystemInvalidate()) && !(tx.near() && tx.local())))
+        if (res.error() != null) {
+            if (log.isDebugEnabled())
+                log.debug("Transaction marked for rollback because of error on dht prepare [tx=" + tx + ", error=" + res.error() + "]");
+
+            tx.setRollbackOnly();
+        }
+        else if (!tx.onePhaseCommit() && ((last || tx.isSystemInvalidate()) && !(tx.near() && tx.local())))
             tx.state(PREPARED);
 
         if (super.onDone(res, res == null ? err : null)) {
@@ -1764,15 +1772,21 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
      * @param baseVer Base version.
      * @return Collection of pending candidates versions.
      */
-    private Collection<GridCacheVersion> localDhtPendingVersions(Iterable<IgniteTxEntry> entries,
-        GridCacheVersion baseVer) {
-        Collection<GridCacheVersion> lessPending = new GridLeanSet<>(5);
+    private Collection<GridCacheVersion> localDhtPendingVersions(
+        Iterable<IgniteTxEntry> entries,
+        GridCacheVersion baseVer
+    ) {
+        Collection<GridCacheVersion> lessPending = null;
 
         for (IgniteTxEntry entry : entries) {
             try {
                 for (GridCacheMvccCandidate cand : entry.cached().localCandidates()) {
-                    if (cand.version().isLess(baseVer))
+                    if (cand.version().isLess(baseVer)) {
+                        if (lessPending == null)
+                            lessPending = new GridLeanSet<>(5);
+
                         lessPending.add(cand.version());
+                    }
                 }
             }
             catch (GridCacheEntryRemovedException ignored) {

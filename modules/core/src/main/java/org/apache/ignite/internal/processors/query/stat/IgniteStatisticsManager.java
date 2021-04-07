@@ -16,9 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.IgniteCheckedException;
-
-import java.util.Map;
-import java.util.UUID;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 
 /**
  * Statistics manager. Coordinate statistics collection and act as source of statistics.
@@ -27,48 +25,10 @@ public interface IgniteStatisticsManager {
     /**
      * Gather object statistics.
      *
-     * @param target Target to gather statistics by.
+     * @param targets Target to params map to gather statistics by.
      * @throws IgniteCheckedException  Throws in case of errors.
      */
-    public void gatherObjectStatistics(StatisticsTarget target) throws IgniteCheckedException;
-
-    /**
-     * Gather objects statistics.
-     *
-     * @param targets Gathering of targets to collect statistics by (schema, obj, columns).
-     * @return Array of futures, to track progress and cancel collection on each of specified cache group.
-     */
-    public StatisticsGatheringFuture<Map<StatisticsTarget, ObjectStatistics>>[] gatherObjectStatisticsAsync(
-        StatisticsTarget... targets
-    );
-
-    /**
-     * Cancel object statistics gathering.
-     *
-     * @param gatId Gathering id.
-     * @return {@code true} if gathering was cancelled, {@code false} if specified gathering wasn't found.
-     * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
-     */
-    public boolean cancelObjectStatisticsGathering(UUID gatId) throws IgniteCheckedException;
-
-    /**
-     * Get local statistics by object.
-     *
-     * @param schemaName Schema name.
-     * @param objName Object to collect statistics by.
-     * @return Object statistics or {@code null} if there are no available statistics by specified object.
-     */
-    public ObjectStatistics getLocalStatistics(String schemaName, String objName);
-
-    /**
-     * Get global statistics by object.
-     *
-     * @param schemaName Schema name.
-     * @param objName Object to collect statistics by.
-     * @return Object statistics or {@code null} if there are no available statistics by specified object.
-     * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
-     */
-    public ObjectStatistics getGlobalStatistics(String schemaName, String objName) throws IgniteCheckedException;
+    public void collectStatistics(StatisticsObjectConfiguration... targets) throws IgniteCheckedException;
 
     /**
      * Clear object statistics.
@@ -76,5 +36,53 @@ public interface IgniteStatisticsManager {
      * @param targets Collection of target to collect statistics by (schema, obj, columns).
      * @throws IgniteCheckedException In case of errors (for example: unsupported feature)
      */
-    public void clearObjectStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+    public void dropStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+
+    /**
+     * Refresh object statistics.
+     *
+     * @param targets Target to refresh statistics by.
+     * @throws IgniteCheckedException  Throws in case of errors.
+     */
+    public void refreshStatistics(StatisticsTarget... targets) throws IgniteCheckedException;
+
+    /**
+     * Drop all statistics.
+     */
+    public void dropAll() throws IgniteCheckedException;
+
+    /**
+     * Get local statistics by object.
+     *
+     * @param key Statistic key.
+     * @return Object statistics or {@code null} if there are no available statistics by specified object.
+     */
+    public ObjectStatistics getLocalStatistics(StatisticsKey key);
+
+    /**
+     * Stop statistic manager.
+     */
+    public void stop();
+
+    /**
+     * Set statistics usage state.
+     *
+     * @param state Statistics state.
+     */
+    public void usageState(StatisticsUsageState state) throws IgniteCheckedException;
+
+    /**
+     * @return Statistics usage state.
+     */
+    public StatisticsUsageState usageState();
+
+    /**
+     * To track statistics invalidation. Skip value if no statistics for the given table exists.
+     *
+     * @param schemaName Schema name.
+     * @param objName Object name.
+     * @param partId Partition id.
+     * @param keyBytes Row key bytes.
+     */
+    public void onRowUpdated(String schemaName, String objName, int partId, byte[] keyBytes);
 }

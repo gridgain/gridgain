@@ -19,6 +19,7 @@ package org.apache.ignite.examples.datagrid;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheMode;
@@ -67,6 +68,16 @@ public class CacheQueryExample {
 
     /** Persons collocated with Organizations cache name. */
     private static final String PERSON_CACHE = CacheQueryExample.class.getSimpleName() + "Persons";
+
+    static {
+        /**
+         * By default, Ignite does not print sensitive information.
+         * Let's set this property in order to print scan query result represented by {@link BinaryObject}.
+         * @see {@link #scanQuery()}
+         * @see {@link IgniteSystemProperties#IGNITE_SENSITIVE_DATA_LOGGING}
+         */
+        System.setProperty(IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING, "plain");
+    }
 
     /**
      * Executes example.

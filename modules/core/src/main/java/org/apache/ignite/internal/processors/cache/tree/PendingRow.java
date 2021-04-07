@@ -22,6 +22,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteUuid;
 
 /**
  *
@@ -37,10 +38,13 @@ public class PendingRow {
     public int cacheId;
 
     /** */
-    public boolean tombstone;
+    public Boolean tombstone;
 
     /** */
     public KeyCacheObject key;
+
+    /** A cache deployment the row belongs to. */
+    public IgniteUuid deploymentId;
 
     /**
      * Creates a new instance which represents an upper or lower bound

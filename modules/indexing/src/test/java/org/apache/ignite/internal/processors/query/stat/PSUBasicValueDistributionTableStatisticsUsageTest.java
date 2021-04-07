@@ -55,42 +55,42 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        runSql("DROP TABLE IF EXISTS digital_distribution");
+        sql("DROP TABLE IF EXISTS digital_distribution");
 
-        runSql("CREATE TABLE digital_distribution (ID INT PRIMARY KEY, col_a int, col_b int, col_c int, col_d int) " +
+        sql("CREATE TABLE digital_distribution (ID INT PRIMARY KEY, col_a int, col_b int, col_c int, col_d int) " +
             "WITH \"TEMPLATE=" + cacheMode + "\"");
 
-        runSql("CREATE INDEX digital_distribution_col_a ON digital_distribution(col_a)");
-        runSql("CREATE INDEX digital_distribution_col_b ON digital_distribution(col_b)");
-        runSql("CREATE INDEX digital_distribution_col_c ON digital_distribution(col_c)");
-        runSql("CREATE INDEX digital_distribution_col_d ON digital_distribution(col_d)");
+        sql("CREATE INDEX digital_distribution_col_a ON digital_distribution(col_a)");
+        sql("CREATE INDEX digital_distribution_col_b ON digital_distribution(col_b)");
+        sql("CREATE INDEX digital_distribution_col_c ON digital_distribution(col_c)");
+        sql("CREATE INDEX digital_distribution_col_d ON digital_distribution(col_d)");
 
         for (int i = 0; i < 100; i++) {
             String sql = String.format("INSERT INTO digital_distribution(id, col_a, col_b, col_c, col_d)" +
                 " VALUES(%d, %d, %d, 1, null)", i, i, i + 200);
-            runSql(sql);
+            sql(sql);
         }
         for (int i = 100; i < 110; i++) {
             String sql = String.format("INSERT INTO digital_distribution(id, col_a, col_b, col_c) " +
                 "VALUES(%d, null, %d, 1)", i, i + 200);
-            runSql(sql);
+            sql(sql);
         }
 
-        runSql("DROP TABLE IF EXISTS empty_distribution");
+        sql("DROP TABLE IF EXISTS empty_distribution");
 
-        runSql("CREATE TABLE empty_distribution (ID INT PRIMARY KEY, col_a int) " +
+        sql("CREATE TABLE empty_distribution (ID INT PRIMARY KEY, col_a int) " +
             "WITH \"TEMPLATE=" + cacheMode + "\"");
 
-        runSql("CREATE INDEX empty_distribution_col_a ON empty_distribution(col_a)");
+        sql("CREATE INDEX empty_distribution_col_a ON empty_distribution(col_a)");
 
-        runSql("DROP TABLE IF EXISTS empty_distribution_no_stat");
+        sql("DROP TABLE IF EXISTS empty_distribution_no_stat");
 
-        runSql("CREATE TABLE empty_distribution_no_stat (ID INT PRIMARY KEY, col_a int) " +
+        sql("CREATE TABLE empty_distribution_no_stat (ID INT PRIMARY KEY, col_a int) " +
             "WITH \"TEMPLATE=" + cacheMode + "\"");
 
-        runSql("CREATE INDEX empty_distribution_no_stat_col_a ON empty_distribution_no_stat(col_a)");
+        sql("CREATE INDEX empty_distribution_no_stat_col_a ON empty_distribution_no_stat(col_a)");
 
-        updateStatistics("digital_distribution", "empty_distribution");
+        collectStatistics("digital_distribution", "empty_distribution");
     }
 
     /**

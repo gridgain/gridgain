@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.gridgain.internal.h2.value.Value;
 
 import java.util.Arrays;
@@ -48,6 +49,12 @@ public class ColumnStatistics {
     /** Raw data. */
     private final byte[] raw;
 
+    /** Version. */
+    private final long ver;
+
+    /** Created at time, milliseconds. */
+    private final long createdAt;
+
     /**
      * Constructor.
      *
@@ -58,8 +65,20 @@ public class ColumnStatistics {
      * @param total Total number of values in column.
      * @param size Average size in bytes, for variable size only.
      * @param raw Raw data to aggregate statistics.
+     * @param ver Statistics version.
+     * @param createdAt Created at time, milliseconds.
      */
-    public ColumnStatistics(Value min, Value max, int nulls, int cardinality, long total, int size, byte[] raw) {
+    public ColumnStatistics(
+        Value min,
+        Value max,
+        int nulls,
+        int cardinality,
+        long total,
+        int size,
+        byte[] raw,
+        long ver,
+        long createdAt
+    ) {
         this.min = min;
         this.max = max;
         this.nulls = nulls;
@@ -67,6 +86,8 @@ public class ColumnStatistics {
         this.total = total;
         this.size = size;
         this.raw = raw;
+        this.ver = ver;
+        this.createdAt = createdAt;
     }
 
     /**
@@ -118,6 +139,20 @@ public class ColumnStatistics {
         return raw;
     }
 
+    /**
+     * @return Statistic's version.
+     */
+    public long version() {
+        return ver;
+    }
+
+    /**
+     * @return Created at time, milliseconds
+     */
+    public long createdAt() {
+        return createdAt;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -127,6 +162,8 @@ public class ColumnStatistics {
                 cardinality == that.cardinality &&
                 total == that.total &&
                 size == that.size &&
+                ver == that.ver &&
+                createdAt == that.createdAt &&
                 Objects.equals(min, that.min) &&
                 Objects.equals(max, that.max) &&
                 Arrays.equals(raw, that.raw);
@@ -134,8 +171,13 @@ public class ColumnStatistics {
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        int result = Objects.hash(min, max, nulls, cardinality, total, size);
+        int result = Objects.hash(min, max, nulls, cardinality, total, size, ver, createdAt);
         result = 31 * result + Arrays.hashCode(raw);
         return result;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ColumnStatistics.class, this);
     }
 }

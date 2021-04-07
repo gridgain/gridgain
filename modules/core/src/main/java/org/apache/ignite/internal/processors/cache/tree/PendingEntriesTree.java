@@ -93,6 +93,9 @@ public class PendingEntriesTree extends BPlusTree<PendingRow, PendingRow> {
 
             if (cmp != 0)
                 return cmp;
+
+            if (row.tombstone == null) // Filters row by cacheId. Used on cache destroy.
+                return cmp;
         }
 
         long expireTime = io.getExpireTime(pageAddr, idx);

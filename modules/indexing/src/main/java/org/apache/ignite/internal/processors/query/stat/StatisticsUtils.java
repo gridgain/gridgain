@@ -15,8 +15,6 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,7 +25,6 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMes
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsPropagationMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.gridgain.internal.h2.value.Value;
 
@@ -46,7 +43,8 @@ public class StatisticsUtils {
         GridH2ValueMessage msgMin = stat.min() == null ? null : GridH2ValueMessageFactory.toMessage(stat.min());
         GridH2ValueMessage msgMax = stat.max() == null ? null : GridH2ValueMessageFactory.toMessage(stat.max());
 
-        return new StatisticsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(), stat.total(), stat.size(), stat.raw());
+        return new StatisticsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(),
+            stat.total(), stat.size(), stat.raw(), stat.version(), stat.createdAt());
     }
 
     /**
@@ -64,7 +62,8 @@ public class StatisticsUtils {
         Value min = (data.min() == null) ? null : data.min().value(ctx);
         Value max = (data.max() == null) ? null : data.max().value(ctx);
 
-        return new ColumnStatistics(min, max, data.nulls(), data.cardinality(), data.total(), data.size(), data.rawData());
+        return new ColumnStatistics(min, max, data.nulls(), data.cardinality(),
+            data.total(), data.size(), data.rawData(), data.version(), data.createdAt());
     }
 
     /**
@@ -87,13 +86,15 @@ public class StatisticsUtils {
             colData.put(ts.getKey(), toMessage(ts.getValue()));
 
         StatisticsObjectData data;
+
         if (stat instanceof ObjectPartitionStatisticsImpl) {
             ObjectPartitionStatisticsImpl partStats = (ObjectPartitionStatisticsImpl) stat;
+
             data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, partStats.partId(),
                     partStats.updCnt(), colData);
         }
         else
-            data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, 0,0, colData);
+            data = new StatisticsObjectData(keyMsg, stat.rowCount(), type, 0, 0, colData);
         return data;
     }
 
@@ -110,27 +111,9 @@ public class StatisticsUtils {
     }
 
     /**
-     * Convert object statistics to StatsPropagationMessage.
-     *
-     * @param keyMsg Statistics key.
-     * @param type Statistics type.
-     * @param stat ObjectStatistics to convert.
-     * @return Converted StatsPropagationMessage.
-     * @throws IgniteCheckedException In case of errors.
-     */
-    public static StatisticsPropagationMessage toMessage(
-        StatisticsKeyMessage keyMsg,
-        StatisticsType type,
-        ObjectStatisticsImpl stat
-    ) throws IgniteCheckedException {
-        StatisticsObjectData data = toObjectData(keyMsg, type, stat);
-        return new StatisticsPropagationMessage(Collections.singletonList(data));
-    }
-
-    /**
      * Convert StatsObjectData message to ObjectPartitionStatistics.
      *
-     * @param ctx Kernal context to use during convertation.
+     * @param ctx Kernal context to use during conversion.
      * @param objData StatsObjectData to convert.
      * @return Converted ObjectPartitionStatistics.
      * @throws IgniteCheckedException In case of errors.
@@ -149,8 +132,12 @@ public class StatisticsUtils {
         for (Map.Entry<String, StatisticsColumnData> cs : objData.data().entrySet())
             colNameToStat.put(cs.getKey(), toColumnStatistics(ctx, cs.getValue()));
 
-        return new ObjectPartitionStatisticsImpl(objData.partId(), true, objData.rowsCnt(), objData.updCnt(),
-                colNameToStat);
+        return new ObjectPartitionStatisticsImpl(
+            objData.partId(),
+            objData.rowsCnt(),
+            objData.updCnt(),
+            colNameToStat
+        );
     }
 
     /**
@@ -174,44 +161,13 @@ public class StatisticsUtils {
     }
 
     /**
-     * Convert statistics propagation message to ObjectStatisticsImpl.
-     *
-     * @param ctx Kernal context to use during conversion.
-     * @param data StatsPropagationMessage to convert.
-     * @return Converted object statistics.
-     * @throws IgniteCheckedException In case of errors.
-     */
-    public static ObjectStatisticsImpl toObjectStatistics(
-        GridKernalContext ctx,
-        StatisticsPropagationMessage data
-    ) throws IgniteCheckedException {
-        if (data == null)
-            return null;
-
-        assert data.data().size() == 1;
-
-        StatisticsObjectData objData = data.data().get(0);
-
-        return toObjectStatistics(ctx, objData);
-    }
-
-    /**
      * Create statistics target from statistics key message.
      *
      * @param msg Source statistics key message;
      * @return StatisticsTarget.
      */
     public static StatisticsTarget statisticsTarget(StatisticsKeyMessage msg) {
-        return new StatisticsTarget(msg.schema(), msg.obj(), msg.colNames().toArray(new String[0]));
-    }
-
-    /**
-     * Create statistics key message from statistics target.
-     *
-     * @param target Source statistics target.
-     * @return StatisticsKeyMessage.
-     */
-    public static StatisticsKeyMessage statisticsKeyMessage(StatisticsTarget target) {
-        return new StatisticsKeyMessage(target.schema(), target.obj(), Arrays.asList(target.columns()));
+        String[] cols = (msg.colNames() == null) ? null : msg.colNames().toArray(new String[0]);
+        return new StatisticsTarget(msg.schema(), msg.obj(), cols);
     }
 }

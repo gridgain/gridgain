@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.gridgain.internal.h2.value.ValueUuid;
 import org.junit.Test;
 
@@ -30,14 +31,16 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
      */
     @Test
     public void testCollectedStatistics() {
-        ObjectStatisticsImpl dtypesStat = (ObjectStatisticsImpl) grid(0).context().query().getIndexing()
-                .statsManager().getLocalStatistics("PUBLIC", "DTYPES");
+
+        IgniteH2Indexing indexing = (IgniteH2Indexing) grid(0).context().query().getIndexing();
+        ObjectStatisticsImpl dtypesStat = (ObjectStatisticsImpl) indexing.statsManager().getLocalStatistics(
+            new StatisticsKey(SCHEMA, "DTYPES"));
 
         assertNotNull(dtypesStat);
 
         assertEquals(SMALL_SIZE * 1.5 - 1, dtypesStat.rowCount());
 
-        assertEquals(TYPES.length + 5, dtypesStat.columnsStatistics().size());
+        assertEquals(TYPES.length + 3, dtypesStat.columnsStatistics().size());
 
         for (String type : TYPES) {
             String colName = COL_NAME_PREFIX + type;
@@ -52,6 +55,7 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
 
             assertEquals(dtypesStat.rowCount(), colStat.total());
             assertNotNull(colStat.raw());
+
             if (colName.equals("COL_GEOMETRY")) {
                 assertNull(colStat.min());
                 assertNull(colStat.max());
@@ -279,7 +283,6 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
      * @return Local object statistics for dtypes table.
      */
     private ObjectStatisticsImpl getTypesStats() {
-        return (ObjectStatisticsImpl) grid(0).context().query().getIndexing().statsManager()
-                .getLocalStatistics(SCHEMA, "DTYPES");
+        return (ObjectStatisticsImpl) statisticsMgr(0).getLocalStatistics(new StatisticsKey(SCHEMA, "DTYPES"));
     }
 }

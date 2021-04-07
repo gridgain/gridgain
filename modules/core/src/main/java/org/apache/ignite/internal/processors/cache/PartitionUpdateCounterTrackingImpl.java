@@ -32,6 +32,7 @@ import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerImpl;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -82,7 +83,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     protected final CacheGroupContext grp;
 
     /** Tombstones clear counter. */
-    private long clearCntr;
+    private volatile long clearCntr;
 
     /**
      * Initial counter points to last sequential update after WAL recovery.
@@ -262,7 +263,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
         long reserved = reserveCntr.getAndAdd(delta);
 
-        assert reserved >= cntr : "LWM after HWM: lwm=" + cntr + ", hwm=" + reserved;
+        assert reserved >= cntr : "LWM after HWM: lwm=" + cntr + ", hwm=" + reserved + ", cntr=" + toString();
 
         return reserved;
     }
@@ -454,8 +455,37 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "Counter [lwm=" + get() + ", holes=" + queue +
-            ", maxApplied=" + highestAppliedCounter() + ", hwm=" + reserveCntr.get() + ']';
+        String quequeStr;
+        long lwm;
+        long hwm;
+        long maxApplied;
+        long clearCntr;
+
+        synchronized (this) {
+            quequeStr = queue.toString();
+
+            lwm = get();
+
+            hwm = reserveCntr.get();
+
+            maxApplied = highestAppliedCounter();
+
+            clearCntr = tombstoneClearCounter();
+        }
+
+        return new SB()
+            .a("Counter [lwm=")
+            .a(lwm)
+            .a(", holes=")
+            .a(quequeStr)
+            .a(", maxApplied=")
+            .a(maxApplied)
+            .a(", hwm=")
+            .a(hwm)
+            .a(", clearCntr=")
+            .a(clearCntr)
+            .a(']')
+            .toString();
     }
 
     /** {@inheritDoc} */

@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
@@ -53,8 +54,10 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadCacheWriter;
@@ -89,8 +92,12 @@ import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillRequest;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillResponse;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
+import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
+import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.sql.command.SqlAlterTableCommand;
 import org.apache.ignite.internal.sql.command.SqlAlterUserCommand;
+import org.apache.ignite.internal.sql.command.SqlAnalyzeCommand;
 import org.apache.ignite.internal.sql.command.SqlBeginTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
 import org.apache.ignite.internal.sql.command.SqlCommand;
@@ -98,9 +105,11 @@ import org.apache.ignite.internal.sql.command.SqlCommitTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlCreateIndexCommand;
 import org.apache.ignite.internal.sql.command.SqlCreateUserCommand;
 import org.apache.ignite.internal.sql.command.SqlDropIndexCommand;
+import org.apache.ignite.internal.sql.command.SqlDropStatisticsCommand;
 import org.apache.ignite.internal.sql.command.SqlDropUserCommand;
 import org.apache.ignite.internal.sql.command.SqlIndexColumn;
 import org.apache.ignite.internal.sql.command.SqlKillQueryCommand;
+import org.apache.ignite.internal.sql.command.SqlRefreshStatitsicsCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -377,7 +386,10 @@ public class CommandProcessor {
             || cmd instanceof SqlAlterTableCommand
             || cmd instanceof SqlCreateUserCommand
             || cmd instanceof SqlAlterUserCommand
-            || cmd instanceof SqlDropUserCommand;
+            || cmd instanceof SqlDropUserCommand
+            || cmd instanceof SqlAnalyzeCommand
+            || cmd instanceof SqlRefreshStatitsicsCommand
+            || cmd instanceof SqlDropStatisticsCommand;
     }
 
     /**
@@ -491,6 +503,64 @@ public class CommandProcessor {
             throw new IgniteSQLException("Failed to cancel query [nodeId=" + cmd.nodeId() + ",qryId="
                 + cmd.nodeQueryId() + ",err=" + e + "]", e);
         }
+    }
+
+    /**
+     * Process analyze command.
+     *
+     * @param cmd Sql analyze command.
+     */
+    private void processAnalyzeCommand(SqlAnalyzeCommand cmd) throws IgniteCheckedException {
+        ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
+
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
+
+        StatisticsObjectConfiguration objCfgs[] = cmd.configurations().stream()
+            .map(t -> {
+                if (t.key().schema() == null) {
+                    StatisticsKey key = new StatisticsKey(cmd.schemaName(), t.key().obj());
+                    return new StatisticsObjectConfiguration(key, t.columns().values(),
+                        t.maxPartitionObsolescencePercent());
+                }
+                else
+                    return t;
+            }).toArray(StatisticsObjectConfiguration[]::new);
+
+        indexing.statsManager().collectStatistics(objCfgs);
+    }
+
+    /**
+     * Process refresh statistics command.
+     *
+     * @param cmd Refresh statistics command.
+     */
+    private void processRefreshStatisticsCommand(SqlRefreshStatitsicsCommand cmd) throws IgniteCheckedException {
+        ctx.security().authorize(SecurityPermission.REFRESH_STATISTICS);
+
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
+
+        StatisticsTarget[] targets = cmd.targets().stream()
+            .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
+            .toArray(StatisticsTarget[]::new);
+
+        indexing.statsManager().refreshStatistics(targets);
+    }
+
+    /**
+     * Process drop statistics command.
+     *
+     * @param cmd Drop statistics command.
+     */
+    private void processDropStatisticsCommand(SqlDropStatisticsCommand cmd) throws IgniteCheckedException {
+        ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
+
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
+
+        StatisticsTarget[] targets = cmd.targets().stream()
+            .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
+            .toArray(StatisticsTarget[]::new);
+
+        indexing.statsManager().dropStatistics(targets);
     }
 
     /**
@@ -610,6 +680,12 @@ public class CommandProcessor {
 
                 ctx.authentication().removeUser(dropCmd.userName());
             }
+            else if (cmd instanceof SqlAnalyzeCommand)
+                processAnalyzeCommand((SqlAnalyzeCommand) cmd);
+            else if (cmd instanceof SqlRefreshStatitsicsCommand)
+                processRefreshStatisticsCommand((SqlRefreshStatitsicsCommand) cmd);
+            else if (cmd instanceof SqlDropStatisticsCommand)
+                processDropStatisticsCommand((SqlDropStatisticsCommand) cmd);
             else
                 throw new IgniteSQLException("Unsupported DDL operation: " + sql,
                     IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
@@ -715,7 +791,7 @@ public class CommandProcessor {
                             cmd.tableName());
                 }
                 else {
-                    QueryEntity e = toQueryEntity(cmd);
+                    QueryEntity e = toQueryEntity(ctx, cmd);
 
                     CacheConfiguration<?, ?> ccfg = new CacheConfiguration<>(cmd.tableName());
 
@@ -770,6 +846,9 @@ public class CommandProcessor {
                 }
                 else {
                     ctx.security().authorize(tbl.cacheName(), SecurityPermission.CACHE_DESTROY);
+
+                    String schema = tbl.getSchema().getName();
+                    String tblName = tbl.getName();
 
                     ctx.query().dynamicTableDrop(tbl.cacheName(), cmd.tableName(), cmd.ifExists());
                 }
@@ -999,8 +1078,8 @@ public class CommandProcessor {
      * Convert this statement to query entity and do Ignite specific sanity checks on the way.
      * @return Query entity mimicking this SQL statement.
      */
-    private static QueryEntity toQueryEntity(GridSqlCreateTable createTbl) {
-        QueryEntity res = new QueryEntity();
+    private static QueryEntity toQueryEntity(GridKernalContext ctx, GridSqlCreateTable createTbl) {
+        QueryEntityEx res = new QueryEntityEx();
 
         res.setTableName(createTbl.tableName());
 
@@ -1075,8 +1154,14 @@ public class CommandProcessor {
 
             res.setKeyFieldName(pkCol.columnName());
         }
-        else
+        else {
             res.setKeyFields(createTbl.primaryKeyColumns());
+
+            if (IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
+                IgniteDiscoverySpi.SRV_NODES), IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)
+            )
+                res.setPreserveKeysOrder(true);
+        }
 
         if (!createTbl.wrapValue()) {
             GridSqlColumn valCol = null;
@@ -1099,13 +1184,8 @@ public class CommandProcessor {
         res.setValueType(valTypeName);
         res.setKeyType(keyTypeName);
 
-        if (!F.isEmpty(notNullFields)) {
-            QueryEntityEx res0 = new QueryEntityEx(res);
-
-            res0.setNotNullFields(notNullFields);
-
-            res = res0;
-        }
+        if (!F.isEmpty(notNullFields))
+            res.setNotNullFields(notNullFields);
 
         return res;
     }

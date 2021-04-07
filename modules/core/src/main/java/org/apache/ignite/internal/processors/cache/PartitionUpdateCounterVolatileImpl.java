@@ -48,7 +48,7 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
     private final CacheGroupContext grp;
 
     /** */
-    private long clearCntr;
+    private volatile long clearCntr;
 
     /**
      * @param grp Group.
@@ -193,7 +193,7 @@ public class PartitionUpdateCounterVolatileImpl implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "Counter [init=" + initCntr + ", val=" + get() + ']';
+        return "Counter [init=" + initCntr + ", val=" + get() + ", clearCntr=" + clearCntr + ']';
     }
 
     /** {@inheritDoc} */
