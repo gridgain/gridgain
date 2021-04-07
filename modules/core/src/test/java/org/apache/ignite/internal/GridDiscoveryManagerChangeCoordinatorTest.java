@@ -86,8 +86,6 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
 
         assertTrue(lsnr.check());
 
-        lsnr.reset();
-
         lsnr = LogListener.matches(CRD_CHANGE_MSG).build();
 
         listeningLog.registerListener(lsnr);
