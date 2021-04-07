@@ -18,13 +18,13 @@ package org.apache.ignite.internal.processors.cache;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.cache.Cache;
@@ -47,6 +47,9 @@ import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.TransactionHeuristicException;
+
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Tests how eviction behaves when {@link DataRegionConfiguration#getEmptyPagesPoolSize()} is not enough for large
@@ -130,15 +133,16 @@ public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractT
         IgniteCache<Object, Object> cache,
         Consumer<Runnable> cacheOpWrapper
     ) throws Exception {
-        List<IgniteInternalFuture<Object>> futures = new ArrayList<>();
+        List<IgniteInternalFuture<Void>> futures = new ArrayList<>();
 
-        Function<ThreadLocalRandom, byte[]> function = random -> new byte[random.nextInt(3) * 100 * 1024];
-
-        AtomicReference<Exception> exceptionsRef = new AtomicReference<>();
+        Function<ThreadLocalRandom, byte[]> randomVal = random -> new byte[random.nextInt(3) * 100 * 1024];
+        Function<ThreadLocalRandom, byte[]> randomSmallVal = random -> new byte[random.nextInt(3) * 50 * 1024];
 
         AtomicBoolean running = new AtomicBoolean(true);
 
         DataRegion dataRegion = ignite.context().cache().cache(cache.getName()).context().dataRegion();
+
+        List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
 
         int emptyPagesPoolSizeInitial = dataRegion.emptyPagesPoolSize();
 
@@ -149,36 +153,34 @@ public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractT
                 try {
                     cacheOpWrapper.accept(() -> op.apply(random));
                 }
-                catch (CachePartialUpdateException e) {
-                    exceptionsRef.compareAndSet(null, e);
-
-                    running.set(false);
+                catch (CachePartialUpdateException | TransactionHeuristicException e) {
+                    exceptions.add(e);
                 }
             }
         };
 
         for (int i = 0; i < 3; i++) {
-            IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
-                task.apply(random -> cache.put(random.nextInt(), function.apply(random)));
+            IgniteInternalFuture<Void> fut = GridTestUtils.runAsync(() -> {
+                task.apply(random -> cache.put(random.nextInt(), randomVal.apply(random)));
             });
 
             futures.add(fut);
         }
 
         for (int i = 0; i < 3; i++) {
-            IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
-                task.apply(random -> cache.replace(random.nextInt(), function.apply(random)));
+            IgniteInternalFuture<Void> fut = GridTestUtils.runAsync(() -> {
+                task.apply(random -> cache.replace(random.nextInt(), randomVal.apply(random)));
             });
 
             futures.add(fut);
         }
 
         for (int i = 0; i < 3; i++) {
-            IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> task.apply(random -> {
+            IgniteInternalFuture<Void> fut = GridTestUtils.runAsync(() -> task.apply(random -> {
                 Map<Integer, Object> map = new HashMap<>();
 
-                map.put(random.nextInt(), function.apply(random));
-                map.put(random.nextInt(), function.apply(random));
+                map.put(random.nextInt(), randomSmallVal.apply(random));
+                map.put(random.nextInt(), randomSmallVal.apply(random));
 
                 cache.putAll(map);
             }));
@@ -186,15 +188,26 @@ public class IgniteOOMWithoutNodeFailureAbstractTest extends GridCommonAbstractT
             futures.add(fut);
         }
 
-        doSleep(10_000);
+        waitForCondition(() -> dataRegion.emptyPagesPoolSize() >= emptyPagesPoolSizeInitial * 4, 60_000, 10);
+
+        int emptyPagesPoolSizeAfterWarmup = dataRegion.emptyPagesPoolSize();
+
+        log.info("Test - empty pages pool size after test warmup: " + emptyPagesPoolSizeAfterWarmup);
+
+        exceptions.clear();
+
+        doSleep(20_000);
 
         running.set(false);
 
-        for (IgniteInternalFuture<Object> future : futures)
+        for (IgniteInternalFuture<Void> future : futures)
             future.get(5, TimeUnit.SECONDS);
 
-        assertNull(exceptionsRef.get());
         assertTrue(dataRegion.emptyPagesPoolSize() > emptyPagesPoolSizeInitial);
+
+        // Exceptions count is 0 in most cases. But we can't guarantee this, as eviction doesn't happen
+        // atomically with put/replace.
+        log.info("Test - exceptions count: " + exceptions.size());
     }
 
     /**

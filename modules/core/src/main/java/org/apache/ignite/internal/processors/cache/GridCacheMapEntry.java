@@ -5734,20 +5734,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             while (true) {
                 try {
-                    if (val != null) {
-                        newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(
-                            entry.cctx,
-                            entry.key,
-                            val,
-                            ver,
-                            expireTime,
-                            oldRow);
-                    }
-                    else {
-                        // Create tombstone for preloaded removal.
-                        newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(entry.cctx, entry.key(),
-                            TombstoneCacheObject.INSTANCE, ver, entry.cctx.shared().ttl().tombstoneExpireTime(), oldRow);
-                    }
+                    newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRow(
+                        entry.cctx,
+                        entry.key(),
+                        val != null ? val : TombstoneCacheObject.INSTANCE,
+                        ver,
+                        val != null ? expireTime : entry.cctx.shared().ttl().tombstoneExpireTime(),
+                        oldRow
+                    );
                 }
                 catch (IgniteCheckedException e) {
                     IgniteCheckedException ex = e;
