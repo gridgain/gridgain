@@ -15,43 +15,73 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.pagemem.PageMemory;
-import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetricsImpl;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderWithDelegateMetric;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.MetricsMxBean;
-import org.apache.ignite.spi.metric.Metric;
-
-import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheGroupMetricsRegistryName;
-import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import org.jetbrains.annotations.Nullable;
 
 /**
  *
  */
 public class DataRegionMetricsImpl implements DataRegionMetrics {
+    private static final class LongAdderMetricDelegate implements LongAdderWithDelegateMetric.Delegate {
+        /** */
+        private final LongAdderMetric delegate;
+
+        /** */
+        public LongAdderMetricDelegate(LongAdderMetric delegate) {
+            this.delegate = delegate;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void increment() {
+            delegate.increment();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void decrement() {
+            delegate.decrement();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void add(long x) {
+            delegate.add(x);
+        }
+    }
+
+    private static LongAdderMetricDelegate delegate(LongAdderMetric delegate) {
+        return new LongAdderMetricDelegate(delegate);
+    }
+
     /**
      * Data region metrics prefix.
      * Full name will contain {@link DataRegionConfiguration#getName()} also.
      * {@code "io.dataregion.default"}, for example.
      */
-    public static final String DATAREGION_METRICS_PREFIX = metricName("io", "dataregion");
+    public static final String DATAREGION_METRICS_PREFIX = MetricUtils.metricName("io", "dataregion");
 
     /** */
     private final DataRegionMetricsProvider dataRegionMetricsProvider;
 
-    /** */
-    private final LongAdderMetric totalAllocatedPages;
+    private final ConcurrentMap<Integer, PageMetrics> cacheGrpMetrics = new ConcurrentHashMap<>();
 
-    /** */
-    private final ConcurrentMap<String, LongAdderMetric> grpAllocationTrackers = new ConcurrentHashMap<>();
+    private final PageMetrics dataRegionPageMetrics;
 
     /**
      * Counter for number of pages occupied by large entries (one entry is larger than one page).
@@ -74,7 +104,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     private final AtomicLongMetric offHeapSize;
 
     /** */
-    private final AtomicLongMetric checkpointBufferSize;
+    private final AtomicLongMetric checkpointBufSize;
 
     /** */
     private volatile boolean metricsEnabled;
@@ -83,7 +113,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     private boolean persistenceEnabled;
 
     /** */
-    private volatile int subInts;
+    private final int subInts;
 
     /** Allocation rate calculator. */
     private final HitRateMetric allocRate;
@@ -101,47 +131,58 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     private final LongAdderMetric totalThrottlingTime;
 
     /** */
-    private final DataRegionConfiguration memPlcCfg;
+    private final DataRegionConfiguration dataRegionCfg;
 
     /** */
+    @Nullable
     private PageMemory pageMem;
 
     /** */
-    private final GridMetricManager mmgr;
+    private final GridKernalContext kernalCtx;
 
     /** Time interval (in milliseconds) when allocations/evictions are counted to calculate rate. */
     private volatile long rateTimeInterval;
 
+    public DataRegionMetricsImpl(DataRegionConfiguration dataRegionCfg, GridKernalContext kernalCtx) {
+        this(dataRegionCfg, kernalCtx, new DataRegionMetricsProvider() {
+            @Override public long partiallyFilledPagesFreeSpace() {
+                return 0;
+            }
+
+            @Override public long emptyDataPages() {
+                return 0;
+            }
+        });
+    }
+
     /**
-     * @param memPlcCfg DataRegionConfiguration.
-     * @param mmgr Metrics manager.
+     * @param dataRegionCfg DataRegionConfiguration.
+     * @param kernalCtx Kernal context.
      * @param dataRegionMetricsProvider Data region metrics provider.
      */
-    public DataRegionMetricsImpl(DataRegionConfiguration memPlcCfg,
-        GridMetricManager mmgr,
-        DataRegionMetricsProvider dataRegionMetricsProvider) {
-        this.memPlcCfg = memPlcCfg;
+    public DataRegionMetricsImpl(
+        DataRegionConfiguration dataRegionCfg,
+        GridKernalContext kernalCtx,
+        DataRegionMetricsProvider dataRegionMetricsProvider
+    ) {
+        this.dataRegionCfg = dataRegionCfg;
         this.dataRegionMetricsProvider = dataRegionMetricsProvider;
-        this.mmgr = mmgr;
+        this.kernalCtx = kernalCtx;
 
-        metricsEnabled = memPlcCfg.isMetricsEnabled();
+        metricsEnabled = dataRegionCfg.isMetricsEnabled();
 
-        persistenceEnabled = memPlcCfg.isPersistenceEnabled();
+        persistenceEnabled = dataRegionCfg.isPersistenceEnabled();
 
-        rateTimeInterval = memPlcCfg.getMetricsRateTimeInterval();
+        rateTimeInterval = dataRegionCfg.getMetricsRateTimeInterval();
 
-        subInts = memPlcCfg.getMetricsSubIntervalCount();
+        subInts = dataRegionCfg.getMetricsSubIntervalCount();
 
-        MetricRegistry mreg = mmgr.registry(metricName(DATAREGION_METRICS_PREFIX, memPlcCfg.getName()));
+        MetricRegistry mreg = metricRegistry();
 
         allocRate = mreg.hitRateMetric("AllocationRate",
             "Allocation rate (pages per second) averaged across rateTimeInternal.",
             60_000,
             5);
-
-        totalAllocatedPages = mreg.longAdderMetric("TotalAllocatedPages",
-            this::updateAllocRate,
-            "Total number of allocated pages.");
 
         evictRate = mreg.hitRateMetric("EvictionRate",
             "Eviction rate (pages per second).",
@@ -176,7 +217,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         offHeapSize = mreg.longMetric("OffHeapSize",
             "Offheap size in bytes.");
 
-        checkpointBufferSize = mreg.longMetric("CheckpointBufferSize",
+        checkpointBufSize = mreg.longMetric("CheckpointBufferSize",
             "Checkpoint buffer size in bytes.");
 
         mreg.register("EmptyDataPages",
@@ -187,16 +228,37 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         totalThrottlingTime = mreg.longAdderMetric("TotalThrottlingTime",
             "Total throttling threads time in milliseconds. The Ignite throttles threads that generate " +
                 "dirty pages during the ongoing checkpoint.");
+
+        dataRegionPageMetrics = PageMetricsImpl.builder(mreg)
+            .totalPagesCallback(new LongAdderWithDelegateMetric.Delegate() {
+                @Override public void increment() {
+                    allocRate.increment();
+                }
+
+                @Override public void add(long x) {
+                    if (x > 0)
+                        allocRate.add(x);
+                }
+
+                @Override public void decrement() {
+                }
+            })
+            .build();
+    }
+
+    private MetricRegistry metricRegistry() {
+        String registryName = MetricUtils.metricName(DATAREGION_METRICS_PREFIX, dataRegionCfg.getName());
+        return kernalCtx.metric().registry(registryName);
     }
 
     /** {@inheritDoc} */
     @Override public String getName() {
-        return U.maskName(memPlcCfg.getName());
+        return U.maskName(dataRegionCfg.getName());
     }
 
     /** {@inheritDoc} */
     @Override public long getTotalAllocatedPages() {
-        return totalAllocatedPages.value();
+        return dataRegionPageMetrics.totalPages().value();
     }
 
     /** {@inheritDoc} */
@@ -235,7 +297,8 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         if (!metricsEnabled)
             return 0;
 
-        return totalAllocatedPages.value() != 0 ? (float)largeEntriesPages.value() / totalAllocatedPages.value() : 0;
+        long totalAllocatedPages = getTotalAllocatedPages();
+        return totalAllocatedPages != 0 ? (float)largeEntriesPages.value() / totalAllocatedPages : 0;
     }
 
     /** {@inheritDoc} */
@@ -245,7 +308,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
 
         long freeSpace = dataRegionMetricsProvider.partiallyFilledPagesFreeSpace();
 
-        long totalAllocated = getPageSize() * totalAllocatedPages.value();
+        long totalAllocated = getPageSize() * getTotalAllocatedPages();
 
         return totalAllocated != 0 ? (float)(totalAllocated - freeSpace) / totalAllocated : 0f;
     }
@@ -310,7 +373,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         if (!metricsEnabled || !persistenceEnabled)
             return 0;
 
-        return checkpointBufferSize.value();
+        return checkpointBufSize.value();
     }
 
     /** {@inheritDoc} */
@@ -369,7 +432,11 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      * @param size Checkpoint buffer size.
      */
     public void updateCheckpointBufferSize(long size) {
-        this.checkpointBufferSize.add(size);
+        this.checkpointBufSize.add(size);
+    }
+
+    public PageMetrics pageMetrics() {
+        return dataRegionPageMetrics;
     }
 
     /**
@@ -425,23 +492,43 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
             dirtyPages.reset();
     }
 
-    /** */
-    public LongAdderMetric totalAllocatedPages() {
-        return totalAllocatedPages;
+    public PageMetrics cacheGrpPageMetrics(Integer cacheGrpId) {
+        return cacheGrpMetrics.computeIfAbsent(
+            cacheGrpId,
+            grpId -> Optional.of(kernalCtx)
+                // both cache and group descriptor can be null
+                .map(GridKernalContext::cache)
+                .map(cache -> cache.cacheGroupDescriptors().get(grpId))
+                .map(this::createCacheGrpPageMetrics)
+                // return region-wide metrics for a non-existent cache group ID. This is needed in some scenarios
+                // when per-group data structures are used on a per-region basis and in tests.
+                .orElse(dataRegionPageMetrics)
+        );
     }
 
-    /**
-     * Get or allocate group allocation tracker.
-     *
-     * @param grpName Group name.
-     * @return Group allocation tracker.
-     */
-    public LongAdderMetric getOrAllocateGroupPageAllocationTracker(String grpName) {
-        return grpAllocationTrackers.computeIfAbsent(grpName,
-            id -> mmgr.registry(cacheGroupMetricsRegistryName(grpName)).longAdderMetric(
-                "TotalAllocatedPages",
-                totalAllocatedPages::add,
-                "Cache group total allocated pages."));
+    public PageMetrics cacheGrpPageMetrics(CacheGroupDescriptor cacheGrpDesc) {
+        return cacheGrpMetrics.computeIfAbsent(
+            cacheGrpDesc.groupId(),
+            grpId -> createCacheGrpPageMetrics(cacheGrpDesc)
+        );
+    }
+
+    private PageMetrics createCacheGrpPageMetrics(CacheGroupDescriptor cacheGrpDesc) {
+        String registryName = MetricUtils.cacheGroupMetricsRegistryName(cacheGrpDesc.cacheOrGroupName());
+        MetricRegistry registry = kernalCtx.metric().registry(registryName);
+
+        return PageMetricsImpl.builder(registry)
+            .totalPagesCallback(delegate(dataRegionPageMetrics.totalPages()))
+            .dataPagesCallback(delegate(dataRegionPageMetrics.dataPages()))
+            .indexPagesCallback(delegate(dataRegionPageMetrics.indexPages()))
+            .build();
+    }
+
+    public void removeCacheGrpPageMetrics(Integer grpId) {
+        PageMetrics rmvMetrics = cacheGrpMetrics.remove(grpId);
+
+        dataRegionPageMetrics.dataPages().add(-rmvMetrics.dataPages().value());
+        dataRegionPageMetrics.indexPages().add(-rmvMetrics.indexPages().value());
     }
 
     /**
@@ -495,7 +582,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     public void pageMemory(PageMemory pageMem) {
         this.pageMem = pageMem;
 
-        MetricRegistry mreg = mmgr.registry(metricName(DATAREGION_METRICS_PREFIX, memPlcCfg.getName()));
+        MetricRegistry mreg = metricRegistry();
 
         mreg.register("PagesFillFactor",
             this::getPagesFillFactor,
@@ -562,34 +649,25 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      * Clear metrics.
      */
     public void clear() {
-        totalAllocatedPages.reset();
-        grpAllocationTrackers.values().forEach(Metric::reset);
         largeEntriesPages.reset();
         dirtyPages.reset();
         readPages.reset();
         writtenPages.reset();
         replacedPages.reset();
         offHeapSize.reset();
-        checkpointBufferSize.reset();
+        checkpointBufSize.reset();
         allocRate.reset();
         evictRate.reset();
         pageReplaceRate.reset();
         pageReplaceAge.reset();
+
+        dataRegionPageMetrics.reset();
+        cacheGrpMetrics.values().forEach(PageMetrics::reset);
     }
 
     /** @param time Time to add to {@code totalThrottlingTime} metric in milliseconds. */
     public void addThrottlingTime(long time) {
         if (metricsEnabled)
             totalThrottlingTime.add(time);
-    }
-
-    /**
-     * Updates allocation rate metric.
-     *
-     * @param delta Delta.
-     */
-    private void updateAllocRate(long delta) {
-        if (metricsEnabled && delta > 0)
-            allocRate.add(delta);
     }
 }

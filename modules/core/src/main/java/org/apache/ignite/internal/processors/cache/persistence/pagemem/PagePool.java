@@ -108,7 +108,7 @@ public class PagePool {
         if (relPtr == PageMemoryImpl.INVALID_REL_PTR)
             relPtr = allocateFreePage(tag);
 
-        if (relPtr != PageMemoryImpl.INVALID_REL_PTR && pagesCntr != null)
+        if (relPtr != PageMemoryImpl.INVALID_REL_PTR)
             pagesCntr.incrementAndGet();
 
         return relPtr;
@@ -185,10 +185,7 @@ public class PagePool {
 
         assert !PageHeader.isAcquired(absPtr) : "Release pinned page: " + PageHeader.fullPageId(absPtr);
 
-        int resCntr = 0;
-
-        if (pagesCntr != null)
-            resCntr = pagesCntr.decrementAndGet();
+        int resCntr = pagesCntr.decrementAndGet();
 
         while (true) {
             long freePageRelPtrMasked = GridUnsafe.getLongVolatile(null, freePageListPtr);

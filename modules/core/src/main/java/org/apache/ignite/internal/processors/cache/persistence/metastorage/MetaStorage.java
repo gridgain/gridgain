@@ -50,7 +50,6 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRecord;
 import org.apache.ignite.internal.processors.cache.CacheDiagnosticManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
-import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
@@ -112,9 +111,6 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
     private AtomicLong rmvId = new AtomicLong();
 
     /** */
-    private DataRegionMetricsImpl regionMetrics;
-
-    /** */
     private final boolean readOnly;
 
     /** */
@@ -148,13 +144,11 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
     public MetaStorage(
         GridCacheSharedContext<?, ?> cctx,
         DataRegion dataRegion,
-        DataRegionMetricsImpl regionMetrics,
         boolean readOnly
     ) {
         this.cctx = cctx;
         wal = cctx.wal();
         this.dataRegion = dataRegion;
-        this.regionMetrics = regionMetrics;
         this.readOnly = readOnly;
         log = cctx.logger(getClass());
         this.failureProcessor = cctx.kernalContext().failure();
@@ -162,7 +156,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
 
     /** */
     public void init(GridCacheDatabaseSharedManager db) throws IgniteCheckedException {
-        regionMetrics.clear();
+        dataRegion.metrics().clear();
         initInternal(db);
 
         if (!PRESERVE_LEGACY_METASTORAGE_PARTITION_ID) {
@@ -256,7 +250,6 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
             partStorage = new PartitionMetaStorageImpl<MetastorageRowStoreEntry>(
                 METASTORAGE_CACHE_ID,
                 freeListName,
-                regionMetrics,
                 dataRegion,
                 null,
                 wal,

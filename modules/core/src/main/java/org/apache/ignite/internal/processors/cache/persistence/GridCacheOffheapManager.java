@@ -2198,7 +2198,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     freeList = new CacheFreeList(
                         grp.groupId(),
                         freeListName,
-                        grp.dataRegion().memoryMetrics(),
                         grp.dataRegion(),
                         ctx.wal(),
                         reuseRoot.pageId().pageId(),
@@ -2223,7 +2222,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     partStorage = new PartitionMetaStorageImpl<SimpleDataRow>(
                         grp.groupId(),
                         partMetastoreName,
-                        grp.dataRegion().memoryMetrics(),
                         grp.dataRegion(),
                         null, // TODO: cannot use reuseList
                         ctx.wal(),

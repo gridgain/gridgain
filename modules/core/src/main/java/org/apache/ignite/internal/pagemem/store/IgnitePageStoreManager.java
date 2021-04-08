@@ -18,7 +18,6 @@ package org.apache.ignite.internal.pagemem.store;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -27,6 +26,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManager;
 import org.apache.ignite.internal.processors.cache.StoredCacheData;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManager;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 
@@ -53,7 +53,7 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
      * @param tracker Allocation tracker.
      * @throws IgniteCheckedException If failed.
      */
-    void initialize(int cacheId, int partitions, String workingDir, LongConsumer tracker)
+    void initialize(int cacheId, int partitions, String workingDir, PageMetrics pageMetrics)
         throws IgniteCheckedException;
 
     /**

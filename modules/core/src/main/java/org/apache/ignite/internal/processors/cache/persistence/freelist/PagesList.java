@@ -191,7 +191,7 @@ public abstract class PagesList extends DataStructure {
     }
 
     /**
-     * @param cacheId Cache ID.
+     * @param cacheGrpId Cache group ID.
      * @param name Name (for debug purpose).
      * @param pageMem Page memory.
      * @param buckets Number of buckets.
@@ -200,7 +200,7 @@ public abstract class PagesList extends DataStructure {
      * @param pageFlag Default flag value for allocated pages.
      */
     protected PagesList(
-        int cacheId,
+        int cacheGrpId,
         String name,
         PageMemory pageMem,
         int buckets,
@@ -210,7 +210,7 @@ public abstract class PagesList extends DataStructure {
         GridKernalContext ctx,
         byte pageFlag
     ) {
-        super(cacheId, null, pageMem, wal, lockLsnr, DEFAULT_PAGE_IO_RESOLVER, pageFlag);
+        super(cacheGrpId, null, pageMem, wal, lockLsnr, DEFAULT_PAGE_IO_RESOLVER, pageFlag);
 
         this.name = name;
         this.buckets = buckets;
