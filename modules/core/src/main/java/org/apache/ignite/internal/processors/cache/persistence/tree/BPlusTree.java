@@ -74,6 +74,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseL
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
+import org.apache.ignite.internal.processors.cache.tree.SearchRow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.GridArrays;
 import org.apache.ignite.internal.util.GridLongList;
@@ -457,11 +458,16 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (needWal)
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
-            if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
-                p.reconReplace(p.oldRow, newRow);
+//            try {
+                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+                    p.reconReplace(p.oldRow, newRow);
 //                System.out.println("qwgopluys printStackTrace:");
 //                new Exception().printStackTrace();
-            }
+                }
+//            }
+//            catch (Throwable e) {
+//
+//            }
 
             return FOUND;
         }
@@ -496,8 +502,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             System.out.println("qfskorwgs Insert p.row " + p.row);
 
-            if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress())
-                p.reconInsert(p.row);
+//            try {
+                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress())
+                    p.reconInsert(p.row);
+//            }
+//            catch (Throwable e) {
+//
+//            }
 
             // Check if split happened.
             if (moveUpRow != null) {
@@ -532,6 +543,17 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         @Override public Result run0(long leafId, long leafPage, long leafAddr, BPlusIO<L> io, Remove r, int lvl)
             throws IgniteCheckedException {
             assert lvl == 0 : lvl; // Leaf.
+
+            if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+                System.out.println("qfpolgjki RemoveFromLeaf");
+                try {
+                    sleep(3);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                r.reconRemoveFromLeaf(r.row);
+            }
 
             // Check the triangle invariant.
             if (io.getForward(leafAddr) != r.fwdId)
@@ -1123,6 +1145,45 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         return cursor;
     }
 
+    private GridCursor<T> findLowerUnboundedRecon(L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
+        ForwardCursor cursor = new ForwardCursor(null, upper, c, x);
+
+        cursor.reconCursor = true;
+
+        long firstPageId;
+
+        long metaPage = acquirePage(metaPageId);
+        try {
+            firstPageId = getFirstPageId(metaPageId, metaPage, 0); // Level 0 is always at the bottom.
+        }
+        finally {
+            releasePage(metaPageId, metaPage);
+        }
+
+        try {
+            long firstPage = acquirePage(firstPageId);
+
+            try {
+                long pageAddr = readLock(firstPageId, firstPage); // We always merge pages backwards, the first page is never removed.
+
+                try {
+                    cursor.init(pageAddr, io(pageAddr), -1);
+                }
+                finally {
+                    readUnlock(firstPageId, firstPage, pageAddr);
+                }
+            }
+            finally {
+                releasePage(firstPageId, firstPage);
+            }
+        }
+        catch (RuntimeException | AssertionError e) {
+            throw new BPlusTreeRuntimeException(e, grpId, metaPageId, firstPageId);
+        }
+
+        return cursor;
+    }
+
     /**
      * Check if the tree is getting destroyed.
      */
@@ -1141,6 +1202,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         return find(lower, upper, null, x);
     }
 
+    /** {@inheritDoc} */
+    public final GridCursor<T> findRecon(L lower, L upper, Object x) throws IgniteCheckedException {
+        return findRecon(lower, upper, null, x);
+    }
+
+    public void reconCursor(GridCursor cursor) {
+        ((ForwardCursor) cursor).reconCursor = true;
+    }
+
     /**
      * @param lower Lower bound inclusive or {@code null} if unbounded.
      * @param upper Upper bound inclusive or {@code null} if unbounded.
@@ -1157,6 +1227,43 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         try {
             if (lower == null)
                 return findLowerUnbounded(upper, c, x);
+
+            cursor.find();
+
+            return cursor;
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteCheckedException("Runtime failure on bounds: [lower=" + lower + ", upper=" + upper + "]", e);
+        }
+        catch (RuntimeException | AssertionError e) {
+            if (e.getCause() instanceof SQLException)
+                throw e;
+
+            long[] pageIds = pages(
+                lower == null || cursor == null || cursor.getCursor == null,
+                () -> new long[]{cursor.getCursor.pageId}
+            );
+
+            throw corruptedTreeException(
+                formatMsg("Runtime failure on bounds: [lower=%s, upper=%s]", lower, upper),
+                e, grpId, pageIds
+            );
+        }
+        finally {
+            checkDestroyed();
+        }
+    }
+
+    public GridCursor<T> findRecon(L lower, L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
+        checkDestroyed();
+
+        ForwardCursor cursor = new ForwardCursor(lower, upper, c, x);
+
+        cursor.reconCursor = true;
+
+        try {
+            if (lower == null)
+                return findLowerUnboundedRecon(upper, c, x);
 
             cursor.find();
 
@@ -3166,6 +3273,342 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         public L row() {
             return row;
         }
+
+        public void reconInsert(L newRow) {
+            System.out.println("qglopdslt " + newRow);
+
+            if (newRow instanceof CacheDataRowAdapter/* && reconciliationCtx.isBatchesInProgress()*/) {
+                CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
+
+                reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
+
+                AtomicLong reconSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
+
+                int cacheId = reconciliationCtx.cacheId;
+
+                if (row0.isReady() && !row0.tombstone()) {
+//                    *******************************************
+                    if (/*borderKey != null && key <= borderKey*/reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0) {
+                        try {
+                            sleep(7);
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                        reconSize.incrementAndGet();
+//                        System.out.println("in PUT after increment reconSize: key " + key + " reconSize " + reconSize.get());
+                        System.out.println("qjkdpotd in PUT reconSize.incrementAndGet(): key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
+                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+                            " ||| storageSize:" + reconSize.get() +
+                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                    }
+                    else {
+                        try {
+                            sleep(7);
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+//                        reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).compute(row0.key(), (k, v) -> {
+//                                    if (v != null && !v.equals(1)) {
+////                                        System.out.println("in PUT remove key from tempMap: key " + row0.key());
+//
+//                                        System.out.println("qbhhysdpir in PUT remove key from tempMap: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+//                                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+//                                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+//                                            " ||| storageSize:" + reconSize.get() +
+//                                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+//                                        return null;
+//                                    }
+//                                    else if (new Integer(1).equals(v)) {
+////                                        System.out.println("in PUT added key to tempMap: key " + row0.key() + " delta " + 1);
+//
+//                                        System.out.println("qhjutgdp in PUT added key to tempMap: key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+//                                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+//                                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+//                                            " ||| storageSize:" + reconSize.get() +
+//                                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+//                                        T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx.lastKeys.get(reconciliationCtx.cacheId), 1);
+//                                        return borderKeyTuple;
+//                                    }
+//                                    else {
+//                                        System.out.println("qhjuypfjf in PUT without changes: key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+//                                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+//                                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+//                                            " ||| storageSize:" + reconSize.get() +
+//                                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+//
+//                                        return v;
+//                                    }
+//                                });
+                        T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx.lastKeys.get(reconciliationCtx.cacheId), 1);
+
+//                        tempMap.put(row0.key(), borderKeyTuple);
+
+                        reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).put(row0.key(), borderKeyTuple);
+                        System.out.println("in PUT added key to tempMap: key " + row0.key());
+                    }
+//                    *******************************************
+
+                }
+                else if (row0.isReady() && row0.tombstone())
+                    System.out.println("qfghypsfrg put tombstone");
+                if (!row0.isReady())
+                    System.out.println("qfghypsfrg put not ready");
+            }
+
+        }
+
+        public void reconRemoveFromLeaf(L row) {
+            if (row instanceof SearchRow/* && reconciliationCtx.isBatchesInProgress()*/) {
+                SearchRow row0 = (SearchRow)row;
+
+                System.out.println("qwlpodfjhg reconRemoveFromLeaf row " + row + " " + Thread.currentThread().getName());
+
+                reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
+
+                reconciliationCtx.sizes.putIfAbsent(reconciliationCtx.cacheId, new AtomicLong());
+
+                AtomicLong reconSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
+
+                int cacheId = reconciliationCtx.cacheId;
+                if ((/*borderKey != null && key <= borderKey*/reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0)) {
+                    try {
+                        sleep(2);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    reconSize.decrementAndGet();
+//                        System.out.println("in reconRemoveFromLeaf after decrement reconSize: key " + row0.key() + " reconSize " + reconSize);
+
+                    System.out.println("qfmpdgbrnjuf in reconRemoveFromLeaf after decrement reconSize: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                        " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
+                        " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+                        " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+                        " ||| storageSize:" + reconSize.get() +
+                        " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                }
+                else {
+                    try {
+                        sleep(2);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).compute(row0.key(), (k, v) -> {
+//                                    System.out.println("k: " + k + ", v: " + v);
+                        if (k != null && v != null /*&& v.equals(1)*/) {
+
+                            try {
+                                sleep(2);
+                            }
+                            catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+
+//                                System.out.println("in REMOVE compute: remove key " + row0.key());
+                            System.out.println("qfmpdgbrnjuf in reconRemoveFromLeaf remove key from tempMap: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                                " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+                                " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+                                " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+                                " ||| storageSize:" + reconSize.get() +
+                                " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+
+                            return null;
+                        }
+                        else if (v == null && reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0) {
+//                                        doSleep(2);
+
+                            try {
+                                sleep(2);
+                            }
+                            catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+
+                            reconSize.decrementAndGet();
+//                                System.out.println("in REMOVE compute: decrement and remove key " + row0.key() + " reconSize " + reconSize);
+
+                            System.out.println("qfmpdgbrnjuf in reconRemoveFromLeaf compute: decrement and remove key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                                " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+                                " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+                                " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+                                " ||| storageSize:" + reconSize.get() +
+                                " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+
+                            return null;
+                        }
+                        else {
+                            try {
+                                sleep(2);
+                            }
+                            catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+
+//                                System.out.println("in REMOVE compute: do nothing key " + row0.key() + " ");
+                            System.out.println("qfhydopdgw " + k);
+
+                            System.out.println("qfmpdgbrnjuf in reconRemoveFromLeaf compute: decrement and remove key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                                " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+                                " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+                                " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+                                " ||| storageSize:" + reconSize.get() +
+                                " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                            return v;
+                        }
+                    });
+
+                }
+            }
+        }
+
+        public void reconReplace(L oldRow, L newRow) {
+            System.out.println("qbfkiurtd " + newRow);
+
+            if (newRow instanceof CacheDataRowAdapter/* && reconciliationCtx.isBatchesInProgress()*/) {
+                CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
+                CacheDataRowAdapter oldRow0;
+
+                System.out.println("qfgyhopffs reconReplace oldRow " + oldRow);
+                System.out.println("qfgyhopffs reconReplace newRow " + newRow);
+
+                boolean oldIsTombstone = false;
+
+                if (oldRow instanceof CacheDataRowAdapter) {
+                    oldRow0 = (CacheDataRowAdapter) oldRow;
+
+                    if (oldRow0.tombstone())
+                        oldIsTombstone = true;
+                }
+
+                reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
+
+                reconciliationCtx.sizes.putIfAbsent(reconciliationCtx.cacheId, new AtomicLong());
+
+                AtomicLong reconSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
+
+                int cacheId = reconciliationCtx.cacheId;
+
+                if (row0.isReady() && ((row0.tombstone() && !oldIsTombstone && oldRow != null))) {
+                    System.out.println("qjiiuofdg reconReplace row0.tombstone()");
+
+//                    *******************************************
+                    if ((/*borderKey != null && key <= borderKey*/reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0)) {
+                        try {
+                            sleep(2);
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                        reconSize.decrementAndGet();
+//                        System.out.println("in REMOVE after decrement reconSize: key " + row0.key() + " reconSize " + reconSize);
+
+                        System.out.println("qcbhpfjlas in REMOVE after decrement reconSize: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
+                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+                            " ||| storageSize:" + reconSize.get() +
+                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                    }
+                    else {
+                        try {
+                            sleep(2);
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                        reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).compute(row0.key(), (k, v) -> {
+//                                    System.out.println("k: " + k + ", v: " + v);
+                            if (k != null && v != null /*&& v.equals(1)*/) {
+
+                                try {
+                                    sleep(2);
+                                }
+                                catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+
+//                                System.out.println("in REMOVE compute: remove key " + row0.key());
+                                System.out.println("qjhuijdpot in REMOVE remove key from tempMap: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+                                    " ||| storageSize:" + reconSize.get() +
+                                    " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+
+                                return null;
+                            }
+                            else if (v == null && reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0) {
+//                                        doSleep(2);
+
+                                try {
+                                    sleep(2);
+                                }
+                                catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+
+                                reconSize.decrementAndGet();
+//                                System.out.println("in REMOVE compute: decrement and remove key " + row0.key() + " reconSize " + reconSize);
+
+                                System.out.println("qhypakiryt in REMOVE compute: decrement and remove key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+                                    " ||| storageSize:" + reconSize.get() +
+                                    " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+
+                                return null;
+                            }
+                            else {
+                                try {
+                                    sleep(2);
+                                }
+                                catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+
+//                                System.out.println("in REMOVE compute: do nothing key " + row0.key() + " ");
+                                System.out.println("qfhydopdgw " + k);
+
+                                System.out.println("qolpfdtyhs in REMOVE compute: decrement and remove key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+                                    " ||| storageSize:" + reconSize.get() +
+                                    " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                                return v;
+                            }
+                        });
+
+                    }
+//                    *******************************************
+
+                }
+                else if (row0.isReady() && !row0.tombstone() && (/*oldRow == null || */oldIsTombstone)) {
+                    System.out.println("reconInsert in Replace start");
+                    reconInsert(newRow);
+                    System.out.println("reconInsert in Replace finish");
+                }
+                else {
+                    System.out.println("In reconReplace ELSE");
+                }
+            }
+
+        }
     }
 
     /**
@@ -3655,233 +4098,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
 //        public KeyCacheObject key;
 
-        public void reconInsert(L newRow) {
-            System.out.println("qglopdslt " + newRow);
 
-            if (newRow instanceof CacheDataRowAdapter/* && reconciliationCtx.isBatchesInProgress()*/) {
-                CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
-
-                reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
-
-                AtomicLong reconSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
-
-                int cacheId = reconciliationCtx.cacheId;
-
-                if (row0.isReady() && !row0.tombstone()) {
-//                    *******************************************
-                    if (/*borderKey != null && key <= borderKey*/reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0) {
-                        try {
-                            sleep(7);
-                        }
-                        catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
-                        reconSize.incrementAndGet();
-//                        System.out.println("in PUT after increment reconSize: key " + key + " reconSize " + reconSize.get());
-                        System.out.println("qjkdpotd in PUT reconSize.incrementAndGet(): key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
-                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                            " ||| storageSize:" + reconSize.get() +
-                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-                    }
-                    else {
-                        try {
-                            sleep(7);
-                        }
-                        catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
-//                        reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).compute(row0.key(), (k, v) -> {
-//                                    if (v != null && !v.equals(1)) {
-////                                        System.out.println("in PUT remove key from tempMap: key " + row0.key());
-//
-//                                        System.out.println("qbhhysdpir in PUT remove key from tempMap: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-//                                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
-//                                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-//                                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-//                                            " ||| storageSize:" + reconSize.get() +
-//                                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-//                                        return null;
-//                                    }
-//                                    else if (new Integer(1).equals(v)) {
-////                                        System.out.println("in PUT added key to tempMap: key " + row0.key() + " delta " + 1);
-//
-//                                        System.out.println("qhjutgdp in PUT added key to tempMap: key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-//                                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
-//                                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-//                                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-//                                            " ||| storageSize:" + reconSize.get() +
-//                                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-//                                        T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx.lastKeys.get(reconciliationCtx.cacheId), 1);
-//                                        return borderKeyTuple;
-//                                    }
-//                                    else {
-//                                        System.out.println("qhjuypfjf in PUT without changes: key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-//                                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
-//                                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-//                                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-//                                            " ||| storageSize:" + reconSize.get() +
-//                                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-//
-//                                        return v;
-//                                    }
-//                                });
-                        T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx.lastKeys.get(reconciliationCtx.cacheId), 1);
-
-//                        tempMap.put(row0.key(), borderKeyTuple);
-
-                        reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).put(row0.key(), borderKeyTuple);
-                        System.out.println("in PUT added key to tempMap: key " + row0.key());
-                    }
-//                    *******************************************
-
-                }
-                else if (row0.isReady() && row0.tombstone())
-                    System.out.println("qfghypsfrg put tombstone");
-                if (!row0.isReady())
-                    System.out.println("qfghypsfrg put not ready");
-            }
-
-        }
-
-        public void reconReplace(L oldRow, L newRow) {
-            System.out.println("qbfkiurtd " + newRow);
-
-            if (newRow instanceof CacheDataRowAdapter/* && reconciliationCtx.isBatchesInProgress()*/) {
-                CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
-                CacheDataRowAdapter oldRow0;
-
-                System.out.println("qfgyhopffs reconReplace oldRow " + oldRow);
-                System.out.println("qfgyhopffs reconReplace newRow " + newRow);
-
-                boolean oldIsTombstone = false;
-
-                if (oldRow instanceof CacheDataRowAdapter) {
-                    oldRow0 = (CacheDataRowAdapter) oldRow;
-
-                    if (oldRow0.tombstone())
-                        oldIsTombstone = true;
-                }
-
-                reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
-
-                reconciliationCtx.sizes.putIfAbsent(reconciliationCtx.cacheId, new AtomicLong());
-
-                AtomicLong reconSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
-
-                int cacheId = reconciliationCtx.cacheId;
-
-                if (row0.isReady() && row0.tombstone() && !oldIsTombstone && oldRow != null) {
-                    System.out.println("qjiiuofdg reconReplace row0.tombstone()");
-//                    *******************************************
-                    if ((/*borderKey != null && key <= borderKey*/reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0)) {
-                        try {
-                            sleep(7);
-                        }
-                        catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
-                        reconSize.decrementAndGet();
-//                        System.out.println("in REMOVE after decrement reconSize: key " + row0.key() + " reconSize " + reconSize);
-
-                        System.out.println("qcbhpfjlas in REMOVE after decrement reconSize: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
-                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                            " ||| storageSize:" + reconSize.get() +
-                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-                    }
-                    else {
-                        try {
-                            sleep(7);
-                        }
-                        catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
-                        reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).compute(row0.key(), (k, v) -> {
-//                                    System.out.println("k: " + k + ", v: " + v);
-                            if (k != null && v != null /*&& v.equals(1)*/) {
-
-                                try {
-                                    sleep(7);
-                                }
-                                catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-
-//                                System.out.println("in REMOVE compute: remove key " + row0.key());
-                                System.out.println("qjhuijdpot in REMOVE remove key from tempMap: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
-                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                    " ||| storageSize:" + reconSize.get() +
-                                    " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-
-                                return null;
-                            }
-                            else if (v == null && reconciliationCtx.lastKey(reconciliationCtx.cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(reconciliationCtx.cacheId)) <= 0) {
-//                                        doSleep(2);
-
-                                try {
-                                    sleep(7);
-                                }
-                                catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-
-                                reconSize.decrementAndGet();
-//                                System.out.println("in REMOVE compute: decrement and remove key " + row0.key() + " reconSize " + reconSize);
-
-                                    System.out.println("qhypakiryt in REMOVE compute: decrement and remove key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
-                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                    " ||| storageSize:" + reconSize.get() +
-                                    " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-
-                                return null;
-                            }
-                            else {
-                                try {
-                                    sleep(7);
-                                }
-                                catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-
-//                                System.out.println("in REMOVE compute: do nothing key " + row0.key() + " ");
-                                System.out.println("qfhydopdgw " + k);
-
-                                System.out.println("qolpfdtyhs in REMOVE compute: decrement and remove key " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
-                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                    " ||| storageSize:" + reconSize.get() +
-                                    " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-                                return v;
-                            }
-                        });
-
-                    }
-//                    *******************************************
-
-                }
-                else if (row0.isReady() && !row0.tombstone() && (/*oldRow == null || */oldIsTombstone)) {
-                    System.out.println("reconInsert in Replace start");
-                    reconInsert(newRow);
-                    System.out.println("reconInsert in Replace finish");
-                }
-                else {
-                    System.out.println("In reconReplace ELSE");
-                }
-            }
-
-        }
 
         /** {@inheritDoc} */
         @Override boolean found(BPlusIO<L> io, long pageAddr, int idx, int lvl) {
@@ -6041,7 +6258,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * Forward cursor.
      */
     private final class ForwardCursor extends AbstractForwardCursor implements GridCursor<T> {
-        public boolean reconCursor;
+        public volatile boolean reconCursor;
 
         /** */
         final Object x;
@@ -6087,6 +6304,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (cnt0 == 0)
                 return false;
 
+            System.out.println("qfsgtjnghrt");
+
             if (rows == EMPTY)
                 rows = (T[])new Object[cnt0];
 
@@ -6105,7 +6324,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             Map<KeyCacheObject, T2<KeyCacheObject, Integer>> newTempMap = new ConcurrentHashMap<>();
 
-            if (/*reconCursor && */reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+            if (/*reconCursor && */reconCursor && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
                 System.out.println("qfrkpoikf");
                 i0++;
                 T[] lastRows = Arrays.copyOf(rows, rows.length);
@@ -6113,6 +6332,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 KeyCacheObject oldBorderKey = reconciliationCtx.lastKeys().get(reconciliationCtx.cacheId);
 
                 reconciliationCtx.tempMap.putIfAbsent(reconciliationCtx.cacheId, new ConcurrentHashMap<>());
+                reconciliationCtx.sizes.putIfAbsent(reconciliationCtx.cacheId, new AtomicLong());
 
                 AtomicLong reconSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
 
@@ -6185,19 +6405,19 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 e.printStackTrace();
             }
 
-            if (firstKey != null && reconciliationCtx != null && (reconciliationCtx.firstKey(reconciliationCtx.cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(reconciliationCtx.firstKey(reconciliationCtx.cacheId), firstKey) < 0)) {
+            if (reconCursor && firstKey != null && reconciliationCtx != null && (reconciliationCtx.firstKey(reconciliationCtx.cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(reconciliationCtx.firstKey(reconciliationCtx.cacheId), firstKey) < 0)) {
                 reconciliationCtx.firstKey(reconciliationCtx.cacheId, firstKey);
                 System.out.println("qpltfdos in cursor new firstKey " + firstKey + " " + (firstKey == null ? "null" : ((KeyCacheObjectImpl)firstKey).value()));
             }
 
-            if (lastKey != null && reconciliationCtx != null && (reconciliationCtx.lastKey(reconciliationCtx.cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(reconciliationCtx.lastKey(reconciliationCtx.cacheId), lastKey) < 0)) {
+            if (reconCursor && lastKey != null && reconciliationCtx != null && (reconciliationCtx.lastKey(reconciliationCtx.cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(reconciliationCtx.lastKey(reconciliationCtx.cacheId), lastKey) < 0)) {
                 reconciliationCtx.lastKey(reconciliationCtx.cacheId, lastKey);
                 System.out.println("qpltfdos in cursor new lastKey " + lastKey + " " + (lastKey == null ? "null" : ((KeyCacheObjectImpl)lastKey).value()));
             }
 
 //            reconciliationCtx.lastKey(reconciliationCtx.cacheId, lastKey);
 
-            if (/*reconCursor && */!newTempMap.isEmpty() && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+            if (reconCursor && !newTempMap.isEmpty() && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
                 AtomicLong reconSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
 
                 int cacheId = reconciliationCtx.cacheId;
@@ -6302,7 +6522,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             }
 
-            if (/*reconCursor && */!newTempMap.isEmpty() && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+            if (reconCursor && !newTempMap.isEmpty() && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
                 try {
                     sleep(2);
                 }
@@ -6382,7 +6602,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             row = 0;
 
-            System.out.println("qfrgkiop nextPage(lastRow)");
+            System.out.println("qfrgkiop nextPage(lastRow) " + Thread.currentThread().getName());
 
             return nextPage(lastRow);
         }

@@ -2123,14 +2123,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Override public void invoke(GridCacheContext cctx, KeyCacheObject key, OffheapInvokeClosure c)
             throws IgniteCheckedException {
 
-            while (!busyLock.enterBusy()) {
-                try {
-                    sleep(10);
+//            if (reconciliationCtx().isReconciliationInProgress()) {
+                while (!busyLock.enterBusy()) {
+                    try {
+                        sleep(2);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+//            }
 
 //            if (!busyLock.enterBusy()) {
 //                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
@@ -3201,8 +3203,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void remove(GridCacheContext cctx, KeyCacheObject key, int partId) throws IgniteCheckedException {
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+//            if (reconciliationCtx().isReconciliationInProgress()) {
+                while (!busyLock.enterBusy()) {
+                    try {
+                        sleep(2);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+//            }
+
+//            if (!busyLock.enterBusy())
+//                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
             try {
                 int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -3765,6 +3778,53 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
+        public GridCursor<? extends CacheDataRow> reconCursor(int cacheId,
+            KeyCacheObject lower,
+            KeyCacheObject upper,
+            CacheDataRowAdapter.RowData x,
+            MvccSnapshot snapshot,
+            int flags
+        ) throws IgniteCheckedException {
+            SearchRow lowerRow;
+            SearchRow upperRow;
+
+            if (grp.sharedGroup()) {
+                assert cacheId != CU.UNDEFINED_CACHE_ID;
+
+                lowerRow = lower != null ? new SearchRow(cacheId, lower) : new SearchRow(cacheId);
+                upperRow = upper != null ? new SearchRow(cacheId, upper) : new SearchRow(cacheId);
+            }
+            else {
+                lowerRow = lower != null ? new SearchRow(CU.UNDEFINED_CACHE_ID, lower) : null;
+                upperRow = upper != null ? new SearchRow(CU.UNDEFINED_CACHE_ID, upper) : null;
+            }
+
+            GridCursor<? extends CacheDataRow> cursor;
+
+            if (snapshot != null) {
+                assert grp.mvccEnabled();
+
+                GridCacheContext cctx = grp.sharedGroup() ? grp.shared().cacheContext(cacheId) : grp.singleCacheContext();
+
+                cursor = dataTree.find(lowerRow, upperRow, new MvccFirstVisibleRowTreeClosure(cctx, snapshot), x);
+            }
+            else {
+                cursor = dataTree.findRecon(lowerRow, upperRow, x);
+
+//                dataTree.reconCursor(cursor);
+
+                if (flags == DATA)
+                    cursor = cursorSkipTombstone(cursor);
+                else if (flags == TOMBSTONES)
+                    cursor = cursorSkipData(cursor);
+            }
+
+//            cursor.rec
+
+            return cursor;
+        }
+
+        /** {@inheritDoc} */
         @Override public void destroy() throws IgniteCheckedException {
             final AtomicReference<IgniteCheckedException> exception = new AtomicReference<>();
 
@@ -4016,6 +4076,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             return new GridCursor<CacheDataRow>() {
                 /** */
                 CacheDataRow next;
+
+//                boolean reconCursor;
 
                 /** {@inheritDoc} */
                 @Override public boolean next() throws IgniteCheckedException {

@@ -323,8 +323,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             i++;
 
             try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
-                grpCtx.offheap().dataStore(part).cursor(cacheId, null, null) :
-                grpCtx.offheap().dataStore(part).cursor(cacheId, keyToStart, null)) {
+                ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl) grpCtx.offheap().dataStore(part)).reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA) :
+                ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl) grpCtx.offheap().dataStore(part)).reconCursor(cacheId, keyToStart, null, null, null, IgniteCacheOffheapManager.DATA)) {
                 System.out.println("qdsadfvers start cursor");
 
                 List<VersionedKey> partEntryHashRecords = new ArrayList<>();
@@ -383,7 +383,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     lastRow = row;
 
                     System.out.println("qwdsfsf newLastKey " + newLastKey);
-                    System.out.println("qwdsfsf end of iteration " + iters + " || " + newLastKey + " || " + partReconciliationCtx.lastKey(cacheId));
+                    System.out.println("qwdsfsf end of iteration " + iters + " || " + newLastKey + " || " + partReconciliationCtx.lastKey(cacheId) + " " + Thread.currentThread().getName());
+
+                    latch.countDown();
                 }
 
                 newLastKey = partReconciliationCtx.lastKey(cacheId);
