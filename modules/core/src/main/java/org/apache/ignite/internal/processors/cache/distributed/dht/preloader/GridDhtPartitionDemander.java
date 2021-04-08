@@ -1182,7 +1182,6 @@ public class GridDhtPartitionDemander {
         private final GridCacheSharedContext<?, ?> ctx;
 
         /** Internal state. */
-        @GridToStringExclude
         private volatile RebalanceFutureState state = RebalanceFutureState.INIT;
 
         /** */
@@ -1536,7 +1535,7 @@ public class GridDhtPartitionDemander {
                 return;
 
             if (onDone(true, null)) {
-                assert state == RebalanceFutureState.STARTED : "[state=" + state + ", fut=" + this + "]";
+                assert state == RebalanceFutureState.STARTED : this;
 
                 grp.localWalEnabled(true, true);
 

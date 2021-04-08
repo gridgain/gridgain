@@ -1050,7 +1050,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Tests that owning partitions (that is trigged by rebalance future) cannot be mapped to a new rebalance future
+     * Tests that owning partitions (that are trigged by rebalance future) cannot be mapped to a new rebalance future
      * that was created by RebalanceReassignExchangeTask.
      *
      * @throws Exception If failed.
@@ -1132,6 +1132,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // until cacheName2 triggers a checkpoint after rebalancing.
         CountDownLatch blockClientJoin = new CountDownLatch(1);
         CountDownLatch unblockClientJoin = new CountDownLatch(1);
+
         demander.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
             @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
                 blockClientJoin.countDown();
@@ -1151,6 +1152,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // Wait for a checkpoint after rebalancing cacheName2.
         CountDownLatch blockCheckpoint = new CountDownLatch(1);
         CountDownLatch unblockCheckpoint = new CountDownLatch(1);
+
         ((GridCacheDatabaseSharedManager) demander
             .context()
             .cache()
