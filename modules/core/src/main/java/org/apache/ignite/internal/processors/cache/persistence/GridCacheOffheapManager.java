@@ -1128,6 +1128,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
+    @Override public @Nullable RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException {
+        return indexStorage.findCacheIndex(cacheId, idxName, segment);
+    }
+
+    /** {@inheritDoc} */
     @Override public void dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException {
         indexStorage.dropCacheIndex(cacheId, idxName, segment);
     }
@@ -1300,8 +1305,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     ) {
         long tsCnt = tombstonesCount();
 
-        if (tsCnt == 0)
-            return false;
+        // Even if tombstones count is zero, we have some entries in the queue and they must be processed.
 
         DiscoCache discoCache = ctx.discovery().discoCache();
 

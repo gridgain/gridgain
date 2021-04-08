@@ -16,9 +16,14 @@
 
 package org.apache.ignite.qa.query;
 
+import org.apache.ignite.testframework.junits.WithSystemProperty;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+
 /**
  * Tests for log print for long running query.
  */
+@WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
 public class WarningOnBigQueryLazyResultsTest extends WarningOnBigQueryResultsTest {
     /** {@inheritDoc} */
     @Override protected boolean lazy() {

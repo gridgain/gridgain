@@ -30,6 +30,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.util.nio.GridNioException;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -165,7 +166,8 @@ public class CommunicationTcpUtils {
             errs,
             IOException.class,
             HandshakeException.class,
-            IgniteSpiOperationTimeoutException.class
+            IgniteSpiOperationTimeoutException.class,
+            GridNioException.class
         );
     }
 

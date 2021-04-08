@@ -21,6 +21,8 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
+
 /**
  * Test cluster wide gathering.
  */
@@ -59,7 +61,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
 
         GridTestUtils.assertThrows(
             log,
-            () -> grid(0).context().query().getIndexing().statsManager().collectStatistics(t100, t101, tWrong),
+            () -> statisticsMgr(0).collectStatistics(buildDefaultConfigurations(t100, t101, tWrong)),
             IgniteSQLException.class,
             "Table doesn't exist [schema=PUBLIC, table=SMALL101wrong]"
         );

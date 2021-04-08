@@ -56,20 +56,20 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
     /** */
     private final Column[] cols;
 
-    /** */
+    /** Column name to statistics column configuration map. */
     private final Map<String, StatisticsColumnConfiguration> colCfgs;
 
-    /** */
+    /** Partition id. */
     private final int partId;
 
-    /** */
+    /** Supplier to track operation state. */
     private final Supplier<Boolean> cancelled;
 
-    /** */
+    /** Ignite logger. */
     private final IgniteLogger log;
 
-    /** */
-    private final long time = U.currentTimeMillis();
+    /** Collection time. */
+    private long time;
 
     /** */
     public GatherPartitionStatistics(
@@ -88,8 +88,16 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
         this.log = log;
     }
 
+    /**
+     * @return Partition id.
+     */
+    public int partition() {
+        return partId;
+    }
+
     /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl call() {
+        time = U.currentTimeMillis();
         CacheGroupContext grp = tbl.cacheContext().group();
 
         GridDhtPartitionTopology top = grp.topology();
@@ -174,13 +182,13 @@ public class GatherPartitionStatistics implements Callable<ObjectPartitionStatis
         }
     }
 
-    /** */
+    /**
+     * Test if row expired.
+     *
+     * @param row Row to test.
+     * @return {@code true} if row expired, {@code false} - otherwise.
+     */
     private boolean wasExpired(CacheDataRow row) {
         return row.expireTime() > 0 && row.expireTime() <= time;
-    }
-
-    /** */
-    public int partition() {
-        return partId;
     }
 }

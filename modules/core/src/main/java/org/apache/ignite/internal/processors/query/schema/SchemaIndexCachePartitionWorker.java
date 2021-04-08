@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -72,7 +73,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
     /** Worker future. */
     private final GridFutureAdapter<SchemaIndexCacheStat> fut;
 
-    /** Count of partitions to be processed */
+    /** Count of partitions to be processed. */
     private final AtomicInteger partsCnt;
 
     /**
@@ -108,6 +109,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
         assert nonNull(stop);
         assert nonNull(clo);
         assert nonNull(fut);
+        assert nonNull(partsCnt);
 
         this.stop = stop;
         wrappedClo = new SchemaIndexCacheVisitorClosureWrapper(clo);
@@ -123,7 +125,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
             processPartition();
         }
         catch (Throwable e) {
-            err = e;
+            err = Error.class.isInstance(e) ? new IgniteException(e) : e;
 
             U.error(log, "Error during create/rebuild index for partition: " + locPart.id(), e);
 
@@ -145,7 +147,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
      * @throws IgniteCheckedException If failed.
      */
     private void processPartition() throws IgniteCheckedException {
-        if (stop.get() || stopNode())
+        if (stop())
             return;
 
         checkCancelled();
@@ -170,7 +172,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
             try {
                 int cntr = 0;
 
-                while (cursor.next() && !stop.get() && !stopNode()) {
+                while (!stop() && cursor.next()) {
                     KeyCacheObject key = cursor.get().key();
 
                     if (!locked) {
@@ -201,7 +203,8 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
             }
         }
         catch (Exception e) {
-            throw new IgniteCheckedException(e);
+            if (!(e instanceof SchemaIndexOperationCancellationException))
+                throw new IgniteCheckedException(e);
         }
         finally {
             locPart.release();
@@ -220,7 +223,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
     private void processKey(KeyCacheObject key) throws IgniteCheckedException {
         assert nonNull(key);
 
-        while (true) {
+        while (!stop()) {
             try {
                 checkCancelled();
 
@@ -247,20 +250,20 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
     /**
      * Check if visit process is not cancelled.
      *
-     * @throws IgniteCheckedException If cancelled.
+     * @throws SchemaIndexOperationCancellationException If cancelled.
      */
-    private void checkCancelled() throws IgniteCheckedException {
+    private void checkCancelled() throws SchemaIndexOperationCancellationException {
         if (nonNull(cancel) && cancel.isCancelled())
-            throw new IgniteCheckedException("Index creation was cancelled.");
+            throw new SchemaIndexOperationCancellationException("Index creation was cancelled.");
     }
 
     /**
-     * Returns node in the process of stopping or not.
+     * Check if index rebuilding needs to be stopped.
      *
-     * @return {@code True} if node is in the process of stopping.
+     * @return {@code True} if necessary to stop rebuilding indexes.
      */
-    private boolean stopNode() {
-        return cctx.kernalContext().isStopping();
+    private boolean stop() {
+        return stop.get() || cctx.kernalContext().isStopping();
     }
 
     /** {@inheritDoc} */
@@ -279,7 +282,9 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
         @Nullable private final SchemaIndexCacheStat indexCacheStat;
 
         /** */
-        private SchemaIndexCacheVisitorClosureWrapper(SchemaIndexCacheVisitorClosure clo) {
+        private SchemaIndexCacheVisitorClosureWrapper(
+            SchemaIndexCacheVisitorClosure clo
+        ) {
             this.clo = clo;
             indexCacheStat = getBoolean(IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, false) ? new SchemaIndexCacheStat() : null;
         }
