@@ -37,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersion
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.logger.java.JavaLogger;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
@@ -219,24 +218,14 @@ public class BPlusTreeBenchmark extends JmhAbstractBenchmark {
 
     /**
      * @return Page memory.
-     * @throws Exception If failed.
      */
-    private PageMemory createPageMemory() throws Exception {
-        long[] sizes = new long[CPUS];
-
-        for (int i = 0; i < sizes.length; i++)
-            sizes[i] = 1024 * MB / CPUS;
-
-        DataRegionConfiguration plcCfg = new DataRegionConfiguration().setMaxSize(1024 * MB).setMetricsEnabled(false);
-
-        PageMemory pageMem = new PageMemoryNoStoreImpl(new JavaLogger(),
+    private PageMemory createPageMemory() {
+        PageMemory pageMem = new PageMemoryNoStoreImpl(
+            new JavaLogger(),
             new UnsafeMemoryProvider(new JavaLogger()),
-            null,
             PAGE_SIZE,
-            plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            false,
-            new NoOpPagesMetric());
+            new DataRegionConfiguration().setMaxSize(1024 * MB),
+            false);
 
         pageMem.start();
 

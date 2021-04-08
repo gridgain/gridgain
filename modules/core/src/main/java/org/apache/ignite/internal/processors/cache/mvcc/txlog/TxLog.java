@@ -214,7 +214,7 @@ public class TxLog implements CheckpointListener {
             if ((treeRoot = reuseList1.takeRecycledPage()) == 0L)
                 treeRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, FLAG_IDX, PageCategory.META);
             else
-                pageMemory.getPageMetric().pageFromReuseList(PageCategory.META);
+                pageMemory.dataRegionMetrics().groupMemoryPageMetrics(TX_LOG_CACHE_ID).pageReused(PageCategory.META);
 
             tree = new TxLogTree(
                 txLogName,

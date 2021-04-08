@@ -18,17 +18,19 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
- * TotalUsedPages metric in-memory tests.
+ * TotalUsedPages metric persistence tests.
  */
-public class UsedPagesMetricTest extends UsedPagesMetricAbstractTest {
+public class UsedMemoryPageMetricsTestPersistence extends UsedPagesMetricAbstractTest {
     /** */
-    public static final int NODES = 2;
+    public static final int NODES = 1;
 
     /** */
-    public static final int ITERATIONS = 3;
+    public static final int ITERATIONS = 1;
 
     /** */
     public static final int STORED_ENTRIES_COUNT = 50000;
@@ -39,6 +41,7 @@ public class UsedPagesMetricTest extends UsedPagesMetricAbstractTest {
             .setDataStorageConfiguration(
                 new DataStorageConfiguration().setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
+                        .setPersistenceEnabled(true)
                         .setInitialSize(100 * 1024L * 1024L)
                         .setMaxSize(500 * 1024L * 1024L)
                         .setMetricsEnabled(true)
@@ -46,12 +49,42 @@ public class UsedPagesMetricTest extends UsedPagesMetricAbstractTest {
     }
 
     /**
-     * Tests that totalUsedPages metric for in-memory data region behaves correctly.
      *
-     * @throws Exception If failed.
+     */
+    @Before
+    public void cleanBeforeStart() throws Exception {
+        cleanPersistenceDir();
+    }
+
+    /**
+     *
+     */
+    @After
+    public void stopAndClean() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    /**
+     * Tests that totalUsedPages metric for data region with enabled persistence
+     * and pages being rotated to disk behaves correctly.
+     *
+     * @throws Exception if failed
      */
     @Test
-    public void testFillAndRemoveInMemory() throws Exception {
+    public void testFillAndRemovePagesRotation() throws Exception {
+        testFillAndRemove(NODES, ITERATIONS, STORED_ENTRIES_COUNT, 8192);
+    }
+
+    /**
+     * Tests that totalUsedPages metric for data region with enabled persistence
+     * and pages that are not being rotated to disk behaves correctly.
+     *
+     * @throws Exception if failed
+     */
+    @Test
+    public void testFillAndRemoveWithoutPagesRotation() throws Exception {
         testFillAndRemove(NODES, ITERATIONS, STORED_ENTRIES_COUNT, 256);
     }
 }

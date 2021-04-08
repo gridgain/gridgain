@@ -2579,7 +2579,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             releasePage(metaPageId, metaPage);
         }
 
-        pageMetric.reusePageIncreased(bag.size(), pageCategory());
+        memoryPageMetrics.pageReleased(bag.size(), pageCategory());
+
         reuseList.addForRecycle(bag);
 
         assert bag.isEmpty() : bag.size();
@@ -2681,7 +2682,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         if (bag.size() == 128) {
-            pageMetric.reusePageIncreased(bag.size(), pageCategory());
+            memoryPageMetrics.pageReleased(bag.size(), pageCategory());
+
             reuseList.addForRecycle(bag);
 
             assert bag.isEmpty() : bag.size();
@@ -4906,10 +4908,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 //TODO: doublecheck
                 if (freePages.getClass() == GridLongList.class) {
                     GridLongList list = ((GridLongList)freePages);
-                    pageMetric.reusePageIncreased(list.size(), pageCategory());
-                } else {
-                    pageMetric.reusePageIncreased(1, pageCategory());
-                }
+
+                    memoryPageMetrics.pageReleased(list.size(), pageCategory());
+                } else
+                    memoryPageMetrics.pageReleased(1, pageCategory());
 
                 reuseList.addForRecycle(this);
             }

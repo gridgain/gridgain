@@ -446,7 +446,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
 
         DataRegionMetricsImpl memMetrics = new DataRegionMetricsImpl(
             dataRegionCfg,
-            cctx.kernalContext().metric(),
+            cctx.kernalContext(),
             dataRegionMetricsProvider(dataRegionCfg));
 
         DataRegion region = initMemory(dataStorageCfg, dataRegionCfg, memMetrics, trackable, pmPageMgr);
@@ -1395,14 +1395,12 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         memMetrics.persistenceEnabled(false);
 
         PageMemory pageMem = new PageMemoryNoStoreImpl(
-            log,
             wrapMetricsMemoryProvider(memProvider, memMetrics),
             cctx,
             memCfg.getPageSize(),
             memPlcCfg,
-            memMetrics.totalAllocatedPages(),
-            false,
-            memMetrics
+            memMetrics,
+            false
         );
 
         memMetrics.pageMemory(pageMem);

@@ -22,7 +22,6 @@ import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
-import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
@@ -74,7 +73,7 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = new IgniteConfiguration().setMetricExporterSpi(new NoopMetricExporterSpi());
 
         memMetrics = new DataRegionMetricsImpl(plcCfg,
-            new GridMetricManager(new GridTestKernalContext(new GridTestLog4jLogger(), cfg)),
+            new GridTestKernalContext(new GridTestLog4jLogger(), cfg),
             NO_OP_METRICS);
 
         memMetrics.enableMetrics();

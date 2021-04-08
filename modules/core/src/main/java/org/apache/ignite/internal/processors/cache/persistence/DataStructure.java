@@ -27,7 +27,7 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RecycleRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.MemoryPageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseL
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
@@ -76,7 +77,7 @@ public abstract class DataStructure {
     /** */
     protected final int partition;
 
-    protected final PagesMetric pageMetric;
+    protected final MemoryPageMetrics memoryPageMetrics;
 
     /**
      * @param cacheGrpId Cache group ID.
@@ -89,7 +90,7 @@ public abstract class DataStructure {
      */
     public DataStructure(
         int cacheGrpId,
-        String grpName,
+        @Nullable String grpName,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
         PageLockListener lockLsnr,
@@ -107,7 +108,7 @@ public abstract class DataStructure {
         this.pageIoRslvr = pageIoRslvr;
         this.pageFlag = pageFlag;
         this.partition = partition;
-        pageMetric = pageMem.getPageMetric();
+        this.memoryPageMetrics = pageMem.dataRegionMetrics().groupMemoryPageMetrics(cacheGrpId);
     }
 
     /**
@@ -155,7 +156,8 @@ public abstract class DataStructure {
 
             // Recycled. "pollFreePage" result should be reinitialized to move rotatedId to itemId.
             if (pageId != 0) {
-                pageMetric.pageFromReuseList(pageCategory());
+                memoryPageMetrics.pageReused(pageCategory());
+
                 pageId = reuseList.initRecycledPage(pageId, pageFlag, null);
             }
         }
@@ -181,7 +183,6 @@ public abstract class DataStructure {
     protected long allocatePageNoReuse() throws IgniteCheckedException {
         return pageMem.allocatePage(grpId, partition, pageFlag, pageCategory());
     }
-
 
     /**
      * @return Page category.

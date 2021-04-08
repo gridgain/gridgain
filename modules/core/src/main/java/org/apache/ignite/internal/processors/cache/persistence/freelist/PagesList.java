@@ -191,7 +191,7 @@ public abstract class PagesList extends DataStructure {
     }
 
     /**
-     * @param cacheId Cache ID.
+     * @param cacheGrpId Cache group ID.
      * @param name Name (for debug purpose).
      * @param pageMem Page memory.
      * @param buckets Number of buckets.
@@ -200,7 +200,7 @@ public abstract class PagesList extends DataStructure {
      * @param pageFlag Default flag value for allocated pages.
      */
     protected PagesList(
-        int cacheId,
+        int cacheGrpId,
         String name,
         PageMemory pageMem,
         int buckets,
@@ -210,7 +210,7 @@ public abstract class PagesList extends DataStructure {
         GridKernalContext ctx,
         byte pageFlag
     ) {
-        super(cacheId, null, pageMem, wal, lockLsnr, DEFAULT_PAGE_IO_RESOLVER, pageFlag,
+        super(cacheGrpId, null, pageMem, wal, lockLsnr, DEFAULT_PAGE_IO_RESOLVER, pageFlag,
             pageFlag == FLAG_IDX ? INDEX_PARTITION : PageIdUtils.partId(metaPageId));
 
         this.name = name;
@@ -1460,7 +1460,8 @@ public abstract class PagesList extends DataStructure {
                 if (recycleId != 0L) {
                     assert !isReuseBucket(bucket);
 
-                    pageMetric.reusePageIncreased(1, pageCategory());
+                    memoryPageMetrics.pageReleased(1, pageCategory());
+
                     reuseList.addForRecycle(new SingletonReuseBag(recycleId));
                 }
 
@@ -1695,7 +1696,8 @@ public abstract class PagesList extends DataStructure {
                 recycleId = merge(pageId, page, nextId, bucket, statHolder);
 
             if (recycleId != 0L) {
-                pageMetric.reusePageIncreased(1, pageCategory());
+                memoryPageMetrics.pageReleased(1, pageCategory());
+
                 reuseList.addForRecycle(new SingletonReuseBag(recycleId));
             }
 

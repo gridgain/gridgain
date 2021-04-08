@@ -29,12 +29,15 @@ import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.database.DataRegionMetricsSelfTest.NO_OP_METRICS;
 
 /**
  *
@@ -174,11 +177,9 @@ public class IndexStorageSelfTest extends GridCommonAbstractTest {
         return new PageMemoryNoStoreImpl(
             log,
             provider,
-            null,
             PAGE_SIZE,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            true,
-            new NoOpPagesMetric());
+            new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log()), NO_OP_METRICS),
+            true);
     }
 }

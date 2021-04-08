@@ -27,16 +27,15 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgressImpl;
 import org.apache.ignite.lang.IgniteOutClosure;
-import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
-import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.junit.Rule;
 import org.junit.Test;
@@ -73,8 +72,10 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
 
         IgniteConfiguration cfg = new IgniteConfiguration().setMetricExporterSpi(new NoopMetricExporterSpi());
 
-        DataRegionMetricsImpl metrics = new DataRegionMetricsImpl(new DataRegionConfiguration(),
-            new GridMetricManager(new GridTestKernalContext(new GridTestLog4jLogger(), cfg)), NO_OP_METRICS);
+        DataRegionMetricsImpl metrics = new DataRegionMetricsImpl(
+            new DataRegionConfiguration(),
+            new GridTestKernalContext(new GridTestLog4jLogger(), cfg),
+            NO_OP_METRICS);
 
         when(pageMemory2g.metrics()).thenReturn(metrics);
     }

@@ -16,10 +16,8 @@
 
 package org.apache.ignite.internal.pagemem.metrics;
 
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
-
 /**
- * Tests for {@link PagesMetric} with persistence data region.
+ * Tests for {@link CacheGroupMemoryPageMetrics} with persistence data region.
  */
 public class PersistenceDataRegionMetricsTest extends NoPersistenceDataRegionMetricsTest {
     /** */

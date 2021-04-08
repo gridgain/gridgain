@@ -28,14 +28,15 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.MemoryPageMetrics;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.MemoryPageMetricsImpl;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * Tests for {@link PagesMetric} without persistence data region.
+ * Tests for {@link MemoryPageMetricsImpl} without persistence data region.
  */
 public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
     /** */
@@ -45,8 +46,10 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
     private static final String CACHE = "test-cache";
 
     /** */
-    private PagesMetric metric;
+    private MemoryPageMetrics metric;
+
     private DataRegionMetricsImpl oldMetrics;
+
     private final List<StatisticData> statistic = new ArrayList<>();
 
     /** Statistic "snapshot". */
@@ -169,11 +172,11 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
         applyStatistic();
         Assert.assertEquals(oldMetrics.getPhysicalMemoryPages(), statistic.get(2).getUsedPages());
         // some pages were allocated for PK()
-        if (persistenceRegion()) {
+        if (persistenceRegion())
             Assert.assertEquals(statistic.get(1).indexPages, statistic.get(2).indexPages);
-        } else {
+        else
             Assert.assertTrue(statistic.get(1).indexPages < statistic.get(2).indexPages);
-        }
+
         Assert.assertEquals(statistic.get(1).metaPages, statistic.get(2).metaPages);
         // check data pages
         Assert.assertTrue(statistic.get(1).dataPages < statistic.get(2).dataPages);
@@ -233,11 +236,11 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
 
     private void applyStatistic() {
         StatisticData data = new StatisticData();
-        data.dataPages = metric.physicalMemoryDataPagesSize();
-        data.freelistPages = metric.physicalMemoryFreelistPagesSize();
-        data.freePages = metric.physicalMemoryFreePagesSize();
-        data.indexPages = metric.physicalMemoryIndexPagesSize();
-        data.metaPages = metric.physicalMemoryMetaPagesSize();
+        data.dataPages = metric.dataPagesSize().value();
+        data.freelistPages = metric.freelistPagesSize().value();
+        data.freePages = metric.freePagesSize().value();
+        data.indexPages = metric.idxPagesSize().value();
+        data.metaPages = metric.metaPagesSize().value();
 
         statistic.add(data);
     }
@@ -246,7 +249,7 @@ public class NoPersistenceDataRegionMetricsTest extends GridCommonAbstractTest {
         IgniteEx ig = startGrid(0);
         ig.cluster().active(true);
         GridCacheSharedContext sharedCtx = ig.context().cache().context();
-        metric = sharedCtx.database().dataRegion(REGION).pageMemory().getPageMetric();
+        metric = sharedCtx.database().dataRegion(REGION).pageMemory().dataRegionMetrics().memoryPageMetrics();
         oldMetrics = sharedCtx.database().dataRegion(REGION).memoryMetrics();
         return ig;
     }

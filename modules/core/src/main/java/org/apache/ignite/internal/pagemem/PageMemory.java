@@ -18,7 +18,7 @@ package org.apache.ignite.internal.pagemem;
 
 import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 
 /**
  */
@@ -68,8 +68,5 @@ public interface PageMemory extends PageIdAllocator, PageSupport {
      */
     public int checkpointBufferPagesCount();
 
-    /**
-     * Pages metric.
-     */
-    PagesMetric getPageMetric();
+    public DataRegionMetricsImpl dataRegionMetrics();
 }

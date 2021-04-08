@@ -191,7 +191,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private final PageReadWriteManager pmPageMgr;
 
     /** */
-    private IgniteWriteAheadLogManager walMgr;
+    private final IgniteWriteAheadLogManager walMgr;
 
     /** */
     private final GridEncryptionManager encMgr;
@@ -218,7 +218,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private PagePool checkpointPool;
 
     /** */
-    private OffheapReadWriteLock rwLock;
+    private final OffheapReadWriteLock rwLock;
 
     /** Flush dirty page closure. When possible, will be called by evictPage(). */
     private final PageStoreWriter flushDirtyPage;
@@ -240,7 +240,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private PagesWriteThrottlePolicy writeThrottle;
 
     /** Write throttle type. */
-    private ThrottlingPolicy throttlingPlc;
+    private final ThrottlingPolicy throttlingPlc;
 
     /** Checkpoint progress provider. Null disables throttling. */
     @Nullable private final IgniteOutClosure<CheckpointProgress> cpProgressProvider;
@@ -253,7 +253,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private volatile int pageReplacementWarned;
 
     /** */
-    private long[] sizes;
+    private final long[] sizes;
 
     /** Memory metrics to track dirty pages count and page replace rate. */
     private final DataRegionMetricsImpl memMetrics;
@@ -574,7 +574,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             setDirty(fullId, absPtr, true, true);
 
             if (isTrackingPage) {
-                memMetrics.pageAllocated(PageCategory.META);
+                memMetrics.groupMemoryPageMetrics(grpId).pageAllocated(PageCategory.META);
 
                 long pageAddr = absPtr + PAGE_OVERHEAD;
 
@@ -599,9 +599,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                         }
                     }
                 }
-            } else {
-                memMetrics.pageAllocated(category);
-            }
+            } else
+                memMetrics.groupMemoryPageMetrics(grpId).pageAllocated(category);
 
             seg.loadedPages.put(grpId, PageIdUtils.effectivePageId(pageId), relPtr, seg.partGeneration(grpId, partId));
         }
@@ -634,6 +633,11 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         //we have allocated 'tracking' page, we need to allocate regular one
         return isTrackingPage ? allocatePage(grpId, partId, flags, category) : pageId;
+    }
+
+    /** {@inheritDoc} */
+    public DataRegionMetricsImpl dataRegionMetrics() {
+        return memMetrics;
     }
 
     /**
@@ -782,7 +786,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 } else {
                     // TODO: define concreate type
                     // it may be wrong
-                    memMetrics.pageAllocated(PageCategory.META);
+                    memMetrics.groupMemoryPageMetrics(grpId).pageAllocated(PageCategory.META);
                 }
 
                 absPtr = seg.absolute(relPtr);
@@ -1845,11 +1849,6 @@ public class PageMemoryImpl implements PageMemoryEx {
         return checkpointPool == null ? 0 : checkpointPool.size();
     }
 
-    /** {@inheritDoc} */
-    @Override public PagesMetric getPageMetric() {
-        return memMetrics;
-    }
-
     /**
      * Number of used pages in checkpoint buffer.
      */
@@ -2012,13 +2011,13 @@ public class PageMemoryImpl implements PageMemoryEx {
         private final LoadedPagesMap loadedPages;
 
         /** Pointer to acquired pages integer counter. */
-        private long acquiredPagesPtr;
+        private final long acquiredPagesPtr;
 
         /** */
-        private PagePool pool;
+        private final PagePool pool;
 
         /** Bytes required to store {@link #loadedPages}. */
-        private long memPerTbl;
+        private final long memPerTbl;
 
         /** Pages marked as dirty since the last checkpoint. */
         private volatile Collection<FullPageId> dirtyPages = new GridConcurrentHashSet<>();
@@ -2049,8 +2048,6 @@ public class PageMemoryImpl implements PageMemoryEx {
             long totalMemory = region.size();
 
             int pages = (int)(totalMemory / sysPageSize);
-
-            memMetrics.freePagesIncreased(pages);
 
             acquiredPagesPtr = region.address();
 
@@ -2653,19 +2650,19 @@ public class PageMemoryImpl implements PageMemoryEx {
      */
     private static class ClearSegmentRunnable implements Runnable {
         /** */
-        private Segment seg;
+        private final Segment seg;
 
         /** Clear element filter for (cache group ID, page ID). */
         LoadedPagesMap.KeyPredicate clearPred;
 
         /** */
-        private CountDownFuture doneFut;
+        private final CountDownFuture doneFut;
 
         /** */
-        private int pageSize;
+        private final int pageSize;
 
         /** */
-        private boolean rmvDirty;
+        private final boolean rmvDirty;
 
         /**
          * @param seg Segment.

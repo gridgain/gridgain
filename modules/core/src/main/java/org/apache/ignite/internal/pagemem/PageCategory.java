@@ -20,13 +20,13 @@ package org.apache.ignite.internal.pagemem;
  * Categories for page usage.
  */
 public enum PageCategory {
-    /** Page is using for indexing. */
+    /** Page is used for indexing. */
     INDEX,
 
-    /** Page is using for data. */
+    /** Page is used for data. */
     DATA,
 
-    /** Page is using for metadata or tracking. */
+    /** Page is used for metadata or tracking. */
     META,
 
     /** Page is ready for reuse. */

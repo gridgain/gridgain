@@ -51,8 +51,8 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemor
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryLazyAllocationWithPDSTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryNoStoreLeakTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesWriteThrottleSmokeTest;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedPagesMetricTest;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedPagesMetricTestPersistence;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedMemoryPageMetricsTest;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedMemoryPageMetricsTestPersistence;
 import org.apache.ignite.internal.processors.cache.persistence.wal.CpTriggeredWalDeltaConsistencyTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.ExplicitWalDeltaConsistencyTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentedRingByteBufferTest;
@@ -117,8 +117,8 @@ public class IgnitePdsTestSuite {
 
         // Metrics
         GridTestUtils.addTestIfNeeded(suite, FillFactorMetricTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, UsedPagesMetricTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, UsedPagesMetricTestPersistence.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, UsedMemoryPageMetricsTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, UsedMemoryPageMetricsTestPersistence.class, ignoredTests);
 
         // WAL delta consistency
         GridTestUtils.addTestIfNeeded(suite, CpTriggeredWalDeltaConsistencyTest.class, ignoredTests);

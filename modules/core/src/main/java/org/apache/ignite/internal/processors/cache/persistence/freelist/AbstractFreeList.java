@@ -338,7 +338,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     }
 
     /**
-     * @param cacheId Cache ID.
+     * @param cacheGrpId Cache group ID.
      * @param name Name (for debug purpose).
      * @param memMetrics Memory metrics.
      * @param memPlc Data region.
@@ -350,7 +350,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
      * @throws IgniteCheckedException If failed.
      */
     public AbstractFreeList(
-        int cacheId,
+        int cacheGrpId,
         String name,
         DataRegionMetricsImpl memMetrics,
         DataRegion memPlc,
@@ -363,9 +363,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         AtomicLong pageListCacheLimit,
         byte pageFlag
     ) throws IgniteCheckedException {
-        super(cacheId, name, memPlc.pageMemory(), BUCKETS, wal, metaPageId, lockLsnr, ctx, pageFlag);
+        super(cacheGrpId, name, memPlc.pageMemory(), BUCKETS, wal, metaPageId, lockLsnr, ctx, pageFlag);
 
-        rmvRow = new RemoveRowHandler(cacheId == 0);
+        rmvRow = new RemoveRowHandler(cacheGrpId == 0);
 
         this.evictionTracker = memPlc.evictionTracker();
         this.reuseList = reuseList == null ? this : reuseList;
@@ -523,7 +523,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                         pageId = reuseList.takeRecycledPage();
 
                         if (pageId != 0) {
-                            pageMetric.pageFromReuseList(PageCategory.DATA);
+                            memoryPageMetrics.pageReused(PageCategory.DATA);
+
                             pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions().latest());
                         }
                     }
@@ -656,7 +657,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 assert nextLink != FAIL_L; // Can't fail here.
             }
 
-            pageMetric.reusePageIncreased(bag.size(), PageCategory.DATA);
+            memoryPageMetrics.pageReleased(bag.size(), PageCategory.DATA);
+
             reuseList.addForRecycle(bag);
         }
         catch (IgniteCheckedException | Error e) {

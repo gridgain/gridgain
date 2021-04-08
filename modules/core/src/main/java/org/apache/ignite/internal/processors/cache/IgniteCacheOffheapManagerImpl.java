@@ -69,6 +69,7 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheSearchRow;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.RowStore;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.MemoryPageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.partstorage.PartitionMetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -185,6 +186,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /** */
     protected GridStripedLock partStoreLock = new GridStripedLock(Runtime.getRuntime().availableProcessors());
 
+    private MemoryPageMetrics memoryPageMetrics;
+
     /** {@inheritDoc} */
     @Override public GridAtomicLong globalRemoveId() {
         return globalRmvId;
@@ -195,6 +198,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         this.ctx = ctx;
         this.grp = grp;
         this.log = ctx.logger(getClass());
+        this.memoryPageMetrics = grp.dataRegion().memoryMetrics().groupMemoryPageMetrics(grp.groupId());
 
         if (grp.affinityNode()) {
             ctx.database().checkpointReadLock();
@@ -1148,7 +1152,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (reuseList == null || (pageId = reuseList.takeRecycledPage()) == 0L)
             pageId = grp.dataRegion().pageMemory().allocatePage(grp.groupId(), INDEX_PARTITION, FLAG_IDX, pageCategory);
         else
-            grp.dataRegion().pageMemory().getPageMetric().pageFromReuseList(pageCategory);
+            memoryPageMetrics.pageReused(pageCategory);
 
         return pageId;
     }

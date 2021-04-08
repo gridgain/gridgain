@@ -17,10 +17,9 @@
 package org.apache.ignite.internal.processors.cache.metric;
 
 import org.apache.ignite.internal.pagemem.metrics.NoPersistenceDataRegionMetricsTest;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
 
 /**
- * Tests for {@link PagesMetric} without persistence data region and with indexing module.
+ * Tests for {@link CacheGroupMemoryPageMetrics} without persistence data region and with indexing module.
  */
 public class NoPersistenceDataRegionMetricsWithIndexingTest extends NoPersistenceDataRegionMetricsTest {
 

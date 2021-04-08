@@ -48,15 +48,12 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFre
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CacheVersionIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.processors.metric.GridMetricManager;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -335,12 +332,10 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
     protected PageMemory createPageMemory(int pageSize, DataRegionConfiguration plcCfg) throws Exception {
         PageMemory pageMem = new PageMemoryNoStoreImpl(log,
             new UnsafeMemoryProvider(log),
-            null,
             pageSize,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            true,
-            new NoOpPagesMetric());
+            new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log()), NO_OP_METRICS),
+            true);
 
         pageMem.start();
 
@@ -363,9 +358,10 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
 
         IgniteConfiguration cfg = new IgniteConfiguration().setMetricExporterSpi(new NoopMetricExporterSpi());
 
-        DataRegionMetricsImpl regionMetrics = new DataRegionMetricsImpl(plcCfg,
-            new GridMetricManager(new GridTestKernalContext(new GridTestLog4jLogger(), cfg)),
-                NO_OP_METRICS);
+        DataRegionMetricsImpl regionMetrics = new DataRegionMetricsImpl(
+            plcCfg,
+            new GridTestKernalContext(log, cfg),
+            NO_OP_METRICS);
 
         DataRegion dataRegion = new DataRegion(pageMem, plcCfg, regionMetrics, new NoOpPageEvictionTracker());
 

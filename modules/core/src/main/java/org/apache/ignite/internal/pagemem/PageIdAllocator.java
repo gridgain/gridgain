@@ -27,20 +27,20 @@ public interface PageIdAllocator {
     /**
      * Flag for Data page.
      * Also used by partition meta and tracking pages.
-     * This type doesn't use Page ID rotation mechanizm.
+     * This type doesn't use Page ID rotation mechanism.
      */
     public static final byte FLAG_DATA = 1;
 
     /**
      * Flag for index page.
-     * Also used by internal structure in inmemory caches.
-     * This type uses Page ID rotation mechanizm.
+     * Also used by internal structure in in-memory caches.
+     * This type uses Page ID rotation mechanism.
      */
     public static final byte FLAG_IDX = 2;
 
     /**
      * Flag for internal structure page.
-     * This type uses Page ID rotation mechanizm.
+     * This type uses Page ID rotation mechanism.
      */
     public static final byte FLAG_AUX = 4;
 
@@ -66,7 +66,7 @@ public interface PageIdAllocator {
      * @param partId Partition ID.
      * @return Allocated page ID.
      */
-    default long allocatePage(int grpId, int partId, byte flags) throws IgniteCheckedException {
+    public default long allocatePage(int grpId, int partId, byte flags) throws IgniteCheckedException {
         return allocatePage(grpId, partId, flags, partId == INDEX_PARTITION ? PageCategory.INDEX : PageCategory.DATA);
     }
 
@@ -84,8 +84,8 @@ public interface PageIdAllocator {
     /**
      * The given page is free now.
      *
-     * @param cacheId Cache Group ID.
+     * @param grpId Cache Group ID.
      * @param pageId Page ID.
      */
-    public boolean freePage(int cacheId, long pageId) throws IgniteCheckedException;
+    public boolean freePage(int grpId, long pageId) throws IgniteCheckedException;
 }

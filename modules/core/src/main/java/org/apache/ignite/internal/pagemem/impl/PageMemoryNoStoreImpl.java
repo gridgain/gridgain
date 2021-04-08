@@ -36,14 +36,15 @@ import org.apache.ignite.internal.pagemem.PageCategory;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesMetric;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.MemoryPageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.OffheapReadWriteLock;
 import org.apache.ignite.internal.util.offheap.GridOffHeapOutOfMemoryException;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL;
 import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
@@ -119,7 +120,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     private static final int IDX_MASK = ~(-1 << IDX_BITS);
 
     /** Page size. */
-    private int sysPageSize;
+    private final int sysPageSize;
 
     /** */
     private final IgniteLogger log;
@@ -131,28 +132,25 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     private final DataRegionConfiguration dataRegionCfg;
 
     /** */
-    private AtomicLong freePageListHead = new AtomicLong(INVALID_REL_PTR);
+    private final DataRegionMetricsImpl dataRegionMetrics;
+
+    /** */
+    private final AtomicLong freePageListHead = new AtomicLong(INVALID_REL_PTR);
 
     /** Segments array. */
     private volatile Segment[] segments;
 
     /** Lock for segments changes. */
-    private Object segmentsLock = new Object();
+    private final Object segmentsLock = new Object();
 
     /** */
     private final AtomicInteger allocatedPages = new AtomicInteger();
 
     /** */
-    private final PagesMetric pageMetric;
+    private final AtomicInteger selector = new AtomicInteger();
 
     /** */
-    private final LongAdderMetric totalAllocatedPagesMetric;
-
-    /** */
-    private AtomicInteger selector = new AtomicInteger();
-
-    /** */
-    private OffheapReadWriteLock rwLock;
+    private final OffheapReadWriteLock rwLock;
 
     /** Concurrency lvl. */
     private final int lockConcLvl = IgniteSystemProperties.getInteger(
@@ -177,29 +175,35 @@ public class PageMemoryNoStoreImpl implements PageMemory {
      * @param sharedCtx Cache shared context.
      * @param pageSize Page size.
      * @param dataRegionCfg Data region configuration.
-     * @param totalAllocatedPagesMetric Total allocated pages metric.
      * @param trackAcquiredPages If {@code true} tracks number of allocated pages (for tests purpose only).
      */
     public PageMemoryNoStoreImpl(
-        IgniteLogger log,
         DirectMemoryProvider directMemoryProvider,
         GridCacheSharedContext<?, ?> sharedCtx,
         int pageSize,
         DataRegionConfiguration dataRegionCfg,
-        LongAdderMetric totalAllocatedPagesMetric,
-        boolean trackAcquiredPages,
-        PagesMetric metrics
+        DataRegionMetricsImpl dataRegionMetrics,
+        boolean trackAcquiredPages
     ) {
-        assert log != null || sharedCtx != null;
+        this(sharedCtx.logger(PageMemoryNoStoreImpl.class), directMemoryProvider, pageSize, dataRegionCfg, dataRegionMetrics, trackAcquiredPages);
+    }
+
+    public PageMemoryNoStoreImpl(
+        IgniteLogger log,
+        DirectMemoryProvider directMemoryProvider,
+        int pageSize,
+        DataRegionConfiguration dataRegionCfg,
+        DataRegionMetricsImpl dataRegionMetrics,
+        boolean trackAcquiredPages
+    ) {
+        assert log != null;
         assert pageSize % 8 == 0;
 
-        this.log = sharedCtx != null ? sharedCtx.logger(PageMemoryNoStoreImpl.class) : log;
+        this.log = log;
         this.directMemoryProvider = directMemoryProvider;
         this.trackAcquiredPages = trackAcquiredPages;
-        this.totalAllocatedPagesMetric = totalAllocatedPagesMetric;
         this.dataRegionCfg = dataRegionCfg;
-
-        pageMetric = metrics;
+        this.dataRegionMetrics = dataRegionMetrics;
 
         sysPageSize = pageSize + PAGE_OVERHEAD;
 
@@ -250,7 +254,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
             if (segments == null)
                 directMemoryProvider.initialize(chunks);
 
-            addSegment(null);
+            addSegment(null, null);
         }
     }
 
@@ -276,8 +280,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     }
 
     /** {@inheritDoc} */
-    @Override public PagesMetric getPageMetric() {
-        return pageMetric;
+    @Override public DataRegionMetricsImpl dataRegionMetrics() {
+        return dataRegionMetrics;
     }
 
     /** {@inheritDoc} */
@@ -298,7 +302,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
             Segment seg = segment(pageIdx);
 
             absPtr = seg.absolute(pageIdx);
-            pageMetric.freePageUsed();
+
+            dataRegionMetrics.groupMemoryPageMetrics(grpId).pageAllocated(PageCategory.DATA);
         }
 
         // No segments contained a free page.
@@ -311,17 +316,20 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
                 if (relPtr != INVALID_REL_PTR) {
                     absPtr = allocSeg.absolute(PageIdUtils.pageIndex(relPtr));
-                    pageMetric.freePageUsed();
+
+                    dataRegionMetrics.groupMemoryPageMetrics(grpId).pageAllocated(PageCategory.DATA);
 
                     break;
                 }
                 else
-                    allocSeg = addSegment(seg0);
+                    allocSeg = addSegment(
+                        seg0,
+                        dataRegionMetrics.groupMemoryPageMetrics(grpId));
             }
         }
 
         if (relPtr == INVALID_REL_PTR) {
-            IgniteOutOfMemoryException oom = new IgniteOutOfMemoryException("Out of memory in data region [" +
+            throw new IgniteOutOfMemoryException("Out of memory in data region [" +
                 "name=" + dataRegionCfg.getName() +
                 ", initSize=" + U.readableSize(dataRegionCfg.getInitialSize(), false) +
                 ", maxSize=" + U.readableSize(dataRegionCfg.getMaxSize(), false) +
@@ -330,8 +338,6 @@ public class PageMemoryNoStoreImpl implements PageMemory {
                 "  ^-- Enable Ignite persistence (DataRegionConfiguration.persistenceEnabled)" + U.nl() +
                 "  ^-- Enable eviction or expiration policies"
             );
-
-            throw oom;
         }
 
         assert (relPtr & ~PageIdUtils.PAGE_IDX_MASK) == 0 : U.hexLong(relPtr & ~PageIdUtils.PAGE_IDX_MASK);
@@ -344,17 +350,18 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         // TODO pass an argument to decide whether the page should be cleaned.
         GridUnsafe.setMemory(absPtr + PAGE_OVERHEAD, sysPageSize - PAGE_OVERHEAD, (byte)0);
 
-        pageMetric.pageAllocated(category);
+        dataRegionMetrics.groupMemoryPageMetrics(grpId).pageAllocated(category);
 
         return pageId;
     }
 
     /** {@inheritDoc} */
-    @Override public boolean freePage(int cacheId, long pageId) {
+    @Override public boolean freePage(int grpId, long pageId) {
         assert started;
 
         releaseFreePage(pageId);
-        pageMetric.freePagesIncreased(1);
+
+        dataRegionMetrics.groupMemoryPageMetrics(grpId).pageReleased(1, PageCategory.DATA);
 
         return true;
     }
@@ -635,7 +642,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
             if (freePageListHead.compareAndSet(freePageRelPtrMasked, relPtr)) {
                 allocatedPages.decrementAndGet();
 
-                totalAllocatedPagesMetric.decrement();
+                dataRegionMetrics.totalAllocatedPages().decrement();
 
                 return;
             }
@@ -665,7 +672,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
                     allocatedPages.incrementAndGet();
 
-                    totalAllocatedPagesMetric.increment();
+                    dataRegionMetrics.totalAllocatedPages().increment();
 
                     return freePageRelPtr;
                 }
@@ -683,7 +690,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
      *      new array.
      * @return Added segment, if successfull, {@code null} if failed to add.
      */
-    private synchronized Segment addSegment(Segment[] oldRef) {
+    private synchronized Segment addSegment(Segment[] oldRef, @Nullable MemoryPageMetrics metrics) {
         if (segments == oldRef) {
             DirectMemoryRegion region = directMemoryProvider.nextRegion();
 
@@ -706,7 +713,10 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
             Segment allocated = new Segment(newRef.length - 1, region, lastSeg == null ? 0 : lastSeg.sumPages());
 
-            pageMetric.freePagesIncreased(allocated.init());
+            int allocatedPages = allocated.init();
+
+            if (metrics != null)
+                metrics.pageReleased(allocatedPages, PageCategory.DATA);
 
             newRef[newRef.length - 1] = allocated;
 
@@ -725,10 +735,10 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         private static final long serialVersionUID = 0L;
 
         /** Segment index. */
-        private int idx;
+        private final int idx;
 
         /** Direct memory chunk. */
-        private DirectMemoryRegion region;
+        private final DirectMemoryRegion region;
 
         /** Last allocated page index. */
         private long lastAllocatedIdxPtr;
@@ -737,7 +747,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         private long pagesBase;
 
         /** */
-        private int pagesInPrevSegments;
+        private final int pagesInPrevSegments;
 
         /** */
         private int maxPages;
@@ -871,7 +881,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
                     allocatedPages.incrementAndGet();
 
-                    totalAllocatedPagesMetric.increment();
+                    dataRegionMetrics.totalAllocatedPages().increment();
 
                     return pageIdx;
                 }
