@@ -170,7 +170,5 @@
                  <!--</executions>-->
              <!--</plugin>-->
              <!--/plugins-->
-            </plugin>
-        </plugins>
     </build>
 </project>
