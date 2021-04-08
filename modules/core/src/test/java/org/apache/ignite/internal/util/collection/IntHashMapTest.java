@@ -16,16 +16,20 @@
 
 package org.apache.ignite.internal.util.collection;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.IntStream;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.collection.IntHashMap.INITIAL_CAPACITY;
 import static org.apache.ignite.internal.util.collection.IntHashMap.MAXIMUM_CAPACITY;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
+import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 /**
  * Test for the specific implementation of IntMap.
@@ -56,7 +60,7 @@ public class IntHashMapTest extends AbstractBaseIntMapTest {
 
         directPositionMap.remove(1);
 
-        Assert.assertEquals(4, directPositionMap.size());
+        assertEquals(4, directPositionMap.size());
     }
 
     /** */
@@ -141,16 +145,35 @@ public class IntHashMapTest extends AbstractBaseIntMapTest {
     }
 
     /**
+     * Tests the copy constructor.
+     */
+    @Test
+    public void testCopyConstructor() {
+        IntMap<String> expected = new IntHashMap<>();
+
+        IntStream.range(0, 10).forEach(i -> expected.put(i, String.valueOf(i)));
+
+        IntMap<Object> actual = new IntHashMap<>(expected);
+
+        Object[] expectedKeys = Arrays.stream(expected.keys()).boxed().toArray();
+        Object[] actualKeys = Arrays.stream(actual.keys()).boxed().toArray();
+
+        assertThat(actualKeys, arrayContainingInAnyOrder(expectedKeys));
+
+        expected.forEach((key, expectedVal) -> assertThat(actual.get(key), is((Object) expectedVal)));
+    }
+
+    /**
      * @param initSize Initial size.
      */
-    private int realCapacityForInitialSize(int initSize) {
+    private static int realCapacityForInitialSize(int initSize) {
         return ((Object[]) U.field(new IntHashMap<String>(initSize), "entries")).length;
     }
 
     /**
      * @param bijection Bijection.
      */
-    private IntMap<String> bijectionHashFunctionMap(Map<Integer, Integer> bijection) {
+    private static IntMap<String> bijectionHashFunctionMap(Map<Integer, Integer> bijection) {
         return new IntHashMap<String>() {
             @Override protected int index(int key) {
                 return bijection.get(key);

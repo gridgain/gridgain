@@ -15,18 +15,17 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.util.collection.IntHashMap;
-import org.apache.ignite.internal.util.collection.IntMap;
-import org.apache.ignite.internal.util.typedef.F;
-
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.collection.IntHashMap;
+import org.apache.ignite.internal.util.collection.IntMap;
+import org.apache.ignite.internal.util.typedef.F;
 
 /**
  * Sql statistics storage in metastore.
@@ -66,7 +65,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
 
         for (StatisticsKey key : partsStats.keySet()) {
             partsStats.computeIfPresent(key, (k, v) -> {
-                res.put(k, Arrays.asList(v.values()));
+                res.put(k, v.values());
                 return v;
             });
         }
@@ -87,7 +86,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
         Collection<ObjectPartitionStatisticsImpl>[] res = new Collection[1];
         partsStats.computeIfPresent(key, (k, v) -> {
             // Need to make a copy under the lock.
-            res[0] = Arrays.asList(v.values());
+            res[0] = new ArrayList<>(v.values());
 
             return v;
         });

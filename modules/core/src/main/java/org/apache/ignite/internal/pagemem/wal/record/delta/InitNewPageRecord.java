@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -90,7 +91,9 @@ public class InitNewPageRecord extends PageDeltaRecord {
     @Override public void applyDelta(PageMemory pageMem, long pageAddr) throws IgniteCheckedException {
         PageIO io = PageIO.getPageIO(ioType, ioVer);
 
-        io.initNewPage(pageAddr, newPageId, pageMem.realPageSize(groupId()));
+        PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(groupId());
+
+        io.initNewPage(pageAddr, newPageId, pageMem.realPageSize(groupId()), metrics);
     }
 
     /** {@inheritDoc} */
@@ -126,4 +129,3 @@ public class InitNewPageRecord extends PageDeltaRecord {
             "super", super.toString());
     }
 }
-

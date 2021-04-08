@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -57,7 +56,7 @@ public class NoOpPageStoreManager implements IgnitePageStoreManager {
 
     /** {@inheritDoc} */
     @Override public void initialize(int cacheId, int partitions, String workingDir,
-        LongConsumer tracker) throws IgniteCheckedException {
+        PageMetrics pageMetrics) throws IgniteCheckedException {
         // No-op.
     }
 
