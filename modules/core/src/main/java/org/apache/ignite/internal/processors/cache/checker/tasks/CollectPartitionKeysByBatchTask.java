@@ -267,23 +267,23 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             if (!partReconciliationCtx.isReconciliationInProgress() && partReconciliationCtx.lastKey(cacheId) == null) {
                 cacheDataStore.busyLock.block();
 
-                try(GridCursor<? extends CacheDataRow> cursor = grpCtx.offheap().dataStore(part).cursor(cacheId, null, null);) {
+                try {
+                    try(GridCursor<? extends CacheDataRow> cursor = grpCtx.offheap().dataStore(part).cursor(cacheId, null, null);) {
 
-                    List q = new ArrayList();
+                        List q = new ArrayList();
 
-                    while (cursor.next()) {
-                        CacheDataRow row = cursor.get();
-                        q.add(row);
+                        while (cursor.next()) {
+                            CacheDataRow row = cursor.get();
+                            q.add(row);
+                        }
+
+                        System.out.println("qfdopjfilkd cache data on start recon " + q);
+
+                    }
+                    catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
 
-                    System.out.println("qfdopjfilkd cache data on start recon " + q);
-
-                }
-                catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
-                try {
                     partReconciliationCtx.isReconciliationInProgress(true);
                     System.out.println("qlopfots set isReconciliationInProgress to true");
                     partReconciliationCtx.cacheId = cacheId;
@@ -478,6 +478,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                        System.out.println("new part.size " + part.size.get());
 //                        *******************************************
 
+                        System.out.println("qfgtopes old size ************************* " + cacheDataStore.storageSize.get());
                         System.out.println("qfgtopes partSize ************************* " + partSize);
 
                         cacheDataStore.storageSize.set(partSize.get());

@@ -154,7 +154,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         CollectPartitionKeysByBatchTask.msg.clear();
         CollectPartitionKeysByBatchTask.msg1.clear();
         BPlusTree.i0 = 0;
-        clear = 0;
+        clear0 = 0;
+        clear1 = 0;
 
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
@@ -168,7 +169,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cache.remove(1);
     }
 
-    volatile int clear;
+    volatile int clear0;
+    volatile int clear1;
 
     @Test
 //    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
@@ -183,7 +185,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         int startKey = 0;
 //        int endKey = 337;
 //        int endKey = 667;//qssefvsdae cacheSize after recon 170
-        int endKey = 1000;
+        int endKey = 3000;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -291,13 +293,13 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         IgniteInternalFuture loadFut0 = GridTestUtils.runAsync(() -> {
 //            doSleep(150);
-                try {
-                    CollectPartitionKeysByBatchTask.latch.await();
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                System.out.println("qvsdhntsd loadFut0 start");
+//                try {
+//                    CollectPartitionKeysByBatchTask.latch.await();
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//                System.out.println("qvsdhntsd loadFut0 start");
 
             int i = 0;
 
@@ -316,32 +318,32 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //                }
 
 //                try {
-//                    sleep(40);
+//                    sleep(1);
 //                }
 //                catch (InterruptedException e) {
 //                    e.printStackTrace();
 //                }
+//
+//                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+////                if (cache.containsKey(i1)) {
+//                System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
+//                cache.remove(i1);
+//                System.out.println("qdflpltis after remove in test key: " + i1);
 
-                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                if (cache.containsKey(i1)) {
-                System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
-                cache.remove(i1);
-                System.out.println("qdflpltis after remove in test key: " + i1);
+                try {
+                    sleep(1);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
 
-                if (i1 % 7 == 0 /*&& *//*i == 10 && *//*!clear*/) {
+                if (i1 % 3 == 0 /*&& *//*i == 10 && *//*!clear*/) {
                     System.out.println("qfgthsfs start clear, cache.size() " + cache.size());
                     cache.clear();
                     System.out.println("qfgthsfs finish clear " + cache.size());
-                    clear++;
+                    clear0++;
                 }
 //                    removeCount.incrementAndGet();
-//                }
-
-//                try {
-//                    sleep(40);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
 //                }
 
 //                try {
@@ -375,74 +377,81 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         },
             "LoadThread");
 //
-//        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
-//            System.out.println("qvsdhntsd loadFut1 start");
-//
-//            int i = 0;
-//
-//            int max = 0;
-//
-//            while(res.get() == null/* || i < endKey*/) {
-//
-//                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-////                if (!cache.containsKey(i1)) {
-//                System.out.println("qdervdvds before put in test key: " + i1);
-//                cache.put(i1, i1);
-//                System.out.println("qdervdvds after put in test key: " + i1);
-////                putCount.incrementAndGet();
-////                }
-//
-////                try {
-////                    sleep(40);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
+        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
+            System.out.println("qvsdhntsd loadFut1 start");
+
+            int i = 0;
+
+            int max = 0;
+
+            while(res.get() == null/* || i < endKey*/) {
+
+                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (!cache.containsKey(i1)) {
+                System.out.println("qdervdvds before put in test key: " + cache.containsKey(i1) + " " + i1);
+                cache.put(i1, i1);
+                System.out.println("qdervdvds after put in test key: " + i1);
+//                putCount.incrementAndGet();
+//                }
+
+                try {
+                    sleep(1);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
 //                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 ////                if (cache.containsKey(i1)) {
-//                System.out.println("qdflpltis before remove in test key: " + i1);
+//                System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
 //                cache.remove(i1);
 //                System.out.println("qdflpltis after remove in test key: " + i1);
 ////                    removeCount.incrementAndGet();
 ////                }
 //
-////                try {
-////                    sleep(40);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                try {
-////                    sleep(10);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                try {
-////                    sleep(3);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                System.out.println("qfegsdg put random: " + i1);
-////                doSleep(3);
-//
-////                if (i1 > max)
-////                    max = i1;
-//
-////                if (i < endKey) {
-////                    cache.put(i, i);
-////                    i++;
-////                }
-//            }
-//
-//            System.out.println("qvraslpf loadFut1 stop " + i);
-//            System.out.println("qmfgtssf loadFut1 max " + max);
-//        });
+//                try {
+//                    sleep(1);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+                if (i1 % 3 == 0 /*&& *//*i == 10 && *//*!clear*/) {
+                    System.out.println("qfgthsfs start clear, cache.size() " + cache.size());
+                    cache.clear();
+                    System.out.println("qfgthsfs finish clear " + cache.size());
+                    clear1++;
+                }
+
+                try {
+                    sleep(1);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+//                try {
+//                    sleep(3);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                System.out.println("qfegsdg put random: " + i1);
+//                doSleep(3);
+
+//                if (i1 > max)
+//                    max = i1;
+
+//                if (i < endKey) {
+//                    cache.put(i, i);
+//                    i++;
+//                }
+            }
+
+            System.out.println("qvraslpf loadFut1 stop " + i);
+            System.out.println("qmfgtssf loadFut1 max " + max);
+        });
 
 //        IgniteInternalFuture loadFut2 = GridTestUtils.runAsync(() -> {
 //            System.out.println("qvsdhntsd loadFut1 start");
@@ -603,7 +612,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         ReconciliationResult reconciliationRes = res.get();
 
         loadFut0.get();
-//        loadFut1.get();
+        loadFut1.get();
 //        loadFut2.get();
 //        loadFut3.get();
 //        loadFut2.get();
@@ -662,7 +671,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         System.out.println("qcsdfrs " + CollectPartitionKeysByBatchTask.msg1);
         System.out.println("qcgpolhuj batches " + CollectPartitionKeysByBatchTask.i);
         System.out.println("qetfstrghbe i0 " + BPlusTree.i0);
-        System.out.println("qngjojetghd cach.clear() " + clear);
+        System.out.println("qngjojetghd cach.clear0() " + clear0);
+        System.out.println("qngjojetghd cach.clear1() " + clear1);
 
         System.out.println("qfsvrsdsdsd putCount " + putCount + ", removeCount " + removeCount);
 

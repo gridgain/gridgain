@@ -544,17 +544,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             throws IgniteCheckedException {
             assert lvl == 0 : lvl; // Leaf.
 
-            if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
-                System.out.println("qfpolgjki RemoveFromLeaf");
-                try {
-                    sleep(3);
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                r.reconRemoveFromLeaf(r.row);
-            }
-
             // Check the triangle invariant.
             if (io.getForward(leafAddr) != r.fwdId)
                 return RETRY;
@@ -607,12 +596,34 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 t.idx = (short)idx;
 
+//                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+//                    System.out.println("qfpolgjki RemoveFromLeaf");
+//                    try {
+//                        sleep(3);
+//                    }
+//                    catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//                    r.reconRemoveFromLeaf(r.row);
+//                }
+
                 // We will do the actual remove only when we made sure that
                 // we've locked the whole needed branch correctly.
                 return FOUND;
             }
 
             r.removeDataRowFromLeaf(leafId, leafPage, leafAddr, null, io, cnt, idx);
+
+//            if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+//                System.out.println("qfpolgjki RemoveFromLeaf");
+//                try {
+//                    sleep(3);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//                r.reconRemoveFromLeaf(r.row);
+//            }
 
             return FOUND;
         }
@@ -3471,6 +3482,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 }
             }
+            else
+                System.out.println("qvdmdfk not a SearchRow");
         }
 
         public void reconReplace(L oldRow, L newRow) {
@@ -3514,6 +3527,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                         reconSize.decrementAndGet();
 //                        System.out.println("in REMOVE after decrement reconSize: key " + row0.key() + " reconSize " + reconSize);
+
+                        System.out.println("qjokodkjhf in REMOVE after decrement reconSize BEFORE SLEEP");
+
+                        try {
+                            sleep(2);
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
 
                         System.out.println("qcbhpfjlas in REMOVE after decrement reconSize: key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                             " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
@@ -5166,6 +5188,42 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             rmvd = needOld ? getRow(io, pageAddr, idx) : (T)Boolean.TRUE;
 
             doRemove(pageId, page, pageAddr, walPlc, io, cnt, idx);
+
+            if (rmvd instanceof CacheDataRowAdapter/* && reconciliationCtx.isBatchesInProgress()*/) {
+                CacheDataRowAdapter row0 = (CacheDataRowAdapter)rmvd;
+                CacheDataRowAdapter oldRow0;
+
+                System.out.println("qfgyhopffs RemoveFromLeaf oldRow " + rmvd);
+                System.out.println("qfgyhopffs RemoveFromLeaf newRow " + rmvd);
+
+                boolean oldIsTombstone = false;
+
+//                if (rmvd instanceof CacheDataRowAdapter) {
+                    oldRow0 = (CacheDataRowAdapter)rmvd;
+
+                    if (oldRow0.tombstone())
+                        oldIsTombstone = true;
+//                }
+
+                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress() && rmvd != null && !oldIsTombstone) {
+                    System.out.println("qfdskgteri rmvd " + rmvd);
+                    System.out.println("qfpolgjki RemoveFromLeaf");
+                    try {
+                        sleep(3);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    reconRemoveFromLeaf(row);
+                }
+//                else {
+//                    System.out.println("qjfpilkrefg tombstone");
+//                }
+
+                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress() && (rmvd == null || oldIsTombstone))
+                    System.out.println("qjfpilkrefg tombstone");
+            }
+
 
             assert isRemoved();
         }
