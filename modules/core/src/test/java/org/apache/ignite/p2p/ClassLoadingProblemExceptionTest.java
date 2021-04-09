@@ -309,6 +309,8 @@ public class ClassLoadingProblemExceptionTest extends GridCommonAbstractTest imp
 
                             cache.query(new ScanQuery<IgniteBiPredicate, Integer>(cls.newInstance())).getAll();
                         }
+                        else if (!ignite.configuration().getIgniteInstanceName().startsWith(CLIENT_PREFIX))
+                            System.out.println(1);
                     }
                     catch (Throwable e) {
                         exceptionThrown.set(e);

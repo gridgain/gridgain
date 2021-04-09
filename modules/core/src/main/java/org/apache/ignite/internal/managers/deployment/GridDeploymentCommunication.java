@@ -189,6 +189,7 @@ class GridDeploymentCommunication {
                 req.responseTopic(U.unmarshal(marsh, req.responseTopicBytes(), U.resolveClassLoader(ctx.config())));
             }
             catch (IgniteCheckedException e) {
+                // TODO GG-32845
                 U.error(log, "Failed to process deployment request (will ignore): " + req, e);
 
                 return;
@@ -216,7 +217,8 @@ class GridDeploymentCommunication {
                     Class<?> cls = Class.forName(clsName, true, ldr);
 
                     if (U.getAnnotation(cls, IgniteNotPeerDeployable.class) != null) {
-                        String errMsg = "Attempt to peer deploy class that has @GridNotPeerDeployable " +
+                        // TODO GG-32845
+                        String errMsg = "Attempt to peer deploy class that has @IgniteNotPeerDeployable " +
                             "annotation: " + clsName;
 
                         U.error(log, errMsg);
@@ -230,6 +232,7 @@ class GridDeploymentCommunication {
                     }
                 }
                 catch (LinkageError | ClassNotFoundException e) {
+                    // TODO GG-32845
                     U.warn(log, "Failed to resolve class: " + clsName, e);
                     // Defined errors can be safely ignored here, because of resource which is able to be not a class name.
                     // Unsuccessful response will be sent below if the resource failed to be loaded.
@@ -239,6 +242,7 @@ class GridDeploymentCommunication {
             InputStream in = ldr.getResourceAsStream(req.resourceName());
 
             if (in == null) {
+                // TODO GG-32845
                 String errMsg = "Requested resource not found (ignoring locally): " + req.resourceName();
 
                 // Java requests the same class with BeanInfo suffix during
@@ -264,6 +268,7 @@ class GridDeploymentCommunication {
                     res.byteSource(bytes);
                 }
                 catch (IOException e) {
+                    // TODO GG-32845
                     String errMsg = "Failed to read resource due to IO failure: " + req.resourceName();
 
                     U.error(log, errMsg, e);
@@ -277,6 +282,7 @@ class GridDeploymentCommunication {
             }
         }
         else {
+            // TODO GG-32845
             String errMsg = "Failed to find local deployment for peer request: " + req;
 
             U.warn(log, errMsg);
