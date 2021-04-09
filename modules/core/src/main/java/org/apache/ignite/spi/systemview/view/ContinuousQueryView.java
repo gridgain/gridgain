@@ -48,7 +48,10 @@ public class ContinuousQueryView {
     private final String nodeConsistentId;
 
     /** Class name of the local listener */
-    private String localListener;
+    private final String locLsnr;
+
+    /** Class name of the local transformed listener */
+    private String localTransformedListener;
 
     /**
      * @param routineId Routine id.
@@ -61,10 +64,18 @@ public class ContinuousQueryView {
         this.nodeConsistentId = nodeConsistentId;
 
         CacheContinuousQueryHandler hnd0 = cacheHandler();
+
         if (hnd0 == null || hnd0.localListener() == null)
-            this.localListener = null;
+            this.locLsnr = null;
         else
-            this.localListener = toStringSafe(hnd0.localListener());
+            this.locLsnr = toStringSafe(hnd0.localListener());
+
+        if (hnd0 == null || hnd0.localTransformedEventListener() == null)
+            this.localTransformedListener = null;
+        else
+            this.localTransformedListener = toStringSafe(hnd0.localTransformedEventListener());
+
+        System.out.println(locLsnr + " | " + localTransformedListener);
     }
 
     /** @return Continuous query id. */
@@ -157,7 +168,7 @@ public class ContinuousQueryView {
      */
     @Order(1)
     public String localListener() {
-        return localListener;
+        return locLsnr;
     }
 
     /**
@@ -207,12 +218,7 @@ public class ContinuousQueryView {
      */
     @Order(4)
     public String localTransformedListener() {
-        CacheContinuousQueryHandler hnd0 = cacheHandler();
-
-        if (hnd0 == null || hnd0.localTransformedEventListener() == null)
-            return null;
-
-        return toStringSafe(hnd0.localTransformedEventListener());
+        return localTransformedListener;
     }
 
     /**
