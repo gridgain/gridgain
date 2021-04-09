@@ -14,7 +14,7 @@
 :: limitations under the License.
 ::
 ::
-:: Grid command line loader.
+:: The utility for offline analysis of WAL files.
 ::
 
 @echo off
@@ -139,25 +139,10 @@ if %ERRORLEVEL% equ 0 (
 )
 
 ::
-:: Uncomment to enable experimental commands [--wal]
-::
-:: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -DIGNITE_ENABLE_EXPERIMENTAL_COMMAND=true
-
-::
-:: Uncomment the following GC settings if you see spikes in your throughput due to Garbage Collection.
-::
-:: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -XX:+UseG1GC
-
-::
 :: Uncomment if you get StackOverflowError.
 :: On 64 bit systems this value can be larger, e.g. -Xss16m
 ::
 :: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -Xss4m
-
-::
-:: Uncomment to set preference to IPv4 stack.
-::
-:: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -Djava.net.preferIPv4Stack=true
 
 ::
 :: Assertions are disabled by default since version 3.5.
@@ -177,12 +162,6 @@ if %ENABLE_ASSERTIONS% == 1 set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -ea
 ::
 
 if "%MAIN_CLASS%" == "" set MAIN_CLASS=org.apache.ignite.internal.commandline.walconverter.IgniteWalConverter
-
-::
-:: Remote debugging (JPDA).
-:: Uncomment and change if remote debugging is required.
-:: set CONTROL_JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8787 %CONTROL_JVM_OPTS%
-::
 
 ::
 :: Final CONTROL_JVM_OPTS for Java 9+ compatibility
@@ -216,15 +195,9 @@ if defined JVM_OPTS (
     echo JVM_OPTS=%JVM_OPTS%
 )
 
-if "%INTERACTIVE%" == "1" (
-    "%JAVA_HOME%\bin\java.exe" %CONTROL_JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
+"%JAVA_HOME%\bin\java.exe" %CONTROL_JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
     -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS% %*
-) else (
-    "%JAVA_HOME%\bin\java.exe" %CONTROL_JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
-    -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
-    -cp "%CP%" %MAIN_CLASS% %*
-)
 
 set JAVA_ERRORLEVEL=%ERRORLEVEL%
 

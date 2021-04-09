@@ -25,7 +25,7 @@ fi
 #
 
 #
-# Grid cluster control.
+# The utility for offline analysis of WAL files.
 #
 
 #
@@ -81,25 +81,10 @@ if [ -z "${CONTROL_JVM_OPTS:-}" ] ; then
 fi
 
 #
-# Uncomment to enable experimental commands [--wal]
-#
-# CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} -DIGNITE_ENABLE_EXPERIMENTAL_COMMAND=true"
-
-#
-# Uncomment the following GC settings if you see spikes in your throughput due to Garbage Collection.
-#
-# CONTROL_JVM_OPTS="$CONTROL_JVM_OPTS -XX:+UseG1GC"
-
-#
 # Uncomment if you get StackOverflowError.
 # On 64 bit systems this value can be larger, e.g. -Xss16m
 #
 # CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} -Xss4m"
-
-#
-# Uncomment to set preference for IPv4 stack.
-#
-# CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} -Djava.net.preferIPv4Stack=true"
 
 #
 # Assertions are disabled by default since version 3.5.
@@ -120,12 +105,6 @@ fi
 if [ "${MAIN_CLASS:-}" = "" ]; then
     MAIN_CLASS=org.apache.ignite.internal.commandline.walconverter.IgniteWalConverter
 fi
-
-#
-# Remote debugging (JPDA).
-# Uncomment and change if remote debugging is required.
-#
-# CONTROL_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8787 ${CONTROL_JVM_OPTS}"
 
 #
 # Final CONTROL_JVM_OPTS for Java 9+ compatibility
