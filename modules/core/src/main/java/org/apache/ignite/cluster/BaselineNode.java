@@ -67,4 +67,9 @@ public interface BaselineNode {
      * @return All node attributes.
      */
     public Map<String, Object> attributes();
+
+    //TODO: document
+    public String affinityAttribute(String name);
+
+    public Map<String, String> affinityAttributes();
 }

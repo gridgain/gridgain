@@ -85,6 +85,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.tracing.SpanType.AFFINITY_CALCULATION;
+import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
  *
@@ -155,6 +156,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         cctx.kernalContext().event().addLocalEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
         cachesRegistry = new CachesRegistry(cctx);
+
+        isLocalNodeCoordinator(cctx.kernalContext().discovery());
     }
 
     /**

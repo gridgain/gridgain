@@ -11673,14 +11673,15 @@ public abstract class IgniteUtils {
      * @return {@code true} if local node is coordinator.
      */
     public static boolean isLocalNodeCoordinator(GridDiscoveryManager discoMgr) {
-        if (discoMgr.localNode().isClient() || discoMgr.localNode().isDaemon())
+        final ClusterNode localNode = discoMgr.localNode();
+        if (localNode.isClient() || localNode.isDaemon())
             return false;
 
         DiscoverySpi spi = discoMgr.getInjectedDiscoverySpi();
 
         return spi instanceof TcpDiscoverySpi
             ? ((TcpDiscoverySpi)spi).isLocalNodeCoordinator()
-            : F.eq(discoMgr.localNode(), U.oldest(discoMgr.aliveServerNodes(), null));
+            : F.eq(localNode, U.oldest(discoMgr.aliveServerNodes(), null));
     }
 
     /**
