@@ -74,8 +74,6 @@ public class ContinuousQueryView {
             this.localTransformedListener = null;
         else
             this.localTransformedListener = toStringSafe(hnd0.localTransformedEventListener());
-
-        System.out.println(locLsnr + " | " + localTransformedListener);
     }
 
     /** @return Continuous query id. */
