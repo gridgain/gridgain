@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import com.sun.tools.javac.util.List;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -42,11 +44,16 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionException;
+import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
 
 import static java.lang.Thread.sleep;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_COMPLETED_TX_COUNT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
  * Tests count of calls the recheck process with different inputs.
@@ -185,7 +192,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         int startKey = 0;
 //        int endKey = 337;
 //        int endKey = 667;//qssefvsdae cacheSize after recon 170
-        int endKey = 3000;
+        int endKey = 1000;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -307,42 +314,71 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
             while(res.get() == null/* && i < 10000*/) {
                 i++;
-
-                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                    int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i2 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i3 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i4 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i5 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (!cache.containsKey(i1)) {
-                System.out.println("qdervdvds before put in test key: " + cache.containsKey(i1) + " " + i1);
-                cache.put(i1, i1);
-                System.out.println("qdervdvds after put in test key: " + i1);
+
+                Map map = new HashMap();
+
+                map.put(i1, i1);
+                map.put(i2, i2);
+                map.put(i3, i3);
+                map.put(i4, i4);
+                map.put(i5, i5);
+
+                    System.out.println("qdervdvds before put in test key: " + cache.containsKey(i1) + " " + i1);
+                    cache.putAll(map);
+                    System.out.println("qdervdvds after put in test key: " + i1);
 
 //                putCount.incrementAndGet();
 //                }
 
-//                try {
-//                    sleep(1);
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
+                    try {
+                        sleep(1);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
 //
-//                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-////                if (cache.containsKey(i1)) {
-//                System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
-//                cache.remove(i1);
-//                System.out.println("qdflpltis after remove in test key: " + i1);
+                    i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i2 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i3 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i4 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i5 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (cache.containsKey(i1)) {
 
-                try {
-                    sleep(1);
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                Set set = new HashSet();
 
-                if (i1 % 3 == 0 /*&& *//*i == 10 && *//*!clear*/) {
-                    System.out.println("qfgthsfs start clear, cache.size() " + cache.size());
-                    cache.clear();
-                    System.out.println("qfgthsfs finish clear " + cache.size());
-                    clear0++;
-                }
+                set.add(i1);
+                set.add(i2);
+                set.add(i3);
+                set.add(i4);
+                set.add(i5);
+
+                    System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
+                    cache.removeAll(set);
+                    System.out.println("qdflpltis after remove in test key: " + i1);
+
+                    try {
+                        sleep(1);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+//                    tx.commit();
+//                }
+
+//                if (i1 % 3 == 0 /*&& *//*i == 10 && *//*!clear*/) {
+//                    System.out.println("qfgthsfs start clear, cache.size() " + cache.size());
+//                    cache.clear();
+//                    System.out.println("qfgthsfs finish clear " + cache.size());
+//                    clear0++;
+//                }
 //                    removeCount.incrementAndGet();
 //                }
 
@@ -386,28 +422,46 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
             while(res.get() == null/* || i < endKey*/) {
 
-                int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                    int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
 //                if (!cache.containsKey(i1)) {
-                System.out.println("qdervdvds before put in test key: " + cache.containsKey(i1) + " " + i1);
-                cache.put(i1, i1);
-                System.out.println("qdervdvds after put in test key: " + i1);
+                    System.out.println("qdervdvds before put in test key: " + cache.containsKey(i1) + " " + i1);
+                    cache.put(i1, i1);
+                    System.out.println("qdervdvds after put in test key: " + i1);
 //                putCount.incrementAndGet();
 //                }
 
-                try {
-                    sleep(1);
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                    try {
+                        sleep(1);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
 
-//                i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-////                if (cache.containsKey(i1)) {
-//                System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
-//                cache.remove(i1);
-//                System.out.println("qdflpltis after remove in test key: " + i1);
-////                    removeCount.incrementAndGet();
-////                }
+                    i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (cache.containsKey(i1)) {
+                    System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
+                    cache.remove(i1);
+                    System.out.println("qdflpltis after remove in test key: " + i1);
+//                    removeCount.incrementAndGet();
+//                }
+
+                    try {
+                        sleep(1);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+//                    tx.commit();
+//                }
+
+//                if (i1 % 3 == 0 /*&& *//*i == 10 && *//*!clear*/) {
+//                    System.out.println("qfgthsfs start clear, cache.size() " + cache.size());
+//                    cache.clear();
+//                    System.out.println("qfgthsfs finish clear " + cache.size());
+//                    clear1++;
+//                }
 //
 //                try {
 //                    sleep(1);
@@ -415,20 +469,6 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //                catch (InterruptedException e) {
 //                    e.printStackTrace();
 //                }
-
-                if (i1 % 3 == 0 /*&& *//*i == 10 && *//*!clear*/) {
-                    System.out.println("qfgthsfs start clear, cache.size() " + cache.size());
-                    cache.clear();
-                    System.out.println("qfgthsfs finish clear " + cache.size());
-                    clear1++;
-                }
-
-                try {
-                    sleep(1);
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
 
 //                try {
 //                    sleep(3);

@@ -3430,8 +3430,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             GridCacheVersion ver,
             GridDhtLocalPartition part
         ) throws IgniteCheckedException {
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(2);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+//            if (!busyLock.enterBusy())
+//                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
             try {
                 assert cctx.shared().database().checkpointLockIsHeldByThread();
