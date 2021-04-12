@@ -30,7 +30,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DeploymentMode;
@@ -40,6 +39,7 @@ import org.apache.ignite.internal.util.GridByteArrayList;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -591,7 +591,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             nodeLdrMapCp = singleNode ? nodeLdrMap : new HashMap<>(nodeLdrMap);
         }
 
-        IgniteCheckedException err = null;
+        Exception err = null;
 
         TimeoutException te;
 
@@ -786,9 +786,11 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                 GridDeploymentResponse res = comm.sendResourceRequest(name, ldrId, node, endTime);
 
                 if (res == null) {
-                    U.warn(log, "Failed to get resource from node (is node alive?) [nodeId=" +
-                        node.id() + ", clsLdrId=" + ldrId + ", resName=" +
-                        name + ", parentClsLdr=" + getParent() + ']');
+                    U.warn(log, "Failed to get resource from node (is node alive?) [" +
+                        "nodeId=" + node.id() +
+                        ", clsLdrId=" + ldrId +
+                        ", resName=" + name +
+                        ", classLoadersHierarchy=" + classLoadersHierarchy() + ']');
                 }
                 else if (!res.success()) {
                     synchronized (mux) {
@@ -800,16 +802,14 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                     // Some frameworks like Spring often ask for the resources
                     // just in case - none will happen if there are no such
                     // resources. So we print out INFO level message.
-                    if (!quiet) {
-                        if (log.isInfoEnabled())
-                            log.info("Failed to get resource from node [nodeId=" +
-                                node.id() + ", clsLdrId=" + ldrId + ", resName=" +
-                                name + ", parentClsLdr=" + getParent() + ", msg=" + res.errorMessage() + ']');
-                    }
-                    else if (log.isDebugEnabled())
-                        log.debug("Failed to get resource from node [nodeId=" +
-                            node.id() + ", clsLdrId=" + ldrId + ", resName=" +
-                            name + ", parentClsLdr=" + getParent() + ", msg=" + res.errorMessage() + ']');
+                    String msg = "Failed to get resource from node [" +
+                        "nodeId=" + node.id() +
+                        ", clsLdrId=" + ldrId +
+                        ", resName=" + name +
+                        ", classLoadersHierarchy=" + classLoadersHierarchy() +
+                        ", msg=" + res.errorMessage() + ']';
+
+                    LT.info(log, msg);
 
                     // Do not ask other nodes in case of shared mode all of them should have the resource.
                     return null;
@@ -819,25 +819,27 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                         res.byteSource().size());
                 }
             }
-            catch (IgniteCheckedException e) {
+            catch (IgniteCheckedException | TimeoutException e) {
                 // This thread should be interrupted again in communication if it
                 // got interrupted. So we assume that thread can be interrupted
                 // by processing cancellation request.
                 if (Thread.currentThread().isInterrupted()) {
-                    if (!quiet)
-                        U.error(log, "Failed to get resource probably due to task/job cancellation: " + name, e);
-                    else if (log.isDebugEnabled())
-                        log.debug("Failed to get resource probably due to task/job cancellation: " + name);
+                    String msg = "Failed to get resource probably due to task/job cancellation [name=" + name +
+                        ", clsLdrId=" + ldrId +
+                        ", nodeId=" + nodeId +
+                        ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']';
+
+                    LT.error(log, e, msg);
                 }
                 else {
-                    if (!quiet)
-                        U.warn(log, "Failed to get resource from node (is node alive?) [nodeId=" +
-                            node.id() + ", clsLdrId=" + ldrId + ", resName=" +
-                            name + ", parentClsLdr=" + getParent() + ", err=" + e + ']');
-                    else if (log.isDebugEnabled())
-                        log.debug("Failed to get resource from node (is node alive?) [nodeId=" +
-                            node.id() + ", clsLdrId=" + ldrId + ", resName=" +
-                            name + ", parentClsLdr=" + getParent() + ", err=" + e + ']');
+                    String msg = "Failed to get resource from node (is node alive?) [" +
+                        "node=" + node.id() +
+                        ", resName=" + name +
+                        ", clsLdrId=" + ldrId +
+                        ", clsLoadersHierarchy=" + classLoadersHierarchy() +
+                        ", err=" + e + ']';
+
+                    LT.warn(log, msg, e);
                 }
             }
         }

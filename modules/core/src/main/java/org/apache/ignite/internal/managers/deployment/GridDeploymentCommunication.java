@@ -36,6 +36,7 @@ import org.apache.ignite.internal.util.GridBusyLock;
 import org.apache.ignite.internal.util.GridByteArrayList;
 import org.apache.ignite.internal.util.lang.GridTuple;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteNotPeerDeployable;
 import org.apache.ignite.lang.IgniteUuid;
@@ -189,8 +190,7 @@ class GridDeploymentCommunication {
                 req.responseTopic(U.unmarshal(marsh, req.responseTopicBytes(), U.resolveClassLoader(ctx.config())));
             }
             catch (IgniteCheckedException e) {
-                // TODO GG-32845
-                U.error(log, "Failed to process deployment request (will ignore): " + req, e);
+                U.error(log, "Failed to process deployment request (will ignore) [node=" + nodeId + ", req=" + req + ']', e);
 
                 return;
             }
@@ -217,7 +217,6 @@ class GridDeploymentCommunication {
                     Class<?> cls = Class.forName(clsName, true, ldr);
 
                     if (U.getAnnotation(cls, IgniteNotPeerDeployable.class) != null) {
-                        // TODO GG-32845
                         String errMsg = "Attempt to peer deploy class that has @IgniteNotPeerDeployable " +
                             "annotation: " + clsName;
 
@@ -232,8 +231,9 @@ class GridDeploymentCommunication {
                     }
                 }
                 catch (LinkageError | ClassNotFoundException e) {
-                    // TODO GG-32845
-                    U.warn(log, "Failed to resolve class: " + clsName, e);
+                    U.warn(log, "Failed to resolve class [node=" + nodeId + ", class=" + clsName +
+                        ", req=" + req + ']', e
+                    );
                     // Defined errors can be safely ignored here, because of resource which is able to be not a class name.
                     // Unsuccessful response will be sent below if the resource failed to be loaded.
                 }
@@ -242,8 +242,7 @@ class GridDeploymentCommunication {
             InputStream in = ldr.getResourceAsStream(req.resourceName());
 
             if (in == null) {
-                // TODO GG-32845
-                String errMsg = "Requested resource not found (ignoring locally): " + req.resourceName();
+                String errMsg = "Requested resource not found (ignoring locally) " + resourceRequestDetails(nodeId, req);
 
                 // Java requests the same class with BeanInfo suffix during
                 // introspection automatically. Usually nobody uses this kind
@@ -268,8 +267,7 @@ class GridDeploymentCommunication {
                     res.byteSource(bytes);
                 }
                 catch (IOException e) {
-                    // TODO GG-32845
-                    String errMsg = "Failed to read resource due to IO failure: " + req.resourceName();
+                    String errMsg = "Failed to read resource due to IO failure " + resourceRequestDetails(nodeId, req);
 
                     U.error(log, errMsg, e);
 
@@ -282,8 +280,7 @@ class GridDeploymentCommunication {
             }
         }
         else {
-            // TODO GG-32845
-            String errMsg = "Failed to find local deployment for peer request: " + req;
+            String errMsg = "Failed to find local deployment for peer request [node=" + nodeId + ", req=" + req + ']';
 
             U.warn(log, errMsg);
 
@@ -292,6 +289,16 @@ class GridDeploymentCommunication {
         }
 
         sendResponse(nodeId, req.responseTopic(), res);
+    }
+
+    /** */
+    private String resourceRequestDetails(UUID nodeId, GridDeploymentRequest req) {
+        return new SB()
+            .a("[nodeId=").a(nodeId)
+            .a(", resourceName=").a(req.resourceName())
+            .a(", classLoaderId=").a(req.classLoaderId())
+            .a(']')
+            .toString();
     }
 
     /**
