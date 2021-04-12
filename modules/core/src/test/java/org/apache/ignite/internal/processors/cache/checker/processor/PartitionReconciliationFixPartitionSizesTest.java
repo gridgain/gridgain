@@ -60,7 +60,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  */
 public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static final int NODES_CNT = 3;
+    protected static final int NODES_CNT = 2;
 
     /** Crd server node. */
     protected IgniteEx ig;
@@ -83,7 +83,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         ccfg.setName(DEFAULT_CACHE_NAME);
 //        ccfg.setGroupName("zzz");
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 9));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, 4));
         ccfg.setBackups(NODES_CNT - NODES_CNT);
         ccfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
 
@@ -192,7 +192,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         int startKey = 0;
 //        int endKey = 337;
 //        int endKey = 667;//qssefvsdae cacheSize after recon 170
-        int endKey = 10000;
+        int endKey = 500;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -214,7 +214,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
-        breakCacheSizes(List.of(grid(0), grid(1), grid(2)/*, grid(3)*/), List.of(DEFAULT_CACHE_NAME));
+        breakCacheSizes(List.of(grid(0), grid(1)/*, grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
 
         assertFalse(cache.size() == startSize);
 

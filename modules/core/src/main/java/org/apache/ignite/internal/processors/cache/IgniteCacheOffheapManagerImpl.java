@@ -3248,11 +3248,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             /** */
-            public Map<Integer, KeyCacheObject> lastKeys() {
-                return lastKeys;
-            }
-
-            /** */
             public KeyCacheObject lastKey(int cacheId) {
                 return lastKeys.get(cacheId);
             }
@@ -3273,8 +3268,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             /** */
-            public void removeFirstKey(int cacheId) {
-                firstKeys.remove(cacheId);
+            public AtomicLong size(int cacheId) {
+                return sizes.get(cacheId);
+            }
+
+            /** */
+            public void size(int cacheId, long size) {
+                sizes.putIfAbsent(cacheId, new AtomicLong());
+
+                sizes.get(cacheId).set(size);
             }
         }
 
@@ -3720,6 +3722,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             else {
                 lowerRow = lower != null ? new SearchRow(CU.UNDEFINED_CACHE_ID, lower) : null;
                 upperRow = upper != null ? new SearchRow(CU.UNDEFINED_CACHE_ID, upper) : null;
+
+                cacheId = CU.UNDEFINED_CACHE_ID;
             }
 
             GridCursor<? extends CacheDataRow> cursor;
@@ -3732,7 +3736,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 cursor = dataTree.find(lowerRow, upperRow, new MvccFirstVisibleRowTreeClosure(cctx, snapshot), x);
             }
             else {
-                cursor = dataTree.findRecon(lowerRow, upperRow, x);
+                cursor = dataTree.findRecon(cacheId, lowerRow, upperRow, x);
 
 //                dataTree.reconCursor(cursor);
 

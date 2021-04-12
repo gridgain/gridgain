@@ -59,6 +59,7 @@ import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
@@ -241,7 +242,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             CacheGroupContext grpCtx = cctx.group();
 
-            int cacheId = cctx.cacheId();
+//            int cacheId = cctx.cacheId();
+            int cacheId = grpCtx.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             final int batchSize = partBatch.batchSize();
             final KeyCacheObject lowerKey;
@@ -297,7 +299,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             AtomicLong partSize = partReconciliationCtx.sizes.get(cacheId);
 
-            KeyCacheObject oldBorderKey = partReconciliationCtx.lastKeys().get(cacheId);
+            KeyCacheObject oldBorderKey = partReconciliationCtx.lastKey(cacheId);
 
             KeyCacheObject newLastKey = null;
 
@@ -333,7 +335,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     }
 
                     CacheDataRow row = cursor.get();
-                    newLastKey = partReconciliationCtx.lastKeys().get(cacheId);//row.key();
+                    newLastKey = partReconciliationCtx.lastKey(cacheId);//row.key();
 
                     if (oldBorderKey != null && KEY_COMPARATOR.compare(oldBorderKey, newLastKey) <= 0)
                         i--;
@@ -365,7 +367,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
                 System.out.println("qvdrftga2 after iteration newLastKey " + newLastKey + " oldBorderKey " + oldBorderKey);
 
-                if ((partReconciliationCtx.lastKeys().get(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKeys().get(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress()) {
+                if ((partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress()) {
 //                if (partSize.get() == 300) {
                     cacheDataStore.busyLock.block();
                     System.out.println("qdsaftpg start second busy lock");
