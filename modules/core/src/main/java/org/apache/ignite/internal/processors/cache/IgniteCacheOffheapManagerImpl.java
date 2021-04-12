@@ -1926,92 +1926,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void flushReconciliationResult(Integer cacheId, Long reconciliationCacheSize) {
-            reconciliationCtx.lockPutRemove.writeLock().lock();
-
-            try {
-                reconciliationCtx.lock.writeLock().lock();
-
-                try /*synchronized (reconciliationCtx.reconciliationMux())*/ {
                     System.out.println("qefsrvfdbs");
                     if (grp.sharedGroup()) {
                         cacheSizes.get(cacheId).set(
-                            reconciliationCacheSize +
-                                reconciliationCtx.storageSizeDeltas().get(cacheId).get());
+                            reconciliationCacheSize/* +
+                                reconciliationCtx.storageSizeDeltas().get(cacheId).get()*/);
 
                         storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
                     }
-                    else {
-                        long newSize0 = reconciliationCacheSize + reconciliationCtx.storageSizeDelta(cacheId)/* + reconciliationCtx.keysAfterCounters.get(cacheId).get()*/;
 
-                        System.out.println("qdsvrfs reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId));
-
-                        AtomicLong newSize = new AtomicLong(newSize0);
-
-                        System.out.println("qwddssda " + newSize);
-
-                        reconciliationCtx.keysAfter.putIfAbsent(cacheId, new ConcurrentHashMap<>());
-                        reconciliationCtx.keysInBatch.putIfAbsent(cacheId, Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>()));
-
-                        reconciliationCtx.keysAfter.get(cacheId).entrySet().forEach(e -> {
-//                            if (reconciliationCtx.lastKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.lastKey(cacheId)) <= 0) {
-//                                long count = e.getValue().get();
-//                                if (count > 0 && !reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
-//                                    newSize.addAndGet(count);
-//                                    System.out.println("qddsdws flush keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
-//                                }
-//                                if (count < 0 && reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
-//                                    newSize.addAndGet(count);
-//                                    System.out.println("qfresdvd flush keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
-//                                }
-//                                System.out.println("qcsdsdfv flush key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
-//                            }
-
-                            if ((reconciliationCtx.lastKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.lastKey(cacheId)) <= 0) &&
-                                (reconciliationCtx.firstKey(cacheId) == null || reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.firstKey(cacheId)) >= 0)) {
-                                long count = e.getValue().get();
-                                if (count > 0 && !reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
-                                    newSize.addAndGet(count);
-                                    System.out.println("qwqwfdeds keysAfter after check increment" + ((KeyCacheObjectImpl)e.getKey()).value());
-                                }
-                                if (count < 0 && reconciliationCtx.keysInBatch.get(cacheId).contains(e.getKey())) {
-                                    newSize.addAndGet(count);
-                                    System.out.println("qcdsvrdsv keysAfter after check decrement" + ((KeyCacheObjectImpl)e.getKey()).value());
-                                }
-                                System.out.println("qwddxvfgrt2 key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
-                            }
-
-                            if (reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(e.getKey(), reconciliationCtx.lastKey(cacheId)) > 0) {
-                                long count = e.getValue().get();
-                                if (count > 0) {
-                                    newSize.addAndGet(count);
-                                    System.out.println("qcsdsdfv flush key: " + ((KeyCacheObjectImpl)e.getKey()).value() + ", value: " + count);
-                                }
-                            }
-                        });
-
-                        System.out.println("qdsrfscsfr " + newSize);
-
-                        storageSize.set(newSize.get());
-                    }
-
-                    CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "xxxxx reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfterCounter: " + reconciliationCtx.keysAfterCounters.get(cacheId).get());
-                    CollectPartitionKeysByBatchTask.msg1.put(System.identityHashCode(this), "zzzzz reconciliationCtx.keysAfter: " + reconciliationCtx.keysAfter);
+//                    CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "xxxxx reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfterCounter: " + reconciliationCtx.keysAfterCounters.get(cacheId).get());
+//                    CollectPartitionKeysByBatchTask.msg1.put(System.identityHashCode(this), "zzzzz reconciliationCtx.keysAfter: " + reconciliationCtx.keysAfter);
 
 //                System.out.println(CollectPartitionKeysByBatchTask.msg);
-
-                    reconciliationCtx.storageSizeDeltas().remove(cacheId);
-
-                    if (reconciliationCtx.storageSizeDeltas().isEmpty())
-                        reconciliationCtx.isReconciliationInProgress(false);
-                }
-                finally {
-                    reconciliationCtx.lock.writeLock().unlock();
-                }
-            }
-            finally {
-                reconciliationCtx.lockPutRemove.writeLock().unlock();
-            }
-
         }
 
         /** {@inheritDoc} */
@@ -2122,21 +2049,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public void invoke(GridCacheContext cctx, KeyCacheObject key, OffheapInvokeClosure c)
             throws IgniteCheckedException {
-
-//            if (reconciliationCtx().isReconciliationInProgress()) {
-                while (!busyLock.enterBusy()) {
-                    try {
-                        sleep(2);
-                    }
-                    catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
                 }
-//            }
-
-//            if (!busyLock.enterBusy()) {
-//                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-//            }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -2314,8 +2234,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         {
             assert mvccVer != null || newMvccVer == null : newMvccVer;
 
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
@@ -2379,8 +2305,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             List<GridCacheMvccEntryInfo> hist) throws IgniteCheckedException {
             assert !F.isEmpty(hist);
 
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
@@ -2456,8 +2388,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             MvccVersion newMvccVer,
             byte mvccTxState,
             byte newMvccTxState) throws IgniteCheckedException {
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
@@ -2511,8 +2449,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert mvccSnapshot != null;
             assert primary || !needHistory;
 
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -2720,8 +2664,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert primary || mvccSnapshot.activeTransactions().size() == 0 : mvccSnapshot;
             assert primary || !needHistory;
 
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -2786,8 +2736,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             MvccSnapshot mvccSnapshot) throws IgniteCheckedException {
             assert mvccSnapshot != null;
 
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -2835,8 +2791,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void mvccRemoveAll(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 key = key.prepareForCache(cctx.cacheObjectContext(), false);
@@ -2896,8 +2858,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (F.isEmpty(cleanupRows))
                 return 0;
 
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            CollectPartitionKeysByBatchTask.iCleanup++;
+
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 return cleanup0(cctx, cleanupRows);
@@ -2971,8 +2941,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         ) throws IgniteCheckedException {
             assert oldRow == null || oldRow.link() != 0L : oldRow;
 
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            CollectPartitionKeysByBatchTask.iUpdate++;
+
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -3029,8 +3007,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             long expireTime,
             MvccVersion mvccVer
         ) throws IgniteCheckedException {
-            if (!busyLock.enterBusy())
-                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                try {
+                    sleep(5);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -3241,38 +3225,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             private volatile boolean isReconciliationInProgress;
 
             /** */
-            private volatile boolean isBatchesInProgress;
-
-            public volatile boolean cursorIteration;
-
-            /** */
-            private final Object reconciliationMux = new Object();
-
-            public final ReadWriteLock lock = new ReentrantReadWriteLock(true);
-
-            public final ReadWriteLock lockPutRemove = new ReentrantReadWriteLock(true);
-
-            public final AtomicLong putRemoveInProgress = new AtomicLong();
-
-            /** */
-            public final Map<Integer, AtomicLong> storageSizeDeltas = new ConcurrentHashMap<>();
-
-            /** */
             private final Map<Integer, KeyCacheObject> firstKeys = new ConcurrentHashMap<>();
 
             /** */
             public final Map<Integer, KeyCacheObject> lastKeys = new ConcurrentHashMap<>();
 
-            public final Map<Integer, List<KeyCacheObject>> keysCheckedInBatch = new ConcurrentHashMap<>();
-
-            public final Map<Integer, Map<KeyCacheObject, AtomicLong>> keysAfter = new ConcurrentHashMap<>();
-
             public final Map<Integer, AtomicLong> sizes = new ConcurrentHashMap<>();
 
-            public final Map<Integer, Map<KeyCacheObject, T2<KeyCacheObject, Integer>>> tempMap = new ConcurrentHashMap<>();
-
-            public Map<Integer, Set<KeyCacheObject>> keysInBatch = new ConcurrentHashMap<>();
-//            public Map<Integer, Set<KeyCacheObject>> keysInBatch = Collections.newSetFromMap(new ConcurrentHashMap<KeyCacheObject, Boolean>());
+            public final Map<Integer, Map<KeyCacheObject, Boolean>> tempMap = new ConcurrentHashMap<>();
 
             /** */
             public static final KeyComparator KEY_COMPARATOR = new KeyComparator();
@@ -3285,49 +3245,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             /** */
             public void isReconciliationInProgress(boolean b) {
                 this.isReconciliationInProgress = b;
-            }
-
-            /** */
-            public boolean isBatchesInProgress() {
-                return isBatchesInProgress;
-            }
-
-            /** */
-            public void isBatchesInProgress(boolean b) {
-                this.isBatchesInProgress = b;
-            }
-
-            /** */
-            public Map<Integer, AtomicLong> storageSizeDeltas() {
-                return storageSizeDeltas;
-            }
-
-            /** */
-            public AtomicLong storageSizeAddDelta(int cacheId, long delta) {
-                AtomicLong savedDelta = storageSizeDeltas.get(cacheId);
-
-                if (savedDelta != null)
-                    storageSizeDeltas.put(cacheId, new AtomicLong(savedDelta.get() + delta));
-                else
-                    storageSizeDeltas.put(cacheId, new AtomicLong(delta));
-
-                return storageSizeDeltas.get(cacheId);
-            }
-
-            /** */
-            public long storageSizeDelta(int cacheId) {
-                storageSizeDeltas.putIfAbsent(cacheId, new AtomicLong());
-                AtomicLong savedDelta = storageSizeDeltas.get(cacheId);
-
-                if (savedDelta != null)
-                    return savedDelta.get();
-                else
-                    return 0;
-            }
-
-            /** */
-            public Object reconciliationMux() {
-                return reconciliationMux;
             }
 
             /** */
@@ -3432,15 +3349,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         ) throws IgniteCheckedException {
             while (!busyLock.enterBusy()) {
                 try {
-                    sleep(2);
+                    sleep(5);
                 }
                 catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-
-//            if (!busyLock.enterBusy())
-//                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
             try {
                 assert cctx.shared().database().checkpointLockIsHeldByThread();

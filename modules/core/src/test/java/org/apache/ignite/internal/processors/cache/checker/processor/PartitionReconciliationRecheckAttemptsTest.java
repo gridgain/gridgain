@@ -302,19 +302,6 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
             assertTrue(iterator.next() == 300);
             assertTrue(iterator.next() == 300);
 
-        long delta00 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
-        long delta01 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
-        long delta10 = ((internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
-        long delta11 = ((internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
-
-        assertFalse(delta00 == 0);
-        assertFalse(delta01 == 0);
-        assertFalse(delta10 == 0);
-        assertFalse(delta11 == 0);
-
-        assertTrue(300+300+delta00+delta01 == client.cache(DEFAULT_CACHE_NAME).size());
-        assertTrue(300+300+delta10+delta11 == client.cache(DEFAULT_CACHE_NAME).size());
-
         System.out.println("qsfgrvd size() " + client.cache(DEFAULT_CACHE_NAME).size());
 //        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());
 //        org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResultCollector.Simple.partSizesMap
@@ -452,19 +439,6 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
             assertTrue(iterator.next() == 300);
             assertTrue(iterator.next() == 300);
-
-        long delta00 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
-        long delta01 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
-        long delta10 = ((internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
-        long delta11 = ((internalCache(grid(1).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(1).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
-
-        assertFalse(delta00 == 0);
-        assertFalse(delta01 == 0);
-        assertFalse(delta10 == 0);
-        assertFalse(delta11 == 0);
-
-        assertTrue(300+300+delta00+delta01 == client.cache(DEFAULT_CACHE_NAME).size());
-        assertTrue(300+300+delta10+delta11 == client.cache(DEFAULT_CACHE_NAME).size());
 
         System.out.println("qsfgrvd size() " + client.cache(DEFAULT_CACHE_NAME).size());
 //        assertEquals(0, res.get().partitionReconciliationResult().inconsistentKeysCount());

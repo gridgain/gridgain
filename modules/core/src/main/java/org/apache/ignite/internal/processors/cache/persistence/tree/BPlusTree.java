@@ -3313,8 +3313,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
                             " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                             " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                            " ||| storageSize:" + reconSize.get() +
-                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                            " ||| storageSize:" + reconSize.get());
                     }
                     else {
                         try {
@@ -3359,11 +3358,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 //                                        return v;
 //                                    }
 //                                });
-                        T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx.lastKeys.get(reconciliationCtx.cacheId), 1);
 
-//                        tempMap.put(row0.key(), borderKeyTuple);
-
-                        reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).put(row0.key(), borderKeyTuple);
+                        reconciliationCtx.tempMap.get(reconciliationCtx.cacheId).put(row0.key(), true);
                         System.out.println("in PUT added key to tempMap: key " + row0.key());
                     }
 //                    *******************************************
@@ -3405,8 +3401,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
                         " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                         " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                        " ||| storageSize:" + reconSize.get() +
-                        " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                        " ||| storageSize:" + reconSize.get());
                 }
                 else {
                     try {
@@ -3432,8 +3427,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                 " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
                                 " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                                 " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                " ||| storageSize:" + reconSize.get() +
-                                " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                                " ||| storageSize:" + reconSize.get());
 
                             return null;
                         }
@@ -3454,8 +3448,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                 " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
                                 " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                                 " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                " ||| storageSize:" + reconSize.get() +
-                                " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                                " ||| storageSize:" + reconSize.get());
 
                             return null;
                         }
@@ -3474,8 +3467,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                 " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
                                 " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                                 " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                " ||| storageSize:" + reconSize.get() +
-                                " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                                " ||| storageSize:" + reconSize.get());
                             return v;
                         }
                     });
@@ -3541,8 +3533,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
                             " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                             " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                            " ||| storageSize:" + reconSize.get() +
-                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                            " ||| storageSize:" + reconSize.get());
                     }
                     else {
                         try {
@@ -3568,8 +3559,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                     " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
                                     " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                                     " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                    " ||| storageSize:" + reconSize.get() +
-                                    " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                                    " ||| storageSize:" + reconSize.get());
 
                                 return null;
                             }
@@ -3590,8 +3580,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                     " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
                                     " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                                     " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                    " ||| storageSize:" + reconSize.get() +
-                                    " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                                    " ||| storageSize:" + reconSize.get());
 
                                 return null;
                             }
@@ -3610,8 +3599,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                     " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
                                     " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                                     " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                    " ||| storageSize:" + reconSize.get() +
-                                    " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                                    " ||| storageSize:" + reconSize.get());
                                 return v;
                             }
                         });
@@ -6380,7 +6368,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             KeyCacheObject lastKey = null;
             KeyCacheObject firstKey = null;
 
-            Map<KeyCacheObject, T2<KeyCacheObject, Integer>> newTempMap = new ConcurrentHashMap<>();
+            Map<KeyCacheObject, Boolean> newTempMap = new ConcurrentHashMap<>();
 
             if (/*reconCursor && */reconCursor && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
                 System.out.println("qfrkpoikf");
@@ -6402,7 +6390,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 //                    System.out.println("qgkplstjte rows " + Arrays.toString(rows));
 
                     try {
-                        sleep(2);
+                        sleep(1);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();
@@ -6419,24 +6407,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             continue;
                         }
 
-//                        if (row0.expireTime() > 0) {
-//                        System.out.println("qpykisyefa");
-//                            continue;
-//                        }
-//                        if (row0 == null)
-//                            System.out.println("qfloprtfs fillFromBuffer0 " + row0);
-
-//                        if (oldBorderKey == null || (reconciliationCtx.KEY_COMPARATOR.compare(oldBorderKey, row0.key()) < 0 && row0.value() != null)) { //из-за проверки значения бывает ошибка Value is not ready из CacheDataRowAdapter
-                            T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(oldBorderKey, 1);
-
-                            newTempMap.put(row0.key(), borderKeyTuple);
+                            newTempMap.put(row0.key(), true);
 //                        System.out.println("qfgpluft in cursor put to tempMap " + row0.key());
                         System.out.println("qopvtsjhx in cursor put to newTempMap " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                             " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
                             " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                             " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                            " ||| storageSize:" + reconSize.get() +
-                            " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                            " ||| storageSize:" + reconSize.get());
 //                            System.out.println("qfioptmjk add to tempMap in fillFromBuffer0 " + row0.key() + " row " + row0);
 //                            else if (tempMap.get(row0.key()).get2() == -1)
 //                                tempMap.remove(row0.key());
@@ -6457,7 +6434,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             }
 
             try {
-                sleep(2);
+                sleep(1);
             }
             catch (InterruptedException e) {
                 e.printStackTrace();
@@ -6480,7 +6457,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 int cacheId = reconciliationCtx.cacheId;
 
-                Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx.tempMap.get(reconciliationCtx.cacheId);
+                Map<KeyCacheObject, Boolean> tempMap = reconciliationCtx.tempMap.get(reconciliationCtx.cacheId);
 
 //                System.out.println("qdrdsrjir reconciliationCtx.tempMap.get(reconciliationCtx.cacheId)" + tempMap);
                 AtomicLong partSize = reconciliationCtx.sizes.get(reconciliationCtx.cacheId);
@@ -6491,20 +6468,20 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
 //                ********************
 
-                Iterator<Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>>> tempMapIter = tempMap.entrySet().iterator();
+                Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
 
 //                System.out.println("tempMap after get iterator " + part.tempMap.size() + part.tempMap);
 
                 while (tempMapIter.hasNext()) {
 
                     try {
-                        sleep(2);
+                        sleep(1);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();
                     }
 
-                    Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry = tempMapIter.next();
+                    Map.Entry<KeyCacheObject, Boolean> entry = tempMapIter.next();
 
                     KeyCacheObject finalFirstKey = firstKey;
 
@@ -6513,32 +6490,26 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 //                                if (!part.removesInProgress.contains(entry.getKey()))
 
                             try {
-                                sleep(2);
+                                sleep(1);
                             }
                             catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
 
-                            partSize.addAndGet(entry.getValue().getValue());
+                            partSize.incrementAndGet();
 
                             System.out.println("qnjdpogtd RECON tempMap iter add delta and remove key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
                                 " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
                                 " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                                 " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                " ||| storageSize:" + reconSize.get() +
-                                " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
+                                " ||| storageSize:" + reconSize.get());
 
-//                                tempMapIter.remove();
-
-//                            System.out.println("RECON tempMap iter add delta and remove key: "
-//                                + "key " + k
-//                                /*+ ", part.reconSize() " + part.reconSize.get()*/);
 
                             return null;
                         }
                         else {
                             try {
-                                sleep(2);
+                                sleep(1);
                             }
                             catch (InterruptedException e) {
                                 e.printStackTrace();
@@ -6548,27 +6519,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                 " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
                                 " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
                                 " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                " ||| storageSize:" + reconSize.get() +
-                                " ||| storageSizeDelta:" + reconciliationCtx.storageSizeDelta(cacheId));
-//                            System.out.println("RECON tempMap iter remove key: "
-//                                + "key " + k
-//                                /*+ ", part.reconSize() " + part.reconSize.get()*/);
+                                " ||| storageSize:" + reconSize.get());
 
                             return null;
                         }
 
                     });
 
-//                        if (entry.getKey() < part.borderKey) {
-//                            part.reconSize.addAndGet(entry.getValue());
-//
-//                                tempMapIter.remove();
-//                        }
-//                        else
-//                            tempMapIter.remove();
-
                     try {
-                        sleep(2);
+                        sleep(1);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();
@@ -6582,30 +6541,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             if (reconCursor && !newTempMap.isEmpty() && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
                 try {
-                    sleep(2);
+                    sleep(1);
                 }
                 catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
-                Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx.tempMap.get(reconciliationCtx.cacheId);
-
-//                for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : newTempMap.entrySet()) {
-//                    if (reconciliationCtx.lastKeys().get(reconciliationCtx.cacheId) == null ||
-//                            reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), reconciliationCtx.lastKeys().get(reconciliationCtx.cacheId)) > 0)
-////                    if (reconciliationCtx.lastKeys().get(reconciliationCtx.cacheId) == null ||
-////                            reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), lastKey) > 0)
-//                        tempMap.put(entry.getKey(), entry.getValue());
-//                }
+                Map<KeyCacheObject, Boolean> tempMap = reconciliationCtx.tempMap.get(reconciliationCtx.cacheId);
 
                 tempMap.putAll(newTempMap);
-
-                Map<KeyCacheObject, T2<KeyCacheObject, Integer>> sortedMap = new TreeMap<>(reconciliationCtx.KEY_COMPARATOR);
-
-                sortedMap.putAll(newTempMap);
-
-                System.out.println("qjooptyhd in cursor tempMap.putAll(newTempMap)" + sortedMap);
-
             }
 
             System.out.println("qftvldfd rows " + rows.length + " " + Arrays.toString(rows));

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.checker.tasks;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -78,6 +79,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     private static final long serialVersionUID = 0L;
 
     public static int i;
+    public static int iCleanup;
+    public static int iUpdate;
 
     public static final CountDownLatch latch = new CountDownLatch(1);
 
@@ -269,22 +272,6 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 System.out.println("qdsaftpg start first busy lock");
 
                 try {
-//                    try(GridCursor<? extends CacheDataRow> cursor = grpCtx.offheap().dataStore(part).cursor(cacheId, null, null);) {
-//
-//                        List q = new ArrayList();
-//
-//                        while (cursor.next()) {
-//                            CacheDataRow row = cursor.get();
-//                            q.add(row);
-//                        }
-//
-//                        System.out.println("qfdopjfilkd cache data on start recon " + q);
-//
-//                    }
-//                    catch (Exception e) {
-//                        throw new RuntimeException(e);
-//                    }
-
                     partReconciliationCtx.isReconciliationInProgress(true);
                     System.out.println("qlopfots set isReconciliationInProgress to true");
                     partReconciliationCtx.cacheId = cacheId;
@@ -310,15 +297,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             AtomicLong partSize = partReconciliationCtx.sizes.get(cacheId);
 
-            partReconciliationCtx.cursorIteration = true;
-
             KeyCacheObject oldBorderKey = partReconciliationCtx.lastKeys().get(cacheId);
 
             KeyCacheObject newLastKey = null;
 
             partReconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
 
-            Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = partReconciliationCtx.tempMap.get(cacheId);
+            Map<KeyCacheObject, Boolean> tempMap = partReconciliationCtx.tempMap.get(cacheId);
 
             CacheDataRow lastRow = null;
 
@@ -341,42 +326,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     iters++;
 
                     try {
-                        sleep(2);
+                        sleep(1);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();
                     }
 
                     CacheDataRow row = cursor.get();
-
-//                    System.out.println("qqedfks1 " + ignite.localNode().id() +
-//                                " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + (oldBorderKey == null ? "null" : oldBorderKey) +
-//                                " ||| _row.key()_:" + row.key() +
-//                                " ||| compare: " + (oldBorderKey == null ? "null" : KEY_COMPARATOR.compare(oldBorderKey, row.key())) +
-//                                " ||| partId: " + part +
-//                                " ||| partSize: " + partSize);
-//
-//                    System.out.println("qqedfks2 " + ignite.localNode().id() +
-//                        " reconcilation execute0 if. _cacheDataStore.lastKey()_: " + ((oldBorderKey) == null ? "null" : ((KeyCacheObjectImpl)oldBorderKey).value()) +
-//                        " ||| _row.key()_:" + ((KeyCacheObjectImpl)row.key()).value() +
-//                        " ||| compare: " + ((oldBorderKey) == null ? "null" : ((Integer)((KeyCacheObjectImpl)oldBorderKey).value()) > ((Integer)((KeyCacheObjectImpl)row.key()).value())) +
-//                        " ||| partId: " + part +
-//                        " ||| partSize: " + partSize);
-
-//                    System.out.println("qdscaerv recon tempMap " + tempMap);
-
-//                    if (oldBorderKey == null || KEY_COMPARATOR.compare(oldBorderKey, row.key()) < 0) {
-//                        if (!tempMap.containsKey(row.key())) {
-//                            T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(oldBorderKey, 1);
-//
-//                            tempMap.put(row.key(), borderKeyTuple);
-//                        }
-//                        else if (tempMap.get(row.key()).get2() == -1)
-//                            tempMap.remove(row.key());
-//
-////                        partReconciliationCtx.lastKey(cacheId, row.key());
-//                    }
-
                     newLastKey = partReconciliationCtx.lastKeys().get(cacheId);//row.key();
 
                     if (oldBorderKey != null && KEY_COMPARATOR.compare(oldBorderKey, newLastKey) <= 0)
@@ -406,8 +362,6 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                if (newLastKey != null)
 //                    partReconciliationCtx.lastKeys().put(cacheId, newLastKey);
 
-                partReconciliationCtx.cursorIteration = false;
-
                 System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
                 System.out.println("qvdrftga2 after iteration newLastKey " + newLastKey + " oldBorderKey " + oldBorderKey);
 
@@ -420,66 +374,21 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                     try {
                         partReconciliationCtx.isReconciliationInProgress(false);
-
-//                        for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : partReconciliationCtx.tempMap.get(partReconciliationCtx.cacheId).entrySet()) {
-//                            System.out.println("qdsfvrds " + entry);
-//                            if (partReconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), newLastKey) <= 0 &&
-////                        if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), ((DataRow)rows[0]).key()) < 0 &&
-//                                entry.getValue().get2() == 1)
-//                                partSize.incrementAndGet();
-////                        else if (!(entry.getValue().get1() != null && entry.getValue().get1().equals(lastKey) && entry.getValue().get2() == -1))
-////                        else if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), lastKey) <= 0 &&
-////                                entry.getValue().get2() == -1)
-////                            partSize.decrementAndGet();
-//                        }
-
-//                        for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : tempMap.entrySet()) {
-//                            System.out.println("qrolpdtd entry " + entry + " lastKey " + newLastKey);
-//                            if (partReconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), newLastKey) <= 0 &&
-////                          if (reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), ((DataRow)rows[0]).key()) < 0 &&
-//                                entry.getValue().get2() == 1) {
-//                                System.out.println("qdsvfred1 increment part size in recon" + entry.getKey());
-//                                partSize.incrementAndGet();
-//                            }
-//                            /*else */if (entry.getValue().get2() == 1) {
-//                                System.out.println("qdsvfred2 increment part size in recon " + entry.getKey());
-//                                partSize.incrementAndGet();
-//                            }
-//                            partSize.addAndGet(entry.getValue().get2());
-//                        }
-
 //                        *******************************************
-                        Iterator<Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>>> tempMapIter = tempMap.entrySet().iterator();
+                        Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
 
 //                        System.out.println("tempMap " + part.tempMap.size() + part.tempMap);
 
                         while (tempMapIter.hasNext()) {
-                            Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry = tempMapIter.next();
+                            Map.Entry<KeyCacheObject, Boolean> entry = tempMapIter.next();
 
-//                    if (entry.getKey() < part.borderKey) {
                             partSize.addAndGet(1);
 
                             System.out.println("qkoplstfo in recon final increment: key " + entry.getKey() + " reconSize " + partSize);
 
-//                        tempMapIter.remove();
-//                    }
-//                    else
-//                        tempMapIter.remove();
-
-                            try {
-                                sleep(2);
-                            }
-                            catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
                         }
 
                         partReconciliationCtx.isReconciliationInProgress(false);
-
-//                        System.out.println("old part.size " + part.size.get());
-//                        part.size.set(part.reconSize.get());
-//                        System.out.println("new part.size " + part.size.get());
-//                        *******************************************
 
                         System.out.println("qfgtopes old size ************************* " + cacheDataStore.storageSize.get());
                         System.out.println("qfgtopes partSize ************************* " + partSize);
@@ -491,18 +400,6 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         cacheDataStore.busyLock.unblock();
                     }
                 }
-//
-//                if (partReconciliationCtx.isReconciliationInProgress()) {
-//                    for (Map.Entry<KeyCacheObject, T2<KeyCacheObject, Integer>> entry : tempMap.entrySet()) {
-//                        System.out.println("qdsfvrds " + entry);
-//                        if (KEY_COMPARATOR.compare(entry.getKey(), newLastKey) <= 0 && entry.getValue().get2() == 1)
-//                            partSize.incrementAndGet();
-//                        else if (!(entry.getValue().get1() != null && entry.getValue().get1().equals(oldBorderKey) && entry.getValue().get2() == -1))
-//                            partSize.decrementAndGet();
-//                    }
-//                }
-//
-//                tempMap.clear();
 
                 return new ExecutionResult<>(new T2<>(partEntryHashRecords, partSize.get()));
             }
