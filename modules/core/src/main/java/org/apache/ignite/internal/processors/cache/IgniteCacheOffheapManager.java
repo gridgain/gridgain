@@ -629,7 +629,7 @@ public interface IgniteCacheOffheapManager {
         public void finishReconciliation(Map<Integer, Long> reconciliationCacheSizes);
 
         /** */
-        public void flushReconciliationResult(Integer cacheId, Long reconciliationCacheSize);
+        public void flushReconciliationResult();
 
         /** */
         public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx();
@@ -679,8 +679,6 @@ public interface IgniteCacheOffheapManager {
          * @param delta Size delta.
          */
         public void updateSize(int cacheId, long delta);
-
-        public void updateSize(int cacheId, long delta, KeyCacheObject key);
 
         /**
          * @return Update counter (LWM).

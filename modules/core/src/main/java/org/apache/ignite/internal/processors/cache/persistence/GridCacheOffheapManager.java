@@ -2557,9 +2557,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 delegate.finishReconciliation(reconciliationCacheSizes);
         }
 
-        @Override public void flushReconciliationResult(Integer cacheId, Long reconciliationCacheSize) {
+        @Override public void flushReconciliationResult() {
             if (delegate != null)
-                delegate.flushReconciliationResult(cacheId, reconciliationCacheSize);
+                delegate.flushReconciliationResult();
         }
 
         @Override public CacheDataStoreImpl.ReconciliationContext reconciliationCtx() {
@@ -2662,19 +2662,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                 if (delegate0 != null)
                     delegate0.updateSize(cacheId, delta);
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public void updateSize(int cacheId, long delta, KeyCacheObject key) {
-            try {
-                CacheDataStore delegate0 = init0(false);
-
-                if (delegate0 != null)
-                    delegate0.updateSize(cacheId, delta, key);
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);

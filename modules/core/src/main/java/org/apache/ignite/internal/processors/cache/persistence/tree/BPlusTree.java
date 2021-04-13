@@ -441,7 +441,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             byte[] newRowBytes = io.store(pageAddr, idx, newRow, null, needWal);
 
-            CacheDataRowAdapter oldRow0;
+            CacheDataRowAdapter oldRow0 = null;
 
             boolean oldIsTombstone = false;
 
@@ -459,7 +459,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
 //            try {
-                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+                if (reconciliationCtx != null && oldRow0 != null && reconciliationCtx.isReconciliationInProgress(oldRow0.cacheId())) {
                     p.reconReplace(p.oldRow, newRow);
 //                System.out.println("qwgopluys printStackTrace:");
 //                new Exception().printStackTrace();
@@ -502,8 +502,19 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             System.out.println("qfskorwgs Insert p.row " + p.row);
 
+            CacheDataRowAdapter oldRow0 = null;
+
+            boolean oldIsTombstone = false;
+
+            if (p.oldRow instanceof CacheDataRowAdapter) {
+                oldRow0 = (CacheDataRowAdapter) p.oldRow;
+
+                if (oldRow0.tombstone())
+                    oldIsTombstone = true;
+            }
+
 //            try {
-                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress())
+                if (reconciliationCtx != null && oldRow0 != null && reconciliationCtx.isReconciliationInProgress(oldRow0.cacheId()))
                     p.reconInsert(p.row);
 //            }
 //            catch (Throwable e) {
@@ -3294,7 +3305,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
 
                 System.out.println("qbgfdgodh " + row0.cacheId());
-                System.out.println("qbgfdgodh " + reconciliationCtx.cacheId);
 
                 reconciliationCtx.tempMap.putIfAbsent(row0.cacheId(), new ConcurrentHashMap<>());
 
@@ -5200,22 +5210,22 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         oldIsTombstone = true;
 //                }
 
-                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress() && rmvd != null && !oldIsTombstone) {
+                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(row0.cacheId()) && rmvd != null && !oldIsTombstone) {
                     System.out.println("qfdskgteri rmvd " + rmvd);
                     System.out.println("qfpolgjki RemoveFromLeaf");
-                    try {
-                        sleep(1);
-                    }
-                    catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+//                    try {
+//                        sleep(1);
+//                    }
+//                    catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
                     reconRemoveFromLeaf(row);
                 }
 //                else {
 //                    System.out.println("qjfpilkrefg tombstone");
 //                }
 
-                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress() && (rmvd == null || oldIsTombstone))
+                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(row0.cacheId()) && (rmvd == null || oldIsTombstone))
                     System.out.println("qjfpilkrefg tombstone");
             }
 
@@ -6346,7 +6356,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             System.out.println("qdtfgsrt " + pageAddr);
             if (reconCursor) {
                 System.out.println("qpkitmdog cacheId " + cacheId);
-                System.out.println("qpkitmdog reconciliationCtx.cacheId " + reconciliationCtx.cacheId);
             }
             if (startIdx == -1) {
                 if (lowerBound != null)
@@ -6383,7 +6392,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             Map<KeyCacheObject, Boolean> newTempMap = new ConcurrentHashMap<>();
 
-            if (/*reconCursor && */reconCursor && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+            if (/*reconCursor && */reconCursor && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(cacheId)) {
                 System.out.println("qfrkpoikf");
                 i0++;
                 T[] lastRows = Arrays.copyOf(rows, rows.length);
@@ -6463,7 +6472,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
 //            reconciliationCtx.lastKey(cacheId, lastKey);
 
-            if (reconCursor && !newTempMap.isEmpty() && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+            if (reconCursor && !newTempMap.isEmpty() && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(cacheId)) {
                 AtomicLong reconSize = reconciliationCtx.sizes.get(cacheId);
 
                 Map<KeyCacheObject, Boolean> tempMap = reconciliationCtx.tempMap.get(cacheId);
@@ -6548,7 +6557,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             }
 
-            if (reconCursor && !newTempMap.isEmpty() && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress()) {
+            if (reconCursor && !newTempMap.isEmpty() && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(cacheId)) {
                 try {
                     sleep(1);
                 }

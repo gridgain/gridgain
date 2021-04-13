@@ -42,7 +42,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.expiry.EternalExpiryPolicy;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -1809,7 +1808,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     Long partSize = nodeMap.get(sharedContext().localNodeId());
 
-                    part.flushReconciliationResult(cacheId, partSize);
+                    part.flushReconciliationResult();
 
                 });
             });

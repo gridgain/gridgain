@@ -269,14 +269,14 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = cacheDataStore.reconciliationCtx();
 
-            if (!partReconciliationCtx.isReconciliationInProgress() && partReconciliationCtx.lastKey(cacheId) == null) {
+            if (!partReconciliationCtx.isReconciliationInProgress(cacheId) && partReconciliationCtx.lastKey(cacheId) == null) {
                 cacheDataStore.busyLock.block();
                 System.out.println("qdsaftpg start first busy lock");
 
                 try {
-                    partReconciliationCtx.isReconciliationInProgress(true);
+                    partReconciliationCtx.isReconciliationInProgress(cacheId, true);
                     System.out.println("qlopfots set isReconciliationInProgress to true");
-                    partReconciliationCtx.cacheId = cacheId;
+//                    partReconciliationCtx.cacheId = cacheId;
                 }
                 finally {
                     System.out.println("qdsaftpg end first busy lock");
@@ -327,12 +327,12 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                     iters++;
 
-                    try {
-                        sleep(1);
-                    }
-                    catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+//                    try {
+//                        sleep(1);
+//                    }
+//                    catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
 
                     CacheDataRow row = cursor.get();
                     newLastKey = partReconciliationCtx.lastKey(cacheId);//row.key();
@@ -367,7 +367,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
                 System.out.println("qvdrftga2 after iteration newLastKey " + newLastKey + " oldBorderKey " + oldBorderKey);
 
-                if ((partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress()) {
+                if ((partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
 //                if (partSize.get() == 300) {
                     cacheDataStore.busyLock.block();
                     System.out.println("qdsaftpg start second busy lock");
@@ -375,7 +375,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     System.out.println("qdresdvscs tempMap " + tempMap);
 
                     try {
-                        partReconciliationCtx.isReconciliationInProgress(false);
+                        partReconciliationCtx.isReconciliationInProgress(cacheId, false);
 //                        *******************************************
                         Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
 
@@ -390,12 +390,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                         }
 
-                        partReconciliationCtx.isReconciliationInProgress(false);
+                        partReconciliationCtx.isReconciliationInProgress(cacheId, false);
 
                         System.out.println("qfgtopes old size ************************* " + cacheDataStore.storageSize.get());
                         System.out.println("qfgtopes partSize ************************* " + partSize);
 
-                        cacheDataStore.storageSize.set(partSize.get());
+//                        cacheDataStore.storageSize.set(partSize.get());
+                        cacheDataStore.flushReconciliationResult();
                     }
                     finally {
                         System.out.println("qdsaftpg end second busy lock");
