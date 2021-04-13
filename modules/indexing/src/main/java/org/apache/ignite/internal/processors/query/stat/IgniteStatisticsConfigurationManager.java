@@ -266,7 +266,8 @@ public class IgniteStatisticsConfigurationManager {
                 configs = getAllConfig();
         }
         catch (IgniteCheckedException e) {
-            // TODO: log
+            log.warning("Error while getting statistics configuration: " + e.getMessage(), e);
+
             configs = Collections.emptyList();
         }
 
@@ -274,7 +275,8 @@ public class IgniteStatisticsConfigurationManager {
 
         for (StatisticsObjectConfiguration cfg : configs) {
             for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values())
-                res.add(new StatisticsColumnConfigurationView(cfg, colCfg));
+                if (!colCfg.tombstone())
+                    res.add(new StatisticsColumnConfigurationView(cfg, colCfg));
         }
 
         return res;
