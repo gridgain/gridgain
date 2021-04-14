@@ -35,7 +35,7 @@ import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 
 /**
- *
+ * Tests of extended logging of class loading problems.
  */
 public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTest {
     /** Test predicate class name. */
@@ -84,6 +84,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
         super.afterTest();
     }
 
+    /** Tests logging when executing job with communication problems. */
     @Test
     public void testTimeoutJob() throws ClassNotFoundException {
         LogListener lsnr = LogListener
@@ -115,6 +116,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
         spi(client).stopBlock();
     }
 
+    /** Tests logging when executing scan query with communication problems. */
     @Test
     public void testTimeoutScanQuery() throws ClassNotFoundException {
         LogListener lsnr = LogListener
@@ -147,6 +149,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
         spi(client).stopBlock();
     }
 
+    /** Tests logging when executing job and class is not found on initiator. */
     @Test
     public void testCNFEJob() throws Exception {
         LogListener srvLsnr = LogListener.matches("Failed to get resource from node").build();
@@ -176,7 +179,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
         spi(ignite).closure(null);
     }
 
-    /** */
+    /** Tests logging when executing scan query and class is not found on initiator. */
     @Test
     public void testCNFEScanQuery() throws Exception {
         LogListener srvLsnr = LogListener.matches("Failed to get resource from node").build();
