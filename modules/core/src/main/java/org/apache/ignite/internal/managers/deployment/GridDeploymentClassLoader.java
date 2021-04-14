@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DeploymentMode;
@@ -691,6 +692,9 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             }
         }
 
+        if (err != null)
+            throw new IgniteException(err);
+
         throw new ClassNotFoundException("Failed to peer load class [class=" + name + ", nodeClsLdrs=" +
             nodeLdrMapCp + ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']', err);
     }
@@ -819,7 +823,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                         res.byteSource().size());
                 }
             }
-            catch (IgniteCheckedException | TimeoutException e) {
+            catch (IgniteCheckedException e) {
                 // This thread should be interrupted again in communication if it
                 // got interrupted. So we assume that thread can be interrupted
                 // by processing cancellation request.
