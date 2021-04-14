@@ -209,8 +209,6 @@ import org.jetbrains.annotations.Nullable;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
@@ -2116,8 +2114,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
-        assert nonNull(cctx);
+    @Override @Nullable public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx, boolean force) {
+        assert cctx != null;
 
         // No data in fresh in-memory cache.
         if (!cctx.group().persistenceEnabled())
@@ -2125,7 +2123,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         IgnitePageStoreManager pageStore = cctx.shared().pageStore();
 
-        assert nonNull(pageStore);
+        assert pageStore != null;
 
         SchemaIndexCacheVisitorClosure clo;
 
@@ -2142,9 +2140,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
                 GridH2Table tbl = tblDesc.table();
 
-                assert nonNull(tbl);
+                assert tbl != null;
 
-                tbl.collectIndexesForPartialRebuild(clo0);
+                tbl.collectIndexesForPartialRebuild(clo0, force);
             }
 
             if (clo0.hasIndexes())
@@ -2164,14 +2162,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         cctx.group().metrics().addIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
 
         // An internal future for the ability to cancel index rebuilding.
-        // This behavior should be discussed in IGNITE-14321.
         SchemaIndexCacheFuture intRebFut = new SchemaIndexCacheFuture(new SchemaIndexOperationCancellationToken());
-        cancelIndexRebuildFuture(idxRebuildFuts.put(cctx.cacheId(), intRebFut));
+
+        SchemaIndexCacheFuture prevIntRebFut = idxRebuildFuts.put(cctx.cacheId(), intRebFut);
+
+        // Check that the previous rebuild is completed.
+        assert prevIntRebFut == null;
 
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
 
-            if (isNull(err)) {
+            if (err == null) {
                 try {
                     markIndexRebuild(cacheName, false);
                 }
@@ -2180,13 +2181,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 }
             }
 
-            if (nonNull(err))
+            if (err != null)
                 U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
-
-            outRebuildCacheIdxFut.onDone(err);
 
             idxRebuildFuts.remove(cctx.cacheId(), intRebFut);
             intRebFut.onDone(err);
+
+            outRebuildCacheIdxFut.onDone(err);
         });
 
         rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());

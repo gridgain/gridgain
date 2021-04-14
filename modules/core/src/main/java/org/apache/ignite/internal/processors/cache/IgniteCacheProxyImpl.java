@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -2217,7 +2217,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
     @Override public IgniteFuture<?> indexReadyFuture() {
         GridCacheContext<K, V> ctx = getContextSafe();
 
-        IgniteInternalFuture fut = ctx.shared().database().indexRebuildFuture(ctx.cacheId());
+        IgniteInternalFuture fut = ctx.shared().kernalContext().query().indexRebuildFuture(ctx.cacheId());
 
         if (fut == null)
             return new IgniteFinishedFutureImpl<>();

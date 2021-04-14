@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -879,15 +879,16 @@ public class GridH2Table extends TableBase {
      * Collect indexes for rebuild.
      *
      * @param clo Closure.
+     * @param force Force rebuild indexes.
      */
-    public void collectIndexesForPartialRebuild(IndexRebuildPartialClosure clo) {
+    public void collectIndexesForPartialRebuild(IndexRebuildPartialClosure clo, boolean force) {
         for (int i = sysIdxsCnt; i < idxs.size(); i++) {
             Index idx = idxs.get(i);
 
             if (idx instanceof H2TreeIndex) {
                 H2TreeIndex idx0 = (H2TreeIndex)idx;
 
-                if (idx0.rebuildRequired())
+                if (force || idx0.rebuildRequired())
                     clo.addIndex(this, idx0);
             }
         }

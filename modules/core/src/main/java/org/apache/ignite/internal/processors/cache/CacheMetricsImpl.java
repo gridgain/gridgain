@@ -1532,7 +1532,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** {@inheritDoc} */
     @Override public boolean isIndexRebuildInProgress() {
-        IgniteInternalFuture fut = cctx.shared().database().indexRebuildFuture(cctx.cacheId());
+        IgniteInternalFuture fut = cctx.shared().kernalContext().query().indexRebuildFuture(cctx.cacheId());
 
         return fut != null && !fut.isDone();
     }
