@@ -385,9 +385,7 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
             assertTrue(waitForCondition(() -> n.cache(cacheName1).size() > cacheSize, getTestTimeout()));
 
             for (String c : caches) {
-                IgniteInternalFuture<?> rebIdxFut = n.context().cache()
-                    .context().database().indexRebuildFuture(CU.cacheId(c));
-
+                IgniteInternalFuture<?> rebIdxFut = n.context().query().indexRebuildFuture(CU.cacheId(c));
                 assertNotNull(rebIdxFut);
                 assertFalse(rebIdxFut.isDone());
 
@@ -408,15 +406,15 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
 
             waitForIndexesRebuild(n);
 
+            intlRebIdxFut.get(getTestTimeout());
+            destroyCacheFut.get(getTestTimeout());
+            putCacheFut.get(getTestTimeout());
+
             injectTestSystemOut();
 
             assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", "--check-crc", cacheName1));
 
             assertContains(log, testOut.toString(), "no issues found.");
-
-            intlRebIdxFut.get(getTestTimeout());
-            destroyCacheFut.get(getTestTimeout());
-            putCacheFut.get(getTestTimeout());
         }
         finally {
             stopLoad.set(true);
