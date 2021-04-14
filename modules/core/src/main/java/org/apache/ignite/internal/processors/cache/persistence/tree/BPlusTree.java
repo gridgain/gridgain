@@ -441,25 +441,22 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             byte[] newRowBytes = io.store(pageAddr, idx, newRow, null, needWal);
 
-            CacheDataRowAdapter oldRow0 = null;
+            CacheDataRowAdapter newRow0 = null;
 
-            boolean oldIsTombstone = false;
+//            boolean oldIsTombstone = false;
 
-            if (p.oldRow instanceof CacheDataRowAdapter) {
-                oldRow0 = (CacheDataRowAdapter) p.oldRow;
-
-                if (oldRow0.tombstone())
-                    oldIsTombstone = true;
+            if (newRow instanceof CacheDataRowAdapter) {
+                newRow0 = (CacheDataRowAdapter) newRow;
             }
 
-            System.out.println("qdsedsdsaw Replace newRow " + newRow + " " + oldIsTombstone);
+//            System.out.println("qdsedsdsaw Replace newRow " + newRow + " " + oldIsTombstone);
 //            System.out.println("qdsedsdsaw Replace oldIsTombstone " + oldIsTombstone);
 
             if (needWal)
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
 //            try {
-                if (reconciliationCtx != null && oldRow0 != null && reconciliationCtx.isReconciliationInProgress(oldRow0.cacheId())) {
+                if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.isReconciliationInProgress(newRow0.cacheId())) {
                     p.reconReplace(p.oldRow, newRow);
 //                System.out.println("qwgopluys printStackTrace:");
 //                new Exception().printStackTrace();
@@ -500,21 +497,18 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             // Do insert.
             L moveUpRow = p.insert(pageId, page, pageAddr, io, idx, lvl);
 
-            System.out.println("qfskorwgs Insert p.row " + p.row);
+//            System.out.println("qfskorwgs Insert p.row " + p.row);
 
-            CacheDataRowAdapter oldRow0 = null;
+            CacheDataRowAdapter row0 = null;
 
-            boolean oldIsTombstone = false;
+//            boolean oldIsTombstone = false;
 
-            if (p.oldRow instanceof CacheDataRowAdapter) {
-                oldRow0 = (CacheDataRowAdapter) p.oldRow;
-
-                if (oldRow0.tombstone())
-                    oldIsTombstone = true;
+            if (p.row instanceof CacheDataRowAdapter) {
+                row0 = (CacheDataRowAdapter) p.row;
             }
 
 //            try {
-                if (reconciliationCtx != null && oldRow0 != null && reconciliationCtx.isReconciliationInProgress(oldRow0.cacheId()))
+                if (reconciliationCtx != null && row0 != null && reconciliationCtx.isReconciliationInProgress(row0.cacheId()))
                     p.reconInsert(p.row);
 //            }
 //            catch (Throwable e) {

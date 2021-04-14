@@ -1732,7 +1732,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
 //            throw new RuntimeException("qwer");
-            System.out.println("qfdgtservs updateSize");
+//            System.out.println("qfdgtservs updateSize");
         }
 
         /** {@inheritDoc} */
@@ -2679,7 +2679,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (F.isEmpty(cleanupRows))
                 return 0;
 
-            CollectPartitionKeysByBatchTask.iCleanup++;
+//            CollectPartitionKeysByBatchTask.iCleanup++;
 
             while (!busyLock.enterBusy()) {
                 try {
@@ -2762,7 +2762,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         ) throws IgniteCheckedException {
             assert oldRow == null || oldRow.link() != 0L : oldRow;
 
-            CollectPartitionKeysByBatchTask.iUpdate++;
+//            CollectPartitionKeysByBatchTask.iUpdate++;
 
             while (!busyLock.enterBusy()) {
                 try {
@@ -3045,6 +3045,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             /** */
 //            private volatile boolean isReconciliationInProgress;
             private final Map<Integer, Boolean> isReconciliationInProgress = new ConcurrentHashMap<>();
+            public final Map<Integer, Boolean> isReconciliationIsFinished = new ConcurrentHashMap<>();
 
             /** */
             private final Map<Integer, KeyCacheObject> firstKeys = new ConcurrentHashMap<>();

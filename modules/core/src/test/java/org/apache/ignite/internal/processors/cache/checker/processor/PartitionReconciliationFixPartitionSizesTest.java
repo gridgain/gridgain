@@ -16,13 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
-import com.sun.tools.javac.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -33,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -42,28 +42,29 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
-import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
-import org.apache.ignite.transactions.Transaction;
-import org.apache.ignite.transactions.TransactionException;
-import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
 
 import static java.lang.Thread.sleep;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_COMPLETED_TX_COUNT;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
-import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
-import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
  * Tests count of calls the recheck process with different inputs.
  */
 public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static final int NODES_CNT = 2;
+    protected static int nodesCnt = 3;
+
+    protected static int backups = 1;
+
+    static int startKey = 0;
+
+    static int endKey = 1000;
+
+    static AtomicReference<ReconciliationResult> reconResult = new AtomicReference<>();
+
+    static final long BROKEN_PART_SIZE = 10;
 
 //    private List<String> cacheGroup0 = new ArrayList<>();
 //    private List<String> cacheGroup1 = new ArrayList<>();
@@ -85,15 +86,16 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         cfg.setDataStorageConfiguration(storageConfiguration);
 
-        CacheConfiguration ccfg = new CacheConfiguration();
-        ccfg.setName(DEFAULT_CACHE_NAME);
-//        ccfg.setGroupName("zzz");
-        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 4));
-        ccfg.setBackups(1);
-        ccfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
+//        CacheConfiguration ccfg = new CacheConfiguration();
+//        ccfg.setName(DEFAULT_CACHE_NAME);
+////        ccfg.setGroupName("zzz");
+//        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+//        ccfg.setAffinity(new RendezvousAffinityFunction(false, 4));
+//        ccfg.setBackups(1);
+//        ccfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
+//
+//        cfg.setCacheConfiguration(ccfg);
 
-        cfg.setCacheConfiguration(ccfg);
         cfg.setConsistentId(name);
 
         return cfg;
@@ -105,9 +107,9 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         cleanPersistenceDir();
 
-        ig = startGrids(NODES_CNT);
+        ig = startGrids(nodesCnt);
 
-        client = startClientGrid(NODES_CNT);
+        client = startClientGrid(nodesCnt);
 
         ig.cluster().active(true);
     }
@@ -164,8 +166,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     @Test
     public void test1() throws Exception {
-        CollectPartitionKeysByBatchTask.msg.clear();
-        CollectPartitionKeysByBatchTask.msg1.clear();
+//        CollectPartitionKeysByBatchTask.msg.clear();
+//        CollectPartitionKeysByBatchTask.msg1.clear();
         BPlusTree.i0 = 0;
         clear0 = 0;
         clear1 = 0;
@@ -187,18 +189,28 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     @Test
 //    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-    public void testRepairUnderLoad() throws Exception {//Value is not ready
-        CollectPartitionKeysByBatchTask.msg.clear();
-        CollectPartitionKeysByBatchTask.msg1.clear();
-        CollectPartitionKeysByBatchTask.i = 0;
-        BPlusTree.i0 = 0;
+    public void testRepairUnderLoad() throws Exception {
+//        CollectPartitionKeysByBatchTask.msg.clear();
+//        CollectPartitionKeysByBatchTask.msg1.clear();
+//        CollectPartitionKeysByBatchTask.i = 0;
+//        BPlusTree.i0 = 0;
+
+//        CacheConfiguration ccfg0 = new CacheConfiguration();
+//        ccfg0.setName(DEFAULT_CACHE_NAME);
+////        ccfg0.setGroupName("zzz");
+//        ccfg0.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+//        ccfg0.setAffinity(new RendezvousAffinityFunction(false, 4));
+////        ccfg0.setBackups(1);
+//        ccfg0.setAtomicityMode(CacheAtomicityMode.ATOMIC);
+//
+//        client.createCache(ccfg0);
 
         IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
         int startKey = 0;
 //        int endKey = 337;
 //        int endKey = 667;//qssefvsdae cacheSize after recon 170
-        int endKey = 500;
+        int endKey = 1000;
 
         AtomicInteger putCount = new AtomicInteger();
         AtomicInteger removeCount = new AtomicInteger();
@@ -220,7 +232,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 0, 536);
 //        setPartitionSize(grid(1), DEFAULT_CACHE_NAME, 1, 139);
 
-        breakCacheSizes(List.of(grid(0)/*, grid(1), grid(2), grid(3)*/), List.of(DEFAULT_CACHE_NAME));
+        breakCacheSizes(Arrays.asList(grid(0)/*, grid(1), grid(2), grid(3)*/), Arrays.asList(DEFAULT_CACHE_NAME));
 
         assertFalse(cache.size() == startSize);
 
@@ -304,121 +316,121 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //            System.out.println("qmfgtssf loadFut max" + max);
 //        });
 
-//        IgniteInternalFuture loadFut0 = GridTestUtils.runAsync(() -> {
-////            doSleep(150);
-////                try {
-////                    CollectPartitionKeysByBatchTask.latch.await();
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-////                System.out.println("qvsdhntsd loadFut0 start");
+        IgniteInternalFuture loadFut0 = GridTestUtils.runAsync(() -> {
+//            doSleep(150);
+//                try {
+//                    CollectPartitionKeysByBatchTask.latch.await();
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//                System.out.println("qvsdhntsd loadFut0 start");
+
+            int i = 0;
+
+            int max = 0;
+
+            while(res.get() == null/* && i < 10000*/) {
+                i++;
+//                try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                    int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i2 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i3 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i4 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i5 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (!cache.containsKey(i1)) {
+
+                Map map = new TreeMap();
+
+                map.put(i1, i1);
+                map.put(i2, i2);
+                map.put(i3, i3);
+                map.put(i4, i4);
+                map.put(i5, i5);
+
+                    System.out.println("qdervdvds before put in test key: " + cache.containsKey(i1) + " " + i1);
+                    cache.putAll(map);
+                    System.out.println("qdervdvds after put in test key: " + i1);
+
+//                putCount.incrementAndGet();
+//                }
+
+//                    try {
+//                        sleep(1);
+//                    }
+//                    catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
 //
-//            int i = 0;
-//
-//            int max = 0;
-//
-//            while(res.get() == null/* && i < 10000*/) {
-//                i++;
-////                try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
-//                    int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                    int i2 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                    int i3 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                    int i4 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                    int i5 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-////                if (!cache.containsKey(i1)) {
-//
-//                Map map = new TreeMap();
-//
-//                map.put(i1, i1);
-//                map.put(i2, i2);
-//                map.put(i3, i3);
-//                map.put(i4, i4);
-//                map.put(i5, i5);
-//
-//                    System.out.println("qdervdvds before put in test key: " + cache.containsKey(i1) + " " + i1);
-//                    cache.putAll(map);
-//                    System.out.println("qdervdvds after put in test key: " + i1);
-//
-////                putCount.incrementAndGet();
-////                }
-//
-////                    try {
-////                        sleep(1);
-////                    }
-////                    catch (InterruptedException e) {
-////                        e.printStackTrace();
-////                    }
-////
-//                    i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                    i2 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                    i3 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                    i4 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-//                    i5 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
-////                if (cache.containsKey(i1)) {
-//
-//                Set set = new TreeSet();
-//
-//                set.add(i1);
-//                set.add(i2);
-//                set.add(i3);
-//                set.add(i4);
-//                set.add(i5);
-//
-//                    System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
-//                    cache.removeAll(set);
-//                    System.out.println("qdflpltis after remove in test key: " + i1);
-//
-////                    try {
-////                        sleep(1);
-////                    }
-////                    catch (InterruptedException e) {
-////                        e.printStackTrace();
-////                    }
-//
-////                    tx.commit();
-////                }
-//
-////                if (i1 % 3 == 0 /*&& *//*i == 10 && *//*!clear*/) {
-////                    System.out.println("qfgthsfs start clear, cache.size() " + cache.size());
-////                    cache.clear();
-////                    System.out.println("qfgthsfs finish clear " + cache.size());
-////                    clear0++;
-////                }
-////                    removeCount.incrementAndGet();
-////                }
-//
-////                try {
-////                    sleep(10);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                try {
-////                    sleep(3);
-////                }
-////                catch (InterruptedException e) {
-////                    e.printStackTrace();
-////                }
-//
-////                System.out.println("qfegsdg put random: " + i1);
-////                doSleep(3);
-//
-////                if (i1 > max)
-////                    max = i1;
-//
-////                if (i < endKey) {
-////                    cache.put(i, i);
-////                    i++;
-////                }
-//            }
-//
-//            System.out.println("qvraslpf loadFut1 stop" + i);
-//            System.out.println("qmfgtssf loadFut1 max" + max);
-//        },
-//            "LoadThread");
-//
+                    i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i2 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i3 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i4 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i5 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+//                if (cache.containsKey(i1)) {
+
+                Set set = new TreeSet();
+
+                set.add(i1);
+                set.add(i2);
+                set.add(i3);
+                set.add(i4);
+                set.add(i5);
+
+                    System.out.println("qdflpltis before remove in test key: " + cache.containsKey(i1) + " " + i1);
+                    cache.removeAll(set);
+                    System.out.println("qdflpltis after remove in test key: " + i1);
+
+//                    try {
+//                        sleep(1);
+//                    }
+//                    catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+
+//                    tx.commit();
+//                }
+
+//                if (i1 % 3 == 0 /*&& *//*i == 10 && *//*!clear*/) {
+//                    System.out.println("qfgthsfs start clear, cache.size() " + cache.size());
+//                    cache.clear();
+//                    System.out.println("qfgthsfs finish clear " + cache.size());
+//                    clear0++;
+//                }
+//                    removeCount.incrementAndGet();
+//                }
+
+//                try {
+//                    sleep(10);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                try {
+//                    sleep(3);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                System.out.println("qfegsdg put random: " + i1);
+//                doSleep(3);
+
+//                if (i1 > max)
+//                    max = i1;
+
+//                if (i < endKey) {
+//                    cache.put(i, i);
+//                    i++;
+//                }
+            }
+
+            System.out.println("qvraslpf loadFut1 stop" + i);
+            System.out.println("qmfgtssf loadFut1 max" + max);
+        },
+            "LoadThread");
+
 //        IgniteInternalFuture loadFut1 = GridTestUtils.runAsync(() -> {
 //            System.out.println("qvsdhntsd loadFut1 start");
 //
@@ -657,7 +669,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         ReconciliationResult reconciliationRes = res.get();
 
-//        loadFut0.get();
+        loadFut0.get();
 //        loadFut1.get();
 //        loadFut2.get();
 //        loadFut3.get();
@@ -713,11 +725,11 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         }
 
         System.out.println("qwghptikd putsAftreAll " + putsAftreAll);//991+173(172)=1164
-        System.out.println("qdsvdrd " + CollectPartitionKeysByBatchTask.msg);
-        System.out.println("qcsdfrs " + CollectPartitionKeysByBatchTask.msg1);
-        System.out.println("qgdhmkff iCleanup " + CollectPartitionKeysByBatchTask.iCleanup);
-        System.out.println("qnjkpfidj iUpdate " + CollectPartitionKeysByBatchTask.iUpdate);
-        System.out.println("qcgpolhuj batches " + CollectPartitionKeysByBatchTask.i);
+//        System.out.println("qdsvdrd " + CollectPartitionKeysByBatchTask.msg);
+//        System.out.println("qcsdfrs " + CollectPartitionKeysByBatchTask.msg1);
+//        System.out.println("qgdhmkff iCleanup " + CollectPartitionKeysByBatchTask.iCleanup);
+//        System.out.println("qnjkpfidj iUpdate " + CollectPartitionKeysByBatchTask.iUpdate);
+//        System.out.println("qcgpolhuj batches " + CollectPartitionKeysByBatchTask.i);
         System.out.println("qetfstrghbe i0 " + BPlusTree.i0);
         System.out.println("qngjojetghd cach.clear0() " + clear0);
         System.out.println("qngjojetghd cach.clear1() " + clear1);
@@ -742,6 +754,91 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        long delta00 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
     }
 
+    @Test
+//    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
+    public void testRepairUnderLoad0() throws Exception {
+
+        CacheConfiguration ccfg0 = new CacheConfiguration();
+        ccfg0.setName(DEFAULT_CACHE_NAME);
+//        ccfg0.setGroupName("zzz");
+        ccfg0.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+        ccfg0.setAffinity(new RendezvousAffinityFunction(false, 9));
+        ccfg0.setBackups(0);
+        ccfg0.setAtomicityMode(CacheAtomicityMode.ATOMIC);
+        ccfg0.setCacheMode(CacheMode.PARTITIONED);
+
+        client.createCache(ccfg0);
+
+        IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
+
+        startKey = 0;
+        endKey = 500;
+
+        for (int i = startKey; i < endKey; i++) {
+            i += 1;
+            if (i < endKey)
+                cache.put(i, i);
+        }
+
+//        cache.removeAll();
+
+        int startSize = cache.size();
+
+        breakCacheSizes(Arrays.asList(grid(0), grid(1), grid(2)/*, grid(3)*/), Arrays.asList(DEFAULT_CACHE_NAME));
+
+        assertFalse(cache.size() == startSize);
+
+        doSleep(300);
+
+        VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
+        builder.repair(true);
+        builder.parallelism(1);
+//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
+        Set<String> objects = new HashSet<>();
+        objects.add(DEFAULT_CACHE_NAME);
+//        objects.add("qqq");
+        builder.caches(objects);
+        builder.batchSize(100);
+
+
+        reconResult = new AtomicReference<>();
+
+        List<IgniteInternalFuture> loadFuts = new ArrayList<>();
+
+        loadFuts.add(startAsyncLoad0(cache));
+        loadFuts.add(startAsyncLoad1(cache));
+
+        GridTestUtils.runMultiThreadedAsync(() -> {
+            doSleep(30);
+
+            reconResult.set(partitionReconciliation(client, builder));
+        }, 1, "reconciliation");
+
+        GridTestUtils.waitForCondition(() -> reconResult.get() != null, 60_000);
+
+        System.out.println("qvsdhntsd partitionReconciliation stop");
+
+        for (IgniteInternalFuture fut : loadFuts) {
+            fut.get();
+        }
+
+        for (int i = startKey; i < endKey; i++) {
+//            if (!grid(0).cache(DEFAULT_CACHE_NAME).containsKey(i))
+                grid(0).cache(DEFAULT_CACHE_NAME).put(i, i);
+        }
+
+        System.out.println("qdfgkjpoet " + getFullPartitionsSizeForCacheGroup(Collections.singletonList(grid(0)), DEFAULT_CACHE_NAME));
+        System.out.println("qdfgkjpoet " + getFullPartitionsSizeForCacheGroup(Collections.singletonList(grid(1)), DEFAULT_CACHE_NAME));
+
+        assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size());
+
+        long allKeysCount = getFullPartitionsSizeForCacheGroup(Arrays.asList(grid(0), grid(1)), DEFAULT_CACHE_NAME);
+
+        doSleep(100);
+//        assertEquals(endKey * (backups + 1), allKeysCount);
+//        System.out.println(getPartitionsSizeForCache(grid(1), DEFAULT_CACHE_NAME));
+    }
+
     private void setPartitionSize(IgniteEx grid, String cacheName, int partId, int delta) {
 
         GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
@@ -751,13 +848,42 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cctx.group().topology().localPartition(partId).dataStore().updateSize(cacheId, delta);
     }
 
-    private void setPartitionSize(IgniteEx grid, String cacheName) {
+    private void updatePartitionsSize(IgniteEx grid, String cacheName) {
 
         GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
 
         int cacheId = cctx.cacheId();
 
-        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, 5/*Math.abs(rnd.nextInt())*/));
+        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, BROKEN_PART_SIZE/*Math.abs(rnd.nextInt())*/));
+
+//        cctx.group().topology().localPartition(partId).dataStore().updateSize(cacheId, delta);
+    }
+
+    private long getFullPartitionsSizeForCacheGroup(List<IgniteEx> nodes, String cacheName) {
+        return nodes.stream().mapToLong(node -> getFullPartitionsSizeForCacheGroup(node, cacheName)).sum();
+    }
+
+    private long getFullPartitionsSizeForCacheGroup(IgniteEx grid, String cacheName) {
+
+        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
+
+        int cacheId = cctx.cacheId();
+
+        return cctx.group().topology().localPartitions().stream().mapToLong(part -> {
+            System.out.println("qedsffd localPartition " + grid.name() + " " + cacheName + " " + part.dataStore().fullSize());
+            return part.dataStore().fullSize();
+        }).sum();
+    }
+
+    private long getPartitionsSizeForCache(IgniteEx grid, String cacheName) {
+
+        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
+
+        int cacheId = cctx.cacheId();
+
+        return cctx.group().topology().localPartitions()
+            .stream()
+            .mapToLong(part -> part.dataStore().cacheSizes().get(cacheId)).sum();
 
 //        cctx.group().topology().localPartition(partId).dataStore().updateSize(cacheId, delta);
     }
@@ -765,8 +891,62 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     private void breakCacheSizes(List<IgniteEx> nodes, List<String> cacheNames) {
         nodes.forEach(node -> {
             cacheNames.forEach(cacheName -> {
-                setPartitionSize(node, cacheName);
+                updatePartitionsSize(node, cacheName);
             });
+        });
+    }
+
+    private IgniteInternalFuture startAsyncLoad0(IgniteCache cache) {
+        return GridTestUtils.runAsync(() -> {
+                while(reconResult.get() == null) {
+                    int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i2 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i3 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i4 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    int i5 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+
+                    Map map = new TreeMap();
+
+                    map.put(i1, i1);
+                    map.put(i2, i2);
+                    map.put(i3, i3);
+                    map.put(i4, i4);
+                    map.put(i5, i5);
+
+                    cache.putAll(map);
+
+                    i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i2 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i3 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i4 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    i5 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+
+                    Set set = new TreeSet();
+
+                    set.add(i1);
+                    set.add(i2);
+                    set.add(i3);
+                    set.add(i4);
+                    set.add(i5);
+
+                    cache.removeAll(set);
+                }
+            },
+            "LoadThread");
+    }
+
+    private IgniteInternalFuture startAsyncLoad1(IgniteCache cache) {
+        return GridTestUtils.runAsync(() -> {
+            while(reconResult.get() == null) {
+                    int i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    cache.put(i1, i1);
+
+                    i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
+                    cache.remove(i1);
+
+                if (i1 % 5 == 0)
+                    cache.clear();
+            }
         });
     }
 
