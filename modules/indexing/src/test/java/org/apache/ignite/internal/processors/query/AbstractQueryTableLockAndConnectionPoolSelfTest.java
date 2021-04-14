@@ -481,8 +481,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
         end.set(true);
         fut.get();
 
-        log.info("+++ DONE");
-
         checkConnectionLeaks(Ignition.allGrids().size());
     }
 
