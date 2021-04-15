@@ -60,7 +60,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 /**
- * Checks compute grid funtionality of thin client.
+ * Checks compute grid functionality of thin client.
  */
 public class ComputeTaskTest extends AbstractThinClientTest {
     /** Grids count. */
@@ -244,7 +244,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
             assertTrue(fut.cancel(true));
 
             assertTrue(GridTestUtils.waitForCondition(
-                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
+                () -> ((ClientComputeImpl)client.compute()).activeTasksCount() == 0, TIMEOUT));
 
             assertTrue(fut.isCancelled());
             assertTrue(fut.isDone());
@@ -273,7 +273,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
             fut.cancel(true);
 
             assertTrue(GridTestUtils.waitForCondition(
-                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
+                () -> ((ClientComputeImpl)client.compute()).activeTasksCount() == 0, TIMEOUT));
 
             assertTrue(fut.isCancelled());
             assertTrue(fut.isDone());
@@ -442,7 +442,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
 
             fut3.get(TIMEOUT, TimeUnit.MILLISECONDS);
 
-            assertTrue(GridTestUtils.waitForCondition(() -> compute.activeTaskFutures().isEmpty(), TIMEOUT));
+            assertTrue(GridTestUtils.waitForCondition(() -> compute.activeTasksCount() == 0, TIMEOUT));
         }
     }
 
@@ -528,7 +528,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
                 futs.add(compute.executeAsync(TestLatchTask.class.getName(), null));
 
             assertTrue(GridTestUtils.waitForCondition(
-                    () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().size() == ACTIVE_TASKS_LIMIT,
+                    () -> ((ClientComputeImpl)client.compute()).activeTasksCount() == ACTIVE_TASKS_LIMIT,
                     TIMEOUT));
 
             // Check that we can't start more tasks.
@@ -627,7 +627,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
                 }, threadsCnt, "run-task-async");
 
             assertTrue(GridTestUtils.waitForCondition(
-                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
+                () -> ((ClientComputeImpl)client.compute()).activeTasksCount() == 0, TIMEOUT));
         }
     }
 
