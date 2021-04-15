@@ -368,7 +368,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     private volatile CommunicationListener<Message> lsnr;
 
     /** Client pool. */
-    private volatile ConnectionClientPool clientPool;
+    public volatile ConnectionClientPool clientPool;
 
     /** Recovery and idle clients handler. */
     private volatile CommunicationWorker commWorker;
@@ -380,7 +380,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     private volatile GridLocalEventListener discoLsnr;
 
     /** Nio server wrapper. */
-    private volatile GridNioServerWrapper nioSrvWrapper;
+    public volatile GridNioServerWrapper nioSrvWrapper;
 
     /** State provider. */
     private volatile ClusterStateProvider stateProvider;
@@ -390,7 +390,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** Logger. */
     @LoggerResource
-    private IgniteLogger log;
+    public IgniteLogger log;
 
     /** Logger. */
     @LoggerResource(categoryName = "org.apache.ignite.internal.diagnostic")
