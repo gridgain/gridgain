@@ -772,8 +772,8 @@ public interface ClientCache<K, V> {
      *
      * @param cacheEntryListenerConfiguration a factory and related configuration for creating the listener.
      * @param disconnectListener Listener of client disconnected event.
-     * @throws IllegalArgumentException is the same CacheEntryListenerConfiguration is used more than once or
-     *          if some unsupported by thin client properties are set.
+     * @throws IllegalArgumentException if the same CacheEntryListenerConfiguration is used more than once or
+     *          if some properties are unsupported by thin client.
      * @see CacheEntryListener
      */
     public void registerCacheEntryListener(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration,
