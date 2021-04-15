@@ -16,7 +16,6 @@
 
 package org.apache.ignite.client;
 
-import java.lang.management.ManagementFactory;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
