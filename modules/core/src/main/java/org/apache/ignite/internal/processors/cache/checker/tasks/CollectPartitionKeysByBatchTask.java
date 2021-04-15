@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.RepairSizes;
@@ -73,7 +74,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  * Collects and returns a set of keys that have conflicts with {@link GridCacheVersion}.
  */
 @GridInternal
-public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>>>> {
+public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>>> {
     /**
      *
      */
@@ -133,7 +134,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>>> reduce(
+    @Override public @Nullable ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>> reduce(
         List<ComputeJobResult> results) throws IgniteException {
         assert partBatch != null;
 
@@ -143,7 +144,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
         KeyCacheObject lastKey = null;
 
-        Map<UUID, Long> partSizesMap = new HashMap<>();
+        Map<UUID, NodePartitionSize> partSizesMap = new HashMap<>();
 
         for (int i = 0; i < results.size(); i++) {
             UUID nodeId = results.get(i).getNode().id();
@@ -153,7 +154,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             if (exc != null)
                 return new ExecutionResult<>(exc.getMessage());
 
-            ExecutionResult<T2<List<VersionedKey>, Long>> nodeRes = results.get(i).getData();
+            ExecutionResult<T2<List<VersionedKey>, NodePartitionSize>> nodeRes = results.get(i).getData();
 
             if (nodeRes.errorMessage() != null)
                 return new ExecutionResult<>(nodeRes.errorMessage());
@@ -172,7 +173,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         totalRes.remove(key);
                 }
                 catch (IgniteCheckedException e) {
-                    U.error(log, e.getMessage(), e);;
+                    U.error(log, e.getMessage(), e);
 
                     return new ExecutionResult<>(e.getMessage());
                 }
@@ -236,7 +237,11 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
         }
 
         /** {@inheritDoc} */
-        @Override protected ExecutionResult<T2<List<VersionedKey>, Long>> execute0() {
+        @Override protected ExecutionResult<T2<List<VersionedKey>, NodePartitionSize>> execute0() {
+            boolean reconConsist = partBatch.reconConsist;
+            boolean reconSize = partBatch.reconSize && (partBatch.partSizesMap().get(ignite.localNode().id()) == null || partBatch.partSizesMap().get(ignite.localNode().id()).inProgress);
+
+//            if (reconConsist || reconSize)
             System.out.println("qdsvdsdfd start recon");
             IgniteCache<Object, Object> cache = ignite.cache(partBatch.cacheName());
 
@@ -271,12 +276,15 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = cacheDataStore.reconciliationCtx();
 
-            if (!partReconciliationCtx.isReconciliationInProgress(cacheId) && partReconciliationCtx.lastKey(cacheId) == null &&
+            NodePartitionSize nodeSize = new NodePartitionSize();
+
+            if (reconSize && !partReconciliationCtx.isReconciliationInProgress(cacheId) && partReconciliationCtx.lastKey(cacheId) == null &&
                 partReconciliationCtx.isReconciliationIsFinished.get(cacheId) == null) {
                 cacheDataStore.busyLock.block();
                 System.out.println("qdsaftpg start first busy lock");
 
                 try {
+                    nodeSize.inProgress = true;
                     partReconciliationCtx.isReconciliationInProgress(cacheId, true);
                     i = 0;
                     System.out.println("qlopfots set isReconciliationInProgress to true");
@@ -287,16 +295,20 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     cacheDataStore.busyLock.unblock();
                 }
             }
+            else {
+                if (partBatch.partSizesMap().get(ignite.localNode().id()) != null)
+                    nodeSize = partBatch.partSizesMap().get(ignite.localNode().id());
+            }
 
             KeyCacheObject lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
 
             KeyCacheObject keyToStart = null;
 
-//            if (lowerKey != null && lastKeyForSizes != null)
-//                keyToStart = KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
-//            else if (lowerKey != null)
-//                keyToStart = lowerKey;
-            /*else */if (lastKeyForSizes != null)
+            if (reconConsist && lowerKey != null && reconSize && lastKeyForSizes != null)
+                keyToStart = KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
+            else if (reconConsist && lowerKey != null)
+                keyToStart = lowerKey;
+            else if (reconSize && lastKeyForSizes != null)
                 keyToStart = lastKeyForSizes;
 
             partReconciliationCtx.sizes.putIfAbsent(cacheId, new AtomicLong());
@@ -315,21 +327,22 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
 //            i++;
 
-            try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
-                ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl) grpCtx.offheap().dataStore(part)).reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA) :
-                ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl) grpCtx.offheap().dataStore(part)).reconCursor(cacheId, keyToStart, null, null, null, IgniteCacheOffheapManager.DATA)) {
-                System.out.println("qdsadfvers start cursor");
+            if (reconConsist || reconSize) {
+                try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
+                    ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)grpCtx.offheap().dataStore(part)).reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA) :
+                    ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)grpCtx.offheap().dataStore(part)).reconCursor(cacheId, keyToStart, null, null, null, IgniteCacheOffheapManager.DATA)) {
+                    System.out.println("qdsadfvers start cursor");
 
-                List<VersionedKey> partEntryHashRecords = new ArrayList<>();
+                    List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
-                boolean isEmptyCursor = true;
+                    boolean isEmptyCursor = true;
 
-                int iters = 0;
+                    int iters = 0;
 
-                for (int i = 0; (i < batchSize /*&& (newLastKey == null || !newLastKey.equals(partReconciliationCtx.lastKey(cacheId)))*/ && cursor.next()); i++) {
-                    isEmptyCursor = false;
+                    for (int i = 0; (i < batchSize /*&& (newLastKey == null || !newLastKey.equals(partReconciliationCtx.lastKey(cacheId)))*/ && cursor.next()); i++) {
+                        isEmptyCursor = false;
 
-                    iters++;
+                        iters++;
 
 //                    try {
 //                        sleep(1);
@@ -338,96 +351,119 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                        e.printStackTrace();
 //                    }
 
-                    CacheDataRow row = cursor.get();
-                    newLastKey = partReconciliationCtx.lastKey(cacheId);//row.key();
+                        CacheDataRow row = cursor.get();
+                        newLastKey = partReconciliationCtx.lastKey(cacheId);//row.key();
 
-                    if (oldBorderKey != null && KEY_COMPARATOR.compare(oldBorderKey, newLastKey) >= 0)
-                        i--;
+                        if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) >= 0)
+                            i--;
+                        else if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) < 0) {
+                            partEntryHashRecords.add(new VersionedKey(
+                                ignite.localNode().id(),
+                                row.key(),
+                                row.version()
+                            ));
+                        }
 
-                    lastRow = row;
+                        lastRow = row;
 
-                    System.out.println("qwdsfsf newLastKey " + newLastKey);
-                    System.out.println("qwdsfsf end of iteration " + iters + " || " + newLastKey + " || " + partReconciliationCtx.lastKey(cacheId) + " " + Thread.currentThread().getName());
+                        System.out.println("qwdsfsf newLastKey " + newLastKey);
+                        System.out.println("qwdsfsf end of iteration " + iters + " || " + newLastKey + " || " + partReconciliationCtx.lastKey(cacheId) + " " + Thread.currentThread().getName());
 
 //                    latch.countDown();
-                }
+                    }
 
-                newLastKey = partReconciliationCtx.lastKey(cacheId);
+                    newLastKey = partReconciliationCtx.lastKey(cacheId);
 
 //                if (newLastKey != null && (oldBorderKey == null || KEY_COMPARATOR.compare(oldBorderKey, newLastKey) < 0)) {
-                if (!(partReconciliationCtx.lastKey(cacheId) == null) && /*oldBorderKey == null ||*/ !(partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
-                    partEntryHashRecords.add(new VersionedKey(
-                        ignite.localNode().id(),
-//                            row.key(),
-                        partReconciliationCtx.lastKey(cacheId),
-                        new GridCacheVersion()
-                    ));
-                }
+//                    if (!(partReconciliationCtx.lastKey(cacheId) == null) && /*oldBorderKey == null ||*/ !(partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
+//                        partEntryHashRecords.add(new VersionedKey(
+//                            ignite.localNode().id(),
+////                            row.key(),
+//                            partReconciliationCtx.lastKey(cacheId),
+//                            new GridCacheVersion()
+//                        ));
+//                    }
 
-                System.out.println("qzsdfvfe after newLastKey iters " + iters);
+                    System.out.println("qzsdfvfe after newLastKey iters " + iters);
 
 //                if (newLastKey != null)
 //                    partReconciliationCtx.lastKeys().put(cacheId, newLastKey);
 
-                System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
-                System.out.println("qvdrftga2 after iteration newLastKey " + newLastKey + " oldBorderKey " + oldBorderKey);
+                    System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
+                    System.out.println("qvdrftga2 after iteration newLastKey " + newLastKey + " oldBorderKey " + oldBorderKey);
 
-                if ((partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
+                    nodeSize.lastKey = (partReconciliationCtx.lastKey(cacheId));
+
+                    System.out.println("qwerdfchg reconSize " + reconSize);
+                    System.out.println("qwerdfchg partReconciliationCtx.lastKey(cacheId) " + partReconciliationCtx.lastKey(cacheId));
+                    System.out.println("qwerdfchg partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey) " + partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey));
+                    System.out.println("qwerdfchg partReconciliationCtx.isReconciliationInProgress(cacheId) " + partReconciliationCtx.isReconciliationInProgress(cacheId));
+
+                    if (reconSize && (partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
 //                if (partSize.get() == 300) {
-                    cacheDataStore.busyLock.block();
-                    System.out.println("qdsaftpg start second busy lock");
 
-                    System.out.println("qdresdvscs tempMap " + tempMap);
+                        cacheDataStore.busyLock.block();
+                        System.out.println("qdsaftpg start second busy lock");
 
-                    try {
-                        partReconciliationCtx.isReconciliationInProgress(cacheId, false);
+                        System.out.println("qdresdvscs tempMap " + tempMap);
+
+                        try {
+                            partReconciliationCtx.isReconciliationInProgress(cacheId, false);
 //                        *******************************************
-                        Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
+                            Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
 
 //                        System.out.println("tempMap " + part.tempMap.size() + part.tempMap);
 
-                        while (tempMapIter.hasNext()) {
-                            Map.Entry<KeyCacheObject, Boolean> entry = tempMapIter.next();
+                            while (tempMapIter.hasNext()) {
+                                Map.Entry<KeyCacheObject, Boolean> entry = tempMapIter.next();
 
-                            partSize.addAndGet(1);
+                                partSize.addAndGet(1);
 
-                            System.out.println("qkoplstfo in recon final increment: key " + entry.getKey() + " reconSize " + partSize);
+                                System.out.println("qkoplstfo in recon final increment: key " + entry.getKey() + " reconSize " + partSize);
 
-                        }
+                            }
 
-                        partReconciliationCtx.isReconciliationInProgress(cacheId, false);
+                            partReconciliationCtx.isReconciliationInProgress(cacheId, false);
 
-                        i++;
-                        System.out.println("qfvdiohiodf " + i + " " + Thread.currentThread().getName());
-                        System.out.println("qhopluindh old size ************************* partBatch.partitionId() " + partBatch.partitionId() + " cacheId " + cacheId + " " + part);
-                        System.out.println("qpijkhdikg old size ************************* " + cacheDataStore.storageSize.get());
-                        System.out.println("qpooikjgns partSize ************************* " + partSize);
+                            i++;
+                            System.out.println("qfvdiohiodf " + i + " " + Thread.currentThread().getName());
+                            System.out.println("qhopluindh old size ************************* partBatch.partitionId() " + partBatch.partitionId() + " cacheId " + cacheId + " " + part);
+                            System.out.println("qpijkhdikg old size ************************* " + cacheDataStore.storageSize.get());
+                            System.out.println("qpooikjgns partSize ************************* " + partSize);
 
-//                        cacheDataStore.storageSize.set(partSize.get());
-                        cacheDataStore.flushReconciliationResult();
+                            nodeSize.oldSize = partSize.get();
+                            cacheDataStore.flushReconciliationResult();
+                            nodeSize.newSize = partSize.get();
+
+                            nodeSize.lastKey = null;
+
+                            nodeSize.inProgress = false;
 
 //                        partEntryHashRecords.clear();
-                        partReconciliationCtx.isReconciliationIsFinished.put(cacheId, true);
+                            partReconciliationCtx.isReconciliationIsFinished.put(cacheId, true);
+                        }
+                        finally {
+                            System.out.println("qdsaftpg end second busy lock");
+                            cacheDataStore.busyLock.unblock();
+                        }
                     }
-                    finally {
-                        System.out.println("qdsaftpg end second busy lock");
-                        cacheDataStore.busyLock.unblock();
-                    }
+
+                    return new ExecutionResult<>(new T2<>(partEntryHashRecords, nodeSize));
                 }
+                catch (Exception e) {
+                    String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";
 
-                return new ExecutionResult<>(new T2<>(partEntryHashRecords, partSize.get()));
+                    log.error(errMsg, e);
+
+                    return new ExecutionResult<>(errMsg + " " + e.getMessage());
+                }
+                finally {
+
+                    part.release();
+                }
             }
-            catch (Exception e) {
-                String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";
-
-                log.error(errMsg, e);
-
-                return new ExecutionResult<>(errMsg + " " + e.getMessage());
-            }
-            finally {
-
-                part.release();
-            }
+            else
+                return new ExecutionResult<>(new T2<>(new ArrayList<>(), nodeSize));
 //            }
         }
     }

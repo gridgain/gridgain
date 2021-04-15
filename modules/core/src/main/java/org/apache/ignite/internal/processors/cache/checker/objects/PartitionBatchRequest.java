@@ -26,6 +26,10 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Pageable partition batch request.
  */
 public class PartitionBatchRequest extends CachePartitionRequest {
+    public boolean reconConsist;
+
+    public boolean reconSize;
+
     /**
      *
      */
@@ -48,7 +52,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     /**
      *
      */
-    private final Map<UUID, Long> partSizesMap;
+    private final Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
      * Reconciliation start topology version.
@@ -65,16 +69,20 @@ public class PartitionBatchRequest extends CachePartitionRequest {
      * @param startTopVer Start topology version.
      */
     public PartitionBatchRequest(
+        boolean reconConsist,
+        boolean reconSize,
         long sesId,
         UUID workloadChainId,
         String cacheName,
         int partId,
         int batchSize,
         KeyCacheObject lowerKey,
-        Map<UUID, Long> partSizesMap,
+        Map<UUID, NodePartitionSize> partSizesMap,
         AffinityTopologyVersion startTopVer
     ) {
         super(sesId, workloadChainId);
+        this.reconConsist = reconConsist;
+        this.reconSize = reconSize;
         this.cacheName = cacheName;
         this.partId = partId;
         this.batchSize = batchSize;
@@ -110,7 +118,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     /**
      *
      */
-    public Map<UUID, Long> partSizesMap() {
+    public Map<UUID, NodePartitionSize> partSizesMap() {
         return partSizesMap;
     }
 

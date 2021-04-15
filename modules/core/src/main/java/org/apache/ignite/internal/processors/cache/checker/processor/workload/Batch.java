@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.checker.processor.workload;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWorkload;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 
@@ -26,6 +27,10 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitio
  * Describes batch workload for {@link CollectPartitionKeysByBatchTask} include the pagination.
  */
 public class Batch extends PipelineWorkload {
+    public boolean reconConsist;
+
+    public boolean reconSize;
+
     /** Cache name. */
     private final String cacheName;
 
@@ -39,7 +44,7 @@ public class Batch extends PipelineWorkload {
     private final KeyCacheObject lowerKey;
 
     /** */
-    private final Map<UUID, Long> partSizesMap;
+    private final Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
      * @param sesId Session id.
@@ -48,8 +53,11 @@ public class Batch extends PipelineWorkload {
      * @param partId Partition id.
      * @param lowerKey Lower key.
      */
-    public Batch(long sesId, UUID workloadChainId, String cacheName, int cacheId, int partId, KeyCacheObject lowerKey, Map<UUID, Long> partSizesMap) {
+    public Batch(boolean reconConsist, boolean reconSize, long sesId, UUID workloadChainId, String cacheName, int cacheId, int partId, KeyCacheObject lowerKey, Map<UUID, NodePartitionSize> partSizesMap) {
         super(sesId, workloadChainId);
+
+        this.reconConsist = reconConsist;
+        this.reconSize = reconSize;
 
         this.cacheName = cacheName;
         this.partId = partId;
@@ -87,7 +95,7 @@ public class Batch extends PipelineWorkload {
     /**
      *
      */
-    public Map<UUID, Long> partSizesMap() {
+    public Map<UUID, NodePartitionSize> partSizesMap() {
         return partSizesMap;
     }
 }

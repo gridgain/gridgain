@@ -44,6 +44,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntriesExtended;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
@@ -127,7 +128,7 @@ public interface ReconciliationResultCollector {
     File flushResultsToFile(LocalDateTime startTime);
 
     /** */
-    Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap();
+    Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap();
 
     /**
      * Represents a collector of inconsistent and repaired entries.
@@ -152,7 +153,7 @@ public interface ReconciliationResultCollector {
         protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
 
         /** */
-        public final Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = new HashMap();
+        public final Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap();
 
         /**
          * Creates a new SimpleCollector.
@@ -182,7 +183,7 @@ public interface ReconciliationResultCollector {
         /**
          *
          */
-        @Override public Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap() {
+        @Override public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
             return partSizesMap;
         }
 

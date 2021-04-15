@@ -54,7 +54,7 @@ import static java.lang.Thread.sleep;
  */
 public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static int nodesCnt = 3;
+    protected static int nodesCnt = 2;
 
     protected static int backups = 1;
 
@@ -64,7 +64,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     static AtomicReference<ReconciliationResult> reconResult = new AtomicReference<>();
 
-    static final long BROKEN_PART_SIZE = 10;
+    static final long BROKEN_PART_SIZE = 9;
 
 //    private List<String> cacheGroup0 = new ArrayList<>();
 //    private List<String> cacheGroup1 = new ArrayList<>();
@@ -762,8 +762,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         ccfg0.setName(DEFAULT_CACHE_NAME);
 //        ccfg0.setGroupName("zzz");
         ccfg0.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg0.setAffinity(new RendezvousAffinityFunction(false, 9));
-        ccfg0.setBackups(0);
+        ccfg0.setAffinity(new RendezvousAffinityFunction(false, 4));
+        ccfg0.setBackups(1);
         ccfg0.setAtomicityMode(CacheAtomicityMode.ATOMIC);
         ccfg0.setCacheMode(CacheMode.PARTITIONED);
 
@@ -772,7 +772,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
         startKey = 0;
-        endKey = 500;
+        endKey = 3000;
 
         for (int i = startKey; i < endKey; i++) {
             i += 1;
@@ -784,7 +784,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         int startSize = cache.size();
 
-        breakCacheSizes(Arrays.asList(grid(0), grid(1), grid(2)/*, grid(3)*/), Arrays.asList(DEFAULT_CACHE_NAME));
+        breakCacheSizes(Arrays.asList(grid(0)/*, grid(1), grid(2), grid(3)*/), Arrays.asList(DEFAULT_CACHE_NAME));
 
         assertFalse(cache.size() == startSize);
 

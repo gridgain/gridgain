@@ -38,6 +38,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.FinalizeCountersDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntriesExtended;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
@@ -227,7 +228,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         /** {@inheritDoc} */
-        @Override public T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, Long>>>>>> execute() throws IgniteException {
+        @Override public T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
@@ -263,7 +264,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     !reconciliationTaskArg.locOutput(),
                     reconciliationTaskArg.includeSensitive());
 
-                ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, Long>>>>> reconciliationRes = proc.execute();
+                ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>> reconciliationRes = proc.execute();
 
                 File path = proc.collector().flushResultsToFile(startTime);
 

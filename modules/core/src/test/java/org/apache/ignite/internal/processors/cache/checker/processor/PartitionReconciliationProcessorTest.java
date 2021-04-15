@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
@@ -106,11 +107,11 @@ public class PartitionReconciliationProcessorTest {
     public void testBatchDoesNotHaveElementsNothingSchedule() throws IgniteCheckedException {
         MockedProcessor processor = MockedProcessor.create(false);
 
-        Map<UUID, Long> partSizesMap = new HashMap<>();
+        Map<UUID, NodePartitionSize> partSizesMap = new HashMap<>();
 
-        ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>>> emptyRes = new ExecutionResult<>(new T3<>(null, new HashMap<>(), partSizesMap));
+        ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>> emptyRes = new ExecutionResult<>(new T3<>(null, new HashMap<>(), partSizesMap));
 
-        processor.addTask(new Batch(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+        processor.addTask(new Batch(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
             .whereResult(CollectPartitionKeysByBatchTask.class, emptyRes)
             .execute();
@@ -130,10 +131,10 @@ public class PartitionReconciliationProcessorTest {
         KeyCacheObject nextKey = new KeyCacheObjectImpl(1, null, PARTITION_ID);
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> batchRes = new HashMap<>();
         batchRes.put(nextKey, new HashMap<>());
-        Map<UUID, Long> partSizesMap = new HashMap<>();
-        ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, Long>>> emptyRes = new ExecutionResult<>(new T3<>(nextKey, batchRes, partSizesMap));
+        Map<UUID, NodePartitionSize> partSizesMap = new HashMap<>();
+        ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>> emptyRes = new ExecutionResult<>(new T3<>(nextKey, batchRes, partSizesMap));
 
-        processor.addTask(new Batch(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+        processor.addTask(new Batch(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
             .whereResult(CollectPartitionKeysByBatchTask.class, emptyRes)
             .execute();

@@ -36,6 +36,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
@@ -169,7 +170,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      * @return Partition reconciliation result
      */
-    public ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, Long>>>>> execute() {
+    public ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>> execute() {
         if (log.isInfoEnabled()) {
             log.info(String.format(
                 START_EXECUTION_MSG,
@@ -198,7 +199,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    Batch workload = new Batch(sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
+                    Batch workload = new Batch(true, true, sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -316,16 +317,23 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
+            new PartitionBatchRequest(workload.reconConsist, workload.reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
             res -> {
+                System.out.println("qfdbdpofgny");
                 KeyCacheObject nextBatchKey = res.get1();
 
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = res.get2();
 
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
-                if (nextBatchKey != null)
-                    schedule(new Batch(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
+                boolean reconConsist = nextBatchKey != null;
+                boolean reconSize = res.get3().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress));
+
+                System.out.println("qpohyhjdfd reconConsist " + reconConsist);
+                System.out.println("qpohyhjdfd reconSize " + reconSize);
+
+                if (reconConsist || reconSize)
+                    schedule(new Batch(reconConsist, reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
 
                 if (nextBatchKey == null) {
                     collector.partSizesMap().putIfAbsent(workload.cacheId(), new HashMap<>());
