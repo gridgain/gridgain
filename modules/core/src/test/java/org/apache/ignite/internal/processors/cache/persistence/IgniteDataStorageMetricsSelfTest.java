@@ -312,26 +312,29 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
         ex.cluster().state(ClusterState.ACTIVE);
 
         try {
-            IgniteCache<Object, Object> cache = ex.cache("cache");
-            GridCacheDatabaseSharedManager dbMgr =
-                    (GridCacheDatabaseSharedManager)ex.context().cache().context().database();
-            DataStorageMetrics dsm;
             long prevLastStart = 0;
 
-            for (int i = 0; i < 10; i++) {
-                ex.context().cache().context().database().waitForCheckpoint("test");
-                cache.put(i, "VALUE_" + i);
+            for (int i = 0; i < 5; i++) {
+                IgniteCache<Object, Object> cache = ex.cache("cache");
 
-                dsm = dbMgr.persistentStoreMetrics();
+                for (int j = 0; j < 10_000; j++)
+                    cache.put(j, "VALUE_" + i + "_" + j);
+
+                ex.context().cache().context().database().waitForCheckpoint("test");
+
+                try {
+                    Thread.sleep(100);
+                }
+                catch (InterruptedException e) { /* no op */ }
+
+                GridCacheDatabaseSharedManager dbMgr =
+                        (GridCacheDatabaseSharedManager)ex.context().cache().context().database();
+                DataStorageMetrics dsm = dbMgr.persistentStoreMetrics();
+
                 long lastStart = dsm.getLastCheckpointStarted();
 
                 assertTrue(lastStart > 0);
                 assertTrue(lastStart - prevLastStart > 0);
-
-                try {
-                    Thread.sleep(10);
-                }
-                catch (InterruptedException e) { }
 
                 prevLastStart = lastStart;
             }
