@@ -823,7 +823,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                         res.byteSource().size());
                 }
             }
-            catch (IgniteCheckedException e) {
+            catch (IgniteCheckedException | TimeoutException e) {
                 // This thread should be interrupted again in communication if it
                 // got interrupted. So we assume that thread can be interrupted
                 // by processing cancellation request.
@@ -845,6 +845,9 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
 
                     LT.warn(log, msg, e);
                 }
+
+                if (e instanceof TimeoutException)
+                    throw (TimeoutException) e;
             }
         }
 
