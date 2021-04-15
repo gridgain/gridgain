@@ -30,8 +30,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.cache.Cache;
-import javax.management.MBeanServerInvocationHandler;
-import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -42,9 +40,6 @@ import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.client.thin.AbstractThinClientTest;
 import org.apache.ignite.internal.client.thin.ClientServerError;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -385,21 +380,6 @@ public class ReliabilityTest extends AbstractThinClientTest {
      */
     protected <K, V> void cachePut(ClientCache<K, V> cache, K key, V val) {
         cache.put(key, val);
-    }
-
-    /**
-     * Drop all thin client connections on given Ignite instance.
-     *
-     * @param ignite Ignite.
-     */
-    private void dropAllThinClientConnections(Ignite ignite) throws Exception {
-        ObjectName mbeanName = U.makeMBeanName(ignite.name(), "Clients",
-            ClientListenerProcessor.class.getSimpleName());
-
-        ClientProcessorMXBean mxBean = MBeanServerInvocationHandler.newProxyInstance(
-            ManagementFactory.getPlatformMBeanServer(), mbeanName, ClientProcessorMXBean.class, true);
-
-        mxBean.dropAllConnections();
     }
 
     /**
