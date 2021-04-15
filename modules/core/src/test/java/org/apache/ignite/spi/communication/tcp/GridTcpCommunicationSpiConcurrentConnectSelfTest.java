@@ -131,7 +131,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
         @Override public void onMessage(UUID nodeId, Message msg, IgniteRunnable msgC) {
             msgC.run();
 
-            assertTrue(msg instanceof GridTestMessage);
+            assertTrue("Msg: " + msg, msg instanceof GridTestMessage);
 
             cntr.incrementAndGet();
 
