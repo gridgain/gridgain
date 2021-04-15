@@ -28,36 +28,36 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     // Failover.
-//    IgniteSpiFailoverSelfTestSuite.class,
-//
-//    // Collision.
-//    IgniteSpiCollisionSelfTestSuite.class,
-//
-//    // Event storage.
-//    IgniteSpiEventStorageSelfTestSuite.class,
-//
-//    // Load Balancing.
-//    IgniteSpiLoadBalancingSelfTestSuite.class,
-//
-//    // Checkpoints.
-//    IgniteSpiCheckpointSelfTestSuite.class,
-//
-//    // Deployment
-//    IgniteSpiDeploymentSelfTestSuite.class,
-//
-//    // Discovery.
-//    IgniteSpiDiscoverySelfTestSuite.class,
+    IgniteSpiFailoverSelfTestSuite.class,
+
+    // Collision.
+    IgniteSpiCollisionSelfTestSuite.class,
+
+    // Event storage.
+    IgniteSpiEventStorageSelfTestSuite.class,
+
+    // Load Balancing.
+    IgniteSpiLoadBalancingSelfTestSuite.class,
+
+    // Checkpoints.
+    IgniteSpiCheckpointSelfTestSuite.class,
+
+    // Deployment
+    IgniteSpiDeploymentSelfTestSuite.class,
+
+    // Discovery.
+    IgniteSpiDiscoverySelfTestSuite.class,
 
     // Communication.
     IgniteSpiCommunicationSelfTestSuite.class,
 
     // All other tests.
-//    GridNoopManagerSelfTest.class,
-//
-//    // Local Message Listener tests.
-//    GridManagerLocalMessageListenerSelfTest.class,
-//
-//    KeystoreEncryptionSpiSelfTest.class
+    GridNoopManagerSelfTest.class,
+
+    // Local Message Listener tests.
+    GridManagerLocalMessageListenerSelfTest.class,
+
+    KeystoreEncryptionSpiSelfTest.class
 })
 public class IgniteSpiTestSuite {
 }
