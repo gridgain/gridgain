@@ -28,7 +28,8 @@ public interface ClientDisconnectListener {
     /**
      * Client disconnected callback.
      *
-     * @param reason Exception that caused the disconnect, can be {@code null}.
+     * @param reason Exception that caused the disconnect, or {@code null} when thin client connection is closed
+     * by the user.
      */
     public void onDisconnected(Exception reason);
 }
