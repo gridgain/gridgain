@@ -75,7 +75,7 @@ public class WalEnableDisableWithRestartsTest extends GridCommonAbstractTest {
         Ignite client = Ignition.start(igniteCfg(true, "client"));
 
         new Thread(new Runnable() {
-            public void run() {
+            @Override public void run() {
                 try {
                     for (int i = 0; i < CYCLES; i++) {
                         System.err.println("*** CYCLE " + i);
