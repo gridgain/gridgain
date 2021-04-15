@@ -153,7 +153,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testTwoThreads() throws Exception {
         concurrentConnect(2, 10, ITERS, false, false);
     }
@@ -161,7 +161,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testMultithreaded() throws Exception {
         int threads = Runtime.getRuntime().availableProcessors() * 5;
 
@@ -171,7 +171,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testMultithreaded_10Connections() throws Exception {
         connectionsPerNode = 10;
 
@@ -181,7 +181,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testMultithreaded_NoPairedConnections() throws Exception {
         pairedConnections = false;
 
@@ -191,7 +191,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testMultithreaded_10ConnectionsNoPaired() throws Exception {
         pairedConnections = false;
         connectionsPerNode = 10;
@@ -202,7 +202,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testWithLoad() throws Exception {
         int threads = Runtime.getRuntime().availableProcessors() * 5;
 
@@ -212,7 +212,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testRandomSleep() throws Exception {
         concurrentConnect(4, 1, ITERS, true, false);
     }
