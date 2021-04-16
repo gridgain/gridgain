@@ -78,6 +78,11 @@ public class GridDirectParser implements GridNioParser {
                 byte b1 = buf.get();
 
                 msg = msgFactory.create(makeMessageType(b0, b1));
+
+                if (makeMessageType(b0, b1) == 0)
+                    log.info("Received not finished message [msg=" + msg
+                        + ", loc=" + ses.localAddress()
+                        + ", rem=" + ses.remoteAddress() + ']');
             }
 
             boolean finished = false;
@@ -92,6 +97,11 @@ public class GridDirectParser implements GridNioParser {
             if (finished) {
                 if (reader != null)
                     reader.reset();
+
+                if (msg.directType() == 0)
+                    log.info("Received finished message [msg=" + msg
+                        + ", loc=" + ses.localAddress()
+                        + ", rem=" + ses.remoteAddress() + ']');
 
                 return msg;
             }
