@@ -20,8 +20,8 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
@@ -127,6 +127,9 @@ public class IgniteMessageFactoryImpl implements IgniteMessageFactory {
      */
     @Override public @Nullable Message create(short directType) {
         Supplier<Message> supplier = msgSuppliers[directTypeToIndex(directType)];
+
+        if (directType == 0)
+            U.dumpStack("GridJobCancelRequest message created [directType=" + directType + ']');
 
         if (supplier == null)
             throw new IgniteException("Invalid message type: " + directType);

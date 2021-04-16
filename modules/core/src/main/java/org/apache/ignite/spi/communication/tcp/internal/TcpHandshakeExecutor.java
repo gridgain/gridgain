@@ -181,8 +181,8 @@ public class TcpHandshakeExecutor {
         else
             U.writeFully(ch, buf);
 
-        if (log.isDebugEnabled())
-            log.debug("Waiting for handshake [rmtNode=" + rmtNodeId + ']');
+        if (log.isInfoEnabled())
+            log.info("Waiting for handshake [rmtNode=" + rmtNodeId + ']');
 
         // Step 3. Waiting for response from the remote node with their receive count message.
         if (stateProvider.isSslEnabled()) {
@@ -245,8 +245,8 @@ public class TcpHandshakeExecutor {
             rcvCnt = buf.getLong(DIRECT_TYPE_SIZE);
         }
 
-        if (log.isDebugEnabled())
-            log.debug("Received handshake message [rmtNode=" + rmtNodeId + ", rcvCnt=" + rcvCnt + ']');
+        if (log.isInfoEnabled())
+            log.info("Received handshake message [rmtNode=" + rmtNodeId + ", rcvCnt=" + rcvCnt + ']');
 
         if (rcvCnt == -1) {
             if (log.isDebugEnabled())

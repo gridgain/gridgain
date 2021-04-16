@@ -306,8 +306,14 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
                                     Thread.sleep(millis);
                             }
 
-                            for (int i = 0; i < msgPerThread; i++)
+                            for (int i = 0; i < msgPerThread; i++) {
+                                info("Sending a message from " + srcNode.id() +
+                                    " to " + dstNode.id());
+
                                 spi.sendMessage(dstNode, new GridTestMessage(srcNode.id(), msgId.incrementAndGet(), 0));
+
+                                info("Sent!!");
+                            }
 
                             return null;
                         }

@@ -444,8 +444,8 @@ public class ConnectionClientPool {
         if (locNode == null)
             throw new IgniteCheckedException("Failed to create NIO client (local node is stopping)");
 
-        if (log.isDebugEnabled())
-            log.debug("Creating NIO client to node: " + node);
+        if (log.isInfoEnabled())
+            log.info("Creating NIO client to node: " + node);
 
         // If remote node has shared memory server enabled and has the same set of MACs
         // then we are likely to run on the same host and shared memory communication could be tried.
@@ -485,8 +485,8 @@ public class ConnectionClientPool {
             if (log.isInfoEnabled())
                 log.info("TCP client created [client=" + clientString(client, node) + ", duration=" + time + "ms]");
         }
-        else if (log.isDebugEnabled())
-            log.debug("TCP client created [client=" + clientString(client, node) + ", duration=" + time + "ms]");
+        else if (log.isInfoEnabled())
+            log.info("TCP client created [client=" + clientString(client, node) + ", duration=" + time + "ms]");
 
         return client;
     }
