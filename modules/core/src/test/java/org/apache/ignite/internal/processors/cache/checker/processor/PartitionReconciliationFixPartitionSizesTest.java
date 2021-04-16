@@ -763,7 +763,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        ccfg0.setGroupName("zzz");
         ccfg0.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
         ccfg0.setAffinity(new RendezvousAffinityFunction(false, 4));
-        ccfg0.setBackups(1);
+        ccfg0.setBackups(0);
         ccfg0.setAtomicityMode(CacheAtomicityMode.ATOMIC);
         ccfg0.setCacheMode(CacheMode.PARTITIONED);
 
@@ -792,7 +792,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
-        builder.parallelism(1);
+        builder.parallelism(3);
 //        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
         Set<String> objects = new HashSet<>();
         objects.add(DEFAULT_CACHE_NAME);

@@ -3537,7 +3537,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        public GridCursor<? extends CacheDataRow> reconCursor(int cacheId,
+        @Override public GridCursor<? extends CacheDataRow> reconCursor(int cacheId,
             KeyCacheObject lower,
             KeyCacheObject upper,
             CacheDataRowAdapter.RowData x,
@@ -3784,6 +3784,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          */
         @Override public void tombstoneCreated() {
             tombstonesCnt.incrementAndGet();
+        }
+
+        @Override public void block() {
+            busyLock.block();
+        }
+
+        @Override public void unblock() {
+            busyLock.unblock();
         }
 
         /**

@@ -1094,6 +1094,14 @@ public interface IgniteCacheOffheapManager {
             MvccSnapshot snapshot,
             int flags) throws IgniteCheckedException;
 
+        public GridCursor<? extends CacheDataRow> reconCursor(int cacheId,
+            KeyCacheObject lower,
+            KeyCacheObject upper,
+            CacheDataRowAdapter.RowData x,
+            MvccSnapshot snapshot,
+            int flags
+        ) throws IgniteCheckedException;
+
         /**
          * Destroys the tree associated with the store.
          *
@@ -1188,5 +1196,9 @@ public interface IgniteCacheOffheapManager {
          * Callback for tombstone creation.
          */
         public void tombstoneCreated();
+
+        public void block();
+
+        public void unblock();
     }
 }

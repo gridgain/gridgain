@@ -16,21 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.checker.tasks;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
-import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -51,7 +45,6 @@ import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResu
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
-import org.apache.ignite.internal.processors.cache.checker.processor.workload.RepairSizes;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -268,7 +261,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             GridDhtLocalPartition part = grpCtx.topology().localPartition(partBatch.partitionId());
 
-            IgniteCacheOffheapManagerImpl.CacheDataStoreImpl cacheDataStore = (IgniteCacheOffheapManagerImpl.CacheDataStoreImpl) grpCtx.offheap().dataStore(part);
+            IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
 
             assert part != null;
 
@@ -280,7 +273,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             if (reconSize && !partReconciliationCtx.isReconciliationInProgress(cacheId) && partReconciliationCtx.lastKey(cacheId) == null &&
                 partReconciliationCtx.isReconciliationIsFinished.get(cacheId) == null) {
-                cacheDataStore.busyLock.block();
+                cacheDataStore.block();
                 System.out.println("qdsaftpg start first busy lock");
 
                 try {
@@ -292,7 +285,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 }
                 finally {
                     System.out.println("qdsaftpg end first busy lock");
-                    cacheDataStore.busyLock.unblock();
+                    cacheDataStore.unblock();
                 }
             }
             else {
@@ -329,8 +322,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             if (reconConsist || reconSize) {
                 try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
-                    ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)grpCtx.offheap().dataStore(part)).reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA) :
-                    ((IgniteCacheOffheapManagerImpl.CacheDataStoreImpl)grpCtx.offheap().dataStore(part)).reconCursor(cacheId, keyToStart, null, null, null, IgniteCacheOffheapManager.DATA)) {
+                    grpCtx.offheap().dataStore(part).reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA)  :
+                    grpCtx.offheap().dataStore(part).reconCursor(cacheId, keyToStart, null, null, null, IgniteCacheOffheapManager.DATA)) {
                     System.out.println("qdsadfvers start cursor");
 
                     List<VersionedKey> partEntryHashRecords = new ArrayList<>();
@@ -354,14 +347,16 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         CacheDataRow row = cursor.get();
                         newLastKey = partReconciliationCtx.lastKey(cacheId);//row.key();
 
-                        if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) >= 0)
-                            i--;
-                        else if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) < 0) {
-                            partEntryHashRecords.add(new VersionedKey(
-                                ignite.localNode().id(),
-                                row.key(),
-                                row.version()
-                            ));
+                        if (reconConsist) {
+                            if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0) {
+                                partEntryHashRecords.add(new VersionedKey(
+                                    ignite.localNode().id(),
+                                    row.key(),
+                                    row.version()
+                                ));
+                            }
+                            else
+                                i--;
                         }
 
                         lastRow = row;
@@ -396,13 +391,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                     System.out.println("qwerdfchg reconSize " + reconSize);
                     System.out.println("qwerdfchg partReconciliationCtx.lastKey(cacheId) " + partReconciliationCtx.lastKey(cacheId));
-                    System.out.println("qwerdfchg partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey) " + partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey));
+//                    System.out.println("qwerdfchg partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey) " + partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey));
                     System.out.println("qwerdfchg partReconciliationCtx.isReconciliationInProgress(cacheId) " + partReconciliationCtx.isReconciliationInProgress(cacheId));
 
                     if (reconSize && (partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
 //                if (partSize.get() == 300) {
 
-                        cacheDataStore.busyLock.block();
+                        cacheDataStore.block();
                         System.out.println("qdsaftpg start second busy lock");
 
                         System.out.println("qdresdvscs tempMap " + tempMap);
@@ -428,7 +423,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                             i++;
                             System.out.println("qfvdiohiodf " + i + " " + Thread.currentThread().getName());
                             System.out.println("qhopluindh old size ************************* partBatch.partitionId() " + partBatch.partitionId() + " cacheId " + cacheId + " " + part);
-                            System.out.println("qpijkhdikg old size ************************* " + cacheDataStore.storageSize.get());
+//                            System.out.println("qpijkhdikg old size ************************* " + cacheDataStore.storageSize.get());
                             System.out.println("qpooikjgns partSize ************************* " + partSize);
 
                             nodeSize.oldSize = partSize.get();
@@ -444,7 +439,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         }
                         finally {
                             System.out.println("qdsaftpg end second busy lock");
-                            cacheDataStore.busyLock.unblock();
+                            cacheDataStore.unblock();
                         }
                     }
 

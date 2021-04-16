@@ -47,7 +47,6 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
-import org.apache.ignite.internal.processors.cache.checker.processor.workload.RepairSizes;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
@@ -250,8 +249,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     handle((Recheck)workload);
                 else if (workload instanceof Repair)
                     handle((Repair)workload);
-                else if (workload instanceof RepairSizes)
-                    handle((RepairSizes)workload);
                 else {
                     String err = "Unsupported workload type: " + workload;
 
@@ -474,21 +471,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     System.out.println("qvsdvewb");
 //                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
                 }
-            });
-    }
-
-    /**
-     * @param workload Workload.
-     */
-    private void handle(RepairSizes workload) throws InterruptedException {
-        compute(
-            RepairSizesTask.class,
-            new RepairSizesRequest(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), startTopVer,
-                workload.partSizesMap()),
-            repairRes -> {
-                AtomicInteger couner = workloadChainIdsInProgress.get(workload.workloadChainId());
-
-                couner.decrementAndGet();
             });
     }
 
