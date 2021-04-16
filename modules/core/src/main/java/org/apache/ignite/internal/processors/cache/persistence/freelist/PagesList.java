@@ -1989,6 +1989,13 @@ public abstract class PagesList extends DataStructure {
     }
 
     /**
+     * @return Meta page id.
+     */
+    public long metaPageId() {
+        return metaPageId;
+    }
+
+    /**
      * Singleton reuse bag.
      */
     private static final class SingletonReuseBag implements ReuseBag {

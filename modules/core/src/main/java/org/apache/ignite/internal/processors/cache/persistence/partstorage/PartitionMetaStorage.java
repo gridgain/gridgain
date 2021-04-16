@@ -47,4 +47,9 @@ public interface PartitionMetaStorage<T extends Storable> {
      * Saves storage metadata.
      */
     public void saveMetadata(IoStatisticsHolder statHolder) throws IgniteCheckedException;
+
+    /**
+     * @return Meta page id.
+     */
+    public long metaPageId();
 }

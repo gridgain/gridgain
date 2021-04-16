@@ -833,6 +833,10 @@ public class CachePartitionDefragmentationManager {
                             partCtx.newCacheDataStore.partStorage().insertDataRow(gapsDataRow, IoStatisticsHolderNoOp.INSTANCE);
 
                             newPartMetaIo.setGapsLink(newPartMetaPageAddr, gapsDataRow.link());
+
+                            newPartMetaIo.setPartitionMetaStoreReuseListRoot(newPartMetaPageAddr,
+                                oldPartMetaIo.getPartitionMetaStoreReuseListRoot(oldPartMetaPageAddr)
+                            );
                         }
 
                         // Encryption stuff.
