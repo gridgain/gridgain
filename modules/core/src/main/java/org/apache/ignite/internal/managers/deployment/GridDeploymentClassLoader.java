@@ -594,7 +594,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
 
         Exception err = null;
 
-        TimeoutException te;
+        TimeoutException te = null;
 
         for (UUID nodeId : nodeListCp) {
             if (nodeId.equals(ctx.discovery().localNode().id()))
@@ -615,8 +615,6 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             try {
                 GridDeploymentResponse res = null;
 
-                te = null;
-
                 try {
                     res = comm.sendResourceRequest(path, ldrId, node, endTime);
                 }
@@ -635,9 +633,6 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                         log.debug(msg);
 
                     err = new IgniteCheckedException(msg);
-
-                    if (te != null)
-                        err.addSuppressed(te);
 
                     continue;
                 }
@@ -692,8 +687,11 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             }
         }
 
-        if (err != null)
+        if (err != null && te != null) {
+            err.addSuppressed(te);
+
             throw new IgniteException(err);
+        }
 
         throw new ClassNotFoundException("Failed to peer load class [class=" + name + ", nodeClsLdrs=" +
             nodeLdrMapCp + ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']', err);
