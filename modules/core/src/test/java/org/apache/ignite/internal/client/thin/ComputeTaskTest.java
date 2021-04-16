@@ -34,8 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientClusterGroup;
@@ -50,11 +48,8 @@ import org.apache.ignite.compute.ComputeTaskName;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.ThinClientConfiguration;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -643,18 +638,6 @@ public class ComputeTaskTest extends AbstractThinClientTest {
             res.add(nodeId(i));
 
         return res;
-    }
-
-    /**
-     *
-     */
-    private void dropAllThinClientConnections() {
-        for (Ignite ignite : G.allGrids()) {
-            ClientProcessorMXBean mxBean = getMxBean(ignite.name(), "Clients",
-                ClientProcessorMXBean.class, ClientListenerProcessor.class);
-
-            mxBean.dropAllConnections();
-        }
     }
 
     /**
