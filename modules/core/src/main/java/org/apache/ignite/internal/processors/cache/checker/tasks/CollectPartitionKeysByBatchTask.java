@@ -177,10 +177,10 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
         System.out.println("qgrtsngd " + results);
 
-        if (lastKey == null)
-            System.out.println("qgrtsngd null");
-        else
-            System.out.println("qgrtsngd " + ((KeyCacheObjectImpl)lastKey).value());
+//        if (lastKey == null)
+//            System.out.println("qgrtsngd null");
+//        else
+//            System.out.println("qgrtsngd " + ((KeyCacheObjectImpl)lastKey).value());
         System.out.println("qgrtsngd " + lastKey);
 
         return new ExecutionResult<>(new T3<>(lastKey, totalRes, partSizesMap));

@@ -9,6 +9,9 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
 public class NodePartitionSize extends IgniteDataTransferObject {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     public boolean inProgress;
 
     public KeyCacheObject lastKey;

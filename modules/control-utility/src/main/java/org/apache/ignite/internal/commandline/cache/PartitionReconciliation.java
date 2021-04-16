@@ -200,7 +200,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
                 .map(n -> String.format(strErrReason, n.nodeId(), n.consistentId()))
                 .collect(toList());
 
-            print(new ReconciliationResult(new ReconciliationAffectedEntries(), new HashMap<>(), errs), log::info);
+            print(new ReconciliationResult(new ReconciliationAffectedEntries(), new HashMap<>(), new HashMap<>(), errs), log::info);
 
             throw new VisorIllegalStateException("There are server nodes not supported partition reconciliation.");
         }

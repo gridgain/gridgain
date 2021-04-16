@@ -18,12 +18,14 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,6 +35,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
@@ -40,13 +43,19 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
+import org.apache.ignite.internal.processors.cache.tree.PendingRow;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
+import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
@@ -75,6 +84,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     private final long evictionProgressFreqMs =
         getLong(SHOW_EVICTION_PROGRESS_FREQ, DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS);
 
+    /** */
+    private static final int MAX_EVICT_QUEUE_SIZE = 10_000;
+
+    /** */
+    private static final int PROCESS_EMPTY_EVICT_QUEUE_FREQ = 500;
+
     /** Last time of show eviction progress. */
     private long lastShowProgressTimeNanos = System.nanoTime() - U.millisToNanos(evictionProgressFreqMs);
 
@@ -95,14 +110,25 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /** */
     private final ConcurrentMap<PartitionKey, PartitionEvictionTask> futs = new ConcurrentHashMap<>();
 
+    /** */
+    private FastSizeDeque<PendingRow> tombstoneEvictQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
+
+    /** */
+    private FastSizeDeque<PendingRow> ttlEvictQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
+
+    /** */
+    private AtomicReference<IgniteInternalFuture<?>> tombstoneFutRef = new AtomicReference<>();
+
+    /** */
+    private AtomicReference<IgniteInternalFuture<?>> ttlFutRef = new AtomicReference<>();
+
     /**
      * Callback on cache group start.
      *
      * @param grp Group.
      */
     public void onCacheGroupStarted(CacheGroupContext grp) {
-        if (!grp.isLocal())
-            evictionGroupsMap.put(grp.groupId(), new GroupEvictionContext(grp));
+        evictionGroupsMap.put(grp.groupId(), new GroupEvictionContext(grp));
     }
 
     /**
@@ -265,6 +291,195 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         super.start0();
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
+
+        // Start processing tombstones.
+        processEvictions(true);
+
+        // Start processing ttl rows.
+        processEvictions(false);
+    }
+
+    /**
+     * Process pending evictions asynchronously.
+     * @param tombstone {@code True} to process tombstones.
+     *
+     * @return A future.
+     */
+    public IgniteInternalFuture<?> processEvictions(boolean tombstone) {
+        GridKernalContext ctx = cctx.kernalContext();
+
+        AtomicReference<IgniteInternalFuture<?>> ref = tombstone ? tombstoneFutRef : ttlFutRef;
+        FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+
+        GridFutureAdapter<?> fut = new GridFutureAdapter<>();
+
+        // Only one thread can trigger queue fill. Make sure we always return not null future.
+        do {
+            IgniteInternalFuture<?> cur = ref.get();
+
+            if (cur != null)
+                return cur;
+        }
+        while (!ref.compareAndSet(null, fut));
+
+        IgniteInternalFuture<?> fut0 = ctx.closure().runLocalSafe(new GridPlainRunnable() {
+            @Override public void run() {
+                int res = fillEvictQueue(tombstone, U.currentTimeMillis());
+
+                if (res == 0 && queue.sizex() == 0) {
+                    ref.set(null);
+
+                    // Queue is empty, try later.
+                    ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(PROCESS_EMPTY_EVICT_QUEUE_FREQ) {
+                        @Override public void onTimeout() {
+                            processEvictions(tombstone);
+                        }
+                    });
+                }
+            }
+        });
+
+        fut0.listen(f -> fut.onDone(null, f.error()));
+
+        return fut;
+    }
+
+    /**
+     * @param tombstone {@code True} for tombstones.
+     * @return The queue.
+     */
+    public Deque<PendingRow> evictQueue(boolean tombstone) {
+        return tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+    }
+
+    /**
+     * @param tombstone {@code True} to process tombstones.
+     * @param upper Upper bound.
+     */
+    private int fillEvictQueue(boolean tombstone, long upper) {
+        int total = 0;
+
+        FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+
+        try {
+            for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
+                if (cctx.kernalContext().isStopping())
+                    return 0;
+
+                if (!ctx0.busyLock.readLock().tryLock())
+                    continue;
+
+                int size = queue.sizex();
+                int amount = MAX_EVICT_QUEUE_SIZE - size;
+
+                try {
+                    if (amount > 0) {
+                        try {
+                            total += ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
+                                queue.addLast(key);
+
+                                // Stop on queue overflow.
+                                return queue.sizex() > MAX_EVICT_QUEUE_SIZE ? 1 : 0;
+                            });
+                        }
+                        catch (IgniteCheckedException e) {
+                            log.error("Failed to expire entries", e);
+                        }
+                    }
+                }
+                finally {
+                    ctx0.busyLock.readLock().unlock();
+                }
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("After filling the evict queue [res=" + total + ", tombstone=" + tombstone +
+                    ", size=" + queue.sizex() + ']');
+            }
+        }
+        catch (Throwable e) {
+            log.error("Failed to fill eviction queue [tombstone=" + tombstone + ']', e);
+        }
+
+        return total;
+    }
+
+    /**
+     * @param tombstone {@code True} to expire tombstones.
+     * @param c Closure.
+     * @param amount The amount.
+     * @param now Expire time.
+     *
+     * @return {@code True} is unprocessed entries remain.
+     */
+    public boolean expire(boolean tombstone, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now) {
+        FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+
+        PendingRow row;
+
+        int cleared = 0;
+
+        cctx.database().checkpointReadLock();
+
+        try {
+            while ((row = queue.pollFirst()) != null) {
+                GridCacheContext<Object, Object> ctx = cctx.cache().context().cacheContext(row.cacheId);
+
+                if (ctx != null && ctx.isNear())
+                    ctx = ctx.near().dht().context();
+
+                // Skip rows with outdated contexts.
+                if (ctx != null && ctx.dynamicDeploymentId().equals(row.deploymentId)) {
+                    try {
+                        GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
+
+                        c.apply(entry, now); // Second argument is used for "forced expiration" logic.
+                    }
+                    catch (GridDhtInvalidPartitionException ignored) {
+                        // The row belongs to obsolete partition, remove it.
+                        try {
+                            ctx.offheap().removePendingRow(row);
+                        }
+                        catch (IgniteCheckedException e) {
+                            log.error("Failed to remove pending row [row=" + row + ']', e);
+                        }
+                    }
+                }
+
+                cleared++;
+
+                if ((cleared & 127) == 0) {
+                    cctx.database().checkpointReadUnlock();
+                    cctx.database().checkpointReadLock();
+                }
+
+                if (amount != -1 && cleared == amount)
+                    break;
+            }
+
+            if (cleared > 0 && log.isDebugEnabled()) {
+                log.debug("After the expiration [cleared=" + cleared + ", tombstone=" + tombstone +
+                    ", remaining=" + queue.sizex() + ']');
+            }
+
+            if (queue.sizex() == 0) {
+                if (cleared > 0) {
+                    AtomicReference<IgniteInternalFuture<?>> ref = tombstone ? tombstoneFutRef : ttlFutRef;
+
+                    // Allow queue fill.
+                    ref.set(null);
+
+                    processEvictions(tombstone);
+                }
+
+                return false;
+            }
+
+            return amount != -1 && cleared == amount;
+        }
+        finally {
+            cctx.database().checkpointReadUnlock();
+        }
     }
 
     /** {@inheritDoc} */
@@ -377,7 +592,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * Shows progress group of eviction.
          */
         private void showProgress() {
-            if (log.isInfoEnabled())
+            if (log.isInfoEnabled() && !grp.isLocal())
                 log.info("Group eviction in progress [grpName=" + grp.cacheOrGroupName() +
                     ", grpId=" + grp.groupId() +
                     ", remainingPartsToEvict=" + (totalTasks.get() - taskInProgress) +

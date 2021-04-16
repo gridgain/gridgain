@@ -435,7 +435,10 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".STRIPED_THREADPOOL_QUEUE",
                 sysSchemaName() + ".DATASTREAM_THREADPOOL_QUEUE",
                 sysSchemaName() + ".CACHE_GROUP_PAGE_LISTS",
-                sysSchemaName() + ".DATA_REGION_PAGE_LISTS"
+                sysSchemaName() + ".DATA_REGION_PAGE_LISTS",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA",
+                sysSchemaName() + ".STATISTICS_CONFIGURATION"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
@@ -991,7 +994,37 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".SQL_QUERIES_HISTORY.DISTRIBUTED_JOINS.null.1",
                 sysSchemaName() + ".SQL_QUERIES.DISTRIBUTED_JOINS.null.1",
                 sysSchemaName() + ".SQL_QUERIES_HISTORY.LAZY.null.1",
-                sysSchemaName() + ".SQL_QUERIES.ENFORCE_JOIN_ORDER.null.1"
+                sysSchemaName() + ".SQL_QUERIES.ENFORCE_JOIN_ORDER.null.1",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.LAST_UPDATE_TIME.null.2147483647",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.NAME.null.2147483647",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.TOTAL.null.19",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.VERSION.null.19",
+                sysSchemaName() + ".STATISTICS_CONFIGURATION.TYPE.null.2147483647",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.NAME.null.2147483647",
+                sysSchemaName() + ".STATISTICS_CONFIGURATION.COLUMN.null.2147483647",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.ROWS_COUNT.null.19",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.TYPE.null.2147483647",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.CARDINALITY.null.19",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.SIZE.null.10",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.LAST_UPDATE_TIME.null.19",
+                sysSchemaName() + ".STATISTICS_CONFIGURATION.MAX_PARTITION_OBSOLESCENCE_PERCENT.null.3",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.VERSION.null.19",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.COLUMN.null.2147483647",
+                sysSchemaName() + ".STATISTICS_CONFIGURATION.SCHEMA.null.2147483647",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.TOTAL.null.19",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.PARTITION.null.10",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.SCHEMA.null.2147483647",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.ROWS_COUNT.null.19",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.SIZE.null.10",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.UPDATE_COUNTER.null.19",
+                sysSchemaName() + ".STATISTICS_CONFIGURATION.NAME.null.2147483647",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.CARDINALITY.null.19",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.NULLS.null.10",
+                sysSchemaName() + ".STATISTICS_CONFIGURATION.VERSION.null.19",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.TYPE.null.2147483647",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.NULLS.null.10",
+                sysSchemaName() + ".STATISTICS_PARTITION_DATA.COLUMN.null.2147483647",
+                sysSchemaName() + ".STATISTICS_LOCAL_DATA.SCHEMA.null.2147483647"
             ));
 
             if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {

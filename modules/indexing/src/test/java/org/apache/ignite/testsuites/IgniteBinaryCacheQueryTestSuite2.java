@@ -54,12 +54,14 @@ import org.apache.ignite.internal.processors.cache.index.DynamicIndexPartitioned
 import org.apache.ignite.internal.processors.cache.index.DynamicIndexReplicatedAtomicConcurrentSelfTest;
 import org.apache.ignite.internal.processors.cache.index.DynamicIndexReplicatedTransactionalConcurrentSelfTest;
 import org.apache.ignite.internal.processors.cache.local.IgniteCacheLocalQueryDefaultTimeoutSelfTest;
+import org.apache.ignite.internal.processors.cache.query.ScanIteratorTimeoutTest;
 import org.apache.ignite.internal.processors.cache.query.ScanQueryOffheapExpiryPolicySelfTest;
 import org.apache.ignite.internal.processors.database.baseline.IgniteChangingBaselineCacheQueryNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.database.baseline.IgniteStableBaselineCacheQueryNodeRestartsSelfTest;
 import org.apache.ignite.internal.processors.query.BasicSqlTest;
 import org.apache.ignite.internal.processors.query.CreateIndexOnInvalidDataTypeTest;
 import org.apache.ignite.internal.processors.query.DisabledSqlFunctionsTest;
+import org.apache.ignite.internal.processors.query.SensitiveInformationForLongRunningQueryTest;
 import org.apache.ignite.internal.processors.query.oom.MemoryTrackerOnReducerTest;
 import org.apache.ignite.internal.processors.query.timeout.DefaultQueryTimeoutTestSuite;
 import org.apache.ignite.internal.processors.query.DmlBatchSizeDeadlockTest;
@@ -172,6 +174,7 @@ import org.junit.runners.Suite;
     IgniteCacheQueryEvictsMultiThreadedSelfTest.class,
 
     ScanQueryOffheapExpiryPolicySelfTest.class,
+    ScanIteratorTimeoutTest.class,
 
     IgniteCacheCrossCacheJoinRandomTest.class,
     IgniteCacheClientQueryReplicatedNodeRestartSelfTest.class,
@@ -220,6 +223,7 @@ import org.junit.runners.Suite;
     LocalQueryLazyTest.class,
 
     LongRunningQueryTest.class,
+    SensitiveInformationForLongRunningQueryTest.class,
 
     SqlStatisticsUserQueriesFastTest.class,
     SqlStatisticsUserQueriesLongTest.class,

@@ -50,7 +50,7 @@ public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
             sql(String.format("insert into tbl_select(id, lo_select, med_select, hi_select) values(%d, %d, %d, %d)",
                     i, i % 10, i % 100, i % 1000));
 
-        updateStatistics("tbl_select");
+        collectStatistics("tbl_select");
     }
 
     /**

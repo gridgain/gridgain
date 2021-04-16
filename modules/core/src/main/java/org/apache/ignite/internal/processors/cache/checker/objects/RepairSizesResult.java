@@ -24,6 +24,9 @@ import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 
 /** Result of {@code RepairResultTask}. */
 public class RepairSizesResult implements Serializable {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     int qwer = 1;
 
     /**

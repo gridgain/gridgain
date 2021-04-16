@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,12 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.mxbean.DataStorageMetricsMXBean;
+import org.jetbrains.annotations.Nullable;
 
 /**
  *
@@ -105,8 +107,8 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
     /** */
     private volatile boolean metricsEnabled;
 
-    /** */
-    private volatile IgniteWriteAheadLogManager wal;
+    /** WAL manager. */
+    @Nullable private volatile IgniteWriteAheadLogManager wal;
 
     /** */
     private volatile IgniteOutClosure<Long> walSizeProvider;
@@ -158,6 +160,12 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
 
     /** */
     private final HistogramMetricImpl cpHistogram;
+
+    /** Total number of logged bytes into the WAL. */
+    private final LongAdderMetric walWrittenBytes;
+
+    /** Total size of the compressed segments in bytes. */
+    private final LongAdderMetric walCompressedBytes;
 
     /**
      * @param mmgr Metrics manager.
@@ -307,6 +315,16 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
 
         cpHistogram = mreg.histogram("CheckpointHistogram", cpBounds,
                 "Histogram of checkpoint durations in milliseconds.");
+
+        walWrittenBytes = mreg.longAdderMetric(
+            "WalWrittenBytes",
+            "Total number of logged bytes into the WAL."
+        );
+
+        walCompressedBytes = mreg.longAdderMetric(
+            "WalCompressedBytes",
+            "Total size of the compressed segments in bytes."
+        );
     }
 
     /** {@inheritDoc} */
@@ -330,7 +348,9 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
         if (!metricsEnabled)
             return 0;
 
-        return wal.walArchiveSegments();
+        IgniteWriteAheadLogManager walMgr = this.wal;
+
+        return walMgr == null ? 0 : walMgr.walArchiveSegments();
     }
 
     /** {@inheritDoc} */
@@ -784,10 +804,14 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
     }
 
     /**
+     * Callback on logging a record to a WAL.
      *
+     * @param size Record size in bytes.
      */
-    public void onWalRecordLogged() {
+    public void onWalRecordLogged(long size) {
         walLoggingRate.increment();
+
+        walWrittenBytes.add(size);
     }
 
     /**
@@ -824,5 +848,30 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
 
         walFsyncTimeDuration.reset(rateTimeInterval, subInts);
         walFsyncTimeNum.reset(rateTimeInterval, subInts);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getWalWrittenBytes() {
+        if (!metricsEnabled)
+            return 0;
+
+        return walWrittenBytes.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getWalCompressedBytes() {
+        if (!metricsEnabled)
+            return 0;
+
+        return walCompressedBytes.value();
+    }
+
+    /**
+     * Callback on compression of a WAL segment.
+     *
+     * @param size Size of the compressed segment in bytes.
+     */
+    public void onWalSegmentCompressed(long size) {
+        walCompressedBytes.add(size);
     }
 }
