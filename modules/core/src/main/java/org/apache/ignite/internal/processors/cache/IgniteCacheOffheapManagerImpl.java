@@ -1691,6 +1691,18 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //
         }
 
+        @Override public ReconciliationContext startReconciliation(int cacheId) {
+            if (reconciliationCtx == null) {
+                reconciliationCtx = new ReconciliationContext();
+
+                tree().reconciliationCtx = reconciliationCtx;
+            }
+
+            reconciliationCtx.isReconciliationInProgress(cacheId, true);
+
+            return reconciliationCtx;
+        }
+
         /** {@inheritDoc} */
         @Override public ReconciliationContext reconciliationCtx() {
             assert reconciliationCtx != null;
@@ -1800,7 +1812,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        @Override public void flushReconciliationResult() {
+        @Override public void flushReconciliationResult(int cacheId) {
 //                    System.out.println("qefsrvfdbs");
 //                    if (grp.sharedGroup()) {
 //                        cacheSizes.get(cacheId).set(
@@ -1811,14 +1823,21 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //                    }
 
             if (grp.sharedGroup()) {
-                reconciliationCtx().sizes.forEach((cacheId, size) -> {
-                    cacheSizes.get(cacheId).set(size.get());
-                });
+                cacheSizes.get(cacheId).set(reconciliationCtx().sizes.remove(cacheId).get());
+
+//                reconciliationCtx().sizes.forEach((cacheId0, size) -> {
+//                    cacheSizes.get(cacheId0).set(size.get());
+//                });
 
                 storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
             }
             else
                 storageSize.set(reconciliationCtx().sizes.get(CU.UNDEFINED_CACHE_ID).get());
+
+            if (reconciliationCtx().sizes.isEmpty()) {
+                reconciliationCtx = null;
+                tree().reconciliationCtx = null;
+            }
 
 //                    CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "xxxxx reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfterCounter: " + reconciliationCtx.keysAfterCounters.get(cacheId).get());
 //                    CollectPartitionKeysByBatchTask.msg1.put(System.identityHashCode(this), "zzzzz reconciliationCtx.keysAfter: " + reconciliationCtx.keysAfter);

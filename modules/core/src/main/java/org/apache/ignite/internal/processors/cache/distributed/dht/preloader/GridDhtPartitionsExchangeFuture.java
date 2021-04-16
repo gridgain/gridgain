@@ -1783,36 +1783,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
 //            GridDhtLocalPartition part = cctx.cacheContext().topology().localPartition(partBatch.partitionId());
 
-            msg.partSizesMap.forEach((cacheId, map) -> {
-                GridCacheContext cacheContext = sharedContext().cacheContext(cacheId);
-                IgniteCacheOffheapManager offheap = cacheContext.offheap();
-                map.forEach((partId, nodeMap) -> {
-//                    int[] cacheParts = ignite.affinity(name).primaryPartitions(ignite.localNode());
-
-                    List<ClusterNode> owners = cacheContext.topology().owners(partId, exchCtx.events().topologyVersion());
-
-                    System.out.println("qdsvsdra");
-
-//                    if (!owners.contains(cctx.localNode()))
-//                        return;
-
-                    if (!nodeMap.containsKey(sharedContext().localNodeId()))
-                        return;
-
-//                    int[] cacheParts = cctx.primaryPartitions(ignite.localNode());
-
-                    System.out.println("qsrrtsdf ");
-
-                    GridDhtLocalPartition partition = cacheContext.topology().localPartition(partId);
-                    IgniteCacheOffheapManager.CacheDataStore part = offheap.dataStore(partition);
-
-                    Long partSize = nodeMap.get(sharedContext().localNodeId());
-
-                    part.flushReconciliationResult();
-
-                });
-            });
-
 //            finalizePartitionCounters();
         }
 

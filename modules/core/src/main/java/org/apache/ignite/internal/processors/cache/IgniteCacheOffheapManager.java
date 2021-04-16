@@ -661,7 +661,10 @@ public interface IgniteCacheOffheapManager {
         public void finishReconciliation(Map<Integer, Long> reconciliationCacheSizes);
 
         /** */
-        public void flushReconciliationResult();
+        public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext startReconciliation(int cacheId);
+
+        /** */
+        public void flushReconciliationResult(int cacheId);
 
         /** */
         public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx();
