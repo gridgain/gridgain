@@ -189,7 +189,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
     protected CacheConfiguration<Object, Object> cacheConfiguration(String name) {
         CacheConfiguration ccfg = new CacheConfiguration(name);
 
-        ccfg.setAtomicityMode(ATOMIC);
+        ccfg.setAtomicityMode(TRANSACTIONAL);
         ccfg.setBackups(backups);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setOnheapCacheEnabled(false);

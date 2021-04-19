@@ -2083,6 +2083,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** */
         private final GridSpinBusyLock busyLock;
 
+        private volatile AtomicBoolean nodeIsStopping;
+
         /** */
         private final IgniteLogger log;
 
@@ -2321,6 +2323,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         () -> pendingTree0,
                         grp,
                         busyLock,
+                        nodeIsStopping,
                         log
                     ) {
                         /** {@inheritDoc} */

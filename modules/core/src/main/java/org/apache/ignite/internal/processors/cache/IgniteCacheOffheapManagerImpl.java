@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -41,6 +42,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageMemory;
@@ -184,6 +186,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /** */
     protected final GridSpinBusyLock busyLock = new GridSpinBusyLock();
 
+    protected final AtomicBoolean nodeIsStopping = new AtomicBoolean();
+
     /** */
     protected GridStripedLock partStoreLock = new GridStripedLock(Runtime.getRuntime().availableProcessors());
 
@@ -281,6 +285,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /** {@inheritDoc} */
     @Override public void onKernalStop() {
+        nodeIsStopping.set(true);
+
         busyLock.block();
     }
 
@@ -1335,7 +1341,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             FLAG_IDX
         );
 
-        return new CacheDataStoreImpl(p, rowStore, dataTree, logTree, () -> pendingEntries, grp, busyLock, log);
+        return new CacheDataStoreImpl(p, rowStore, dataTree, logTree, () -> pendingEntries, grp, busyLock, nodeIsStopping, log);
     }
 
     /** {@inheritDoc} */
@@ -1579,7 +1585,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private final CacheGroupContext grp;
 
         /** */
-        public final GridSpinBusyLock busyLock;
+        private final GridSpinBusyLock busyLock;
+
+        private volatile AtomicBoolean nodeIsStopping;
 
         /** Update counter. */
         protected final PartitionUpdateCounter pCntr;
@@ -1629,6 +1637,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 Supplier<PendingEntriesTree> pendingEntries,
                 CacheGroupContext grp,
                 GridSpinBusyLock busyLock,
+                AtomicBoolean nodeIsStopping,
                 IgniteLogger log
             ) {
             this.partId = partId;
@@ -1638,6 +1647,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             this.pendingEntries = pendingEntries;
             this.grp = grp;
             this.busyLock = busyLock;
+            this.nodeIsStopping = nodeIsStopping;
             this.log = log;
 
             PartitionUpdateCounter delegate = grp.mvccEnabled() ? new PartitionUpdateCounterMvccImpl(grp) :
@@ -1954,6 +1964,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Override public void invoke(GridCacheContext cctx, KeyCacheObject key, OffheapInvokeClosure c)
             throws IgniteCheckedException {
             while (!busyLock.enterBusy()) {
+
+            if (nodeIsStopping.get()) {
+                System.out.println("qkoplkdhtde");
+                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            }
+
                 try {
                     sleep(5);
                 }
@@ -1961,6 +1977,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     e.printStackTrace();
                 }
             }
+
+//            if (!busyLock.enterBusy()) {
+//                System.out.println("qkoplkdhtde");
+//                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+//            }
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 

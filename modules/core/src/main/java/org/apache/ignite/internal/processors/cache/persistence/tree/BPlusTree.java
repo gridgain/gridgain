@@ -432,7 +432,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
 
                 // Get old row in leaf page to reduce contention at upper level.
-                p.oldRow = getRow(io, pageAddr, idx);
+                p.oldRow = p.needOld ? getRow(io, pageAddr, idx) : (T)Boolean.TRUE;
 
                 p.finish();
             }
@@ -451,7 +451,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
                 if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.isReconciliationInProgress(newRow0.cacheId())) {
-                    p.reconReplace(p.oldRow, newRow);
+                    T oldRow = getRow(io, pageAddr, idx);
+
+                    p.reconReplace(oldRow, newRow);
                 }
 
             return FOUND;
@@ -3432,9 +3434,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
                 CacheDataRowAdapter oldRow0;
 
-                System.out.println("qfhotufdfg row0.cacheId() " + row0.cacheId());
-                System.out.println("qfgyhopffs reconReplace oldRow " + oldRow);
-                System.out.println("qfgyhopffs reconReplace newRow " + newRow);
+//                System.out.println("qfhotufdfg row0.cacheId() " + row0.cacheId());
+//                System.out.println("qfgyhopffs reconReplace oldRow " + oldRow);
+//                System.out.println("qfgyhopffs reconReplace newRow " + newRow);
 
                 boolean oldIsTombstone = false;
 
@@ -5025,8 +5027,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter)rmvd;
                 CacheDataRowAdapter oldRow0;
 
-                System.out.println("qfgyhopffs RemoveFromLeaf oldRow " + rmvd);
-                System.out.println("qfgyhopffs RemoveFromLeaf newRow " + rmvd);
+//                System.out.println("qfgyhopffs RemoveFromLeaf oldRow " + rmvd);
+//                System.out.println("qfgyhopffs RemoveFromLeaf newRow " + rmvd);
 
                 boolean oldIsTombstone = false;
 
@@ -6180,7 +6182,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         /** {@inheritDoc} */
         @Override boolean fillFromBuffer0(long pageAddr, BPlusIO<L> io, int startIdx, int cnt) throws IgniteCheckedException {
-            System.out.println("qdtfgsrt " + pageAddr);
+//            System.out.println("qdtfgsrt " + pageAddr);
             if (startIdx == -1) {
                 if (lowerBound != null)
                     startIdx = findLowerBound(pageAddr, io, cnt);
@@ -6196,7 +6198,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (cnt0 == 0)
                 return false;
 
-            System.out.println("qfsgtjnghrt");
+//            System.out.println("qfsgtjnghrt");
 
             if (rows == EMPTY)
                 rows = (T[])new Object[cnt0];
@@ -6353,7 +6355,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
 
-            System.out.println("qftvldfd rows " + rows.length + " " + Arrays.toString(rows));
+//            System.out.println("qftvldfd rows " + rows.length + " " + Arrays.toString(rows));
 
             if (resCnt == 0) {
                 rows = (T[])EMPTY;
@@ -6405,7 +6407,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             row = 0;
 
-            System.out.println("qfrgkiop nextPage(lastRow) " + Thread.currentThread().getName());
+//            System.out.println("qfrgkiop nextPage(lastRow) " + Thread.currentThread().getName());
 
             return nextPage(lastRow);
         }
