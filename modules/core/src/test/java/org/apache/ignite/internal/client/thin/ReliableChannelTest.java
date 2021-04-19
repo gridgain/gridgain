@@ -318,7 +318,7 @@ public class ReliableChannelTest {
         ClientBinaryMarshaller marsh = mock(ClientBinaryMarshaller.class);
         TcpClientTransactions transactions = mock(TcpClientTransactions.class);
 
-        TcpClientCache cache = new TcpClientCache("", rc, marsh, transactions, false, null);
+        TcpClientCache cache = new TcpClientCache("", rc, marsh, transactions, null, false, null);
 
         GridTestUtils.assertThrowsWithCause(() -> op.accept(cache), TestChannelException.class);
     }
@@ -365,7 +365,13 @@ public class ReliableChannelTest {
         }
 
         /** {@inheritDoc} */
-        @Override public void addNotificationListener(NotificationListener lsnr) {
+        @Override public void addNotificationListener(ClientNotificationType type, Long rsrcId,
+            NotificationListener lsnr) {
+            /* No-op */
+        }
+
+        /** {@inheritDoc} */
+        @Override public void removeNotificationListener(ClientNotificationType type, Long rsrcId) {
             /* No-op */
         }
 

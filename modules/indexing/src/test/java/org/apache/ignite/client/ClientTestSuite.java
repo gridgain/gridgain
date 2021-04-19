@@ -17,6 +17,7 @@
 package org.apache.ignite.client;
 
 import org.apache.ignite.internal.client.thin.CacheAsyncTest;
+import org.apache.ignite.internal.client.thin.CacheEntryListenersTest;
 import org.apache.ignite.internal.client.thin.ClusterApiTest;
 import org.apache.ignite.internal.client.thin.ClusterGroupTest;
 import org.apache.ignite.internal.client.thin.ComputeTaskTest;
@@ -57,6 +58,7 @@ import org.junit.runners.Suite;
     ClusterApiTest.class,
     ClusterGroupTest.class,
     ServicesTest.class,
+    CacheEntryListenersTest.class,
     ThinClientTxMissingBackupsFailover.class,
     ThinClientAffinityAwarenessConnectionTest.class,
     ThinClientAffinityAwarenessStableTopologyTest.class,
