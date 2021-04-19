@@ -1984,10 +1984,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             Object item1 = it1.next();
             Object item2 = it2.next();
 
-            if (!F.eq(item1, item2)) {
-                fail("Collections are not equal (position " + idx + "):\nExpected: " + exp + "\nActual:   " + act
-                    + "\nExpected item: " + item1 + "\nActual item:   " + item2);
-            }
+            if (!F.eq(item1, item2))
+                fail("Collections are not equal (position " + idx + "):\nExpected: " + exp + "\nActual:   " + act);
 
             idx++;
         }
