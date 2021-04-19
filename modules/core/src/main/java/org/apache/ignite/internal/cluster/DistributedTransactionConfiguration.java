@@ -185,7 +185,7 @@ public class DistributedTransactionConfiguration {
     }
 
     /**
-     * @return Long operations dump timeout.
+     * @return Long operations dump timeout. See {@link #longOperationsDumpTimeout}.
      */
     public Long longOperationsDumpTimeout() {
         return longOperationsDumpTimeout.getOrDefault(dfltLongOpsDumpTimeout);
@@ -212,7 +212,8 @@ public class DistributedTransactionConfiguration {
     }
 
     /**
-     * @return Threshold timeout for long transactions.
+     * @return Threshold timeout for long transactions. See {@link #longTransactionTimeDumpThreshold}
+     *         for more information.
      */
     public Long longTransactionTimeDumpThreshold() {
         return longTransactionTimeDumpThreshold.getOrDefault(dfltLongTransactionTimeDumpThreshold);
@@ -242,6 +243,7 @@ public class DistributedTransactionConfiguration {
 
     /**
      * @return The coefficient for samples of completed transactions that will be dumped in log.
+     *         See {@link #transactionTimeDumpSamplesCoefficient}.
      */
     public Double transactionTimeDumpSamplesCoefficient() {
         return transactionTimeDumpSamplesCoefficient.getOrDefault(dfltTransactionTimeDumpSamplesCoefficient);
@@ -269,6 +271,7 @@ public class DistributedTransactionConfiguration {
 
     /**
      * @return Limit of samples of completed transactions that will be dumped in log per second.
+     *         See {@link #longTransactionTimeDumpSamplesPerSecondLimit} for more information.
      */
     public Integer longTransactionTimeDumpSamplesPerSecondLimit() {
         return longTransactionTimeDumpSamplesPerSecondLimit.getOrDefault(dfltLongTransactionTimeDumpSamplesPerSecondLimit);
@@ -295,7 +298,7 @@ public class DistributedTransactionConfiguration {
     }
 
     /**
-     * @return Collisions dump interval.
+     * @return Collisions dump interval. See {@link #collisionsDumpInterval}.
      */
     public Integer collisionsDumpInterval() {
         return collisionsDumpInterval.getOrDefault(dfltCollisionsDumpInterval);
@@ -323,6 +326,7 @@ public class DistributedTransactionConfiguration {
 
     /**
      * @return Allowance to dump requests from local node to near node, when long running transaction is found.
+     *         See {@link #txOwnerDumpRequestsAllowed} for more information.
      */
     public Boolean txOwnerDumpRequestsAllowed() {
         return txOwnerDumpRequestsAllowed.getOrDefault(dfltTxOwnerDumpRequestsAllowed);

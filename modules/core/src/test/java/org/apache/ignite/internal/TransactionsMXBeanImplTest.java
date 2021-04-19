@@ -184,8 +184,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the correct change of "Long operations dump timeout." in
-     * an immutable cluster.
+     * Test to verify the correct change of {@link TransactionsMXBean#getLongOperationsDumpTimeout()}
+     * in an immutable cluster.
      *
      * @throws Exception If failed.
      */
@@ -257,8 +257,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the correct change of "Long operations dump timeout." in
-     * an mutable cluster.
+     * Test to verify the correct change of {@link TransactionsMXBean#getLongOperationsDumpTimeout()}
+     * in an mutable cluster.
      *
      * @throws Exception If failed.
      */
@@ -291,8 +291,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the correct change of "Allowance to dump requests from local node to near node,
-     * when long running transaction is found." in an mutable cluster.
+     * Test to verify the correct change of {@link TransactionsMXBean#getTxOwnerDumpRequestsAllowed()}
+     * in an mutable cluster.
      *
      * @throws Exception If failed.
      */
@@ -304,7 +304,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the correct change of "Threshold timeout for long transactions." in an mutable cluster.
+     * Test to verify the correct change of {@link TransactionsMXBean#getLongTransactionTimeDumpThreshold()}
+     * in an mutable cluster.
      *
      * @throws Exception If failed.
      */
@@ -316,8 +317,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the correct change of "The coefficient for samples of completed transactions
-     * that will be dumped in log." in an mutable cluster.
+     * Test to verify the correct change of {@link TransactionsMXBean#getTransactionTimeDumpSamplesCoefficient()}
+     * in an mutable cluster.
      *
      * @throws Exception If failed.
      */
@@ -329,8 +330,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the correct change of "The coefficient for samples of completed transactions
-     * that will be dumped in log." in an mutable cluster.
+     * Test to verify the correct change of {@link TransactionsMXBean#getTransactionTimeDumpSamplesPerSecondLimit()}
+     * in an mutable cluster.
      *
      * @throws Exception If failed.
      */
@@ -342,7 +343,8 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the correct change of "Collisions dump interval." in an mutable cluster.
+     * Test to verify the correct change of {@link TransactionsMXBean#getTxKeyCollisionsInterval()}
+     * in an mutable cluster.
      *
      * @throws Exception If failed.
      */
