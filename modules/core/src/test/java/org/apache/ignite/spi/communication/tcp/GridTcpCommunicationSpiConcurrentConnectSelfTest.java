@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import java.io.Serializable;
 import java.net.BindException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -43,6 +45,7 @@ import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridNioServer;
+import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
@@ -215,6 +218,112 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     @Test
     public void testRandomSleep() throws Exception {
         concurrentConnect(4, 1, ITERS, true, false);
+    }
+
+    public void sentTestMessageOneToAnotherWithHandshake() throws Exception {
+        int nodeId = 1;
+
+        AtomicReference<String> unexpectedMsg = new AtomicReference<>();
+
+        CommunicationListener lsnr = new CommunicationListener() {
+            @Override public void onMessage(UUID nodeId, Serializable msg, IgniteRunnable msgC) {
+                info("Received a message");
+
+                if (!(msg instanceof  GridTestMessage))
+                    unexpectedMsg.compareAndSet(null, "Msg: " + msg);
+
+                assertTrue("Msg: " + msg, msg instanceof GridTestMessage);
+            }
+
+            @Override public void onDisconnected(UUID nodeId) {
+
+            }
+        };
+
+        ArrayList<T3<CommunicationSpi, ClusterNode, GridSpiTestContext>> list = new ArrayList<>();
+
+        list.add(startCommSpi(nodeId++, lsnr));
+        list.add(startCommSpi(nodeId++, lsnr));
+
+        for (T3<CommunicationSpi, ClusterNode, GridSpiTestContext> locCtx : list) {
+            for (T3<CommunicationSpi, ClusterNode, GridSpiTestContext> rmtCtx : list) {
+                if (locCtx != rmtCtx)
+                    locCtx.get3().remoteNodes().add(rmtCtx.get2());
+            }
+        }
+
+        int iter = 0;
+
+        while (iter < 500) {
+            info("Sending a message");
+
+            list.get(0).get1().sendMessage(list.get(1).get2(), new GridTestMessage(list.get(1).get2().id(), iter++, 0));
+
+            info("Sent the message");
+
+            ((TcpCommunicationSpi)list.get(0).get1()).clientPool.forceCloseConnection(list.get(1).get2().id());
+
+            info("Clients closed.");
+
+            assertNull("Message unexpected " + unexpectedMsg.get(), unexpectedMsg.get());
+        }
+    }
+
+    private T3<CommunicationSpi, ClusterNode, GridSpiTestContext> startCommSpi(int nodeId, CommunicationListener lsnr) throws Exception {
+        CommunicationSpi<Message> spi = createSpi();
+
+        IgniteTestResources rsrcs = new IgniteTestResources();
+
+        GridTestNode node = new GridTestNode(rsrcs.getNodeId());
+
+        node.setAttribute(IgniteNodeAttributes.ATTR_CLIENT_MODE, false);
+
+        node.order(nodeId);
+
+        GridSpiTestContext ctx = initSpiContext();
+
+        MessageFactoryProvider testMsgFactory = new MessageFactoryProvider() {
+            @Override public void registerAll(IgniteMessageFactory factory) {
+                factory.register(GridTestMessage.DIRECT_TYPE, GridTestMessage::new);
+            }
+        };
+
+        ctx.messageFactory(new IgniteMessageFactoryImpl(
+            new MessageFactory[] {new GridIoMessageFactory(), testMsgFactory})
+        );
+
+        ctx.setLocalNode(node);
+
+        ctx.timeoutProcessor(timeoutProcessor);
+
+        info(">>> Initialized context: nodeId=" + ctx.localNode().id());
+
+        rsrcs.inject(spi);
+
+        GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + nodeId);
+
+        if (useSsl) {
+            IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");
+
+            IgniteConfiguration cfg = ignite.configuration()
+                .setSslContextFactory(GridTestUtils.sslFactory());
+
+            ignite.setStaticCfg(cfg);
+        }
+
+        spi.setListener(lsnr);
+
+        spi.spiStart(getTestIgniteInstanceName() + (nodeId));
+
+        node.setAttributes(spi.getNodeAttributes());
+
+        spi.onContextInitialized(ctx);
+
+        return new T3<> (spi, node, ctx);
+    }
+
+    @Override protected long getTestTimeout() {
+        return super.getTestTimeout() * 100;
     }
 
     /**

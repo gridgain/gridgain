@@ -108,4 +108,9 @@ public class GridTcpCommunicationSpiConcurrentConnectSslSelfTest extends GridTcp
     public void testMultithreaded_NoPairedConnections14() throws Exception {
         super.testMultithreaded_NoPairedConnections();
     }
+
+    @Test
+    public void sentTestMessageOneToAnotherWithHandshake() throws Exception {
+        super.sentTestMessageOneToAnotherWithHandshake();
+    }
 }
