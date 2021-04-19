@@ -244,20 +244,39 @@ namespace ignite
                 void EnsureEnoughData(int32_t cnt) const;
 
                 /**
-                 * Copy data from the stream shifting it along the way.
-                 *
-                 * @param dest Pointer to data.
-                 * @param off Offset.
-                 * @param cnt Amount of data to copy.
-                 */
-                void CopyAndShift(int8_t* dest, int32_t off, int32_t cnt);
-
-                /**
                  * Shift stream to the right.
                  *
                  * @param cnt Amount of bytes to shift the stream to.
                  */
                 void Shift(int32_t cnt);
+
+                /**
+                 * Copy data from the stream shifting it along the way.
+                 *
+                 * @tparam T type of array element.
+                 * @param dest Pointer to destination.
+                 * @param cnt Amount of data to copy.
+                 */
+                template<typename T>
+                void ReadArrayAndShift(T* dest, int32_t cnt);
+
+                /**
+                 * Read primitive at current position with checks.
+                 * @tparam T Primitive type to read.
+                 * @param size Type length.
+                 * @return Value.
+                 */
+                template<typename T>
+                T Read(int32_t pos);
+
+                /**
+                 * Read primitive at current position with checks.
+                 * @tparam T Primitive type to read.
+                 * @param size Type length.
+                 * @return Value.
+                 */
+                template<typename T>
+                T ReadAndShift();
             };
         }
     }
