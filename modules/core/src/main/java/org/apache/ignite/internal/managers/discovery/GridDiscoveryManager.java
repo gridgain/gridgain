@@ -1598,10 +1598,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         clo.apply(summary.toString());
 
-        ClusterNode currCrd = discoCache.coordinator();
+        ClusterNode currCrd = discoCache.oldestAliveServerNode();
 
         if ((evtType == EventType.EVT_NODE_FAILED || evtType == EventType.EVT_NODE_LEFT) &&
-                !evtNode.isClient() && currCrd != null && currCrd.order() > evtNode.order())
+                currCrd != null && currCrd.order() > evtNode.order() && !evtNode.isClient() && !evtNode.isDaemon())
             clo.apply("Coordinator changed [prev=" + evtNode + ", cur=" + currCrd + "]");
 
         BaselineTopology blt = state.baselineTopology();
