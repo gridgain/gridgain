@@ -434,7 +434,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
     /** */
     private boolean isSingleRowLookup(SearchRow lower, SearchRow upper, H2Tree tree) {
-        return !cctx.mvccEnabled() && indexType.isPrimaryKey() && lower != null && upper != null &&
+        return !cctx.mvccEnabled() && lower != null && upper != null &&
             tree.checkRowsTheSame((H2Row)lower, (H2Row)upper) && hasAllIndexColumns(lower);
     }
 
@@ -670,7 +670,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @return RootPage for meta page.
      * @throws IgniteCheckedException If failed.
      */
-    private static RootPage getMetaPage(IgniteCacheOffheapManager offheap, GridCacheContext<?, ?> cctx, String treeName, int segIdx)
+    public static RootPage getMetaPage(IgniteCacheOffheapManager offheap, GridCacheContext<?, ?> cctx, String treeName, int segIdx)
         throws IgniteCheckedException {
         return offheap.rootPageForIndex(cctx.cacheId(), treeName, segIdx);
     }
