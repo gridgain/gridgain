@@ -436,7 +436,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                         c.apply(entry, now); // Second argument is used for "forced expiration" logic.
                     }
                     catch (GridDhtInvalidPartitionException ignored) {
-                        // Skip renting or evicted partition.
+                        // The row belongs to obsolete partition, remove it.
+                        try {
+                            ctx.offheap().removePendingRow(row);
+                        }
+                        catch (IgniteCheckedException e) {
+                            log.error("Failed to remove pending row [row=" + row + ']', e);
+                        }
                     }
                 }
 

@@ -597,6 +597,13 @@ public interface IgniteCacheOffheapManager {
      * @param idxName Index name.
      * @throws IgniteCheckedException If failed.
      */
+    public @Nullable RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+
+    /**
+     * @param cacheId Cache ID.
+     * @param idxName Index name.
+     * @throws IgniteCheckedException If failed.
+     */
     public void dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
 
     /**
@@ -630,6 +637,11 @@ public interface IgniteCacheOffheapManager {
      * @throws IgniteCheckedException If failed.
      */
     public void preloadPartition(int part) throws IgniteCheckedException;
+
+    /**
+     * @param row Row.
+     */
+    public void removePendingRow(PendingRow row) throws IgniteCheckedException;
 
     /**
      *
