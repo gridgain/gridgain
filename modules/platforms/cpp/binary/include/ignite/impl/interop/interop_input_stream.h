@@ -261,9 +261,9 @@ namespace ignite
                 void ReadArrayAndShift(T* dest, int32_t cnt);
 
                 /**
-                 * Read primitive at current position with checks.
+                 * Read primitive at specified position with checks.
                  * @tparam T Primitive type to read.
-                 * @param size Type length.
+                 * @param pos Position to read from.
                  * @return Value.
                  */
                 template<typename T>
@@ -272,7 +272,6 @@ namespace ignite
                 /**
                  * Read primitive at current position with checks.
                  * @tparam T Primitive type to read.
-                 * @param size Type length.
                  * @return Value.
                  */
                 template<typename T>

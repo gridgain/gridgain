@@ -238,7 +238,7 @@ namespace ignite
                 /**
                  * Ensure that stream enough capacity optionally extending it.
                  *
-                 * @param reqCap Requsted capacity.
+                 * @param reqCap Requested capacity.
                  */
                 void EnsureCapacity(int32_t reqCap);
 
@@ -250,13 +250,30 @@ namespace ignite
                 void Shift(int32_t cnt);
 
                 /**
-                 * Copy data to the stream shifting it along the way.
+                 * Write array of values to stream shifting it along the way.
                  *
-                 * @param src Pointer to data.
-                 * @param off Offset.
-                 * @param len Length.
+                 * @param src Pointer to array that should be written.
+                 * @param len Length of the array (number of elements).
                  */
-                void CopyAndShift(const int8_t* src, int32_t off, int32_t len);
+                template<typename T>
+                void WriteArrayAndShift(const T* src, int32_t len);
+
+                /**
+                 * Write primitive to specified position with checks.
+                 * @tparam T Primitive type to write.
+                 * @param pos Position in stream to write to.
+                 * @param val Value to write.
+                 */
+                template<typename T>
+                void Write(int32_t pos, T val);
+
+                /**
+                 * Write primitive to current position with checks and shift stream position.
+                 * @tparam T Primitive type to write.
+                 * @param val Value to write.
+                 */
+                template<typename T>
+                void WriteAndShift(T val);
             };
         }
     }

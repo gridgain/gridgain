@@ -153,6 +153,22 @@ namespace ignite
                 }
 
                 /**
+                 * Writes uint16 to memory in the little-endian (Ignite binary byte order).
+                 * Written value is in little endian no matter on which platform operation was performed.
+                 *
+                 * @warning No boundary checks for the memory are conducted.
+                 * @param mem Memory to write value to.
+                 * @param value Value to write.
+                 */
+                inline void RawWriteUInt16(void* mem, uint16_t value)
+                {
+                    uint8_t* ptr = static_cast<uint8_t*>(mem);
+
+                    ptr[0] = static_cast<uint8_t>(value & 0xFF);
+                    ptr[1] = static_cast<uint8_t>((value >> 8) & 0xFF);
+                }
+
+                /**
                  * Reads int16 from memory assuming it's in the little-endian (Ignite binary byte order).
                  * Resulting value is valid on any platform.
                  *
@@ -175,11 +191,7 @@ namespace ignite
                  */
                 inline void RawWriteInt16(void* mem, int16_t value)
                 {
-                    uint8_t* ptr = static_cast<uint8_t*>(mem);
-                    uint16_t uValue = static_cast<uint16_t>(value);
-
-                    ptr[0] = static_cast<uint8_t>(uValue & 0xFF);
-                    ptr[1] = static_cast<uint8_t>((uValue >> 8) & 0xFF);
+                    RawWriteUInt16(mem, static_cast<uint16_t>(value));
                 }
 
                 /**
@@ -282,6 +294,19 @@ namespace ignite
                 }
 
                 /**
+                 * Writes bool to memory in the little-endian (Ignite binary byte order).
+                 * Written value is in little endian no matter on which platform operation was performed.
+                 *
+                 * @warning No boundary checks for the memory are conducted.
+                 * @param mem Memory to write value to.
+                 * @param value Value to write.
+                 */
+                inline void RawWriteBool(void* mem, bool value)
+                {
+                    RawWriteInt8(mem, value ? 1 : 0);
+                }
+
+                /**
                  * Reads float from memory assuming it's in the little-endian (Ignite binary byte order).
                  * Resulting value is valid on any platform.
                  *
@@ -298,6 +323,22 @@ namespace ignite
                 }
 
                 /**
+                 * Writes float to memory in the little-endian (Ignite binary byte order).
+                 * Written value is in little endian no matter on which platform operation was performed.
+                 *
+                 * @warning No boundary checks for the memory are conducted.
+                 * @param mem Memory to write value to.
+                 * @param value Value to write.
+                 */
+                inline void RawWriteFloat(void* mem, float value)
+                {
+                    ConvertInt32Float u = {};
+                    u.f = value;
+
+                    RawWriteInt32(mem, u.i);
+                }
+
+                /**
                  * Reads float from memory assuming it's in the little-endian (Ignite binary byte order).
                  * Resulting value is valid on any platform.
                  *
@@ -311,6 +352,22 @@ namespace ignite
                     u.i = RawReadInt64(mem);
 
                     return u.d;
+                }
+
+                /**
+                 * Writes double to memory in the little-endian (Ignite binary byte order).
+                 * Written value is in little endian no matter on which platform operation was performed.
+                 *
+                 * @warning No boundary checks for the memory are conducted.
+                 * @param mem Memory to write value to.
+                 * @param value Value to write.
+                 */
+                inline void RawWriteDouble(void* mem, double value)
+                {
+                    ConvertInt64Double u = {};
+                    u.d = value;
+
+                    RawWriteInt64(mem, u.i);
                 }
 
                 /**
@@ -371,6 +428,65 @@ namespace ignite
                 inline double RawReadPrimitive(const void* mem)
                 {
                     return RawReadDouble(mem);
+                }
+
+                /**
+                 * Writes int64 to memory in the little-endian (Ignite binary byte order).
+                 * Written value is in little endian no matter on which platform operation was performed.
+                 *
+                 * @warning No boundary checks for the memory are conducted.
+                 * @param mem Memory to write value to.
+                 * @param value Value to write.
+                 */
+                template<typename T>
+                void RawWritePrimitive(void* mem, T value);
+
+                template<>
+                inline void RawWritePrimitive(void* mem, int8_t value)
+                {
+                    RawWriteInt8(mem, value);
+                }
+
+                template<>
+                inline void RawWritePrimitive(void* mem, int16_t value)
+                {
+                    RawWriteInt16(mem, value);
+                }
+
+                template<>
+                inline void RawWritePrimitive(void* mem, uint16_t value)
+                {
+                    RawWriteUInt16(mem, value);
+                }
+
+                template<>
+                inline void RawWritePrimitive(void* mem, int32_t value)
+                {
+                    RawWriteInt32(mem, value);
+                }
+
+                template<>
+                inline void RawWritePrimitive(void* mem, int64_t value)
+                {
+                    RawWriteInt64(mem, value);
+                }
+
+                template<>
+                inline void RawWritePrimitive(void* mem, bool value)
+                {
+                    RawWriteBool(mem, value);
+                }
+
+                template<>
+                inline void RawWritePrimitive(void* mem, float value)
+                {
+                    RawWriteFloat(mem, value);
+                }
+
+                template<>
+                inline void RawWritePrimitive(void* mem, double value)
+                {
+                    RawWriteDouble(mem, value);
                 }
             } // namespace utils
         } // namespace interop

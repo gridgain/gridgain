@@ -16,25 +16,8 @@
 
 #include <cstring>
 
-#include <ignite/ignite_error.h>
-
-#include "ignite/impl/interop//interop_output_stream.h"
-
-/**
- * Common macro to write a single value.
- */
-#define IGNITE_INTEROP_OUT_WRITE(val, type, len) { \
-    EnsureCapacity(pos + len); \
-    *reinterpret_cast<type*>(data + pos) = val; \
-    Shift(len); \
-}
-
-/**
- * Common macro to write an array.
- */
-#define IGNITE_INTEROP_OUT_WRITE_ARRAY(val, len) { \
-    CopyAndShift(reinterpret_cast<const int8_t*>(val), 0, len); \
-}
+#include "ignite/impl/interop/interop_utils.h"
+#include "ignite/impl/interop/interop_output_stream.h"
 
 namespace ignite
 {
@@ -42,47 +25,33 @@ namespace ignite
     {
         namespace interop 
         {
-            union BinaryFloatInt32
+            InteropOutputStream::InteropOutputStream(InteropMemory* mem) :
+                mem(mem),
+                data(mem->Data()),
+                cap(mem->Capacity()),
+                pos(0)
             {
-                float f;
-                int32_t i;                
-            };
-
-            union BinaryDoubleInt64
-            {
-                double d;
-                int64_t i;                
-            };
-
-            InteropOutputStream::InteropOutputStream(InteropMemory* mem)
-            {
-                this->mem = mem;
-
-                data = mem->Data();
-                cap = mem->Capacity();
-                pos = 0;
+                // No-op.
             }
 
             void InteropOutputStream::WriteInt8(const int8_t val)
             {
-                IGNITE_INTEROP_OUT_WRITE(val, int8_t, 1);
+                WriteAndShift<int8_t>(val);
             }
 
             void InteropOutputStream::WriteInt8(const int8_t val, const int32_t pos)
             {
-                EnsureCapacity(pos + 1);
-
-                *(data + pos) = val;
+                Write<int8_t>(pos, val);
             }
 
             void InteropOutputStream::WriteInt8Array(const int8_t* val, const int32_t len)
             {
-                IGNITE_INTEROP_OUT_WRITE_ARRAY(val, len);
+                WriteArrayAndShift<int8_t>(val, len);
             }
 
             void InteropOutputStream::WriteBool(const bool val)
             {
-                WriteInt8(val ? 1 : 0);
+                WriteAndShift<bool>(val);
             }
 
             void InteropOutputStream::WriteBoolArray(const bool* val, const int32_t len)
@@ -93,93 +62,77 @@ namespace ignite
 
             void InteropOutputStream::WriteInt16(const int16_t val)
             {
-                IGNITE_INTEROP_OUT_WRITE(val, int16_t, 2);
+                WriteAndShift<int16_t>(val);
             }
 
             void InteropOutputStream::WriteInt16(const int32_t pos, const int16_t val)
             {
-                EnsureCapacity(pos + 2);
-
-                *reinterpret_cast<int16_t*>(data + pos) = val;
+                Write<int16_t>(pos, val);
             }
 
             void InteropOutputStream::WriteInt16Array(const int16_t* val, const int32_t len)
             {
-                IGNITE_INTEROP_OUT_WRITE_ARRAY(val, len << 1);
+                WriteArrayAndShift<int16_t>(val, len);
             }
 
             void InteropOutputStream::WriteUInt16(const uint16_t val)
             {
-                IGNITE_INTEROP_OUT_WRITE(val, uint16_t, 2);
+                WriteAndShift<uint16_t>(val);
             }
 
             void InteropOutputStream::WriteUInt16Array(const uint16_t* val, const int32_t len)
             {
-                IGNITE_INTEROP_OUT_WRITE_ARRAY(val, len << 1);
+                WriteArrayAndShift<uint16_t>(val, len);
             }
 
             void InteropOutputStream::WriteInt32(const int32_t val)
             {
-                IGNITE_INTEROP_OUT_WRITE(val, int32_t, 4);
+                WriteAndShift<int32_t>(val);
             }
 
             void InteropOutputStream::WriteInt32(const int32_t pos, const int32_t val)
             {
-                EnsureCapacity(pos + 4);
-
-                *reinterpret_cast<int32_t*>(data + pos) = val;
+                Write<int32_t>(pos, val);
             }
 
             void InteropOutputStream::WriteInt32Array(const int32_t* val, const int32_t len)
             {
-                IGNITE_INTEROP_OUT_WRITE_ARRAY(val, len << 2);
+                WriteArrayAndShift<int32_t>(val, len);
             }
 
             void InteropOutputStream::WriteInt64(const int64_t val)
             {
-                IGNITE_INTEROP_OUT_WRITE(val, int64_t, 8);
+                WriteAndShift<int64_t>(val);
             }
 
             void InteropOutputStream::WriteInt64(const int32_t pos, const int64_t val)
             {
-                EnsureCapacity(pos + 8);
-
-                *reinterpret_cast<int64_t*>(data + pos) = val;
+                Write<int64_t>(pos, val);
             }
 
             void InteropOutputStream::WriteInt64Array(const int64_t* val, const int32_t len)
             {
-                IGNITE_INTEROP_OUT_WRITE_ARRAY(val, len << 3);
+                WriteArrayAndShift<int64_t>(val, len);
             }
 
             void InteropOutputStream::WriteFloat(const float val)
             {
-                BinaryFloatInt32 u;
-
-                u.f = val;
-
-                WriteInt32(u.i);
+                WriteAndShift<float>(val);
             }
 
             void InteropOutputStream::WriteFloatArray(const float* val, const int32_t len)
             {
-                for (int i = 0; i < len; i++)
-                    WriteFloat(*(val + i));
+                WriteArrayAndShift<float>(val, len);
             }
 
             void InteropOutputStream::WriteDouble(const double val)
             {
-                BinaryDoubleInt64 u;
-
-                u.d = val;
-
-                WriteInt64(u.i);
+                WriteAndShift<double>(val);
             }
 
             void InteropOutputStream::WriteDoubleArray(const double* val, const int32_t len)
             {
-                for (int i = 0; i < len; i++)
-                    WriteDouble(*(val + i));
+                WriteArrayAndShift<double>(val, len);
             }
 
             int32_t InteropOutputStream::Position() const
@@ -215,8 +168,10 @@ namespace ignite
                 return mem;
             }
 
-            void InteropOutputStream::EnsureCapacity(int32_t reqCap) {
-                if (reqCap > cap) {
+            void InteropOutputStream::EnsureCapacity(int32_t reqCap)
+            {
+                if (reqCap > cap)
+                {
                     int newCap = cap << 1;
 
                     if (newCap < reqCap)
@@ -228,16 +183,43 @@ namespace ignite
                 }
             }
 
-            void InteropOutputStream::Shift(int32_t cnt) {
+            inline void InteropOutputStream::Shift(int32_t cnt)
+            {
                 pos += cnt;
             }
 
-            void InteropOutputStream::CopyAndShift(const int8_t* src, int32_t off, int32_t len) {
-                EnsureCapacity(pos + len);
+            template<typename T>
+            inline void InteropOutputStream::WriteArrayAndShift(const T* src, int32_t len)
+            {
+                const int32_t bytesToWrite = len * utils::PrimitiveMeta<T>::SIZE;
 
-                memcpy(data + pos, src + off, len);
+                EnsureCapacity(pos + bytesToWrite);
 
-                Shift(len);
+#ifdef AI_LITTLE_ENDIAN
+                // Optimization for little endian - we can simply copy data.
+                memcpy(data + pos, src, bytesToWrite);
+#else
+                for (int32_t i = 0; i < len; ++i)
+                    utils::RawWritePrimitive<T>(data + pos + (i * utils::PrimitiveMeta<T>::SIZE), src[i]);
+#endif
+
+                Shift(bytesToWrite);
+            }
+
+            template<typename T>
+            inline void InteropOutputStream::Write(int32_t pos0, T val)
+            {
+                EnsureCapacity(pos0 + utils::PrimitiveMeta<T>::SIZE);
+
+                utils::RawWritePrimitive<T>(data + pos0, val);
+            }
+
+            template<typename T>
+            inline void InteropOutputStream::WriteAndShift(T val)
+            {
+                Write<T>(pos, val);
+
+                Shift(utils::PrimitiveMeta<T>::SIZE);
             }
         }
     }

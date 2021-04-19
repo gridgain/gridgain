@@ -59,7 +59,12 @@ namespace ignite
 
             void InteropInputStream::ReadBoolArray(bool* res, const int32_t len)
             {
-                ReadArrayAndShift<bool>(res, len);
+                EnsureEnoughData(pos + len);
+
+                for (int32_t i = 0; i < len; ++i)
+                    res[i] = utils::RawReadPrimitive<bool>(data + pos + i);
+
+                Shift(len);
             }
 
             int16_t InteropInputStream::ReadInt16()
@@ -176,9 +181,9 @@ namespace ignite
             template<typename T>
             inline void InteropInputStream::ReadArrayAndShift(T* dest, int32_t cnt)
             {
-                EnsureEnoughData(pos + cnt);
-
                 const int32_t bytesToRead = cnt * utils::PrimitiveMeta<T>::SIZE;
+
+                EnsureEnoughData(pos + bytesToRead);
 #ifdef AI_LITTLE_ENDIAN
                 // Optimization for little endian - we can simply copy data.
                 memcpy(dest, data + pos, bytesToRead);
