@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +31,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DeploymentMode;
@@ -592,9 +592,9 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             nodeLdrMapCp = singleNode ? nodeLdrMap : new HashMap<>(nodeLdrMap);
         }
 
-        Exception err = null;
+        List<Exception> suppressed = new ArrayList<>();
 
-        TimeoutException te = null;
+        String reason = null;
 
         for (UUID nodeId : nodeListCp) {
             if (nodeId.equals(ctx.discovery().localNode().id()))
@@ -613,45 +613,37 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             }
 
             try {
-                GridDeploymentResponse res = null;
-
-                try {
-                    res = comm.sendResourceRequest(path, ldrId, node, endTime);
-                }
-                catch (TimeoutException e) {
-                    te = e;
-                }
+                GridDeploymentResponse res = comm.sendResourceRequest(path, ldrId, node, endTime);
 
                 if (res == null) {
                     String msg = "Failed to send class-loading request to node (is node alive?) [node=" +
                         node.id() + ", clsName=" + name + ", clsPath=" + path + ", clsLdrId=" + ldrId +
                         ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']';
 
-                    if (!quiet)
-                        U.warn(log, msg, te);
-                    else if (log.isDebugEnabled())
-                        log.debug(msg);
+                    U.warn(log, msg);
 
-                    err = new IgniteCheckedException(msg);
+                    suppressed.add(new IgniteCheckedException(msg));
 
                     continue;
                 }
-
-                if (res.success())
+                else if (res.success())
                     return res.byteSource();
+                else {
+                    // In case of shared resources/classes all nodes should have it.
+                    reason = res.errorMessage();
 
-                // In case of shared resources/classes all nodes should have it.
-                if (log.isDebugEnabled())
-                    log.debug("Failed to find class on remote node [class=" + name + ", nodeId=" + node.id() +
-                        ", clsLdrId=" + ldrId + ", reason=" + res.errorMessage() + ']');
+                    LT.warn(log, "Failed to find class on remote node [class=" + name + ", nodeId=" + node.id() +
+                        ", clsLdrId=" + ldrId + ", classLoadersHierarchy=" + classLoadersHierarchy() +
+                        ", reason=" + res.errorMessage() + ']'
+                    );
 
-                synchronized (mux) {
-                    if (missedRsrcs != null)
-                        missedRsrcs.add(path);
+                    synchronized (mux) {
+                        if (missedRsrcs != null)
+                            missedRsrcs.add(path);
+                    }
+
+                    break;
                 }
-
-                throw new ClassNotFoundException("Failed to peer load class [class=" + name + ", nodeClsLdrs=" +
-                    nodeLdrMapCp + ", clsLoadersHierarchy=" + classLoadersHierarchy() + ", reason=" + res.errorMessage() + ']');
             }
             catch (IgniteCheckedException e) {
                 // This thread should be interrupted again in communication if it
@@ -682,19 +674,34 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                     else if (log.isDebugEnabled())
                         log.debug(msg);
 
-                    err = e;
+                    suppressed.add(e);
                 }
+            }
+            catch (TimeoutException e) {
+                suppressed.add(new IgniteCheckedException("Failed to send class-loading request to node (is node alive?) " +
+                    "[node=" + node.id() + ", clsName=" + name + ", clsPath=" + path + ", clsLdrId=" + ldrId +
+                    ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']', e));
             }
         }
 
-        if (err != null && te != null) {
-            err.addSuppressed(te);
+        ClassNotFoundException cnfe = new ClassNotFoundException("Failed to peer load class [" +
+            "class=" + name +
+            ", nodeClsLdrs=" + nodeLdrMapCp +
+            ", clsLoadersHierarchy=" + classLoadersHierarchy() +
+            (reason == null ? "" : ", reason=" + reason) +
+            ']');
 
-            throw new IgniteException(err);
-        }
+        for (Exception e : suppressed)
+            cnfe.addSuppressed(e);
 
-        throw new ClassNotFoundException("Failed to peer load class [class=" + name + ", nodeClsLdrs=" +
-            nodeLdrMapCp + ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']', err);
+        U.warn(log, "Failed to peer load class [class=" + name + ", nodeClsLdrs=" + nodeLdrMapCp +
+            ", clsLoadersHierarchy=" + classLoadersHierarchy() +
+            (reason == null ? "" : ", reason=" + reason) +
+            ']',
+            cnfe
+        );
+
+        throw cnfe;
     }
 
     /** {@inheritDoc} */

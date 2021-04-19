@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -376,19 +377,9 @@ class GridDeploymentCommunication {
         Collection<UUID> nodeIds = activeReqNodeIds.get();
 
         if (nodeIds != null && nodeIds.contains(dstNode.id())) {
-            if (log.isDebugEnabled())
-                log.debug("Node attempts to load resource from one of the requesters " +
-                    "[rsrcName=" + rsrcName + ", dstNodeId=" + dstNode.id() +
-                    ", requesters=" + nodeIds + ']');
-
-            GridDeploymentResponse fake = new GridDeploymentResponse();
-
-            fake.success(false);
-            fake.errorMessage("Node attempts to load resource from one of the requesters " +
+            throw new IgniteCheckedException("Node attempts to load resource from one of the requesters " +
                 "[rsrcName=" + rsrcName + ", dstNodeId=" + dstNode.id() +
-                ", requesters=" + nodeIds + ']');
-
-            return fake;
+                    ", requesters=" + nodeIds + ']');
         }
 
         Object resTopic = TOPIC_CLASSLOAD.topic(IgniteUuid.fromUuid(ctx.localNodeId()));
@@ -402,57 +393,9 @@ class GridDeploymentCommunication {
 
         final GridTuple<GridDeploymentResponse> res = new GridTuple<>();
 
-        GridLocalEventListener discoLsnr = new GridLocalEventListener() {
-            @Override public void onEvent(Event evt) {
-                assert evt instanceof DiscoveryEvent;
+        GridLocalEventListener discoLsnr = resourceRequestingDiscoveryListener(res, dstNode, rsrcName, qryMux);
 
-                assert evt.type() == EVT_NODE_LEFT || evt.type() == EVT_NODE_FAILED;
-
-                DiscoveryEvent discoEvt = (DiscoveryEvent)evt;
-
-                UUID nodeId = discoEvt.eventNode().id();
-
-                if (!nodeId.equals(dstNode.id()))
-                    // Not a destination node.
-                    return;
-
-                GridDeploymentResponse fake = new GridDeploymentResponse();
-
-                String errMsg = "Originating node left grid (resource will not be peer loaded) " +
-                    "[nodeId=" + dstNode.id() + ", rsrc=" + rsrcName + ']';
-
-                U.warn(log, errMsg);
-
-                fake.success(false);
-                fake.errorMessage(errMsg);
-
-                // We put fake result here to interrupt waiting peer-to-peer thread
-                // because originating node has left grid.
-                synchronized (qryMux) {
-                    res.set(fake);
-
-                    qryMux.notifyAll();
-                }
-            }
-        };
-
-        GridMessageListener resLsnr = new GridMessageListener() {
-            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-                assert nodeId != null;
-                assert msg != null;
-
-                synchronized (qryMux) {
-                    if (!(msg instanceof GridDeploymentResponse)) {
-                        U.error(log, "Received unknown peer class loading response [node=" + nodeId + ", msg=" +
-                            msg + ']');
-                    }
-                    else
-                        res.set((GridDeploymentResponse)msg);
-
-                    qryMux.notifyAll();
-                }
-            }
-        };
+        GridMessageListener resLsnr = resourceRequestingMessageListener(res, qryMux);
 
         try {
             ctx.io().addMessageListener(resTopic, resLsnr);
@@ -504,11 +447,9 @@ class GridDeploymentCommunication {
             }
 
             if (res.get() == null) {
-                U.warn(log, "Failed to receive peer response from node within duration [node=" + dstNode.id() +
-                    ", duration=" + (U.currentTimeMillis() - start) + ']');
+                throw new IgniteCheckedException("Failed to receive peer response from node within duration [node=" +
+                    dstNode.id() + ", duration=" + (U.currentTimeMillis() - start) + ']');
             }
-            else if (log.isDebugEnabled())
-                log.debug("Received peer loading response [node=" + dstNode.id() + ", res=" + res.get() + ']');
 
             return res.get();
         }
@@ -517,5 +458,79 @@ class GridDeploymentCommunication {
 
             ctx.io().removeMessageListener(resTopic, resLsnr);
         }
+    }
+
+    /**
+     * @param res Result holder.
+     * @param dstNode Destination node.
+     * @param rsrcName Resource name.
+     * @param qryMux Mutex.
+     * @return Listener for discovery events {@code EVT_NODE_LEFT} and {@code EVT_NODE_FAILED} for class loading
+     * requests.
+     */
+    public GridLocalEventListener resourceRequestingDiscoveryListener(
+        GridTuple<GridDeploymentResponse> res,
+        ClusterNode dstNode,
+        String rsrcName,
+        Object qryMux
+    ) {
+        return new GridLocalEventListener() {
+            @Override public void onEvent(Event evt) {
+                assert evt instanceof DiscoveryEvent;
+
+                assert evt.type() == EVT_NODE_LEFT || evt.type() == EVT_NODE_FAILED;
+
+                DiscoveryEvent discoEvt = (DiscoveryEvent)evt;
+
+                UUID nodeId = discoEvt.eventNode().id();
+
+                if (!nodeId.equals(dstNode.id()))
+                    // Not a destination node.
+                    return;
+
+                GridDeploymentResponse fake = new GridDeploymentResponse();
+
+                String errMsg = "Originating node left grid (resource will not be peer loaded) " +
+                    "[nodeId=" + dstNode.id() + ", rsrc=" + rsrcName + ']';
+
+                U.warn(log, errMsg);
+
+                fake.success(false);
+                fake.errorMessage(errMsg);
+
+                // We put fake result here to interrupt waiting peer-to-peer thread
+                // because originating node has left grid.
+                synchronized (qryMux) {
+                    res.set(fake);
+
+                    qryMux.notifyAll();
+                }
+            }
+        };
+    }
+
+    /**
+     * @param res Result holder.
+     * @param qryMux Mutex.
+     * @return Listener for response message for class loading requests.
+     */
+    public GridMessageListener resourceRequestingMessageListener(GridTuple<GridDeploymentResponse> res, Object qryMux) {
+        return new GridMessageListener() {
+            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
+                assert nodeId != null;
+                assert msg != null;
+
+                synchronized (qryMux) {
+                    if (!(msg instanceof GridDeploymentResponse)) {
+                        U.error(log, "Received unknown peer class loading response [node=" + nodeId + ", msg=" +
+                            msg + ']');
+                    }
+                    else
+                        res.set((GridDeploymentResponse)msg);
+
+                    qryMux.notifyAll();
+                }
+            }
+        };
     }
 }

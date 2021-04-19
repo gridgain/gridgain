@@ -15,7 +15,9 @@
  */
 package org.apache.ignite.p2p;
 
+import java.util.List;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -29,7 +31,10 @@ import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import static com.google.common.primitives.Ints.asList;
 import static org.apache.ignite.configuration.DeploymentMode.SHARED;
 import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
@@ -37,6 +42,7 @@ import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 /**
  * Tests of extended logging of class loading problems.
  */
+@RunWith(Parameterized.class)
 public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTest {
     /** Test predicate class name. */
     private static final String PREDICATE_NAME = "org.apache.ignite.tests.p2p.P2PTestPredicate";
@@ -49,6 +55,15 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
 
     /** */
     private IgniteEx client;
+
+    /** */
+    @Parameterized.Parameter(0)
+    public Integer allowSuccessfulClassRequestsCnt;
+
+    @Parameterized.Parameters(name = "{0}")
+    public static List<Integer> allowSuccessfulClassRequestsCntList() {
+        return asList(0, 1);
+    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -87,7 +102,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
     /** Tests logging when executing job with communication problems. */
     @Test
     public void testTimeoutJob() throws ClassNotFoundException {
-        LogListener lsnr = LogListener
+        LogListener lsnr1 = LogListener
             .matches(msg -> msg
                 .replace("\n", "")
                 .matches(".*?Failed to get resource from node \\(is node alive\\?\\).*?" +
@@ -95,9 +110,27 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
             )
             .build();
 
-        listeningLog.registerListener(lsnr);
+        LogListener lsnr2 = LogListener
+            .matches(msg -> msg
+                .replace("\n", "")
+                .matches(".*?Failed to peer load class.*?" +
+                    TimeoutException.class.getName() + ".*")
+            )
+            .build();
 
-        spi(client).blockMessages(GridDeploymentResponse.class, ignite.name());
+        listeningLog.registerListener(lsnr1);
+        listeningLog.registerListener(lsnr2);
+
+        TestRecordingCommunicationSpi clientSpi = spi(client);
+
+        AtomicInteger reqCntr = new AtomicInteger(0);
+
+        spi(ignite).closure((node, msg) -> {
+            if (msg instanceof GridDeploymentRequest && allowSuccessfulClassRequestsCnt - reqCntr.get() <= 0)
+                clientSpi.blockMessages(GridDeploymentResponse.class, ignite.name());
+
+            reqCntr.incrementAndGet();
+        });
 
         Class cls = getExternalClassLoader()
             .loadClass("org.apache.ignite.tests.p2p.P2PTestTaskExternalPath1");
@@ -111,15 +144,15 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
 
         doSleep(2000);
 
-        assertTrue(lsnr.check());
+        assertTrue(lsnr1.check() || lsnr2.check());
 
-        spi(client).stopBlock();
+        clientSpi.stopBlock();
     }
 
     /** Tests logging when executing scan query with communication problems. */
     @Test
     public void testTimeoutScanQuery() throws ClassNotFoundException {
-        LogListener lsnr = LogListener
+        LogListener lsnr1= LogListener
             .matches(msg -> msg
                 .replace("\n", "")
                 .matches(".*?Failed to get resource from node \\(is node alive\\?\\).*?" +
@@ -127,9 +160,27 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
             )
             .build();
 
-        listeningLog.registerListener(lsnr);
+        LogListener lsnr2 = LogListener
+            .matches(msg -> msg
+                .replace("\n", "")
+                .matches(".*?Failed to peer load class.*?" +
+                    TimeoutException.class.getName() + ".*")
+            )
+            .build();
 
-        spi(client).blockMessages(GridDeploymentResponse.class, ignite.name());
+        listeningLog.registerListener(lsnr1);
+        listeningLog.registerListener(lsnr2);
+
+        TestRecordingCommunicationSpi clientSpi = spi(client);
+
+        AtomicInteger reqCntr = new AtomicInteger(0);
+
+        spi(ignite).closure((node, msg) -> {
+            if (msg instanceof GridDeploymentRequest && allowSuccessfulClassRequestsCnt - reqCntr.get() <= 0)
+                clientSpi.blockMessages(GridDeploymentResponse.class, ignite.name());
+
+            reqCntr.incrementAndGet();
+        });
 
         try {
             IgniteCache<Integer, Integer> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
@@ -144,23 +195,29 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
 
         doSleep(2000);
 
-        assertTrue(lsnr.check());
+        assertTrue(lsnr1.check() || lsnr2.check());
 
-        spi(client).stopBlock();
+        clientSpi.stopBlock();
     }
 
     /** Tests logging when executing job and class is not found on initiator. */
     @Test
     public void testCNFEJob() throws Exception {
-        LogListener srvLsnr = LogListener.matches("Failed to get resource from node").build();
+        LogListener srvLsnr1 = LogListener.matches("Failed to get resource from node").build();
+        LogListener srvLsnr2 = LogListener.matches("Failed to find class on remote node").build();
         LogListener clientLsnr = LogListener.matches("Failed to resolve class").build();
 
-        listeningLog.registerListener(srvLsnr);
+        listeningLog.registerListener(srvLsnr1);
+        listeningLog.registerListener(srvLsnr2);
         listeningLog.registerListener(clientLsnr);
 
+        AtomicInteger reqCntr = new AtomicInteger(0);
+
         spi(ignite).closure((node, msg) -> {
-            if (msg instanceof GridDeploymentRequest)
+            if (msg instanceof GridDeploymentRequest && allowSuccessfulClassRequestsCnt - reqCntr.get() <= 0)
                 setFieldValue(msg, "rsrcName", "asdf");
+
+            reqCntr.incrementAndGet();
         });
 
         Class cls = getExternalClassLoader()
@@ -173,7 +230,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
             /* No-op. */
         }
 
-        assertTrue(srvLsnr.check());
+        assertTrue(srvLsnr1.check() || srvLsnr2.check());
         assertTrue(clientLsnr.check());
 
         spi(ignite).closure(null);
@@ -182,15 +239,21 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
     /** Tests logging when executing scan query and class is not found on initiator. */
     @Test
     public void testCNFEScanQuery() throws Exception {
-        LogListener srvLsnr = LogListener.matches("Failed to get resource from node").build();
+        LogListener srvLsnr1 = LogListener.matches("Failed to get resource from node").build();
+        LogListener srvLsnr2 = LogListener.matches("Failed to find class on remote node").build();
         LogListener clientLsnr = LogListener.matches("Failed to resolve class").build();
 
-        listeningLog.registerListener(srvLsnr);
+        listeningLog.registerListener(srvLsnr1);
+        listeningLog.registerListener(srvLsnr2);
         listeningLog.registerListener(clientLsnr);
 
+        AtomicInteger reqCntr = new AtomicInteger(0);
+
         spi(ignite).closure((node, msg) -> {
-            if (msg instanceof GridDeploymentRequest)
+            if (msg instanceof GridDeploymentRequest && allowSuccessfulClassRequestsCnt - reqCntr.get() <= 0)
                 setFieldValue(msg, "rsrcName", "asdf");
+
+            reqCntr.incrementAndGet();
         });
 
         try {
@@ -204,7 +267,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
             /* No-op. */
         }
 
-        assertTrue(srvLsnr.check());
+        assertTrue(srvLsnr1.check() || srvLsnr2.check());
         assertTrue(clientLsnr.check());
 
         spi(ignite).closure(null);
