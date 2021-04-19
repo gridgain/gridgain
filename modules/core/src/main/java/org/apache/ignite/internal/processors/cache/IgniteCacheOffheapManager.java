@@ -667,7 +667,7 @@ public interface IgniteCacheOffheapManager {
         public void flushReconciliationResult(int cacheId);
 
         /** */
-        public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx();
+        public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx() throws IgniteCheckedException;
 
         /**
          * @return Cache data tree object.

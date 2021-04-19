@@ -267,7 +267,14 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             part.reserve();
 
-            IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = cacheDataStore.reconciliationCtx();
+            IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = null;
+
+            try {
+                partReconciliationCtx = cacheDataStore.reconciliationCtx();
+            }
+            catch (IgniteCheckedException e) {
+                new RuntimeException(e);
+            }
 
             NodePartitionSize nodeSize = new NodePartitionSize();
 
@@ -315,8 +322,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             if (reconConsist || reconSize) {
                 try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
-                    grpCtx.offheap().dataStore(part).reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA)  :
-                    grpCtx.offheap().dataStore(part).reconCursor(cacheId, keyToStart, null, null, null, IgniteCacheOffheapManager.DATA)) {
+                    cacheDataStore.reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA)  :
+                    cacheDataStore.reconCursor(cacheId, keyToStart, null, null, null, IgniteCacheOffheapManager.DATA)) {
                     System.out.println("qdsadfvers start cursor");
 
                     List<VersionedKey> partEntryHashRecords = new ArrayList<>();
