@@ -2251,7 +2251,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
                 //do nothing
             }
 
-            throw new IgniteCacheRestartingException(new IgniteFutureImpl<>(currentFut, exec()), cacheName);
+            throw new IgniteCacheRestartingException(new IgniteFutureImpl<>(currentFut), cacheName);
         }
     }
 
