@@ -1572,6 +1572,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             partId,
             exists,
             busyLock,
+            nodeIsStopping,
             log
         );
     }
@@ -2083,7 +2084,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** */
         private final GridSpinBusyLock busyLock;
 
-        private volatile AtomicBoolean nodeIsStopping;
+        private final AtomicBoolean nodeIsStopping;
 
         /** */
         private final IgniteLogger log;
@@ -2103,11 +2104,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          */
         public GridCacheDataStore(CacheGroupContext grp, int partId, boolean exists,
             GridSpinBusyLock busyLock,
+            AtomicBoolean nodeIsStopping,
             IgniteLogger log) {
             this.grp = grp;
             this.partId = partId;
             this.exists = exists;
             this.busyLock = busyLock;
+            this.nodeIsStopping = nodeIsStopping;
             this.log = log;
         }
 
