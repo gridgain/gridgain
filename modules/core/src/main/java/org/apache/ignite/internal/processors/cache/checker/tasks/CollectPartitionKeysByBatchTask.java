@@ -232,7 +232,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
         /** {@inheritDoc} */
         @Override protected ExecutionResult<T2<List<VersionedKey>, NodePartitionSize>> execute0() {
             boolean reconConsist = partBatch.reconConsist;
-            boolean reconSize = partBatch.reconSize && (partBatch.partSizesMap().get(ignite.localNode().id()) == null || partBatch.partSizesMap().get(ignite.localNode().id()).inProgress);
+            boolean reconSize = partBatch.reconSize &&
+                (partBatch.partSizesMap().get(ignite.localNode().id()) == null ||
+                    partBatch.partSizesMap().get(ignite.localNode().id()).inProgress);
 
 //            if (reconConsist || reconSize)
             System.out.println("qdsvdsdfd start recon");
@@ -269,37 +271,61 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = null;
 
-            try {
-                partReconciliationCtx = cacheDataStore.reconciliationCtx();
-            }
-            catch (IgniteCheckedException e) {
-                new RuntimeException(e);
-            }
-
             NodePartitionSize nodeSize = new NodePartitionSize();
 
-            if (reconSize && partReconciliationCtx != null && !partReconciliationCtx.isReconciliationInProgress(cacheId) && partReconciliationCtx.lastKey(cacheId) == null &&
-                partReconciliationCtx.isReconciliationIsFinished.get(cacheId) == null) {
-                cacheDataStore.block();
-                System.out.println("qdsaftpg start first busy lock");
+            KeyCacheObject lastKeyForSizes = null;
 
+            AtomicLong partSize = null;
+
+            KeyCacheObject oldBorderKey = null;
+
+            Map<KeyCacheObject, Boolean> tempMap = null;
+
+            if (reconSize) {
                 try {
-                    nodeSize.inProgress = true;
-                    partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
-
-                    System.out.println("qlopfots set isReconciliationInProgress to true");
+                    partReconciliationCtx = cacheDataStore.reconciliationCtx();
                 }
-                finally {
-                    System.out.println("qdsaftpg end first busy lock");
-                    cacheDataStore.unblock();
+                catch (IgniteCheckedException e) {
+                    throw new RuntimeException(e);
                 }
-            }
-            else {
-                if (partBatch.partSizesMap().get(ignite.localNode().id()) != null)
-                    nodeSize = partBatch.partSizesMap().get(ignite.localNode().id());
-            }
 
-            KeyCacheObject lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
+                if (partReconciliationCtx != null &&
+                    !partReconciliationCtx.isReconciliationInProgress(cacheId) &&
+                    partReconciliationCtx.lastKey(cacheId) == null &&
+                    partReconciliationCtx.isReconciliationIsFinished.get(cacheId) == null) {
+
+                    cacheDataStore.block();
+
+                    System.out.println("qdsaftpg start first busy lock");
+
+                    try {
+                        nodeSize.inProgress = true;
+                        partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
+
+                        System.out.println("qlopfots set isReconciliationInProgress to true");
+                    }
+                    finally {
+                        System.out.println("qdsaftpg end first busy lock");
+                        cacheDataStore.unblock();
+                    }
+
+                    partReconciliationCtx.sizes.putIfAbsent(cacheId, new AtomicLong());
+
+                    partReconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
+                }
+                else {
+                    if (partBatch.partSizesMap().get(ignite.localNode().id()) != null)
+                        nodeSize = partBatch.partSizesMap().get(ignite.localNode().id());
+                }
+
+                lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
+
+                partSize = partReconciliationCtx.sizes.get(cacheId);
+
+                oldBorderKey = partReconciliationCtx.lastKey(cacheId);
+
+                tempMap = partReconciliationCtx.tempMap.get(cacheId);
+            }
 
             KeyCacheObject keyToStart = null;
 
@@ -309,16 +335,6 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 keyToStart = lowerKey;
             else if (reconSize && lastKeyForSizes != null)
                 keyToStart = lastKeyForSizes;
-
-            partReconciliationCtx.sizes.putIfAbsent(cacheId, new AtomicLong());
-
-            AtomicLong partSize = partReconciliationCtx.sizes.get(cacheId);
-
-            KeyCacheObject oldBorderKey = partReconciliationCtx.lastKey(cacheId);
-
-            partReconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
-
-            Map<KeyCacheObject, Boolean> tempMap = partReconciliationCtx.tempMap.get(cacheId);
 
             if (reconConsist || reconSize) {
                 try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
@@ -351,18 +367,18 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         }
                     }
 
-
-                    System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
-
-                    nodeSize.lastKey = (partReconciliationCtx.lastKey(cacheId));
-
-                    System.out.println("qwerdfchg reconSize " + reconSize);
-                    System.out.println("qwerdfchg partReconciliationCtx.lastKey(cacheId) " + partReconciliationCtx.lastKey(cacheId));
-                    System.out.println("qwerdfchg partReconciliationCtx.isReconciliationInProgress(cacheId) " + partReconciliationCtx.isReconciliationInProgress(cacheId));
+//                    System.out.println("qwerdfchg reconSize " + reconSize);
+//                    System.out.println("qwerdfchg partReconciliationCtx.lastKey(cacheId) " + partReconciliationCtx.lastKey(cacheId));
+//                    System.out.println("qwerdfchg partReconciliationCtx.isReconciliationInProgress(cacheId) " + partReconciliationCtx.isReconciliationInProgress(cacheId));
 
                     if (reconSize && (partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
 
+                        System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
+
+                        nodeSize.lastKey = (partReconciliationCtx.lastKey(cacheId));
+
                         cacheDataStore.block();
+
                         System.out.println("qdsaftpg start second busy lock");
 
                         System.out.println("qdresdvscs tempMap " + tempMap);

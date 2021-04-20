@@ -413,6 +413,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             // Need to read link here because `p.finish()` will clear row.
             L newRow = p.row;
 
+            T oldRow = null;
+
+            boolean oldRowReaded = false;
+
             // Detach the old row if we are on a leaf page.
             if (lvl == 0) {
                 assert p.oldRow == null; // The old row must be set only once.
@@ -434,6 +438,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 // Get old row in leaf page to reduce contention at upper level.
                 p.oldRow = p.needOld ? getRow(io, pageAddr, idx) : (T)Boolean.TRUE;
 
+                if (reconciliationCtx != null) {
+                    oldRow = getRow(io, pageAddr, idx);
+
+                    oldRowReaded = true;
+                }
+
                 p.finish();
             }
 
@@ -450,11 +460,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (needWal)
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
-                if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.isReconciliationInProgress(newRow0.cacheId())) {
-                    T oldRow = getRow(io, pageAddr, idx);
-
-                    p.reconReplace(oldRow, newRow);
-                }
+            if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.isReconciliationInProgress(newRow0.cacheId()))
+                p.reconReplace(oldRowReaded ? oldRow : getRow(io, pageAddr, idx), newRow);
 
             return FOUND;
         }
