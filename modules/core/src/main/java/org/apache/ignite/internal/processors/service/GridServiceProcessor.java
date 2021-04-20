@@ -1697,10 +1697,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
                         affReadyFut.get();
                     }
                     catch (IgniteInterruptedCheckedException e) {
-                        if (log.isDebugEnabled())
-                            U.log(log, "Failed to wait for affinity ready future.", e);
-
-                        throw new IgniteInterruptedException("Failed to wait for affinity ready future.");
+                        throw new IgniteInterruptedException("Interrupted while waiting for affinity ready future.");
                     }
                     catch (IgniteCheckedException e) {
                         U.warn(log, "Failed to wait for affinity ready future " +
@@ -2010,7 +2007,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
                 run0();
             }
             catch (Throwable t) {
-                if (!GridServiceProcessor.this.ctx.isStopping())
+                if (!GridServiceProcessor.this.ctx.isStopping() || log.isDebugEnabled())
                     log.error("Error when executing service: " + svcName.get(), t);
 
                 if (t instanceof Error)
