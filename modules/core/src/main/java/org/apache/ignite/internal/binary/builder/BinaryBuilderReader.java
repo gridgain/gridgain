@@ -516,15 +516,26 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
             case GridBinaryMarshaller.HANDLE: {
                 int objStart = pos - 1 - readInt();
 
-                BinaryObjectBuilderImpl res = objMap.get(objStart);
+                BinaryObjectBuilderImpl bobRef = objMap.get(objStart);
 
-                if (res == null) {
-                    res = new BinaryObjectBuilderImpl(new BinaryBuilderReader(this, objStart), objStart);
+                if (bobRef != null)
+                    return bobRef;
 
-                    objMap.put(objStart, res);
+                // Read handle by position
+                int savedPos = pos;
+                pos = objStart;
+
+                try {
+                    Object res = parseValue();
+
+                    if (res instanceof BinaryObjectBuilderImpl)
+                        objMap.put(objStart, (BinaryObjectBuilderImpl)res);
+
+                    return res;
                 }
-
-                return res;
+                finally {
+                    pos = savedPos;
+                }
             }
 
             case GridBinaryMarshaller.OBJ: {

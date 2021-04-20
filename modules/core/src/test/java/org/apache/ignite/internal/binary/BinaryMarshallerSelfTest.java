@@ -42,6 +42,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,6 +52,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -78,6 +80,7 @@ import org.apache.ignite.binary.BinaryWriter;
 import org.apache.ignite.binary.Binarylizable;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.binary.builder.BinaryBuilderReader;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
@@ -1029,6 +1032,31 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         Object des = po.deserialize();
 
         assertEquals(obj, des);
+    }
+
+    /**
+     * Checks {@link BinaryBuilderReader#parseValue()} for object that contains handles to collection.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void handleToCollection() throws Exception {
+        BinaryMarshaller m = binaryMarshaller();
+
+        HandleToCollections obj = new HandleToCollections();
+
+        BinaryObject bo = marshal(obj, m);
+
+        for (int i = 0; i < 10; ++i) {
+            BinaryObjectBuilder bob = bo.toBuilder();
+
+            if (i > 0)
+                assertEquals(i - 1, (int)bo.field("a"));
+
+            bob.setField("a", i);
+
+            bo = bob.build();
+        }
     }
 
     /**
@@ -5823,6 +5851,50 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
                 return a;
             }
+        }
+    }
+
+    /** */
+    public static class HandleToCollections {
+        /** */
+        List<Value> lst;
+
+        /** */
+        List<Value> hndLst;
+
+        /** */
+        List<Value> linkedLst;
+
+        /** */
+        List<Value> hndLinkedLst;
+
+        /** */
+        Map<Integer, Value> map;
+
+        /** */
+        Map<Integer, Value> hdnMap;
+
+        /** */
+        Map<Integer, Value> linkedMap;
+
+        /** */
+        Map<Integer, Value> hdnLinkedMap;
+
+        /** */
+        public HandleToCollections() {
+            lst = new ArrayList<>(Arrays.asList(new Value(0), new Value(1)));
+            hndLst = lst;
+
+            linkedLst = new LinkedList<>(Arrays.asList(new Value(0), new Value(1)));
+            hndLinkedLst = linkedLst;
+
+            map = IntStream.range(0, 1).boxed()
+                .collect(Collectors.toMap(Function.identity(), Value::new));
+            hdnMap = map;
+
+            linkedMap = IntStream.range(0, 1).boxed()
+                .collect(Collectors.toMap(Function.identity(), Value::new, (a, b) -> a, LinkedHashMap::new));
+            hdnLinkedMap = linkedMap;
         }
     }
 }
