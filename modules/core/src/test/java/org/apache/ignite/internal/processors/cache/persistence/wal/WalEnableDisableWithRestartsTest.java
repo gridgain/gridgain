@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.cache.persistence.wal;
 
 import java.util.LinkedList;
@@ -37,6 +38,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Test;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CORRUPTED_DATA_FILES_MNTC_TASK_NAME;
 
 /** */
@@ -70,7 +72,7 @@ public class WalEnableDisableWithRestartsTest extends GridCommonAbstractTest {
         for (int i = 0; i < NODES; i++)
             nodes.add(Ignition.start(igniteCfg(false, "server_" + i)));
 
-        nodes.getFirst().active(true);
+        nodes.getFirst().cluster().state(ACTIVE);
 
         Ignite client = Ignition.start(igniteCfg(true, "client"));
 
