@@ -41,6 +41,7 @@ import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
@@ -1695,6 +1696,12 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
                     try {
                         affReadyFut.get();
                     }
+                    catch (IgniteInterruptedCheckedException e) {
+                        if (log.isDebugEnabled())
+                            U.log(log, "Failed to wait for affinity ready future.", e);
+
+                        throw new IgniteInterruptedException("Failed to wait for affinity ready future.");
+                    }
                     catch (IgniteCheckedException e) {
                         U.warn(log, "Failed to wait for affinity ready future " +
                             "(the assignment will be recalculated anyway):" + e.toString());
@@ -2003,7 +2010,8 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
                 run0();
             }
             catch (Throwable t) {
-                log.error("Error when executing service: " + svcName.get(), t);
+                if (!GridServiceProcessor.this.ctx.isStopping())
+                    log.error("Error when executing service: " + svcName.get(), t);
 
                 if (t instanceof Error)
                     throw t;
