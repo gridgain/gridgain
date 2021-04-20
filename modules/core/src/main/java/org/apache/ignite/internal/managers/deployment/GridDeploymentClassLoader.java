@@ -29,8 +29,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DeploymentMode;
@@ -109,7 +109,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
     private final Object mux = new Object();
 
     /** */
-    private final AtomicReference<String> clsLdrHierarchyRef = new AtomicReference<>();
+    private final String clsLdrHierarchy = classLoadersHierarchy();
 
     /**
      * Creates a new peer class loader.
@@ -583,7 +583,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             if (missedRsrcs != null && missedRsrcs.contains(path)) {
                 throw new ClassNotFoundException("Failed to peer load class, class is cached as previously missed " +
                     "[class=" + name + ", nodeClsLdrIds=" +
-                    nodeLdrMap + ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']');
+                    nodeLdrMap + ", clsLoadersHierarchy=" + clsLdrHierarchy + ']');
             }
 
             // If single-node mode, then node cannot change and we simply reuse list and map.
@@ -592,9 +592,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             nodeLdrMapCp = singleNode ? nodeLdrMap : new HashMap<>(nodeLdrMap);
         }
 
-        List<Exception> suppressed = new ArrayList<>();
-
-        String reason = null;
+        List<IgniteException> classRequestExceptions = new ArrayList<>();
 
         for (UUID nodeId : nodeListCp) {
             if (nodeId.equals(ctx.discovery().localNode().id()))
@@ -618,11 +616,11 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                 if (res == null) {
                     String msg = "Failed to send class-loading request to node (is node alive?) [node=" +
                         node.id() + ", clsName=" + name + ", clsPath=" + path + ", clsLdrId=" + ldrId +
-                        ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']';
+                        ", clsLoadersHierarchy=" + clsLdrHierarchy + ']';
 
                     U.warn(log, msg);
 
-                    suppressed.add(new IgniteCheckedException(msg));
+                    classRequestExceptions.add(new IgniteException(msg));
 
                     continue;
                 }
@@ -630,12 +628,13 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                     return res.byteSource();
                 else {
                     // In case of shared resources/classes all nodes should have it.
-                    reason = res.errorMessage();
+                    String msg = "Failed to find class on remote node [class=" + name + ", nodeId=" + node.id() +
+                        ", clsLdrId=" + ldrId + ", classLoadersHierarchy=" + clsLdrHierarchy +
+                        ", reason=" + res.errorMessage() + ']';
 
-                    LT.warn(log, "Failed to find class on remote node [class=" + name + ", nodeId=" + node.id() +
-                        ", clsLdrId=" + ldrId + ", classLoadersHierarchy=" + classLoadersHierarchy() +
-                        ", reason=" + res.errorMessage() + ']'
-                    );
+                    LT.warn(log, msg);
+
+                    classRequestExceptions.add(new IgniteException(msg));
 
                     synchronized (mux) {
                         if (missedRsrcs != null)
@@ -653,7 +652,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                     String msg = "Failed to find class probably due to task/job cancellation [name=" + name +
                         ", clsLdrId=" + ldrId +
                         ", nodeId=" + nodeId +
-                        ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']';
+                        ", clsLoadersHierarchy=" + clsLdrHierarchy + ']';
 
                     if (!quiet)
                         U.error(log, msg, e);
@@ -666,7 +665,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                         ", clsName=" + name +
                         ", clsPath=" + path +
                         ", clsLdrId=" + ldrId +
-                        ", clsLoadersHierarchy=" + classLoadersHierarchy() +
+                        ", clsLoadersHierarchy=" + clsLdrHierarchy +
                         ", err=" + e + ']';
 
                     if (!quiet)
@@ -674,34 +673,38 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                     else if (log.isDebugEnabled())
                         log.debug(msg);
 
-                    suppressed.add(e);
+                    classRequestExceptions.add(new IgniteException(msg, e));
                 }
             }
             catch (TimeoutException e) {
-                suppressed.add(new IgniteCheckedException("Failed to send class-loading request to node (is node alive?) " +
+                classRequestExceptions.add(new IgniteException("Failed to send class-loading request to node (is node alive?) " +
                     "[node=" + node.id() + ", clsName=" + name + ", clsPath=" + path + ", clsLdrId=" + ldrId +
-                    ", clsLoadersHierarchy=" + classLoadersHierarchy() + ']', e));
+                    ", clsLoadersHierarchy=" + clsLdrHierarchy + ']', e));
             }
         }
 
-        ClassNotFoundException cnfe = new ClassNotFoundException("Failed to peer load class [" +
-            "class=" + name +
-            ", nodeClsLdrs=" + nodeLdrMapCp +
-            ", clsLoadersHierarchy=" + classLoadersHierarchy() +
-            (reason == null ? "" : ", reason=" + reason) +
-            ']');
+        if (!classRequestExceptions.isEmpty()) {
+            IgniteException exception = classRequestExceptions.remove(0);
 
-        for (Exception e : suppressed)
-            cnfe.addSuppressed(e);
+            for (Exception e : classRequestExceptions)
+                exception.addSuppressed(e);
 
-        U.warn(log, "Failed to peer load class [class=" + name + ", nodeClsLdrs=" + nodeLdrMapCp +
-            ", clsLoadersHierarchy=" + classLoadersHierarchy() +
-            (reason == null ? "" : ", reason=" + reason) +
-            ']',
-            cnfe
-        );
+            LT.warn(log, exception.getMessage(), exception);
 
-        throw cnfe;
+            throw exception;
+        }
+        else {
+            ClassNotFoundException cnfe = new ClassNotFoundException("Failed to peer load class [" +
+                "class=" + name +
+                ", nodeClsLdrs=" + nodeLdrMapCp +
+                ", clsLoadersHierarchy=" + clsLdrHierarchy +
+                ']'
+            );
+
+            LT.warn(log, cnfe.getMessage(), cnfe);
+
+            throw cnfe;
+        }
     }
 
     /** {@inheritDoc} */
@@ -870,33 +873,22 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
      * @return Hierarchy of all parents of this class loader.
      */
     private String classLoadersHierarchy() {
-        if (clsLdrHierarchyRef.get() != null)
-            return clsLdrHierarchyRef.get();
-        else {
-            synchronized (clsLdrHierarchyRef) {
-                if (clsLdrHierarchyRef.get() != null)
-                    return clsLdrHierarchyRef.get();
+        SB sb = new SB();
 
-                SB sb = new SB();
+        sb.a(getClass().getName());
 
-                sb.a(getClass().getName());
+        ClassLoader ldr = this;
 
-                ClassLoader ldr = this;
+        int iterations = 100;
 
-                int iterations = 10;
+        while (ldr.getParent() != null && iterations > 0) {
+            sb.a("->").a(ldr.getParent().getClass().getName());
 
-                while (ldr.getParent() != null && iterations > 0) {
-                    sb.a("->").a(ldr.getParent().getClass().getName());
+            ldr = ldr.getParent();
 
-                    ldr = ldr.getParent();
-
-                    iterations--;
-                }
-
-                clsLdrHierarchyRef.set(sb.toString());
-
-                return clsLdrHierarchyRef.get();
-            }
+            iterations--;
         }
+
+        return sb.toString();
     }
 }

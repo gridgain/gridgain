@@ -44,9 +44,6 @@ import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
  */
 @RunWith(Parameterized.class)
 public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTest {
-    /** Test predicate class name. */
-    private static final String PREDICATE_NAME = "org.apache.ignite.tests.p2p.P2PTestPredicate";
-
     /** */
     private ListeningTestLogger listeningLog = new ListeningTestLogger(log);
 
@@ -101,7 +98,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
 
     /** Tests logging when executing job with communication problems. */
     @Test
-    public void testTimeoutJob() throws ClassNotFoundException {
+    public void testTimeout() throws ClassNotFoundException {
         LogListener lsnr1 = LogListener
             .matches(msg -> msg
                 .replace("\n", "")
@@ -111,11 +108,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
             .build();
 
         LogListener lsnr2 = LogListener
-            .matches(msg -> msg
-                .replace("\n", "")
-                .matches(".*?Failed to peer load class.*?" +
-                    TimeoutException.class.getName() + ".*")
-            )
+            .matches("Failed to send class-loading request to node")
             .build();
 
         listeningLog.registerListener(lsnr1);
@@ -142,58 +135,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
             /* No-op. */
         }
 
-        doSleep(2000);
-
-        assertTrue(lsnr1.check() || lsnr2.check());
-
-        clientSpi.stopBlock();
-    }
-
-    /** Tests logging when executing scan query with communication problems. */
-    @Test
-    public void testTimeoutScanQuery() throws ClassNotFoundException {
-        LogListener lsnr1= LogListener
-            .matches(msg -> msg
-                .replace("\n", "")
-                .matches(".*?Failed to get resource from node \\(is node alive\\?\\).*?" +
-                    TimeoutException.class.getName() + ".*")
-            )
-            .build();
-
-        LogListener lsnr2 = LogListener
-            .matches(msg -> msg
-                .replace("\n", "")
-                .matches(".*?Failed to peer load class.*?" +
-                    TimeoutException.class.getName() + ".*")
-            )
-            .build();
-
-        listeningLog.registerListener(lsnr1);
-        listeningLog.registerListener(lsnr2);
-
-        TestRecordingCommunicationSpi clientSpi = spi(client);
-
-        AtomicInteger reqCntr = new AtomicInteger(0);
-
-        spi(ignite).closure((node, msg) -> {
-            if (msg instanceof GridDeploymentRequest && allowSuccessfulClassRequestsCnt - reqCntr.get() <= 0)
-                clientSpi.blockMessages(GridDeploymentResponse.class, ignite.name());
-
-            reqCntr.incrementAndGet();
-        });
-
-        try {
-            IgniteCache<Integer, Integer> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-            Class<IgniteBiPredicate> predCls = (Class<IgniteBiPredicate>)getExternalClassLoader().loadClass(PREDICATE_NAME);
-
-            cache.query(new ScanQuery<>(predCls.newInstance())).getAll();
-        }
-        catch (Exception ignored) {
-            /* No-op. */
-        }
-
-        doSleep(2000);
+        doSleep(1500);
 
         assertTrue(lsnr1.check() || lsnr2.check());
 
@@ -202,7 +144,7 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
 
     /** Tests logging when executing job and class is not found on initiator. */
     @Test
-    public void testCNFEJob() throws Exception {
+    public void testCNFE() throws Exception {
         LogListener srvLsnr1 = LogListener.matches("Failed to get resource from node").build();
         LogListener srvLsnr2 = LogListener.matches("Failed to find class on remote node").build();
         LogListener clientLsnr = LogListener.matches("Failed to resolve class").build();
@@ -225,43 +167,6 @@ public class ClassLoadingProblemExtendedLoggingTest extends GridCommonAbstractTe
 
         try {
             client.compute().execute(cls, ignite.cluster().localNode().id());
-        }
-        catch (Exception ignored) {
-            /* No-op. */
-        }
-
-        assertTrue(srvLsnr1.check() || srvLsnr2.check());
-        assertTrue(clientLsnr.check());
-
-        spi(ignite).closure(null);
-    }
-
-    /** Tests logging when executing scan query and class is not found on initiator. */
-    @Test
-    public void testCNFEScanQuery() throws Exception {
-        LogListener srvLsnr1 = LogListener.matches("Failed to get resource from node").build();
-        LogListener srvLsnr2 = LogListener.matches("Failed to find class on remote node").build();
-        LogListener clientLsnr = LogListener.matches("Failed to resolve class").build();
-
-        listeningLog.registerListener(srvLsnr1);
-        listeningLog.registerListener(srvLsnr2);
-        listeningLog.registerListener(clientLsnr);
-
-        AtomicInteger reqCntr = new AtomicInteger(0);
-
-        spi(ignite).closure((node, msg) -> {
-            if (msg instanceof GridDeploymentRequest && allowSuccessfulClassRequestsCnt - reqCntr.get() <= 0)
-                setFieldValue(msg, "rsrcName", "asdf");
-
-            reqCntr.incrementAndGet();
-        });
-
-        try {
-            IgniteCache<Integer, Integer> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-            Class<IgniteBiPredicate> predCls = (Class<IgniteBiPredicate>)getExternalClassLoader().loadClass(PREDICATE_NAME);
-
-            cache.query(new ScanQuery<>(predCls.newInstance())).getAll();
         }
         catch (Exception ignored) {
             /* No-op. */
