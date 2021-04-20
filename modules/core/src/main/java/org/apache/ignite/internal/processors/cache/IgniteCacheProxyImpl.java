@@ -2059,7 +2059,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
 
                 assert restartFut != null;
 
-                throw new IgniteCacheRestartingException(new IgniteFutureImpl<>(restartFut, exec()), cacheName);
+                throw new IgniteCacheRestartingException(new IgniteFutureImpl<>(restartFut), cacheName);
             }
             else
                 throw restartingException;
@@ -2067,7 +2067,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
 
         if (restartFut != null) {
             if (X.hasCause(e, CacheStoppedException.class) || X.hasSuppressed(e, CacheStoppedException.class))
-                throw new IgniteCacheRestartingException(new IgniteFutureImpl<>(restartFut, exec()), "Cache is restarting: " +
+                throw new IgniteCacheRestartingException(new IgniteFutureImpl<>(restartFut), "Cache is restarting: " +
                         cacheName, e);
         }
 
@@ -2397,7 +2397,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
             }
 
             throw new IgniteCacheRestartingException(
-                new IgniteFutureImpl<>(this, exec()),
+                new IgniteFutureImpl<>(this),
                 "Cache is restarting: " + name
             );
         }
