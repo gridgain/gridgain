@@ -225,7 +225,7 @@ namespace ignite
                 inline void RawWriteInt32(void* mem, int32_t value)
                 {
                     uint8_t* ptr = static_cast<uint8_t*>(mem);
-                    uint32_t uValue = static_cast<uint16_t>(value);
+                    uint32_t uValue = static_cast<uint32_t>(value);
 
                     ptr[0] = static_cast<uint8_t>(uValue & 0xFF);
                     ptr[1] = static_cast<uint8_t>((uValue >> 8) & 0xFF);
@@ -268,7 +268,7 @@ namespace ignite
                 inline void RawWriteInt64(void* mem, int64_t value)
                 {
                     uint8_t* ptr = static_cast<uint8_t*>(mem);
-                    uint64_t uValue = static_cast<uint16_t>(value);
+                    uint64_t uValue = static_cast<uint64_t>(value);
 
                     ptr[0] = static_cast<uint8_t>(uValue & 0xFF);
                     ptr[1] = static_cast<uint8_t>((uValue >> 8) & 0xFF);

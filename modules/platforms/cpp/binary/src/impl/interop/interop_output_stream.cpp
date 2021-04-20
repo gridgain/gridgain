@@ -194,7 +194,6 @@ namespace ignite
                 const int32_t bytesToWrite = len * utils::PrimitiveMeta<T>::SIZE;
 
                 EnsureCapacity(pos + bytesToWrite);
-
 #ifdef AI_LITTLE_ENDIAN
                 // Optimization for little endian - we can simply copy data.
                 memcpy(data + pos, src, bytesToWrite);
@@ -202,7 +201,6 @@ namespace ignite
                 for (int32_t i = 0; i < len; ++i)
                     utils::RawWritePrimitive<T>(data + pos + (i * utils::PrimitiveMeta<T>::SIZE), src[i]);
 #endif
-
                 Shift(bytesToWrite);
             }
 

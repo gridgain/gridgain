@@ -38,7 +38,7 @@ namespace ignite
             const int8_t IGNITE_PROTO_VER = 1;
 
             /** Protocol version position. */
-            const int32_t PROTO_VER_POS = 1;
+            const int32_t IGNITE_OFFSET_PROTO_VER = 1;
 
             /** Header offset: Flags. */
             const int32_t IGNITE_OFFSET_FLAGS = 2;
