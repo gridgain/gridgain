@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
