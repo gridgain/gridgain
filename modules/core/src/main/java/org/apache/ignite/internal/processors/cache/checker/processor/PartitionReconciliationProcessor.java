@@ -200,8 +200,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                     workloadTracker.addTrackingChain(workload);
 
-                    workloadChainIdsInProgress.put(workload.workloadChainId(), new AtomicInteger());
-
                     schedule(workload);
                 }
             }
@@ -346,15 +344,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                         TimeUnit.SECONDS
                     );
                 }
-
-                AtomicInteger counter = workloadChainIdsInProgress.get(workload.workloadChainId());
-
-                counter.decrementAndGet();
-
-                if (counter.get() == 0) {
-                    System.out.println("qfrsdvfd");
-//                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
-                }
             }
         );
     }
@@ -398,15 +387,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                             conflicts,
                             actualKeys);
                     }
-                }
-
-                AtomicInteger counter = workloadChainIdsInProgress.get(workload.workloadChainId());
-
-                counter.decrementAndGet();
-
-                if (counter.get() == 0) {
-                    System.out.println("qvfdrbzdf");
-//                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
                 }
             });
     }
@@ -459,15 +439,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 workload.repairAttempt() + 1
                             ));
                     }
-                }
-
-                AtomicInteger counter = workloadChainIdsInProgress.get(workload.workloadChainId());
-
-                counter.decrementAndGet();
-
-                if (counter.get() == 0) {
-                    System.out.println("qvsdvewb");
-//                    scheduleHighPriority(new RepairSizes(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), collector.partSizesMap()));
                 }
             });
     }

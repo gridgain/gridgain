@@ -6090,7 +6090,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         /** {@inheritDoc} */
         @Override boolean fillFromBuffer0(long pageAddr, BPlusIO<L> io, int startIdx, int cnt)
             throws IgniteCheckedException {
-            System.out.println("qlkdkpdfs");
             if (startIdx == -1)
                 startIdx = findLowerBound(pageAddr, io, cnt);
 

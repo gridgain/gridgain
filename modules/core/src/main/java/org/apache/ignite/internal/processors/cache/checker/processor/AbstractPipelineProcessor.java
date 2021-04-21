@@ -76,9 +76,6 @@ public class AbstractPipelineProcessor {
     /** Event listener that allows to track the execution of workload. */
     protected volatile ReconciliationEventListener evtLsnr = ReconciliationEventListenerProvider.defaultListenerInstance();
 
-    /** */
-    final Map<UUID, AtomicInteger> workloadChainIdsInProgress = new ConcurrentHashMap<>();
-
     /** Tracks workload chains based on its lifecycle. */
     protected final WorkloadsInProgressTracker workloadsInProgressTracker = new WorkloadsInProgressTracker();
 
@@ -258,8 +255,6 @@ public class AbstractPipelineProcessor {
     protected void scheduleHighPriority(PipelineWorkload task) {
         evtLsnr.onEvent(SCHEDULED, task);
 
-        workloadChainIdsInProgress.get(task.workloadChainId()).incrementAndGet();
-
         highPriorityQueue.offer(new DelayedHolder<>(-1, task));
     }
 
@@ -274,8 +269,6 @@ public class AbstractPipelineProcessor {
         long finishTime = U.currentTimeMillis() + timeUnit.toMillis(duration);
 
         evtLsnr.onEvent(SCHEDULED, task);
-
-        workloadChainIdsInProgress.get(task.workloadChainId()).incrementAndGet();
 
         queue.offer(new DelayedHolder<>(finishTime, task));
     }
