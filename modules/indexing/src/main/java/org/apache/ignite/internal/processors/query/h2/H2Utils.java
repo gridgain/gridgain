@@ -39,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -1002,7 +1003,10 @@ public class H2Utils {
 
             GridCacheContext cctx = sharedCtx.cacheContext(cacheId);
 
-            assert cctx != null;
+            if (cctx == null) {
+                throw new IgniteSQLException("Failed to find cache [cacheId=" + cacheId + ']',
+                    IgniteQueryErrorCode.TABLE_NOT_FOUND);
+            }
 
             if (i == 0) {
                 mvccEnabled = cctx.mvccEnabled();
