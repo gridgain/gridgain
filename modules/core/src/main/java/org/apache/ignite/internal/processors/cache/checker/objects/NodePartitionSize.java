@@ -16,9 +16,9 @@ public class NodePartitionSize extends IgniteDataTransferObject {
 
     public KeyCacheObject lastKey;
 
-    public Long oldSize;
+    public long oldSize;
 
-    public Long newSize;
+    public long newSize;
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
@@ -33,7 +33,7 @@ public class NodePartitionSize extends IgniteDataTransferObject {
         ObjectInput in) throws IOException, ClassNotFoundException {
         inProgress = (boolean)in.readObject();
         lastKey = (KeyCacheObject)in.readObject();
-        oldSize = (Long)in.readObject();
-        newSize = (Long)in.readObject();
+        oldSize = (long)in.readObject();
+        newSize = (long)in.readObject();
     }
 }

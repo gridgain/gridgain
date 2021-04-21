@@ -19,12 +19,14 @@ package org.apache.ignite.internal.processors.cache.checker.tasks;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobContext;
@@ -38,10 +40,13 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 /**
@@ -102,7 +107,9 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
                 }
             }
 
-            res.add(new ComputeJobResultStub<>(partKeyVer));
+            NodePartitionSize nodeSize = new NodePartitionSize();
+
+            res.add(new ComputeJobResultStub<>(new T2(partKeyVer, nodeSize)));
         }
 
         return res;
@@ -126,12 +133,12 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
         /**
          *
          */
-        private final List<T> data;
+        private final T2<List<T>, NodePartitionSize> data;
 
         /**
          *
          */
-        private ComputeJobResultStub(List<T> data) {
+        private ComputeJobResultStub(T2<List<T>, NodePartitionSize> data) {
             this.data = data;
         }
 
@@ -141,7 +148,7 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDocl} */
-        @Override public ExecutionResult<List<T>> getData() {
+        @Override public ExecutionResult<T2<List<T>, NodePartitionSize>> getData() {
             return new ExecutionResult<>(data);
         }
 
@@ -157,7 +164,57 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public ClusterNode getNode() {
-            throw new IllegalStateException("Unsupported!");
+            return new ClusterNode() {
+
+                @Override public UUID id() {
+                    return null;
+                }
+
+                @Override public Object consistentId() {
+                    return null;
+                }
+
+                @Override public <T> T attribute(String name) {
+                    return null;
+                }
+
+                @Override public ClusterMetrics metrics() {
+                    return null;
+                }
+
+                @Override public Map<String, Object> attributes() {
+                    return null;
+                }
+
+                @Override public Collection<String> addresses() {
+                    return null;
+                }
+
+                @Override public Collection<String> hostNames() {
+                    return null;
+                }
+
+                @Override public long order() {
+                    return 0;
+                }
+
+                @Override public IgniteProductVersion version() {
+                    return null;
+                }
+
+                @Override public boolean isLocal() {
+                    return false;
+                }
+
+                @Override public boolean isDaemon() {
+                    return false;
+                }
+
+                @Override public boolean isClient() {
+                    return false;
+                }
+            };
+//            throw new IllegalStateException("Unsupported!");
         }
 
         /** {@inheritDoc} */
