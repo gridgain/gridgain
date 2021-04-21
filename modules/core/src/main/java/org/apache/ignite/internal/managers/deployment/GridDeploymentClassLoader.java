@@ -613,18 +613,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             try {
                 GridDeploymentResponse res = comm.sendResourceRequest(path, ldrId, node, endTime);
 
-                if (res == null) {
-                    String msg = "Failed to send class-loading request to node (is node alive?) [node=" +
-                        node.id() + ", clsName=" + name + ", clsPath=" + path + ", clsLdrId=" + ldrId +
-                        ", clsLoadersHierarchy=" + clsLdrHierarchy + ']';
-
-                    U.warn(log, msg);
-
-                    classRequestExceptions.add(new IgniteException(msg));
-
-                    continue;
-                }
-                else if (res.success())
+                if (res.success())
                     return res.byteSource();
                 else {
                     // In case of shared resources/classes all nodes should have it.
@@ -797,14 +786,11 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                 // Request is sent with timeout that is why we can use synchronization here.
                 GridDeploymentResponse res = comm.sendResourceRequest(name, ldrId, node, endTime);
 
-                if (res == null) {
-                    U.warn(log, "Failed to get resource from node (is node alive?) [" +
-                        "nodeId=" + node.id() +
-                        ", clsLdrId=" + ldrId +
-                        ", resName=" + name +
-                        ", classLoadersHierarchy=" + classLoadersHierarchy() + ']');
+                if (res.success()) {
+                    return new ByteArrayInputStream(res.byteSource().internalArray(), 0,
+                        res.byteSource().size());
                 }
-                else if (!res.success()) {
+                else {
                     synchronized (mux) {
                         // Cache unsuccessfully loaded resource.
                         if (missedRsrcs != null)
@@ -825,10 +811,6 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
 
                     // Do not ask other nodes in case of shared mode all of them should have the resource.
                     return null;
-                }
-                else {
-                    return new ByteArrayInputStream(res.byteSource().internalArray(), 0,
-                        res.byteSource().size());
                 }
             }
             catch (IgniteCheckedException | TimeoutException e) {

@@ -358,14 +358,14 @@ class GridDeploymentCommunication {
      * Sends request to the remote node and wait for response. If there is
      * no response until threshold time, method returns null.
      *
-     *
      * @param rsrcName Resource name.
      * @param clsLdrId Class loader ID.
      * @param dstNode Remote node request should be sent to.
      * @param threshold Time in milliseconds when request is decided to
      *      be obsolete.
-     * @return Either response value or {@code null} if timeout occurred.
+     * @return Response value.
      * @throws IgniteCheckedException Thrown if there is no connection with remote node.
+     * @throws TimeoutException If request timed out.
      */
     GridDeploymentResponse sendResourceRequest(final String rsrcName, IgniteUuid clsLdrId,
         final ClusterNode dstNode, long threshold) throws IgniteCheckedException, TimeoutException {
@@ -445,10 +445,7 @@ class GridDeploymentCommunication {
                 }
             }
 
-            if (res.get() == null) {
-                throw new IgniteCheckedException("Failed to receive peer response from node within duration [node=" +
-                    dstNode.id() + ", duration=" + (U.currentTimeMillis() - start) + ']');
-            }
+            assert res.get() != null;
 
             return res.get();
         }
