@@ -41,7 +41,7 @@ public class JmxMetricExporterSpiTest extends GridCommonAbstractTest {
      *
      */
     @Test
-    public void testConcurrentRegistration() throws IgniteCheckedException {
+    public void testConcurrentRegistration() throws Exception {
         JmxMetricExporterSpi spi = new JmxMetricExporterSpi();
 
         new IgniteTestResources(new DummyMBeanServer()).inject(spi);
@@ -85,7 +85,7 @@ public class JmxMetricExporterSpiTest extends GridCommonAbstractTest {
         /**
          *
          */
-        public void runRegistersConcurrent() {
+        public void runRegistersConcurrent() throws Exception {
             final AtomicInteger cntr = new AtomicInteger();
 
             GridTestUtils.runMultiThreadedAsync(() -> {
@@ -93,8 +93,7 @@ public class JmxMetricExporterSpiTest extends GridCommonAbstractTest {
                     for (Consumer<ReadOnlyMetricRegistry> lsnr : creation)
                         lsnr.accept(new ReadOnlyMetricRegistryStub("stub-" + cntr.getAndIncrement()));
                 }
-            }, Runtime.getRuntime().availableProcessors() * 2, "runner-");
-
+            }, Runtime.getRuntime().availableProcessors() * 2, "runner-").get();
         }
 
         /**

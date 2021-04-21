@@ -107,7 +107,7 @@ public class JmxMetricExporterSpi extends IgniteSpiAdapter implements MetricExpo
 
             boolean rmv = mBeans.remove(mbeanName);
 
-            assert rmv;
+            assert rmv : mBeans;
 
             unregBean(ignite, mbeanName);
         }
