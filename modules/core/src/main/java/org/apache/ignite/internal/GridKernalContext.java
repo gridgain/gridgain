@@ -19,6 +19,7 @@ package org.apache.ignite.internal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.ignite.IgniteLogger;
@@ -783,4 +784,11 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Thread pool for create/rebuild indexes.
      */
     public ExecutorService buildIndexExecutorService();
+
+    /**
+     * Executor that is in charge of processing user async continuations.
+     *
+     * @return Executor that is in charge of processing user async continuations.
+     */
+    public Executor getAsyncContinuationExecutor();
 }
