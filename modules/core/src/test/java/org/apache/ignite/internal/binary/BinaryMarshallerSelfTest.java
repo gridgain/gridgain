@@ -1042,7 +1042,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void handleToCollection() throws Exception {
-        final IgnitePair<String>[] fieldsCollectionAndHandle = new IgnitePair[] {
+        final IgnitePair<String>[] fieldsColAndHandle = new IgnitePair[] {
             new IgnitePair<>("lst", "hndLst"),
             new IgnitePair<>("linkedLst", "hndLinkedLst"),
             new IgnitePair<>("map", "hndMap"),
@@ -1062,13 +1062,23 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
             bob.setField("a", i);
 
-            for (IgnitePair<String> flds : fieldsCollectionAndHandle) {
-                Object collection = bob.getField(flds.get1());
-                Object collectionHandle = bob.getField(flds.get2());
+            for (IgnitePair<String> flds : fieldsColAndHandle) {
+                // Different orders to read collection and handle to collection.
+                Object col;
+                Object colHnd;
+
+                if (i % 2 == 0) {
+                    col = bob.getField(flds.get1());
+                    colHnd = bob.getField(flds.get2());
+                }
+                else {
+                    colHnd = bob.getField(flds.get2());
+                    col = bob.getField(flds.get1());
+                }
 
                 // Must be assertSame but now BinaryObjectBuilder doesn't support handle to collection.
                 // Now we check only that BinaryObjectBuilder#getField doesn't crash and returns valid collection.
-                assertEquals("Check: " + flds, collection, collectionHandle);
+                assertEquals("Check: " + flds, col, colHnd);
             }
 
             bo = bob.build();
