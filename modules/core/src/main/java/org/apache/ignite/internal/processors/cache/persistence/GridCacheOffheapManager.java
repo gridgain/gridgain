@@ -2437,7 +2437,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @return Partition metas.
          */
         private Metas getOrAllocatePartitionMetas() throws IgniteCheckedException {
-             PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
+            PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
+
             IgniteWriteAheadLogManager wal = grp.shared().wal();
 
             int grpId = grp.groupId();
@@ -2516,8 +2517,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             pendingTreeAllocated = true;
                         }
 
+                        //checkGapsLinkAndPartMetaStorage(io, pageAddr, grpId, partId);
+
                         if ((partMetaStoreReuseListRoot = io.getPartitionMetaStoreReuseListRoot(pageAddr)) == 0) {
-                            assert io.getGapsLink(pageAddr) == 0 : "Gaps link is not 0";
+                            assert io.getGapsLink(pageAddr) == 0 : "Partition meta page corruption: there is a link " +
+                                "to counter data page, but partition meta storage doesn't exist [grpId=" + grpId +
+                                ", partId=" + partId +
+                                ", gapsLink=" + io.getGapsLink(pageAddr) + ", partMetaStoreReuseListRoot=0]";
 
                             partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
 
@@ -2526,7 +2532,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             partMetastoreReuseListAllocated = true;
                         }
                         else
-                            assert io.getGapsLink(pageAddr) != 0;
+                            assert io.getGapsLink(pageAddr) != 0 : "Partition meta page corruption: there is no link " +
+                                "to counter data page, but partition meta storage does exist [grpId=" + grpId +
+                                ", partId=" + partId +
+                                ", gapsLink=0, partMetaStoreReuseListRoot=" + io.getPartitionMetaStoreReuseListRoot(pageAddr) + ']';
 
                         if ((updateLogTreeRoot = io.getUpdateTreeRoot(pageAddr)) == 0) {
                             updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
@@ -2584,6 +2593,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 pageMem.releasePage(grpId, partMetaId, partMetaPage);
             }
         }
+
+        /*private void checkGapsLinkAndPartMetaStorage(PagePartitionMetaIOV3 io, long pageAddr, int grpId, int partId) {
+            if io.getPartitionMetaStoreReuseListRoot(pageAddr)) == 0
+        }*/
 
         @Override public CacheDataTree tree() {
             return dataTree;

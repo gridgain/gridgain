@@ -49,7 +49,7 @@ public interface PartitionMetaStorage<T extends Storable> {
     public void saveMetadata(IoStatisticsHolder statHolder) throws IgniteCheckedException;
 
     /**
-     * @return Meta page id.
+     * @return Meta page id of partition meta storage.
      */
     public long metaPageId();
 }
