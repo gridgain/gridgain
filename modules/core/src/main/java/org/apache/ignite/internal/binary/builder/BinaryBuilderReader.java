@@ -51,7 +51,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
     private final BinaryReaderExImpl reader;
 
     /** */
-    private final Map<Integer, BinaryObjectBuilderImpl> objMap;
+    private final Map<Integer, Object> objMap;
 
     /** */
     private int pos;
@@ -382,19 +382,21 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
             case GridBinaryMarshaller.HANDLE: {
                 int objStart = pos - readIntPositioned(pos + 1);
 
-                BinaryObjectBuilderImpl res = objMap.get(objStart);
+                Object res = objMap.get(objStart);
 
-                if (res == null) {
-                    res = new BinaryObjectBuilderImpl(new BinaryBuilderReader(this, objStart), objStart);
+                if (res != null)
+                    return res;
 
-                    objMap.put(objStart, res);
-                }
+                // Read handle by position
+                res = getValueQuickly(objStart, len - (objStart - pos));
+
+                objMap.put(objStart, res);
 
                 return res;
             }
 
             case GridBinaryMarshaller.OBJ: {
-                BinaryObjectBuilderImpl res = objMap.get(pos);
+                Object res = objMap.get(pos);
 
                 if (res == null) {
                     res = new BinaryObjectBuilderImpl(new BinaryBuilderReader(this, pos), pos);
@@ -454,8 +456,18 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
             case GridBinaryMarshaller.ENUM_ARR:
             case GridBinaryMarshaller.OBJ_ARR:
             case GridBinaryMarshaller.COL:
-            case GridBinaryMarshaller.MAP:
-                return new LazyCollection(pos);
+            case GridBinaryMarshaller.MAP: {
+                Object res = objMap.get(pos);
+
+                if (res != null)
+                    return res;
+
+                res = new LazyCollection(pos);
+
+                objMap.put(pos, res);
+
+                return res;
+            }
 
             case GridBinaryMarshaller.ENUM: {
                 if (len == 1) {
@@ -516,32 +528,28 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
             case GridBinaryMarshaller.HANDLE: {
                 int objStart = pos - 1 - readInt();
 
-                BinaryObjectBuilderImpl bobRef = objMap.get(objStart);
+                Object res = objMap.get(objStart);
 
-                if (bobRef != null)
-                    return bobRef;
+                if (res != null)
+                    return res;
 
                 // Read handle by position
                 int savedPos = pos;
                 pos = objStart;
 
-                try {
-                    Object res = parseValue();
+                res = parseValue();
 
-                    if (res instanceof BinaryObjectBuilderImpl)
-                        objMap.put(objStart, (BinaryObjectBuilderImpl)res);
+                pos = savedPos;
 
-                    return res;
-                }
-                finally {
-                    pos = savedPos;
-                }
+                objMap.put(objStart, res);
+
+                return res;
             }
 
             case GridBinaryMarshaller.OBJ: {
                 pos--;
 
-                BinaryObjectBuilderImpl res = objMap.get(pos);
+                Object res = objMap.get(pos);
 
                 if (res == null) {
                     res = new BinaryObjectBuilderImpl(new BinaryBuilderReader(this, pos), pos);
@@ -775,24 +783,52 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
                 int size = readInt();
                 byte colType = arr[pos++];
 
+                Object res = objMap.get(pos);
+                Object parseRes = null;
+
                 switch (colType) {
                     case GridBinaryMarshaller.USER_COL:
                     case GridBinaryMarshaller.ARR_LIST:
-                        return new BinaryLazyArrayList(this, size);
+                        parseRes = new BinaryLazyArrayList(this, size);
+
+                        break;
 
                     case GridBinaryMarshaller.LINKED_LIST:
-                        return new BinaryLazyLinkedList(this, size);
+                        parseRes = new BinaryLazyLinkedList(this, size);
+
+                        break;
 
                     case GridBinaryMarshaller.HASH_SET:
                     case GridBinaryMarshaller.LINKED_HASH_SET:
-                        return new BinaryLazySet(this, size);
+                        parseRes = new BinaryLazySet(this, size);
+
+                        break;
+
+                    default:
+                        throw new BinaryObjectException("Unknown collection type: " + colType);
                 }
 
-                throw new BinaryObjectException("Unknown collection type: " + colType);
+                if (res == null) {
+                    objMap.put(pos, parseRes);
+
+                    res = parseRes;
+                }
+
+                return res;
             }
 
-            case GridBinaryMarshaller.MAP:
-                return BinaryLazyMap.parseMap(this);
+            case GridBinaryMarshaller.MAP: {
+                Object res = objMap.get(pos);
+                Object parseRes = BinaryLazyMap.parseMap(this);
+
+                if (res == null) {
+                    objMap.put(pos, parseRes);
+
+                    res = parseRes;
+                }
+
+                return res;
+            }
 
             case GridBinaryMarshaller.ENUM:
                 return new BinaryBuilderEnum(this);

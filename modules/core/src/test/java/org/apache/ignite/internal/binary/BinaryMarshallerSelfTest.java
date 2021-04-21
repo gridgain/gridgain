@@ -92,6 +92,7 @@ import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.lang.GridMapEntry;
+import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.lang.IgniteThrowableConsumer;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -1041,6 +1042,12 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void handleToCollection() throws Exception {
+        final IgnitePair<String>[] fieldsCollectionAndHandle = new IgnitePair[] {
+            new IgnitePair<>("lst", "hndLst"),
+            new IgnitePair<>("linkedLst", "hndLinkedLst"),
+            new IgnitePair<>("map", "hndMap"),
+            new IgnitePair<>("linkedMap", "hndLinkedMap")
+        };
         BinaryMarshaller m = binaryMarshaller();
 
         HandleToCollections obj = new HandleToCollections();
@@ -1054,6 +1061,15 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
                 assertEquals(i - 1, (int)bo.field("a"));
 
             bob.setField("a", i);
+
+            for (IgnitePair<String> flds : fieldsCollectionAndHandle) {
+                Object collection = bob.getField(flds.get1());
+                Object collectionHandle = bob.getField(flds.get2());
+
+                // Must be assertSame but now BinaryObjectBuilder doesn't support handle to collection.
+                // Now we check only that BinaryObjectBuilder#getField doesn't crash and returns valid collection.
+                assertEquals("Check: " + flds, collection, collectionHandle);
+            }
 
             bo = bob.build();
         }
@@ -5872,13 +5888,13 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         Map<Integer, Value> map;
 
         /** */
-        Map<Integer, Value> hdnMap;
+        Map<Integer, Value> hndMap;
 
         /** */
         Map<Integer, Value> linkedMap;
 
         /** */
-        Map<Integer, Value> hdnLinkedMap;
+        Map<Integer, Value> hndLinkedMap;
 
         /** */
         public HandleToCollections() {
@@ -5890,11 +5906,11 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
             map = IntStream.range(0, 1).boxed()
                 .collect(Collectors.toMap(Function.identity(), Value::new));
-            hdnMap = map;
+            hndMap = map;
 
             linkedMap = IntStream.range(0, 1).boxed()
                 .collect(Collectors.toMap(Function.identity(), Value::new, (a, b) -> a, LinkedHashMap::new));
-            hdnLinkedMap = linkedMap;
+            hndLinkedMap = linkedMap;
         }
     }
 }
