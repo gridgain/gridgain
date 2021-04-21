@@ -30,6 +30,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -1900,7 +1901,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
     @Override public IgniteFuture<?> destroyAsync() {
         GridCacheContext<K, V> ctx = getContextSafe();
 
-        return new IgniteFutureImpl<>(ctx.kernalContext().cache().dynamicDestroyCache(cacheName, false, true, false, null));
+        return new IgniteFutureImpl<>(ctx.kernalContext().cache().dynamicDestroyCache(cacheName, false, true, false, null), exec());
     }
 
     /** {@inheritDoc} */
@@ -1912,7 +1913,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
     @Override public IgniteFuture<?> closeAsync() {
         GridCacheContext<K, V> ctx = getContextSafe();
 
-        return new IgniteFutureImpl<>(ctx.kernalContext().cache().dynamicCloseCache(cacheName));
+        return new IgniteFutureImpl<>(ctx.kernalContext().cache().dynamicCloseCache(cacheName), exec());
     }
 
     /** {@inheritDoc} */
@@ -2094,7 +2095,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
 
     /** {@inheritDoc} */
     @Override protected <R> IgniteFuture<R> createFuture(IgniteInternalFuture<R> fut) {
-        return new IgniteCacheFutureImpl<>(fut);
+        return new IgniteCacheFutureImpl<>(fut, exec());
     }
 
     /**
@@ -2210,7 +2211,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
     @Override public IgniteFuture<Boolean> rebalance() {
         GridCacheContext<K, V> ctx = getContextSafe();
 
-        return new IgniteFutureImpl<>(ctx.preloader().forceRebalance());
+        return new IgniteFutureImpl<>(ctx.preloader().forceRebalance(), exec());
     }
 
     /** {@inheritDoc} */
@@ -2222,7 +2223,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
         if (fut == null)
             return new IgniteFinishedFutureImpl<>();
 
-        return new IgniteFutureImpl<>(fut);
+        return new IgniteFutureImpl<>(fut, exec());
     }
 
     /**
@@ -2354,6 +2355,13 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
 
         assert delegate == null || cacheName.equals(delegate.name()) && cacheName.equals(ctx.name()) :
                 "ctx.name=" + ctx.name() + ", delegate.name=" + delegate.name() + ", cacheName=" + cacheName;
+    }
+
+    /**
+     * Async continuation executor.
+     */
+    private Executor exec() {
+        return context().kernalContext().getAsyncContinuationExecutor();
     }
 
     /**
