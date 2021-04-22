@@ -249,6 +249,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             final int batchSize = partBatch.batchSize();
             final KeyCacheObject lowerKey;
+            KeyCacheObject newLowerKey = null;
 
             try {
                 lowerKey = unmarshalKey(partBatch.lowerKey(), cctx);
@@ -336,6 +337,10 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             else if (reconSize && lastKeyForSizes != null)
                 keyToStart = lastKeyForSizes;
 
+            System.out.println("asdijfliuue keyToStart " + (keyToStart == null ? "null" : ((KeyCacheObjectImpl)keyToStart).value()));
+            System.out.println("fhdjmrtjut lowerKey " + (lowerKey == null ? "null" : ((KeyCacheObjectImpl)lowerKey).value()));
+            System.out.println("rsathtyjtq45 lastKeyForSizes " + (lastKeyForSizes == null ? "null" : ((KeyCacheObjectImpl)lastKeyForSizes).value()));
+
             if (reconConsist || reconSize) {
                 try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
                     cacheDataStore.reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA)  :
@@ -353,25 +358,28 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                    }
 
                         CacheDataRow row = cursor.get();
+                        System.out.println("qkljiddfvbj " + ((KeyCacheObjectImpl)row.key()).value());
 
-                        if (reconConsist) {
-                            if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0) {
-                                partEntryHashRecords.add(new VersionedKey(
-                                    ignite.localNode().id(),
-                                    row.key(),
-                                    row.version()
-                                ));
-                            }
-                            else
-                                i--;
+                        if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) >= 0)
+                            i--;
+                        else if (reconConsist && (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0)) {
+                            System.out.println("asdghfgjioiyil " + ((KeyCacheObjectImpl)row.key()).value());
+
+                            newLowerKey = row.key();
+
+                            partEntryHashRecords.add(new VersionedKey(
+                                ignite.localNode().id(),
+                                row.key(),
+                                row.version()
+                            ));
                         }
                     }
 
-//                    System.out.println("qwerdfchg reconSize " + reconSize);
-//                    System.out.println("qwerdfchg partReconciliationCtx.lastKey(cacheId) " + partReconciliationCtx.lastKey(cacheId));
-//                    System.out.println("qwerdfchg partReconciliationCtx.isReconciliationInProgress(cacheId) " + partReconciliationCtx.isReconciliationInProgress(cacheId));
+                    System.out.println("wfgsbfdgb reconSize " + reconSize);
+//                    System.out.println("fsgbfdgnhn partReconciliationCtx.lastKey(cacheId) " + partReconciliationCtx.lastKey(cacheId));
+//                    System.out.println("fgnnytnjm partReconciliationCtx.isReconciliationInProgress(cacheId) " + partReconciliationCtx.isReconciliationInProgress(cacheId));
 
-                    if (reconSize && (partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
+                    if (reconSize && ((partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && (lowerKey == null || lowerKey.equals(newLowerKey))) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
 
                         System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
 
@@ -395,7 +403,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                                 partSize.addAndGet(1);
 
-                                System.out.println("qkoplstfo in recon final increment: key " + entry.getKey() + " reconSize " + partSize);
+                                System.out.println("qkoplstfo in recon final: tempMap iter add delta and remove key: key " + entry.getKey() + " reconSize " + partSize);
 
                             }
 

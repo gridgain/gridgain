@@ -6221,8 +6221,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             Map<KeyCacheObject, Boolean> newTempMap = new ConcurrentHashMap<>();
 
+            System.out.println("sdfjuldbkfd reconCursor " + reconCursor);
+
             if (reconCursor && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(cacheId)) {
                 reconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
+                System.out.println("qjidfjgoifgs");
+
                 reconciliationCtx.sizes.putIfAbsent(cacheId, new AtomicLong());
 
                 AtomicLong reconSize = reconciliationCtx.sizes.get(cacheId);

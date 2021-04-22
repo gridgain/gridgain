@@ -30,6 +30,8 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -40,6 +42,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -48,6 +51,10 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static java.lang.Thread.sleep;
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
 /**
  * Tests count of calls the recheck process with different inputs.
@@ -58,9 +65,9 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     protected static int backups = 1;
 
-    static int startKey = 0;
+    static int startKey;
 
-    static int endKey = 1000;
+    static int endKey;
 
     static AtomicReference<ReconciliationResult> reconResult = new AtomicReference<>();
 
@@ -164,25 +171,25 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        CollectPartitionKeysByBatchTask.CollectPartitionKeysByBatchJob.execute0
     }
 
-    @Test
-    public void test1() throws Exception {
-//        CollectPartitionKeysByBatchTask.msg.clear();
-//        CollectPartitionKeysByBatchTask.msg1.clear();
-        BPlusTree.i0 = 0;
-        clear0 = 0;
-        clear1 = 0;
-
-        IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
-
-        int startKey = 0;
-//        int endKey = 337;
-        int endKey = 2;
-
-        cache.put(1, 1);
-        cache.remove(1);
+//    @Test
+//    public void test1() throws Exception {
+////        CollectPartitionKeysByBatchTask.msg.clear();
+////        CollectPartitionKeysByBatchTask.msg1.clear();
+//        BPlusTree.i0 = 0;
+//        clear0 = 0;
+//        clear1 = 0;
+//
+//        IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
+//
+//        int startKey = 0;
+////        int endKey = 337;
+//        int endKey = 2;
+//
 //        cache.put(1, 1);
-        cache.remove(1);
-    }
+//        cache.remove(1);
+////        cache.put(1, 1);
+//        cache.remove(1);
+//    }
 
     volatile int clear0;
     volatile int clear1;
@@ -754,25 +761,72 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //        long delta00 = ((internalCache(grid(0).cache(DEFAULT_CACHE_NAME)).context().topology().localPartition(0).dataStore())).reconciliationCtx().storageSizeDelta(cacheId);
     }
 
+    private CacheConfiguration getCacheConfig(CacheAtomicityMode cacheAtomicityMode, CacheMode cacheMode, int backupCount, int partCount, String cacheGroup) {
+        CacheConfiguration ccfg = new CacheConfiguration();
+        ccfg.setName(DEFAULT_CACHE_NAME);
+        if (cacheGroup != null)
+            ccfg.setGroupName(cacheGroup);
+        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, partCount));
+        ccfg.setBackups(backupCount);
+        ccfg.setAtomicityMode(cacheAtomicityMode);
+        ccfg.setCacheMode(cacheMode);
+
+        return ccfg;
+    }
+
     @Test
-//    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-    public void testRepairUnderLoad0() throws Exception {
-
-        CacheConfiguration ccfg0 = new CacheConfiguration();
-        ccfg0.setName(DEFAULT_CACHE_NAME);
-        ccfg0.setGroupName("zzz");
-        ccfg0.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg0.setAffinity(new RendezvousAffinityFunction(false, 9));
-        ccfg0.setBackups(0);
-        ccfg0.setAtomicityMode(CacheAtomicityMode.ATOMIC);
-        ccfg0.setCacheMode(CacheMode.PARTITIONED);
-
-        client.createCache(ccfg0);
-
-        IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
+    public void test0() throws Exception {
+        nodesCnt = 1;
 
         startKey = 0;
-        endKey = 5000;
+        endKey = 2000;
+
+        test(Arrays.asList(getCacheConfig(ATOMIC, PARTITIONED, 0, 1, null)),
+            Collections.emptyList()
+        );
+    }
+
+    @Test
+    public void test1() throws Exception {
+        nodesCnt = 3;
+
+        startKey = 0;
+        endKey = 500;
+
+        test(Arrays.asList(getCacheConfig(ATOMIC, PARTITIONED, 0, 12, "testCacheGroup1")),
+            Collections.emptyList()
+        );
+    }
+
+    @Test
+    public void test2() throws Exception {
+        nodesCnt = 4;
+
+        startKey = 0;
+        endKey = 2000;
+
+        test(Arrays.asList(getCacheConfig(TRANSACTIONAL, PARTITIONED, 2, 12, null)),
+            Collections.emptyList()
+        );
+    }
+
+    @Test
+    public void test3() throws Exception {
+        nodesCnt = 4;
+
+        startKey = 0;
+        endKey = 10000;
+
+        test(Arrays.asList(getCacheConfig(ATOMIC, REPLICATED, 0, 12, null)),
+            Collections.emptyList()
+        );
+    }
+
+    private void test(List<CacheConfiguration> cachesToCheck, List<CacheConfiguration> otherCaches) throws Exception {
+        cachesToCheck.forEach(ccfg -> client.createCache(ccfg));
+
+        IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
         for (int i = startKey; i < endKey; i++) {
             i += 1;
@@ -784,7 +838,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         int startSize = cache.size();
 
-        breakCacheSizes(Arrays.asList(grid(0), grid(1), grid(2)/*, grid(3)*/), Arrays.asList(DEFAULT_CACHE_NAME));
+        breakCacheSizes(Arrays.asList(grid(0)/*, grid(1), grid(2), grid(3)*/), Arrays.asList(DEFAULT_CACHE_NAME));
 
         assertFalse(cache.size() == startSize);
 
@@ -792,13 +846,13 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
-        builder.parallelism(3);
+        builder.parallelism(1);
 //        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
         Set<String> objects = new HashSet<>();
         objects.add(DEFAULT_CACHE_NAME);
 //        objects.add("qqq");
         builder.caches(objects);
-        builder.batchSize(100);
+        builder.batchSize(50);
 
 
         reconResult = new AtomicReference<>();
@@ -944,7 +998,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
                     i1 = startKey + rnd.nextInt(endKey - startKey)/* + ((endKey - startKey) / 10)*/;
                     cache.remove(i1);
 
-                if (i1 % 5 == 0)
+                if (i1 % 7 == 0)
                     cache.clear();
             }
         });
