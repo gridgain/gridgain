@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import org.apache.commons.collections.iterators.EmptyIterator;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.spi.metric.ReadOnlyMetricManager;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
