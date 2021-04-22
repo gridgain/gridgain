@@ -20,6 +20,8 @@ import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.zip.Deflater;
 import javax.cache.configuration.Factory;
 import javax.cache.event.CacheEntryListener;
@@ -614,6 +616,9 @@ public class IgniteConfiguration {
     /** Sql initial config. */
     private SqlConfiguration sqlCfg = new SqlConfiguration();
 
+    /** Executor for async operations continuations. */
+    private Executor asyncContinuationExecutor;
+
     /** Shutdown policy for cluster. */
     public ShutdownPolicy shutdown = DFLT_SHUTDOWN_POLICY;
 
@@ -741,6 +746,7 @@ public class IgniteConfiguration {
         warmupClos = cfg.getWarmupClosure();
         sqlCfg = cfg.getSqlConfiguration();
         shutdown = cfg.getShutdownPolicy();
+        asyncContinuationExecutor = cfg.getAsyncContinuationExecutor();
     }
 
     /**
@@ -3705,6 +3711,37 @@ public class IgniteConfiguration {
         A.ensure(sqlInitCfg != null, "SQL initial configuration cannot be null");
 
         this.sqlCfg = sqlInitCfg;
+
+        return this;
+    }
+
+    /**
+     * Gets the continuation executor for cache async APIs.
+     * <p />
+     * When <code>null</code> (default), {@link ForkJoinPool#commonPool()} is used.
+     * <p />
+     * When async operation completes, corresponding {@link org.apache.ignite.lang.IgniteFuture} listeners
+     * will be invoked using this executor.
+     *
+     * @return Executor for async continuations.
+     */
+    public Executor getAsyncContinuationExecutor() {
+        return asyncContinuationExecutor;
+    }
+
+    /**
+     * Sets the continuation executor for cache async APIs.
+     * <p />
+     * When <code>null</code> (default), {@link ForkJoinPool#commonPool()} is used.
+     * <p />
+     * When async operation completes, corresponding {@link org.apache.ignite.lang.IgniteFuture} listeners
+     * will be invoked using this executor.
+     *
+     * @param asyncContinuationExecutor Executor for async continuations.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setAsyncContinuationExecutor(Executor asyncContinuationExecutor) {
+        this.asyncContinuationExecutor = asyncContinuationExecutor;
 
         return this;
     }
