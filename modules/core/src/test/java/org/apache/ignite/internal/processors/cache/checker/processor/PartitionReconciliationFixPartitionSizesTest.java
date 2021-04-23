@@ -49,6 +49,8 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static java.lang.Thread.sleep;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -59,15 +61,27 @@ import static org.apache.ignite.cache.CacheMode.REPLICATED;
 /**
  * Tests count of calls the recheck process with different inputs.
  */
+@RunWith(Parameterized.class)
 public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static int nodesCnt = 3;
-
-    protected static int backups = 1;
-
-    static int startKey;
-
-    static int endKey;
+    @Parameterized.Parameter(0)
+    public static int nodesCnt;
+    @Parameterized.Parameter(1)
+    public static int startKey;
+    @Parameterized.Parameter(2)
+    public static int endKey;
+    @Parameterized.Parameter(3)
+    public static CacheAtomicityMode cacheAtomicityMode;
+    @Parameterized.Parameter(4)
+    public static CacheMode cacheMode;
+    @Parameterized.Parameter(5)
+    public static int backupCount;
+    @Parameterized.Parameter(6)
+    public static int partCount;
+    @Parameterized.Parameter(7)
+    public static String cacheGroup;
+    @Parameterized.Parameter(8)
+    public static int batchSize;
 
     static AtomicReference<ReconciliationResult> reconResult = new AtomicReference<>();
 
@@ -113,12 +127,6 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         stopAllGrids();
 
         cleanPersistenceDir();
-
-        ig = startGrids(nodesCnt);
-
-        client = startClientGrid(nodesCnt);
-
-        ig.cluster().active(true);
     }
 
     /** {@inheritDoc} */
@@ -774,57 +782,118 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         return ccfg;
     }
+//    getCacheConfig(CacheAtomicityMode cacheAtomicityMode, CacheMode cacheMode, int backupCount, int partCount, String cacheGroup) {
+    /**
+     *
+     */
+    @Parameterized.Parameters(name = "nodesCnt = {0}, startKey = {1}, endKey = {2}, cacheAtomicityMode = {3}, cacheMode = {4}, " +
+        "backupCount = {5}, partCount = {6}, cacheGroup = {7}, batchSize = {8}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>();
 
-    @Test
-    public void test0() throws Exception {
-        nodesCnt = 1;
+        CacheAtomicityMode[] atomicityModes = new CacheAtomicityMode[] {
+            CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
 
-        startKey = 0;
-        endKey = 2000;
+//        for (CacheAtomicityMode atomicityMode : atomicityModes) {
+        params.add(new Object[] {1, 0, 2000, ATOMIC, PARTITIONED, 0, 1, null, 100});
+        params.add(new Object[] {3, 0, 500, ATOMIC, PARTITIONED, 0, 12, "testCacheGroup1", 100});
+        params.add(new Object[] {4, 0, 2000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 100});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 100});
 
-        test(Arrays.asList(getCacheConfig(ATOMIC, PARTITIONED, 0, 1, null)),
-            Collections.emptyList()
-        );
+        params.add(new Object[] {1, 0, 2000, ATOMIC, PARTITIONED, 0, 1, null, 10});
+        params.add(new Object[] {3, 0, 500, ATOMIC, PARTITIONED, 0, 12, "testCacheGroup1", 10});
+        params.add(new Object[] {4, 0, 2000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 10});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 10});
+
+        params.add(new Object[] {1, 0, 2000, ATOMIC, PARTITIONED, 0, 1, null, 1});
+        params.add(new Object[] {3, 0, 500, ATOMIC, PARTITIONED, 0, 12, "testCacheGroup1", 1});
+        params.add(new Object[] {4, 0, 2000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1});
+//        }
+
+        return params;
     }
 
+//    @Test
+//    public void test0() throws Exception {
+//        nodesCnt = 1;
+//
+//        startKey = 0;
+//        endKey = 2000;
+//
+//        test(Arrays.asList(getCacheConfig(ATOMIC, PARTITIONED, 0, 1, null)),
+//            Collections.emptyList()
+//        );
+//    }
+//
+//    @Test
+//    public void test1() throws Exception {
+//        nodesCnt = 3;
+//
+//        startKey = 0;
+//        endKey = 500;
+//
+//        test(Arrays.asList(getCacheConfig(ATOMIC, PARTITIONED, 0, 12, "testCacheGroup1")),
+//            Collections.emptyList()
+//        );
+//    }
+//
+//    @Test
+//    public void test2() throws Exception {
+//        nodesCnt = 4;
+//
+//        startKey = 0;
+//        endKey = 2000;
+//
+//        test(Arrays.asList(getCacheConfig(TRANSACTIONAL, PARTITIONED, 2, 12, null)),
+//            Collections.emptyList()
+//        );
+//    }
+//
+//    @Test
+//    public void test3() throws Exception {
+//        nodesCnt = 4;
+//
+//        startKey = 0;
+//        endKey = 10000;
+//
+//        test(Arrays.asList(getCacheConfig(ATOMIC, REPLICATED, 0, 12, null)),
+//            Collections.emptyList()
+//        );
+//    }
+
     @Test
-    public void test1() throws Exception {
-        nodesCnt = 3;
+    public void test() throws Exception {
+        ig = startGrids(nodesCnt);
 
-        startKey = 0;
-        endKey = 500;
+        client = startClientGrid(nodesCnt);
 
-        test(Arrays.asList(getCacheConfig(ATOMIC, PARTITIONED, 0, 12, "testCacheGroup1")),
-            Collections.emptyList()
+        ig.cluster().active(true);
+
+        client.createCache(
+            getCacheConfig(cacheAtomicityMode, cacheMode, backupCount, partCount, cacheGroup)
         );
-    }
 
-    @Test
-    public void test2() throws Exception {
-        nodesCnt = 4;
-
-        startKey = 0;
-        endKey = 2000;
-
-        test(Arrays.asList(getCacheConfig(TRANSACTIONAL, PARTITIONED, 2, 12, null)),
-            Collections.emptyList()
-        );
-    }
-
-    @Test
-    public void test3() throws Exception {
-        nodesCnt = 4;
-
-        startKey = 0;
-        endKey = 10000;
-
-        test(Arrays.asList(getCacheConfig(ATOMIC, REPLICATED, 0, 12, null)),
-            Collections.emptyList()
-        );
-    }
-
-    private void test(List<CacheConfiguration> cachesToCheck, List<CacheConfiguration> otherCaches) throws Exception {
-        cachesToCheck.forEach(ccfg -> client.createCache(ccfg));
+//        @Parameterized.Parameter(0)
+//        protected static int nodesCnt;
+//        @Parameterized.Parameter(1)
+//        protected static int backups;
+//        @Parameterized.Parameter(2)
+//        static int startKey;
+//        @Parameterized.Parameter(3)
+//        static int endKey;
+//        @Parameterized.Parameter(4)
+//        CacheAtomicityMode cacheAtomicityMode;
+//        @Parameterized.Parameter(5)
+//        CacheMode cacheMode;
+//        @Parameterized.Parameter(6)
+//        int backupCount;
+//        @Parameterized.Parameter(7)
+//        int partCount;
+//        @Parameterized.Parameter(8)
+//        String cacheGroup;
+//        @Parameterized.Parameter(8)
+//        int batchSize;
 
         IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
@@ -852,7 +921,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         objects.add(DEFAULT_CACHE_NAME);
 //        objects.add("qqq");
         builder.caches(objects);
-        builder.batchSize(50);
+        builder.batchSize(batchSize);
 
 
         reconResult = new AtomicReference<>();

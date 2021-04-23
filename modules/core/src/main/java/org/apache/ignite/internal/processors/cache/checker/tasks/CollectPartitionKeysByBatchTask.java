@@ -337,9 +337,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             else if (reconSize && lastKeyForSizes != null)
                 keyToStart = lastKeyForSizes;
 
-            System.out.println("asdijfliuue keyToStart " + (keyToStart == null ? "null" : ((KeyCacheObjectImpl)keyToStart).value()));
-            System.out.println("fhdjmrtjut lowerKey " + (lowerKey == null ? "null" : ((KeyCacheObjectImpl)lowerKey).value()));
-            System.out.println("rsathtyjtq45 lastKeyForSizes " + (lastKeyForSizes == null ? "null" : ((KeyCacheObjectImpl)lastKeyForSizes).value()));
+//            System.out.println("asdijfliuue keyToStart " + (keyToStart == null ? "null" : ((KeyCacheObjectImpl)keyToStart).value()));
+//            System.out.println("fhdjmrtjut lowerKey " + (lowerKey == null ? "null" : ((KeyCacheObjectImpl)lowerKey).value()));
+//            System.out.println("rsathtyjtq45 lastKeyForSizes " + (lastKeyForSizes == null ? "null" : ((KeyCacheObjectImpl)lastKeyForSizes).value()));
 
             if (reconConsist || reconSize) {
                 try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
@@ -358,12 +358,12 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                    }
 
                         CacheDataRow row = cursor.get();
-                        System.out.println("qkljiddfvbj " + ((KeyCacheObjectImpl)row.key()).value());
+//                        System.out.println("qkljiddfvbj " + ((KeyCacheObjectImpl)row.key()).value());
 
                         if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) >= 0)
                             i--;
                         else if (reconConsist && (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0)) {
-                            System.out.println("asdghfgjioiyil " + ((KeyCacheObjectImpl)row.key()).value());
+//                            System.out.println("asdghfgjioiyil " + ((KeyCacheObjectImpl)row.key()).value());
 
                             newLowerKey = row.key();
 
@@ -375,7 +375,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         }
                     }
 
-                    System.out.println("wfgsbfdgb reconSize " + reconSize);
+//                    System.out.println("wfgsbfdgb reconSize " + reconSize);
 //                    System.out.println("fsgbfdgnhn partReconciliationCtx.lastKey(cacheId) " + partReconciliationCtx.lastKey(cacheId));
 //                    System.out.println("fgnnytnjm partReconciliationCtx.isReconciliationInProgress(cacheId) " + partReconciliationCtx.isReconciliationInProgress(cacheId));
 
