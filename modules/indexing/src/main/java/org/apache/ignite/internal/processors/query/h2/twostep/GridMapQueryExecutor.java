@@ -213,81 +213,86 @@ public class GridMapQueryExecutor {
         final boolean lazy = req.isFlagSet(GridH2QueryRequest.FLAG_LAZY);
         boolean treatReplicatedAsPartitioned = req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED_AS_PARTITIONED);
 
-        Boolean dataPageScanEnabled = req.isDataPageScanEnabled();
+        try {
+            Boolean dataPageScanEnabled = req.isDataPageScanEnabled();
 
-        final List<Integer> cacheIds = req.caches();
+            final List<Integer> cacheIds = req.caches();
 
-        int segments = explain || replicated || F.isEmpty(cacheIds) ? 1 :
-            CU.firstPartitioned(ctx.cache().context(), cacheIds).config().getQueryParallelism();
+            int segments = explain || replicated || F.isEmpty(cacheIds) ? 1 :
+                CU.firstPartitioned(ctx.cache().context(), cacheIds).config().getQueryParallelism();
 
-        final Object[] params = req.parameters();
+            final Object[] params = req.parameters();
 
-        final int timeout = req.timeout() > 0 || req.explicitTimeout()
-            ? req.timeout()
-            : (int)h2.distributedConfiguration().defaultQueryTimeout();
+            final int timeout = req.timeout() > 0 || req.explicitTimeout()
+                ? req.timeout()
+                : (int)h2.distributedConfiguration().defaultQueryTimeout();
 
-        for (int i = 1; i < segments; i++) {
-            assert !F.isEmpty(cacheIds);
+            for (int i = 1; i < segments; i++) {
+                assert !F.isEmpty(cacheIds);
 
-            final int segment = i;
+                final int segment = i;
 
-            Span span = MTC.span();
+                Span span = MTC.span();
 
-            ctx.closure().callLocal(
-                (Callable<Void>)() -> {
-                    try (TraceSurroundings ignored = MTC.supportContinual(span)) {
-                        onQueryRequest0(
-                            node,
-                            req.requestId(),
-                            segment,
-                            req.schemaName(),
-                            req.queries(),
-                            cacheIds,
-                            req.topologyVersion(),
-                            partsMap,
-                            parts,
-                            req.pageSize(),
-                            distributedJoins,
-                            enforceJoinOrder,
-                            false,
-                            timeout,
-                            params,
-                            lazy,
-                            req.mvccSnapshot(),
-                            dataPageScanEnabled,
-                            req.maxMemory(),
-                            req.runningQryId(),
-                            treatReplicatedAsPartitioned
-                        );
-                        return null;
-                    }
-                },
-                QUERY_POOL);
+                ctx.closure().callLocal(
+                    (Callable<Void>)() -> {
+                        try (TraceSurroundings ignored = MTC.supportContinual(span)) {
+                            onQueryRequest0(
+                                node,
+                                req.requestId(),
+                                segment,
+                                req.schemaName(),
+                                req.queries(),
+                                cacheIds,
+                                req.topologyVersion(),
+                                partsMap,
+                                parts,
+                                req.pageSize(),
+                                distributedJoins,
+                                enforceJoinOrder,
+                                false,
+                                timeout,
+                                params,
+                                lazy,
+                                req.mvccSnapshot(),
+                                dataPageScanEnabled,
+                                req.maxMemory(),
+                                req.runningQryId(),
+                                treatReplicatedAsPartitioned
+                            );
+                            return null;
+                        }
+                    },
+                    QUERY_POOL);
+            }
+
+            onQueryRequest0(
+                node,
+                req.requestId(),
+                0,
+                req.schemaName(),
+                req.queries(),
+                cacheIds,
+                req.topologyVersion(),
+                partsMap,
+                parts,
+                req.pageSize(),
+                distributedJoins,
+                enforceJoinOrder,
+                replicated,
+                timeout,
+                params,
+                lazy,
+                req.mvccSnapshot(),
+                dataPageScanEnabled,
+                req.maxMemory(),
+                req.runningQryId(),
+                treatReplicatedAsPartitioned
+            );
         }
-
-        onQueryRequest0(
-            node,
-            req.requestId(),
-            0,
-            req.schemaName(),
-            req.queries(),
-            cacheIds,
-            req.topologyVersion(),
-            partsMap,
-            parts,
-            req.pageSize(),
-            distributedJoins,
-            enforceJoinOrder,
-            replicated,
-            timeout,
-            params,
-            lazy,
-            req.mvccSnapshot(),
-            dataPageScanEnabled,
-            req.maxMemory(),
-            req.runningQryId(),
-            treatReplicatedAsPartitioned
-        );
+        catch (Throwable e) {
+            sendError(node, req.requestId(), e);
+        }
     }
 
     /**

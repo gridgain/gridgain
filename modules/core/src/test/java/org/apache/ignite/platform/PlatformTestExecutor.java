@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache;
+package org.apache.ignite.platform;
 
-import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import java.util.concurrent.Executor;
 
 /**
- *
+ * Test executor.
  */
-public class IgniteFinishedCacheFutureImpl<V> extends IgniteCacheFutureImpl<V> {
-    /**
-     * @param err Error.
-     */
-    public IgniteFinishedCacheFutureImpl(Throwable err) {
-        super(new GridFinishedFuture<V>(err), null);
+public class PlatformTestExecutor implements Executor {
+    /** {@inheritDoc} */
+    @Override public void execute(Runnable runnable) {
+        runnable.run();
     }
 }
