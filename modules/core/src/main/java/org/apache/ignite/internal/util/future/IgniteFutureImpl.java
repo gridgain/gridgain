@@ -37,13 +37,25 @@ public class IgniteFutureImpl<V> implements IgniteFuture<V> {
     /** */
     protected final IgniteInternalFuture<V> fut;
 
+    /** */
+    protected final Executor defaultExecutor;
+
     /**
      * @param fut Future.
      */
     public IgniteFutureImpl(IgniteInternalFuture<V> fut) {
+        this(fut, null);
+    }
+
+    /**
+     * @param fut Future.
+     * @param defaultExecutor Default executor.
+     */
+    public IgniteFutureImpl(IgniteInternalFuture<V> fut, @Nullable Executor defaultExecutor) {
         assert fut != null;
 
         this.fut = fut;
+        this.defaultExecutor = defaultExecutor;
     }
 
     /**
@@ -67,7 +79,10 @@ public class IgniteFutureImpl<V> implements IgniteFuture<V> {
     @Override public void listen(IgniteInClosure<? super IgniteFuture<V>> lsnr) {
         A.notNull(lsnr, "lsnr");
 
-        fut.listen(new InternalFutureListener(lsnr));
+        if (defaultExecutor != null && !isDone())
+            fut.listen(new InternalFutureListener(new AsyncFutureListener<>(lsnr, defaultExecutor)));
+        else
+            fut.listen(new InternalFutureListener(lsnr));
     }
 
     /** {@inheritDoc} */
@@ -80,7 +95,7 @@ public class IgniteFutureImpl<V> implements IgniteFuture<V> {
 
     /** {@inheritDoc} */
     @Override public <T> IgniteFuture<T> chain(final IgniteClosure<? super IgniteFuture<V>, T> doneCb) {
-        return new IgniteFutureImpl<>(chainInternal(doneCb, null));
+        return new IgniteFutureImpl<>(chainInternal(doneCb, null), defaultExecutor);
     }
 
     /** {@inheritDoc} */
@@ -89,7 +104,7 @@ public class IgniteFutureImpl<V> implements IgniteFuture<V> {
         A.notNull(doneCb, "doneCb");
         A.notNull(exec, "exec");
 
-        return new IgniteFutureImpl<>(chainInternal(doneCb, exec));
+        return new IgniteFutureImpl<>(chainInternal(doneCb, exec), defaultExecutor);
     }
 
     /**
@@ -113,6 +128,9 @@ public class IgniteFutureImpl<V> implements IgniteFuture<V> {
 
         if (exec != null)
             return fut.chain(clos, exec);
+
+        if (defaultExecutor != null && !isDone())
+            return fut.chain(clos, defaultExecutor);
 
         return fut.chain(clos);
     }
