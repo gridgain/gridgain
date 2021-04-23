@@ -21,8 +21,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -59,6 +61,7 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitio
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
@@ -74,6 +77,7 @@ import org.mockito.verification.VerificationMode;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -407,7 +411,7 @@ public class PartitionReconciliationProcessorTest {
             when(igniteMock.compute(any())).thenReturn(igniteComputeMock);
 
             return new MockedProcessor(igniteMock, Collections.emptyList(), fixMode, parallelismLevel,
-                10, MAX_RECHECK_ATTEMPTS, 10);
+                10, MAX_RECHECK_ATTEMPTS, 10, new HashSet<>(Arrays.asList(CONSISTENCY)));
         }
 
         /**
@@ -420,7 +424,8 @@ public class PartitionReconciliationProcessorTest {
             int parallelismLevel,
             int batchSize,
             int recheckAttempts,
-            int recheckDelay
+            int recheckDelay,
+            Set<ReconType> reconTypes
         ) throws IgniteCheckedException {
             super(SESSION_ID,
                 ignite,
@@ -432,6 +437,7 @@ public class PartitionReconciliationProcessorTest {
                 batchSize,
                 recheckAttempts,
                 recheckDelay,
+                reconTypes,
                 false,
                 true);
         }

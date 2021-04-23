@@ -3191,7 +3191,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             CacheDataStore delegate = init0(true);
 
             if (delegate != null)
-                return delegate.cursor(cacheId, lower, upper, x, snapshot, flags);
+                return delegate.reconCursor(cacheId, lower, upper, x, snapshot, flags);
 
             return EMPTY_CURSOR;
         }

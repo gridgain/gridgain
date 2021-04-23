@@ -19,13 +19,21 @@ package org.apache.ignite.internal.visor.checker;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.U;
+
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 
 /**
  * Partition reconciliation task arguments.
@@ -74,6 +82,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** Recheck delay seconds. */
     private int recheckDelay;
 
+    Set<ReconType> reconTypes;
+
     /**
      * Default constructor.
      */
@@ -108,7 +118,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         int batchSize,
         int recheckAttempts,
         RepairAlgorithm repairAlg,
-        int recheckDelay
+        int recheckDelay,
+        Set<ReconType> reconTypes
     ) {
         this.caches = caches;
         this.fastCheck = fastCheck;
@@ -120,6 +131,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
         this.recheckDelay = recheckDelay;
+        this.reconTypes = reconTypes;
     }
 
     /**
@@ -137,7 +149,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
              b.batchSize,
              b.recheckAttempts,
              b.repairAlg,
-             b.recheckDelay);
+             b.recheckDelay,
+             b.reconTypes);
 
         if (b.partsToRepair != null) {
             partsToRepair = b.partsToRepair
@@ -176,6 +189,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         out.writeBoolean(fastCheck);
 
         U.writeIntKeyMap(out, partsToRepair);
+
+        U.writeCollection(out, reconTypes);
     }
 
     /** {@inheritDoc} */
@@ -204,6 +219,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
             partsToRepair = U.readIntKeyMap(in);
         }
+
+        reconTypes = U.readSet(in);
     }
 
     /**
@@ -284,6 +301,10 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         return recheckDelay;
     }
 
+    public Set<ReconType> reconTypes() {
+        return reconTypes;
+    }
+
     /**
      * Builder class for test purposes.
      */
@@ -330,6 +351,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /** Recheck delay seconds. */
         private int recheckDelay;
 
+        Set<ReconType> reconTypes;
+
         /**
          * Default constructor.
          */
@@ -344,6 +367,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = 2;
             recheckDelay = 1;
             repairAlg = RepairAlgorithm.defaultValue();
+            reconTypes = new HashSet<>(Arrays.asList(CONSISTENCY, SIZES));
         }
 
         /**
@@ -364,6 +388,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = cpFrom.recheckAttempts;
             recheckDelay = cpFrom.recheckDelay;
             repairAlg = cpFrom.repairAlg;
+            reconTypes = cpFrom.reconTypes;
         }
 
         /**
@@ -480,6 +505,12 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
          */
         public Builder recheckDelay(int recheckDelay) {
             this.recheckDelay = recheckDelay;
+
+            return this;
+        }
+
+        public Builder reconTypes(Set<ReconType> reconTypes) {
+            this.reconTypes = reconTypes;
 
             return this;
         }

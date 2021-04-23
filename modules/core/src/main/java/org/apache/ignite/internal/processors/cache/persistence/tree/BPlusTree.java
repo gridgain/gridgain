@@ -460,8 +460,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (needWal)
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
-            if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.isReconciliationInProgress(newRow0.cacheId()))
+//            System.out.println("awsdekjvidfbljkn");
+            if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.isReconciliationInProgress(newRow0.cacheId())) {
                 p.reconReplace(oldRowReaded ? oldRow : getRow(io, pageAddr, idx), newRow);
+//                System.out.println("dskjfjdgfgh");
+            }
 
             return FOUND;
         }
@@ -3290,12 +3293,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         public void reconInsert(L newRow) {
-            System.out.println("qglopdslt " + newRow);
+//            System.out.println("qglopdslt " + newRow);
 
             if (newRow instanceof CacheDataRowAdapter) {
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
 
-                System.out.println("qbgfdgodh " + row0.cacheId());
+//                System.out.println("qbgfdgodh " + row0.cacheId());
 
                 reconciliationCtx.tempMap.putIfAbsent(row0.cacheId(), new ConcurrentHashMap<>());
 
@@ -3421,8 +3424,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (row instanceof SearchRow/* && reconciliationCtx.isBatchesInProgress()*/) {
                 SearchRow row0 = (SearchRow)row;
 
-                System.out.println("qwlpodfjhg reconRemoveFromLeaf row " + row + " " + Thread.currentThread().getName());
-                System.out.println("qfgdfghjkiu row " + row0.cacheId());
+//                System.out.println("qwlpodfjhg reconRemoveFromLeaf row " + row + " " + Thread.currentThread().getName());
+//                System.out.println("qfgdfghjkiu row " + row0.cacheId());
 
                 reconciliationCtx.tempMap.putIfAbsent(row0.cacheId(), new ConcurrentHashMap<>());
 
@@ -3430,12 +3433,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 reconRemove(row0.cacheId(), row0.key());
             }
-            else
-                System.out.println("qvdmdfk not a SearchRow");
+//            else
+//                System.out.println("qvdmdfk not a SearchRow");
         }
 
         public void reconReplace(L oldRow, L newRow) {
-            System.out.println("qbfkiurtd " + newRow);
+//            System.out.println("qbfkiurtd " + newRow);
 
             if (newRow instanceof CacheDataRowAdapter/* && reconciliationCtx.isBatchesInProgress()*/) {
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
@@ -3462,12 +3465,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 reconRemove(row0.cacheId(), row0.key());
                 }
                 else if (row0.isReady() && !row0.tombstone() && (/*oldRow == null || */oldIsTombstone)) {
-                    System.out.println("reconInsert in Replace start");
+//                    System.out.println("reconInsert in Replace start");
                     reconInsert(newRow);
-                    System.out.println("reconInsert in Replace finish");
+//                    System.out.println("reconInsert in Replace finish");
                 }
                 else {
-                    System.out.println("In reconReplace ELSE");
+//                    System.out.println("In reconReplace ELSE");
                 }
             }
 
@@ -5047,8 +5050,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 //                }
 
                 if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(row0.cacheId()) && rmvd != null && !oldIsTombstone) {
-                    System.out.println("qfdskgteri rmvd " + rmvd);
-                    System.out.println("qfpolgjki RemoveFromLeaf");
+//                    System.out.println("qfdskgteri rmvd " + rmvd);
+//                    System.out.println("qfpolgjki RemoveFromLeaf");
 //                    try {
 //                        sleep(1);
 //                    }
@@ -5061,8 +5064,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 //                    System.out.println("qjfpilkrefg tombstone");
 //                }
 
-                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(row0.cacheId()) && (rmvd == null || oldIsTombstone))
-                    System.out.println("qjfpilkrefg tombstone");
+//                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(row0.cacheId()) && (rmvd == null || oldIsTombstone))
+//                    System.out.println("qjfpilkrefg tombstone");
             }
 
 
@@ -6221,11 +6224,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             Map<KeyCacheObject, Boolean> newTempMap = new ConcurrentHashMap<>();
 
-            System.out.println("sdfjuldbkfd reconCursor " + reconCursor);
+//            System.out.println("sdfjuldbkfd reconCursor " + reconCursor);
 
             if (reconCursor && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(cacheId)) {
                 reconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
-                System.out.println("qjidfjgoifgs");
+//                System.out.println("qjidfjgoifgs");
 
                 reconciliationCtx.sizes.putIfAbsent(cacheId, new AtomicLong());
 
@@ -6249,11 +6252,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             continue;
 
                             newTempMap.put(row0.key(), true);
-                        System.out.println("qopvtsjhx in cursor put to newTempMap " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
-                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                            " ||| storageSize:" + reconSize.get());
+//                        System.out.println("qopvtsjhx in cursor put to newTempMap " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                            " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)row0.key()).value() +
+//                            " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+//                            " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)row0.key()).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+//                            " ||| storageSize:" + reconSize.get());
 
                         if (firstKey == null)
                             firstKey = row0.key();
@@ -6264,12 +6267,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 if (firstKey != null) {
                     reconciliationCtx.firstKey(cacheId, firstKey);
-                    System.out.println("qpltfdos in cursor new firstKey " + firstKey + " " + (firstKey == null ? "null" : ((KeyCacheObjectImpl)firstKey).value()));
+//                    System.out.println("qpltfdos in cursor new firstKey " + firstKey + " " + (firstKey == null ? "null" : ((KeyCacheObjectImpl)firstKey).value()));
                 }
 
                 if (lastKey != null) {
                     reconciliationCtx.lastKey(cacheId, lastKey);
-                    System.out.println("qpltfdos in cursor new lastKey " + lastKey + " " + (lastKey == null ? "null" : ((KeyCacheObjectImpl)lastKey).value()));
+//                    System.out.println("qpltfdos in cursor new lastKey " + lastKey + " " + (lastKey == null ? "null" : ((KeyCacheObjectImpl)lastKey).value()));
                 }
 
                 if (!newTempMap.isEmpty()) {
@@ -6314,11 +6317,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                                 partSize.incrementAndGet();
 
-                                System.out.println("qnjdpogtd RECON tempMap iter add delta and remove key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
-                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                    " ||| storageSize:" + reconSize.get());
+//                                System.out.println("qnjdpogtd RECON tempMap iter add delta and remove key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+//                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+//                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+//                                    " ||| storageSize:" + reconSize.get());
 
 
                                 return null;
@@ -6331,11 +6334,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                     e.printStackTrace();
                                 }
 
-                                System.out.println("qvnjduptf RECON tempMap iter remove key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
-                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
-                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
-                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
-                                    " ||| storageSize:" + reconSize.get());
+//                                System.out.println("qvnjduptf RECON tempMap iter remove key: " + Thread.currentThread().getName().substring(Thread.currentThread().getName().length() - 6) +
+//                                    " updateSize inner if. _key_: " + ((KeyCacheObjectImpl)k).value() +
+//                                    " ||| _lastKey_:" + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value()) +
+//                                    " ||| compare: " + (reconciliationCtx.lastKey(cacheId) == null ? "null" : ((Integer)((KeyCacheObjectImpl)k).value()) > ((Integer)((KeyCacheObjectImpl)reconciliationCtx.lastKey(cacheId)).value())) +
+//                                    " ||| storageSize:" + reconSize.get());
 
                                 return null;
                             }
@@ -6349,7 +6352,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             e.printStackTrace();
                         }
 
-                        System.out.println("entry from iterator " + entry);
+//                        System.out.println("entry from iterator " + entry);
                     }
 //                ********************
 

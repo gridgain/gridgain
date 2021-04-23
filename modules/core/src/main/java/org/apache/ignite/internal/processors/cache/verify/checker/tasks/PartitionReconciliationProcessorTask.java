@@ -222,6 +222,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             LocalDateTime startTime,
             long sesId
         ) {
+            System.out.println("dfljlhjfdb");
             this.reconciliationTaskArg = arg;
             this.startTime = startTime;
             this.sesId = sesId;
@@ -250,6 +251,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             }
 
             try {
+                System.out.println("qiusdfuiv");
                 PartitionReconciliationProcessor proc = new PartitionReconciliationProcessor(
                     sesId,
                     ignite,
@@ -261,8 +263,10 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
                     reconciliationTaskArg.recheckDelay(),
+                    reconciliationTaskArg.reconTypes(),
                     !reconciliationTaskArg.locOutput(),
-                    reconciliationTaskArg.includeSensitive());
+                    reconciliationTaskArg.includeSensitive()
+                    );
 
                 ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>> reconciliationRes = proc.execute();
 

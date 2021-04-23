@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -49,6 +50,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Re
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
+import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -58,6 +60,8 @@ import static java.util.Collections.EMPTY_SET;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 
 /**
  * The base point of partition reconciliation processing.
@@ -109,6 +113,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     private final RepairAlgorithm repairAlg;
 
+    private final Set<ReconType> reconTypes;
+
     /** Tracks workload chains based on its lifecycle. */
     private final WorkloadTracker workloadTracker = new WorkloadTracker();
 
@@ -144,6 +150,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         int batchSize,
         int recheckAttempts,
         int recheckDelay,
+        Set<ReconType> reconTypes,
         boolean compact,
         boolean includeSensitive
     ) throws IgniteCheckedException {
@@ -156,6 +163,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
+        this.reconTypes = reconTypes;
 
         registerListener(workloadTracker.andThen(evtLsnr));
 
@@ -196,7 +204,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    Batch workload = new Batch(true, true, sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
+                    Batch workload = new Batch(reconTypes.contains(CONSISTENCY), reconTypes.contains(SIZES), sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
 
                     workloadTracker.addTrackingChain(workload);
 
