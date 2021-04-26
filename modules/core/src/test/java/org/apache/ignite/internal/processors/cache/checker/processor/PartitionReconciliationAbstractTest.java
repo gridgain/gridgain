@@ -19,12 +19,20 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
@@ -35,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.verify.checker.tasks.Partitio
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,6 +53,8 @@ import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
  * Abstract utility class for partition reconciliation testing.
  */
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
+    static final long BROKEN_PART_SIZE = 666;
+
     /**
      *
      */
@@ -137,5 +148,182 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         GridCacheAdapter<Object, Object> cache = (GridCacheAdapter<Object, Object>)ctx.cache();
 
         cache.clearLocally(key);
+    }
+
+    protected void setPartitionSize(IgniteEx grid, String cacheName, int partId, int delta) {
+
+        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
+
+        int cacheId = cctx.cacheId();
+
+        cctx.group().topology().localPartition(partId).dataStore().updateSize(cacheId, delta);
+    }
+
+    protected void updatePartitionsSize(IgniteEx grid, String cacheName) {
+
+        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
+
+        int cacheId = cctx.cacheId();
+
+        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, BROKEN_PART_SIZE/*Math.abs(rnd.nextInt())*/));
+    }
+
+    protected long getFullPartitionsSizeForCacheGroup(List<IgniteEx> nodes, String cacheName) {
+        return nodes.stream().mapToLong(node -> getFullPartitionsSizeForCacheGroup(node, cacheName)).sum();
+    }
+
+    protected long getFullPartitionsSizeForCacheGroup(IgniteEx grid, String cacheName) {
+
+        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
+
+        return cctx.group().topology().localPartitions().stream().mapToLong(part -> {
+            System.out.println("qedsffd localPartition " + grid.name() + " " + cacheName + " " + part.dataStore().fullSize());
+            return part.dataStore().fullSize();
+        }).sum();
+    }
+
+    protected long getPartitionsSizeForCache(IgniteEx grid, String cacheName) {
+
+        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
+
+        int cacheId = cctx.cacheId();
+
+        System.out.println("qqqqqqqqqqqq");
+
+        return cctx.group().topology().localPartitions()
+            .stream()
+            .mapToLong(part -> {
+                    System.out.println("zdfdf " + part);
+                    System.out.println("dfvfd " + part.dataStore());
+                    System.out.println("xfgnf " + part.dataStore().cacheSizes());
+                    if (cctx.group().sharedGroup())
+                        return part
+                            .dataStore()
+                            .cacheSizes()
+                            .get(cacheId);
+                    else
+                        return part.dataStore().fullSize();
+                }
+            )
+//            .mapToLong(part -> Optional.of(part.dataStore().cacheSizes().get(cacheId)).orElseGet(() -> 0L))
+            .sum();
+    }
+
+    protected void breakCacheSizes(List<IgniteEx> nodes, List<String> cacheNames) {
+        nodes.forEach(node -> {
+            cacheNames.forEach(cacheName -> {
+                updatePartitionsSize(node, cacheName);
+            });
+        });
+    }
+
+    protected IgniteInternalFuture startAsyncLoad0(AtomicReference<ReconciliationResult> reconResult, IgniteCache cache,
+        int startKey, int endKey, boolean clear) {
+        Random rnd = new Random();
+
+        return GridTestUtils.runAsync(() -> {
+                while(reconResult.get() == null) {
+                    int op;
+
+                    if (clear)
+                        op = rnd.nextInt(8);
+                    else
+                        op = rnd.nextInt(7);
+
+                    long n;
+
+                    switch (op) {
+                        case 0:
+                            Map map = new TreeMap();
+
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            map.put(n, n);
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            map.put(n, n);
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            map.put(n, n);
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            map.put(n, n);
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            map.put(n, n);
+
+                            cache.putAll(map);
+
+                            break;
+
+                        case 1:
+                            Set set = new TreeSet();
+
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            set.add(n);
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            set.add(n);
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            set.add(n);
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            set.add(n);
+                            n = startKey + rnd.nextInt(endKey - startKey);
+                            set.add(n);
+
+                            cache.removeAll(set);
+
+                            break;
+
+                        case 2:
+                            n = startKey + rnd.nextInt(endKey - startKey);
+
+                            cache.put(n, n);
+
+                            break;
+
+                        case 3:
+                            n = startKey + rnd.nextInt(endKey - startKey);
+
+                            cache.remove(n);
+
+                            break;
+
+                        case 4:
+                            n = startKey + rnd.nextInt(endKey - startKey);
+
+                            cache.getAndPut(n, n+1);
+
+                            break;
+
+                        case 5:
+                            n = startKey + rnd.nextInt(endKey - startKey);
+
+                            cache.getAndRemove(n);
+
+                            break;
+
+                        case 6:
+                            n = startKey + rnd.nextInt(endKey - startKey);
+
+                            long n0 = n;
+
+                            cache.invoke(n, (k, v) -> {
+                                if (v == null)
+                                    return n0;
+                                else
+                                    return null;
+                            });
+
+                            break;
+
+                        case 7:
+                            n = startKey + rnd.nextInt(endKey - startKey);
+
+                            if (n % 10 == 0)
+                                cache.clear();
+
+                            break;
+                    }
+
+
+
+                }
+            },
+            "LoadThread");
     }
 }

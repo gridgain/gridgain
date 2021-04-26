@@ -320,7 +320,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             CollectPartitionKeysByBatchTask.class,
             new PartitionBatchRequest(workload.reconConsist, workload.reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
             res -> {
-                System.out.println("qfdbdpofgny");
                 KeyCacheObject nextBatchKey = res.get1();
 
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = res.get2();
@@ -330,9 +329,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 boolean reconConsist = nextBatchKey != null;
                 boolean reconSize = res.get3().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress));
 
-                System.out.println("qpohyhjdfd reconConsist " + reconConsist);
-                System.out.println("qpohyhjdfd reconSize " + reconSize);
-
                 if (reconConsist || reconSize)
                     schedule(new Batch(reconConsist, reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
 
@@ -340,8 +336,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     collector.partSizesMap().putIfAbsent(workload.cacheId(), new HashMap<>());
 
                     collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.get3());
-
-                    System.out.println("qsdfverdsf " + workload.partitionId());
                 }
 
                 if (!recheckKeys.isEmpty()) {
