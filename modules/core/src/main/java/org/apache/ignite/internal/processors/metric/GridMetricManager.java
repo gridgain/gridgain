@@ -543,7 +543,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      */
     private long totalSysMemory() {
         try {
-            return U.<Long>property(os, "totalPhysicalMemorySize");
+            com.sun.management.OperatingSystemMXBean sunOs = (com.sun.management.OperatingSystemMXBean) os;
+
+            return sunOs.getTotalPhysicalMemorySize();
         }
         catch (RuntimeException ignored) {
             return -1;
@@ -602,9 +604,11 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             long cpuTime;
 
             try {
-                cpuTime = U.<Long>property(os, "processCpuTime");
+                com.sun.management.OperatingSystemMXBean sunOs = (com.sun.management.OperatingSystemMXBean) os;
+
+                cpuTime = sunOs.getProcessCpuTime();
             }
-            catch (IgniteException ignored) {
+            catch (RuntimeException ignored) {
                 return -1;
             }
 
