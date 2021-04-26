@@ -483,7 +483,8 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             int find = 0;
 
             while (find < 2) {
-                int recordTypeIndex = raf.read();
+                // RecordV1Serializer.readRecordType()
+                int recordTypeIndex = raf.readUnsignedByte();
 
                 if (recordTypeIndex > 0) {
                     recordTypeIndex--;
@@ -497,7 +498,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
                             raf.write(Byte.MAX_VALUE);
                         }
                     }
-
+                    // to read the structure correctly
                     final long idx = raf.readLong();
 
                     final int fileOff = Integer.reverseBytes(raf.readInt());

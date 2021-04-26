@@ -33,9 +33,6 @@ public class IgniteWalIteratorFactoryIgnoreError extends IgniteWalIteratorFactor
     public WALIterator iterator(
         @NotNull IteratorParametersBuilder iteratorParametersBuilder
     ) throws IgniteCheckedException, IllegalArgumentException {
-        if (true){
-            return super.iterator(iteratorParametersBuilder);
-        }
         iteratorParametersBuilder.validate();
 
         return new StandaloneWalRecordsIteratorIgnoreError(

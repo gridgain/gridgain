@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.commandline.walconverter;
 
+import java.io.EOFException;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -25,7 +26,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
+import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentEofException;
+import org.apache.ignite.internal.processors.cache.persistence.wal.WalSegmentTailReachedException;
+import org.apache.ignite.internal.processors.cache.persistence.wal.io.FileInput;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneWalRecordsIterator;
+import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.NotNull;
@@ -58,19 +63,53 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
     /** {@inheritDoc} */
     @Override protected IgniteBiTuple<WALPointer, WALRecord> advanceRecord(
         @Nullable AbstractReadFileHandle hnd) throws IgniteCheckedException {
-        FileWALPointer actualFilePtr = new FileWALPointer(hnd.idx(), (int)hnd.in().position(), 0);
+        if (hnd == null)
+            return null;
 
-        try {
-            WALRecord rec = hnd.ser().readRecord(hnd.in(), actualFilePtr);
+        IgniteBiTuple<WALPointer, WALRecord> result=null;
 
-            actualFilePtr.length(rec.size());
+        while (result==null) {
+            FileWALPointer actualFilePtr = new FileWALPointer(hnd.idx(), (int)hnd.in().position(), 0);
 
-            // cast using diamond operator here can break compile for 7
-            return new IgniteBiTuple<>((WALPointer)actualFilePtr, postProcessRecord(rec));
-        }catch (Exception e){
-            // ignore
-            e.printStackTrace();
+            try {
+                WALRecord rec = hnd.ser().readRecord(hnd.in(), actualFilePtr);
+
+                actualFilePtr.length(rec.size());
+
+                result = new IgniteBiTuple<>(actualFilePtr, postProcessRecord(rec));
+            }
+            catch (SegmentEofException eof){
+                break;
+            }
+            catch (EOFException eof){
+                break;
+            }
+            catch (Exception ignore) {
+                // ignore
+                ignore.printStackTrace();
+                try {
+                    final FileInput in = hnd.in();
+
+                    in.seek(actualFilePtr.fileOffset());
+
+                    final int recordType = in.readUnsignedByte()-1;
+
+                    final long idx = in.readLong();
+
+                    final int offset = in.readInt();
+
+                    final int len = in.readInt();
+
+                    in.seek(offset + len);
+
+                    log.error("Error read record [recordType="+recordType+", idx=" + idx + ", offset=" + offset + ", len="+len+"]", ignore);
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    break;
+                }
+            }
         }
-        return null;
+        return result;
     }
 }
