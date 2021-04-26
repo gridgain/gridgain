@@ -563,7 +563,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
                 countErrorRead++;
         }
 
-        assertEquals(9, countErrorRead);
+        assertEquals(1, countErrorRead);
     }
 
     /**
