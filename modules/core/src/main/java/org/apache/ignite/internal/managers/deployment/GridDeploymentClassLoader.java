@@ -581,8 +581,8 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
         synchronized (mux) {
             // Skip requests for the previously missed classes.
             if (missedRsrcs != null && missedRsrcs.contains(path)) {
-                throw new ClassNotFoundException("Failed to peer load class, class is cached as previously missed " +
-                    "[class=" + name + ", nodeClsLdrIds=" +
+                throw new ClassNotFoundException("Failed to peer load class, previous request for the same class " +
+                    "has failed [class=" + name + ", nodeClsLdrIds=" +
                     nodeLdrMap + ", clsLoadersHierarchy=" + clsLdrHierarchy + ']');
             }
 
