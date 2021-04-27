@@ -2596,7 +2596,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             if ((io.getPartitionMetaStoreReuseListRoot(pageAddr) == 0 && io.getGapsLink(pageAddr) != 0) ||
                 (io.getPartitionMetaStoreReuseListRoot(pageAddr) != 0 && io.getGapsLink(pageAddr) == 0)) {
                 throw new AssertionError("Partition meta page corruption: links to counter data page and partition " +
-                    "meta store must both be present, or must both be absent in partition [" +
+                    "meta store must both be present, or both be absent in partition [" +
                     "grpId=" + grpId +
                     ", partId=" + partId +
                     ", cntrUpdDataPageId=" + io.getGapsLink(pageAddr) +

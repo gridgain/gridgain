@@ -19,15 +19,8 @@ import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
@@ -44,8 +37,6 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderSettings;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
-import org.apache.ignite.internal.util.lang.GridClosure3;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -54,7 +45,6 @@ import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_SKIP_CRC;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
-import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_DIR_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.T_PART_META;
@@ -62,15 +52,19 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
 import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
 import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
 import static org.apache.ignite.internal.util.GridUnsafe.freeBuffer;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /**
  *
  */
 public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstractTest {
+    /** */
     private static final int PAGE_SIZE = 4096;
 
+    /** */
     private static final int PAGE_STORE_VER = 2;
 
+    /** */
     private FilePageStoreFactory storeFactory = new FileVersionCheckingFactory(
         new AsyncFileIOFactory(),
         new AsyncFileIOFactory(),
@@ -82,6 +76,7 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
         }
     };
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setDataStorageConfiguration(new DataStorageConfiguration()
@@ -89,6 +84,7 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
             );
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
@@ -97,6 +93,7 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
         cleanPersistenceDir();
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_PDS_SKIP_CRC, value = "true")
     public void test() throws Exception {
@@ -131,9 +128,10 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
 
         store.ensure();
 
-        Map<Short, Long> pageIdsMap = findPages(0, FLAG_DATA, store, new HashSet<Short>() {{ add(T_PART_META); }});
+        long metaPageId = findMetaPage(0, FLAG_DATA, store);
 
-        long metaPageId = pageIdsMap.get(T_PART_META);
+        if (metaPageId < 0)
+            fail("Could not find meta page.");
 
         int pageIdx = PageIdUtils.pageIndex(metaPageId);
 
@@ -141,19 +139,17 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
 
         writeLongToFileByOffset(store.getFileAbsolutePath(), offset, 0L);
 
-        ignite = startGrid(0);
-
-        ignite.cluster().state(ClusterState.ACTIVE);
-
-        counter = counter(0, DEFAULT_CACHE_NAME, ignite.name());
-
-        counter.update(11, 6);
-
-        forceCheckpoint();
-
-        doSleep(1000);
+        assertThrowsWithCause(() -> startGrid(0), AssertionError.class);
     }
 
+    /**
+     * Write any number to any place in the file.
+     *
+     * @param path Path to the file.
+     * @param offset Offset.
+     * @param val Value.
+     * @throws Exception If failed.
+     */
     private void writeLongToFileByOffset(String path, long offset, long val) throws Exception {
         ByteBuffer buf = ByteBuffer.allocate(8);
 
@@ -169,123 +165,40 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
     }
 
     /**
-     * Allocates buffer and does some work in closure, then frees the buffer.
+     * Finds meta page in file page store
      *
-     * @param c Closure.
-     * @param <T> Result type.
-     * @return Result of closure.
+     * @param partId Partition id.
+     * @param flag Page store flag.
+     * @param store File page store.
+     * @return Page id.
      * @throws IgniteCheckedException If failed.
      */
-    protected <T> T doWithBuffer(BufferClosure<T> c) throws IgniteCheckedException {
+    protected long findMetaPage(int partId, byte flag, FilePageStore store)
+        throws IgniteCheckedException {
         ByteBuffer buf = allocateBuffer(PAGE_SIZE);
 
         try {
             long addr = bufferAddress(buf);
-
-            return c.apply(buf, addr);
-        }
-        finally {
-            freeBuffer(buf);
-        }
-    }
-
-    /**
-     * Scans given file page store and executes closure for each page.
-     *
-     * @param partId Partition id.
-     * @param flag Flag.
-     * @param store Page store.
-     * @param c Closure that accepts page id, page address, page IO. If it returns false, scan stops.
-     * @return List of errors that occured while scanning.
-     * @throws IgniteCheckedException If failed.
-     */
-    private List<Throwable> scanFileStore(int partId, byte flag, FilePageStore store, GridClosure3<Long, Long, PageIO, Boolean> c)
-        throws IgniteCheckedException {
-        return doWithBuffer((buf, addr) -> {
-            List<Throwable> errors = new ArrayList<>();
 
             long pagesNum = isNull(store) ? 0 : (store.size() - store.headerSize()) / PAGE_SIZE;
 
             for (int i = 0; i < pagesNum; i++) {
                 buf.rewind();
 
-                try {
-                    long pageId = PageIdUtils.pageId(partId, flag, i);
+                long pageId = PageIdUtils.pageId(partId, flag, i);
 
-                    readPage(store, pageId, buf);
+                store.read(pageId, buf, false);
 
-                    PageIO io = PageIO.getPageIO(addr);
+                PageIO io = PageIO.getPageIO(addr);
 
-                    if (!c.apply(pageId, addr, io))
-                        break;
-                }
-                catch (Throwable e) {
-                    String err = "Exception occurred on step " + i + ": " + e.getMessage();
-
-                    errors.add(new IgniteException(err, e));
-                }
+                if (io.getType() == T_PART_META)
+                    return pageId;
             }
-
-            return errors;
-        });
-    }
-
-    /**
-     * Reading pages into buffer.
-     *
-     * @param store Source for reading pages.
-     * @param pageId Page ID.
-     * @param buf Buffer.
-     */
-    protected void readPage(FilePageStore store, long pageId, ByteBuffer buf) throws IgniteCheckedException {
-        try {
-            store.read(pageId, buf, false);
         }
-        catch (IgniteDataIntegrityViolationException | IllegalArgumentException e) {
-            // Replacing exception due to security reasons, as IgniteDataIntegrityViolationException prints page content.
-            // Catch IllegalArgumentException for output page information.
-            throw new IgniteException("Failed to read page, id=" + pageId + ", idx=" + pageIndex(pageId) +
-                ", file=" + store.getFileAbsolutePath());
+        finally {
+            freeBuffer(buf);
         }
-    }
 
-    /**
-     * Finds certain pages in file page store. When all pages corresponding given types is found, at least one page
-     * for each type, we return the result.
-     *
-     * @param partId Partition id.
-     * @param flag Page store flag.
-     * @param store File page store.
-     * @param pageTypesIn Page types to find.
-     * @return Map of found pages. First page of this class that was found, is put to this map.
-     * @throws IgniteCheckedException If failed.
-     */
-    protected Map<Short, Long> findPages(int partId, byte flag, FilePageStore store, Set<Short> pageTypesIn)
-        throws IgniteCheckedException {
-        Map<Short, Long> res = new HashMap<>();
-
-        Set<Short> pageTypes = new HashSet<>();
-
-        pageTypes.addAll(pageTypesIn);
-
-        scanFileStore(partId, flag, store, (pageId, addr, io) -> {
-            if (pageTypes.contains((short)io.getType())) {
-                res.put((short)io.getType(), pageId);
-
-                pageTypes.remove((short)io.getType());
-            }
-
-            return !pageTypes.isEmpty();
-        });
-
-        return res;
-    }
-
-    /**
-     *
-     */
-    protected interface BufferClosure<T> {
-        /** */
-        T apply(ByteBuffer buf, Long addr) throws IgniteCheckedException;
+        return -1;
     }
 }
