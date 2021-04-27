@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.qa.query;
+package org.apache.ignite.platform;
+
+import java.util.concurrent.Executor;
 
 /**
- * Tests for log print for long running query.
+ * Test executor.
  */
-public class WarningOnBigQueryLazyResultsTest extends WarningOnBigQueryResultsTest {
+public class PlatformTestExecutor implements Executor {
     /** {@inheritDoc} */
-    @Override protected boolean lazy() {
-        return true;
+    @Override public void execute(Runnable runnable) {
+        runnable.run();
     }
 }
