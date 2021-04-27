@@ -307,7 +307,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         /**
          * Creates a new instance.
          *
-         * @param sesId Partition reconsiliation session identifier.
+         * @param sesId Partition reconciliation session identifier.
          */
         public ReconciliationSessionId(long sesId, int parallelism) {
             this.sesId = sesId;

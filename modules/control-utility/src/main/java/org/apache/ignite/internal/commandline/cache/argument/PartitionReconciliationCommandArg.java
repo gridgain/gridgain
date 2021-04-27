@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 
 /**
@@ -58,7 +59,10 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     LOCAL_OUTPUT("--local-output", Boolean.FALSE),
 
     /** Recheck delay seconds. */
-    RECHECK_DELAY("--recheck-delay", 5);
+    RECHECK_DELAY("--recheck-delay", 5),
+
+    /** Allowed cache types to process. By default only user caches are allowed for processing. */
+    CACHE_TYPES("--cache-types", ReconciliationCachesType.defaultValue());
 
     /** Option name. */
     private final String name;

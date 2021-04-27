@@ -236,7 +236,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
      * @throws Exception if failed.
      */
     @Test
-    public void testConsoleOutputHidesSensetiveInformation() throws Exception {
+    public void testConsoleOutputHidesSensitiveInformation() throws Exception {
         ignite(0).cache(DEFAULT_CACHE_NAME).put(INVALID_KEY, VALUE_PREFIX + INVALID_KEY);
 
         List<ClusterNode> nodes = ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context().affinity().

@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.ignite.IgniteSet;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -43,34 +45,49 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOG
  */
 @RunWith(Parameterized.class)
 public class PartitionReconciliationSetDataStructureTest extends PartitionReconciliationAbstractTest {
-    /** Nodes. */
+    /**
+     * Nodes.
+     */
     protected static final int NODES_CNT = 4;
 
-    /** Keys count. */
+    /**
+     * Keys count.
+     */
     protected static final int KEYS_CNT = 100;
 
-    /** Corrupted keys count. */
+    /**
+     * Corrupted keys count.
+     */
     protected static final int BROKEN_KEYS_CNT = 10;
 
-    /** Data structure name. */
+    /**
+     * Data structure name.
+     */
     protected static final String DS_NAME = "DefaultDS";
 
-    /** Cache atomicity mode. */
+    /**
+     * Cache atomicity mode.
+     */
     @Parameterized.Parameter(0)
     public CacheAtomicityMode cacheAtomicityMode;
 
-    /** Fix mode. */
+    /**
+     * Fix mode.
+     */
     @Parameterized.Parameter(1)
     public boolean fixMode;
 
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
         cfg.setDataStorageConfiguration(new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                        .setPersistenceEnabled(true)
-                        .setMaxSize(300L * 1024 * 1024))
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+                .setPersistenceEnabled(true)
+                .setMaxSize(300L * 1024 * 1024))
         );
 
         cfg.setConsistentId(name);
@@ -79,15 +96,21 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
         return cfg;
     }
 
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void beforeTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
     }
 
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -100,25 +123,45 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        CacheAtomicityMode[] atomicityModes = new CacheAtomicityMode[] {
-                CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
+        CacheAtomicityMode[] atomicityModes = new CacheAtomicityMode[]{
+            CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
-            params.add(new Object[] {atomicityMode, false});
-            params.add(new Object[] {atomicityMode, true});
+            params.add(new Object[]{atomicityMode, false});
+            params.add(new Object[]{atomicityMode, true});
         }
 
         return params;
     }
 
     /**
-     * Tests that reconciliation works with data structures.
+     * Tests that reconciliation works with data structures using cache name explicitly.
      *
      * @throws Exception If failed.
      */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-    public void testReconciliationOfIgniteSet() throws Exception {
+    public void testReconciliationOfIgniteSetExplicitly() throws Exception {
+        runIgniteSetReconciliation(true);
+    }
+
+    /**
+     * Tests that reconciliation works with internal caches.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
+    public void testReconciliationOfInternalCaches() throws Exception {
+        runIgniteSetReconciliation(false);
+    }
+
+    /**
+     * Run Ignite set reconciliation.
+     * @param useCacheName use cache name explicitly.
+     * @throws Exception if failed.
+     */
+    private void runIgniteSetReconciliation(boolean useCacheName) throws Exception {
         String cacheName = null;
 
         IgniteEx ig = startGrids(NODES_CNT);
@@ -141,7 +184,7 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
 
         GridCacheContext[] nodeCacheCtxs = new GridCacheContext[NODES_CNT];
 
-        for (int i = 0; i < NODES_CNT; i++){
+        for (int i = 0; i < NODES_CNT; i++) {
             Collection<IgniteInternalCache<?, ?>> ds_name = grid(i).cachesx(p -> p.name().contains(DS_NAME));
             GridCacheContext<?, ?> ctx = ds_name.iterator().next().context();
             nodeCacheCtxs[i] = ctx;
@@ -172,7 +215,8 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
 
         ig.cluster().active(true);
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, ReconciliationCachesType.INTERNAL, cacheName);
+        String[] cacheNameToRepair = useCacheName ? new String[]{cacheName} : new String[0];
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, ReconciliationCachesType.INTERNAL, cacheNameToRepair);
 
         log.info(">>>> Partition reconciliation finished");
 
@@ -189,9 +233,9 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
             }
 
             assertTrue(
-                    "Unmatched key: " + i + ", got conflict key metas: " +
-                            conflictKeyMetas.stream().map(m -> m.stringView(true)).reduce((s1, s2) -> s1 + ", " + s2).get(),
-                    keyMatched
+                "Unmatched key: " + i + ", got conflict key metas: " +
+                    conflictKeyMetas.stream().map(m -> m.stringView(true)).reduce((s1, s2) -> s1 + ", " + s2).get(),
+                keyMatched
             );
         }
     }
