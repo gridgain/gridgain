@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -189,6 +190,40 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
+     * Check that utility works with user caches only if that cache type is specified.
+     */
+    @Test
+    public void testWorkWithUserCacheTypes() throws Exception {
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "--cache-types", "USER");
+
+        assertTrue(usedCaches.containsAll(Arrays.asList("default", "default1", "default2", "default3")));
+        assertEquals(4, usedCaches.size());
+    }
+
+    /**
+     * Check that utility works with system caches only if that cache type is specified.
+     */
+    @Test
+    public void testWorkWithInternalCaches() throws Exception {
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "--cache-types", "INTERNAL");
+
+        assertTrue(usedCaches.containsAll(Arrays.asList("ignite-sys-cache", "ignite-sys-atomic-cache@default-ds-group")));
+        assertEquals(2, usedCaches.size());
+    }
+
+    /**
+     * Check that utility works with system caches only if that cache type is specified.
+     */
+    @Test
+    public void testWorkWithAllCaches() throws Exception {
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "--cache-types", "ALL");
+
+        assertTrue(usedCaches.containsAll(Arrays.asList("ignite-sys-cache",
+            "ignite-sys-atomic-cache@default-ds-group", "default", "default1", "default2", "default3")));
+        assertEquals(6, usedCaches.size());
+    }
+
+    /**
      * Tests that utility will started with all available user caches.
      */
     @Test
@@ -214,6 +249,31 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         assertTrue(usedCaches.containsAll(setOfCaches));
         assertEquals(usedCaches.size(), setOfCaches.size());
+    }
+
+    /**
+     * Creates internal and custom caches and runs reconciliation cmd with args.
+     */
+    private Set<String> getUsedCachesForArgs(String... args) throws Exception {
+        Set<String> usedCaches = new HashSet<>();
+        LogListener lsnr = fillCacheNames(usedCaches);
+        log.registerListener(lsnr);
+
+        startGrids(3);
+
+        IgniteEx ignite = grid(0);
+        ignite.cluster().active(true);
+
+        for (int i = 1; i <= 3; i++){
+            ignite.atomicLong(DEFAULT_CACHE_NAME + i, 0, true);
+            ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
+        }
+
+        assertEquals(EXIT_CODE_OK, execute(args));
+
+        assertTrue(lsnr.check(10_000));
+
+        return usedCaches;
     }
 
     /**

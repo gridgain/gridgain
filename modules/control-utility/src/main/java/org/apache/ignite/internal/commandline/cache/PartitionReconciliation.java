@@ -344,6 +344,26 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
                             throw new IllegalArgumentException(String.format(RECHECK_DELAY_FORMAT_MESSAGE, strVal));
 
                         break;
+
+                    case CACHE_TYPES:
+                        peekedNextArg = argIter.peekNextArg();
+
+                        if (!PartitionReconciliationCommandArg.args().contains(peekedNextArg)) {
+                            strVal = argIter.nextArg(
+                                "Allowed cache types should be specified. The following " +
+                                    "values can be used: " + Arrays.toString(ReconciliationCachesType.values()) + '.');
+
+                            try {
+                                allowedCacheTypes = ReconciliationCachesType.valueOf(strVal);
+                            }
+                            catch (IllegalArgumentException e) {
+                                throw new IllegalArgumentException(
+                                    "Invalid cache type specified: " + strVal + ". The following " +
+                                        "values can be used: " + Arrays.toString(ReconciliationCachesType.values()) + '.');
+                            }
+                        }
+
+                        break;
                 }
             }
         }
