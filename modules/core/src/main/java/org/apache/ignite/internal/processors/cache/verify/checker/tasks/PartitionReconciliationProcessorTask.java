@@ -18,14 +18,8 @@ package org.apache.ignite.internal.processors.cache.verify.checker.tasks;
 
 import java.io.File;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -35,6 +29,7 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntriesExtended;
@@ -42,9 +37,12 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
+import org.apache.ignite.lang.IgniteClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
@@ -212,17 +210,32 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         @Override public T2<String, ExecutionResult<ReconciliationAffectedEntries>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
 
+            Collection<String> allowedCacheNames = F.viewReadOnly(ignite.context().cache().cacheDescriptors().values(),
+                new IgniteClosure<DynamicCacheDescriptor, String>() {
+                    @Override
+                    public String apply(DynamicCacheDescriptor desc) {
+                        return desc.cacheConfiguration().getName();
+                    }
+                },
+                new IgnitePredicate<DynamicCacheDescriptor>() {
+                    @Override
+                    public boolean apply(DynamicCacheDescriptor desc) {
+                        return reconciliationTaskArg.includeSystemCaches() || desc.cacheType().userCache();
+                    }
+                }
+            );
+
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
-                caches.addAll(ignite.context().cache().publicCacheNames());
+                caches.addAll(allowedCacheNames);
             else {
                 for (String cacheRegexp : reconciliationTaskArg.caches()) {
                     List<String> acceptedCaches = new ArrayList<>();
 
-                    for (String cacheName : ignite.context().cache().publicCacheNames()) {
+                    for (String cacheName : allowedCacheNames) {
                         if (cacheName.matches(cacheRegexp))
                             acceptedCaches.add(cacheName);
                     }
-
+                    
                     if (acceptedCaches.isEmpty())
                         return new T2<>(null, new ExecutionResult<>(new ReconciliationAffectedEntriesExtended(), "The cache '" + cacheRegexp + "' doesn't exist."));
 

@@ -54,6 +54,20 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         int parallelism,
         String... caches
     ) {
+        return partitionReconciliation(ig, repair, repairAlgorithm, parallelism, false, caches);
+    }
+
+    /**
+     *
+     */
+    public static ReconciliationResult partitionReconciliation(
+        Ignite ig,
+        boolean repair,
+        @Nullable RepairAlgorithm repairAlgorithm,
+        int parallelism,
+        boolean includeSysCaches,
+        String... caches
+    ) {
         return partitionReconciliation(
             ig,
             new VisorPartitionReconciliationTaskArg.Builder()
@@ -62,6 +76,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                 .parallelism(parallelism)
                 .repair(repair)
                 .repairAlg(repairAlgorithm)
+                .includeSystemCaches(includeSysCaches)
         );
     }
 

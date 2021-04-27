@@ -74,6 +74,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** Recheck delay seconds. */
     private int recheckDelay;
 
+    /** `If {@code true} -allows system caches reconciliation.` */
+    private boolean includeSystemCaches;
+
     /**
      * Default constructor.
      */
@@ -96,6 +99,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
      * @param repairAlg Partition reconciliation repair algorithm to be used.
      * @param recheckDelay Recheck delay in seconds.
+     * @param includeSysCaches Flag indicates that verification should include system caches.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(
@@ -108,7 +112,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         int batchSize,
         int recheckAttempts,
         RepairAlgorithm repairAlg,
-        int recheckDelay
+        int recheckDelay,
+        boolean includeSysCaches
     ) {
         this.caches = caches;
         this.fastCheck = fastCheck;
@@ -120,6 +125,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
         this.recheckDelay = recheckDelay;
+        this.includeSystemCaches = includeSysCaches;
     }
 
     /**
@@ -137,7 +143,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
              b.batchSize,
              b.recheckAttempts,
              b.repairAlg,
-             b.recheckDelay);
+             b.recheckDelay,
+             b.includeSystemCaches);
 
         if (b.partsToRepair != null) {
             partsToRepair = b.partsToRepair
@@ -285,6 +292,13 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     }
 
     /**
+     * @return {@code true} If allows system caches reconciliation.
+     */
+    public boolean includeSystemCaches() {
+        return includeSystemCaches;
+    }
+
+    /**
      * Builder class for test purposes.
      */
     public static class Builder {
@@ -328,6 +342,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /** Recheck delay seconds. */
         private int recheckDelay;
 
+        /** If {@code true} - allows system caches reconciliation. */
+        private boolean includeSystemCaches;
+
         /**
          * Default constructor.
          */
@@ -342,6 +359,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = 2;
             recheckDelay = 1;
             repairAlg = RepairAlgorithm.defaultValue();
+            includeSystemCaches = false;
         }
 
         /**
@@ -362,6 +380,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = cpFrom.recheckAttempts;
             recheckDelay = cpFrom.recheckDelay;
             repairAlg = cpFrom.repairAlg;
+            includeSystemCaches = cpFrom.includeSystemCaches;
         }
 
         /**
@@ -478,6 +497,16 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
          */
         public Builder recheckDelay(int recheckDelay) {
             this.recheckDelay = recheckDelay;
+
+            return this;
+        }
+
+        /**
+         * @param includeSysCaches If {@code true} -allows system caches reconciliation.
+         * @return Builder for chaning.
+         */
+        public Builder includeSystemCaches(boolean includeSysCaches) {
+            this.includeSystemCaches = includeSysCaches;
 
             return this;
         }

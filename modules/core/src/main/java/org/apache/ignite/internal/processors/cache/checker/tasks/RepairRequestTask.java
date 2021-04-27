@@ -50,6 +50,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
+import javax.cache.processor.EntryProcessorResult;
+
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.calculateValueToFixWith;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
@@ -288,7 +290,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = ignite.cache(cacheName).withKeepBinary().<RepairEntryProcessor.RepairStatus>invoke(
+                            EntryProcessorResult<Object> invoke = ctx.cache().keepBinary().invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
@@ -296,6 +298,10 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                     rmvQueueMaxSize,
                                     false,
                                     startTopVer));
+
+                            assert invoke != null;
+
+                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)invoke.get();
                         }
                     }
                     else {
@@ -327,14 +333,18 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)ignite.cache(cacheName).withKeepBinary().invoke(
-                                key,
-                                new RepairEntryProcessor(
-                                    valToFixWith,
-                                    nodeToVersionedValues,
-                                    rmvQueueMaxSize,
-                                    false,
-                                    startTopVer));
+                            EntryProcessorResult<Object> invoke = ctx.cache().keepBinary().invoke(
+                                    key,
+                                    new RepairEntryProcessor(
+                                            valToFixWith,
+                                            nodeToVersionedValues,
+                                            rmvQueueMaxSize,
+                                            false,
+                                            startTopVer));
+
+                            assert invoke != null;
+
+                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)invoke.get();
                         }
                     }
 
