@@ -27,10 +27,8 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentEofException;
-import org.apache.ignite.internal.processors.cache.persistence.wal.WalSegmentTailReachedException;
 import org.apache.ignite.internal.processors.cache.persistence.wal.io.FileInput;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneWalRecordsIterator;
-import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.NotNull;
@@ -41,7 +39,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecordsIterator {
 
-    /** */
+    /**
+     *
+     */
     public StandaloneWalRecordsIteratorIgnoreError(@NotNull IgniteLogger log,
         @NotNull GridCacheSharedContext sharedCtx,
         @NotNull FileIOFactory ioFactory,
@@ -66,9 +66,9 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
         if (hnd == null)
             return null;
 
-        IgniteBiTuple<WALPointer, WALRecord> result=null;
+        IgniteBiTuple<WALPointer, WALRecord> result = null;
 
-        while (result==null) {
+        while (result == null) {
             FileWALPointer actualFilePtr = new FileWALPointer(hnd.idx(), (int)hnd.in().position(), 0);
 
             try {
@@ -78,10 +78,10 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
 
                 result = new IgniteBiTuple<>(actualFilePtr, postProcessRecord(rec));
             }
-            catch (SegmentEofException eof){
+            catch (SegmentEofException eof) {
                 break;
             }
-            catch (EOFException eof){
+            catch (EOFException eof) {
                 break;
             }
             catch (Exception ignore) {
@@ -92,7 +92,7 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
 
                     in.seek(actualFilePtr.fileOffset());
 
-                    final int recordType = in.readUnsignedByte()-1;
+                    final int recordType = in.readUnsignedByte() - 1;
 
                     final long idx = in.readLong();
 
@@ -102,7 +102,7 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
 
                     in.seek(offset + len);
 
-                    log.error("Error read record [recordType="+recordType+", idx=" + idx + ", offset=" + offset + ", len="+len+"]", ignore);
+                    log.error("Error read record [recordType=" + recordType + ", idx=" + idx + ", offset=" + offset + ", len=" + len + "]", ignore);
                 }
                 catch (Exception e) {
                     e.printStackTrace();

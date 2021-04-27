@@ -29,8 +29,7 @@ public class IgniteWalIteratorFactoryIgnoreError extends IgniteWalIteratorFactor
      * @param iteratorParametersBuilder Iterator parameters builder.
      * @return closable WAL records iterator, should be closed when non needed
      */
-    @Override
-    public WALIterator iterator(
+    @Override public WALIterator iterator(
         @NotNull IteratorParametersBuilder iteratorParametersBuilder
     ) throws IgniteCheckedException, IllegalArgumentException {
         iteratorParametersBuilder.validate();
