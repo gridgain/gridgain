@@ -18,7 +18,15 @@ package org.apache.ignite.internal.processors.cache.verify.checker.tasks;
 
 import java.io.File;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -36,6 +44,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -220,7 +229,11 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 new IgnitePredicate<DynamicCacheDescriptor>() {
                     @Override
                     public boolean apply(DynamicCacheDescriptor desc) {
-                        return reconciliationTaskArg.includeSystemCaches() || desc.cacheType().userCache();
+                        if(reconciliationTaskArg.allowedCacheTypes() == ReconciliationCachesType.USER)
+                            return desc.cacheType().userCache();
+                        else if(reconciliationTaskArg.allowedCacheTypes() == ReconciliationCachesType.INTERNAL)
+                            return !desc.cacheType().userCache();
+                        else return true;
                     }
                 }
             );
@@ -235,7 +248,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                         if (cacheName.matches(cacheRegexp))
                             acceptedCaches.add(cacheName);
                     }
-                    
+
                     if (acceptedCaches.isEmpty())
                         return new T2<>(null, new ExecutionResult<>(new ReconciliationAffectedEntriesExtended(), "The cache '" + cacheRegexp + "' doesn't exist."));
 

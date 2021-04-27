@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -74,8 +75,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** Recheck delay seconds. */
     private int recheckDelay;
 
-    /** `If {@code true} -allows system caches reconciliation.` */
-    private boolean includeSystemCaches;
+    /** Specifies which type of caches are allowed to be processed. */
+    private ReconciliationCachesType allowedCacheTypes;
 
     /**
      * Default constructor.
@@ -99,7 +100,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
      * @param repairAlg Partition reconciliation repair algorithm to be used.
      * @param recheckDelay Recheck delay in seconds.
-     * @param includeSysCaches Flag indicates that verification should include system caches.
+     * @param allowedCacheTypes Cache types allowed to be processed.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(
@@ -113,7 +114,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         int recheckAttempts,
         RepairAlgorithm repairAlg,
         int recheckDelay,
-        boolean includeSysCaches
+        ReconciliationCachesType allowedCacheTypes
     ) {
         this.caches = caches;
         this.fastCheck = fastCheck;
@@ -125,7 +126,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
         this.recheckDelay = recheckDelay;
-        this.includeSystemCaches = includeSysCaches;
+        this.allowedCacheTypes = allowedCacheTypes;
     }
 
     /**
@@ -144,7 +145,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
              b.recheckAttempts,
              b.repairAlg,
              b.recheckDelay,
-             b.includeSystemCaches);
+             b.allowedCacheTypes);
 
         if (b.partsToRepair != null) {
             partsToRepair = b.partsToRepair
@@ -156,7 +157,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V3;
     }
 
     /** {@inheritDoc} */
@@ -183,6 +184,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         out.writeBoolean(fastCheck);
 
         U.writeIntKeyMap(out, partsToRepair);
+
+        U.writeEnum(out, allowedCacheTypes);
     }
 
     /** {@inheritDoc} */
@@ -211,6 +214,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
             partsToRepair = U.readIntKeyMap(in);
         }
+
+        if(protoVer >= V3)
+            allowedCacheTypes = ReconciliationCachesType.fromOrdinal(in.readByte());
     }
 
     /**
@@ -292,10 +298,10 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     }
 
     /**
-     * @return {@code true} If allows system caches reconciliation.
+     * Specifies which type of caches are allowed to be processed.
      */
-    public boolean includeSystemCaches() {
-        return includeSystemCaches;
+    public ReconciliationCachesType allowedCacheTypes() {
+        return allowedCacheTypes;
     }
 
     /**
@@ -342,8 +348,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /** Recheck delay seconds. */
         private int recheckDelay;
 
-        /** If {@code true} - allows system caches reconciliation. */
-        private boolean includeSystemCaches;
+        /** Specifies which type of caches are allowed to be processed. */
+        private ReconciliationCachesType allowedCacheTypes;
 
         /**
          * Default constructor.
@@ -359,7 +365,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = 2;
             recheckDelay = 1;
             repairAlg = RepairAlgorithm.defaultValue();
-            includeSystemCaches = false;
+            allowedCacheTypes = ReconciliationCachesType.defaultValue();
         }
 
         /**
@@ -380,7 +386,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = cpFrom.recheckAttempts;
             recheckDelay = cpFrom.recheckDelay;
             repairAlg = cpFrom.repairAlg;
-            includeSystemCaches = cpFrom.includeSystemCaches;
+            allowedCacheTypes = cpFrom.allowedCacheTypes;
         }
 
         /**
@@ -392,7 +398,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param caches New caches.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder caches(Set<String> caches) {
             this.caches = caches;
@@ -402,7 +408,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param repair New if  - Partition Reconciliation&Fix: update from Primary partition.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder repair(boolean repair) {
             this.repair = repair;
@@ -413,7 +419,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /**
          * @param fastCheck Flag indicates that only partitions that did not pass validation
          *                  during the last partition map exchange will be checked and repaired.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder fastCheck(boolean fastCheck) {
             this.fastCheck = fastCheck;
@@ -423,7 +429,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param partsToRepair  Collection of partitions that should be checked and repaired.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder partitionsToRepair(Map<Integer, Set<Integer>> partsToRepair) {
             this.partsToRepair = partsToRepair;
@@ -433,7 +439,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param locOutput The result will be primted to output if {@code locOutput} equals to {@code true}.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder locOutput(boolean locOutput) {
             this.locOutput = locOutput;
@@ -443,7 +449,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param includeSensitive If {@code true} then sensitive information is included into result.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder includeSensitive(boolean includeSensitive) {
             this.includeSensitive = includeSensitive;
@@ -453,7 +459,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param parallelism Maximum number of threads that can be involved in reconciliation activities.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder parallelism(int parallelism) {
             this.parallelism = parallelism;
@@ -463,7 +469,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param batchSize New amount of keys to retrieve within one job.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder batchSize(int batchSize) {
             this.batchSize = batchSize;
@@ -473,7 +479,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param recheckAttempts New amount of potentially inconsistent keys recheck attempts.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder recheckAttempts(int recheckAttempts) {
             this.recheckAttempts = recheckAttempts;
@@ -483,7 +489,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param repairAlg New specifies which fix algorithm to use: options  while repairing doubtful keys.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder repairAlg(RepairAlgorithm repairAlg) {
             this.repairAlg = repairAlg;
@@ -493,7 +499,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param recheckDelay Recheck delay seconds.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder recheckDelay(int recheckDelay) {
             this.recheckDelay = recheckDelay;
@@ -502,11 +508,11 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         }
 
         /**
-         * @param includeSysCaches If {@code true} -allows system caches reconciliation.
-         * @return Builder for chaning.
+         * @param allowedCacheTypes Specifies which type of caches are allowed to be processed.
+         * @return Builder for chaining.
          */
-        public Builder includeSystemCaches(boolean includeSysCaches) {
-            this.includeSystemCaches = includeSysCaches;
+        public Builder allowedCacheTypes(ReconciliationCachesType allowedCacheTypes) {
+            this.allowedCacheTypes = allowedCacheTypes;
 
             return this;
         }
