@@ -32,15 +32,11 @@ import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 
 /**
  * Tests for log print for long running query.
  */
-@WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
 public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTest {
     /** JDBC thin URL. */
     private static final String JDBC_THIN_URL = "jdbc:ignite:thin://127.0.0.1:" + CLI_PORT;
