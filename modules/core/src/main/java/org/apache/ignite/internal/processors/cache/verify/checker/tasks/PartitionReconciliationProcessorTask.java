@@ -221,17 +221,15 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
             Collection<String> allowedCacheNames = F.viewReadOnly(ignite.context().cache().cacheDescriptors().values(),
                 new IgniteClosure<DynamicCacheDescriptor, String>() {
-                    @Override
-                    public String apply(DynamicCacheDescriptor desc) {
+                    @Override public String apply(DynamicCacheDescriptor desc) {
                         return desc.cacheConfiguration().getName();
                     }
                 },
                 new IgnitePredicate<DynamicCacheDescriptor>() {
-                    @Override
-                    public boolean apply(DynamicCacheDescriptor desc) {
-                        if(reconciliationTaskArg.allowedCacheTypes() == ReconciliationCachesType.USER)
+                    @Override public boolean apply(DynamicCacheDescriptor desc) {
+                        if (reconciliationTaskArg.allowedCacheTypes() == ReconciliationCachesType.USER)
                             return desc.cacheType().userCache();
-                        else if(reconciliationTaskArg.allowedCacheTypes() == ReconciliationCachesType.INTERNAL)
+                        else if (reconciliationTaskArg.allowedCacheTypes() == ReconciliationCachesType.INTERNAL)
                             return !desc.cacheType().userCache();
                         else return true;
                     }

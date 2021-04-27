@@ -215,7 +215,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             partsToRepair = U.readIntKeyMap(in);
         }
 
-        if(protoVer >= V3)
+        if (protoVer >= V3)
             allowedCacheTypes = ReconciliationCachesType.fromOrdinal(in.readByte());
     }
 

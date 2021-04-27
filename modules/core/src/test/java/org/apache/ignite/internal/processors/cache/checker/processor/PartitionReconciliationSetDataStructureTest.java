@@ -80,8 +80,7 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected IgniteConfiguration getConfiguration(String name) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
         cfg.setDataStorageConfiguration(new DataStorageConfiguration()
@@ -99,8 +98,7 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected void beforeTest() throws Exception {
+    @Override protected void beforeTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -109,8 +107,7 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected void afterTest() throws Exception {
+    @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();

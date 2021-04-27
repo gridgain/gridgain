@@ -18,23 +18,20 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.lang.reflect.Constructor;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.ignite.IgniteAtomicLong;
-import org.apache.ignite.IgniteSet;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.configuration.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import org.apache.ignite.configuration.AtomicConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
-import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKey;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
-import org.apache.ignite.internal.processors.datastructures.GridCacheSetItemKey;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -68,9 +65,9 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
         IgniteConfiguration cfg = super.getConfiguration(name);
 
         cfg.setDataStorageConfiguration(new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                        .setPersistenceEnabled(true)
-                        .setMaxSize(300L * 1024 * 1024))
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+                .setPersistenceEnabled(true)
+                .setMaxSize(300L * 1024 * 1024))
         );
 
         cfg.setConsistentId(name);
@@ -99,8 +96,8 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
     @Parameterized.Parameters(name = "repair = {0}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
-        params.add(new Object[]{false});
-        params.add(new Object[]{true});
+        params.add(new Object[] {false});
+        params.add(new Object[] {true});
         return params;
     }
 
@@ -175,9 +172,9 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
             }
 
             assertTrue(
-                    "Unmatched key: " + i + ", got conflict key metas: " +
-                            conflictKeyMetas.stream().map(m -> m.stringView(true)).reduce((s1, s2) -> s1 + ", " + s2).get(),
-                    keyMatched
+                "Unmatched key: " + i + ", got conflict key metas: " +
+                    conflictKeyMetas.stream().map(m -> m.stringView(true)).reduce((s1, s2) -> s1 + ", " + s2).get(),
+                keyMatched
             );
         }
     }

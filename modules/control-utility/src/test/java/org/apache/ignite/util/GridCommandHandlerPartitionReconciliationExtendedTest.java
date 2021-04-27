@@ -40,7 +40,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -264,7 +263,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         IgniteEx ignite = grid(0);
         ignite.cluster().active(true);
 
-        for (int i = 1; i <= 3; i++){
+        for (int i = 1; i <= 3; i++) {
             ignite.atomicLong(DEFAULT_CACHE_NAME + i, 0, true);
             ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
         }
