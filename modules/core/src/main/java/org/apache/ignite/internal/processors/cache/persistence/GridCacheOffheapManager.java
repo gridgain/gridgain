@@ -2517,25 +2517,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             pendingTreeAllocated = true;
                         }
 
-                        //checkGapsLinkAndPartMetaStorage(io, pageAddr, grpId, partId);
+                        checkGapsLinkAndPartMetaStorage(io, pageAddr, grpId, partId);
 
                         if ((partMetaStoreReuseListRoot = io.getPartitionMetaStoreReuseListRoot(pageAddr)) == 0) {
-                            assert io.getGapsLink(pageAddr) == 0 : "Partition meta page corruption: there is a link " +
-                                "to counter data page, but partition meta storage doesn't exist [grpId=" + grpId +
-                                ", partId=" + partId +
-                                ", gapsLink=" + io.getGapsLink(pageAddr) + ", partMetaStoreReuseListRoot=0]";
-
                             partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
 
                             io.setPartitionMetaStoreReuseListRoot(pageAddr, partMetaStoreReuseListRoot);
 
                             partMetastoreReuseListAllocated = true;
                         }
-                        else
-                            assert io.getGapsLink(pageAddr) != 0 : "Partition meta page corruption: there is no link " +
-                                "to counter data page, but partition meta storage does exist [grpId=" + grpId +
-                                ", partId=" + partId +
-                                ", gapsLink=0, partMetaStoreReuseListRoot=" + io.getPartitionMetaStoreReuseListRoot(pageAddr) + ']';
 
                         if ((updateLogTreeRoot = io.getUpdateTreeRoot(pageAddr)) == 0) {
                             updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
@@ -2594,9 +2584,27 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
         }
 
-        /*private void checkGapsLinkAndPartMetaStorage(PagePartitionMetaIOV3 io, long pageAddr, int grpId, int partId) {
-            if io.getPartitionMetaStoreReuseListRoot(pageAddr)) == 0
-        }*/
+        /**
+         * Checks that links to counter data page and partition meta store are both present or both absent in partition.
+         *
+         * @param io Meta page io.
+         * @param pageAddr Meta page address.
+         * @param grpId Group id.
+         * @param partId Partition id.
+         */
+        private void checkGapsLinkAndPartMetaStorage(PagePartitionMetaIOV3 io, long pageAddr, int grpId, int partId) {
+            if ((io.getPartitionMetaStoreReuseListRoot(pageAddr) == 0 && io.getGapsLink(pageAddr) != 0) ||
+                (io.getPartitionMetaStoreReuseListRoot(pageAddr) != 0 && io.getGapsLink(pageAddr) == 0)) {
+                throw new AssertionError("Partition meta page corruption: links to counter data page and partition " +
+                    "meta store must both be present, or must both be absent in partition [" +
+                    "grpId=" + grpId +
+                    ", partId=" + partId +
+                    ", cntrUpdDataPageId=" + io.getGapsLink(pageAddr) +
+                    ", partitionMetaStoreReuseListRoot=" + io.getPartitionMetaStoreReuseListRoot(pageAddr) +
+                    ']'
+                );
+            }
+        }
 
         @Override public CacheDataTree tree() {
             return dataTree;
