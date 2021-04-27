@@ -274,9 +274,10 @@ public class IgniteStatisticsConfigurationManager {
         List<StatisticsColumnConfigurationView> res = new ArrayList<>();
 
         for (StatisticsObjectConfiguration cfg : configs) {
-            for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values())
+            for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values()) {
                 if (!colCfg.tombstone())
                     res.add(new StatisticsColumnConfigurationView(cfg, colCfg));
+            }
         }
 
         return res;
