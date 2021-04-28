@@ -276,22 +276,27 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     private void removeDurableBackgroundTask(DurableBackgroundTask obj) {
         String objName = durableBackgroundTaskMetastorageKey(obj);
 
-        synchronized (metaStorageMux) {
-            durableBackgroundTasks.remove(objName);
+        try {
+            synchronized (metaStorageMux) {
+                durableBackgroundTasks.remove(objName);
 
-            if (metastorage != null) {
-                ctx.cache().context().database().checkpointReadLock();
+                if (metastorage != null) {
+                    ctx.cache().context().database().checkpointReadLock();
 
-                try {
-                    metastorage.remove(objName);
-                }
-                catch (IgniteCheckedException e) {
-                    throw new IgniteException(e);
-                }
-                finally {
-                    ctx.cache().context().database().checkpointReadUnlock();
+                    try {
+                        metastorage.remove(objName);
+                    }
+                    catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+                    finally {
+                        ctx.cache().context().database().checkpointReadUnlock();
+                    }
                 }
             }
+        }
+        catch (IgniteException e) {
+            log.warning("Failed to remove durable background task:" + obj.shortName(), e);
         }
     }
 
