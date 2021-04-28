@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
@@ -296,7 +297,13 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
             }
         }
         catch (IgniteException e) {
-            log.warning("Failed to remove durable background task:" + obj.shortName(), e);
+            log.warning("Failed to remove durable background task: " + obj.shortName(), e);
+
+            if (e.getCause() instanceof NodeStoppingException) {
+                return;
+            }
+
+            throw e;
         }
     }
 
