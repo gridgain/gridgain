@@ -93,10 +93,10 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
         cleanPersistenceDir();
     }
 
-    /** */
+    /** Tests that node with corrupted partition fails on start. */
     @Test
     @WithSystemProperty(key = IGNITE_PDS_SKIP_CRC, value = "true")
-    public void test() throws Exception {
+    public void testCorruptedNodeFailsOnStart() throws Exception {
         IgniteEx ignite = startGrid(0);
 
         ignite.cluster().state(ClusterState.ACTIVE);
