@@ -520,17 +520,8 @@ class GridDeploymentCommunication {
 
                 synchronized (qryMux) {
                     if (!(msg instanceof GridDeploymentResponse)) {
-                        GridDeploymentResponse fake = new GridDeploymentResponse();
-
-                        String errMsg = "Received unknown peer class loading response [node=" + nodeId +
-                            ", msg=" + msg + ']';
-
-                        U.error(log, errMsg);
-
-                        fake.success(false);
-                        fake.errorMessage(errMsg);
-
-                        res.set(fake);
+                        U.error(log, "Received unknown peer class loading response [node=" + nodeId + ", msg=" +
+                            msg + ']');
                     }
                     else
                         res.set((GridDeploymentResponse)msg);
