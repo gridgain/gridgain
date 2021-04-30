@@ -79,6 +79,7 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
             }
             catch (SegmentEofException | EOFException eof) {
                 log.error("Critical exception has happened during WAL was scanned", eof);
+
                 break;
             }
             catch (Exception ignore) {
