@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.reader.Ignite
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Factory for creating iterator over WAL files
+ * Factory for creating WAL reader which won't stop on exceptions.
  */
 public class IgniteWalIteratorFactoryIgnoreError extends IgniteWalIteratorFactory {
     /**

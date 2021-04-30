@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,13 +35,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * WAL reader iterator with ignore Exception
+ * WAL reader which won't stop on exceptions.
+ * It differs from the standard iterator (StandaloneWalRecordsIterator) in that it does not interrupt reading
+ * on an error but tries to read further.
  */
 public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecordsIterator {
 
-    /**
-     *
-     */
+    /** */
     public StandaloneWalRecordsIteratorIgnoreError(@NotNull IgniteLogger log,
         @NotNull GridCacheSharedContext sharedCtx,
         @NotNull FileIOFactory ioFactory,
@@ -61,8 +61,7 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
     }
 
     /** {@inheritDoc} */
-    @Override protected IgniteBiTuple<WALPointer, WALRecord> advanceRecord(
-        @Nullable AbstractReadFileHandle hnd) throws IgniteCheckedException {
+    @Override protected IgniteBiTuple<WALPointer, WALRecord> advanceRecord(@Nullable AbstractReadFileHandle hnd) {
         if (hnd == null)
             return null;
 
@@ -78,34 +77,33 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
 
                 result = new IgniteBiTuple<>(actualFilePtr, postProcessRecord(rec));
             }
-            catch (SegmentEofException eof) {
-                break;
-            }
-            catch (EOFException eof) {
+            catch (SegmentEofException | EOFException eof) {
+                log.error("Critical exception has happened during WAL was scanned", eof);
                 break;
             }
             catch (Exception ignore) {
-                // ignore
-                ignore.printStackTrace();
+                log.error("Critical exception has happened during WAL was scanned", ignore);
+
                 try {
-                    final FileInput in = hnd.in();
+                    FileInput in = hnd.in();
 
                     in.seek(actualFilePtr.fileOffset());
 
-                    final int recordType = in.readUnsignedByte() - 1;
+                    int recordType = in.readUnsignedByte() - 1;
 
-                    final long idx = in.readLong();
+                    long idx = in.readLong();
 
-                    final int offset = in.readInt();
+                    int offset = in.readInt();
 
-                    final int len = in.readInt();
+                    int len = in.readInt();
 
                     in.seek(offset + len);
 
                     log.error("Error read record [recordType=" + recordType + ", idx=" + idx + ", offset=" + offset + ", len=" + len + "]", ignore);
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Couldn't miss read error", e);
+
                     break;
                 }
             }
