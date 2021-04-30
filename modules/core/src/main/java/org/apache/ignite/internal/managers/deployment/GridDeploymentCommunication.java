@@ -183,7 +183,7 @@ class GridDeploymentCommunication {
      */
     private void processResourceRequest(UUID nodeId, GridDeploymentRequest req) {
         if (log.isDebugEnabled())
-            log.debug("Received peer class/resource loading request [originatingNodeId =" + nodeId + ", req=" + req + ']');
+            log.debug("Received peer class/resource loading request [originatingNodeId=" + nodeId + ", req=" + req + ']');
 
         if (req.responseTopic() == null) {
             try {
@@ -191,7 +191,7 @@ class GridDeploymentCommunication {
             }
             catch (IgniteCheckedException e) {
                 U.error(log, "Failed to process deployment request (will ignore) [" +
-                    "originatingNodeId =" + nodeId + ", req=" + req + ']', e);
+                    "originatingNodeId=" + nodeId + ", req=" + req + ']', e);
 
                 return;
             }
@@ -232,7 +232,7 @@ class GridDeploymentCommunication {
                     }
                 }
                 catch (LinkageError | ClassNotFoundException e) {
-                    U.warn(log, "Failed to resolve class [originatingNodeId =" + nodeId + ", class=" + clsName +
+                    U.warn(log, "Failed to resolve class [originatingNodeId=" + nodeId + ", class=" + clsName +
                         ", req=" + req + ']', e
                     );
                     // Defined errors can be safely ignored here, because of resource which is able to be not a class name.
@@ -282,7 +282,7 @@ class GridDeploymentCommunication {
         }
         else {
             String errMsg = "Failed to find local deployment for peer request [" +
-                "originatingNodeId =" + nodeId + ", req=" + req + ']';
+                "originatingNodeId=" + nodeId + ", req=" + req + ']';
 
             U.warn(log, errMsg);
 
@@ -296,7 +296,7 @@ class GridDeploymentCommunication {
     /** */
     private String resourceRequestDetails(UUID nodeId, GridDeploymentRequest req) {
         return new SB()
-            .a("[originatingNodeId =").a(nodeId)
+            .a("[originatingNodeId=").a(nodeId)
             .a(", resourceName=").a(req.resourceName())
             .a(", classLoaderId=").a(req.classLoaderId())
             .a(']')
