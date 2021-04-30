@@ -466,7 +466,7 @@ class GridDeploymentCommunication {
      * @return Listener for discovery events {@code EVT_NODE_LEFT} and {@code EVT_NODE_FAILED} for class loading
      * requests.
      */
-    public GridLocalEventListener resourceDiscoListener(
+    private GridLocalEventListener resourceDiscoListener(
         GridTuple<GridDeploymentResponse> res,
         ClusterNode dstNode,
         String rsrcName,
@@ -512,7 +512,7 @@ class GridDeploymentCommunication {
      * @param qryMux Mutex.
      * @return Listener for response message for class loading requests.
      */
-    public GridMessageListener resourceMessageListener(GridTuple<GridDeploymentResponse> res, Object qryMux) {
+    private GridMessageListener resourceMessageListener(GridTuple<GridDeploymentResponse> res, Object qryMux) {
         return new GridMessageListener() {
             @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
                 assert nodeId != null;
