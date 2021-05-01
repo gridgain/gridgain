@@ -118,7 +118,7 @@ public class IgniteWalConverter {
         if (params.getWalArchiveDir() != null)
             iteratorParametersBuilder.filesOrDirs(params.getWalArchiveDir());
 
-        final IgniteWalIteratorFactory factory = new IgniteWalIteratorFactory();
+        IgniteWalIteratorFactoryIgnoreError factory = new IgniteWalIteratorFactoryIgnoreError();
 
         boolean printAlways = F.isEmpty(params.getRecordTypes());
 
