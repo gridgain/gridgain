@@ -32,7 +32,6 @@ import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.commandline.cache.CacheValidateIndexes;
 import org.apache.ignite.internal.commandline.cache.FindAndDeleteGarbage;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
-import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.visor.tx.VisorTxOperation;
@@ -755,12 +754,6 @@ public class CommandHandlerParsingTest {
      *      if unsupported value is used - IllegalArgumentException (Invalid recheck attempts:
      *      <invalid-recheck-attempts>. Int value between 1 and 5 should be used.) is expected.
      *
-     * --cache-types
-     *      if value is missing - IllegalArgumentException (Allowed cache types should be specified.
-     *      The following values can be used: : [USER, INTERNAL, ALL].) is expected.
-     *      if unsupported value is used - IllegalArgumentException (IInvalid cache type specified:
-     *      invalid-cache-type. The following values can be used: [USER, INTERNAL, ALL].) is expected.
-     *
      * As invalid values use values that produce NumberFormatException and out-of-range values.
      * Also ensure that in case of appropriate parameters parseArgs() doesn't throw any exceptions.
      */
@@ -833,13 +826,6 @@ public class CommandHandlerParsingTest {
         parseArgs(asList("--cache", "partition_reconciliation", "--recheck-delay", "0"));
 
         parseArgs(asList("--cache", "partition_reconciliation", "--recheck-delay", "50"));
-
-        assertParseArgsThrows("Allowed cache types should be specified. The following values can be used: "
-            + Arrays.toString(ReconciliationCachesType.values()) + '.', "--cache", "partition_reconciliation", "--cache-types");
-
-        assertParseArgsThrows("Invalid cache type specified: invalid-cache-type. The following values can be used: "
-                + Arrays.toString(ReconciliationCachesType.values()) + '.', "--cache", "partition_reconciliation", "--cache-types",
-            "invalid-cache-type");
     }
 
     /**

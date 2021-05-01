@@ -30,7 +30,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
-import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -45,29 +44,12 @@ import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
  * Abstract utility class for partition reconciliation testing.
  */
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
-    /**
-     *
-     */
+    /** */
     public static ReconciliationResult partitionReconciliation(
         Ignite ig,
         boolean repair,
         @Nullable RepairAlgorithm repairAlgorithm,
         int parallelism,
-        String... caches
-    ) {
-        return partitionReconciliation(ig, repair, repairAlgorithm,
-            parallelism, ReconciliationCachesType.defaultValue(), caches);
-    }
-
-    /**
-     *
-     */
-    public static ReconciliationResult partitionReconciliation(
-        Ignite ig,
-        boolean repair,
-        @Nullable RepairAlgorithm repairAlgorithm,
-        int parallelism,
-        ReconciliationCachesType allowedCacheTypes,
         String... caches
     ) {
         return partitionReconciliation(
@@ -78,7 +60,6 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                 .parallelism(parallelism)
                 .repair(repair)
                 .repairAlg(repairAlgorithm)
-                .allowedCacheTypes(allowedCacheTypes)
         );
     }
 

@@ -290,18 +290,14 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            EntryProcessorResult<Object> invoke = ctx.cache().keepBinary().invoke(
+                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus) ignite.cachex(cacheName).invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
                                     nodeToVersionedValues,
                                     rmvQueueMaxSize,
                                     false,
-                                    startTopVer));
-
-                            assert invoke != null;
-
-                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)invoke.get();
+                                    startTopVer)).get();
                         }
                     }
                     else {
@@ -333,18 +329,14 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            EntryProcessorResult<Object> invoke = ctx.cache().keepBinary().invoke(
+                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus) ignite.cachex(cacheName).invoke(
                                     key,
                                     new RepairEntryProcessor(
                                             valToFixWith,
                                             nodeToVersionedValues,
                                             rmvQueueMaxSize,
                                             false,
-                                            startTopVer));
-
-                            assert invoke != null;
-
-                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)invoke.get();
+                                            startTopVer)).get();
                         }
                     }
 

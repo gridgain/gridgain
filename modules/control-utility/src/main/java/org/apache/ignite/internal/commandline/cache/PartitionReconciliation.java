@@ -41,7 +41,6 @@ import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
-import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
@@ -55,7 +54,6 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PARTITION_RECONCILIATION;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.BATCH_SIZE;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.CACHE_TYPES;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FAST_CHECK;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.INCLUDE_SENSITIVE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
@@ -187,8 +185,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             args.batchSize,
             args.recheckAttempts,
             args.repairAlg,
-            args.recheckDelay,
-            args.allowedCacheTypes
+            args.recheckDelay
         );
 
         List<GridClientNode> unsupportedSrvNodes = client.compute().nodes().stream()
@@ -229,7 +226,6 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         int recheckAttempts = (int)RECHECK_ATTEMPTS.defaultValue();
         RepairAlgorithm repairAlg = (RepairAlgorithm)REPAIR.defaultValue();
         int recheckDelay = (int)RECHECK_DELAY.defaultValue();
-        ReconciliationCachesType allowedCacheTypes = (ReconciliationCachesType)CACHE_TYPES.defaultValue();
 
         int partReconciliationArgsCnt = 8;
 
@@ -344,26 +340,6 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
                             throw new IllegalArgumentException(String.format(RECHECK_DELAY_FORMAT_MESSAGE, strVal));
 
                         break;
-
-                    case CACHE_TYPES:
-                        peekedNextArg = argIter.peekNextArg();
-
-                        if (!PartitionReconciliationCommandArg.args().contains(peekedNextArg)) {
-                            strVal = argIter.nextArg(
-                                "Allowed cache types should be specified. The following " +
-                                    "values can be used: " + Arrays.toString(ReconciliationCachesType.values()) + '.');
-
-                            try {
-                                allowedCacheTypes = ReconciliationCachesType.valueOf(strVal);
-                            }
-                            catch (IllegalArgumentException e) {
-                                throw new IllegalArgumentException(
-                                    "Invalid cache type specified: " + strVal + ". The following " +
-                                        "values can be used: " + Arrays.toString(ReconciliationCachesType.values()) + '.');
-                            }
-                        }
-
-                        break;
                 }
             }
         }
@@ -378,8 +354,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             batchSize,
             recheckAttempts,
             repairAlg,
-            recheckDelay,
-            allowedCacheTypes);
+            recheckDelay);
     }
 
     /**
@@ -412,8 +387,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             .a("], batch-size=[" + args.batchSize)
             .a("], recheck-attempts=[" + args.recheckAttempts)
             .a("], fix-alg=[" + args.repairAlg)
-            .a("], recheck-delay=[" + args.recheckDelay)
-            .a("], cache-types=[" + args.allowedCacheTypes + "]")
+            .a("], recheck-delay=[" + args.recheckDelay + "]")
             .a(System.lineSeparator());
 
         if (args.includeSensitive) {
@@ -523,9 +497,6 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         /** Recheck delay in seconds. */
         private int recheckDelay;
 
-        /** Allowed cache types to be used. */
-        private final ReconciliationCachesType allowedCacheTypes;
-
         /**
          * Constructor.
          *
@@ -541,7 +512,6 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
          * @param recheckAttempts Amount of recheck attempts.
          * @param repairAlg Partition reconciliation repair algorithm to be used.
          * @param recheckDelay Recheck delay in seconds.
-         * @param recheckDelay Allowed cache types to run on.
          */
         public Arguments(
             Set<String> caches,
@@ -553,8 +523,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             int batchSize,
             int recheckAttempts,
             RepairAlgorithm repairAlg,
-            int recheckDelay,
-            ReconciliationCachesType allowedCacheTypes
+            int recheckDelay
         ) {
             this.caches = caches;
             this.repair = repair;
@@ -566,7 +535,6 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             this.recheckAttempts = recheckAttempts;
             this.repairAlg = repairAlg;
             this.recheckDelay = recheckDelay;
-            this.allowedCacheTypes = allowedCacheTypes;
         }
 
         /**
@@ -638,13 +606,6 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
          */
         public int recheckDelay() {
             return recheckDelay;
-        }
-
-        /**
-         * @return Allowed cache types to process.
-         */
-        public ReconciliationCachesType allowedCacheTypes() {
-            return allowedCacheTypes;
         }
     }
 }

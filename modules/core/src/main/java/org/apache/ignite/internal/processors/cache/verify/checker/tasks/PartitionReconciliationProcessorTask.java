@@ -44,7 +44,6 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
-import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -219,30 +218,17 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         @Override public T2<String, ExecutionResult<ReconciliationAffectedEntries>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
 
-            Collection<String> allowedCacheNames = F.viewReadOnly(ignite.context().cache().cacheDescriptors().values(),
-                new IgniteClosure<DynamicCacheDescriptor, String>() {
-                    @Override public String apply(DynamicCacheDescriptor desc) {
-                        return desc.cacheConfiguration().getName();
-                    }
-                },
-                new IgnitePredicate<DynamicCacheDescriptor>() {
-                    @Override public boolean apply(DynamicCacheDescriptor desc) {
-                        if (reconciliationTaskArg.allowedCacheTypes() == ReconciliationCachesType.USER)
-                            return desc.cacheType().userCache();
-                        else if (reconciliationTaskArg.allowedCacheTypes() == ReconciliationCachesType.INTERNAL)
-                            return !desc.cacheType().userCache();
-                        else return true;
-                    }
-                }
+            Collection<String> cacheNames = F.viewReadOnly(ignite.context().cache().cacheDescriptors().values(),
+                (IgniteClosure<DynamicCacheDescriptor, String>)desc -> desc.cacheConfiguration().getName()
             );
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
-                caches.addAll(allowedCacheNames);
+                caches.addAll(cacheNames);
             else {
                 for (String cacheRegexp : reconciliationTaskArg.caches()) {
                     List<String> acceptedCaches = new ArrayList<>();
 
-                    for (String cacheName : allowedCacheNames) {
+                    for (String cacheName : cacheNames) {
                         if (cacheName.matches(cacheRegexp))
                             acceptedCaches.add(cacheName);
                     }

@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.processors.cache.verify.ReconciliationCachesType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -75,9 +74,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** Recheck delay seconds. */
     private int recheckDelay;
 
-    /** Specifies which type of caches are allowed to be processed. */
-    private ReconciliationCachesType allowedCacheTypes;
-
     /**
      * Default constructor.
      */
@@ -100,7 +96,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
      * @param repairAlg Partition reconciliation repair algorithm to be used.
      * @param recheckDelay Recheck delay in seconds.
-     * @param allowedCacheTypes Cache types allowed to be processed.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(
@@ -113,8 +108,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         int batchSize,
         int recheckAttempts,
         RepairAlgorithm repairAlg,
-        int recheckDelay,
-        ReconciliationCachesType allowedCacheTypes
+        int recheckDelay
     ) {
         this.caches = caches;
         this.fastCheck = fastCheck;
@@ -126,7 +120,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
         this.recheckDelay = recheckDelay;
-        this.allowedCacheTypes = allowedCacheTypes;
     }
 
     /**
@@ -144,8 +137,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
              b.batchSize,
              b.recheckAttempts,
              b.repairAlg,
-             b.recheckDelay,
-             b.allowedCacheTypes);
+             b.recheckDelay);
 
         if (b.partsToRepair != null) {
             partsToRepair = b.partsToRepair
@@ -184,8 +176,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         out.writeBoolean(fastCheck);
 
         U.writeIntKeyMap(out, partsToRepair);
-
-        U.writeEnum(out, allowedCacheTypes);
     }
 
     /** {@inheritDoc} */
@@ -214,9 +204,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
             partsToRepair = U.readIntKeyMap(in);
         }
-
-        if (protoVer >= V3)
-            allowedCacheTypes = ReconciliationCachesType.fromOrdinal(in.readByte());
     }
 
     /**
@@ -298,13 +285,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     }
 
     /**
-     * Specifies which type of caches are allowed to be processed.
-     */
-    public ReconciliationCachesType allowedCacheTypes() {
-        return allowedCacheTypes;
-    }
-
-    /**
      * Builder class for test purposes.
      */
     public static class Builder {
@@ -348,9 +328,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /** Recheck delay seconds. */
         private int recheckDelay;
 
-        /** Specifies which type of caches are allowed to be processed. */
-        private ReconciliationCachesType allowedCacheTypes;
-
         /**
          * Default constructor.
          */
@@ -365,7 +342,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = 2;
             recheckDelay = 1;
             repairAlg = RepairAlgorithm.defaultValue();
-            allowedCacheTypes = ReconciliationCachesType.defaultValue();
         }
 
         /**
@@ -386,7 +362,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = cpFrom.recheckAttempts;
             recheckDelay = cpFrom.recheckDelay;
             repairAlg = cpFrom.repairAlg;
-            allowedCacheTypes = cpFrom.allowedCacheTypes;
         }
 
         /**
@@ -503,16 +478,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
          */
         public Builder recheckDelay(int recheckDelay) {
             this.recheckDelay = recheckDelay;
-
-            return this;
-        }
-
-        /**
-         * @param allowedCacheTypes Specifies which type of caches are allowed to be processed.
-         * @return Builder for chaining.
-         */
-        public Builder allowedCacheTypes(ReconciliationCachesType allowedCacheTypes) {
-            this.allowedCacheTypes = allowedCacheTypes;
 
             return this;
         }
