@@ -310,7 +310,7 @@ public class RepairRequestTaskTest {
         try {
             when(internalCacheMock.invoke(any(), any(EntryProcessor.class))).thenReturn(invokeReturnFixed
                 ? CacheInvokeResult.fromResult(RepairEntryProcessor.RepairStatus.SUCCESS)
-                :CacheInvokeResult.fromResult(RepairEntryProcessor.RepairStatus.FAIL));
+                : CacheInvokeResult.fromResult(RepairEntryProcessor.RepairStatus.FAIL));
         }
         catch (IgniteCheckedException e) {
             e.printStackTrace();

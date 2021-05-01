@@ -189,33 +189,33 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     * Check that utility works with user caches only if that cache type is specified.
-     */
-    @Test
-    public void testWorkWithUserCacheTypes() throws Exception {
-        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "--cache-types", "USER");
-
-        assertTrue(usedCaches.containsAll(Arrays.asList("default", "default1", "default2", "default3")));
-        assertEquals(4, usedCaches.size());
-    }
-
-    /**
      * Check that utility works with system caches only if that cache type is specified.
      */
     @Test
     public void testWorkWithInternalCaches() throws Exception {
-        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "--cache-types", "INTERNAL");
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "ignite-sys-cache, ignite-sys-atomic-cache@default-ds-group");
 
         assertTrue(usedCaches.containsAll(Arrays.asList("ignite-sys-cache", "ignite-sys-atomic-cache@default-ds-group")));
         assertEquals(2, usedCaches.size());
     }
 
     /**
-     * Check that utility works with system caches only if that cache type is specified.
+     * Check that utility works with system caches if regexp specified.
+     */
+    @Test
+    public void testWorkWithSystemCachesByRegexp() throws Exception {
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "ignite-sys.*");
+
+        assertTrue(usedCaches.containsAll(Arrays.asList("ignite-sys-cache", "ignite-sys-atomic-cache@default-ds-group")));
+        assertEquals(2, usedCaches.size());
+    }
+
+    /**
+     * Check that utility works with all caches if caches argument is not specified.
      */
     @Test
     public void testWorkWithAllCaches() throws Exception {
-        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "--cache-types", "ALL");
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation");
 
         assertTrue(usedCaches.containsAll(Arrays.asList("ignite-sys-cache",
             "ignite-sys-atomic-cache@default-ds-group", "default", "default1", "default2", "default3")));
