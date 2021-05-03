@@ -52,6 +52,7 @@ import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.SESSION_CHANGE_MSG;
 
 /**
@@ -71,6 +72,12 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).setBackups(2));
 
         return cfg;
+    }
+
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -238,6 +245,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         List<String> setOfCaches = new ArrayList<>();
         setOfCaches.add(DEFAULT_CACHE_NAME);
+        setOfCaches.add(UTILITY_CACHE_NAME);
 
         for (int i = 1; i <= 3; i++)
             setOfCaches.add(ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i).getName());

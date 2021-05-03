@@ -49,7 +49,6 @@ import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
-
 import javax.cache.processor.EntryProcessorResult;
 
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.calculateValueToFixWith;
@@ -322,7 +321,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                         valToFixWith,
                                         nodeToVersionedValues,
                                         rmvQueueMaxSize,
-                                        false,
+                                        true,
                                         startTopVer));
 
                             assert res != null;
@@ -339,15 +338,19 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus) ignite.cachex(cacheName)
+                            EntryProcessorResult<RepairEntryProcessor.RepairStatus> res = ignite.cachex(cacheName)
                                 .keepBinary().invoke(
                                     key,
                                     new RepairEntryProcessor(
-                                            valToFixWith,
-                                            nodeToVersionedValues,
-                                            rmvQueueMaxSize,
-                                            false,
-                                            startTopVer)).get();
+                                        valToFixWith,
+                                        nodeToVersionedValues,
+                                        rmvQueueMaxSize,
+                                        false,
+                                        startTopVer));
+
+                            assert res != null;
+
+                            keyWasSuccessfullyFixed = res.get();
                         }
                     }
 
