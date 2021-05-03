@@ -104,8 +104,7 @@ public interface Command<T> {
             }
 
             throw lastErr;
-        } else
-            printClusterInfoBanner(client.state(), log);
+        }
 
         return client;
     }
